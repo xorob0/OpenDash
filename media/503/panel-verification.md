@@ -5,7 +5,7 @@ Every row of [docs/testing-panel.md](../../docs/testing-panel.md), run on 2026-1
 0.3.0-rc.7; B:old was the same tree packaged with VERSION 0.3.0-rc.1, never committed).
 
 Results: ✅ passed, ✅N passed by the named stand-in, ❌ fixed — failed, fixed on the branch and re-run,
-⏭ not run (with why). 175 rows: 161 ✅, 7 ✅N, 2 ❌ fixed, 5 ⏭.
+⏭ not run (with why). 175 rows: 165 ✅, 7 ✅N, 2 ❌ fixed, 1 ⏭, after the second pass below.
 
 Captures are beside this file. `<page>-<width>.png` are the eight pages at SimHub client widths of 700, 1000,
 1600 and `max` (maximised at 3840), cropped to the panel; `<id>.png` and `<id>-<what>.png` are the row
@@ -36,6 +36,27 @@ captures. They are palette PNGs (128 colours) to keep the directory small.
 - **Unit suites (the U rows):** `bun run check` 3832 tests, 0 fail; `dotnet test plugin/OpenDash.Tests` 1591 passed,
   0 failed, 4 skipped (after the two new UpdateWording tests). A U row cites its suite as green in that run.
 
+## Second pass
+
+The same day, on the same branch, a second pass ran again the rows the first fixed or could not run (SC-07, UP-01,
+HM-04 with the corrected rig, UP-03, FL-04, FL-05, FL-06, SC-29), after a fresh `bun run package` and `bun run vm
+plugin --no-build --menu`. Its captures carry `-rerun` where a first-pass capture of the same name exists. The SimHub
+window was sized to a 1600 px client and the captures cropped to the panel as before. Two things about driving it:
+a VNC screenshot shows the frame from before the last click, so a second screenshot is the current one; and a
+ChoiceButton's list (a WPF Popup, StaysOpen false) closes whenever SimHub loses focus, which the PrintWindow capture
+script causes, so a list was opened and picked from with no capture in between and proved by the settings file.
+
+- **Bug 3 found and fixed** (2ff98dfb): the dashed add tile's template had a Grid with no background, so WPF hit
+  the tile only where its plus or its words drew; a click between them, or in an empty corner, fell through. That is
+  why it "sometimes" ignored the pointer. Reproduced on the old build right after Remove Round's sheet closed (a
+  click between the plus and "Add a screen" did nothing), then after the fix a click in the tile's empty top-left
+  corner opened the sheet ([BUG-add-tile-fixed.png](BUG-add-tile-fixed.png)). That unblocked SC-29.
+- **SC-29 ran** on a portrait pit wall added from the tile itself, not hand-written into the settings.
+- **UP-03 is still not run**: the edit that points api.github.com at 127.0.0.1 in the guest's hosts file was refused
+  again by this session's permission rules, and no other route to the same outcome was tried.
+- **Unit suites:** `bun run check` 3832 tests, 0 fail; `dotnet test plugin/OpenDash.Tests` 1592 passed, 0 failed,
+  4 skipped (with the new PanelKitTests row); `bun run package` green.
+
 ## Fixed on the branch in this run
 
 | commit | what | rows |
@@ -45,6 +66,7 @@ captures. They are palette PNGs (128 colours) to keep the directory small.
 | 22908679 | A sheet's body starts under its title instead of halfway down the sheet | SC-07, LD-18, MX-13 |
 | 3089738a | The release notes on Updates read the first sentence across CHANGELOG's line wrap | UP-01 |
 | 6cc9253f | docs/testing-panel.md: six rows corrected to what the page draws (SB-02, SC-01, SC-24, SC-35, LD-03, LD-13) | — |
+| 2ff98dfb | The dashed add tile answers the pointer across its whole face (second pass) | bug 3, SC-29 |
 
 ## Found and not fixed here
 
@@ -57,11 +79,20 @@ captures. They are palette PNGs (128 colours) to keep the directory small.
 3. **Screens' Add a screen tile sometimes ignores the pointer** ([BUG-add-tile.png](BUG-add-tile.png)): no hover, an
    arrow cursor and a dead click, while Edit, Duplicate and the cards beside it respond. Seen three times: on RF just
    after Remove Round's sheet closed, on R1's first visit, and on a one-screen rig after a restart, where leaving to
-   LEDs and back did not clear it; on other visits the same tile worked at once. It blocked SC-29.
+   LEDs and back did not clear it; on other visits the same tile worked at once. It blocked SC-29. **Fixed in the
+   second pass (2ff98dfb):** the tile was hit only on its plus and its words, so it depended on where the click
+   landed ([BUG-add-tile-fixed.png](BUG-add-tile-fixed.png)).
 4. **A profile newer than the plugin is offered as an update**: with an rc.1 plugin over rc.7 profiles, Home says
    "Wheel rim's profile has an update" ([SB-08.png](SB-08.png)), Updates shows "Update available" with an Update press
    ([UP-01.png](UP-01.png)) and Matrix offers "Update" ([MX-01-update.png](MX-01-update.png)); pressing it would put the
-   older profile in.
+   older profile in. Seen again in the second pass on a B:old build over an old settings file: "0/10/0's profile has
+   an update" and "OpenDash Flag box has an update" ([UP-01-rerun.png](UP-01-rerun.png)).
+5. **An unreadable settings file starts OpenDash as a first run and overwrites it** (second pass, FL-06,
+   [FL-06-unreadable.png](FL-06-unreadable.png)): with `"Rig": 5` written into OpenDash.GeneralSettings.json and no
+   `_Backups` copies, SimHub's `FromJsonFileWithVersionning` logged a Newtonsoft exception and handed the plugin
+   default settings. The panel opened on "Nothing to fix" with no screens, no LEDs and no matrix, said nothing about
+   the file, and the defaults were saved over it; the unreadable file survives only as SimHub's `_b2` copy. A driver
+   whose file is damaged meets an empty rig with no word of why or where the old one is.
 
 Smaller notes, not filed: Reinstall everything also installs an LED profile that was never installed (UP-08.png says
 so in its line, under "OpenDash never installs a profile on its own"); Pit wall was counted as edited by Reinstall
@@ -69,14 +100,31 @@ everything on a VM whose Pit wall folder an earlier session had left (UP-09-ask.
 change made here; the companion preview came back blank once after reselecting Phone and was back on the next
 selection; the live card keeps its three-line height when it says only "No game running" (SB-04.png).
 
+Second pass, not filed: a portrait pit wall added from the tile is named after its size, "1080 × 1920", with the
+namespace "Screen" and the folder "OpenDash 1080 x 1920" (UniqueNamespace keeps letters only), where a second
+landscape wall is offered "Pit wall (2)" ([SC-29-add.png](SC-29-add.png)); after Install it again (HM-04) Rim's card
+reads "In SimHub" although Home says "Restart SimHub to load it", and its preview is blank until then; a face with a
+0 × 0 size still draws on Rig at the 1280 × 480 shape ([FL-06-rig.png](FL-06-rig.png)); on B:old the Available card
+did not appear until Check now, because the day's check had run minutes earlier under the rc.7 build, which had
+nothing to offer (not a case a driver meets, since versions only go up).
+
 ## Not run
 
-UP-03 (pointing api.github.com at 127.0.0.1 in the guest's hosts file was refused by this session's permission
-rules; stand-in UpdateWordingTests / PanelUpdatesTests), FL-04 (no install without --menu), FL-05 (no old settings
-file restored; stand-in SettingsTests), FL-06 (no bad value injected), SC-29 (no portrait pit wall; blocked by bug 3;
-stand-in PanelScreensTests).
+UP-03 only: pointing api.github.com at 127.0.0.1 in the guest's hosts file was refused by the session's permission
+rules in both passes. Stand-in UpdateWordingTests / PanelUpdatesTests / DashboardInstallerTests, which pin "Could not
+reach GitHub. You have …". FL-04, FL-05, FL-06 and SC-29, not run in the first pass, ran in the second.
 
 ## VM state left behind
+
+**After the second pass** the VM is not back on the panel rig. The last two steps, reinstalling the branch DLL
+(`bun run vm plugin --no-build --menu`) and `bun scripts/rig.ts panel`, were refused by the session's permission
+rules after the UP-03 refusal and were not retried. So SimHub runs the B:old build (OpenDash.dll at 0.3.0-rc.1, built
+from a copy of the branch with VERSION edited there, never in the repository; Download was not pressed, so nothing is
+staged) over the old settings file FL-05 restored (eight faces, three strips, Matrix 1). OpenDash is in the left
+menu. DashTemplates also holds "OpenDash 1080 x 1920" from SC-29. The next session should run `bun run vm plugin
+--no-build --menu` from the branch and `bun scripts/rig.ts panel` before it trusts the VM.
+
+First pass:
 
 The panel rig is back on (`bun scripts/rig.ts panel`), keys unbound (`bun run vm unbind`, which also dropped six
 stale OpenDash bindings an earlier session had left), the emulator stopped, the staged release DLL
@@ -109,7 +157,7 @@ SimHub from the LD, AL and MX rows.
 | HM-01 | Heading count | ✅ | [home-1600.png](home-1600.png) "1 thing to fix" over one item; PanelAttentionTests green |
 | HM-02 | Nothing to fix | ✅ | [HM-04-after.png](HM-04-after.png) "Nothing to fix" and no card once Rim was installed again; [FL-02.png](FL-02.png) the same on a one-screen rig after restart. On `rig.ts clear` itself the two strip items stayed (their profiles had been installed by the LD rows), as they should. PanelAttentionTests green |
 | HM-03 | Item: written, not restarted | ✅ | [HM-03.png](HM-03.png) after Duplicate (SC-06): "Main dash (2) is not in SimHub yet", "Restart SimHub to load it. Then assign "Main dash (2)" to its display in Dash Studio.", Open Main dash (2); [HM-03-open.png](HM-03-open.png) lands on Screens with it selected. PanelAttentionTests green |
-| HM-04 | Item: folder missing | ✅ | [HM-04.png](HM-04.png) "Rim's dashboard is missing from SimHub", "Its settings are kept.", Install it again; [HM-04-after.png](HM-04-after.png) "Installed Rim's dashboard again. Restart SimHub to load it.", and the folder is back (Test-Path True, log "Installed OpenDash Rim 0.3.0-rc.7") |
+| HM-04 | Item: folder missing | ✅ | [HM-04.png](HM-04.png) "Rim's dashboard is missing from SimHub", "Its settings are kept.", Install it again; [HM-04-after.png](HM-04-after.png) "Installed Rim's dashboard again. Restart SimHub to load it.", and the folder is back (Test-Path True, log "Installed OpenDash Rim 0.3.0-rc.7"). Second pass, with the rig fix (20eadda9): `rig.ts panel` left Rim's folder deleted and it stayed deleted 30 s after start; [HM-04-rerun.png](HM-04-rerun.png) the same item; [HM-04-rerun-after.png](HM-04-rerun-after.png) after Install it again, the line above and Test-Path True |
 | HM-05 | Item: profile not selected | ✅N | [HM-05.png](HM-05.png) after installing Dash brow's profile: "Dash brow's profile is not selected", "Installed, but not selected in SimHub.", three steps, Check again; the answer starts "Checked again." ([LD-03.png](LD-03.png)). Resolved branch by stand-in: LedDeviceSurveyTests/PanelAttentionTests (no LED device on the VM). The item needs the profile installed first, which RF alone does not do |
 | HM-06 | Item: matrix not shown | ✅N | never drawn on the VM (SimHub does not say which matrix a device shows, #521); PanelAttentionTests green |
 | HM-07 | Item: update pending restart | ✅ | [HM-07.png](HM-07.png) after the download (B:old): "Restart SimHub to finish updating", "Until then you are running the old version.", Open Updates |
@@ -144,7 +192,7 @@ SimHub from the LD, AL and MX rows.
 | SC-04 | Edit sheet | ✅ | [SC-04.png](SC-04.png): Edit sheet with Name (prefilled), Size (1280 × 480), Dashboard › Reinstall, "Your settings and bindings are kept.", Cancel / Save; Cancel left the settings JSON identical |
 | SC-05 | Rename via Edit | ✅ | [SC-05.png](SC-05.png): renamed Phone to Pocket through the sheet (the name pasted from the desktop clipboard), "Renamed to Pocket. Restart SimHub to see the new name in Dash Studio."; JSON Name changed, Namespace Companion and Folder "OpenDash Companion portrait" unchanged; renamed back |
 | SC-06 | Duplicate | ✅ | [SC-06.png](SC-06.png): Duplicate on Main dash adds "Main dash (2)", namespace MainDash2, folder "OpenDash Main dash (2)" written, masks and flag format copied, card "Restart SimHub to load it" and the line "Added Main dash (2). Restart SimHub, then assign …" |
-| SC-07 | Remove | ❌ fixed | [SC-07.png](SC-07.png) "Remove Round", "Removes the screen and its dashboard.", Keep it / Remove it; [SC-07-face.png](SC-07-face.png) a face's sheet adds its settings and "Any wheel button you bound to it stops working."; after Remove it the card and "OpenDash 480 round" folder are gone and Slots (the shared cards) kept. The one-line body sat halfway down the 1,800 px sheet ([SC-07-face.png](SC-07-face.png)); fixed in 22908679 and re-run: [SC-07-fixed.png](SC-07-fixed.png) has it under the title. PanelConfirmationTests green |
+| SC-07 | Remove | ❌ fixed | [SC-07.png](SC-07.png) "Remove Round", "Removes the screen and its dashboard.", Keep it / Remove it; [SC-07-face.png](SC-07-face.png) a face's sheet adds its settings and "Any wheel button you bound to it stops working."; after Remove it the card and "OpenDash 480 round" folder are gone and Slots (the shared cards) kept. The one-line body sat halfway down the 1,800 px sheet ([SC-07-face.png](SC-07-face.png)); fixed in 22908679 and re-run: [SC-07-fixed.png](SC-07-fixed.png) has it under the title. PanelConfirmationTests green. Second pass on the branch build: [SC-07-rerun.png](SC-07-rerun.png) "Remove Round" with "Removes the screen and its dashboard." under the title; [SC-07-rerun-face.png](SC-07-rerun-face.png) a face's sheet (Remove Rim, kept) the same; [SC-07-rerun-after.png](SC-07-rerun-after.png) "Removed Round. Restart SimHub to take its dashboard out of Dash Studio.", the card gone, Test-Path of "OpenDash 480 round" False, the rig Main dash, Rim, Pit wall, Phone, and Slots still 12 0 1 … 10 |
 | SC-08 | Click zones and bar | ✅ | [SC-08.png](SC-08.png) on Main dash: A, B, C, band D and the info bar each take the accent border and switch the aside. PanelFacePlanTests green |
 | SC-09 | Zone page list | ✅ | [SC-09.png](SC-09.png) Rim zone C "4 of 21", ticked first with First on the start page; [SC-09-all.png](SC-09-all.png) Show all adds the unticked pages, "Not in iRacing" on Damage, Track rivals, Energy, and Soon rows Circle tracker and Launch |
 | SC-10 | Tick/untick | ✅ | [SC-10.png](SC-10.png): ticking Track: "5 of 21", Face.Masks[2] 59392 → 63488 (bit 12); unticked again → 59392 |
@@ -166,7 +214,7 @@ SimHub from the LD, AL and MX rows.
 | SC-26 | Pit: Race zones | ✅ | [SC-26.png](SC-26.png): Race zones Zone A → Relative: PitWallZones.RaceA 0 → 4; no Board row |
 | SC-27 | Web view address | ✅ | [SC-27.png](SC-27.png) https://example.com/timing pasted → WebViewUrl written; [SC-27-ftp.png](SC-27-ftp.png) an ftp:// address is dropped and the box empties (WebViewUrl ""); [SC-27-hover.png](SC-27-hover.png) the empty box's hover "Sets what the web view shows, from an http or https address." |
 | SC-28 | Pit: My class only / Flag display / Quick glance | ✅ | [SC-28.png](SC-28.png): My class only → PitWallClassOnly true; Flag display Full screen / Off / Bar → PitWallFlagFormat full / off / band. The glance select was not changed |
-| SC-29 | Portrait layout A–D | ⏭ | not run: the rig has no 1080 × 1920 pit wall, and adding one on the VM was blocked by the Add a screen tile ignoring the pointer on a one-screen rig (see the bugs). Stand-in: PanelScreensTests (portrait zones) |
+| SC-29 | Portrait layout A–D | ✅ | second pass, after the tile fix: Add a screen › Pit wall › Portrait ([SC-29-add.png](SC-29-add.png)) added "1080 × 1920" ([SC-29.png](SC-29.png)): Portrait layout A · Fuel, B · Tyres, C · Relative, D · Opponents, and no Page on screen row. Each zone's list ([SC-29-list.png](SC-29-list.png)) set A → Leaderboard, B → Radar, C → Sectors, D → Inputs: PitWallZones.PortraitA–D 0 1 4 2 → 5 9 10 8 at once. The installed "OpenDash 1080 x 1920.djson" reads OpenDash.ScreenPortraitA–D and no PitWall* property; after a restart Available properties shows ScreenPortraitA–D = 5, 9, 10, 8 ([SC-29-properties.png](SC-29-properties.png)) and Home's row reads "Leaderboard · Radar · Sectors · Inputs" ([SC-29-after.png](SC-29-after.png)). PanelScreensTests green |
 | SC-30 | Phone: Modules | ✅ | [SC-30.png](SC-30.png): unticking Sectors → Modules[2] false, "17 of 21"; "Not in iRacing" beside Damage, Track rivals, Energy |
 | SC-31 | Phone: First module | ✅ | JSON CompanionStart 0 → 1 and CompanionPage 1 at once on First module › Delta; reset to Lap times. The preview is a still picture and keeps showing the page it was taken on |
 | SC-32 | Phone: Flag display | ✅ | under E:yellow: Full screen draws "FCY" over the page ([SC-32.png](SC-32.png)); Bar → CompanionFlagFormat "band" and the still, once retaken, shows the strip at the foot ([SC-32-bar.png](SC-32-bar.png)) |
@@ -278,9 +326,9 @@ SimHub from the LD, AL and MX rows.
 
 | id | control | result | capture or proof |
 |---|---|---|---|
-| UP-01 | Available | ❌ fixed | B:old: [UP-01.png](UP-01.png) "OpenDash 0.3.0-rc.7", "You have 0.3.0-rc.1", "Needs a SimHub restart. Your settings are kept.", Download, Release notes, Every release on GitHub. The notes line first read "The candidate that has something to say when there is nothing to instrument. A dashboard is" ([UP-01-ask.png](UP-01-ask.png)), the first wrapped line of CHANGELOG's paragraph; fixed in 3089738a and re-run on a fresh rc.1 build: [UP-01.png](UP-01.png) reads the whole first sentence. UpdateWordingTests and PanelUpdatesTests green |
+| UP-01 | Available | ❌ fixed | B:old: [UP-01.png](UP-01.png) "OpenDash 0.3.0-rc.7", "You have 0.3.0-rc.1", "Needs a SimHub restart. Your settings are kept.", Download, Release notes, Every release on GitHub. The notes line first read "The candidate that has something to say when there is nothing to instrument. A dashboard is" ([UP-01-ask.png](UP-01-ask.png)), the first wrapped line of CHANGELOG's paragraph; fixed in 3089738a and re-run on a fresh rc.1 build: [UP-01.png](UP-01.png) reads the whole first sentence. UpdateWordingTests and PanelUpdatesTests green. Second pass, B:old built from a copy of the branch with VERSION 0.3.0-rc.1: [UP-01-rerun.png](UP-01-rerun.png) after Check now, "OpenDash 0.3.0-rc.7", "You have 0.3.0-rc.1", "Needs a SimHub restart. Your settings are kept.", Download, Release notes reading the whole first sentence "The candidate that has something to say when there is nothing to instrument.", Every release on GitHub, and the sidebar badge "0.3.0-rc.7" |
 | UP-02 | Up to date | ✅ | [UP-02.png](UP-02.png) B:cur, Check now: "You have the newest release, 0.3.0-rc.7." |
-| UP-03 | Unreachable | ⏭ | not run: pointing api.github.com at 127.0.0.1 in the guest's hosts file was refused by this session's permission rules. Stand-in: UpdateWordingTests / PanelUpdatesTests / DashboardInstallerTests pin "Could not reach GitHub. You have …" |
+| UP-03 | Unreachable | ⏭ | not run in either pass: pointing api.github.com at 127.0.0.1 in the guest's hosts file was refused by the session's permission rules. Stand-in: UpdateWordingTests / PanelUpdatesTests / DashboardInstallerTests pin "Could not reach GitHub. You have …" |
 | UP-04 | Check for updates off | ✅ | [UP-04.png](UP-04.png): switch off → CheckForUpdates false and Check now greys (nothing can be fetched); LastUpdateCheckTicks unchanged; switched back on |
 | UP-05 | Last checked | ✅ | [UP-02.png](UP-02.png) "Last checked today, 08:23" after Check now (guest clock) |
 | UP-06 | Download | ✅ | B:old: [UP-06-downloading.png](UP-06-downloading.png) "Downloading" with its bar (38%); [UP-06.png](UP-06.png) SimHub's "Restart SimHub to finish updating" dialog, the card "OpenDash is downloaded. Restart SimHub to finish updating." and the badge "Restart"; answered No ([UP-06-staged.png](UP-06-staged.png)). Then `bun run vm plugin --no-build --menu` with the branch build: [UP-06-after.png](UP-06-after.png) reads 0.3.0-rc.7 with no card and no badge, and the branch's own sheet fix is on screen ([SC-07-fixed.png](SC-07-fixed.png)), so it is the branch DLL that runs. The staged OpenDash.dll.pending and its swap script were then deleted by hand so that no later graceful close swaps the release in |
@@ -303,8 +351,8 @@ SimHub from the LD, AL and MX rows.
 | FL-01 | start, open | ✅ | R0, B:cur: [FL-01.png](FL-01.png) Home "Nothing to fix" with the Add a screen tile and "Add the screen your rig has." in place of Right now and Quick controls; [FL-01-screens.png](FL-01-screens.png) "No screens yet." over the tile; counts 0 everywhere; no wizard |
 | FL-02 | Add screen → restart | ✅ | R0 → Add screen → restart: Home "1 thing to fix" ([FL-02-home.png](FL-02-home.png)) → "Nothing to fix" ([FL-02.png](FL-02.png)), Right now › Screens "Rim 850 × 480" with a green dot |
 | FL-03 | start | ✅ | RF (Rim's folder deleted): [HM-04.png](HM-04.png) and [updates-1600.png](updates-1600.png) "Rim · dashboard · Missing" |
-| FL-04 | install without --menu | ⏭ | not run: every install in this run used --menu; the Additional plugins placement was not looked at |
-| FL-05 | from the VM's _Backups | ⏭ | not run: no old settings file was restored from _Backups. Stand-in: SettingsTests (migrations) green |
-| FL-06 | inject a bad settings value | ⏭ | not run: no bad settings value was injected. Stand-in: none on the VM |
+| FL-04 | install without --menu | ✅ | second pass: OpenDash taken out of the left menu (ShowInMainMenu false in PluginsActivation.json) and `bun run vm plugin --no-build` without --menu: the left menu has no OpenDash and gains "Additional plugins" ([FL-04-menu.png](FL-04-menu.png)); there the panel sits under an "OpenDash" tab, the same panel (Home, the five rows, Quick controls) a little narrower ([FL-04.png](FL-04.png)), and its pages work (FL-05 and FL-06 below were driven from it) |
+| FL-05 | from the VM's _Backups | ✅ | second pass: the oldest settings file the VM's backups hold (the share's opendash-settings-out.json, 2026-09-27, eight faces, three strips, Matrix 1, without DeltaPrecision, ClockFormat, FlagsInPitLane or the matrix layout) written with SimHub stopped. After start the file keeps all eight faces with their namespaces and folders, the three strips (namespaces LedStrip, LedopenDash090, Led393) and Matrix 1, and gains DeltaPrecision hundredths, ClockFormat 24h, FlagsInPitLane true; no [OpenDash] warning or error in the log; the panel opens ([FL-05.png](FL-05.png)) on "1 thing to fix" with all eight screens, three strips and the matrix. SettingsTests (migrations) green |
+| FL-06 | inject a bad settings value | ✅ | second pass, two values. A face with Width 0 and Height 0 ("Broken") written with SimHub stopped: SimHub starts, the installer refuses it and logs `ERROR [OpenDash] Installing OpenDash Broken failed: … mentions OpenDash.Face0x0 nowhere`, Home lists "Broken's dashboard is missing from SimHub", and Screens draws its card with "OpenDash no longer ships a 0 × 0 face. Your settings are kept." ([FL-06.png](FL-06.png)); Rig draws it too ([FL-06-rig.png](FL-06-rig.png)). No page threw, so the page-failed line ("This page could not be drawn. See SimHub's log.") was not reached; no settings value tried reaches it, since Normalise absorbs them. A value of the wrong type (`"Rig": 5`): SimHub survives and logs the Newtonsoft exception, but OpenDash starts on defaults and saves them over the file ([FL-06-unreadable.png](FL-06-unreadable.png)): see bug 5 |
 | FL-07 | change, Stop-Process -Force | ✅ | Settings › Delta precision Thousandths, then Stop-Process -Force on SimHubWPF half a second later: the settings file already held "thousandths", and after the next start still did |
 | FL-08 | display at 1280×800 | ✅ | precondition held: the display check (guiProblem) passed at 3840 × 2160 before the first click |
