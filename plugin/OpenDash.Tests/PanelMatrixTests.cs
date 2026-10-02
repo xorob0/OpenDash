@@ -122,6 +122,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.4.0", outdated.State);
             Assert.Equal("Update", outdated.Button);
             Assert.Equal(PanelButton.Primary, outdated.Style);
+            // With no matrix on the rig, Home files no update issue, the sidebar draws no dot and Updates leaves the
+            // row out: the press is still there, an outline one like Install and Reinstall, never the primary.
+            var unused = PanelMatrix.ProfileRow(FlagBoxInstallState.Outdated, "0.4.0", false);
+            Assert.Equal("Update", unused.Button);
+            Assert.Equal(PanelButton.Outline, unused.Style);
+            Assert.False(PanelUpdates.DrawsFlagBoxRow(false));
+            var noMatrix = new AttentionInput { FlagBox = FlagBoxInstallState.Outdated };
+            Assert.DoesNotContain(PanelAttention.Find(noMatrix), issue => issue.Id == PanelAttention.FlagBoxOutdated);
             var current = PanelMatrix.ProfileRow(FlagBoxInstallState.UpToDate, "0.5.0");
             Assert.Equal("Reinstall", current.Button);
             Assert.Equal(PanelButton.Outline, current.Style);
@@ -162,7 +170,7 @@ namespace OpenDashPlugin.Tests
                 Assert.Matches("^#[0-9A-F]{6}$", PanelMatrix.ProfileRow(state, null).StateHex);
             }
             // The page's own ink, never another page's table, which moved under the dot twice.
-            Assert.Contains("var action = PanelMatrix.ProfileRow(state, version); var dot = new Ellipse { Width = PanelMatrix.ProfileDotSize, Height = PanelMatrix.ProfileDotSize, Fill = Ui.Brush(action.StateHex),", FlatSource());
+            Assert.Contains("var action = PanelMatrix.ProfileRow(state, version, Settings.MatrixPanels().Any()); var dot = new Ellipse { Width = PanelMatrix.ProfileDotSize, Height = PanelMatrix.ProfileDotSize, Fill = Ui.Brush(action.StateHex),", FlatSource());
             Assert.DoesNotContain("DotHex", MatrixSource());
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(MatrixSource(), @"PanelMatrix\.ProfileRow\("));
 

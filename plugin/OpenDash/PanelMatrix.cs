@@ -43,13 +43,17 @@ namespace OpenDashPlugin
         /// every state): a current profile green, an older one purpose.status.updateAvailable as the sidebar's dot,
         /// Home and the Updates artboard draw it, a failed one red, and none purpose.status.notInstalled.
         /// </summary>
-        public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion)
+        /// <param name="hasMatrix">Whether the rig has a matrix. Without one, Home files no update issue, the
+        /// sidebar draws no dot and Updates leaves the profile's row out (PanelUpdates.DrawsFlagBoxRow), so an
+        /// older profile's Update is an outline press like Install and Reinstall rather than the page's one
+        /// primary: no page offers it as something to act on while nothing on the rig uses it.</param>
+        public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion, bool hasMatrix = true)
         {
             var installed = string.IsNullOrEmpty(installedVersion) ? Installed : installedVersion;
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(installed, Theme.StatusUpdateAvailable, Update, PanelButton.Primary);
+                    return new RowAction(installed, Theme.StatusUpdateAvailable, Update, hasMatrix ? PanelButton.Primary : PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
                     return new RowAction(installed, Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
                 case FlagBoxInstallState.Failed:

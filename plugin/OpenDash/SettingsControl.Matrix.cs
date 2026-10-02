@@ -100,7 +100,8 @@ namespace OpenDashPlugin
         {
             var state = PanelMatrix.StateOf(plan);
             var version = plan == null ? null : plan.InstalledVersion;
-            var action = PanelMatrix.ProfileRow(state, version);
+            // Primary only while the rig has a matrix, as Home, the sidebar and Updates count the profile.
+            var action = PanelMatrix.ProfileRow(state, version, Settings.MatrixPanels().Any());
             // The dot is the page's own ink for the state, the one part of the line that tells an older profile
             // from a current one: never another page's table, which has moved under it twice.
             var dot = new Ellipse
