@@ -81,7 +81,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("All four matrices are in use.", PanelMatrix.AllInUse);
             Assert.Equal("Adds a matrix.", PanelMatrix.AddTooltip);
             Assert.Equal("Renames this matrix.", PanelMatrix.RenameTooltip);
-            Assert.Equal("Removes this matrix.", PanelMatrix.RemoveTooltip);
+            // What goes with it, as the Remove sheet says it and as every other Remove hover names it
+            // ("Removes this screen, its dashboard and its settings.", "Removes this strip, its settings and its profile.").
+            Assert.Equal("Removes this matrix and its settings.", PanelMatrix.RemoveTooltip);
+            Assert.StartsWith(PanelMatrix.RemoveTooltip.Replace("this matrix", "Left pillar"), PanelMatrix.RemoveCaption("Left pillar"));
             Assert.Equal("Cancel", PanelMatrix.Cancel);
             Assert.Equal("Preview", PanelMatrix.PreviewChipsName);
             // The code's word for the chips never reaches a driver.

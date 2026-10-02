@@ -403,7 +403,9 @@ namespace OpenDashPlugin
         public const string Rename = "Rename";
         public const string RenameTooltip = "Renames this matrix.";
         public const string Remove = "Remove";
-        public const string RemoveTooltip = "Removes this matrix.";
+        /// <summary>Remove's hover: what goes with the matrix, as <see cref="RemoveCaption"/> says it in the sheet
+        /// and as the Screens and LEDs pages' Remove hovers name what goes with theirs.</summary>
+        public const string RemoveTooltip = "Removes this matrix and its settings.";
 
         public static string RenameTitle(string name)
         {
