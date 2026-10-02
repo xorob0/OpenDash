@@ -543,17 +543,18 @@ namespace OpenDashPlugin
             showUnits(units);
             settingsUnitsFollow.Add(showUnits);
 
+            // Each live row under its own anchor, which its search entry lands on (PanelSettings.Search).
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
-                SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),
-                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))),
-                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),
-                SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),
-                SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),
-                Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName),
-                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)), PanelSettings.AnchorPosition),
+                Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))), PanelSettings.AnchorDelta),
+                Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))), PanelSettings.AnchorDeltaPrecision),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)), PanelSettings.AnchorSession),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)), PanelSettings.AnchorDriverNames),
+                Ui.Anchor(Ui.Row(PanelDataTab.TeamNameTitle, PanelDataTab.TeamNameCaption, teamName), PanelSettings.AnchorTeamNames),
+                Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle, PanelDataTab.ClockCaption, clock))), PanelSettings.AnchorClock),
                 Ui.Soon(Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title, fuelTarget), PanelSoon.FuelTargetPerLap),
                 Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.TyreDisplay.Title, tyres)), PanelSoon.TyreDisplay),
-                SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)));
+                Ui.Anchor(SettingsNew(Ui.Row(PanelSettings.UnitsTitle, PanelSettings.UnitsCaption, unitsLine)), PanelSettings.AnchorUnits));
         }
 
         // --- Flags -----------------------------------------------------------------------------------
@@ -574,9 +575,9 @@ namespace OpenDashPlugin
                 Save();
             });
             return PageSection(PanelSettings.FlagsTitle, true, PanelKit.SectionHeadingGapSettings,
-                SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.BlueFlagTitle, PanelDataTab.BlueFlagCaption, blueFlag)), PanelSettings.AnchorBlueFlag),
                 Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon.YellowFlags.Title, SettingsGreyedChoice(PanelSettings.YellowFlagLabels))), PanelSoon.YellowFlags),
-                Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()));
+                Ui.Anchor(Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag()), PanelSettings.AnchorFlagsInPitLane));
         }
 
         // --- Alerts ----------------------------------------------------------------------------------
@@ -723,7 +724,9 @@ namespace OpenDashPlugin
                 under.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
                 nameCell.Children.Add(under);
             }
-            SettingsAlertCell(grid, row, column++, nameCell, soon, false);
+            var nameBox = SettingsAlertCell(grid, row, column++, nameCell, soon, false);
+            // A live alert's search entry lands on its row, through its name cell.
+            if (alert.Anchor != null) Ui.Anchor(nameBox, alert.Anchor);
 
             // Every row draws a box, Pit window open's too, which has no word before it and no unit after, as
             // the artboard draws it; a greyed row's is disabled inside the row's Soon.
@@ -921,9 +924,9 @@ namespace OpenDashPlugin
 
             return PageSection(PanelSettings.LightingTitle, true, PanelKit.SectionHeadingGapSettings,
                 card,
-                SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)),
-                SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)),
-                Ui.Row(PanelSettings.NightModeTitle, null, nightMode),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelSettings.BrightnessTitle, PanelSettings.BrightnessCaption, brightness)), PanelSettings.AnchorBrightness),
+                Ui.Anchor(SettingsFit(Ui.Row(PanelSettings.NightBrightnessTitle, null, nightBrightness)), PanelSettings.AnchorNightBrightness),
+                Ui.Anchor(Ui.Row(PanelSettings.NightModeTitle, null, nightMode), PanelSettings.AnchorNightMode),
                 // SimHub's trigger name sets the chip's width, so the row stacks like the sliders above it.
                 SettingsFit(SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))),
                 Ui.SoonRow(PanelSoon.SimTimeOfDay),
