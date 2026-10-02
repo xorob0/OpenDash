@@ -108,7 +108,14 @@ namespace OpenDashPlugin
             heading.TextTrimming = TextTrimming.CharacterEllipsis;
             head.Children.Add(heading);
 
-            var bodyHost = new Border { Padding = new Thickness(PanelShell.SheetPaddingX, 0, PanelShell.SheetPaddingX, PanelShell.SheetBodyPaddingBottom), Child = body };
+            // Top, not the default stretch: a ScrollViewer arranges its content at least as tall as the
+            // viewport, so a body of one line of prose (Ui.Text centres itself) sat halfway down the sheet.
+            var bodyHost = new Border
+            {
+                Padding = new Thickness(PanelShell.SheetPaddingX, 0, PanelShell.SheetPaddingX, PanelShell.SheetBodyPaddingBottom),
+                VerticalAlignment = VerticalAlignment.Top,
+                Child = body,
+            };
             // Not a tab stop of its own: WPF's ScrollViewer is focusable by default, which put an invisible
             // stop with the default focus visual before the body's first control.
             var scroll = new ScrollViewer
