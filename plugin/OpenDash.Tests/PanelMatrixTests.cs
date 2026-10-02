@@ -549,6 +549,17 @@ namespace OpenDashPlugin.Tests
             }
             // Every sheet's Cancel closes it.
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("cancel.Click += (sender, args) => CloseSheet();")).Count);
+            // A double-click on Cancel: the first press closes the sheet through CloseSheet, which marks the sheet
+            // moved, and the shell drops the second press on the control's root (SettingsControl.Sheet.cs, #523),
+            // so it never reaches a control the sheet hid. Cancel has no other handler and no guard of its own,
+            // and closes the sheet no other way.
+            Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("cancel.Click +=")).Count);
+            Assert.DoesNotContain("cancel.Preview", flat);
+            var sheetFlat = System.Text.RegularExpressions.Regex.Replace(
+                RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Sheet.cs")), @"\s+", " ");
+            Assert.Contains("private void CloseSheet() { CloseSheet(restoreFocus: true); }", sheetFlat);
+            Assert.Contains("sheetLayer.Visibility = Visibility.Collapsed; sheetPanel.Child = null; SheetMoved();", sheetFlat);
+            Assert.Contains("if (PanelShell.SheetSwallowsPress(sheetMoved, args.ClickCount)) { args.Handled = true; return; }", sheetFlat);
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(matrix, @"\}, PanelKit\.SegmentedHeightMatrix\);").Count);
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(matrix, @"Ui\.Button\(PanelMatrix\.Cancel, PanelButtonKind\.Ghost, PanelButtonSize\.Large\)").Count);
         }
@@ -805,6 +816,8 @@ namespace OpenDashPlugin.Tests
         {
             // Titled by the card's state (#524, ruling 8); the matrix number is in the Content step.
             Assert.Equal("Not shown in SimHub", PanelMatrix.FixTitle);
+            Assert.Equal(PanelMatrix.NotShown, PanelMatrix.FixTitle);
+            Assert.Equal(PanelMatrix.NotShown, PanelMatrix.CardLine("Left pillar", 2, "left", false));
             var steps = PanelMatrix.FixSteps(2, "OpenDash Flag box");
             Assert.Equal(3, steps.Count);
             Assert.Equal(new[] { "Devices", "your matrix" }, steps[0]);
