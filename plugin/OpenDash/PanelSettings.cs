@@ -212,8 +212,10 @@ namespace OpenDashPlugin
 
         /// <summary>Below this much content a row's control goes under its title rather than beside it. The
         /// widest row is the greyed Colour vision: its four options beside its title and Soon tag need about
-        /// 510, measured with Barlow's advances, so 560 clears it by about 50. Next are Colours and Theme at
-        /// about 410 and the driver names' four examples at about 430.</summary>
+        /// 510, measured with Barlow's advances, so 560 clears it by about 50. Next are Night brightness at
+        /// about 455, its title beside the sliders' fixed 320, and the driver names' four examples at about
+        /// 430, then Theme, Colours and Name at about 420 and Brightness at about 415: past Colour vision, a
+        /// wider slider is the next thing to push a row over the threshold.</summary>
         public const double StackControlsBelow = 560;
 
         /// <summary>Between a title and the control stacked under it.</summary>
