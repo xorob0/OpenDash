@@ -464,7 +464,8 @@ namespace OpenDashPlugin.Tests
             Assert.Matches(@"var all = new List<UIElement> \{ SettingsIndex\(sections, to\) \};\s*all\.AddRange\(sections\);", page);
             Assert.Contains("return PageLayout(PanelSettings.Title, null, all.ToArray());", page);
             // A link for every section from the first, each kept, to be lit, and drawn in the row's wrap, which
-            // is what the row's border holds.
+            // is what the row's border holds: a row, wrapping onto a second line where the six do not fit.
+            Assert.Contains("var wrap = new WrapPanel { Orientation = Orientation.Horizontal };", page);
             Assert.Matches(Lines(
                 "for (var i = 0; i < PanelSettings.SectionTitles.Length; i++)",
                 "{",
@@ -654,6 +655,10 @@ namespace OpenDashPlugin.Tests
             // ...and lets go once it has scrolled out of view, below it or above it.
             Assert.Equal(3, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, 10, 800, 1300 }, PanelSettings.IndexReadLine, 700, false, 4));
             Assert.Equal(5, PanelSettings.CurrentSection(new double[] { -3000, -2500, -2000, -1500, -100, 20 }, PanelSettings.IndexReadLine, 700, false, 4));
+            // Above the top, the hold lasts until the heading is a read line past it: nudged 20 up it still
+            // holds, even at the foot; 40 up, past the 36, it lets go.
+            Assert.Equal(4, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, -20, 500 }, PanelSettings.IndexReadLine, 700, true, 4));
+            Assert.Equal(5, PanelSettings.CurrentSection(new double[] { -2000, -1500, -900, -400, -40, 500 }, PanelSettings.IndexReadLine, 700, true, 4));
             Assert.Equal(0, PanelSettings.CurrentSection(new double[0], PanelSettings.IndexReadLine, 700, false, -1));
             Assert.Equal(0, PanelSettings.CurrentSection(null, PanelSettings.IndexReadLine, 700, true, 2));
         }
@@ -712,6 +717,25 @@ namespace OpenDashPlugin.Tests
             // its foot marks the short last section.
             Assert.Matches(@"var current = PanelSettings\.CurrentSection\(tops, PanelSettings\.IndexReadLine, scroll\.ViewportHeight, atEnd, held\);\s*if \(current != held\) held = -1;\s*mark\(current\);", page);
             Assert.Contains("var atEnd = scroll.ScrollableHeight > 0 && scroll.VerticalOffset >= scroll.ScrollableHeight - 1;", page);
+
+            // What those calls are fed: the route's own anchor, so a search or a Home fix landing on Flags marks
+            // Flags; each section's top as its distance down from the top of the view, so the mark follows the
+            // scroll and a press's jump lands its heading the margin under the top; and a jump to a section the
+            // scroller cannot measure brings it into view instead.
+            Assert.Contains("var anchor = to == null ? null : to.Anchor;", page);
+            Assert.Matches(Lines(
+                "if (!section.IsVisible) return double.MaxValue;",
+                "try",
+                "{",
+                "return section.TranslatePoint(new Point(0, 0), scroll).Y;"), page);
+            Assert.Matches(Lines(
+                "var top = scroll == null ? double.MaxValue : SettingsTopIn(scroll, section);",
+                "if (top == double.MaxValue)",
+                "{",
+                "section.BringIntoView();",
+                "return;",
+                "}",
+                "scroll.ScrollToVerticalOffset(Math.Max(0, scroll.VerticalOffset + top - PanelSettings.IndexJumpMargin));"), page);
         }
 
         [Fact]
