@@ -254,7 +254,7 @@ namespace OpenDashPlugin.Tests
             {
                 new[]
                 {
-                    "SettingsFit(Ui.Row(PanelDataTab.PositionTitle,", "SettingsFit(Ui.Row(PanelDataTab.DeltaTitle,",
+                    "SettingsFit(Ui.Row(PanelDataTab.PositionTitle,", "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle,",
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", "SettingsFit(Ui.Row(PanelDataTab.SessionTitle,",
                     "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle,", "Ui.Row(PanelDataTab.TeamNameTitle,",
                     "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", "Ui.SettingRow(PanelSoon.FuelTargetPerLap.Title,",
@@ -410,7 +410,9 @@ namespace OpenDashPlugin.Tests
         /// landed after v0.3.0-rc.7, the tagged release, although no artboard tags them: delta precision
         /// (#322), the clock (#324), the night-mode button, whose action rc.7 does not register, and the Units
         /// line, which rc.7's panel never drew: nothing in it read SimHub's GameUnitSettings. A read-only row
-        /// is no exception, since what the tag says is that the row is new.
+        /// is no exception, since what the tag says is that the row is new. Nor is an old row that gained an
+        /// answer: rc.7's Delta reference offered session and all-time best only, and Last lap (#322) is
+        /// something rc.7 cannot do, so the row carries New for it.
         /// </summary>
         [Fact]
         public void New_marks_what_the_artboards_tag_and_what_rc7_lacks()
@@ -419,6 +421,9 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.SettingRow(PanelSettings.FlagsInPitLaneTitle, flagsInPitLane, null, Ui.NewTag())", page);
             Assert.Contains("Ui.Heading(PanelSettings.AlertsTitle, true), Ui.NewTag()", page);
             Assert.Contains("Ui.HStack(PanelSettings.TitleTagGap, Ui.Eyebrow(PanelSettings.PreviewTitle), Ui.NewTag())", page);
+            Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))", page);
+            // rc.7 had the first two; the third is the one the tag is for.
+            Assert.Equal(new[] { "session", "alltime", "lastlap" }, Contract.DeltaReferences);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelDataTab.ClockTitle,", page);
             Assert.Contains("SettingsNew(Ui.Row(PanelSettings.NightModeButtonTitle, null, SettingsBindingKey(Contract.ToggleNightModeAction)))", page);
@@ -1105,7 +1110,7 @@ namespace OpenDashPlugin.Tests
             foreach (var row in new[]
             {
                 "SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),",
-                "SettingsFit(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta)),",
+                "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))),",
                 "SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),",
                 "SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),",
                 "SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),",

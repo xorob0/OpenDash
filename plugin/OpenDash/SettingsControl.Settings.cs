@@ -319,7 +319,9 @@ namespace OpenDashPlugin
         /// <remarks>
         /// New marks what the shipped plugin cannot do, for one release. Delta precision (#322), the clock
         /// (#324), the night-mode action the button row binds and the Units row landed after v0.3.0-rc.7,
-        /// whose contract has none of the first three and whose panel never read SimHub's units.
+        /// whose contract has none of the first three and whose panel never read SimHub's units. The Delta
+        /// reference row is rc.7's, but its third answer, Last lap, is not: rc.7's references are session and
+        /// all-time only, so the row carries New for the choice it gained (#322).
         /// </remarks>
         private static Border SettingsNew(Border row)
         {
@@ -543,7 +545,7 @@ namespace OpenDashPlugin
 
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
                 SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)),
-                SettingsFit(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta)),
+                SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))),
                 SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))),
                 SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)),
                 SettingsFit(Ui.Row(PanelDataTab.DriverNameTitle, PanelDataTab.DriverNameCaption, driverName)),

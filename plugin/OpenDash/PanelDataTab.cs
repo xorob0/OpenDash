@@ -71,7 +71,8 @@ namespace OpenDashPlugin
         /// <remarks>
         /// "Last lap" is the canvas's own name for that lap, the one the Last lap card and the Lap times
         /// page draw, so the row names a lap the driver has already seen a time for rather than
-        /// inventing a word for it. The Settings artboard draws all three segments (#322).
+        /// inventing a word for it. The Settings artboard draws all three segments (#322). v0.3.0-rc.7
+        /// offered only the first two, so the Settings page tags the row New for the third.
         /// </remarks>
         public static readonly string[] DeltaLabels = { "Session best", "All-time best", "Last lap" };
 
