@@ -765,6 +765,8 @@ namespace OpenDashPlugin.Tests
             // The canvas grows to hold them, the last row clear of the hint.
             Assert.Equal(placed["matrix:1"].Y + PanelRigMap.FootprintHeight(placed["matrix:1"]) + PanelRigMap.HintClear, height);
             Assert.True(height > PanelRigMap.CanvasHeight);
+            // And the frame is drawn that tall, not the 580 that would clip the matrices off its foot.
+            Assert.Equal(height, PanelRigMap.Plan(Rig(), 600).DrawnHeight);
         }
 
         [Fact]
@@ -985,6 +987,9 @@ namespace OpenDashPlugin.Tests
         {
             // The room in the tiles' own pixels is never under the canvas's height, whatever it is drawn at.
             Assert.True(plan.Height >= PanelRigMap.CanvasHeight, label);
+            // The frame is the 580, or the room as drawn where that is taller: a frame held to the 580 under
+            // a taller room clipped its lower tiles out of reach.
+            Assert.Equal(Math.Max(PanelRigMap.CanvasHeight, plan.Height * plan.Scale), plan.DrawnHeight, 9);
             Assert.InRange(plan.Scale, PanelRigMap.MinScale, 1);
             if (plan.Scale > PanelRigMap.MinScale + 1e-9)
             {
@@ -1276,6 +1281,21 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_device_added_under_a_shrunk_arrangement_clears_the_hint_as_drawn()
+        {
+            // Arranged in a 4K window and planned in the artboard's: the room is drawn shrunk, so the hint's
+            // clearance is HintClear on the screen, which is more of the room's own pixels.
+            var settings = Rig();
+            PanelRigMap.SavePlaces(settings, PanelRigMap.Plan(settings, 3534).Tiles);
+            settings.AddLedBar("4-12-4", "Pedals", LedBar.ArduinoDevice);
+            var plan = PanelRigMap.Plan(settings, 877);
+            Assert.True(plan.Scale < 1);
+            Inside(plan, 877, "877");
+            var added = plan.Tiles.Single(t => t.Id == "led:LedPedals");
+            Assert.Equal(added.Y + PanelRigMap.FootprintHeight(added) + PanelRigMap.HintClear / plan.Scale, plan.Height, 9);
+        }
+
+        [Fact]
         public void A_screen_tile_is_the_screen_a_drop_keeps()
         {
             var settings = Rig();
@@ -1473,6 +1493,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(phone));
             phone.CompanionStart = 3;
             Assert.Equal(Modules.All[3].Name, PanelRigMap.CompanionIdle(phone));
+            // A start the modules do not have is the default's, rather than an index past the list.
+            foreach (var start in new[] { -1, Modules.All.Count })
+            {
+                phone.CompanionStart = start;
+                Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(phone));
+            }
+            Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(null));
         }
 
         [Fact]
@@ -1884,9 +1911,23 @@ namespace OpenDashPlugin.Tests
             Assert.NotEqual(standing, PanelRigMap.PitWallState(portrait));
 
             Assert.Equal(string.Empty, PanelRigMap.PitWallState(null));
+            // A face is watched by the pages its zones are on, which a wheel button moves.
+            var main = settings.ScreenByNamespace("MainDash");
+            main.Face = new FaceSettings();
+            main.Face.Normalise();
+            var face = PanelRigMap.Tiles(settings).Single(t => t.Id == "MainDash");
+            var paged = PanelRigMap.LiveState(settings, face);
+            Assert.NotNull(paged);
+            Assert.Equal(PanelRigMap.FaceState(main), paged);
+            main.Face.Zones[0] = main.Face.Zones[0] == 2 ? 3 : 2;
+            Assert.NotEqual(paged, PanelRigMap.LiveState(settings, face));
+            Assert.Equal(PanelRigMap.FaceState(main), PanelRigMap.LiveState(settings, face));
+
             // A tile that draws nothing a glance moves is not watched.
             Assert.Null(PanelRigMap.LiveState(settings, Tile(RigTileKind.Strip, "strip")));
             Assert.Null(PanelRigMap.LiveState(settings, Tile(RigTileKind.Matrix, "matrix")));
+            Assert.Null(PanelRigMap.LiveState(settings, PanelRigMap.Tiles(settings).Single(t => t.Kind == RigTileKind.Round)));
+            Assert.Null(PanelRigMap.LiveState(settings, PanelRigMap.Tiles(settings).Single(t => t.Kind == RigTileKind.Companion)));
         }
 
         [Fact]
