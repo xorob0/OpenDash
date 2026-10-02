@@ -93,10 +93,7 @@ namespace OpenDashPlugin
             /// between plans from the move rather than drawing the tile back where it was.</summary>
             public RigTile Pending { get; set; }
 
-            /// <summary>The scroller the room scrolls across in, or null where the room fits the canvas; the
-            /// room's offset in it (the focus ring's outset), and the scale it is drawn at.</summary>
-            public ScrollViewer Scroller { get; set; }
-            public double Inset { get; set; }
+            /// <summary>The scale the room is drawn at, which a tile's focus ring is measured against.</summary>
             public double Scale { get; set; }
         }
 
@@ -274,8 +271,6 @@ namespace OpenDashPlugin
                 };
                 scroller.PreviewMouseWheel += RigPassWheel;
                 RigKeepScroll(scroller, extent);
-                extent.Scroller = scroller;
-                extent.Inset = outset;
                 // The scroller fills the frame, so its bar lies along the frame's foot.
                 frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;
                 // The hint stands above the bar and the room's outset over it, behind the scroller, which is
@@ -321,18 +316,6 @@ namespace OpenDashPlugin
                 if (!restored || !extent.Live) return;
                 rigScrollX = scroller.HorizontalOffset;
             };
-        }
-
-        /// <summary>Scrolls a canvas that scrolls across so the tile in the hand stays in view: a tile dragged
-        /// past the scroller's edge is otherwise dropped where nobody can see it.</summary>
-        private static void RigFollow(FrameworkElement root, RigExtent extent)
-        {
-            var scroller = extent.Scroller;
-            if (scroller == null) return;
-            var left = extent.Inset + Canvas.GetLeft(root) * extent.Scale;
-            var right = left + root.Width * extent.Scale;
-            if (left < scroller.HorizontalOffset) scroller.ScrollToHorizontalOffset(left);
-            else if (right > scroller.HorizontalOffset + scroller.ViewportWidth) scroller.ScrollToHorizontalOffset(right - scroller.ViewportWidth);
         }
 
         /// <summary>The wheel over a canvas that scrolls across goes on to the page: the canvas's scroller
@@ -436,10 +419,11 @@ namespace OpenDashPlugin
             Canvas.SetTop(root, tile.Y);
             // The Thumb is focusable for the arrow keys, so a press focuses it, and focus brings a tile into view
             // after the Thumb has taken its grip: a tile half out of view would scroll the page and jump that far
-            // on the first move. Only the keyboard's focus scrolls to a tile.
+            // on the first move. Only the keyboard's focus, and the drop (showing), scroll to a tile.
+            var showing = false;
             root.RequestBringIntoView += (sender, args) =>
             {
-                if (Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
+                if (!showing && Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
             };
 
             var moved = false;
@@ -463,7 +447,10 @@ namespace OpenDashPlugin
                 moved = true;
                 Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
                 Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
-                RigFollow(root, extent);
+                // Nothing scrolls here. The Thumb reports the pointer against the tile, so a scroll that slid
+                // the tile under a pointer that had not moved came back as the next move: a tile followed past
+                // a scroller's edge ran away from the pointer, a scroll and a jump on every event. The drop
+                // brings it into view instead.
             };
             // Saved on the drop, never in End(): SimHub is force-killed on the VM. A drag that is cancelled --
             // the capture lost, or the build replaced under it -- is no drop: the tile goes back.
@@ -482,6 +469,11 @@ namespace OpenDashPlugin
                 }
                 if (!moved) return;
                 RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
+                // A tile dropped past the canvas's scrolled edge, or below the fold where the rows run down the
+                // page, is brought into view with its focus ring, across the canvas and down the page alike.
+                showing = true;
+                root.BringIntoView(RigRingBounds(root, extent));
+                showing = false;
                 RigDrop(tile, views);
             };
             // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when

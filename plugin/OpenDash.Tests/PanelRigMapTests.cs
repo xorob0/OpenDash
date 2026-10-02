@@ -282,8 +282,6 @@ namespace OpenDashPlugin.Tests
                 "Content = canvas,",
                 "scroller.PreviewMouseWheel += RigPassWheel;",
                 "RigKeepScroll(scroller, extent);",
-                "extent.Scroller = scroller;",
-                "extent.Inset = outset;",
                 // The scroller fills the frame, so its bar is along the frame's foot.
                 "frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;",
                 // The hint above the bar and the outset, behind the scroller.
@@ -308,9 +306,6 @@ namespace OpenDashPlugin.Tests
             // A rebuild draws a canvas that scrolls across where it was scrolled to, and only the build that
             // is the page's keeps the place.
             InOrder(RigMethod("private void RigKeepScroll("), "var restore = rigScrollX;", "scroller.Loaded +=", "scroller.ScrollToHorizontalOffset(restore);", "scroller.ScrollChanged +=", "if (!restored || !extent.Live) return;", "rigScrollX = scroller.HorizontalOffset;");
-            // The tile in the hand is kept in view as it is dragged past the scroller's edge.
-            InOrder(RigMethod("private static void RigFollow("), "if (scroller == null) return;", "var left = extent.Inset + Canvas.GetLeft(root) * extent.Scale;", "var right = left + root.Width * extent.Scale;",
-                "if (left < scroller.HorizontalOffset) scroller.ScrollToHorizontalOffset(left);", "else if (right > scroller.HorizontalOffset + scroller.ViewportWidth) scroller.ScrollToHorizontalOffset(right - scroller.ViewportWidth);");
             Assert.Equal(1, canvas.Split("OnDrop(").Length - 1);
             InOrder(RigMethod("private static void RigPassWheel("), "if (args.Handled) return;", "args.Handled = true;", "parent.RaiseEvent(", "RoutedEvent = UIElement.MouseWheelEvent");
             // The empty rig's press goes to Screens, named as the attention rows name the page; the hint is in
@@ -345,10 +340,17 @@ namespace OpenDashPlugin.Tests
                 "if (!moved && Math.Abs(args.HorizontalChange) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(args.VerticalChange) < SystemParameters.MinimumVerticalDragDistance) return;",
                 "moved = true;",
                 "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)",
-                "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)",
-                "RigFollow(root, extent);");
+                "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)");
+            // Nothing scrolls while the tile is in the hand: the Thumb reports the pointer against the tile,
+            // so a scroll under a still pointer came back as the next move and the tile ran away (#527).
+            foreach (var scroll in new[] { "BringIntoView", "ScrollTo", "Offset", "RigFollow" }) Assert.DoesNotContain(scroll, delta);
+            Assert.DoesNotContain("RigFollow", tile);
+            Assert.DoesNotContain("RigFollow", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
             InOrder(Handler(tile, "thumb.DragStarted +="), "moved = false;");
-            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
+            // The drop brings the tile into view with its ring, across the canvas and down the page, through
+            // the guard that keeps a press from scrolling.
+            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);",
+                "showing = true;", "root.BringIntoView(RigRingBounds(root, extent));", "showing = false;", "RigDrop(tile, views);");
             InOrder(Handler(tile, "thumb.DragStarted +="), "startLeft = Canvas.GetLeft(root);", "startTop = Canvas.GetTop(root);");
             // The tile is built where the plan puts it, its picture painted in the build's scenario, and its
             // view repaints it: the chips reach it through that.
@@ -402,7 +404,9 @@ namespace OpenDashPlugin.Tests
             InOrder(place, "var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);", "var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);");
             Assert.DoesNotContain("Snap(", place);
             // A press does not scroll the page to the tile under it.
-            InOrder(Handler(tile, "root.RequestBringIntoView +="), "Mouse.LeftButton == MouseButtonState.Pressed", "args.Handled = true;");
+            InOrder(tile, "var showing = false;", "root.RequestBringIntoView +=");
+            InOrder(Handler(tile, "root.RequestBringIntoView +="), "if (!showing && Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;");
+            Assert.Equal(1, tile.Split("showing = true;").Length - 1);
             // A wheel button pages a face's zones, and the quick glance a face's or a pit wall's, with no save
             // and no rebuild, so the clock repaints the tile.
             InOrder(tile, "var seen = PanelRigMap.LiveState(Settings, tile);", "if (seen != null)", "OnTick(", "var now = PanelRigMap.LiveState(Settings, tile);", "if (now == seen) return;", "seen = now;", "paint(rigScenario);");
