@@ -17,6 +17,7 @@ using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
 
 namespace OpenDashPlugin
 {
@@ -405,19 +406,56 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>SimHub's own version, off its executable, or null.</summary>
+        /// <summary>
+        /// SimHub's own version as the report says it: its install entry's, and only without one the file version
+        /// of its executable, which SimHub 9.12.6 stamps 1.0.0.0 (#641). PanelUpdates.SimHubVersion says which.
+        /// </summary>
         private static string UpdatesSimHubVersion(string root)
         {
-            try
+            var installed = PanelUpdates.SimHubInstalledVersion(UpdatesUninstallEntries(), root);
+            string fileVersion = null;
+            if (string.IsNullOrWhiteSpace(installed))
             {
-                var exe = Path.Combine(root ?? string.Empty, PanelUpdates.SimHubExe);
-                return File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;
+                try
+                {
+                    var exe = Path.Combine(root ?? string.Empty, PanelUpdates.SimHubExe);
+                    fileVersion = File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("Could not read SimHub's version: " + ex.Message);
+                }
             }
-            catch (Exception ex)
+            return PanelUpdates.SimHubVersion(installed, fileVersion);
+        }
+
+        /// <summary>Windows' list of installed programs, both hives of it; empty where the registry cannot be read.</summary>
+        private static IList<UninstallEntry> UpdatesUninstallEntries()
+        {
+            var entries = new List<UninstallEntry>();
+            foreach (var path in PanelUpdates.UninstallKeys)
             {
-                Log.Warn("Could not read SimHub's version: " + ex.Message);
-                return null;
+                try
+                {
+                    using (var list = Registry.LocalMachine.OpenSubKey(path))
+                    {
+                        if (list == null) continue;
+                        foreach (var name in list.GetSubKeyNames())
+                        {
+                            using (var entry = list.OpenSubKey(name))
+                            {
+                                if (entry == null) continue;
+                                entries.Add(new UninstallEntry(entry.GetValue("DisplayName") as string, entry.GetValue("DisplayVersion") as string, entry.GetValue("InstallLocation") as string));
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("Could not read the installed programs for SimHub's version: " + ex.Message);
+                }
             }
+            return entries;
         }
 
         /// <summary>The last OpenDash lines of SimHub's current log, read beside SimHub, which holds it open.</summary>

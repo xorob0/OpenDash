@@ -84,6 +84,21 @@ namespace OpenDashPlugin
         public string State { get; private set; }
     }
 
+    /// <summary>One entry of Windows' list of installed programs, as much of it as the support report reads.</summary>
+    public sealed class UninstallEntry
+    {
+        public UninstallEntry(string displayName, string displayVersion, string installLocation)
+        {
+            DisplayName = displayName;
+            DisplayVersion = displayVersion;
+            InstallLocation = installLocation;
+        }
+
+        public string DisplayName { get; private set; }
+        public string DisplayVersion { get; private set; }
+        public string InstallLocation { get; private set; }
+    }
+
     /// <summary>What the support report is made of, gathered by the page at the press.</summary>
     public sealed class UpdatesReportInput
     {
@@ -1426,8 +1441,67 @@ namespace OpenDashPlugin
                 + (fetched.HasValue ? " (fetched " + fetched.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ")" : string.Empty);
         }
 
-        /// <summary>SimHub's executable, under its own folder, whose file version is the report's SimHub version.</summary>
+        /// <summary>
+        /// SimHub's executable, under its own folder, whose file version the report falls back to when SimHub's
+        /// install entry is not found. SimHub 9.12.6 stamps it, and every assembly attribute, 1.0.0.0 (#641).
+        /// </summary>
         public const string SimHubExe = "SimHubWPF.exe";
+
+        /// <summary>
+        /// Where Windows lists what is installed, each a key under HKEY_LOCAL_MACHINE: SimHub's installer is 32-bit,
+        /// so its entry is under WOW6432Node, and the 64-bit list is read after it. The entry's DisplayVersion is
+        /// SimHub's version as its own status bar shows it ("9.12.6"); its DisplayName on the test VM is
+        /// "SimHub version 9.12.6" (#641).
+        /// </summary>
+        public static readonly string[] UninstallKeys =
+        {
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        };
+
+        /// <summary>The report's SimHub version when neither the install entry nor the executable names one.</summary>
+        public const string SimHubVersionNotFound = "version not found";
+
+        /// <summary>
+        /// SimHub's version off the install entries Windows lists, or null: the entry SimHub's installer wrote,
+        /// whose DisplayName is "SimHub" or "SimHub version 9.12.6", and among several (an install moved, or one
+        /// left behind) the one whose InstallLocation is the SimHub this plugin runs in.
+        /// </summary>
+        public static string SimHubInstalledVersion(IEnumerable<UninstallEntry> entries, string root)
+        {
+            var simHub = (entries ?? Enumerable.Empty<UninstallEntry>())
+                .Where(entry => entry != null && IsSimHubName(entry.DisplayName) && !string.IsNullOrWhiteSpace(entry.DisplayVersion))
+                .ToList();
+            var chosen = simHub.FirstOrDefault(entry => SameFolder(entry.InstallLocation, root)) ?? simHub.FirstOrDefault();
+            return chosen == null ? null : chosen.DisplayVersion.Trim();
+        }
+
+        /// <summary>
+        /// The report's SimHub version: the install entry's when there is one. Without it, the executable's file
+        /// version, said to be that, unless it is the 1.0.0.0 (or 0.0.0.0) SimHub stamps every build with, which
+        /// names no release; and otherwise <see cref="SimHubVersionNotFound"/>.
+        /// </summary>
+        public static string SimHubVersion(string installed, string fileVersion)
+        {
+            if (!string.IsNullOrWhiteSpace(installed)) return installed.Trim();
+            var file = fileVersion == null ? string.Empty : fileVersion.Trim();
+            if (file.Length == 0 || file == "1.0.0.0" || file == "0.0.0.0") return SimHubVersionNotFound;
+            return file + ", read from " + SimHubExe;
+        }
+
+        private static bool IsSimHubName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            var trimmed = name.Trim();
+            return string.Equals(trimmed, "SimHub", StringComparison.OrdinalIgnoreCase)
+                || trimmed.StartsWith("SimHub version ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool SameFolder(string a, string b)
+        {
+            if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
+            return string.Equals(a.Trim().TrimEnd('\\', '/'), b.Trim().TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+        }
 
         /// <summary>Where SimHub writes its log, under its own folder: Logs\SimHub.txt is the current one and
         /// SimHub.N.txt the rotations (docs/testing-vm.md).</summary>

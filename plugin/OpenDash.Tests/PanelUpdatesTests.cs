@@ -1705,6 +1705,56 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("unknown", PanelUpdates.CarTables(null, null));
         }
 
+        /// <summary>
+        /// The report names SimHub by the version its installer recorded (#641): SimHubWPF.exe's file version is
+        /// 1.0.0.0 in 9.12.6, and a report that said so sent a reader after the wrong release.
+        /// </summary>
+        [Fact]
+        public void The_report_names_SimHub_by_its_install_entry_and_says_when_it_could_not()
+        {
+            // The 32-bit list first, where SimHub's installer writes, then the 64-bit one.
+            Assert.Equal(new[]
+            {
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            }, PanelUpdates.UninstallKeys);
+
+            const string Root = @"C:\Program Files (x86)\SimHub\";
+            // The entry as the test VM has it, among programs that are not SimHub.
+            var vm = new[]
+            {
+                new UninstallEntry("Microsoft Visual C++ 2015 Redistributable", "14.0.24215", null),
+                new UninstallEntry("SimHub version 9.12.6", "9.12.6", Root),
+                new UninstallEntry("SimHub Lovely plugin", "2.0.0", Root),
+            };
+            Assert.Equal("9.12.6", PanelUpdates.SimHubInstalledVersion(vm, Root));
+            Assert.Equal("9.12.6", PanelUpdates.SimHubInstalledVersion(new[] { new UninstallEntry("SimHub", " 9.12.6 ", null) }, Root));
+            // Two installs listed: the one this SimHub runs from, whatever its trailing separator or case.
+            var two = new[]
+            {
+                new UninstallEntry("SimHub version 9.9.5", "9.9.5", @"D:\Old SimHub"),
+                new UninstallEntry("SimHub version 9.12.6", "9.12.6", @"c:\program files (x86)\simhub"),
+            };
+            Assert.Equal("9.12.6", PanelUpdates.SimHubInstalledVersion(two, Root));
+            // No entry, an entry with no version, or a list that could not be read.
+            Assert.Null(PanelUpdates.SimHubInstalledVersion(new[] { vm[0], vm[2] }, Root));
+            Assert.Null(PanelUpdates.SimHubInstalledVersion(new[] { new UninstallEntry("SimHub version 9.12.6", " ", Root) }, Root));
+            Assert.Null(PanelUpdates.SimHubInstalledVersion(null, Root));
+
+            // The words: the entry's version as it is; the file version only without an entry, and said to be it;
+            // never 1.0.0.0, which names no release.
+            Assert.Equal("9.12.6", PanelUpdates.SimHubVersion("9.12.6", "1.0.0.0"));
+            Assert.Equal("9.9.5.0, read from SimHubWPF.exe", PanelUpdates.SimHubVersion(null, "9.9.5.0"));
+            Assert.Equal("version not found", PanelUpdates.SimHubVersion(null, "1.0.0.0"));
+            Assert.Equal("version not found", PanelUpdates.SimHubVersion(" ", "0.0.0.0"));
+            Assert.Equal("version not found", PanelUpdates.SimHubVersion(null, null));
+            Assert.Equal(PanelUpdates.SimHubVersionNotFound, PanelUpdates.SimHubVersion(null, ""));
+
+            // And so the report's line.
+            var report = PanelUpdates.Report(new UpdatesReportInput { SimHubVersion = PanelUpdates.SimHubVersion(null, "1.0.0.0"), SimHubRoot = Root });
+            Assert.Contains(@"SimHub: version not found, in C:\Program Files (x86)\SimHub\" + Environment.NewLine, report);
+        }
+
         [Fact]
         public void The_report_carries_the_versions_the_rig_and_the_log_and_nothing_else()
         {
@@ -2174,10 +2224,23 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains(source, input);
             }
+            // SimHub's version off its install entry first, and off the executable only without one (#641): the
+            // file version of SimHubWPF.exe is 1.0.0.0 in 9.12.6. The words, and which of the two, are
+            // PanelUpdates.SimHubVersion's.
             var simHub = Method("private static string UpdatesSimHubVersion(string root)");
             InOrder(simHub,
+                "var installed = PanelUpdates.SimHubInstalledVersion(UpdatesUninstallEntries(), root);",
+                "if (string.IsNullOrWhiteSpace(installed))",
                 "var exe = Path.Combine(root ?? string.Empty, PanelUpdates.SimHubExe);",
-                "return File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;");
+                "fileVersion = File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;",
+                "return PanelUpdates.SimHubVersion(installed, fileVersion);");
+            var uninstall = Method("private static IList<UninstallEntry> UpdatesUninstallEntries()");
+            InOrder(uninstall,
+                "foreach (var path in PanelUpdates.UninstallKeys)",
+                "try",
+                "using (var list = Registry.LocalMachine.OpenSubKey(path))",
+                "entries.Add(new UninstallEntry(entry.GetValue(\"DisplayName\") as string, entry.GetValue(\"DisplayVersion\") as string, entry.GetValue(\"InstallLocation\") as string));",
+                "catch (Exception ex)");
 
             var tail = Method("private static IList<string> UpdatesLogTail(string root)");
             InOrder(tail,
