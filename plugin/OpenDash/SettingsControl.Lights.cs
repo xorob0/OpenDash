@@ -1314,7 +1314,7 @@ namespace OpenDashPlugin
             var offersFanatec = PanelLights.OffersFanatec(census);
             if (!PanelLeds.SheetHasShapes(sides.Length, offersFanatec))
             {
-                ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLeds.NoProfiles), null);
+                ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLightRows.NoProfiles), null);
                 return;
             }
 

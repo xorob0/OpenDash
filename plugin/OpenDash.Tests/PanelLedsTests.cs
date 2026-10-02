@@ -654,7 +654,7 @@ namespace OpenDashPlugin.Tests
                 "centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle);",
                 "LedsSheetRow(PanelLights.BarEndsTitle, ends),",
                 "if (passedOver.Count > 0) list.Children.Add(Ui.Prose(PanelLeds.PassedOverNote));",
-                "ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLeds.NoProfiles), null); return;",
+                "ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLightRows.NoProfiles), null); return;",
                 "Ui.Step(1, PanelLeds.HardwareStep, hardwareHost, true), Ui.Step(2, PanelLeds.ShapeStep, shapeHost), Ui.Step(3, PanelLights.BarDeviceTitle, deviceHost), Ui.Step(4, PanelLights.BarNameTitle, name));",
                 "ShowSheet(PanelLights.AddBar, body, Ui.VStack(14, footerNote, SheetFooter(null, cancel, add)));");
             Assert.Equal(2, Occurrences(leds, "DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec))"));
@@ -1528,7 +1528,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove it", PanelLeds.RemoveConfirm);
             Assert.Equal("Removes the strip, its settings and its profile in SimHub.", PanelLeds.RemoveBody);
             Assert.Equal("Start", PanelLeds.EachLedStart);
-            Assert.Equal("This build ships no strip profiles.", PanelLeds.NoProfiles);
+            // Ruling 3: the file is an LED profile, in the Updates table's words (PanelWordsTests holds both pages).
+            Assert.Equal("This build ships no LED profiles.", PanelLightRows.NoProfiles);
             Assert.Equal(new[] { "1 LED" }, PanelLeds.PreviewLabels(0, 1));
         }
 

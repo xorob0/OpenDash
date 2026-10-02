@@ -117,5 +117,34 @@ namespace OpenDashPlugin.Tests
             Assert.Null(typeof(PanelDataTab).GetField("RevBarTitle"));
             Assert.Null(typeof(PanelDataTab).GetField("RevBarCaption"));
         }
+
+        /// <summary>Ruling 3: a strip is the device and an LED profile is the file SimHub loads. The empty build is
+        /// said in one sentence, the Updates table's, on the LEDs page's Add sheet too; the device's words name a
+        /// strip; and no constant a page draws calls the file a "strip profile".</summary>
+        [Fact]
+        public void A_strip_is_the_device_and_an_LED_profile_is_the_file_on_every_page()
+        {
+            // One sentence for the empty build, naming the file as Updates names its rows' kind.
+            Assert.Contains("Ui.Prose(PanelLightRows.NoProfiles)", Source("SettingsControl.Lights.cs"));
+            Assert.Null(typeof(PanelLeds).GetField("NoProfiles"));
+            Assert.Contains(PanelUpdates.StripKind, PanelLightRows.NoProfiles);
+            Assert.Equal("LED profile", PanelUpdates.StripKind);
+            // The device is a strip.
+            foreach (var device in new[] { PanelLights.AddBar, PanelLeds.NoStrips, PanelLights.BarsTitle })
+            {
+                Assert.Contains("strip", device, System.StringComparison.OrdinalIgnoreCase);
+            }
+            // No constant pairs the device's noun with the file's.
+            var pairing = new System.Text.RegularExpressions.Regex(@"\bstrip profiles?\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            var offenders = typeof(PanelSearch).Assembly.GetTypes()
+                .Where(type => type.Namespace == "OpenDashPlugin" && type.IsAbstract && type.IsSealed && type.Name.StartsWith("Panel", System.StringComparison.Ordinal))
+                .SelectMany(type => type.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+                    .Where(field => field.FieldType == typeof(string) && (field.IsLiteral || field.IsInitOnly))
+                    .Select(field => new { Name = type.Name + "." + field.Name, Value = (string)field.GetValue(null) }))
+                .Where(constant => constant.Value != null && pairing.IsMatch(constant.Value))
+                .Select(constant => constant.Name + " = " + constant.Value)
+                .ToList();
+            Assert.True(offenders.Count == 0, "constants that call the file a strip profile: " + string.Join("; ", offenders));
+        }
     }
 }

@@ -986,7 +986,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Whether the sheet has a shape to offer at all: a plain shape or the Fanatec wheel. Where it
-        /// has neither it says <see cref="NoProfiles"/> and nothing else.</summary>
+        /// has neither it says <see cref="PanelLightRows.NoProfiles"/>, the Updates table's words for the same fact
+        /// (#524, ruling 3: the file is an LED profile), and nothing else.</summary>
         public static bool SheetHasShapes(int plainSides, bool offersFanatec)
         {
             return plainSides > 0 || offersFanatec;
@@ -1072,8 +1073,6 @@ namespace OpenDashPlugin
             var name = Hardware(shapeId) == PanelLights.BarFanatecTitle ? WheelRim : SomethingElseStrip;
             return PackageCatalogue.UniqueName(name, taken ?? Enumerable.Empty<string>());
         }
-
-        public const string NoProfiles = "This build ships no strip profiles.";
 
         // --- What is said after a press ---------------------------------------------------------------------------
 
