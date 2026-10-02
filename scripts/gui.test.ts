@@ -60,6 +60,18 @@ describe('the display mode the coordinates need', () => {
     expect(screenModeProblem({ width: EXPECTED_SCREEN.width, height: 1600 })).not.toBeNull();
     expect(screenModeProblem({ width: 2560, height: EXPECTED_SCREEN.height })).not.toBeNull();
   });
+
+  // testing-vm.md gave the GUI tools' coordinates as 1280x800 with a 1.25 scale, while the same page's
+  // Size row said 3840x2160, and the stale one sent clicks to the wrong place (#540).
+  test("testing-vm.md's Size row and GUI row give this mode, and the GUI row's scale follows from it", async () => {
+    const doc = await Bun.file(`${import.meta.dir}/../docs/testing-vm.md`).text();
+    const row = (name: string): string => doc.split('\n').find((line) => line.startsWith(`| ${name} |`)) ?? '';
+    const mode = `${EXPECTED_SCREEN.width}×${EXPECTED_SCREEN.height}`;
+    expect(row('Size')).toContain(mode);
+    const gui = row('GUI');
+    expect(gui).toContain(`Coordinates are full-resolution (${mode}`);
+    expect(gui).toContain(`${EXPECTED_SCREEN.width}/1024 = ${EXPECTED_SCREEN.width / 1024}`);
+  });
 });
 
 // Measured on the guest on 2026-09-29, and the ground the tests below stand on: the offer's band,
