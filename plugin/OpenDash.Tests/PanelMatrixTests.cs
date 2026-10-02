@@ -614,7 +614,7 @@ namespace OpenDashPlugin.Tests
                 "var fresh = Ui.Matrix(cells, style, MatrixDim()); var lamps = fresh.Child; fresh.Child = null; picture.Child = lamps;",
                 "if (cardPicture != null) MatrixRepaint(cardPicture,",
                 // The repaint reads the settings of the matrix it is drawn for.
-                "Action repaint = () => { var options = PanelMatrix.OptionsFor(Settings, m); MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);",
+                "Action repaint = () => { var options = PanelMatrix.OptionsFor(Settings, m); MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview);",
                 "return PanelEmulation.Dim(Settings.LightsNightMode, Settings.LightsNightBrightness);",
                 // The priority list's own words and greyed rows.
                 "Ui.Text(PanelMatrix.DragToReorder, Theme.SizeSmall, FontWeights.Normal, Theme.TextSecondary)",
@@ -1092,10 +1092,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, bandsOff));
             // Shift colours can be seen: under the revs chip the gear takes its first shift colour with the
             // switch on and stays white with it off; on a matrix that rests dark the chip draws the idle display.
-            Assert.Equal(PanelMatrix.RevsScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn, false));
-            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn, false), bandsOn));
-            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOff, false), bandsOff));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, new MatrixOptions { Rest = "dark", Bands = true }, false));
+            Assert.Equal(PanelMatrix.RevsScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn));
+            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOn), bandsOn));
+            Assert.Equal("Gear 4 rest", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, bandsOff), bandsOff));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, new MatrixOptions { Rest = "dark", Bands = true }));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.RevsScenario, null));
+            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(null, bandsOn));
 
             // What a screen reader is told the preview draws: the artboard's alt text, as the matrix leaves it.
             var gear = new MatrixOptions { Rest = "gear" };
@@ -1139,7 +1141,12 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelMatrix.OptionsFor(settings, slot).Bands);
             Assert.True(PanelMatrix.OptionsFor(settings, slot).CarLadder);
 
-            // A family switched off leaves the matrix at its idle display under its chip, and only under its chip.
+            // A chip the matrix would not show is drawn in its own scenario, as the Rig page draws it
+            // (PanelRigMap.MatrixOptionsFor and PanelEmulation.MatrixFrame), so "All devices at once" opens on the
+            // same picture: a family switched off leaves the matrix at what it shows when nothing takes it over,
+            // which on a gear matrix with Shift colours on is the gear at that chip's revs, in its first shift
+            // colour, and never the idle display's white gear (PanelEmulationTests pins the same for a car on the
+            // side the matrix is not mounted on). The chip's own family is the only one it leaves.
             var chips = new Dictionary<string, string>
             {
                 { "Flags", PanelEmulation.Yellow }, { "Pit", PanelEmulation.Limiter },
@@ -1162,44 +1169,84 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(family != "Warnings", read.Warnings);
                 foreach (var chip in chips)
                 {
-                    var drawn = PanelMatrix.DrawnScenario(chip.Value, read, false);
-                    if (chip.Key == family) Assert.Equal(PanelMatrix.IdleScenario, drawn);
-                    else Assert.Equal(chip.Value, drawn);
-                    var glyph = PanelEmulation.GlyphFor(drawn, read);
-                    if (chip.Key == family) Assert.Equal(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
-                    else Assert.NotEqual(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
+                    var drawn = PanelMatrix.DrawnScenario(chip.Value, read);
+                    Assert.Equal(chip.Value, drawn);
+                    var drawnWith = PanelMatrix.OptionsFor(one, n, drawn);
+                    var glyph = PanelEmulation.GlyphFor(drawn, drawnWith);
+                    // The Rig page's tile for this matrix under the same chip.
+                    Assert.Equal(PanelEmulation.GlyphFor(chip.Value, PanelRigMap.MatrixOptionsFor(one, n, chip.Value)), glyph);
+                    Assert.NotEqual(PanelEmulation.GlyphFor(PanelMatrix.IdleScenario, read), glyph);
+                    if (chip.Key == family)
+                    {
+                        Assert.Equal("Gear 4 stage1", glyph);
+                        Assert.Equal(PanelMatrix.PreviewRevs, PanelMatrix.PreviewAlt(drawn, drawnWith));
+                    }
+                    else Assert.Equal(PanelMatrix.PreviewAlt(chip.Value, new MatrixOptions()), PanelMatrix.PreviewAlt(drawn, drawnWith));
                 }
             }
-            // A car on the side the matrix is not mounted on leaves it at rest too.
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, new MatrixOptions { Side = "right" }, false));
-            Assert.Equal(PanelEmulation.CarLeft, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, new MatrixOptions { Side = "left" }, false));
+            // A car on the side the matrix is not mounted on: the gear at the car's revs, named for that, with
+            // Shift colours on; the white gear with it off; nothing on a matrix that rests dark.
+            var mountedRight = new MatrixOptions { Side = "right", Rest = "gear", Bands = true };
+            Assert.Equal(PanelEmulation.CarLeft, PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, mountedRight));
+            Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(PanelMatrix.DrawnScenario(PanelEmulation.CarLeft, mountedRight), mountedRight));
+            Assert.Equal("Gear 4 in the first shift colour", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, mountedRight));
+            Assert.Equal("Gear 4", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, new MatrixOptions { Side = "right", Rest = "gear", Bands = false }));
+            Assert.Equal("Dark", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, new MatrixOptions { Side = "right", Rest = "dark" }));
+            Assert.Equal("Car on the left", PanelMatrix.PreviewAlt(PanelEmulation.CarLeft, new MatrixOptions { Side = "left", Rest = "gear" }));
 
-            // Critical flags only drops the news, the chequer among the chips, and keeps the warnings.
-            Assert.Equal(PanelEmulation.Chequer, PanelMatrix.DrawnScenario(PanelEmulation.Chequer, new MatrixOptions(), false));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.Chequer, new MatrixOptions(), true));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.White, new MatrixOptions(), true));
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelEmulation.Green, new MatrixOptions(), true));
-            foreach (var critical in new[] { PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Red, PanelEmulation.Black })
+            // Critical flags only reaches the picture as the Rig page's does: the flags off under a flag that is
+            // news (the chequer, the white, the green), on under one that is critical, and the chip kept.
+            var critical = new OpenDashSettings();
+            critical.Normalise();
+            var c = critical.AddMatrixPanel("A");
+            critical.SetMatrixRest(c, "gear");
+            critical.FlagBoxMatrixCriticalOnly[c - 1] = true;
+            foreach (var news in new[] { PanelEmulation.Chequer, PanelEmulation.White, PanelEmulation.Green })
             {
-                Assert.Equal(critical, PanelMatrix.DrawnScenario(critical, new MatrixOptions(), true));
-                Assert.False(PanelMatrix.IsNewsFlag(critical));
+                Assert.Equal(news, PanelMatrix.DrawnScenario(news, PanelMatrix.OptionsFor(critical, c)));
+                Assert.False(PanelMatrix.OptionsFor(critical, c, news).Flags);
+                Assert.Equal("Gear 4 stage1", PanelEmulation.GlyphFor(news, PanelMatrix.OptionsFor(critical, c, news)));
             }
-            Assert.Equal(PanelMatrix.IdleScenario, PanelMatrix.DrawnScenario(PanelMatrix.IdleScenario, new MatrixOptions(), true));
+            Assert.Equal("Gear 4 in the first shift colour", PanelMatrix.PreviewAlt(PanelEmulation.Chequer, PanelMatrix.OptionsFor(critical, c, PanelEmulation.Chequer)));
+            foreach (var flag in new[] { PanelEmulation.Yellow, PanelEmulation.Blue, PanelEmulation.Red, PanelEmulation.Black })
+            {
+                Assert.True(PanelMatrix.OptionsFor(critical, c, flag).Flags);
+                Assert.Equal(flag, PanelEmulation.GlyphFor(flag, PanelMatrix.OptionsFor(critical, c, flag)));
+            }
+            critical.FlagBoxMatrixCriticalOnly[c - 1] = false;
+            Assert.True(PanelMatrix.OptionsFor(critical, c, PanelEmulation.Chequer).Flags);
+            Assert.Equal("Chequered flag", PanelMatrix.PreviewAlt(PanelEmulation.Chequer, PanelMatrix.OptionsFor(critical, c, PanelEmulation.Chequer)));
+            // The options are the Rig page's for every chip, Critical flags only on or off.
+            foreach (var on in new[] { true, false })
+            {
+                critical.FlagBoxMatrixCriticalOnly[c - 1] = on;
+                foreach (var chip in PanelMatrix.PreviewScenarios.Concat(new[] { PanelEmulation.White, PanelEmulation.Green, (string)null }))
+                {
+                    var mine = PanelMatrix.OptionsFor(critical, c, chip);
+                    var rig = PanelRigMap.MatrixOptionsFor(critical, c, chip);
+                    Assert.Equal(new object[] { rig.Side, rig.Rest, rig.Bands, rig.CarLadder, rig.Flags, rig.Pit, rig.Spotter, rig.Warnings },
+                        new object[] { mine.Side, mine.Rest, mine.Bands, mine.CarLadder, mine.Flags, mine.Pit, mine.Spotter, mine.Warnings });
+                }
+            }
 
             var source = MatrixSource();
-            Assert.Contains("var options = PanelMatrix.OptionsFor(Settings, matrix); return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options, Settings.MatrixCriticalOnly(matrix));", FlatSource());
+            var flatSource = FlatSource();
+            Assert.Contains("var options = PanelMatrix.OptionsFor(Settings, matrix); return PanelMatrix.DrawnScenario(PanelMatrix.PreviewScenario(matrixPreviewScenario, options), options);", flatSource);
+            Assert.Contains("private MatrixOptions MatrixDrawnOptions(int matrix) { return PanelMatrix.OptionsFor(Settings, matrix, MatrixDrawn(matrix)); }", flatSource);
             Assert.Contains("Settings.FlagBoxMatrixCriticalOnly[i] = on; Save(); repaint();", source);
-            Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Preview, MatrixDim());", source);
-            Assert.Contains("MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), options), MatrixStyle.Preview);", source);
+            Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview, MatrixDim());", source);
+            Assert.Contains("MatrixRepaint(preview, PanelEmulation.MatrixFrame(GlyphSheet, MatrixDrawn(m), MatrixDrawnOptions(m)), MatrixStyle.Preview);", source);
             Assert.Contains("Ui.Matrix(PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, PanelMatrix.OptionsFor(Settings, m)), MatrixStyle.Card, MatrixDim());", source);
             Assert.Contains("MatrixRepaint(cardPicture, PanelEmulation.MatrixFrame(GlyphSheet, PanelMatrix.IdleScenario, options), MatrixStyle.Card);", source);
             Assert.Contains("Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)))", source);
+            // The picture is never drawn in the settings alone, which leave Critical flags only out of it.
+            Assert.DoesNotContain("MatrixFrame(GlyphSheet, MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m))", flatSource);
+            Assert.DoesNotContain("MatrixFrame(GlyphSheet, MatrixDrawn(m), options)", flatSource);
             // The preview is named for what it draws, when it is built and on every repaint, on its frame: the
             // one element there that a screen reader is told about, as an image.
-            var flatSource = FlatSource();
             Assert.Contains("var frame = new MatrixNamed(AutomationControlType.Image) {", flatSource);
-            Assert.Contains("Child = preview, }; AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), PanelMatrix.OptionsFor(Settings, m)));", flatSource);
-            Assert.Contains("AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), options));", source);
+            Assert.Contains("Child = preview, }; AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));", flatSource);
+            Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flatSource, System.Text.RegularExpressions.Regex.Escape("AutomationProperties.SetName(frame, PanelMatrix.PreviewAlt(MatrixDrawn(m), MatrixDrawnOptions(m)));")).Count);
             Assert.Contains("var chipGroup = new MatrixNamed(AutomationControlType.Group) { Child = chips }; AutomationProperties.SetName(chipGroup, PanelMatrix.PreviewChipsName);", flatSource);
             foreach (var write in new[] { "Settings.FlagBoxFlags[i] = on; Save(); repaint();", "Settings.FlagBoxPit[i] = on; Save(); repaint();",
                 "Settings.FlagBoxSpotter[i] = on; Save(); repaint();", "Settings.FlagBoxWarnings[i] = on; Save(); repaint();" })

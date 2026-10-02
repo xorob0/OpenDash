@@ -589,15 +589,20 @@ namespace OpenDashPlugin
         };
 
         /// <summary>
-        /// What the preview draws, for a screen reader (the artboard's role=img alt text): the scenario the
-        /// matrix is drawn in, as <see cref="DrawnScenario"/> leaves it, and at rest the gear or nothing. The
-        /// revs chip with Shift colours on draws the gear in its first shift colour, which is the one picture
-        /// that tells it from the idle display, so it is named for that; with the switch off it draws the
-        /// idle display's white gear and is named as it is.
+        /// What the preview draws, for a screen reader (the artboard's role=img alt text): the glyph the matrix
+        /// shows under the chip drawn (<see cref="DrawnScenario"/>), in the options it is drawn with
+        /// (<see cref="OptionsFor"/> with that chip), so the name is always the picture's. The gear in its first
+        /// shift colour is named for that colour, which is the one picture that tells it from the idle display:
+        /// under the revs chip with Shift colours on, and under any chip the matrix does not show, since a gear
+        /// matrix that nothing takes over draws the gear at that chip's revs (PanelEmulation's rest glyph), as
+        /// the Rig page draws it.
         /// </summary>
         public static string PreviewAlt(string drawn, MatrixOptions options)
         {
-            if (drawn == RevsScenario && options != null && options.Bands && ShowsGearRows(options.Rest)) return PreviewRevs;
+            var glyph = PanelEmulation.GlyphFor(drawn, options);
+            if (glyph == null) return PreviewDark;
+            if (glyph == RestGearGlyph) return PreviewGear;
+            if (glyph == RevsGearGlyph) return PreviewRevs;
             switch (drawn)
             {
                 case PanelEmulation.Yellow: return "Yellow flag";
@@ -607,9 +612,16 @@ namespace OpenDashPlugin
                 case PanelEmulation.LowFuel: return "Fuel pump";
                 case PanelEmulation.Chequer: return "Chequered flag";
             }
-            var gear = options != null && ShowsGearRows(options.Rest);
-            return gear ? "Gear " + PanelEmulation.Gear : PreviewDark;
+            return PreviewLabel(drawn);
         }
+
+        /// <summary>The glyphs the gear is drawn in at rest, and at revs with Shift colours on, as
+        /// PanelEmulation names them from flag-box-glyphs.json.</summary>
+        private const string RestGearGlyph = "Gear " + PanelEmulation.Gear + " rest";
+        private const string RevsGearGlyph = "Gear " + PanelEmulation.Gear + " stage1";
+
+        /// <summary>The preview's alt text when the gear is drawn in its one white.</summary>
+        public const string PreviewGear = "Gear " + PanelEmulation.Gear;
 
         /// <summary>The preview's alt text when the idle display rests dark.</summary>
         public const string PreviewDark = "Dark";
@@ -652,55 +664,31 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A matrix's settings as its picture reads them, the families included: a family switched off
-        /// leaves the matrix at its idle display under that chip, which is what the matrix would do.
+        /// A matrix's settings as its picture reads them under a chip: the Rig page's own
+        /// (PanelRigMap.MatrixOptionsFor), called rather than copied, so the preview and the matrix's tile on
+        /// the Rig page, which "All devices at once" opens on the same chip, draw one matrix under one chip
+        /// alike. A family switched off, or a car on the side the matrix is not mounted on, leaves the matrix
+        /// at its idle display (PanelEmulation.GlyphFor); with Critical flags only on, the flags are off for a
+        /// flag that is news rather than a warning (the chequer, the white and the green: flags.ts's
+        /// "critical"). Without a chip, the settings alone.
         /// </summary>
-        public static MatrixOptions OptionsFor(OpenDashSettings settings, int matrix)
+        public static MatrixOptions OptionsFor(OpenDashSettings settings, int matrix, string scenario = null)
         {
-            return new MatrixOptions
-            {
-                Side = settings.MatrixSide(matrix),
-                Rest = settings.MatrixRest(matrix),
-                Bands = settings.MatrixGearBands(matrix),
-                CarLadder = settings.MatrixGearCarLadder(matrix),
-                Flags = settings.MatrixFlags(matrix),
-                Pit = settings.MatrixPit(matrix),
-                Spotter = settings.MatrixSpotter(matrix),
-                Warnings = settings.MatrixWarnings(matrix),
-            };
+            return PanelRigMap.MatrixOptionsFor(settings, matrix, scenario);
         }
 
         /// <summary>
-        /// The scenario a chip is drawn in, which is the chip's own unless the matrix would not show it: a
-        /// family switched off, a car on the side the matrix is not mounted on, or, with Critical flags only on,
-        /// a flag that is news rather than a warning (the chequer, the white and the green). Each of those
-        /// leaves the matrix at its idle display, so it is drawn as the first chip draws it. The flag box's
-        /// catalogue is packages/dash/src/flags.ts ("critical"); docs/design/flag-box.md says what it drops.
+        /// The scenario a chip is drawn in: the chip's own, as the Rig page draws it, so a chip the matrix
+        /// would not show draws what the matrix shows then -- on a matrix that rests on the gear, the gear at
+        /// that chip's revs (PanelEmulation.MatrixFrame) rather than the idle display's white gear. The idle
+        /// display alone is drawn as the idle scenario, and so is the revs chip on a matrix that rests dark,
+        /// whose revs change nothing it shows.
         /// </summary>
-        public static string DrawnScenario(string scenario, MatrixOptions options, bool criticalOnly)
+        public static string DrawnScenario(string scenario, MatrixOptions options)
         {
             if (scenario == null || scenario == IdleScenario) return IdleScenario;
-            if (criticalOnly && IsNewsFlag(scenario)) return IdleScenario;
-            // The revs are the idle display's own: drawn while the matrix rests on the gear, which is the only
-            // thing they change.
-            if (scenario == RevsScenario) return options != null && ShowsGearRows(options.Rest) ? RevsScenario : IdleScenario;
-            // Whether anything but the idle display shows: the chip on a matrix that rests dark.
-            var dark = new MatrixOptions
-            {
-                Side = options == null ? Contract.FlagBoxSides[0] : options.Side,
-                Rest = "dark",
-                Flags = options == null || options.Flags,
-                Pit = options == null || options.Pit,
-                Spotter = options == null || options.Spotter,
-                Warnings = options == null || options.Warnings,
-            };
-            return PanelEmulation.GlyphFor(scenario, dark) == null ? IdleScenario : scenario;
-        }
-
-        /// <summary>The flags Critical flags only drops, among those the emulation draws.</summary>
-        public static bool IsNewsFlag(string scenario)
-        {
-            return scenario == PanelEmulation.Chequer || scenario == PanelEmulation.White || scenario == PanelEmulation.Green;
+            if (scenario == RevsScenario && (options == null || !ShowsGearRows(options.Rest))) return IdleScenario;
+            return scenario;
         }
 
         /// <summary>What the chips are, for a screen reader: a noun, as voice.md names a group (ruling 24),
