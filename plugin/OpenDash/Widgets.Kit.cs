@@ -732,6 +732,12 @@ namespace OpenDashPlugin
         /// A path through SimHub's menus: each step a 22 px crumb on the raised ground, a chevron between
         /// them. Drawn and never typed: a "›" in a literal is a glyph standing in for an icon.
         /// </summary>
+        /// <remarks>
+        /// A crumb wider than the row, such as a SimHub device name of seventy characters, wraps inside its
+        /// box rather than being cut at the row's edge: the WrapPanel measures each crumb at the row's width,
+        /// and a crumb's words are the name a driver has to find in SimHub, so none of it may go (#523). A
+        /// crumb that fits is drawn as before, one line centred in 22.
+        /// </remarks>
         public static WrapPanel Crumbs(params string[] parts)
         {
             var wrap = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
@@ -743,14 +749,16 @@ namespace OpenDashPlugin
                     chevron.Margin = new Thickness(4, 0, 4, 0);
                     wrap.Children.Add(chevron);
                 }
+                var words = Text(parts[i], PanelShell.CrumbTextSize, FontWeights.Medium, Theme.TextPrimary);
+                words.TextWrapping = TextWrapping.Wrap;
                 wrap.Children.Add(new Border
                 {
-                    Height = PanelShell.CrumbHeight,
-                    Padding = new Thickness(PanelShell.CrumbPaddingX, 0, PanelShell.CrumbPaddingX, 0),
+                    MinHeight = PanelShell.CrumbHeight,
+                    Padding = new Thickness(PanelShell.CrumbPaddingX, PanelShell.CrumbPaddingY, PanelShell.CrumbPaddingX, PanelShell.CrumbPaddingY),
                     CornerRadius = new CornerRadius(Theme.Radius),
                     Background = Brush(Theme.SurfaceRaised),
                     Margin = new Thickness(0, 2, 0, 2),
-                    Child = Text(parts[i], PanelShell.CrumbTextSize, FontWeights.Medium, Theme.TextPrimary),
+                    Child = words,
                 });
             }
             return wrap;

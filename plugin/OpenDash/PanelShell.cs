@@ -465,6 +465,10 @@ namespace OpenDashPlugin
         public const double TagTextSize = 10;
         public const double CrumbHeight = 22;
         public const double CrumbPaddingX = 7;
+
+        /// <summary>Above and below a crumb's words, which a single line never needs (12 px set in 22 is room
+        /// enough) and a crumb wrapped onto a second line does, so its lines do not touch its edge.</summary>
+        public const double CrumbPaddingY = 3;
         public const double CrumbTextSize = 12;
         public const double MessageTextSize = 13;
 

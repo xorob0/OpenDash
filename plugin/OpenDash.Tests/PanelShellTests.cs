@@ -453,6 +453,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(10, PanelShell.TagTextSize);
             Assert.Equal(22, PanelShell.CrumbHeight);
             Assert.Equal(7, PanelShell.CrumbPaddingX);
+            // A crumb longer than its row wraps inside its box (#523), so the box takes a little air above and
+            // below that a single line, centred in 22, never uses: 12 px words and 3 + 3 still fit 22.
+            Assert.Equal(3, PanelShell.CrumbPaddingY);
+            Assert.True(PanelShell.CrumbTextSize * 1.33 + 2 * PanelShell.CrumbPaddingY <= PanelShell.CrumbHeight);
             Assert.Equal(12, PanelShell.CrumbTextSize);
             Assert.Equal(13, PanelShell.MessageTextSize);
             // .inp: 30 high, 10 in, 13 px; .num-in: 64 by 30, 8 in, 15 px.

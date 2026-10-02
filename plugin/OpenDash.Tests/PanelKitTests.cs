@@ -300,6 +300,19 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(": trims ? new TextBlock { Text = text, TextTrimming = TextTrimming.CharacterEllipsis } : (object)text,", button);
         }
 
+        /// <summary>A crumb longer than its row wraps inside its box rather than being cut at the row's edge, and
+        /// one that fits keeps the 22 px box (#523).</summary>
+        [Fact]
+        public void A_crumb_longer_than_its_row_wraps()
+        {
+            var crumbs = Regex.Replace(Factory("Crumbs"), @"\s+", " ");
+            Assert.Contains("words.TextWrapping = TextWrapping.Wrap;", crumbs);
+            Assert.Contains("MinHeight = PanelShell.CrumbHeight,", crumbs);
+            Assert.Contains("Padding = new Thickness(PanelShell.CrumbPaddingX, PanelShell.CrumbPaddingY, PanelShell.CrumbPaddingX, PanelShell.CrumbPaddingY),", crumbs);
+            Assert.DoesNotContain(" Height = PanelShell.CrumbHeight", crumbs);
+            Assert.DoesNotContain("TextTrimming", crumbs);
+        }
+
         /// <summary>The kit as code alone, so a comment naming a constant or a call cannot hold a pin up.</summary>
         private static string Kit() => RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "Widgets.Kit.cs"));
 
