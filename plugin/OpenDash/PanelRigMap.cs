@@ -440,7 +440,6 @@ namespace OpenDashPlugin
             {
                 var size = MatrixTileSide();
                 tiles.Add(new RigTile(RigTileKind.Matrix, MatrixId(matrix), settings.MatrixName(matrix) ?? string.Empty, 0, 0, size, size, settings.MatrixSide(matrix)));
-
             }
             return tiles;
         }
@@ -1659,8 +1658,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The panels of the page a pit wall is on, as fractions of the tile's body under its band: the board
-        /// or the tower by name, each zone by the page it shows. The Race page is the artboard's Leaderboard,
+        /// The panels of the page a pit wall is on, as fractions of the tile's body under its band: a fixed
+        /// panel by what it shows (PanelPitWallPlan's Shows, so the Race page's board and the Tower page's
+        /// tower are both the leaderboard they draw), each zone by the page it shows. The Race page is the artboard's Leaderboard,
         /// Fuel and Tyres; the portrait pit wall draws its one page, the board over zones A to D.
         /// </summary>
         public static IList<RigCell> PitWallCells(ScreenInstance screen)
@@ -1676,7 +1676,7 @@ namespace OpenDashPlugin
             foreach (var panel in page.Panels)
             {
                 string text;
-                if (!panel.Configurable) text = panel.Name == "Board" ? BoardLabel : panel.Name;
+                if (!panel.Configurable) text = panel.Shows ?? panel.Name;
                 else text = PitWallZoneName(screen, title + panel.Name);
                 cells.Add(new RigCell(text,
                     Fraction(panel.X - PanelPitWallPlan.Inset, spanX),

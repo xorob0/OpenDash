@@ -93,10 +93,7 @@ namespace OpenDashPlugin
             /// between plans from the move rather than drawing the tile back where it was.</summary>
             public RigTile Pending { get; set; }
 
-            /// <summary>The scroller the room scrolls across in, or null where the room fits the canvas; the
-            /// room's offset in it (the focus ring's outset), and the scale it is drawn at.</summary>
-            public ScrollViewer Scroller { get; set; }
-            public double Inset { get; set; }
+            /// <summary>The scale the room is drawn at, which a tile's focus ring is measured against.</summary>
             public double Scale { get; set; }
         }
 
@@ -192,13 +189,15 @@ namespace OpenDashPlugin
             var plan = PanelRigMap.Plan(Settings, width);
             var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };
             // The room on the dotted ground: the tiles' room as drawn, which a shrunk arrangement leaves
-            // shorter than the frame, so the band under it takes no drop.
-            var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };
+            // shorter than the frame, so the band under it takes no drop and has no dots.
+            var dots = RigDots(plan.Scale);
+            var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true };
             // The tiles in their own pixels, drawn at the plan's scale: an arrangement wider than the canvas
             // is shrunk to it, and a Thumb's drag is in the tile's own pixels, so it is held to the same room.
             var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };
             var tiles = plan.Tiles;
 
+            TextBlock hint = null;
             if (tiles.Count == 0)
             {
                 var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);
@@ -210,11 +209,13 @@ namespace OpenDashPlugin
             }
             else
             {
-                // Under the tiles, so a tile dragged into the corner covers it rather than the other way round.
-                var hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
-                Canvas.SetLeft(hint, PanelRigMap.HintLeft);
-                Canvas.SetBottom(hint, PanelRigMap.HintBottom);
-                canvas.Children.Add(hint);
+                // In the frame's lower left, as the artboard puts it, rather than the room's, which a shrunk
+                // arrangement draws shorter than the frame and which scrolls across; and under the tiles, so a
+                // tile dragged into the corner covers it rather than the other way round.
+                hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);
+                hint.HorizontalAlignment = HorizontalAlignment.Left;
+                hint.VerticalAlignment = VerticalAlignment.Bottom;
+                hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom);
             }
             canvas.Children.Add(layer);
 
@@ -255,31 +256,41 @@ namespace OpenDashPlugin
                 // its whole ring. The room itself, and so every place a tile is kept at, is unchanged.
                 var outset = Theme.FocusRingOffset + Theme.FocusRing;
                 canvas.Margin = new Thickness(outset);
-                var scroller = new ScrollViewer
+                // The ground scrolls across with the room.
+                canvas.Background = dots;
+                // A RigScroller, so the page keys a focused tile does not take go on to the page.
+                var scroller = new RigScroller
                 {
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                     VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    // As the shell's scrollers: no Tab stop between Reset layout and the first tile, no focus
-                    // taken by a press on the ground (which scrolled the page back up to the canvas), and no
-                    // arrow or page key swallowed for an axis it does not scroll. A tile's arrow keys still
-                    // scroll it across, through the tile's BringIntoView.
+                    // As the shell's scrollers: no Tab stop between Reset layout and the first tile, and no focus
+                    // taken by a press on the ground (which scrolled the page back up to the canvas). That is
+                    // all Focusable = false does: the keys are RigScroller's. A tile's arrow keys still scroll
+                    // it across, through the tile's BringIntoView.
                     Focusable = false,
                     Content = canvas,
                 };
                 scroller.PreviewMouseWheel += RigPassWheel;
                 RigKeepScroll(scroller, extent);
-                extent.Scroller = scroller;
-                extent.Inset = outset;
                 // The scroller fills the frame, so its bar lies along the frame's foot.
                 frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;
+                // The hint stands above the bar and the room's outset over it, behind the scroller, which is
+                // clear between the dots.
+                if (hint != null)
+                {
+                    hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom + outset + SystemParameters.HorizontalScrollBarHeight);
+                    frame.Children.Add(hint);
+                }
                 frame.Children.Add(scroller);
             }
             else
             {
-                // The frame is the room's own width, so its outline, the dotted ground and the room a drag
-                // is held to are one rectangle whether or not the page's scroll bar is showing.
-                outline.Width = plan.DrawnWidth + 2 * PanelMetrics.BorderWeight;
-                outline.HorizontalAlignment = HorizontalAlignment.Left;
+                // The outline spans the column, flush with the header and Reset layout above it, as the
+                // artboard draws it. The room is planned at ContentWidth, which leaves the page's scroll bar
+                // its 17 px whether or not it is showing, so the dotted ground goes across the whole frame,
+                // as high as the room is drawn, while a drag still stops at the room's own right edge.
+                frame.Children.Add(new Border { Height = canvas.Height, VerticalAlignment = VerticalAlignment.Top, Background = dots });
+                if (hint != null) frame.Children.Add(hint);
                 frame.Children.Add(canvas);
             }
             return outline;
@@ -288,6 +299,25 @@ namespace OpenDashPlugin
         /// <summary>Where a canvas that scrolls across was scrolled to, so a rebuild -- the night switch, a
         /// wheel's lighting press, a resize -- draws it there again rather than at its left end.</summary>
         private double rigScrollX;
+
+        /// <summary>The scroller a canvas wider than the page scrolls across in, which leaves the page keys to
+        /// the page.</summary>
+        /// <remarks>
+        /// Focusable = false only stops a scroller taking the focus. ScrollViewer.OnKeyDown is a class handler
+        /// and still runs for a key bubbling up from a focused tile, and it marks PageUp, PageDown and Ctrl+Home
+        /// or End handled whatever the axis. With a tile focused those keys did nothing: this scroller cannot
+        /// scroll down, and the page's never saw them. They now go on unhandled. Home and End alone still
+        /// throw the canvas to its ends, and the arrows are the tile's, which handles them first.
+        /// </remarks>
+        private sealed class RigScroller : ScrollViewer
+        {
+            protected override void OnKeyDown(KeyEventArgs e)
+            {
+                if (e.Key == Key.PageUp || e.Key == Key.PageDown) return;
+                if ((e.Key == Key.Home || e.Key == Key.End) && (Keyboard.Modifiers & ModifierKeys.Control) != 0) return;
+                base.OnKeyDown(e);
+            }
+        }
 
         /// <summary>Restores the canvas's scroll across once the scroller is laid out, and keeps it as it
         /// changes while this build is the page's.</summary>
@@ -306,18 +336,6 @@ namespace OpenDashPlugin
                 if (!restored || !extent.Live) return;
                 rigScrollX = scroller.HorizontalOffset;
             };
-        }
-
-        /// <summary>Scrolls a canvas that scrolls across so the tile in the hand stays in view: a tile dragged
-        /// past the scroller's edge is otherwise dropped where nobody can see it.</summary>
-        private static void RigFollow(FrameworkElement root, RigExtent extent)
-        {
-            var scroller = extent.Scroller;
-            if (scroller == null) return;
-            var left = extent.Inset + Canvas.GetLeft(root) * extent.Scale;
-            var right = left + root.Width * extent.Scale;
-            if (left < scroller.HorizontalOffset) scroller.ScrollToHorizontalOffset(left);
-            else if (right > scroller.HorizontalOffset + scroller.ViewportWidth) scroller.ScrollToHorizontalOffset(right - scroller.ViewportWidth);
         }
 
         /// <summary>The wheel over a canvas that scrolls across goes on to the page: the canvas's scroller
@@ -421,10 +439,11 @@ namespace OpenDashPlugin
             Canvas.SetTop(root, tile.Y);
             // The Thumb is focusable for the arrow keys, so a press focuses it, and focus brings a tile into view
             // after the Thumb has taken its grip: a tile half out of view would scroll the page and jump that far
-            // on the first move. Only the keyboard's focus scrolls to a tile.
+            // on the first move. Only the keyboard's focus, and the drop (showing), scroll to a tile.
+            var showing = false;
             root.RequestBringIntoView += (sender, args) =>
             {
-                if (Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
+                if (!showing && Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;
             };
 
             var moved = false;
@@ -448,7 +467,10 @@ namespace OpenDashPlugin
                 moved = true;
                 Canvas.SetLeft(root, PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width));
                 Canvas.SetTop(root, PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height));
-                RigFollow(root, extent);
+                // Nothing scrolls here. The Thumb reports the pointer against the tile, so a scroll that slid
+                // the tile under a pointer that had not moved came back as the next move: a tile followed past
+                // a scroller's edge ran away from the pointer, a scroll and a jump on every event. The drop
+                // brings it into view instead.
             };
             // Saved on the drop, never in End(): SimHub is force-killed on the VM. A drag that is cancelled --
             // the capture lost, or the build replaced under it -- is no drop: the tile goes back.
@@ -467,6 +489,11 @@ namespace OpenDashPlugin
                 }
                 if (!moved) return;
                 RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);
+                // A tile dropped past the canvas's scrolled edge, or below the fold where the rows run down the
+                // page, is brought into view with its focus ring, across the canvas and down the page alike.
+                showing = true;
+                root.BringIntoView(RigRingBounds(root, extent));
+                showing = false;
                 RigDrop(tile, views);
             };
             // An arrow key moves the tile a step; a held key repeats the move, and the tile is saved once, when
@@ -933,9 +960,10 @@ namespace OpenDashPlugin
         private void RigDrawChips(Border host, IList<RigTileView> views, string focus)
         {
             var current = rigScenario;
-            // Every group carries the gap across on its right, and the panel takes back the last one's, so a
-            // group wraps only when it does not fit, as the artboard's flex-wrap does.
-            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, 0) };
+            // Every group carries the gap across on its right and the gap down under it, and the panel takes
+            // back the last column's and the last row's: a group wraps only when it does not fit, as the
+            // artboard's flex-wrap does, and the page ends its own padding under the chips, not 18 more.
+            var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, -PanelRigMap.GroupGapY) };
             Button focusChip = null;
             foreach (var group in PanelEmulation.Groups)
             {

@@ -134,8 +134,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0.43, PanelRigMap.PortraitBoardShare);
             Assert.Equal(0.49, PanelRigMap.PortraitZonesTop);
             Assert.Equal(0.02, PanelRigMap.PortraitCellGap);
-            Assert.Equal(Math.Round(800.0 / 1856, 2), PanelRigMap.PortraitBoardShare);
-            Assert.Equal(Math.Round(912.0 / 1856, 2), PanelRigMap.PortraitZonesTop);
+            Assert.Equal(PanelRigMap.PortraitBoardShare, Math.Round(800.0 / 1856, 2));
+            Assert.Equal(PanelRigMap.PortraitZonesTop, Math.Round(912.0 / 1856, 2));
         }
 
         [Fact]
@@ -247,7 +247,8 @@ namespace OpenDashPlugin.Tests
                 "var width = Math.Max(0, ContentWidth - 2 * PanelMetrics.BorderWeight);",
                 "var plan = PanelRigMap.Plan(Settings, width);",
                 "var extent = new RigExtent { Width = plan.Width, Height = plan.Height, Scale = plan.Scale, Live = true };",
-                "var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true, Background = RigDots(plan.Scale) };",
+                "var dots = RigDots(plan.Scale);",
+                "var canvas = new Canvas { Width = plan.DrawnWidth, Height = plan.Height * plan.Scale, ClipToBounds = true };",
                 "var layer = new Canvas { Width = plan.Width, Height = plan.Height, RenderTransform = new ScaleTransform(plan.Scale, plan.Scale) };",
                 "var tiles = plan.Tiles;",
                 "canvas.Children.Add(layer);",
@@ -272,6 +273,9 @@ namespace OpenDashPlugin.Tests
                 // Held off the scroller's clip by the focus ring's outset, so a tile at an edge keeps its ring.
                 "var outset = Theme.FocusRingOffset + Theme.FocusRing;",
                 "canvas.Margin = new Thickness(outset);",
+                // The ground on the room, so it scrolls across with it.
+                "canvas.Background = dots;",
+                "var scroller = new RigScroller",
                 "HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,",
                 "VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,",
                 // No Tab stop, no focus taken by a press on the ground, no page key swallowed.
@@ -279,35 +283,52 @@ namespace OpenDashPlugin.Tests
                 "Content = canvas,",
                 "scroller.PreviewMouseWheel += RigPassWheel;",
                 "RigKeepScroll(scroller, extent);",
-                "extent.Scroller = scroller;",
-                "extent.Inset = outset;",
                 // The scroller fills the frame, so its bar is along the frame's foot.
                 "frame.Height = plan.DrawnHeight + 2 * outset + SystemParameters.HorizontalScrollBarHeight;",
+                // The hint above the bar and the outset, behind the scroller.
+                "if (hint != null)",
+                "hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom + outset + SystemParameters.HorizontalScrollBarHeight);",
+                "frame.Children.Add(hint);",
                 "frame.Children.Add(scroller);",
-                // A canvas that fits is framed at the room's own width: outline, ground and room agree.
-                "outline.Width = plan.DrawnWidth + 2 * PanelMetrics.BorderWeight;",
-                "outline.HorizontalAlignment = HorizontalAlignment.Left;",
+                // A canvas that fits: the outline spans the column, flush with the header, and the ground
+                // goes across the whole frame as high as the room is drawn; the hint is behind the room.
+                "frame.Children.Add(new Border { Height = canvas.Height, VerticalAlignment = VerticalAlignment.Top, Background = dots });",
+                "if (hint != null) frame.Children.Add(hint);",
                 "frame.Children.Add(canvas);",
                 "return outline;");
-            Assert.DoesNotContain("VerticalAlignment = VerticalAlignment.Top,", canvas);
+            // The scroller leaves the page keys a focused tile does not take to the page: Focusable = false
+            // keeps the focus off it, but not its class handler, which marked them handled on an axis it
+            // cannot scroll (#527).
+            Assert.DoesNotContain("new ScrollViewer", canvas);
+            InOrder(RigMethod("private sealed class RigScroller : ScrollViewer"),
+                "protected override void OnKeyDown(KeyEventArgs e)",
+                "if (e.Key == Key.PageUp || e.Key == Key.PageDown) return;",
+                "if ((e.Key == Key.Home || e.Key == Key.End) && (Keyboard.Modifiers & ModifierKeys.Control) != 0) return;",
+                "base.OnKeyDown(e);");
+            // The scroller fills the frame rather than standing at its top, so its bar is along the foot.
+            Assert.DoesNotContain("VerticalAlignment", Handler(canvas, "var scroller = new "));
+            Assert.DoesNotContain("outline.Width", canvas);
+            Assert.DoesNotContain("outline.HorizontalAlignment", canvas);
+            Assert.Equal(1, canvas.Split("canvas.Background = dots;").Length - 1);
+            Assert.DoesNotContain("frame.Background", canvas);
+            Assert.DoesNotContain("Canvas.SetBottom(hint", canvas);
+            Assert.DoesNotContain("canvas.Children.Add(hint)", canvas);
             // A rebuild draws a canvas that scrolls across where it was scrolled to, and only the build that
             // is the page's keeps the place.
             InOrder(RigMethod("private void RigKeepScroll("), "var restore = rigScrollX;", "scroller.Loaded +=", "scroller.ScrollToHorizontalOffset(restore);", "scroller.ScrollChanged +=", "if (!restored || !extent.Live) return;", "rigScrollX = scroller.HorizontalOffset;");
-            // The tile in the hand is kept in view as it is dragged past the scroller's edge.
-            InOrder(RigMethod("private static void RigFollow("), "if (scroller == null) return;", "var left = extent.Inset + Canvas.GetLeft(root) * extent.Scale;", "var right = left + root.Width * extent.Scale;",
-                "if (left < scroller.HorizontalOffset) scroller.ScrollToHorizontalOffset(left);", "else if (right > scroller.HorizontalOffset + scroller.ViewportWidth) scroller.ScrollToHorizontalOffset(right - scroller.ViewportWidth);");
             Assert.Equal(1, canvas.Split("OnDrop(").Length - 1);
             InOrder(RigMethod("private static void RigPassWheel("), "if (args.Handled) return;", "args.Handled = true;", "parent.RaiseEvent(", "RoutedEvent = UIElement.MouseWheelEvent");
             // The empty rig's press goes to Screens, named as the attention rows name the page; the hint is in
-            // the lower left, under the tiles.
+            // the frame's lower left, wherever the room is drawn, and under the tiles.
             InOrder(canvas,
                 "if (tiles.Count == 0)",
                 "Ui.Button(PanelAttention.Open(PanelScreens.Title),",
                 "screensPress.Click += (sender, args) => Go(PanelPage.Screens);",
                 "canvas.Children.Add(empty);",
-                "Canvas.SetLeft(hint, PanelRigMap.HintLeft);",
-                "Canvas.SetBottom(hint, PanelRigMap.HintBottom);",
-                "canvas.Children.Add(hint);",
+                "hint = Ui.Text(PanelRigMap.CanvasHint,",
+                "hint.HorizontalAlignment = HorizontalAlignment.Left;",
+                "hint.VerticalAlignment = VerticalAlignment.Bottom;",
+                "hint.Margin = new Thickness(PanelRigMap.HintLeft, 0, 0, PanelRigMap.HintBottom);",
                 "canvas.Children.Add(layer);");
             Assert.DoesNotContain("SizeChanged", canvas);
             Assert.DoesNotContain("ActualWidth", canvas);
@@ -329,10 +350,17 @@ namespace OpenDashPlugin.Tests
                 "if (!moved && Math.Abs(args.HorizontalChange) < SystemParameters.MinimumHorizontalDragDistance && Math.Abs(args.VerticalChange) < SystemParameters.MinimumVerticalDragDistance) return;",
                 "moved = true;",
                 "PanelRigMap.Clamp(Canvas.GetLeft(root) + args.HorizontalChange, root.Width, extent.Width)",
-                "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)",
-                "RigFollow(root, extent);");
+                "PanelRigMap.Clamp(Canvas.GetTop(root) + args.VerticalChange, root.Height, extent.Height)");
+            // Nothing scrolls while the tile is in the hand: the Thumb reports the pointer against the tile,
+            // so a scroll under a still pointer came back as the next move and the tile ran away (#527).
+            foreach (var scroll in new[] { "BringIntoView", "ScrollTo", "Offset", "RigFollow" }) Assert.DoesNotContain(scroll, delta);
+            Assert.DoesNotContain("RigFollow", tile);
+            Assert.DoesNotContain("RigFollow", RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Rig.cs")));
             InOrder(Handler(tile, "thumb.DragStarted +="), "moved = false;");
-            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);", "RigDrop(tile, views);");
+            // The drop brings the tile into view with its ring, across the canvas and down the page, through
+            // the guard that keeps a press from scrolling.
+            InOrder(Handler(tile, "thumb.DragCompleted +="), "if (!extent.Live) return;", "if (args.Canceled)", "Canvas.SetLeft(root, startLeft);", "Canvas.SetTop(root, startTop);", "return;", "if (!moved) return;", "RigPlace(root, Canvas.GetLeft(root), Canvas.GetTop(root), extent);",
+                "showing = true;", "root.BringIntoView(RigRingBounds(root, extent));", "showing = false;", "RigDrop(tile, views);");
             InOrder(Handler(tile, "thumb.DragStarted +="), "startLeft = Canvas.GetLeft(root);", "startTop = Canvas.GetTop(root);");
             // The tile is built where the plan puts it, its picture painted in the build's scenario, and its
             // view repaints it: the chips reach it through that.
@@ -386,7 +414,9 @@ namespace OpenDashPlugin.Tests
             InOrder(place, "var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);", "var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);");
             Assert.DoesNotContain("Snap(", place);
             // A press does not scroll the page to the tile under it.
-            InOrder(Handler(tile, "root.RequestBringIntoView +="), "Mouse.LeftButton == MouseButtonState.Pressed", "args.Handled = true;");
+            InOrder(tile, "var showing = false;", "root.RequestBringIntoView +=");
+            InOrder(Handler(tile, "root.RequestBringIntoView +="), "if (!showing && Mouse.LeftButton == MouseButtonState.Pressed) args.Handled = true;");
+            Assert.Equal(1, tile.Split("showing = true;").Length - 1);
             // A wheel button pages a face's zones, and the quick glance a face's or a pit wall's, with no save
             // and no rebuild, so the clock repaints the tile.
             InOrder(tile, "var seen = PanelRigMap.LiveState(Settings, tile);", "if (seen != null)", "OnTick(", "var now = PanelRigMap.LiveState(Settings, tile);", "if (now == seen) return;", "seen = now;", "paint(rigScenario);");
@@ -403,8 +433,9 @@ namespace OpenDashPlugin.Tests
             InOrder(RigMethod("private void RigDrawChips("),
                 "var current = rigScenario;",
                 // 32 between two groups and 18 between two rows of them, as the artboard's `gap: 18px 32px`:
-                // the chips' own 6 counted in, and the last group's trailing gap taken back by the panel.
-                "var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, 0) };",
+                // the chips' own 6 counted in, and the last group's trailing gaps taken back by the panel, across
+                // and down, so the last row does not leave 18 under the page (#527).
+                "var wrap = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, -PanelRigMap.GroupGapX, -PanelRigMap.GroupGapY) };",
                 "foreach (var group in PanelEmulation.Groups)",
                 "foreach (var scenario in group.Scenarios)",
                 "Ui.SwatchChip(scenario.Label, scenario.SwatchHex, id == current, () => RigPick(host, views, id))",
@@ -573,6 +604,170 @@ namespace OpenDashPlugin.Tests
             InOrder(header, "var title = PageTitleRow(PanelRigMap.Title, Ui.NewTag());");
             var canvas = RigMethod("private FrameworkElement BuildRigCanvas(");
             InOrder(canvas, "Ui.Prose(PanelRigMap.Empty,", "Ui.Text(PanelRigMap.CanvasHint,");
+        }
+
+        /// <remarks>
+        /// What each builder makes is put on the screen, at the constants The_rig_page_is_drawn_at_the_artboards_sizes
+        /// holds by value (#527). Each line was a mutation that left every other check green: a tile with no
+        /// Thumb could not be dragged, a face that never added its band or its zones drew none, and a name line
+        /// sized off NameHeight broke FootprintHeight, which the drag's clamp and the drop size a tile by. The
+        /// ones the model's arithmetic assumes come first in each list.
+        /// </remarks>
+        [Fact]
+        public void The_rig_page_adds_what_it_builds_and_draws_it_at_its_constants()
+        {
+            // A tile: the name line at NameHeight and NameGap and the dot at WarnDot and WarnGap, which
+            // FootprintHeight and the name's MaxWidth assume; the picture and the Thumb on the root, the Thumb a
+            // focusable tab stop wearing the kit's ring, which RigRingBounds' outset is measured for.
+            InOrder(RigMethod("private RigTileView BuildRigTile("),
+                "var name = Ui.Text(tile.Name, PanelRigMap.NameSize, FontWeights.Medium, Theme.TextSecondary);",
+                "Height = PanelRigMap.NameHeight,",
+                "Margin = new Thickness(0, 0, 0, PanelRigMap.NameGap),",
+                "nameLine.Children.Add(name);",
+                "if (warns)",
+                "nameLine.Children.Add(new Ellipse",
+                "Width = PanelRigMap.WarnDot,",
+                "Height = PanelRigMap.WarnDot,",
+                "Fill = Ui.Brush(Theme.Caution),",
+                "Margin = new Thickness(PanelRigMap.WarnGap, 0, 0, 0),",
+                "body.Children.Add(nameLine);",
+                "body.Children.Add(host);",
+                "Template = RigThumbTemplate,",
+                "Cursor = Cursors.SizeAll,",
+                "Focusable = true,",
+                "IsTabStop = true,",
+                "FocusVisualStyle = Ui.FocusRing(),",
+                "var root = new Grid { Width = PanelRigMap.FootprintWidth(tile), Height = PanelRigMap.FootprintHeight(tile) };",
+                "root.Children.Add(body);",
+                "root.Children.Add(thumb);",
+                "Canvas.SetLeft(root, tile.X);",
+                "Canvas.SetTop(root, tile.Y);");
+
+            // A drop or a key lands on the grid and says whether it moved the tile: a key held against an edge
+            // moves nothing and so saves nothing, where a "moved" that is always true kept the default layout as
+            // an arrangement.
+            InOrder(RigMethod("private static bool RigPlace("),
+                "var left = PanelRigMap.DropPosition(x, root.Width, extent.Width);",
+                "var top = PanelRigMap.DropPosition(y, root.Height, extent.Height);",
+                "var moved = left != Canvas.GetLeft(root) || top != Canvas.GetTop(root);",
+                "Canvas.SetLeft(root, left);",
+                "Canvas.SetTop(root, top);",
+                "return moved;");
+
+            // A screen's frame at ScreenPadding, which ScreenInner and the band-fit check assume.
+            InOrder(RigMethod("private static Border RigScreenFrame("),
+                "Width = tile.Width,",
+                "Height = tile.Height,",
+                "Padding = new Thickness(PanelRigMap.ScreenPadding),",
+                "Background = Ui.Brush(Theme.SurfaceInset),",
+                "BorderBrush = Ui.Brush(Theme.Border),",
+                "BorderThickness = new Thickness(PanelMetrics.BorderWeight),",
+                "CornerRadius = new CornerRadius(PanelRigMap.ScreenRadius),",
+                "Child = child,");
+
+            // A face: its band at BandHeight under the zones, its revs, band and zones each added.
+            InOrder(RigMethod("private FrameworkElement RigFace("),
+                "var segments = new UniformGrid { Rows = 1, Columns = revs.Length };",
+                "segments.Children.Add(new Border",
+                "Margin = new Thickness(PanelRigMap.RevGap / 2, 0, PanelRigMap.RevGap / 2, 0),",
+                "CornerRadius = new CornerRadius(PanelRigMap.RevRadius),",
+                "Background = Ui.Brush(led ?? Theme.SurfaceRaised),",
+                "Height = PanelRigMap.RevRowHeight,",
+                "Background = Ui.Brush(Theme.SurfaceBase),",
+                "Margin = new Thickness(0, 0, 0, PanelRigMap.ScreenGap),",
+                "Child = segments,",
+                "DockPanel.SetDock(revRow, Dock.Top);",
+                "dock.Children.Add(revRow);",
+                "band.Height = PanelRigMap.BandHeight(tile.Height);",
+                "band.Margin = new Thickness(0, PanelRigMap.ScreenGap, 0, 0);",
+                "DockPanel.SetDock(band, Dock.Bottom);",
+                "dock.Children.Add(band);",
+                "text = Ui.Text(zone.Text, PanelRigMap.FaceGearSize(tile.Height, column), FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);",
+                "text = Ui.Text(zone.Text, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);",
+                "Background = Ui.Brush(Theme.SurfaceZone),",
+                "Child = text,",
+                "zones.Children.Add(cell);",
+                "dock.Children.Add(RigOverZoneA(",
+                "return RigScreenFrame(tile, dock);");
+            // The limiter's banner and the pop-up are added over zone A, over the body.
+            InOrder(RigMethod("private static UIElement RigOverZoneA("),
+                "var box = RigBand(paint);",
+                "box.Margin = margin;",
+                "over.Children.Add(box);",
+                "var grid = new Grid();",
+                "grid.Children.Add(body);",
+                "grid.Children.Add(over);",
+                "return grid;");
+
+            // A pit wall: its band at PitWallBandHeight, which bodyHeight takes off, and each panel added.
+            InOrder(RigMethod("private FrameworkElement RigPitWall("),
+                "band.Height = PanelRigMap.PitWallBandHeight;",
+                "band.Margin = new Thickness(0, 0, 0, PanelRigMap.ScreenGap);",
+                "DockPanel.SetDock(band, Dock.Top);",
+                "dock.Children.Add(band);",
+                "var bodyHeight = tile.Height - 2 * (PanelRigMap.ScreenPadding + PanelMetrics.BorderWeight) - PanelRigMap.PitWallBandHeight - PanelRigMap.ScreenGap;",
+                "Padding = new Thickness(PanelRigMap.PitWallCellPadding),",
+                "Background = Ui.Brush(Theme.SurfaceZone),",
+                "body.Children.Add(box);",
+                "dock.Children.Add(RigCovered(body,",
+                "return RigScreenFrame(tile, dock);");
+
+            // A phone: its corners, its words in, and the flag's strip at its foot when the format asks.
+            InOrder(RigMethod("private FrameworkElement RigCompanion("),
+                "var phone = RigPainted(paint, PanelRigMap.CompanionTextSize, PanelRigMap.CompanionTracking);",
+                "phone.Width = tile.Width;",
+                "phone.Height = tile.Height;",
+                "phone.CornerRadius = new CornerRadius(PanelRigMap.CompanionRadius);",
+                "if (words != null) words.Margin = new Thickness(PanelRigMap.ScreenPadding);",
+                "bar.Height = PanelRigMap.CompanionStripHeight;",
+                "bar.Margin = new Thickness(PanelRigMap.ScreenPadding, 0, PanelRigMap.ScreenPadding, PanelRigMap.ScreenPadding);",
+                "DockPanel.SetDock(bar, Dock.Bottom);",
+                "dock.Children.Add(bar);",
+                "phone.Child = null;",
+                "if (words != null) dock.Children.Add(words);",
+                "phone.Child = dock;",
+                "return phone;");
+
+            // A round face: its ground, and the gear added inside the ring.
+            InOrder(RigMethod("private FrameworkElement RigRound("),
+                "Fill = Ui.Brush(Theme.SurfaceInset),",
+                "var gear = Ui.Text(PanelEmulation.Gear, PanelRigMap.RoundGearSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);",
+                "grid.Children.Add(gear);",
+                "return grid;");
+
+            // The chequer: the base ground and two squares of the flag's white, tiled.
+            InOrder(RigMethod("private static Brush RigChequerBrush("),
+                "new GeometryDrawing(Ui.Brush(Theme.SurfaceBase), null, new RectangleGeometry(new Rect(0, 0, 2 * square, 2 * square)))",
+                "new GeometryDrawing(Ui.Brush(Theme.FlagChequer), null, new RectangleGeometry(new Rect(square, 0, square, square)))",
+                "new GeometryDrawing(Ui.Brush(Theme.FlagChequer), null, new RectangleGeometry(new Rect(0, square, square, square)))",
+                "TileMode = TileMode.Tile,",
+                "brush.Freeze();");
+
+            // The chips are added to their group, the group to the wrap, and the wrap to the host.
+            InOrder(RigMethod("private void RigDrawChips("),
+                "chips.Children.Add(chip);",
+                "var title = Ui.Eyebrow(group.Title);",
+                "var column = Ui.VStack(0, title, chips);",
+                "wrap.Children.Add(column);",
+                "host.Child = wrap;");
+            Assert.Contains("return \"RigGroup\";", RigMethod("protected override string GetClassNameCore("));
+
+            // The header's labels, the canvas's outline, its empty rig and its hint, in the artboard's sizes
+            // and inks.
+            InOrder(RigMethod("private static TextBlock RigHeaderLabel("),
+                "var label = Ui.Text(text, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary);",
+                "label.VerticalAlignment = VerticalAlignment.Center;");
+            InOrder(RigMethod("private FrameworkElement BuildRigCanvas("),
+                "var screensPress = Ui.Button(PanelAttention.Open(PanelScreens.Title), PanelButtonKind.Outline, PanelButtonSize.Small);",
+                "var empty = Ui.HStack(PanelRigMap.EmptyGap, Ui.Prose(PanelRigMap.Empty, Theme.SizeBody), screensPress);",
+                "Canvas.SetLeft(empty, PanelRigMap.LayoutMargin);",
+                "Canvas.SetTop(empty, PanelRigMap.LayoutMargin);",
+                "hint = Ui.Text(PanelRigMap.CanvasHint, Theme.SizeLabel, FontWeights.Normal, Theme.TextLabel);",
+                "Background = Ui.Brush(Theme.SurfaceInset),",
+                "BorderBrush = Ui.Brush(Theme.Rule),",
+                "BorderThickness = new Thickness(PanelMetrics.BorderWeight),",
+                "CornerRadius = new CornerRadius(Theme.Radius),",
+                "Child = frame,");
         }
 
         [Fact]
@@ -765,6 +960,8 @@ namespace OpenDashPlugin.Tests
             // The canvas grows to hold them, the last row clear of the hint.
             Assert.Equal(placed["matrix:1"].Y + PanelRigMap.FootprintHeight(placed["matrix:1"]) + PanelRigMap.HintClear, height);
             Assert.True(height > PanelRigMap.CanvasHeight);
+            // And the frame is drawn that tall, not the 580 that would clip the matrices off its foot.
+            Assert.Equal(height, PanelRigMap.Plan(Rig(), 600).DrawnHeight);
         }
 
         [Fact]
@@ -985,6 +1182,9 @@ namespace OpenDashPlugin.Tests
         {
             // The room in the tiles' own pixels is never under the canvas's height, whatever it is drawn at.
             Assert.True(plan.Height >= PanelRigMap.CanvasHeight, label);
+            // The frame is the 580, or the room as drawn where that is taller: a frame held to the 580 under
+            // a taller room clipped its lower tiles out of reach.
+            Assert.Equal(Math.Max(PanelRigMap.CanvasHeight, plan.Height * plan.Scale), plan.DrawnHeight, 9);
             Assert.InRange(plan.Scale, PanelRigMap.MinScale, 1);
             if (plan.Scale > PanelRigMap.MinScale + 1e-9)
             {
@@ -1276,6 +1476,21 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_device_added_under_a_shrunk_arrangement_clears_the_hint_as_drawn()
+        {
+            // Arranged in a 4K window and planned in the artboard's: the room is drawn shrunk, so the hint's
+            // clearance is HintClear on the screen, which is more of the room's own pixels.
+            var settings = Rig();
+            PanelRigMap.SavePlaces(settings, PanelRigMap.Plan(settings, 3534).Tiles);
+            settings.AddLedBar("4-12-4", "Pedals", LedBar.ArduinoDevice);
+            var plan = PanelRigMap.Plan(settings, 877);
+            Assert.True(plan.Scale < 1);
+            Inside(plan, 877, "877");
+            var added = plan.Tiles.Single(t => t.Id == "led:LedPedals");
+            Assert.Equal(added.Y + PanelRigMap.FootprintHeight(added) + PanelRigMap.HintClear / plan.Scale, plan.Height, 9);
+        }
+
+        [Fact]
         public void A_screen_tile_is_the_screen_a_drop_keeps()
         {
             var settings = Rig();
@@ -1473,6 +1688,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(phone));
             phone.CompanionStart = 3;
             Assert.Equal(Modules.All[3].Name, PanelRigMap.CompanionIdle(phone));
+            // A start the modules do not have is the default's, rather than an index past the list.
+            foreach (var start in new[] { -1, Modules.All.Count })
+            {
+                phone.CompanionStart = start;
+                Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(phone));
+            }
+            Assert.Equal(Modules.All[Contract.DefaultCompanionStart].Name, PanelRigMap.CompanionIdle(null));
         }
 
         [Fact]
@@ -1832,7 +2054,9 @@ namespace OpenDashPlugin.Tests
             wall.SetZonePage("RaceA", 5);
             Assert.Equal("Leaderboard", PanelRigMap.PitWallCells(wall)[1].Text);
             wall.PitWallPage = 1;
-            Assert.Equal(new[] { "Tower", ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
+            // The Tower page's tower is the same table as the Race page's board (pitwall.ts' race.board and
+            // tower.board), so it is named for what it shows, as every zone on the tile is.
+            Assert.Equal(new[] { PanelRigMap.BoardLabel, ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
             Assert.False(PanelRigMap.PitWallPortrait(wall));
 
             // Every page the settings name is one the Screens page draws, by its title: the two lists are
@@ -1884,9 +2108,23 @@ namespace OpenDashPlugin.Tests
             Assert.NotEqual(standing, PanelRigMap.PitWallState(portrait));
 
             Assert.Equal(string.Empty, PanelRigMap.PitWallState(null));
+            // A face is watched by the pages its zones are on, which a wheel button moves.
+            var main = settings.ScreenByNamespace("MainDash");
+            main.Face = new FaceSettings();
+            main.Face.Normalise();
+            var face = PanelRigMap.Tiles(settings).Single(t => t.Id == "MainDash");
+            var paged = PanelRigMap.LiveState(settings, face);
+            Assert.NotNull(paged);
+            Assert.Equal(PanelRigMap.FaceState(main), paged);
+            main.Face.Zones[0] = main.Face.Zones[0] == 2 ? 3 : 2;
+            Assert.NotEqual(paged, PanelRigMap.LiveState(settings, face));
+            Assert.Equal(PanelRigMap.FaceState(main), PanelRigMap.LiveState(settings, face));
+
             // A tile that draws nothing a glance moves is not watched.
             Assert.Null(PanelRigMap.LiveState(settings, Tile(RigTileKind.Strip, "strip")));
             Assert.Null(PanelRigMap.LiveState(settings, Tile(RigTileKind.Matrix, "matrix")));
+            Assert.Null(PanelRigMap.LiveState(settings, PanelRigMap.Tiles(settings).Single(t => t.Kind == RigTileKind.Round)));
+            Assert.Null(PanelRigMap.LiveState(settings, PanelRigMap.Tiles(settings).Single(t => t.Kind == RigTileKind.Companion)));
         }
 
         [Fact]
