@@ -1859,7 +1859,9 @@ namespace OpenDashPlugin.Tests
             wall.SetZonePage("RaceA", 5);
             Assert.Equal("Leaderboard", PanelRigMap.PitWallCells(wall)[1].Text);
             wall.PitWallPage = 1;
-            Assert.Equal(new[] { "Tower", ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
+            // The Tower page's tower is the same table as the Race page's board (pitwall.ts' race.board and
+            // tower.board), so it is named for what it shows, as every zone on the tile is.
+            Assert.Equal(new[] { PanelRigMap.BoardLabel, ZonePages.Wide[Contract.PitWallZoneSlotByKey("TowerWide").Fallback].Name, "Relative", "Opponents" }, PanelRigMap.PitWallCells(wall).Select(c => c.Text));
             Assert.False(PanelRigMap.PitWallPortrait(wall));
 
             // Every page the settings name is one the Screens page draws, by its title: the two lists are
