@@ -88,6 +88,16 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(32, PanelShell.MainPaddingBottom);
         }
 
+        /// <summary>A rebuild in place puts keyboard focus back and leaves the scroll where the driver had it:
+        /// focusing raises BringIntoView, which pulled the page back to the last control pressed (#523).</summary>
+        [Fact]
+        public void A_rebuild_keeps_the_scroll_where_the_driver_left_it()
+        {
+            var shell = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            Assert.Contains("var offset = mainScroll.VerticalOffset; pageHost.Content = BuildPage(route); mainScroll.ScrollToVerticalOffset(offset); if (focus != null) RestoreFocus(pageHost, focus, offset);", shell);
+            Assert.Contains("if (last != null) Keyboard.Focus(last); else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); mainScroll.ScrollToVerticalOffset(offset); Dispatcher.BeginInvoke(new Action(() => mainScroll.ScrollToVerticalOffset(offset)), DispatcherPriority.Loaded);", shell);
+        }
+
         /// <summary>A repeat of the click that opened or closed the sheet is dropped on the control's root, until a
         /// fresh press clears it (#523): a double-click on an Add tile leaves the sheet open, and a sheet's press
         /// does not reach the page drawn again under the pointer.</summary>

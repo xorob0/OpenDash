@@ -478,7 +478,7 @@ namespace OpenDashPlugin
                 var offset = mainScroll.VerticalOffset;
                 pageHost.Content = BuildPage(route);
                 mainScroll.ScrollToVerticalOffset(offset);
-                if (focus != null) RestoreFocus(pageHost, focus);
+                if (focus != null) RestoreFocus(pageHost, focus, offset);
             }
             finally
             {
@@ -731,8 +731,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
-        /// focusable thing above it when the rebuild is shaped differently there.</summary>
-        private void RestoreFocus(DependencyObject root, List<int> path)
+        /// focusable thing above it when the rebuild is shaped differently there, and leaves the main scroll
+        /// at <paramref name="offset"/>, where the driver had it.</summary>
+        /// <remarks>
+        /// Focusing a control raises its BringIntoView, which pulled the main scroll back to whatever the
+        /// driver had last pressed and then scrolled away from: a wheel's lighting press or a threshold resize
+        /// rebuilt Settings and threw it back to its heading (#523). The offset is put back after the focus,
+        /// and again once that has been laid out, since the scroll viewer applies the pull during layout.
+        /// </remarks>
+        private void RestoreFocus(DependencyObject root, List<int> path, double offset)
         {
             Dispatcher.BeginInvoke(new Action(() =>
             {
@@ -747,6 +754,8 @@ namespace OpenDashPlugin
                 }
                 if (last != null) Keyboard.Focus(last);
                 else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+                mainScroll.ScrollToVerticalOffset(offset);
+                Dispatcher.BeginInvoke(new Action(() => mainScroll.ScrollToVerticalOffset(offset)), DispatcherPriority.Loaded);
             }), DispatcherPriority.Loaded);
         }
 
