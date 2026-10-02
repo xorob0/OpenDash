@@ -95,12 +95,10 @@ namespace OpenDashPlugin
         /// when it is loaded. On arriving at an anchor it holds the section the route lands in
         /// (IndexStartHeld). A press moves keyboard focus to its section's heading, as an in-page link moves
         /// the focus start point: focus left on the link would scroll the view back up whenever something
-        /// brings it into view again, as Tab to the next link does. Parked on the heading, it moves where a
-        /// rebuild in place pulls the view back to rather than ending the pull: the shell's RebuildPage
-        /// restores keyboard focus, and a focused element brings itself into view, so a wheel's lighting press
-        /// or a resize across a threshold keeps the view where the jump landed only while the driver stays in
-        /// that section. Once they have scrolled on, it scrolls back to the heading, as it would to any
-        /// control they last pressed; the restore is the shell's to change.
+        /// brings it into view again, as Tab to the next link does. A rebuild in place (a wheel's lighting
+        /// press, a resize across a threshold) keeps the scroll where the driver had it, wherever they have
+        /// scrolled to since: the shell's RestoreFocus hands focus back to the heading and then puts the saved
+        /// offset back (#523).
         /// </remarks>
         private FrameworkElement SettingsIndex(IList<FrameworkElement> sections, PanelRoute to)
         {
