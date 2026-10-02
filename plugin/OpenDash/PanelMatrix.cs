@@ -896,6 +896,14 @@ namespace OpenDashPlugin
         public const string AnchorWarnings = "matrix.warnings";
         public const string AnchorIdleDisplay = "matrix.idle-display";
 
+        /// <summary>Whether search lists a row of this page on a rig of <paramref name="matrices"/> matrices: the
+        /// profile's line and the cards on any rig, every other row only where there is a matrix to select, since
+        /// the page draws them for the selected one.</summary>
+        public static bool SearchDrawn(string anchor, int matrices)
+        {
+            return anchor == null || anchor == AnchorProfile || anchor == AnchorPanels || matrices > 0;
+        }
+
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(FlagBoxProfile.ProfileName, PanelPage.Matrix, AnchorProfile, "flag box profile", "install", "reinstall", "matrix profile", "8x8"),

@@ -133,6 +133,40 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// The entries whose row the rig in <paramref name="settings"/> draws, in All()'s order: what the sidebar
+        /// searches. A row only a strip, a matrix or a kind of screen draws is left out of a rig without one, since
+        /// its hit would land at the top of a page that has no such row.
+        /// </summary>
+        public static IEnumerable<Entry> For(OpenDashSettings settings)
+        {
+            return All().Where(entry => Drawn(entry, settings));
+        }
+
+        /// <summary>Whether some page of the rig in <paramref name="settings"/> draws the entry's row: each page
+        /// that draws rows only for some of the rig answers for its own (PanelScreens, PanelLeds, PanelMatrix,
+        /// PanelShortcuts.SearchDrawn); every other page draws all of its rows on any rig. With no settings to
+        /// read, every entry is drawn.</summary>
+        public static bool Drawn(Entry entry, OpenDashSettings settings)
+        {
+            if (entry == null) return false;
+            if (settings == null) return true;
+            var anchor = entry.Route.Anchor;
+            switch (entry.Route.Page)
+            {
+                case PanelPage.Screens:
+                    return PanelScreens.SearchDrawn(anchor, settings.RigScreens());
+                case PanelPage.Leds:
+                    return PanelLeds.SearchDrawn(anchor, entry.Label, settings.LedBarList());
+                case PanelPage.Matrix:
+                    return PanelMatrix.SearchDrawn(anchor, settings.MatrixPanels().Count());
+                case PanelPage.Shortcuts:
+                    return PanelShortcuts.SearchDrawn(anchor, settings.RigScreens());
+                default:
+                    return true;
+            }
+        }
+
         /// <summary>Every page's entries, in sidebar order, then Updates, then every greyed row of the
         /// registry that a page draws, each routed to its page and its own anchor.</summary>
         public static IEnumerable<Entry> All()

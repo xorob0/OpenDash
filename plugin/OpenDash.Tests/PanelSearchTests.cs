@@ -137,6 +137,91 @@ namespace OpenDashPlugin.Tests
             Assert.Single(all, entry => entry.Label == PanelRigMap.RealHardwareTitle);
         }
 
+        /// <summary>
+        /// Search lists only what the rig draws: a row of the selected strip, of the selected matrix, of a kind
+        /// of screen, or of a screen's shortcut card is left out of a rig without one, since its hit would land at
+        /// the top of a page with no such row. A rig with one of everything lists every entry.
+        /// </summary>
+        [Fact]
+        public void Search_lists_only_the_rows_the_rig_draws()
+        {
+            var empty = new OpenDashSettings();
+            empty.Normalise();
+            var bare = PanelSearch.For(empty).ToList();
+            var stripRows = new[]
+            {
+                PanelLeds.RevLightsTitle, PanelLeds.CarRevLightsTitle, PanelLeds.CentreDisplayTitle, PanelLights.BarDeviceTitle,
+                PanelLeds.BrightnessTitle, PanelLeds.ReverseTitle, PanelLeds.FlagAnimationTitle, PanelLeds.SpotterTitle,
+                PanelLeds.MirrorFitTitle, PanelSoon.EachLedInTurn.Title, PanelSoon.PitLimiterLights.Title,
+            }.Concat(PanelLeds.Effects.Select(effect => effect.Label));
+            foreach (var label in stripRows) Assert.DoesNotContain(bare, entry => entry.Route.Page == PanelPage.Leds && entry.Label == label);
+            foreach (var label in new[] { PanelLights.AddBar, PanelLeds.EveryStripTitle, PanelLights.CarTablesTitle, PanelSoon.IdleSweep.Title })
+            {
+                Assert.Contains(bare, entry => entry.Route.Page == PanelPage.Leds && entry.Label == label);
+            }
+            var matrixRows = new[]
+            {
+                PanelMatrix.PriorityTitle, PanelMatrix.FlagsTitle, PanelMatrix.PitLaneTitle, PanelMatrix.SpotterTitle, PanelMatrix.SpotterAnimationTitle,
+                PanelMatrix.WarningsTitle, PanelMatrix.IdleDisplayTitle, PanelMatrix.ShiftColoursTitle, PanelMatrix.RedlineFlashTitle, PanelSoon.SimHubDevice.Title,
+            };
+            foreach (var label in matrixRows) Assert.DoesNotContain(bare, entry => entry.Route.Page == PanelPage.Matrix && entry.Label == label);
+            Assert.Contains(bare, entry => entry.Label == PanelMatrix.AddPanel);
+            Assert.Contains(bare, entry => entry.Label == FlagBoxProfile.ProfileName);
+            foreach (var label in new[] { PanelScreens.ModulesTitle, PanelScreens.FirstModuleTitle, PanelScreens.PortraitTitle, PanelScreens.WebViewTitle, PanelScreens.RevRingTitle, PanelScreens.RevBarTitle })
+            {
+                Assert.DoesNotContain(bare, entry => entry.Route.Page == PanelPage.Screens && entry.Label == label);
+            }
+            Assert.Contains(bare, entry => entry.Route.Page == PanelPage.Screens && entry.Route.Anchor == PanelScreens.AnchorCards);
+            Assert.DoesNotContain(bare, entry => entry.Route.Anchor == PanelShortcuts.AnchorScreens);
+            Assert.Contains(bare, entry => entry.Route.Anchor == PanelShortcuts.AnchorRig);
+            Assert.Empty(PanelSearch.Find(bare, "reverse direction"));
+
+            // One of everything: every entry is drawn somewhere.
+            var full = new OpenDashSettings();
+            full.Normalise();
+            full.AddLedBar("3-9-3", "Rim", null).RpmStyle = Contract.LedRpmStyleCar;
+            full.AddLedBar("0-15-0", "Bar", null);
+            full.AddMatrixPanel("Flags");
+            full.Rig = new List<ScreenInstance>
+            {
+                new ScreenInstance { Kind = Contract.KindFace, Width = 1280, Height = 480, Namespace = "Face" },
+                new ScreenInstance { Kind = Contract.KindPitWall, Width = 1920, Height = 1080, Namespace = "Wall" },
+                new ScreenInstance { Kind = Contract.KindPitWall, Width = 1080, Height = 1920, Namespace = "Tall" },
+                new ScreenInstance { Kind = Contract.KindCompanion, Width = 850, Height = 480, Namespace = "Phone" },
+                new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480, Namespace = "Round" },
+            };
+            var missing = PanelSearch.All().Where(entry => !PanelSearch.Drawn(entry, full)).Select(entry => entry.Label + " · " + entry.Route.Page).ToList();
+            Assert.True(missing.Count == 0, "rows a full rig does not draw: " + string.Join(", ", missing));
+            Assert.Equal(PanelSearch.All().Count(), PanelSearch.For(null).Count());
+        }
+
+        /// <summary>A route to a row of one strip opens a strip that draws it, as ScreenFor does for a screen:
+        /// the selected one where it does, the first that does otherwise.</summary>
+        [Fact]
+        public void A_route_to_a_strips_row_opens_a_strip_that_draws_it()
+        {
+            var plain = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3", RpmStyle = Contract.LedRpmStyleLeftToRight };
+            var fanatec = new LedBar { Name = "Wheel", Namespace = "LedWheel", Shape = "3-9-3-fanatec", RpmStyle = Contract.LedRpmStyleLeftToRight };
+            var bare = new LedBar { Name = "Bar", Namespace = "LedBar", Shape = "0-15-0", RpmStyle = Contract.LedRpmStyleCar };
+            var bars = new List<LedBar> { fanatec, bare, plain };
+            // A Fanatec wheel's wiring is its own; a bare run has a reversed twin, and is the first that does.
+            Assert.Same(bare, PanelLeds.StripFor(PanelLeds.AnchorReverse, PanelLeds.ReverseTitle, bars, fanatec));
+            Assert.Same(plain, PanelLeds.StripFor(PanelLeds.AnchorReverse, PanelLeds.ReverseTitle, bars, plain));
+            Assert.Same(fanatec, PanelLeds.StripFor(PanelLeds.AnchorSpotter, PanelLeds.SpotterTitle, bars, fanatec));
+            Assert.Same(fanatec, PanelLeds.StripFor(PanelLeds.AnchorSpotter, PanelLeds.SpotterTitle, bars, bare));
+            Assert.Same(bare, PanelLeds.StripFor(PanelLeds.AnchorMirrorFit, PanelLeds.MirrorFitTitle, bars, plain));
+            Assert.Same(plain, PanelLeds.StripFor(PanelLeds.AnchorBrightness, PanelLeds.BrightnessTitle, bars, plain));
+            // An effect a bare run does not carry opens a strip with ends; one it carries keeps the selection.
+            var aid = PanelLeds.Effects.First(effect => !PanelLeds.EffectsFor("0-15-0").Any(carried => carried.Label == effect.Label));
+            Assert.Same(fanatec, PanelLeds.StripFor(PanelLeds.AnchorEffects, aid.Label, bars, bare));
+            Assert.Same(bare, PanelLeds.StripFor(PanelLeds.AnchorEffects, PanelLeds.EffectsTitle, bars, bare));
+            // A row outside the selected strip's section never moves the selection.
+            Assert.Same(bare, PanelLeds.StripFor(PanelLeds.AnchorCarTables, PanelLights.CarTablesTitle, bars, bare));
+            Assert.False(PanelLeds.SearchDrawn(PanelLeds.AnchorReverse, PanelLeds.ReverseTitle, new[] { fanatec }));
+            Assert.True(PanelLeds.SearchDrawn(PanelLeds.AnchorReverse, PanelLeds.ReverseTitle, new[] { fanatec, plain }));
+            Assert.False(PanelLeds.SearchDrawn(PanelLeds.AnchorSpotter, PanelLeds.SpotterTitle, new[] { bare }));
+        }
+
         /// <summary>A result is labelled by the row or heading it lands on, so the words in the list are the
         /// words on the page; other words for it are keywords.</summary>
         [Fact]

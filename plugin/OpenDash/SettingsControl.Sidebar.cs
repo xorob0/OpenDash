@@ -219,12 +219,17 @@ namespace OpenDashPlugin
             if (!narrow && searchFull != null) return searchFull;
             if (narrow && searchRail != null) return searchRail;
 
-            Func<string, System.Collections.Generic.IList<PanelSearch.Hit>> find = query => PanelSearch.Find(PanelSearch.All(), query);
+            // Only what this rig draws: a row of a strip, a matrix or a kind of screen the rig lacks would land on
+            // a page with no such row.
+            Func<string, System.Collections.Generic.IList<PanelSearch.Hit>> find = query => PanelSearch.Find(PanelSearch.For(Settings), query);
             Action<PanelSearch.Hit> pick = hit =>
             {
                 if (searchFlyout != null) searchFlyout.IsOpen = false;
                 if (searchBox != null) searchBox.Text = string.Empty;
                 if (railSearchBox != null) railSearchBox.Text = string.Empty;
+                // An effect's switch is routed to the effects block every strip draws: LEDs reads which switch
+                // was searched to open a strip that carries it.
+                ledsSearchedLabel = hit.Route.Page == PanelPage.Leds ? hit.Label : null;
                 Go(hit.Route);
             };
 

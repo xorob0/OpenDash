@@ -805,6 +805,17 @@ namespace OpenDashPlugin
 
         // --- Search -------------------------------------------------------------------------------------
 
+        /// <summary>Whether search lists a row of this page on <paramref name="rig"/>: the screens' rows only
+        /// where a screen has a card here (a face, a companion, or a pit wall whose glance swaps a zone), since
+        /// AnchorScreens sits on the first such card; the rig's and the alerts' cards are always drawn. A portrait
+        /// wall drawn only to clear a glance still bound is not counted: what is bound is SimHub's, not the rig's.</summary>
+        public static bool SearchDrawn(string anchor, IEnumerable<ScreenInstance> rig)
+        {
+            if (anchor != AnchorScreens) return true;
+            return rig != null && rig.Any(screen => screen != null
+                && (screen.IsFace || screen.IsCompanion || (screen.IsPitWall && PitWallCard(screen.Width, screen.Height, false))));
+        }
+
         public static readonly PanelSearch.Entry[] Search =
         {
             new PanelSearch.Entry(NextPageTitle, PanelPage.Shortcuts, AnchorScreens, "wheel buttons", "bind", "button", "key", "zone"),

@@ -1255,6 +1255,64 @@ namespace OpenDashPlugin
 
         // --- Search ---------------------------------------------------------------------------------------------
 
+        /// <summary>
+        /// Whether <paramref name="bar"/> draws the row a route to <paramref name="anchor"/> lands on, and, for an
+        /// effect's switch, the switch labelled <paramref name="label"/>: the selected strip's rows only for a
+        /// strip, Reverse direction only for a shape with a twin wired from the far end, Full-strip spotter only
+        /// where an end has a lamp, Width only while the car's own rev lights are on, and an effect only where the
+        /// shape carries it. A row outside the selected strip's section is drawn whatever is selected.
+        /// </summary>
+        public static bool StripDraws(string anchor, string label, LedBar bar)
+        {
+            if (!PerStrip(anchor)) return true;
+            if (bar == null) return false;
+            if (anchor == AnchorReverse) return bar.SupportsReversal;
+            if (anchor == AnchorSpotter) return HasFullStripSpotter(bar.Shape);
+            if (anchor == AnchorMirrorFit) return ShowsMirrorFit(bar.RpmStyle);
+            if (anchor == AnchorEffects)
+            {
+                var effect = Effects.FirstOrDefault(candidate => string.Equals(candidate.Label, label, StringComparison.Ordinal));
+                return effect == null || EffectsFor(bar.Shape).Any(carried => string.Equals(carried.Label, effect.Label, StringComparison.Ordinal));
+            }
+            return true;
+        }
+
+        /// <summary>Whether the row a route to <paramref name="anchor"/> lands on is in the selected strip's
+        /// section, which the page draws only with a strip to select.</summary>
+        public static bool PerStrip(string anchor)
+        {
+            if (anchor == null) return false;
+            switch (anchor)
+            {
+                case AnchorStrips:
+                case AnchorEveryStrip:
+                case AnchorCarTables:
+                    return false;
+            }
+            if (anchor.StartsWith("soon.", StringComparison.Ordinal))
+            {
+                return anchor == PanelSoon.EachLedInTurn.Anchor || anchor == PanelSoon.PitLimiterLights.Anchor;
+            }
+            return true;
+        }
+
+        /// <summary>Whether search lists a row of this page on a rig of <paramref name="bars"/>: where some strip
+        /// draws it (StripDraws), which is the strip a search lands on.</summary>
+        public static bool SearchDrawn(string anchor, string label, IEnumerable<LedBar> bars)
+        {
+            if (!PerStrip(anchor)) return true;
+            return bars != null && bars.Any(bar => bar != null && StripDraws(anchor, label, bar));
+        }
+
+        /// <summary>The strip a route to <paramref name="anchor"/> (a search for <paramref name="label"/>) opens:
+        /// the selected one where it draws the row, else the first that does, else the selected one.</summary>
+        public static LedBar StripFor(string anchor, string label, IList<LedBar> bars, LedBar selected)
+        {
+            if (anchor == null || StripDraws(anchor, label, selected)) return selected;
+            var drawing = bars == null ? null : bars.FirstOrDefault(bar => bar != null && StripDraws(anchor, label, bar));
+            return drawing ?? selected;
+        }
+
         /// <summary>Every row label and heading the page draws. An effect is drawn from its switch's Label in a
         /// loop, which SearchDrawnOtherwise says.</summary>
         public static readonly PanelSearch.Entry[] Search = BuildSearch();

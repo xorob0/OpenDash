@@ -67,8 +67,24 @@ namespace OpenDashPlugin
         /// scrolling.</summary>
         private bool ledsFocusReverse;
 
+        /// <summary>The label of the search hit that last went to this page, which tells LedsFollow which of the
+        /// effects block's switches it was for; let go of on the way in.</summary>
+        private string ledsSearchedLabel;
+
+        /// <summary>Whether the page has been built since the last Go, as screensBuiltSinceGo is for Screens: a
+        /// route's anchor selects a strip on the way in, never on a rebuild in place.</summary>
+        private bool ledsBuiltSinceGo;
+
         private FrameworkElement BuildLedsPage(PanelRoute to)
         {
+            if (!ledsBuiltSinceGo)
+            {
+                ledsBuiltSinceGo = true;
+                OnLeave("Leds.follow", () => ledsBuiltSinceGo = false);
+                var searched = ledsSearchedLabel;
+                ledsSearchedLabel = null;
+                if (to != null && to.Anchor != null) LedsFollow(to.Anchor, searched);
+            }
             ledsCardRepaints.Clear();
             OnDrop(() =>
             {
@@ -82,6 +98,17 @@ namespace OpenDashPlugin
             if (current != null) sections.Add(LedsStripSection(current));
             sections.Add(LedsEveryStripSection());
             return PageLayout(PanelLeds.Title, null, sections.ToArray());
+        }
+
+        /// <summary>Selects the strip a route to <paramref name="anchor"/> needs (PanelLeds.StripFor): a search
+        /// for Reverse direction, Full-strip spotter, Width or an effect lands on a strip that draws it, as Screens'
+        /// ScreensFollow opens a screen that draws the row.</summary>
+        private void LedsFollow(string anchor, string label)
+        {
+            var bars = Settings.LedBarList().Where(bar => bar != null).ToList();
+            var current = LedsSelectedBar(bars);
+            var strip = PanelLeds.StripFor(anchor, label, bars, current);
+            if (strip != null && !ReferenceEquals(strip, current)) Select(PanelPage.Leds, strip.Namespace);
         }
 
         /// <summary>The strip whose settings are showing: the one selected, else the first; null with none.</summary>

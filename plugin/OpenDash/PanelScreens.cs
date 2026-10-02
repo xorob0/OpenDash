@@ -1195,6 +1195,15 @@ namespace OpenDashPlugin
             return drawing ?? selected;
         }
 
+        /// <summary>Whether search lists a row of this page on <paramref name="rig"/>: the cards and the add tile
+        /// on any rig, every other row only where a screen of the rig draws it (Draws), which is the screen
+        /// ScreenFor then opens.</summary>
+        public static bool SearchDrawn(string anchor, IEnumerable<ScreenInstance> rig)
+        {
+            if (anchor == null || anchor == AnchorCards || anchor == AnchorAdd) return true;
+            return rig != null && rig.Any(screen => Draws(anchor, screen));
+        }
+
         /// <summary>
         /// The zone a face's aside has to show for the row <paramref name="anchor"/> names to be drawn:
         /// the bar for the Info bar, a zone for Next page and Previous page, B or C for the two greyed pages,
