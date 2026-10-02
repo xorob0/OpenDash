@@ -1,7 +1,10 @@
 /** buildLayout: the two dashboards, the contract, the slot strategies, and nothing of the brand on the face. */
 import { describe, expect, test } from 'bun:test';
-import { existsSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts';
+import { sweep } from '../src/build.ts';
 import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV,
   CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP,
   FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PROPERTY_PREFIX, zoneProperties, declaredProperties, defaultCardForSlot,
@@ -173,5 +176,57 @@ describe('package', () => {
     expect(pkg.dashboards.map((d) => d.name)).toEqual(['OpenDash slots 1920x480', 'cards']);
     expect(pkg.dashboards[0]!.name).toBe(pkg.folderName);
     expect(buildPackage(layout1920x480, { ...opts, strategy: 'inline' }).dashboards.map((d) => d.name)).toEqual(['OpenDash slots 1920x480']);
+  });
+});
+
+/**
+ * The sweep removes an earlier build's artefacts, and the hard part is telling one of those from a
+ * file this build has just written under a spelling the filesystem chose.
+ */
+describe('sweep', () => {
+  const PROFILE = 'OpenDash 3-9-3.ledsprofile';
+  const manifest = { packages: [], ledProfiles: [PROFILE] } as unknown as Parameters<typeof sweep>[1];
+
+  const scratch = (): string => mkdtempSync(path.join(tmpdir(), 'opendash-sweep-'));
+
+  /** Whether this filesystem folds case, which decides what a differently spelled name even means. */
+  const foldsCase = (dir: string): boolean => {
+    writeFileSync(path.join(dir, 'probe'), '');
+    return existsSync(path.join(dir, 'PROBE'));
+  };
+
+  test('an artefact no longer built is removed', () => {
+    const out = scratch();
+    writeFileSync(path.join(out, 'OpenDash 3-9-3-fanalab.ledsprofile'), 'old');
+    writeFileSync(path.join(out, PROFILE), 'new');
+
+    expect(sweep(out, manifest).map((f) => path.basename(f))).toEqual(['OpenDash 3-9-3-fanalab.ledsprofile']);
+    expect(existsSync(path.join(out, PROFILE))).toBe(true);
+  });
+
+  test('a file that is not an artefact is left alone', () => {
+    const out = scratch();
+    writeFileSync(path.join(out, PROFILE), 'new');
+    writeFileSync(path.join(out, 'flag-box.svg'), '<svg/>');
+
+    expect(sweep(out, manifest)).toEqual([]);
+    expect(existsSync(path.join(out, 'flag-box.svg'))).toBe(true);
+  });
+
+  test('the same file under an older spelling is renamed, never deleted', () => {
+    const out = scratch();
+    if (!foldsCase(out)) {
+      // On a case-sensitive filesystem the two spellings are two files, and the older one really is
+      // stale, which the first test above already covers. There is nothing to distinguish here.
+      return;
+    }
+    // What a checkout that last built before `openDash` became `OpenDash` has on disk: the write
+    // replaced the contents and the filesystem kept the entry's original spelling.
+    writeFileSync(path.join(out, PROFILE), 'fresh');
+    renameSync(path.join(out, PROFILE), path.join(out, 'openDash 3-9-3.ledsprofile'));
+
+    expect(sweep(out, manifest)).toEqual([]);
+    expect(readFileSync(path.join(out, PROFILE), 'utf8')).toBe('fresh');
+    expect(readdirSync(out).filter((f) => f.endsWith('.ledsprofile'))).toEqual([PROFILE]);
   });
 });

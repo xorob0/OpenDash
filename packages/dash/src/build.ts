@@ -9,7 +9,7 @@
  * #438 and which therefore carries a `schemaVersion`. Folder names may contain spaces. Validation errors fail the build before anything is written; warnings
  * are printed. Importing this module runs nothing: only `bun src/build.ts` calls main().
  */
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { COMPANION_PREFIX, declaredProperties, facePrefix, foreignProperties, PIT_WALL_PREFIX, PROPERTY_PREFIX } from './contract.ts';
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
@@ -559,18 +559,45 @@ export function build(opts: BuildOptions = {}): BuildResult {
  * source builds, offering a wiring order the panel no longer captions. A removed screen size would do
  * the same, and would be installed by anyone who pressed the button beside it.
  */
-function sweep(out: string, manifest: Manifest): string[] {
-  const wanted = new Set<string>([...manifest.packages.map((p) => p.file), ...manifest.ledProfiles]);
+export function sweep(out: string, manifest: Manifest): string[] {
+  /** Canonical name by its lower-cased spelling, so an entry can be matched however it is spelled. */
+  const wanted = new Map<string, string>();
+  for (const name of [...manifest.packages.map((p) => p.file), ...manifest.ledProfiles]) wanted.set(name.toLowerCase(), name);
+
   const removed: string[] = [];
   for (const entry of readdirSync(out, { withFileTypes: true })) {
     if (!entry.isFile()) continue;
     const isArtefact = entry.name.endsWith(PACKAGE_EXTENSION) || entry.name.endsWith(leds.LEDS_PROFILE_EXTENSION);
-    if (!isArtefact || wanted.has(entry.name)) continue;
-    const stale = path.join(out, entry.name);
-    rmSync(stale, { force: true });
-    removed.push(stale);
+    if (!isArtefact) continue;
+    const canonical = wanted.get(entry.name.toLowerCase());
+    if (canonical === entry.name) continue;
+
+    const here = path.join(out, entry.name);
+    // A name the manifest wants, spelled differently on the disk. On macOS and Windows that is the
+    // *same file*: a write replaces the contents and the filesystem keeps the entry's original
+    // spelling, so after `openDash` became `OpenDash` every freshly written artefact was still
+    // listed under the old casing, missed this set, and was deleted by the sweep it had just been
+    // handed. Fifty files on the disk against sixty-three in the manifest, the flag box among the
+    // missing, and only on the machines that build: CI runs on Linux, where the two are genuinely
+    // two files and the old one really is stale. `realpath` tells the cases apart, because it
+    // answers with the spelling the filesystem holds rather than the one it was asked for.
+    if (canonical !== undefined && sameEntry(out, canonical, entry.name)) {
+      renameSync(here, path.join(out, canonical));
+      continue;
+    }
+    rmSync(here, { force: true });
+    removed.push(here);
   }
   return removed;
+}
+
+/** Whether `name` is the directory entry that `canonical` resolves to, rather than a second file. */
+function sameEntry(out: string, canonical: string, name: string): boolean {
+  try {
+    return path.basename(realpathSync.native(path.join(out, canonical))) === name;
+  } catch {
+    return false;
+  }
 }
 
 const describe = (e: unknown): string => (e instanceof Error ? e.message : String(e));

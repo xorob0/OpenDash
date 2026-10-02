@@ -96,8 +96,10 @@ const USAGE = `shots: photograph every package on one claim of the VM.
 
   bun run shots [--packages a,b] [--scenarios green,yellow] [--out dir] [--no-build] [--keep]
 
-  --packages   comma separated; default the ten faces
-               ${LIST_ORDER.join(', ')}
+  --packages   comma separated; default the ${FACES.length} faces
+               ${FACES.join(', ')}
+               the second screens are named rather than defaulted:
+               ${LIST_ORDER.filter((n) => !FACES.includes(n)).join(', ')}
   --scenarios  comma separated; default "green"
                ${scenarios().join(', ') || '(none built)'}
   --out        where the PNGs go; default build/shots

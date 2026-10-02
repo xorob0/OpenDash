@@ -13,6 +13,7 @@
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
+import { assistPresent } from '../second/tracked.ts';
 import { CHARS, absLevel, antiRollFront, antiRollRear, brakeBias, fuelMixture, tcLevel } from '../second/values.ts';
 import { defineModule, drawnAt, fieldsRow, fld } from './module.ts';
 import type { Expr } from '../bind.ts';
@@ -20,16 +21,17 @@ import type { FieldSpec } from '../second/field.ts';
 import type { ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { fmt, isNull, not, or, gt, num, isnull, raw, game } = ncalc;
+const { fmt, isNull, not, raw, game } = ncalc;
 
 /**
  * A setting field that disappears when the sim does not publish the property behind it, and whose
  * rank then closes over the hole.
  *
  * `present` is the property that says the car **has** the setting, which is not always the one the
- * value is read from. SimHub normalises traction control and ABS into `TCLevel` and `ABSLevel` and
- * reports 0 for a car that has neither, so those two are tested on the raw iRacing field behind
- * them; the brake bias is read through an `isnull` default and so is never null itself.
+ * value is read from: the brake bias is read through an `isnull` default and so is never null
+ * itself. Traction control and ABS are not settled by one property at all, and take
+ * {@link presentField} with `assistPresent` from `second/tracked.ts`, which is the one definition
+ * the strip and the pit wall read as well.
  */
 const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, present = expr): FieldSpec =>
   fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
@@ -44,22 +46,6 @@ const settingField = (ctx: ModuleContext, id: string, label: string, expr: strin
  */
 const presentField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, visible: Expr): FieldSpec =>
   fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: visible });
-
-/**
- * Present when iRacing publishes the driver-adjustable control, or when SimHub has a level for it
- * anyway.
- *
- * Two questions, because `dcTractionControl` and `dcABS` answer "can the driver turn this knob",
- * which is narrower than "does this car have the system". A car with fixed traction control
- * publishes no knob, and the grid then drew no TC cell at all -- which reads as a car without
- * traction control rather than one whose TC is not adjustable. Reported from a rig as the settings
- * page maybe missing TC and ABS.
- *
- * SimHub's normalised `TCLevel` and `ABSLevel` are the second answer: zero for a car with neither,
- * so a level above zero is a system that exists whether or not its knob does. Either signal shows
- * the cell; neither still hides it, which is the rule this module is built on.
- */
-const assistPresent = (knob: Expr, level: Expr): Expr => or(not(isNull(knob)), gt(isnull(level, num(0)), num(0)));
 
 /** The canvas sets a readout group's pairs 20 px apart, which is closer than a row of fields. */
 const SETTING_GAP = 20;

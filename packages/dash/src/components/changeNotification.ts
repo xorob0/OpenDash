@@ -38,12 +38,12 @@ import { boxSlack, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
-import { TRACKED_VALUES, type TrackedValue } from '../second/tracked.ts';
+import { TRACKED_VALUES, hasSetting, type TrackedValue } from '../second/tracked.ts';
 import { inTheCar } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { LAP_POP_UP } from './popUp.ts';
 
-const { and, changed, fmt, isdecreasing, isincreasing, isNull, not, num } = ncalc;
+const { and, changed, fmt, isdecreasing, isincreasing, not, num } = ncalc;
 
 /**
  * The box the pagesandalerts artboard draws.
@@ -78,11 +78,10 @@ export const CHANGE_NOTIFICATION_MS = ds.indicator.changeNotification.durationMs
  * needs the start value remembered and nothing here remembers anything. It is approximated as "the
  * car has this setting at all": a car that does not publish it raises nothing, which is the case the
  * clause is really about, while a setting that genuinely moves to zero still shows. The test is the
- * strip's own `present`, because for three of the seven the reading is defaulted and so is never
+ * strip's own `hasSetting`, because for three of the seven the reading is defaulted and so is never
  * null itself.
  */
-const moved = (value: TrackedValue): Expr =>
-  and(inTheCar(), not(isNull(value.present ?? value.read)), changed(num(CHANGE_NOTIFICATION_MS), value.read));
+const moved = (value: TrackedValue): Expr => and(inTheCar(), hasSetting(value), changed(num(CHANGE_NOTIFICATION_MS), value.read));
 
 /**
  * The one pop-up that outranks this box.
