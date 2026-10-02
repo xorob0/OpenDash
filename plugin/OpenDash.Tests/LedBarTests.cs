@@ -122,6 +122,28 @@ namespace OpenDashPlugin.Tests
             // ToByteArray(), whose first three groups are little-endian and so do not put the version
             // nibble where the RFC does.
             Assert.Equal('5', LedBarProfile.IdFor("LedRim").ToString("D")[14]);
+
+            // The ids SimHub wrote into ArduinoRGBLedsSettings.json on the rig #457 was reported from (#464,
+            // ADR 0017): a 3/9/3 and a 3/9/3 Fanatec on the Arduino. Every strip already installed on a
+            // driver's rig is found by these, so a change to the prefix, the hash or the version bits that
+            // kept IdFor self-consistent would still lose them, and the next install would add a second copy.
+            Assert.Equal(Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), LedBarProfile.IdFor("Led393"));
+            Assert.Equal(Guid.Parse("cf2f576b-a3e3-5f53-be30-5d74ece9cf6c"), LedBarProfile.IdFor("Led393Fanatec"));
+
+            // The embedded 3/9/3 profile's own id is no bar's: a copy under it in SimHub reads the rig-wide
+            // settings and belongs to no strip, so a bar of that shape is still not installed beside it.
+            var current = "Built by OpenDash 0.3.0; do not edit here.";
+            var bar = new LedBar { Name = "OpenDash 3/9/3", Namespace = "Led393", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
+            var embeddedOnly = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = Guid.Parse("cf7dc3c7-20e7-567d-b6cf-fd9cd188b746"), Name = "OpenDash 3/9/3", Description = current },
+            };
+            Assert.Equal(FlagBoxInstallState.NotInstalled, LedBarProfile.Plan(bar, current, new[] { embeddedOnly }).State);
+            var installed = new List<InstalledProfile>
+            {
+                new InstalledProfile { ProfileId = Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), Name = "OpenDash 3/9/3", Description = current },
+            };
+            Assert.Equal(FlagBoxInstallState.UpToDate, LedBarProfile.Plan(bar, current, new[] { installed }).State);
         }
 
         /// <summary>
@@ -204,19 +226,28 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal("Rim", FlagBoxProfile.ProfileNameOf(mine));
             Assert.Contains("\"ProfileId\": \"" + LedBarProfile.IdFor("LedRim").ToString("D") + "\"", mine);
+            // Every name a bar owns is moved wherever the profile reads it. The four a strip has always
+            // read are all read by the 3-9-3 profile this rewrites, though not by every profile: a bare
+            // run has no ends and no LedSpotterWhole. The brightness and the switches (#503) are read
+            // where the generator draws them, and a profile built before them reads none, which is no
+            // name left rig-wide either.
+            var always = new[] { Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole };
             foreach (var setting in LedBarProfile.BarSettings)
             {
                 Assert.DoesNotContain("[OpenDash." + setting + "]", mine);
-                Assert.Contains("[OpenDash.LedRim" + setting + "]", mine);
+                if (always.Contains(setting) || embedded.Contains("[OpenDash." + setting + "]"))
+                {
+                    Assert.Contains("[OpenDash.LedRim" + setting + "]", mine);
+                }
             }
-            // What stays the rig's stays the rig's: the brightness, the low-fuel threshold and the car's
-            // own shift pattern are not a strip's business.
+            // What stays the rig's stays the rig's: the rig's fallback brightness and night mode, the
+            // low-fuel threshold and the car's own shift pattern are not a strip's business.
             foreach (var shared in new[] { "LightsBrightness", "LightsNightMode", "LightsLowFuelLaps", "LedMirrorReady" })
             {
                 if (!embedded.Contains("[OpenDash." + shared + "]")) continue;
                 Assert.Contains("[OpenDash." + shared + "]", mine);
             }
-            // And the file is otherwise what the build wrote: undoing the three names and dropping the
+            // And the file is otherwise what the build wrote: undoing the bar's own names and dropping the
             // two edited lines from both sides leaves two identical documents. A rewrite that touched
             // anything else -- a colour, a threshold, a container -- fails here.
             var undone = mine;
@@ -234,6 +265,167 @@ namespace OpenDashPlugin.Tests
                 "\n",
                 json.Split('\n').Where(line => !line.TrimStart().StartsWith("\"Name\":", StringComparison.Ordinal)
                     && !line.TrimStart().StartsWith("\"ProfileId\":", StringComparison.Ordinal)));
+        }
+
+        [Fact]
+        public void A_bar_owns_its_brightness_and_a_switch_per_effect()
+        {
+            // The four it always had, then its own brightness and the fifteen switches, in the order the
+            // contract declares them. #503.
+            Assert.Equal(20, LedBarProfile.BarSettings.Length);
+            Assert.Equal(
+                new[] { Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole, Contract.LedBrightness }
+                    .Concat(Contract.LedEffectSettings()),
+                LedBarProfile.BarSettings);
+            // Every one of them is the rig's too, so a strip nobody added reads the rig's answer.
+            foreach (var setting in LedBarProfile.BarSettings) Assert.Contains(setting, Contract.LedPropertyNames());
+            Assert.Equal(LedBarProfile.BarSettings.Select(s => "LedRim" + s), LedBarProfile.Properties("LedRim"));
+            // And the rig's stays the rig's: night mode and the fallback brightness are not a bar's.
+            Assert.DoesNotContain(Contract.LightsBrightness, LedBarProfile.BarSettings);
+            Assert.DoesNotContain(Contract.LightsNightMode, LedBarProfile.BarSettings);
+
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            var names = settings.DeclaredProperties().ToList();
+            foreach (var setting in LedBarProfile.BarSettings) Assert.Contains("LedRim" + setting, names);
+            Assert.Equal(names.Count, names.Distinct().Count());
+        }
+
+        [Fact]
+        public void A_bar_follows_the_rigs_brightness_until_it_has_its_own()
+        {
+            var settings = new OpenDashSettings { LightsBrightness = 70 };
+            settings.Normalise();
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            Assert.Null(bar.Brightness);
+            Assert.Null(settings.BarBrightness(bar.Namespace));
+            settings.SetBarBrightness(bar.Namespace, 40);
+            Assert.Equal(40, settings.BarBrightness(bar.Namespace));
+            settings.SetBarBrightness(bar.Namespace, 180);
+            Assert.Equal(100, settings.BarBrightness(bar.Namespace));
+            settings.SetBarBrightness(bar.Namespace, null);
+            Assert.Null(settings.BarBrightness(bar.Namespace));
+            // A hand-edited value is clamped, and a bar that has gone reads the rig's.
+            bar.Brightness = -10;
+            settings.Normalise();
+            Assert.Equal(0, settings.BarBrightness(bar.Namespace));
+            Assert.Null(settings.BarBrightness("Gone"));
+            settings.SetBarBrightness("Gone", 50);
+        }
+
+        [Fact]
+        public void Every_effect_is_on_until_it_is_switched_off_and_a_flag_is_every_flag()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            Assert.Empty(bar.EffectsOff);
+            foreach (var id in Contract.LedEffectIds()) Assert.True(settings.BarEffectEnabled(bar.Namespace, id));
+
+            settings.SetBarEffect(bar.Namespace, "tc", false);
+            settings.SetBarEffect(bar.Namespace, "flag.yellow", false);
+            Assert.False(settings.BarEffectEnabled(bar.Namespace, "tc"));
+            Assert.True(settings.BarEffectEnabled(bar.Namespace, "abs"));
+            // One switch for the flags: turning off the yellow turned off the chequer with it.
+            Assert.False(settings.BarEffectEnabled(bar.Namespace, "flag.chequered"));
+            Assert.Equal(new[] { "tc", "flag.black" }, bar.EffectsOff);
+            settings.SetBarEffect(bar.Namespace, "flag.blue", true);
+            Assert.True(settings.BarEffectEnabled(bar.Namespace, "flag.yellow"));
+            Assert.Equal(new[] { "tc" }, bar.EffectsOff);
+
+            // An id no switch answers is dropped from a file, and a repeat is stored once.
+            bar.EffectsOff = new List<string> { "sparkles", "abs", "abs", "flag.white", "flag.green", null };
+            settings.Normalise();
+            Assert.Equal(new[] { "abs", "flag.black" }, settings.LedBarByNamespace(bar.Namespace).EffectsOff);
+            // And a bar that has gone draws everything, which is what a strip nobody configured draws.
+            Assert.True(settings.BarEffectEnabled("Gone", "tc"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => settings.SetBarEffect(bar.Namespace, "sparkles", false));
+
+            // The copy carries them and does not share the list.
+            var copy = new OpenDashSettings();
+            copy.CopyFrom(settings);
+            Assert.False(copy.BarEffectEnabled(bar.Namespace, "abs"));
+            copy.SetBarEffect(bar.Namespace, "abs", true);
+            Assert.False(settings.BarEffectEnabled(bar.Namespace, "abs"));
+        }
+
+        [Fact]
+        public void A_reversed_shape_is_the_plain_one_wired_from_the_far_end()
+        {
+            // The 4/14/4 that shipped as a shape of its own loads as its sibling with the switch on, and
+            // still installs the same profile.
+            var settings = new OpenDashSettings
+            {
+                LedBars = new List<LedBar> { new LedBar { Name = "MLD", Namespace = "LedMLD", Shape = "4-14-4-reversed" } },
+            };
+            settings.Normalise();
+            var bar = settings.LedBarByNamespace("LedMLD");
+            Assert.Equal("4-14-4", bar.Shape);
+            Assert.True(bar.Reversed);
+            Assert.True(settings.BarReversed("LedMLD"));
+            Assert.Equal("4-14-4-reversed", bar.ProfileShapeId);
+            // The namespace is frozen, so the profile's id and every bound name are where they were.
+            Assert.Equal("LedMLD", bar.Namespace);
+
+            // Round trip: off is the plain profile, on is the twin, and a change is reported so the
+            // caller reinstalls.
+            Assert.True(settings.SetBarReversed("LedMLD", false));
+            Assert.Equal("4-14-4", bar.ProfileShapeId);
+            Assert.False(settings.SetBarReversed("LedMLD", false));
+            Assert.True(settings.SetBarReversed("LedMLD", true));
+            Assert.Equal("4-14-4-reversed", bar.ProfileShapeId);
+            Assert.False(settings.SetBarReversed("Gone", true));
+
+            // Any plain shape of the grid has a twin, a bare run included.
+            var bare = settings.AddLedBar("0-15-0", "Brow", LedBar.ArduinoDevice);
+            Assert.False(bare.Reversed);
+            Assert.True(settings.SetBarReversed(bare.Namespace, true));
+            Assert.Equal("0-15-0-reversed", bare.ProfileShapeId);
+            // A pre-grid brow id has none: no build wrote a brow-15-reversed to install.
+            var brow = settings.AddLedBar("brow-15", "Old brow", LedBar.ArduinoDevice);
+            Assert.False(brow.SupportsReversal);
+            Assert.False(settings.SetBarReversed(brow.Namespace, true));
+            Assert.Equal("brow-15", brow.ProfileShapeId);
+
+            // Added as a reversed id, a bar arrives reversed.
+            var added = settings.AddLedBar("4-14-4-reversed", "Second", LedBar.ArduinoDevice);
+            Assert.Equal("4-14-4", added.Shape);
+            Assert.True(added.Reversed);
+
+            // The copy carries the switch.
+            var copy = bar.Copy();
+            Assert.True(copy.Reversed);
+            Assert.Equal(bar.ProfileShapeId, copy.ProfileShapeId);
+        }
+
+        [Fact]
+        public void A_shape_with_a_wiring_of_its_own_cannot_be_reversed()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var wheel = settings.AddLedBar("3-9-3-fanatec", "Wheel", LedBar.ArduinoDevice);
+            Assert.False(wheel.SupportsReversal);
+            Assert.False(settings.SetBarReversed(wheel.Namespace, true));
+            Assert.False(wheel.Reversed);
+            Assert.Equal("3-9-3-fanatec", wheel.ProfileShapeId);
+            // And a file claiming otherwise is repaired.
+            wheel.Reversed = true;
+            settings.Normalise();
+            Assert.False(settings.LedBarByNamespace(wheel.Namespace).Reversed);
+            Assert.False(settings.BarReversed(wheel.Namespace));
+        }
+
+        [Fact]
+        public void A_bars_retired_rev_look_loads_as_left_to_right()
+        {
+            var settings = new OpenDashSettings
+            {
+                LedBars = new List<LedBar> { new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3", RpmStyle = "f1" } },
+            };
+            settings.Normalise();
+            Assert.Equal("leftToRight", settings.LedBarByNamespace("LedRim").RpmStyle);
+            Assert.Equal("leftToRight", settings.BarRpmStyle("LedRim"));
         }
 
         /// <summary>A name with a quote in it would end the JSON string early and hand SimHub a file it
@@ -276,6 +468,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(FlagBoxInstallPlan.BuiltInModeOf(false, false));
             // It names the switch rather than describing the symptom, because the switch is the fix.
             Assert.Contains("built-in profiles", FlagBoxInstallPlan.BuiltInModeNote, StringComparison.Ordinal);
+            // A possessive takes its noun (voice.md, #523).
+            Assert.Equal("Turn off built-in profiles on your device, or OpenDash's profiles will not be listed.", FlagBoxInstallPlan.BuiltInModeNote);
             // A plan carrying it is still a plan that worked: nothing to repeat, nothing to undo.
             var plan = new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, Note = FlagBoxInstallPlan.BuiltInModeNote };
             Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);
@@ -377,5 +571,56 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(id, LedBar.NormaliseDevice(" " + id + " "));
         }
 
+    }
+    /// <summary>
+    /// The allocation measurements, alone: GetAllocatedBytesForCurrentThread counts whatever the runtime
+    /// allocates on the thread while it is measured, and with the whole suite running in parallel it saw
+    /// 3000 bytes in about one run in eight that the code under test never allocated. The class runs in a
+    /// collection that is not run beside any other, and each measurement takes the least of several passes:
+    /// a real allocation shows in every pass, a stray one in only some.
+    /// </summary>
+    [Collection(AllocationMeasurements.Name)]
+    public class LedBarAllocationTests
+    {
+        [Fact]
+        public void An_effect_switch_costs_nothing_to_read_with_effects_off()
+        {
+            // Every gated effect in a strip profile reads its switch first, so a profile asks all fifteen
+            // on every LED frame: with a switch off that must still be compares and nothing else. #503.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            settings.SetBarEffect(bar.Namespace, "tc", false);
+            settings.SetBarEffect(bar.Namespace, "flag.yellow", false);
+            settings.SetBarEffect(bar.Namespace, "pit.lane", false);
+            var ns = bar.Namespace;
+            var effects = Contract.LedEffectSettings().Select(Contract.LedEffectPrimaryId).ToArray();
+            foreach (var effect in effects) settings.BarEffectEnabled(ns, effect);
+
+            var least = long.MaxValue;
+            for (var pass = 0; pass < AllocationMeasurements.Passes; pass++)
+            {
+                var before = GC.GetAllocatedBytesForCurrentThread();
+                for (var frame = 0; frame < 100; frame++)
+                {
+                    for (var i = 0; i < effects.Length; i++) settings.BarEffectEnabled(ns, effects[i]);
+                }
+                least = Math.Min(least, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+            Assert.Equal(0, least);
+            Assert.False(settings.BarEffectEnabled(ns, "tc"));
+            Assert.False(settings.BarEffectEnabled(ns, "flag.chequered"));
+            Assert.True(settings.BarEffectEnabled(ns, "abs"));
+        }
+    }
+
+    /// <summary>The collection an allocation measurement runs in: never beside another test.</summary>
+    [CollectionDefinition(Name, DisableParallelization = true)]
+    public class AllocationMeasurements
+    {
+        public const string Name = "Allocation measurements";
+
+        /// <summary>How many times a measurement is taken; the least is the one asserted.</summary>
+        public const int Passes = 5;
     }
 }

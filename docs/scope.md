@@ -52,8 +52,9 @@ until somebody has actually driven them. Concerning that audit, see #102.
 
 ## What ships
 
-Three kinds of screen, built from one set of parts and installed by one plugin, and one profile
-for a box of lights that is not a screen at all.
+Three kinds of screen, built from one set of parts and installed by one plugin, and the profiles
+for the lights around them: a box of lights that is not a screen at all, and the LED strips on a
+wheel, a dash or a monitor.
 
 ### The face
 
@@ -178,14 +179,36 @@ each as a 64-pixel picture, ranked in the same order the face ranks them and col
 same `purpose.flag.*` tokens.
 
 One profile ships, `OpenDash Flag box.ledsprofile`, built by `bun run build` like everything else
-and embedded in the plugin like everything else. It is the one artefact **the plugin does not
-install by itself**: a profile paints hardware somebody owns, which is a thing to be asked about
-rather than assumed. The Lights page has a button that adds it to SimHub's own matrix profiles
-through SimHub's own API, and it never presses itself. The file is written out as well, as the
-fallback and as the thing you copy to another machine.
-[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning, [flag-box.md](flag-box.md) is
-the guide, and the rest of the LED families — strips, brows, wheel buttons, ambient lighting — are
-deliberately not claimed.
+and embedded in the plugin like everything else. Like a strip's profile below, it is an artefact
+**the plugin does not install by itself**: a profile paints hardware somebody owns, which is a thing
+to be asked about rather than assumed. The Matrix page has a press that adds it to SimHub's own
+matrix profiles through SimHub's own API, and it never presses itself. The file is written out as
+well, as the fallback and as the thing you copy to another machine.
+[ADR 0013](decisions/0013-lighting-hardware.md) is the reasoning and [flag-box.md](flag-box.md) is
+the guide.
+
+### The LED strips
+
+A strip is a run of RGB LEDs on a wheel, along a dash or above a monitor, and what a driver knows
+about it is how many LEDs it has and how they are grouped: sides of nought to four around a centre
+of four to twelve, or a bare run of thirteen to twenty-five, which is what a brow is. The build
+generates a profile for every one of those shapes, and the plugin embeds them all. A strip carries
+the revs, the flags, a car alongside, the pit lane and the car's own warnings, and its rev lights
+are the car's own wherever the table the driver downloads has the car
+([ADR 0018](decisions/0018-the-cars-own-lights.md)).
+
+**One profile per strip.** A strip is something the driver adds on the LEDs page and names, as a
+screen is an instance ([ADR 0017](decisions/0017-a-screen-is-an-instance.md)), and adding it installs
+its shape's profile rewritten as that strip's own, reading that strip's settings, into the SimHub LED
+device the strip names ([ADR 0013](decisions/0013-lighting-hardware.md)). The LEDs page is where its
+Rev lights, its centre and its effects are set, and where its Install and Update presses are; neither
+presses itself, and nothing selects a profile on a device, because which profile somebody's hardware
+runs is theirs to choose.
+
+**What is still not claimed** is the rest of the LED families: wheel buttons, button boxes and
+ambient lighting. Each is a different device with a different container vocabulary, OpenDash builds
+no profile for any of them, and the honest position is the one ADR 0013 took for the strips before
+they shipped.
 
 ## The plugin
 
@@ -195,7 +218,7 @@ page in SimHub's left menu. It does not render, does not read telemetry and does
 anything; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why, and the
 question of whether it should ever compute is open as #98.
 
-The Rig tab does now show the screen it is configuring, and that is not a reversal of the sentence
+The Screens page does now show the screen it is configuring, and that is not a reversal of the sentence
 above. The panel hosts SimHub's own renderer, handed the `.djson` under `DashTemplates` that the
 driver's screen loads, reading the properties the panel has just written; nothing about the picture
 is drawn by OpenDash. [ADR 0020](decisions/0020-the-panel-draws-what-it-configures.md) is the record,

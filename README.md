@@ -79,11 +79,11 @@ Windows. [CHANGELOG.md](CHANGELOG.md) says what each release changed.
 Close SimHub, unzip the archive and copy `OpenDash.dll` into SimHub's install folder, the one
 holding `SimHubWPF.exe`, rather than into a subfolder of it. Unblock the file, then start SimHub
 and, in the prompt it shows, switch OpenDash on and then "Show in left main menu", which appears
-once the first switch is on, before pressing Ok. An "OpenDash" page appears in the left menu; on
-its Rig tab, add the
-screen your rig has, and the plugin writes that dashboard into SimHub. `OpenDash 850x480` is the
-base size and the one to take if nothing matches your display exactly; `OpenDash 1280x480` is the
-large one. Restart SimHub once the screens are added, since it reads its list of dashboards only
+once the first switch is on, before pressing Ok. An "OpenDash" entry appears in the left menu with
+eight pages; on its Screens page, add the screen your rig has, and the plugin writes that dashboard
+into SimHub.
+`OpenDash 850x480` is the base size and the one to take if nothing matches your display exactly;
+`OpenDash 1280x480` is the large one. Restart SimHub once the screens are added, since it reads its list of dashboards only
 when it starts. The full procedure, the table of sizes and the troubleshooting list are in
 [plugin/INSTALL.md](plugin/INSTALL.md).
 
@@ -112,7 +112,7 @@ The face is five parts: a fifteen segment rev bar with the car's own shift light
 recessed well, a bar of settled values, a body of three zones, and a band across the foot. The bar
 lights at the RPMs the sim publishes for the car being driven, and falls back to SimHub's per-car
 bands for a car that publishes none. The rev
-bar can also show a plain RPM bar, or be switched off entirely, in which case the well goes with it:
+bar can also be switched off, in which case the well goes with it:
 the bar rises into its room and the body grows by what it gained, while the band keeps its place at
 the foot.
 
@@ -139,7 +139,8 @@ it has its own set, so two screens on one rig are configured apart.
 What every screen shares carries no such name: `OpenDash.RevBar`, `OpenDash.PositionMode`,
 `OpenDash.DeltaReference`, `OpenDash.DeltaPrecision` and `OpenDash.SessionProgress`.
 `OpenDash.DeltaPrecision` is `hundredths` or `thousandths`, the places the live delta is drawn to,
-and `OpenDash.RevBar` is `shift`, `rpm` or `off`, for a wheel that already has LEDs across its top.
+and `OpenDash.RevBar` is `shift` or `off`, the latter for a wheel that already has LEDs across its
+top; a settings file that still says `rpm`, the plain bar earlier releases offered, reads as `shift`.
 On a rectangular zone face `off` selects a second arrangement of the screen, with the well's room
 given back; on everything that has no such arrangement -- the round faces' rev arc, the companion's
 speedo -- it falls back to the plain RPM bar rather than going dark, which is what ADR 0004 records.
@@ -245,6 +246,7 @@ docs/
   decisions/           Architecture decision records
   research/            Format notes verified against SimHub 9.12.6, SDK notes, competitor analysis
   design/              Brand and visual direction
+  testing-panel.md     The scenario matrix for the settings panel, one row per control
   testing-vm.md        The Windows VM that runs SimHub for tests
 ```
 

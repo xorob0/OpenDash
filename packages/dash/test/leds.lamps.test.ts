@@ -11,7 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
+import { ALL_EFFECTS, FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
 import { lampsForSide, lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -199,7 +199,7 @@ describe('what a driver can tell one condition from another by', () => {
       delay: FAST_BLINK_MS,
     });
     // Rank 1 answers to nobody, so its condition is written bare...
-    const oilWhen = SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!.when;
+    const oilWhen = ALL_EFFECTS().find((e) => e.id === 'oilPressure')!.when;
     expect(top.enabledFormula.expression).toBe(oilWhen);
     // ...and both rows under it carry its negation, which is what makes the rank a fact about the
     // emitted profile rather than about the order the catalogue happens to be written in.

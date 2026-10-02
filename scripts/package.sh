@@ -5,17 +5,21 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bun run build
-rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/*.ledsprofile plugin/OpenDash/Resources/fonts
+rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/*.ledsprofile plugin/OpenDash/Resources/fonts plugin/OpenDash/Resources/flag-box-glyphs.json
 # Everything is copied and the csproj decides what is embedded, which is how CI works too: it hands
 # the whole dash artefact over. The card faces are excluded there, for the reason written there.
 cp build/*.simhubdash plugin/OpenDash/Resources/
-# Gzipped, keeping the .ledsprofile name. Sixty-three shapes of a third of a megabyte each is twenty
-# megabytes of NCalc in the assembly; the same files pack to about five hundred kilobytes, and
-# FlagBoxProfile.TextOf sniffs gzip's magic so nothing else in the plugin knows the difference. The
-# plain files stay in build/ and are published nowhere: the plugin is the only way in (#438).
+# Gzipped, keeping the .ledsprofile name. A hundred and twenty-one shapes and the flag box, a third of
+# a megabyte each, is forty-four megabytes of NCalc in the assembly; the same files pack to under a
+# megabyte, and FlagBoxProfile.TextOf sniffs gzip's magic so nothing else in the plugin knows the
+# difference. Half of that is the far-end twins (#503). The plain files stay in build/ and are
+# published nowhere: the plugin is the only way in (#438).
 for profile in build/*.ledsprofile; do
   gzip -9 -c "$profile" > "plugin/OpenDash/Resources/$(basename "$profile")"
 done
+# The flag box's glyphs as data, which the panel draws its previews from (#503). Plain JSON and small,
+# so it is copied rather than gzipped; the csproj embeds it as OpenDash.FlagBoxGlyphs.json.
+cp build/flag-box-glyphs.json plugin/OpenDash/Resources/
 cp -R build/fonts plugin/OpenDash/Resources/fonts
 dotnet build plugin/OpenDash -c Release --no-incremental
 bash plugin/scripts/package-plugin.sh

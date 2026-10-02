@@ -73,17 +73,11 @@ namespace OpenDashPlugin
     {
         public const string SectionTitle = "Add a screen";
 
-        public const string TypeTitle = "Screen type";
-
-        public const string TypeCaption = null;
-
-        public const string SizeTitle = "Screen size";
-
-        public const string SizeCaption = null;
+        /// <summary>The edit sheet's rows for a screen already on the rig: the size row asks what the Add
+        /// sheet's second step asks, so it has the step's name.</summary>
+        public const string SizeTitle = SizeStep;
 
         public const string OrientationTitle = "Orientation";
-
-        public const string OrientationCaption = null;
 
         public const string NameTitle = "Name";
 
@@ -93,6 +87,15 @@ namespace OpenDashPlugin
         public static readonly string[] OrientationLabels = { "Landscape", "Portrait" };
 
         public const string AddButton = "Add screen";
+
+        /// <summary>
+        /// A Duplicate that made nothing. DuplicateScreen returns null only when no package in this build makes
+        /// the screen, and that reason is logged; the line points at the log, as voice.md's failure rule asks.
+        /// </summary>
+        public static string DuplicateFailed(string name)
+        {
+            return "Could not duplicate " + name + ". See SimHub's log.";
+        }
 
         /// <summary>
         /// The one place a screen already on the rig is changed.
@@ -105,6 +108,12 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string EditTitle = "Edit";
 
+        /// <summary>The edit sheet's title: "Edit Rim".</summary>
+        public static string EditSheetTitle(string name)
+        {
+            return EditTitle + " " + name;
+        }
+
         /// <summary>
         /// What an edit keeps, which is everything but the name and the pixels.
         /// </summary>
@@ -116,26 +125,45 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string EditCaption = "Your settings and bindings are kept.";
 
+        /// <summary>The edit sheet's foot for this screen: <see cref="EditCaption"/> where the screen has
+        /// settings of its own, and nothing for a round screen, whose cards are the rig's shared slots and
+        /// which no wheel button is bound to, as PanelScreens.RemoveBody leaves them out.</summary>
+        public static string EditCaptionFor(ScreenInstance screen)
+        {
+            return PanelScreens.OwnsSettings(screen) ? EditCaption : null;
+        }
+
         public const string SaveButton = "Save";
 
         /// <summary>The title of the row the reinstall sits on: it acts on the dashboard rather than on
         /// either of the answers above it.</summary>
         public const string ReinstallTitle = "Dashboard";
 
-        public const string ReinstallCaption = "Writes this screen's dashboard into SimHub again, at the name and size above.";
+        /// <summary>What a reinstall installs, which is the screen as it is saved: a name typed in the box above
+        /// and not yet saved is not in it, and a kind that ships one package draws no size row to point at. In
+        /// the verb of the button beside it, as a control's description is (voice.md); the button has no hover,
+        /// since this caption already says it.</summary>
+        public const string ReinstallCaption = "Reinstalls this screen's dashboard, at its saved name and size.";
 
         public const string ReinstallButton = "Reinstall";
+
+        /// <summary>Save's hover, in Save's own verb and only what every Save does: a Save with nothing changed
+        /// installs nothing, and a resize installs another package, so the line after the press (Renamed,
+        /// Resized) says what was written.</summary>
+        public const string SaveTooltip = "Saves your changes.";
+
+        /// <summary>The edit sheet's Cancel, which has nothing to add and so does not say "adding".</summary>
+        public const string EditCancelTooltip = "Goes back without changing anything.";
 
         /// <summary>
         /// What the caption says instead once this screen's folder has been edited.
         /// </summary>
         /// <remarks>
-        /// The Install tab asks before it replaces authored work and keeps the copy under a name no
-        /// later install claims. A reinstall of one screen costs exactly the same thing, so it says the
-        /// same thing and keeps the copy the same way; "Put mine back" on the Install tab is what
-        /// restores it.
+        /// Updates asks before it replaces authored work and keeps the copy under a name no later
+        /// install claims. A reinstall of one screen costs exactly the same thing, so it says the same
+        /// thing and keeps the copy the same way; "Put mine back" on the Updates page is what restores it.
         /// </remarks>
-        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Install tab restores it.";
+        public const string ReinstallEditedCaption = "You have edited this dashboard. Reinstalling replaces your version; a copy is kept, and \"Put mine back\" on the Updates page restores it.";
 
         /// <summary>
         /// The kinds the build can make a screen of, in the order the page offers them.
@@ -143,15 +171,15 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Derived from the packages rather than written down, so a build carrying no pit wall does not
         /// offer a pit wall: the census is what is embedded, which is the rule the Install tab's rows
-        /// already follow. The order is PackageCatalogue's own -- faces, companions, pit walls, then the
-        /// card model -- because that is the order a rig is usually built in.
+        /// already follow. The order is AddScreen.dc.html's -- faces, pit walls, companions, then the round
+        /// screens -- which is the order a rig is usually built in.
         /// </remarks>
         public static IReadOnlyList<ScreenType> Types(IEnumerable<PackageEntry> catalogue)
         {
             var types = new List<ScreenType>();
             if (catalogue == null) return types;
             var entries = catalogue.Where(e => e != null).ToList();
-            foreach (var kind in new[] { Contract.KindFace, Contract.KindCompanion, Contract.KindPitWall, Contract.KindSlots })
+            foreach (var kind in new[] { Contract.KindFace, Contract.KindPitWall, Contract.KindCompanion, Contract.KindSlots })
             {
                 var of = entries.Where(e => string.Equals(e.Kind, kind, StringComparison.Ordinal)).ToList();
                 if (of.Count == 0) continue;
@@ -164,25 +192,150 @@ namespace OpenDashPlugin
         {
             if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
             if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
-            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Card face";
-            return "Dash or wheel";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return KindName(kind);
+            return "Dash face";
         }
 
+        /// <summary>
+        /// A kind's name where a screen already has one: the card's facts and the header under its name
+        /// ("Round · 480 × 480"), as Screens.dc.html writes them. The Add sheet's tile says the same for the
+        /// three the sheet asks about in the same words, and calls a face a "Dash face", as AddScreen.dc.html
+        /// does. Never the internal kind id: "Slots" is the settings model's.
+        /// </summary>
+        public static string KindName(string kind)
+        {
+            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Companion";
+            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Pit wall";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Round";
+            return "Face";
+        }
+
+        /// <summary>The note under a kind's name on its tile: where a screen of that kind is found.</summary>
         public static string CaptionOf(string kind)
         {
-            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal))
-            {
-                return "A phone or tablet beside the wheel.";
-            }
-            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal))
-            {
-                return "A monitor for your engineer.";
-            }
-            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal))
-            {
-                return "Round faces on the older card layout.";
-            }
-            return "The main screen in front of the driver.";
+            if (string.Equals(kind, Contract.KindCompanion, StringComparison.Ordinal)) return "Phone or tablet";
+            if (string.Equals(kind, Contract.KindPitWall, StringComparison.Ordinal)) return "Monitor or TV";
+            if (string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal)) return "Cards on a round screen";
+            return "Wheel or dash";
+        }
+
+        /// <summary>The greyed kind tile's note (#116).</summary>
+        public const string FlagsScreenCaption = "A second display for flags";
+
+        // --- The sheet's tiles (AddScreen.dc.html) ------------------------------------------------------
+
+        /// <summary>The kind tiles: at least 140 wide, 8 apart, three to a row at most.</summary>
+        public const double KindTileLeast = 140;
+
+        public const int KindColumns = 3;
+
+        /// <summary>The size tiles: at least 96 wide, 8 apart, four to a row at most.</summary>
+        public const double SizeTileLeast = 96;
+
+        public const int SizeColumns = 4;
+
+        public const double TileGap = 8;
+
+        /// <summary>A kind tile's name at 15 SemiBold over its note.</summary>
+        public const double KindTitleSize = 15;
+
+        /// <summary>A size tile: the screen's outline in a 44 px band (<see cref="TileShape"/> fits it), its
+        /// size at 14 in the display family, and the design's name for it at 11.</summary>
+        public const double SizeBand = 44;
+
+        public const double SizeLabelSize = 14;
+
+        public const double SizeHintSize = 11;
+
+        // --- The sheet's three steps and its foot -----------------------------------------------------
+
+        public const string KindStep = "Kind";
+
+        public const string SizeStep = "Size";
+
+        /// <summary>The second step's title: "Orientation" over a pair that is one screen either way up, as the
+        /// edit sheet asks it, and "Size" otherwise.</summary>
+        public static string SizeStepTitle(ScreenType type)
+        {
+            return Question(type) == SizeQuestion.Orientation ? OrientationTitle : SizeStep;
+        }
+
+        public const string NameStep = "Name";
+
+        /// <summary>The foot's heading: a noun, not "What happens next".</summary>
+        public const string NextStepsTitle = "Next steps";
+
+        /// <summary>The foot's step, built from the name the screen will be added under (<see cref="NameFor"/>):
+        /// SimHub lists the dashboard under it.</summary>
+        public static string NextStep(string name)
+        {
+            return "Restart SimHub, then assign \"" + (name ?? string.Empty).Trim() + "\" to this display in Dash Studio.";
+        }
+
+        /// <summary>
+        /// The name Add gives the screen for what is in the box: the box trimmed, or the size when it is empty,
+        /// made distinct from every name on the rig -- what OpenDashSettings.AddScreen does with it.
+        /// </summary>
+        /// <remarks>
+        /// The foot names this and not the box: a rig that already has a Rim adds "Rim (2)", and a cleared box
+        /// adds "850 × 480", so a step built from the box sent the driver to assign another screen's
+        /// dashboard, or one called "".
+        /// </remarks>
+        public static string NameFor(string typed, PackageEntry entry, IEnumerable<string> rig)
+        {
+            var wanted = string.IsNullOrWhiteSpace(typed) ? (entry == null ? string.Empty : entry.SizeLabel) : typed.Trim();
+            return PackageCatalogue.UniqueName(wanted, rig);
+        }
+
+        /// <summary>
+        /// Whether the name in the box is the driver's, after it changed: what they type while the box has the
+        /// keyboard counts, and emptying it gives the box back to the defaults; a default the sheet wrote while
+        /// the keyboard was elsewhere leaves the answer as it was.
+        /// </summary>
+        public static bool Typed(bool wasTyped, bool byDriver, string text)
+        {
+            return byDriver ? (text ?? string.Empty).Trim().Length > 0 : wasTyped;
+        }
+
+        /// <summary>What the box says after a kind or a size is picked: the driver's own name kept, never
+        /// overwritten, and otherwise the new package's default made distinct on the rig.</summary>
+        public static string FilledName(string current, bool typed, PackageEntry entry, IEnumerable<string> rig)
+        {
+            return typed ? current : PackageCatalogue.UniqueName(DefaultName(entry), rig);
+        }
+
+        /// <summary>Add screen's hover, in its own verb and the one the line after it uses ("Added Rim.").</summary>
+        public const string AddTooltip = "Adds the screen and installs its dashboard.";
+
+        public const string CancelButton = "Cancel";
+
+        public const string CancelTooltip = "Goes back without adding anything.";
+
+        /// <summary>What the sheet says in a build carrying no dashboard at all.</summary>
+        public const string NothingToAdd = "This build ships no dashboards.";
+
+        /// <summary>The name the design gives a package, under its size on a tile ("Rim", "Nano"); null where
+        /// it gives none, and none for a pair asked as an orientation or a round screen, whose tiles already
+        /// say what they are.</summary>
+        public static string SizeHint(ScreenType type, PackageEntry entry)
+        {
+            if (entry == null || Question(type) == SizeQuestion.Orientation) return null;
+            if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return null;
+            return PackageCatalogue.NameFor(entry.Folder);
+        }
+
+        /// <summary>The outline a size tile draws inside its 44 px band: AddScreen.dc.html's own formula, a
+        /// wide screen squeezed and a tall one stretched so both read as their shape at a glance, and a
+        /// round one a circle.</summary>
+        public static double[] TileShape(int width, int height)
+        {
+            if (width <= 0 || height <= 0) return new double[] { 40, 40 };
+            var w = width / 2.2;
+            var k = 40 / Math.Max(w, height);
+            var shapeWidth = Math.Min(Math.Round(w * k * 1.6), 96);
+            var shapeHeight = Math.Max(Math.Min(Math.Round(height * k * 0.9), 40), 12);
+            if (width == height) shapeWidth = shapeHeight = 36;
+            return new[] { shapeWidth, shapeHeight };
         }
 
         /// <summary>
@@ -205,13 +358,39 @@ namespace OpenDashPlugin
             return a.Width > 0 && a.Height > 0 && a.Width == b.Height && a.Height == b.Width && a.Width != a.Height;
         }
 
-        /// <summary>A type's packages in the order the control offers them: landscape first for a pair
-        /// that is one screen either way up, the catalogue's own order otherwise.</summary>
+        /// <summary>
+        /// The sizes in the order AddScreen.dc.html's step 2 draws them, width then height: the reference face,
+        /// the three 1280s, the 850 x 480, the Nano, the display dash, then the round.
+        /// </summary>
+        public static readonly int[][] SizeOrder =
+        {
+            new[] { 1920, 480 }, new[] { 1280, 480 }, new[] { 1280, 400 }, new[] { 1280, 720 },
+            new[] { 850, 480 }, new[] { 800, 286 }, new[] { 600, 686 }, new[] { 480, 480 },
+        };
+
+        /// <summary>
+        /// A type's packages in the order the control offers them: landscape first for a pair that is one
+        /// screen either way up, and the artboard's order of sizes otherwise.
+        /// </summary>
+        /// <remarks>
+        /// The catalogue's own order puts the packages the design names first (the Main DDU, the Rim, the
+        /// Nano), which is the order of the Install list and not of the Add sheet's tiles. A size the artboard
+        /// does not draw keeps its place in the catalogue, after the ones it does.
+        /// </remarks>
         public static IReadOnlyList<PackageEntry> Offered(ScreenType type)
         {
             if (type == null) return new PackageEntry[0];
-            if (Question(type) != SizeQuestion.Orientation) return type.Entries;
-            return type.Entries.OrderByDescending(e => e.Width).ToList();
+            if (Question(type) == SizeQuestion.Orientation) return type.Entries.OrderByDescending(e => e.Width).ToList();
+            return type.Entries.OrderBy(SizeRank).ToList();
+        }
+
+        private static int SizeRank(PackageEntry entry)
+        {
+            for (var i = 0; i < SizeOrder.Length; i++)
+            {
+                if (entry.Width == SizeOrder[i][0] && entry.Height == SizeOrder[i][1]) return i;
+            }
+            return SizeOrder.Length;
         }
 
         /// <summary>
@@ -243,8 +422,13 @@ namespace OpenDashPlugin
                 return index >= 0 && index < OrientationLabels.Length ? OrientationLabels[index] : entry.SizeLabel;
             }
             // The design's own caption where a package has one -- "480 round" reads as the product
-            // writes it -- and the pixels otherwise, which is what a driver measures their screen in.
+            // writes it -- and every round screen the same way; the pixels otherwise, which is what a
+            // driver measures their screen in.
             if (entry.SizeCaption != null) return entry.SizeCaption;
+            if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal) && entry.Width > 0 && entry.Width == entry.Height)
+            {
+                return entry.Width + " round";
+            }
             return entry.Width > 0 ? entry.SizeLabel : entry.Folder ?? string.Empty;
         }
 
@@ -271,19 +455,40 @@ namespace OpenDashPlugin
         /// The line under the questions, saying what pressing the button will do.
         /// </summary>
         /// <remarks>
-        /// The second screen at a size is the case worth saying out loud: it gets a copy of the
-        /// dashboard and a settings group of its own, which is the whole of ADR 0017 and is invisible
-        /// from the outside until somebody wonders why their two rims cycle together.
+        /// Another screen of a size is the case worth saying out loud: it gets a copy of the dashboard and its
+        /// own settings, which is the whole of ADR 0017 and is invisible from the outside until somebody
+        /// wonders why their two rims cycle together. What the driver needs from that is the consequence, that
+        /// the two can show different pages (modules, on a companion), never the settings group behind it
+        /// (voice.md, What never appears). <paramref name="second"/> says only that the size's own settings are
+        /// taken, so the line counts nothing: the third screen at a size is not the second, and a second added
+        /// after the first was removed takes the first's place.
+        ///
+        /// The screen is named the way the sheet asked about it: by its size where the tiles show sizes, and
+        /// by its kind where step 2 asked Landscape or Portrait and no size is drawn anywhere -- a second
+        /// landscape companion is not "This 850 × 480", which is the Rim face's size.
         /// </remarks>
-        public static string Note(PackageEntry entry, bool second)
+        public static string Note(ScreenType type, PackageEntry entry, bool second)
         {
-            if (entry == null) return string.Empty;
+            if (entry == null || !second) return string.Empty;
             // Not a card face's: every card face reads the same twelve slots, so a second one gets a dashboard of its
             // own and no settings at all, and the line would promise what it does not do (#474).
             if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return string.Empty;
-            return second
-                ? "Your second " + entry.SizeLabel + " gets settings of its own."
-                : string.Empty;
+            var thing = Question(type) == SizeQuestion.Orientation ? KindName(entry.Kind).ToLowerInvariant() : entry.SizeLabel;
+            // What it shows in its own editor's word: a companion shows modules, a face and a pit wall pages.
+            var shows = string.Equals(entry.Kind, Contract.KindCompanion, StringComparison.Ordinal) ? "modules" : "pages";
+            return "This " + thing + " can show different " + shows + " from any other " + thing + " on your rig.";
+        }
+
+        /// <summary>
+        /// Whether adding <paramref name="entry"/> to <paramref name="rig"/> makes a screen with settings of its
+        /// own beside another of its size, which is <see cref="Note"/>'s <c>second</c>: the first screen of a
+        /// kind and size takes its stock namespace, so the stock namespace already being on the rig is the case.
+        /// </summary>
+        public static bool SettingsTaken(PackageEntry entry, IEnumerable<ScreenInstance> rig)
+        {
+            if (entry == null || rig == null) return false;
+            var stock = new ScreenInstance { Kind = entry.Kind, Width = entry.Width, Height = entry.Height, Folder = entry.Folder }.StockNamespace;
+            return rig.Any(screen => screen != null && string.Equals(screen.Namespace, stock, StringComparison.Ordinal));
         }
 
         /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not
@@ -293,9 +498,11 @@ namespace OpenDashPlugin
             return "Added " + name + ". Restart SimHub, then assign \"" + title + "\" to this display in Dash Studio.";
         }
 
-        public static string AddFailed(string name, string error)
+        /// <summary>An add whose dashboard was not written: the screen is on the rig, and the reason is in
+        /// SimHub's log (voice.md), as <see cref="DuplicateFailed"/> and PanelLights.BarAddFailed say it.</summary>
+        public static string AddFailed(string name)
         {
-            return "Added " + name + ", but its dashboard could not be installed: " + error;
+            return "Added " + name + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
         public static string Resized(string name, string size, string title)
@@ -303,9 +510,51 @@ namespace OpenDashPlugin
             return name + " is now " + size + ". Restart SimHub, then assign \"" + title + "\" to this display again in Dash Studio.";
         }
 
-        public static string ResizeFailed(string name, string error)
+        /// <summary>A resize whose dashboard was not installed. The resize itself happened -- the old folder is
+        /// gone and the screen holds its new size, which the header and the card then show -- so the line says
+        /// so and admits the half that did not land, as <see cref="AddFailed"/> does.</summary>
+        public static string ResizeFailed(string name, string size)
         {
-            return "Could not resize " + name + ": " + error;
+            return name + " is now " + size + ", but its dashboard could not be installed. See SimHub's log.";
+        }
+
+        /// <summary>
+        /// The size the edit sheet's row opens on: the screen's own among <paramref name="offered"/>, or -1 where
+        /// this build offers no package at the screen's size.
+        /// </summary>
+        /// <remarks>
+        /// The case is real: a card face a migration brought onto the rig at "OpenDash slots 1280x480" is a size
+        /// no build embeds, and a face size a later build drops is another. The row used to open on the first
+        /// size offered and hold it as the answer, so pressing Save only to rename such a screen resized it to
+        /// a package the driver never picked and removed its dashboard folder on the way.
+        /// </remarks>
+        public static int OpensOn(IReadOnlyList<PackageEntry> offered, int width, int height)
+        {
+            if (offered == null) return -1;
+            for (var i = 0; i < offered.Count; i++)
+            {
+                if (offered[i] != null && offered[i].Width == width && offered[i].Height == height) return i;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// The choices the edit sheet's size row draws: the sizes offered, led by the screen's own size (a null
+        /// entry, drawn as its size label) where that is not among them, so the row says what the screen is and
+        /// Save keeps it until another size is picked.
+        /// </summary>
+        public static IReadOnlyList<PackageEntry> EditSizes(IReadOnlyList<PackageEntry> offered, int width, int height)
+        {
+            if (offered == null) return new PackageEntry[] { null };
+            if (OpensOn(offered, width, height) >= 0) return offered;
+            return new PackageEntry[] { null }.Concat(offered).ToList();
+        }
+
+        /// <summary>Whether Save resizes the screen: only to a size that was picked and that the screen is not.
+        /// The screen's own size, and a row nobody touched, keep it.</summary>
+        public static bool Resizes(PackageEntry chosen, int width, int height)
+        {
+            return chosen != null && (chosen.Width != width || chosen.Height != height);
         }
 
         /// <summary>
@@ -340,9 +589,11 @@ namespace OpenDashPlugin
             return "Renamed to " + title + ". Restart SimHub to see the new name in Dash Studio.";
         }
 
-        public static string RenameFailed(string name, string error)
+        /// <summary>A rename whose dashboard was not installed, from the name the screen now has, as
+        /// <see cref="Renamed"/> writes it: "Renamed to Wheel", never "Renamed Wheel".</summary>
+        public static string RenameFailed(string title)
         {
-            return "Renamed " + name + ", but its dashboard could not be written: " + error;
+            return "Renamed to " + title + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
         public static string Reinstalled(string name)
@@ -350,9 +601,18 @@ namespace OpenDashPlugin
             return "Installed " + name + "'s dashboard again. Restart SimHub to load it.";
         }
 
+        /// <summary>
+        /// A reinstall that did not write the dashboard, pointing at the log rather than repeating it: the
+        /// installer's error can be a sentence of its own naming the settings model's kind ("This build
+        /// ships no package for a 1280 × 480 slots."), which is for a contributor.
+        /// </summary>
+        /// <remarks>
+        /// Two arguments still, because the shell's InstallScreenAgain calls it with the error it logs; the
+        /// error is not drawn.
+        /// </remarks>
         public static string ReinstallFailed(string name, string error)
         {
-            return "Could not install " + name + "'s dashboard: " + error;
+            return "Could not install " + name + "'s dashboard. See SimHub's log.";
         }
     }
 }

@@ -1,12 +1,12 @@
-// PanelLightRowsTests.cs: the rows the Install tab's Lights section draws, and the one thing about them
+// PanelLightRowsTests.cs: the census of the light profiles this build embeds, and the one thing about it
 // that is mirrored out of the dash build rather than read back from it.
 //
-// Two different jobs here. The first is the shape of the section: eight rows over a full build, in the
-// canvas's order, with the grouped ones counting their own members so that a length added to
-// packages/dash/src/leds/strip.ts cannot leave a caption saying "five" over six profiles. The second is
-// the device captions, which are the only thing PanelLightRows carries that no embedded artefact does --
-// a strip profile's JSON has a Name and nothing else we could caption from -- and which are therefore
-// held against strip.ts in both directions.
+// No page draws the census rows since the Install tab went (#503): the Updates page draws a row per strip
+// on the rig, which PanelUpdatesTests pins. What these tests hold is the census, and through it the
+// embedded build against the generator: every shape a build
+// emits lands in exactly one group, the reversed twins included, and the device captions are held against
+// packages/dash/src/leds/strip.ts in both directions, since a strip profile's JSON has a Name and nothing
+// else a caption could be read from.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -48,7 +48,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_full_build_draws_a_row_per_named_device_and_a_row_per_side_length()
+        public void A_full_build_groups_into_one_group_per_named_device_and_one_per_side_length()
         {
             var rows = PanelLightRows.Rows(FullBuild());
             Assert.Equal(
@@ -90,6 +90,68 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(all.Count, members.Count);
             Assert.Equal(all.Count, members.Distinct(StringComparer.Ordinal).Count());
             Assert.Equal(all.OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
+        }
+
+        [Fact]
+        public void A_reversed_twin_shares_its_siblings_row_and_is_not_counted_as_a_length()
+        {
+            // The generator writes a reversed twin of every plain shape since #503, and reversal is a
+            // switch on a bar rather than a shape to pick, so a twin rides in its sibling's row. Names and
+            // captions are what they were; each row installs twice as many profiles.
+            var plain = FullBuild();
+            var twins = plain
+                .Where(p => !p.ShapeId.EndsWith("-reversed", StringComparison.Ordinal) && !p.ShapeId.EndsWith("-fanatec", StringComparison.Ordinal) && p.ShapeId != "4-14-4")
+                .Select(p => new LightProfile(p.ShapeId + "-reversed", "OpenDash " + PanelLightRows.Label(new LightProfile(p.ShapeId + "-reversed", null))))
+                .ToList();
+            // Shuffled in, as the assembly hands them over.
+            var built = plain.Concat(twins).OrderBy(p => p.ShapeId, StringComparer.Ordinal).ToList();
+
+            var before = PanelLightRows.Rows(plain);
+            var after = PanelLightRows.Rows(built);
+            Assert.Equal(before.Select(r => r.Name), after.Select(r => r.Name));
+            Assert.Equal(before.Select(r => r.Caption), after.Select(r => r.Caption));
+            for (var i = 0; i < before.Count; i++)
+            {
+                var row = before[i];
+                // The 4/14/4 pair keep their own two rows, and the Fanatec wiring has no twin.
+                var expected = row.ShapeIds.SelectMany(id => twins.Any(t => t.ShapeId == id + "-reversed") ? new[] { id, id + "-reversed" } : new[] { id });
+                Assert.Equal(expected, after[i].ShapeIds);
+            }
+            Assert.Equal(new[] { "4-14-4" }, after.Single(r => r.Name == "OpenDash 4/14/4").ShapeIds);
+            Assert.Equal(new[] { "4-14-4-reversed" }, after.Single(r => r.Name == "OpenDash 4/14/4 reversed").ShapeIds);
+            Assert.Equal(new[] { "3-9-3-fanatec" }, after.Single(r => r.Name == "OpenDash 3/9/3 Fanatec").ShapeIds);
+            Assert.Equal(new[] { "3-10-3", "3-10-3-reversed" }, after.Single(r => r.Name == "OpenDash 3/10/3").ShapeIds);
+            Assert.Equal(new[] { "1-4-1", "1-4-1-reversed", "1-5-1", "1-5-1-reversed" }, after.Single(r => r.Name == "OpenDash 1/4/1 … 1/12/1").ShapeIds.Take(4));
+            // Every profile in exactly one row, twins included.
+            var members = after.SelectMany(r => r.ShapeIds).ToList();
+            Assert.Equal(built.Count, members.Count);
+            Assert.Equal(built.Select(p => p.ShapeId).OrderBy(x => x, StringComparer.Ordinal), members.OrderBy(x => x, StringComparer.Ordinal));
+            // 62 profiles become 121: every plain shape but the 4/14/4, which had its twin already.
+            Assert.Equal(62, plain.Count);
+            Assert.Equal(121, built.Count);
+
+            // A twin whose sibling this build does not carry is still offered, in the row its geometry
+            // puts it in.
+            var orphan = PanelLightRows.Rows(new[] { new LightProfile("0-10-0-reversed", "OpenDash 0/10/0 reversed") });
+            Assert.Equal(new[] { "0-10-0-reversed" }, Assert.Single(orphan).ShapeIds);
+        }
+
+        [Fact]
+        public void A_bare_run_has_a_reversed_twin_and_a_pre_grid_brow_has_none()
+        {
+            // A bare run is 0-N-0 and its twin 0-N-0-reversed, which share a row like any other pair.
+            var twin = LightShape.Parse("0-15-0-reversed");
+            Assert.Equal(PanelLightRows.Wheel, twin.Placement);
+            Assert.Equal(15, twin.Centre);
+            Assert.True(twin.Bare);
+            Assert.True(twin.Reversed);
+            var rows = PanelLightRows.Rows(new[] { new LightProfile("0-15-0", null), new LightProfile("0-15-0-reversed", null) });
+            Assert.Equal(new[] { "0-15-0", "0-15-0-reversed" }, Assert.Single(rows).ShapeIds);
+            // brow-N is from before the grid and is read only for an old profile's sake; no build wrote
+            // a twin of one, so an id that claims to be one is not read as a brow.
+            Assert.Equal(PanelLightRows.Brow, LightShape.Parse("brow-15").Placement);
+            Assert.Null(LightShape.Parse("brow-15-reversed"));
+            Assert.Null(LightShape.Parse("brow-15-fanatec"));
         }
 
         [Fact]
@@ -174,8 +236,8 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_dot_never_disagrees_with_the_words_beside_it()
         {
-            // Read off PanelCopy.LightRow rather than from a table of its own, except for the one pairing
-            // that table cannot carry: the uninstalled dot is status.notInstalled and its label text.label.
+            // A fixed ink per state, so neither page's rewording of its own table can move it: the installed
+            // green beside a profile SimHub holds, the failure red, and status.notInstalled otherwise.
             Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.UpToDate));
             Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.Outdated));
             Assert.Equal(Theme.StatusFailed, PanelLightRows.DotHex(FlagBoxInstallState.Failed));
@@ -184,168 +246,55 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.NotEmbedded));
         }
 
+        /// <summary>
+        /// Every state has a dot, whatever another page's table carries: when DotHex read PanelMatrix.ProfileRow
+        /// and the Matrix branch gave that table's words no ink, it returned null, and Ui.Brush(null) threw
+        /// while the Matrix page built. It reads no page's table, so neither ProfileRow nor LightRow can move
+        /// it; a page that wants its dot to follow its own words draws its own table's ink, as the Matrix
+        /// branch now does.
+        /// </summary>
+        [Fact]
+        public void The_dot_has_an_ink_in_every_state_and_reads_no_page_s_table()
+        {
+            foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
+            {
+                Assert.False(string.IsNullOrEmpty(PanelLightRows.DotHex(state)), state + " has a dot");
+            }
+            var code = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelLightRows.cs"));
+            Assert.DoesNotContain("PanelMatrix.ProfileRow(", code);
+            Assert.DoesNotContain("PanelCopy.LightRow(", code);
+        }
+
         [Fact]
         public void An_unreachable_driver_does_not_promise_a_file_that_was_never_written()
         {
             // The whole reason a strip row has a tooltip of its own. FlagBoxInstallPlan.Summary offers the
             // copy in the OpenDash folder, and FlagBoxProfile.Extract writes only the flag box there, so
             // that sentence over a strip row sends a driver looking for a file nothing ever created.
-            var strip = PanelLightRows.Tooltip(5, new FlagBoxPlan { State = FlagBoxInstallState.Unavailable });
-            Assert.Equal(PanelLightRows.Unavailable, strip);
-            Assert.DoesNotContain("OpenDash folder", strip, StringComparison.OrdinalIgnoreCase);
-            Assert.DoesNotContain("by hand", strip, StringComparison.OrdinalIgnoreCase);
+            // The reason is the note under the table, and the strip row's hover says nothing further.
+            var strip = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }).Tooltip;
+            Assert.Null(strip);
+            var note = PanelUpdates.TableNotes(true, null, false, true, true, true, false);
+            Assert.Contains(PanelLightRows.Unavailable, note);
+            foreach (var line in note)
+            {
+                Assert.DoesNotContain("OpenDash folder", line, StringComparison.OrdinalIgnoreCase);
+                Assert.DoesNotContain("by hand", line, StringComparison.OrdinalIgnoreCase);
+            }
             Assert.Contains("OpenDash folder", FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, null), StringComparison.Ordinal);
         }
 
-        /// <summary>
-        /// What a strip row says of the rig's strips, and the one press it can have.
-        /// </summary>
-        /// <remarks>
-        /// This replaces a test of the wording the rows had while they compared the embedded profiles
-        /// with SimHub, member by member and worst first: "at least one of these seven is not installed,
-        /// install them all". That wording described a press the rows lost when a strip became a bar, and
-        /// a reduction #457 replaces, so it is no longer true of anything the panel draws.
-        /// </remarks>
+        /// <summary>The Install tab's Update and its grouping went with their last caller (#523): the Updates page
+        /// writes per strip (SettingsControl.Updates.Lights.cs), and the shell's UpdateBars and
+        /// EmbeddedProfileNames had none.</summary>
         [Fact]
-        public void A_strip_tooltip_says_what_the_rigs_strips_hold_and_offers_only_the_press_the_row_has()
+        public void The_grouped_update_is_gone_with_its_last_caller()
         {
-            // No strip of the shape in SimHub: a strip is added on the Lights tab, and the row has no
-            // Install press to name, so it says where to go.
-            var one = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
-            Assert.Equal("No strip of this shape is in SimHub. Add one on the Lights tab.", one);
-            var group = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled });
-            Assert.Equal("No strip of these shapes is in SimHub. Add one on the Lights tab.", group);
-
-            // Current: the version it carries, and no warning, because there is no press to warn about.
-            var current = PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, InstalledVersion = "0.3.0", EmbeddedVersion = "0.3.0" });
-            Assert.Equal("Installed and up to date (0.3.0).", current);
-            Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, current, StringComparison.Ordinal);
-            Assert.DoesNotContain("(", PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.UpToDate }), StringComparison.Ordinal);
-
-            // Older: both versions, and the warning the flag box's Update carries, since the row's Update
-            // replaces the copy in SimHub by id and whatever was changed in it there goes with it.
-            var older = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Outdated, InstalledVersion = "0.3.0-rc.8", EmbeddedVersion = "0.3.0" });
-            Assert.Equal("A newer profile is available (0.3.0-rc.8 to 0.3.0). " + FlagBoxInstallPlan.Replaces, older);
-            // A strip installed before strips carried a version says the new one alone rather than
-            // inventing an old one.
-            var unstamped = PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Outdated, EmbeddedVersion = "0.3.0" });
-            Assert.Equal("A newer profile is available (0.3.0). " + FlagBoxInstallPlan.Replaces, unstamped);
-
-            Assert.Equal(PanelLightRows.Unavailable, PanelLightRows.Tooltip(9, new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
-            Assert.Equal("Install failed. See SimHub's log.", PanelLightRows.Tooltip(1, new FlagBoxPlan { State = FlagBoxInstallState.Failed }));
-        }
-
-        /// <summary>What a strip built by this checkout's VERSION says in its description.</summary>
-        private const string Current = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0; do not edit here, it is replaced on update.";
-
-        private const string Older = "Shift lights, flags and the spotter on one LED strip. Built by OpenDash 0.3.0-rc.8; do not edit here, it is replaced on update.";
-
-        private static IList<KeyValuePair<LedBar, FlagBoxPlan>> Census(IEnumerable<LedBar> bars, params IEnumerable<InstalledProfile>[] devices)
-        {
-            return bars.Select(bar => new KeyValuePair<LedBar, FlagBoxPlan>(bar, LedBarProfile.Plan(bar, Current, devices))).ToList();
-        }
-
-        /// <summary>
-        /// The rig #457 was reported from: a 3/9/3 and a 3/9/3 Fanatec added on the Arduino, and every
-        /// strip row saying Not installed beside them.
-        /// </summary>
-        /// <remarks>
-        /// The two ids are the ones SimHub wrote into ArduinoRGBLedsSettings.json on that run, and they
-        /// are what the two bars derive from their namespaces, which is the whole of the fix: a row asks
-        /// about the ids the rig's bars derive. It used to ask about the embedded profile's own id,
-        /// cf7dc3c7-... for the 3/9/3, which no bar ever carries, so it could never find one. A profile
-        /// under that id is not a bar's and the row does not speak for it.
-        /// </remarks>
-        [Fact]
-        public void A_row_finds_the_rigs_strips_by_the_ids_their_bars_derive()
-        {
-            var plain = new LedBar { Name = "OpenDash 3/9/3", Namespace = "Led393", Shape = "3-9-3", Device = LedBar.ArduinoDevice };
-            var fanatec = new LedBar { Name = "OpenDash 3/9/3 Fanatec", Namespace = "Led393Fanatec", Shape = "3-9-3-fanatec", Device = LedBar.ArduinoDevice };
-            var arduino = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = Guid.Parse("b8000ec9-0bac-5ab5-993a-4c89f11b692c"), Name = "OpenDash 3/9/3", Description = Current },
-                new InstalledProfile { ProfileId = Guid.Parse("cf2f576b-a3e3-5f53-be30-5d74ece9cf6c"), Name = "OpenDash 3/9/3 Fanatec", Description = Current },
-                new InstalledProfile { ProfileId = Guid.NewGuid(), Name = "Somebody's own" },
-            };
-            Assert.Equal(arduino[0].ProfileId, LedBarProfile.IdFor(plain.Namespace));
-            Assert.Equal(arduino[1].ProfileId, LedBarProfile.IdFor(fanatec.Namespace));
-
-            var census = Census(new[] { plain, fanatec }, arduino);
-            var rows = PanelLightRows.Rows(FullBuild());
-            var sideThree = rows.Single(row => row.ShapeIds.Contains("3-9-3"));
-            var fanatecRow = rows.Single(row => row.ShapeIds.Contains("3-9-3-fanatec"));
-            Assert.Equal("OpenDash 3/4/3 … 3/12/3", sideThree.Name);
-
-            var plan = PanelLightRows.RowPlan(sideThree.ShapeIds, census, true);
-            Assert.Equal(FlagBoxInstallState.UpToDate, plan.State);
-            Assert.Equal("0.3.0", plan.InstalledVersion);
-            Assert.Equal(FlagBoxInstallState.UpToDate, PanelLightRows.RowPlan(fanatecRow.ShapeIds, census, true).State);
-            // Every other shape has no strip on this rig, and says so.
-            foreach (var row in rows.Where(row => row != sideThree && row != fanatecRow))
-            {
-                Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(row.ShapeIds, census, true).State);
-            }
-
-            // The embedded profile's own id is not a strip of the rig's: a copy of it in SimHub reads the
-            // rig-wide settings and belongs to no bar, and a row with no bar of its shape is Not installed.
-            var embeddedOnly = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = Guid.Parse("cf7dc3c7-20e7-567d-b6cf-fd9cd188b746"), Name = "OpenDash 3/9/3", Description = Current },
-            };
-            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(sideThree.ShapeIds, Census(new LedBar[0], embeddedOnly), true).State);
-        }
-
-        /// <summary>
-        /// A row reads Outdated while any strip of its shapes that is in SimHub is older than this build,
-        /// and its Update rewrites exactly those.
-        /// </summary>
-        [Fact]
-        public void A_row_reports_an_older_strip_and_its_update_rewrites_only_that_one()
-        {
-            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
-            var dash = new LedBar { Name = "Dash", Namespace = "LedDash", Shape = "3-12-3" };
-            var unstamped = new LedBar { Name = "Old", Namespace = "LedOld", Shape = "3-4-3" };
-            var gone = new LedBar { Name = "Gone", Namespace = "LedGone", Shape = "3-8-3" };
-            var arduino = new List<InstalledProfile>
-            {
-                new InstalledProfile { ProfileId = LedBarProfile.IdFor(rim.Namespace), Description = Older },
-                new InstalledProfile { ProfileId = LedBarProfile.IdFor(dash.Namespace), Description = Current },
-            };
-            var sideThree = new[] { "3-4-3", "3-8-3", "3-9-3", "3-12-3" };
-
-            // Rim alone is older: the row cannot read current while it is.
-            var plan = PanelLightRows.RowPlan(sideThree, Census(new[] { rim, dash, gone }, arduino), true);
-            Assert.Equal(FlagBoxInstallState.Outdated, plan.State);
-            Assert.Equal("0.3.0", plan.EmbeddedVersion);
-            // Two strips at two versions: the pill names neither rather than one of them.
-            Assert.Null(plan.InstalledVersion);
-            Assert.Equal(new[] { rim }, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
-
-            // Gone has no copy anywhere, and neither pulls the row down to Not installed nor is rewritten
-            // by an Update: there is nothing of it in SimHub to bring forward.
-            Assert.DoesNotContain(gone, PanelLightRows.OutdatedBars(sideThree, Census(new[] { rim, dash, gone }, arduino)));
-
-            // A strip installed before strips carried a version is older too, because nothing says it is
-            // current; its copy names no version and the row invents none.
-            arduino.Add(new InstalledProfile { ProfileId = LedBarProfile.IdFor(unstamped.Namespace), Description = null });
-            var alone = PanelLightRows.RowPlan(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino), true);
-            Assert.Equal(FlagBoxInstallState.Outdated, alone.State);
-            Assert.Null(alone.InstalledVersion);
-            Assert.Equal(new[] { unstamped }, PanelLightRows.OutdatedBars(new[] { "3-4-3" }, Census(new[] { unstamped }, arduino)));
-
-            // And a row whose strips are all current has nothing to update.
-            Assert.Empty(PanelLightRows.OutdatedBars(new[] { "3-12-3" }, Census(new[] { rim, dash, gone }, arduino)));
-        }
-
-        /// <summary>No LED device could be read: the row says so rather than Not installed.</summary>
-        [Fact]
-        public void A_rig_whose_LED_devices_cannot_be_read_is_unavailable_rather_than_empty()
-        {
-            var rim = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
-            Assert.Equal(FlagBoxInstallState.Unavailable, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new[] { rim }), false).State);
-            Assert.Equal(FlagBoxInstallState.Unavailable, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new LedBar[0]), false).State);
-            // Reachable and holding nothing of ours is a rig with no such strip, which is a fact.
-            Assert.Equal(FlagBoxInstallState.NotInstalled, PanelLightRows.RowPlan(new[] { "3-9-3" }, Census(new LedBar[0], new List<InstalledProfile>()), true).State);
+            Assert.Null(typeof(PanelLightRows).GetMethod("RowPlan"));
+            Assert.Null(typeof(PanelLightRows).GetMethod("OutdatedBars"));
+            var profiles = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Profiles.cs"));
+            Assert.DoesNotContain("UpdateBars(", profiles);
+            Assert.DoesNotContain("EmbeddedProfileNames(", profiles);
         }
 
         [Fact]
@@ -484,11 +433,11 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_rows_a_real_build_produces_are_the_rows_the_canvas_draws()
+        public void The_embedded_build_falls_into_the_groups_the_generator_emits()
         {
             // The whole census end to end, off the files the plugin actually embeds: the file name gives
-            // the shape id and the profile's own Name gives the row its title, exactly as
-            // SettingsControl.Install.Lights.cs reads them out of the assembly.
+            // the shape id and the profile's own Name gives the row its title, as FlagBoxProfile reads them
+            // out of the assembly. No page draws these rows; the test holds the build's 121 profiles.
             var built = BuiltProfiles();
             if (built == null)
             {
@@ -516,8 +465,17 @@ namespace OpenDashPlugin.Tests
                 },
                 rows.Select(r => r.Name));
             // Sixty-two: five sides of nine centres and thirteen longer bare runs, less the one the
-            // legacy list already spells, plus the five that shipped before the grid.
-            Assert.Equal(62, rows.SelectMany(r => r.ShapeIds).Count());
+            // legacy list already spells, plus the five that shipped before the grid. And since #503 a
+            // reversed twin of every plain shape but the 4/14/4, which had one: fifty-nine more, riding
+            // in their siblings' rows, for 121. On CI Resources/ holds this commit's own dash build, so
+            // all fifty-nine are required there: LedBar.SupportsReversal offers the switch on every plain
+            // shape, and a package without the twins would leave ProfileShapeId naming a profile nothing
+            // embeds. Only a stale build/ in a local checkout, from before the twins, may carry none.
+            var members = rows.SelectMany(r => r.ShapeIds).ToList();
+            var twins = members.Count(id => id.EndsWith("-reversed", StringComparison.Ordinal) && id != "4-14-4-reversed");
+            if (OnCI) Assert.True(twins == 59, twins + " reversed twins; CI builds the dash from this commit and needs all 59");
+            else Assert.True(twins == 0 || twins == 59, twins + " reversed twins");
+            Assert.Equal(62 + twins, members.Count);
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
             Assert.DoesNotContain(rows, r => r.Name == FlagBoxProfile.ProfileName);

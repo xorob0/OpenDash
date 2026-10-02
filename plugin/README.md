@@ -32,8 +32,10 @@ dotnet test plugin/OpenDash.Tests
 
 The files without SimHub or WPF dependencies (`Contract.cs`, `Cards.cs`, `OpenDashSettings.cs`,
 `Theme.cs`, `Versioning.cs`, `Installation.cs`, `PackageExtractor.cs`,
-`DashboardInstaller.Core.cs`) are compiled into the test project directly; keep them free of
-SimHub and WPF types. The installer tests run the whole install against a temporary SimHub root
+`DashboardInstaller.Core.cs` and the rest `OpenDash.Tests.csproj` lists) are compiled into the test
+project directly; keep them free of SimHub and WPF types. Every `Panel*.cs` but `PanelFonts.cs` is
+among them, by pattern: they are the panel's pure half, its words, sizes and rules, which the
+`SettingsControl.*.cs` partials draw. The installer tests run the whole install against a temporary SimHub root
 with synthetic packages. One test reads `build/OpenDash.simhubdash` and is skipped until the dash
 has been built.
 

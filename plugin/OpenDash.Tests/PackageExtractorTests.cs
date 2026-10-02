@@ -37,6 +37,36 @@ namespace OpenDashPlugin.Tests
         private string Templates(string folder) => Path.Combine(root, "DashTemplates", folder);
 
         /// <summary>
+        /// A screen waits for a restart when this session created its folder, whatever rewrote it since, and
+        /// not because a file in it is newer than SimHub: a Dash Studio save, Reinstall and Edit all rewrite
+        /// the .djson of a dashboard SimHub has listed since it started.
+        /// </summary>
+        [Fact]
+        public void A_screen_waits_for_a_restart_only_when_this_session_created_its_folder()
+        {
+            PackageExtractor.Install(Package("OpenDash Rim", "0.1.0"), root, null);
+            Directory.CreateDirectory(Templates("Half written"));
+            var atStart = PackageExtractor.InstalledFolders(root);
+            Assert.Equal(new[] { "OpenDash Rim" }, atStart.ToArray());
+            Assert.Contains("opendash rim", atStart);
+
+            // Rewritten after startup, as Dash Studio's save and Reinstall do: still loaded.
+            PackageExtractor.Install(Package("OpenDash Rim", "0.2.0"), root, null);
+            File.SetLastWriteTimeUtc(PackageExtractor.InstalledDashboard(root, "OpenDash Rim"), DateTime.UtcNow.AddMinutes(5));
+            Assert.False(PackageExtractor.WaitsForRestart(atStart, "OpenDash Rim", PackageExtractor.IsInstalled(root, "OpenDash Rim")));
+
+            // Added in this session, however soon after SimHub started: waiting.
+            PackageExtractor.Install(Package("OpenDash Wheel", "0.1.0"), root, null);
+            Assert.True(PackageExtractor.WaitsForRestart(atStart, "OpenDash Wheel", PackageExtractor.IsInstalled(root, "OpenDash Wheel")));
+
+            // Missing is its own state, and an unread fact says nothing.
+            Assert.False(PackageExtractor.WaitsForRestart(atStart, "OpenDash Gone", false));
+            Assert.Null(PackageExtractor.WaitsForRestart(null, "OpenDash Wheel", true));
+            Assert.Null(PackageExtractor.WaitsForRestart(atStart, "OpenDash Wheel", null));
+            Assert.Empty(PackageExtractor.InstalledFolders(Path.Combine(root, "nowhere")));
+        }
+
+        /// <summary>
         /// The promise made when somebody consents to replacing their own work is that a copy is kept. A copy the
         /// next routine install reclaims is not kept, so an edited folder's copy goes somewhere no install claims.
         /// </summary>

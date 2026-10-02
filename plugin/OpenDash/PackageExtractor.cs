@@ -39,6 +39,42 @@ namespace OpenDashPlugin
             return File.Exists(InstalledDashboard(simHubRoot, folderName));
         }
 
+        /// <summary>
+        /// Every folder in DashTemplates that holds its dashboard (IsInstalled), by name, compared as Windows
+        /// compares paths. The plugin takes this once, when Init has finished writing the rig's folders: the
+        /// templates SimHub loaded at startup, which it does not read again (docs/dev-loop.md).
+        /// </summary>
+        public static ISet<string> InstalledFolders(string simHubRoot)
+        {
+            var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var root = Path.Combine(simHubRoot, DashTemplates);
+            if (!Directory.Exists(root)) return found;
+            foreach (var folder in Directory.GetDirectories(root))
+            {
+                var name = Path.GetFileName(folder);
+                if (IsInstalled(simHubRoot, name)) found.Add(name);
+            }
+            return found;
+        }
+
+        /// <summary>
+        /// Whether a screen's dashboard waits for SimHub to restart: its folder is in DashTemplates now and was
+        /// not when SimHub loaded its templates, so this session created it. Null when either fact is unknown.
+        /// </summary>
+        /// <remarks>
+        /// It was the folder's and the .djson's write time against the process's start plus two minutes, which
+        /// was wrong both ways: a dashboard saved in Dash Studio, Reinstall or a screen's Edit rewrites the
+        /// .djson, and the screen read "not in SimHub yet" while SimHub listed it; and a screen added in the
+        /// first two minutes -- a first run -- was not flagged at all. A folder SimHub loaded is loaded however
+        /// often it is rewritten, and one it did not load is not, however soon it was made.
+        /// </remarks>
+        public static bool? WaitsForRestart(ISet<string> installedAtStart, string folderName, bool? installedNow)
+        {
+            if (installedNow == false) return false;
+            if (installedAtStart == null || folderName == null || installedNow == null) return null;
+            return !installedAtStart.Contains(folderName);
+        }
+
         /// <summary>DashTemplates/<folder>/<folder>.djson.metadata, the sidecar that carries DashboardVersion.</summary>
         public static string InstalledSidecar(string simHubRoot, string folderName)
         {

@@ -1,0 +1,165 @@
+// SettingsControl.Screens.Companion.cs: a companion's editor on the Screens page (Screens.dc.html) -- its
+// rotation of modules, the module a session opens on, its flag display, its quick glance, and how it is paged.
+//
+// The paging is SimHub's: a tap on either half of the screen, or a wheel button bound to NextScreen on the
+// device the companion runs on (PanelCopy.CompanionPaging). What OpenDash still chooses, it chooses for a
+// moment: the First module, forced as soon as it is picked, and the Quick glance, held on a button (#362).
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+
+namespace OpenDashPlugin
+{
+    public partial class SettingsControl
+    {
+        /// <summary>
+        /// The companion's editor, drawn again in place after a First module pick or a module tick.
+        /// </summary>
+        /// <remarks>
+        /// Save normalises the screen, which moves CompanionStart past a module the rotation has off, so First
+        /// module offers only the ones on, and unticking the First module moves it. The choice has to say what
+        /// the setting now holds, and a list reopened has to mark it, so both redraw.
+        /// </remarks>
+        private FrameworkElement BuildCompanionPane(ScreenInstance screen)
+        {
+            var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            Action redraw = null;
+            redraw = () => ScreensRedraw(host, () => BuildCompanionEditor(screen, redraw));
+            redraw();
+            return host;
+        }
+
+        private FrameworkElement BuildCompanionEditor(ScreenInstance screen, Action redraw)
+        {
+            var count = Ui.Text(PanelScreens.ModuleCount(screen.Modules), PanelScreens.HeadCountSize, FontWeights.SemiBold, Theme.TextSecondary, PanelFonts.Data);
+            count.VerticalAlignment = VerticalAlignment.Center;
+            var head = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(count, Dock.Right);
+            head.Children.Add(count);
+            head.Children.Add(Ui.Heading(PanelScreens.ModulesTitle));
+
+            // Only the modules the rotation has on: Save moves the start past one that is off.
+            var choices = PanelScreens.FirstModuleChoices(screen.Modules);
+            var names = PanelScreens.ModuleNames();
+            var first = Ui.ChoiceButton(choices.Select(i => names[i]).ToArray(), Array.IndexOf(choices, Settings.ScreenCompanionStart(screen.Namespace)), index =>
+            {
+                if (index < 0 || index >= choices.Length) return;
+                var value = choices[index];
+                screen.CompanionStart = value;
+                // And force it now, so the screen in front of you moves rather than waiting for the next
+                // SimHub start. Somebody choosing where it opens is looking at the thing. The force lets go by
+                // itself after the same window Init's does, so the taps come back.
+                screen.OpenOnStartModule(DateTime.UtcNow);
+                ScreensSave(screen, redraw);
+            });
+            first.Uid = "screens.companion.first";
+            var flags = ScreensSegmented(Contract.CompanionFlagFormats, PanelScreens.BarFlagLabels, Settings.ScreenCompanionFlagFormat(screen.Namespace),
+                value => { screen.CompanionFlagFormat = Contract.NormaliseCompanionFlagFormat(value); ScreensSave(screen); });
+            flags.Uid = "screens.companion.flags";
+            // Any module, the ones the rotation has off included: a glance is asked for by holding a button,
+            // and the rotation is about what a tap steps through.
+            var glance = Ui.ChoiceButton(PanelScreens.ModuleNames(), Settings.ScreenCompanionQuickGlance(screen.Namespace), value =>
+            {
+                screen.CompanionQuickGlance = value;
+                ScreensSave(screen, redraw);
+            });
+            glance.Uid = "screens.companion.glance";
+            var chip = ScreensCutChip(BindingChipFor(Contract.HoldQuickGlanceActionFor(screen.Namespace)), PanelScreens.GlanceChipMax);
+            chip.Uid = "screens.companion.glance.chip";
+            // Read only as far as the glance's line of controls wraps; the module grid lays itself out.
+            var controls = PanelScreens.ControlsWidth(ContentWidthUpTo(PanelScreens.ControlsColumnMost));
+
+            // Quick glance is new on the companion in this release (#362), and tagged so for one.
+            var rows = Ui.Rows(
+                Ui.Anchor(Ui.SettingRow(PanelScreens.FirstModuleTitle, first), PanelScreens.AnchorFirstModule),
+                Ui.Anchor(Ui.SettingRow(PanelScreens.FlagDisplayTitle, flags, null, Ui.NewTag()), PanelScreens.AnchorFlagDisplay),
+                Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, ScreensWrap(controls, glance, chip), PanelCopy.CompanionGlance, Ui.NewTag()), PanelScreens.AnchorGlance),
+                Ui.Anchor(BuildCompanionPaging(), PanelScreens.AnchorPaging));
+            return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, redraw)), PanelScreens.AnchorModules), rows);
+        }
+
+        /// <summary>The twenty-one modules as ticks, three to a row where they fit, fewer where they do not;
+        /// a tick redraws the editor, so the count and the First module follow it.</summary>
+        /// <remarks>
+        /// The kit's card grid, as the artboard's repeat(3, minmax(0, 1fr)) at a 6 px gap is: it decides its
+        /// columns as it is measured, holds Compact's two, and reads across and then down (Lap times, Delta,
+        /// Sectors on the first row), so a resize re-lays it without the page reading the width.
+        /// </remarks>
+        private FrameworkElement BuildModuleGrid(ScreenInstance screen, Action redraw)
+        {
+            var cells = Modules.All.Select(module => (UIElement)BuildModuleCell(screen, module, redraw)).ToArray();
+            return Ui.CardGrid(PanelCompanionPlan.ModuleLeast, PanelCompanionPlan.ModuleGap, PanelCompanionPlan.ModuleColumns, cells);
+        }
+
+        /// <summary>One module (.mod): its tick and its name on the base ground, and "Not in iRacing" beside the
+        /// three iRacing publishes nothing for. The description is its hover, and a press anywhere on it
+        /// ticks it.</summary>
+        private FrameworkElement BuildModuleCell(ScreenInstance screen, Module module, Action redraw)
+        {
+            var index = module.Number - 1;
+            var box = new CheckBox
+            {
+                IsChecked = screen.Modules != null && index < screen.Modules.Length && screen.Modules[index],
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 10, 0),
+                Uid = "screens.module." + module.Number.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            };
+            System.Windows.Automation.AutomationProperties.SetName(box, module.Name);
+            Action<bool> ticked = on =>
+            {
+                if (screen.Modules == null || index >= screen.Modules.Length) return;
+                screen.Modules[index] = on;
+                ScreensSave(screen, redraw);
+            };
+            box.Checked += (sender, args) => ticked(true);
+            box.Unchecked += (sender, args) => ticked(false);
+            var line = new DockPanel { LastChildFill = true };
+            // The whole module is the tick's label, as the artboard's .mod is a label.
+            ScreensLabelFor(line, box);
+            DockPanel.SetDock(box, Dock.Left);
+            line.Children.Add(box);
+            if (PanelScreens.IsNotInIracing(module.Id))
+            {
+                var none = Ui.Text(PanelScreens.NotInIracing, PanelCompanionPlan.NoteSize, FontWeights.Normal, Theme.TextSecondary);
+                none.VerticalAlignment = VerticalAlignment.Center;
+                none.Margin = new Thickness(8, 0, 0, 0);
+                DockPanel.SetDock(none, Dock.Right);
+                line.Children.Add(none);
+            }
+            line.Children.Add(ScreensCellText(module.Name, Theme.SizeBody, FontWeights.Normal, Theme.TextPrimary));
+            return new Border
+            {
+                Height = PanelCompanionPlan.ModuleHeight,
+                Padding = new Thickness(PanelCompanionPlan.ModulePaddingX, 0, PanelCompanionPlan.ModulePaddingX, 0),
+                Background = Ui.Brush(Theme.SurfaceBase),
+                CornerRadius = new CornerRadius(Theme.Radius),
+                Child = line,
+                ToolTip = PanelScreens.ModuleTooltip(module),
+            };
+        }
+
+        /// <summary>
+        /// How a companion is paged, which is SimHub's: the sentence naming both ways, and the path to the
+        /// binding on the companion's own device.
+        /// </summary>
+        /// <remarks>
+        /// There used to be a binder for OpenDash's own next-module action here. It needed OpenDash to be the
+        /// thing choosing which screen was up, and that is exactly what stopped a tap working: SimHub's only
+        /// touch gesture maps a tap to the previous or next screen, and its navigation walks the screens whose
+        /// expression is true, so with one of twenty-one enabled there was nothing to walk. It is prose and
+        /// crumbs, not a picture (#435): a drawing of SimHub's dialog goes stale at SimHub's next release.
+        /// </remarks>
+        private FrameworkElement BuildCompanionPaging()
+        {
+            var paging = Ui.Caption(PanelCopy.CompanionPaging, BodyWidth);
+            var crumbs = Ui.Crumbs(PanelScreens.CompanionPagingCrumbs);
+            crumbs.Margin = new Thickness(0, 8, 0, 0);
+            var body = Ui.VStack(0, paging, crumbs);
+            body.Margin = new Thickness(0, 6, 0, 0);
+            var row = Ui.SettingRow(PanelScreens.NextModuleTitle, null);
+            return Ui.VStack(0, row, body);
+        }
+    }
+}

@@ -45,6 +45,7 @@ import {
   fuelUnit,
   NO_VALUE,
   settledFuelTimeLeft,
+  tankIsLow,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
@@ -52,13 +53,14 @@ import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 const { and, fmt, iff, gt, lt, num, str, eq } = ncalc;
 
 /**
- * Below a lap of fuel the level reads as low, which is the dash card's rule too, and only once a
- * lap has said what one costs. `fuelLapsLeft` reads the unpublished estimate as zero and zero is
- * under a lap, so before the first crossing a full tank, the bar under it and the `--` the estimate
- * draws for itself were all painted in the low-fuel red, on the row this page had just been brought
- * to one answer on (#382).
+ * The level reads as low under the rig's one low-fuel threshold, `tankIsLow`, which is what the
+ * strip, the box, the pop-up and the dash card ask too (#503), and only once a lap has said what one
+ * costs. `fuelLapsLeft` reads the unpublished estimate as zero and zero is under any threshold, so
+ * before the first crossing a full tank, the bar under it and the `--` the estimate draws for itself
+ * were all painted in the low-fuel red, on the row this page had just been brought to one answer on
+ * (#382); `tankIsLow` carries the same `fuelIsSettled` gate.
  */
-const lowFuel = () => and(fuelIsSettled(), lt(fuelLapsLeft(), num(1)));
+const lowFuel = () => tankIsLow();
 
 const consumption = (value: string, guard: string) => ({ sample: '2.84', bind: iff(guard, fmt(value, '0.00'), str(NO_VALUE)), chars: CHARS.consumption });
 

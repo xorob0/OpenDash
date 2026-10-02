@@ -18,12 +18,24 @@ bun run vm install 'OpenDash'     # expand built packages into DashTemplates, re
 bun run vm plugin                 # package, install OpenDash.dll, restart SimHub
 bun run vm logs 80                # tail the log SimHub is writing now
 bun run vm shot build/vm.png      # screenshot the display through QEMU's VNC
+bun run vm bind RimCycleZoneC F7  # bind a key to an OpenDash action, restart SimHub
+bun run vm unbind                 # drop every key binding bind made, restart SimHub
 bun run vm claim "what for"       # there is one VM; say who has it
 bun run vm release
 ```
 
 Telemetry is `bun run emulator`, described in
 [tools/irsdk-emulator/README.md](../tools/irsdk-emulator/README.md).
+
+The settings panel has two commands of its own, described under *Photographing the settings panel*
+and *Pressing a wheel button* below:
+
+```bash
+bun scripts/rig.ts panel          # the rig the panel is photographed on; Rim's folder deleted
+bun scripts/rig.ts empty          # a first run: no settings, no copies, no OpenDash folders
+bun scripts/rig.ts clear          # no screens, every other setting kept
+bun run panel-shots --menu-y <y> --rig panel   # every page at every width, into build/panel/
+```
 
 Both find the VM by themselves: this machine when `/opt/winvm` is present, otherwise the SSH host
 in `OPENDASH_VM_HOST`, which defaults to the host the project uses. `scripts/vm.ts` is also a library,
@@ -83,7 +95,7 @@ checks still need a real rig.
 | Commands | `run_powershell(script, timeout_seconds)` `run_cmd(command)` | Runs over SSH as the admin user in **session 0**. Anything with a window started here is invisible; use `run_in_desktop`. |
 | Desktop | `run_in_desktop(command, arguments, working_dir)` | Launches into the logged-in desktop via a scheduled task. Returns immediately. |
 | Files | `upload_file` `download_file` `read_file(remote_path, tail_lines)` `write_file` | SCP under the hood. Windows paths, backslashes escaped in JSON. |
-| GUI | `screenshot(max_width)` `screen_size` `click(x,y,button,double)` `mouse_move` `drag` `type_text` `press_keys` | Coordinates are full-resolution (1280×800). `screenshot` defaults to 1024 px wide; scale your click coordinates by 1280/1024 = 1.25 or ask for `max_width=0`. Works even while Windows is installing. |
+| GUI | `screenshot(max_width)` `screen_size` `click(x,y,button,double)` `mouse_move` `drag` `type_text` `press_keys` | Coordinates are full-resolution (3840×2160, what `screen_size` reports). `screenshot` defaults to 1024 px wide; scale your click coordinates by 3840/1024 = 3.75 or ask for `max_width=0`. A guest at 1280×800 has lost its display mode in a container restart, and [dev-loop.md](dev-loop.md) says how `setres.ps1` puts it back. Works even while Windows is installing. |
 | SimHub | `simhub_status` `simhub_start` `simhub_stop(force)` `simhub_logs(lines)` `simhub_install_plugin(local_dll_path)` | `simhub_install_plugin` copies a DLL into the SimHub folder, unblocks it and restarts SimHub. |
 
 `press_keys` uses vncdotool names: `enter`, `tab`, `esc`, `ctrl-c`, `alt-f4`, `super`, `f5`,
@@ -145,16 +157,39 @@ Two things make it usable from here:
 - The result field is one line and clips a long value, so ask for the part you want rather than the
   whole of it — `left(value, 18, 9)` rather than `value`.
 
+### Photographing the settings panel
+
+`OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel` claims the VM, installs the
+plugin with its left-menu entry, seeds a rig of every kind of screen, strip and matrix
+(`bun scripts/rig.ts panel`; `empty` is a genuine first run), and photographs every page at SimHub
+widths of 700, 1000 and 1600 px and maximised into `build/panel/`, cropped to the panel. `--menu-y` is
+where OpenDash sits in SimHub's left menu, read off a `bun run vm shot`, and has no default. The
+panel's own width is measured by UI Automation and decides where each sidebar item is clicked, from a
+mirror of `PanelShell` that `scripts/panel-shots.test.ts` holds to the C#; `bun run panel-shots --help`
+has the rest.
+
+The pages are the sidebar's eight: Home, Rig, Screens, LEDs, Matrix, Shortcuts, Settings and Updates.
+`--pages` takes a few of them and `--scenario race` gives the live card a session. A page taller than
+the panel comes back in parts, `<page>-<width>-1of2.png` and on. `build/panel/` is scratch; a capture a
+document cites is copied to `media/503/`. The rig on its own, without the photographs, is
+`bun scripts/rig.ts panel`, `empty` or `clear`; each restarts SimHub and expects the VM claimed
+already (`bun run vm claim "panel" && bun scripts/rig.ts panel`). What to check on each
+page, row by row, is [testing-panel.md](testing-panel.md).
+
 ## Pressing a wheel button
 
-Five OpenDash actions are bound to wheel buttons by a driver, and a test has to be able to press
-them. `bun run vm bind` writes SimHub's own input mappings and turns on the keyboard reader, which
-ships disabled:
+OpenDash's actions are bound to wheel buttons by a driver, on the panel's Shortcuts page, and a test
+has to be able to press them. `bun run vm bind` writes SimHub's own input mappings and turns on the
+keyboard reader, which ships disabled, so a binding needs no clicks in the Shortcuts page's binder:
 
 ```bash
-bun run vm bind OpenDash.CycleZoneB F7 OpenDash.HoldQuickGlance F8
-bun run vm unbind          # drop every OpenDash binding again
+bun run vm bind RimCycleZoneB F7 RimHoldQuickGlance F8
+bun run vm unbind          # drop every OpenDash key binding again
 ```
+
+An action is named after its screen's namespace: `RimCycleZoneB` is zone B on the screen called Rim
+in `bun scripts/rig.ts panel`, and a bare name is OpenDash's, so it is `OpenDash.RimCycleZoneB` to
+SimHub.
 
 SimHub is restarted by both, because it reads `PluginsData/PluginManagerSettings.json` at startup.
 A binding survives until it is unbound, so a capture run binds once.
@@ -166,8 +201,9 @@ held keys.
 **A held action must be bound with press type `During`.** SimHub calls an action's start on press
 and its end on release only for that type; every other type goes through `TriggerAction`, which
 fires start and end back to back, so the page appears and vanishes in one frame. `bun run vm bind`
-chooses it for any action whose name begins with `Hold`, and the plugin's own panel corrects a
-glance binding made any other way.
+chooses it only for an action whose name begins with `Hold`, and a glance's name begins with its
+screen's namespace, so `RimHoldQuickGlance` is bound as a press. The Shortcuts page corrects a glance
+binding to `During` while it shows it: open the page once after binding, before holding the key.
 
 ## Manual access (humans)
 

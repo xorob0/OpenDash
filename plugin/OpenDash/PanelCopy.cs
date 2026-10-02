@@ -3,6 +3,9 @@
 // Apart from Widgets.cs for the reason PanelMetrics.cs is: the panel is WPF and the net8.0 test project
 // cannot compile it, so the words live where PanelCopyTests can pin them character for character, as
 // UpdateWordingTests pins the update sentences. Pure: no WPF types.
+//
+// Shared by every page, and not divided into per-page regions: a page adds the constants it needs and changes
+// only those its own page alone draws, never one another page reads (SettingsControl.cs's ownership table).
 using System;
 using System.Globalization;
 
@@ -45,8 +48,6 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PluginDescription = "Dashboards for the screens on your rig, and a page to choose what each one shows.";
 
-        public const string AddScreen = "Add a screen";
-
         /// <summary>The sentence under the empty rig's pill, which the pill has already said is empty.</summary>
         /// <remarks>
         /// Here rather than inline in the WPF file so that a test can hold the wording: it is the one
@@ -55,9 +56,35 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string EmptyRig = "Add the screen your rig has.";
         public const string Installing = "Installing";
+
+        /// <summary>The flag box's by-hand route (SettingsControl.Profiles.cs), which Matrix and Updates both
+        /// draw: its press, the press's hover, the path box's hover, and what a copy says. A failure points at
+        /// the log rather than quoting an exception (voice.md).</summary>
+        public const string CopyForImport = "Copy to SimHub's import folder";
+        public const string CopyForImportTooltip = "Puts a copy in Documents\\SimHub.";
+        public const string ImportPathTooltip = "Where OpenDash left the profile.";
+        public const string CopyForImportFailed = "Could not copy the profile. See SimHub's log.";
+
+        public static string CopiedForImport(string path)
+        {
+            return "Copied to " + path + ". In SimHub, open your device's profiles and press Import.";
+        }
         public const string Installed = "Installed";
         public const string NotInstalled = "Not installed";
         public const string InstallFailed = "Install failed";
+
+        /// <summary>
+        /// A dashboard written after SimHub started, which SimHub has not read yet: one phrase for the one state
+        /// on every page that draws it, as plugin.md's departures table records. The Screens card's state and its fix box's title, Home's
+        /// screen line and the first step of Home's issue, and the Updates table's state all read this constant.
+        /// </summary>
+        /// <remarks>
+        /// Home's issue keeps a title that names the screen ("Rim is not in SimHub yet"), since a list of issues
+        /// is read by what each is about, and says this phrase as its step. Where a card or a cell is too narrow
+        /// for it the phrase wraps to a second line; it is never trimmed, since a trimmed step is one nobody can
+        /// follow.
+        /// </remarks>
+        public const string RestartToLoad = "Restart SimHub to load it";
 
         /// <summary>
         /// The sentence a glance row ends on: the binding is a hold, and the press type the dialog
@@ -118,10 +145,11 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The word a kind needs because the canvas gives it no icon, and null for the three that
-        /// have one. A kind is either drawn or written, never neither.</summary>
+        /// have one. A kind is either drawn or written, never neither, and written by its one name,
+        /// PanelAddScreen.KindName ("Round"), never the settings model's "Slots".</summary>
         public static string KindWord(string kind)
         {
-            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? "Slots" : null;
+            return string.Equals(kind, Contract.KindSlots, StringComparison.Ordinal) ? PanelAddScreen.KindName(kind) : null;
         }
 
         /// <summary>The card's second line: the size OpenDash installed, behind the kind when the kind has
@@ -133,45 +161,53 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What a light profile's row says and offers, from the state the install plan found it in.
+        /// What a light profile's row on the Updates page says, and the press it offers, from the state the
+        /// install plan found it in.
         /// </summary>
         /// <remarks>
-        /// One function rather than a label here and a style there, so that the panel cannot pair a verb
-        /// with the wrong button: an update is the one accented action on the page, and everything else is
-        /// an outline. The canvas draws two of these rows, the older profile and the uninstalled one. A
-        /// profile already at this version takes the panel's own Reinstall wording, which the "This
-        /// plugin" section draws as an outline; a failed install says what the status pill says and offers
-        /// the same press again. Nothing is embedded and SimHub being unreachable have no row of their
-        /// own, the section's own sentence covering both, so they read as not installed.
+        /// The Updates page's: its "In SimHub" table reads it, dot included (PanelUpdates), and the Updates
+        /// agent may reword it. The Matrix page's header row has its own table, PanelMatrix.ProfileRow, and
+        /// its pill's dot, PanelLightRows.DotHex, is a fixed ink per state that reads neither table.
+        ///
+        /// The state is a word and the version has a column of its own, so the words are the four the
+        /// dashboards' rows use (InstallStatus.Label): an older profile is "Update available" in the update
+        /// ink, as the artboard draws "Out of date". The one press the table carries is an older profile's
+        /// Update (PanelUpdates.RowUpdate), and every other state offers none, so its button is null; the
+        /// page draws it as an outline, its one primary being the update card's Download. A state the page
+        /// cannot know -- SimHub's settings out of reach, or no profile in this build to compare with -- is
+        /// "Unknown", the word the table already writes for a version it cannot read, and the row's hover
+        /// says why: calling it "Not installed" would claim what nobody has checked.
+        ///
+        /// Only State and StateHex are drawn. The row's press is PanelUpdates.StripRow's and FlagBoxRow's
+        /// OffersUpdate, since it also depends on SimHub listing the strip's device, so Button and Style here
+        /// are the RowAction's shape, read by no page: pinned as an outline so a primary never creeps back.
         /// </remarks>
         public static RowAction LightRow(FlagBoxInstallState state, string installedVersion)
         {
             switch (state)
             {
                 case FlagBoxInstallState.Outdated:
-                    return new RowAction(InstalledAt(installedVersion), Theme.StatusUpToDate, "Update", PanelButton.Primary);
+                    return new RowAction(InstallStatus.UpdateAvailable.Label(), Theme.StatusUpdateAvailable, PanelUpdates.RowUpdate, PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
-                    return new RowAction(InstalledAt(installedVersion), Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
+                    return new RowAction(InstallStatus.UpToDate.Label(), Theme.StatusUpToDate, null, PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
-                    return new RowAction(InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
+                    return new RowAction(InstallFailed, Theme.StatusFailed, null, PanelButton.Outline);
+                case FlagBoxInstallState.Unavailable:
+                case FlagBoxInstallState.NotEmbedded:
+                    return new RowAction(PanelUpdates.Unknown, Theme.TextLabel, null, PanelButton.Outline);
                 default:
-                    return new RowAction(NotInstalled, Theme.TextLabel, "Install", PanelButton.Outline);
+                    return new RowAction(NotInstalled, Theme.TextLabel, null, PanelButton.Outline);
             }
         }
 
         /// <summary>
-        /// What a screen package's row says and offers.
+        /// What a strip's row says: <see cref="LightRow"/>'s words, except that a strip whose profile this build
+        /// does not ship reads "Not installed", as the LEDs card and Home say it, one word for one state, where the flag
+        /// box's row keeps "Unknown".
         /// </summary>
-        /// <remarks>
-        /// Written and not yet drawn: whether the Install tab removes a screen at all is XOR's plugin-63,
-        /// which is not settled. The table is here so that the answer, when it comes, is a call rather
-        /// than a second set of strings.
-        /// </remarks>
-        public static RowAction ScreenRow(bool installed)
+        public static RowAction StripRow(FlagBoxInstallState state, string installedVersion)
         {
-            return installed
-                ? new RowAction(Installed, Theme.StatusUpToDate, "Remove", PanelButton.Outline)
-                : new RowAction(NotInstalled, Theme.TextLabel, "Add", PanelButton.Outline);
+            return LightRow(state == FlagBoxInstallState.NotEmbedded ? FlagBoxInstallState.NotInstalled : state, installedVersion);
         }
     }
 }

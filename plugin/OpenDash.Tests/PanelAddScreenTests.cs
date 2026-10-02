@@ -80,15 +80,112 @@ namespace OpenDashPlugin.Tests
             };
         }
 
+        /// <summary>A kind is named one way on its card, under its name and on the Add sheet's tile:
+        /// Screens.dc.html's Face, Pit wall, Companion and Round, never the internal id "Slots".</summary>
+        [Fact]
+        public void A_kind_has_one_name()
+        {
+            Assert.Equal("Face", PanelAddScreen.KindName(Contract.KindFace));
+            Assert.Equal("Companion", PanelAddScreen.KindName(Contract.KindCompanion));
+            Assert.Equal("Pit wall", PanelAddScreen.KindName(Contract.KindPitWall));
+            Assert.Equal("Round", PanelAddScreen.KindName(Contract.KindSlots));
+            foreach (var kind in new[] { Contract.KindCompanion, Contract.KindPitWall, Contract.KindSlots })
+            {
+                Assert.Equal(PanelAddScreen.KindName(kind), PanelAddScreen.LabelOf(kind));
+            }
+            // The sheet's tile calls a face what AddScreen.dc.html does; the card says what it is.
+            Assert.Equal("Dash face", PanelAddScreen.LabelOf(Contract.KindFace));
+        }
+
+        /// <summary>AddScreen.dc.html's four kinds, in its order, named as it names them, each with the note
+        /// under its name saying where such a screen is found.</summary>
         [Fact]
         public void The_first_question_is_what_kind_of_screen_it_is()
         {
             var types = PanelAddScreen.Types(Catalogue());
-            Assert.Equal(new[] { Contract.KindFace, Contract.KindCompanion, Contract.KindPitWall, Contract.KindSlots }, types.Select(t => t.Kind));
-            Assert.Equal(new[] { "Dash or wheel", "Companion", "Pit wall", "Card face" }, types.Select(t => t.Label));
-            // Every one says what it is: two words on a button cannot, and a driver adding their first
-            // screen has nowhere else to find out.
-            foreach (var type in types) Assert.NotEmpty(type.Caption);
+            Assert.Equal(new[] { Contract.KindFace, Contract.KindPitWall, Contract.KindCompanion, Contract.KindSlots }, types.Select(t => t.Kind));
+            Assert.Equal(new[] { "Dash face", "Pit wall", "Companion", "Round" }, types.Select(t => t.Label));
+            Assert.Equal(new[] { "Wheel or dash", "Monitor or TV", "Phone or tablet", "Cards on a round screen" }, types.Select(t => t.Caption));
+            // The fifth tile is greyed (#116) and carries its own note.
+            Assert.Equal("Flags screen", PanelSoon.FlagsScreen.Title);
+            Assert.Equal("A second display for flags", PanelAddScreen.FlagsScreenCaption);
+        }
+
+        /// <summary>The sheet's three steps and its foot, in AddScreen.dc.html's words where voice.md agrees:
+        /// a heading is a noun, and the step names the name the driver typed, which SimHub lists it under.</summary>
+        [Fact]
+        public void The_sheet_asks_in_three_steps_and_says_what_comes_next()
+        {
+            Assert.Equal("Add a screen", PanelAddScreen.SectionTitle);
+            Assert.Equal("Kind", PanelAddScreen.KindStep);
+            Assert.Equal("Size", PanelAddScreen.SizeStep);
+            Assert.Equal("Name", PanelAddScreen.NameStep);
+            Assert.Equal("Next steps", PanelAddScreen.NextStepsTitle);
+            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("Rim"));
+            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("  Rim "));
+            // The same step the line after Add says, so the foot and the message cannot disagree.
+            Assert.EndsWith(PanelAddScreen.NextStep("Rim"), PanelAddScreen.Added("Rim", "Rim"));
+
+            // The foot names what Add will call the screen: the rig's settings name a taken name apart and
+            // give an empty box the size, and NameFor says the same before the press.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var rim = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            settings.AddScreen(rim, "Rim");
+            var names = settings.RigScreens().Select(s => s.Name).ToList();
+            Assert.Equal("Rim (2)", PanelAddScreen.NameFor(" Rim ", rim, names));
+            Assert.Equal(settings.AddScreen(rim, " Rim ").Name, PanelAddScreen.NameFor(" Rim ", rim, names));
+            names = settings.RigScreens().Select(s => s.Name).ToList();
+            Assert.Equal("850 × 480", PanelAddScreen.NameFor("  ", rim, names));
+            Assert.Equal(settings.AddScreen(rim, "  ").Name, PanelAddScreen.NameFor("  ", rim, names));
+            Assert.Equal("Restart SimHub, then assign \"Rim (3)\" to this display in Dash Studio.",
+                PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, settings.RigScreens().Select(s => s.Name))));
+            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, null)));
+            Assert.Equal("Add screen", PanelAddScreen.AddButton);
+            Assert.Equal("Adds the screen and installs its dashboard.", PanelAddScreen.AddTooltip);
+            Assert.Equal("Cancel", PanelAddScreen.CancelButton);
+            Assert.Equal("Goes back without adding anything.", PanelAddScreen.CancelTooltip);
+            Assert.Equal("This build ships no dashboards.", PanelAddScreen.NothingToAdd);
+        }
+
+        /// <summary>A size tile is the screen's outline, its size and the name the design gives it: a wide
+        /// face squeezed, a tall one stretched, a round one a circle, and none larger than its band.</summary>
+        [Fact]
+        public void A_size_tile_draws_the_screens_shape_and_its_name()
+        {
+            Assert.Equal(new double[] { 64, 20 }, PanelAddScreen.TileShape(1920, 480));
+            Assert.Equal(new double[] { 64, 30 }, PanelAddScreen.TileShape(1280, 480));
+            Assert.Equal(new double[] { 25, 36 }, PanelAddScreen.TileShape(600, 686));
+            Assert.Equal(new double[] { 36, 36 }, PanelAddScreen.TileShape(480, 480));
+            Assert.Equal(new double[] { 40, 40 }, PanelAddScreen.TileShape(0, 0));
+            // Every outline fits the band it is drawn in.
+            Assert.Equal(44, PanelAddScreen.SizeBand);
+            foreach (var entry in Catalogue()) Assert.True(PanelAddScreen.TileShape(entry.Width, entry.Height)[1] <= PanelAddScreen.SizeBand);
+            // The tiles' grids and words, as AddScreen.dc.html draws them.
+            Assert.Equal(140, PanelAddScreen.KindTileLeast);
+            Assert.Equal(3, PanelAddScreen.KindColumns);
+            Assert.Equal(96, PanelAddScreen.SizeTileLeast);
+            Assert.Equal(4, PanelAddScreen.SizeColumns);
+            Assert.Equal(8, PanelAddScreen.TileGap);
+            Assert.Equal(15, PanelAddScreen.KindTitleSize);
+            Assert.Equal(14, PanelAddScreen.SizeLabelSize);
+            Assert.Equal(11, PanelAddScreen.SizeHintSize);
+            foreach (var entry in Catalogue())
+            {
+                var shape = PanelAddScreen.TileShape(entry.Width, entry.Height);
+                Assert.InRange(shape[0], 12, 96);
+                Assert.InRange(shape[1], 12, 40);
+            }
+            var types = PanelAddScreen.Types(Catalogue());
+            var faces = types.First(t => t.Kind == Contract.KindFace);
+            Assert.Equal("Main DDU", PanelAddScreen.SizeHint(faces, faces.Entries.First(e => e.Folder == "OpenDash")));
+            Assert.Equal("Rim", PanelAddScreen.SizeHint(faces, faces.Entries.First(e => e.Folder == "OpenDash 850x480")));
+            Assert.Null(PanelAddScreen.SizeHint(faces, faces.Entries.First(e => e.Folder == "OpenDash 1280x720")));
+            // A way round, and a round screen, already say what they are.
+            var pitWall = types.First(t => t.Kind == Contract.KindPitWall);
+            Assert.Null(PanelAddScreen.SizeHint(pitWall, pitWall.Entries[0]));
+            var round = types.First(t => t.Kind == Contract.KindSlots);
+            Assert.Null(PanelAddScreen.SizeHint(round, round.Entries.First(e => e.Folder == "OpenDash 480 round")));
         }
 
         /// <summary>The census is what the build carries, so a build with no pit wall offers none.</summary>
@@ -117,6 +214,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(of[Contract.KindPitWall]));
             // The round faces are two genuine sizes rather than one screen either way up.
             Assert.Equal(SizeQuestion.Size, PanelAddScreen.Question(of[Contract.KindSlots]));
+            // The Add sheet's second step is titled as the question is asked, as the edit sheet's row is.
+            Assert.Equal("Size", PanelAddScreen.SizeStepTitle(of[Contract.KindFace]));
+            Assert.Equal("Orientation", PanelAddScreen.SizeStepTitle(of[Contract.KindPitWall]));
+            Assert.Equal("Orientation", PanelAddScreen.SizeStepTitle(of[Contract.KindCompanion]));
 
             // And a build carrying one companion asks nothing at all about it.
             var one = PanelAddScreen.Types(Catalogue().Where(e => e.Folder != "OpenDash Companion portrait").ToList())
@@ -141,37 +242,134 @@ namespace OpenDashPlugin.Tests
         {
             var faces = PanelAddScreen.Types(Catalogue()).First(t => t.Kind == Contract.KindFace);
             var offered = PanelAddScreen.Offered(faces);
-            Assert.Equal(faces.Entries, offered);
             Assert.Equal("1920 × 480", PanelAddScreen.SizeLabel(faces, offered[0], 0));
             // The design's own caption wins where a package has one, so a round face reads as the
-            // product writes it rather than as its pixels.
+            // product writes it rather than as its pixels, and so does the round screen it names none for.
             var round = PanelAddScreen.Types(Catalogue()).First(t => t.Kind == Contract.KindSlots);
-            Assert.Equal(round.Entries[0].SizeCaption ?? round.Entries[0].SizeLabel, PanelAddScreen.SizeLabel(round, round.Entries[0], 0));
+            Assert.Equal(new[] { "480 round", "800 round" }, PanelAddScreen.Offered(round).Select((e, i) => PanelAddScreen.SizeLabel(round, e, i)));
         }
 
-        /// <summary>The name box opens on something a driver would recognise, not on a resource name.</summary>
+        /// <summary>
+        /// Step 2's tiles stand in AddScreen.dc.html's order, held against the catalogue a release builds
+        /// rather than a list made up here: PackageCatalogue.From puts the packages the design names first,
+        /// which is the Install list's order and not the sheet's.
+        /// </summary>
+        [Fact]
+        public void The_sizes_stand_in_the_artboards_order()
+        {
+            var source = new MemoryPackageSource();
+            foreach (var package in new[]
+            {
+                ("OpenDash 800 round", 800, 800), ("OpenDash Pit wall portrait", 1080, 1920), ("OpenDash Pit wall", 1920, 1080),
+                ("OpenDash Companion portrait", 480, 850), ("OpenDash Companion", 850, 480), ("OpenDash 480 round", 480, 480),
+                ("OpenDash 600x686", 600, 686), ("OpenDash 800x286", 800, 286), ("OpenDash 1280x720", 1280, 720),
+                ("OpenDash 800x480", 800, 480), ("OpenDash 850x480", 850, 480), ("OpenDash 1280x400", 1280, 400),
+                ("OpenDash 1280x480", 1280, 480), ("OpenDash", 1920, 480),
+            })
+            {
+                source.Add("OpenDashPlugin.Resources." + package.Item1 + ".simhubdash", Zip(package.Item1, package.Item2, package.Item3));
+            }
+            var types = PanelAddScreen.Types(PackageCatalogue.From(source));
+
+            var faces = types.First(t => t.Kind == Contract.KindFace);
+            Assert.Equal(SizeQuestion.Size, PanelAddScreen.Question(faces));
+            Assert.Equal(
+                new[] { "1920x480", "1280x480", "1280x400", "1280x720", "850x480", "800x286", "600x686", "800x480" },
+                PanelAddScreen.Offered(faces).Select(e => e.Width + "x" + e.Height).ToArray());
+            // The sheet still opens on the 850 x 480, which it finds by its size wherever it stands.
+            var opens = PanelAddScreen.Offered(faces)[PanelAddScreen.PreferredIndex(faces)];
+            Assert.Equal(Contract.PreferredFaceWidth + "x" + Contract.PreferredFaceHeight, opens.Width + "x" + opens.Height);
+
+            var round = types.First(t => t.Kind == Contract.KindSlots);
+            Assert.Equal(new[] { "480 round", "800 round" }, PanelAddScreen.Offered(round).Select((e, i) => PanelAddScreen.SizeLabel(round, e, i)).ToArray());
+            // A way round is still landscape first.
+            var companion = types.First(t => t.Kind == Contract.KindCompanion);
+            Assert.Equal(new[] { 850, 480 }, PanelAddScreen.Offered(companion).Select(e => e.Width).ToArray());
+        }
+
+        private static System.IO.MemoryStream Zip(string folder, int width, int height)
+        {
+            var stream = new System.IO.MemoryStream();
+            using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, true))
+            {
+                SyntheticPackage.Add(zip, folder + "/" + folder + PackageExtractor.DashExtension, "{\"Version\":2}");
+                SyntheticPackage.Add(zip, folder + "/" + folder + PackageExtractor.MetadataExtension,
+                    "{\"Title\":\"" + folder + "\",\"Width\":" + width + ",\"Height\":" + height + "}");
+            }
+            stream.Position = 0;
+            return stream;
+        }
+
+        /// <summary>The name box opens on something a driver would recognise, not on a resource name, and a
+        /// name the driver typed is never overwritten by the default of the next kind or size picked.</summary>
         [Fact]
         public void The_name_is_filled_in_with_the_package_the_design_names_or_with_its_size()
         {
             Assert.Equal("Rim", PanelAddScreen.DefaultName(Package("OpenDash 850x480", Contract.KindFace, 850, 480)));
             Assert.Equal("1280 × 720", PanelAddScreen.DefaultName(Package("OpenDash 1280x720", Contract.KindFace, 1280, 720)));
             Assert.Equal(string.Empty, PanelAddScreen.DefaultName(null));
+
+            var rim = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            var big = Package("OpenDash 1280x720", Contract.KindFace, 1280, 720);
+            // A default fills the box, distinct on the rig, while nothing is typed.
+            Assert.Equal("Rim (2)", PanelAddScreen.FilledName("1280 × 720", false, rim, new[] { "Rim" }));
+            // What the driver typed stays whatever is picked after it.
+            Assert.Equal("Wheel", PanelAddScreen.FilledName("Wheel", true, big, new[] { "Rim" }));
+            // Typing makes the box theirs, emptying it gives it back, and a default written from elsewhere
+            // changes nothing.
+            Assert.True(PanelAddScreen.Typed(false, true, "Wheel"));
+            Assert.False(PanelAddScreen.Typed(true, true, "   "));
+            Assert.True(PanelAddScreen.Typed(true, false, "Rim"));
+            Assert.False(PanelAddScreen.Typed(false, false, "Rim"));
         }
 
         /// <summary>The second screen at a size is the case worth saying out loud: it is the whole of
-        /// ADR 0017 and is invisible from the outside until two rims cycle together.</summary>
+        /// ADR 0017 and is invisible from the outside until two rims cycle together. It is said as what the
+        /// driver gets, two screens showing different pages, and the screen is named the way step 2 asked
+        /// about it: by its size where tiles show sizes, by its kind where they say Landscape or Portrait.</summary>
         [Fact]
         public void The_note_says_what_the_button_will_do()
         {
-            var entry = Package("OpenDash 850x480", Contract.KindFace, 850, 480);
+            var types = PanelAddScreen.Types(Catalogue());
+            var faces = types.First(t => t.Kind == Contract.KindFace);
+            var companions = types.First(t => t.Kind == Contract.KindCompanion);
+            var walls = types.First(t => t.Kind == Contract.KindPitWall);
+            var rim = faces.Entries.First(e => e.Width == 850);
             // The ordinary case says nothing at all: a button reading "Add screen" has already said it.
-            Assert.Equal(string.Empty, PanelAddScreen.Note(entry, false));
-            // The second screen at a size is the one case worth a line, since two rims that page
-            // together is what somebody would otherwise report as a bug.
-            Assert.Contains("second", PanelAddScreen.Note(entry, true));
-            Assert.Contains("settings of its own", PanelAddScreen.Note(entry, true));
+            Assert.Equal(string.Empty, PanelAddScreen.Note(faces, rim, false));
+            // Another screen at a size is the one case worth a line, since two rims that page together is
+            // what somebody would otherwise report as a bug. It counts nothing: the third at a size is not
+            // "your second", and a second added after the first was removed is the only one.
+            Assert.Equal("This 850 × 480 can show different pages from any other 850 × 480 on your rig.", PanelAddScreen.Note(faces, rim, true));
+            Assert.DoesNotContain("second", PanelAddScreen.Note(faces, rim, true));
+            Assert.DoesNotContain("settings", PanelAddScreen.Note(faces, rim, true));
+            // A companion and a pit wall are asked as an orientation, and no pixels are drawn on the sheet:
+            // a second landscape companion is not "This 850 × 480", which is the Rim face's size.
+            Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(companions));
+            // A companion shows modules, in its own editor's word, never pages.
+            Assert.Equal("This companion can show different modules from any other companion on your rig.", PanelAddScreen.Note(companions, companions.Entries[0], true));
+            Assert.Equal(SizeQuestion.Orientation, PanelAddScreen.Question(walls));
+            Assert.Equal("This pit wall can show different pages from any other pit wall on your rig.", PanelAddScreen.Note(walls, walls.Entries[1], true));
+            Assert.Equal(string.Empty, PanelAddScreen.Note(walls, walls.Entries[0], false));
             // Except a card face, since every one of them reads the same twelve slots and a second gets none (#474).
-            Assert.Equal(string.Empty, PanelAddScreen.Note(Package("OpenDash 480 round", Contract.KindSlots, 480, 480), true));
+            var rounds = types.First(t => t.Kind == Contract.KindSlots);
+            Assert.Equal(string.Empty, PanelAddScreen.Note(rounds, rounds.Entries[0], true));
+            var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("var second = PanelAddScreen.SettingsTaken(entry, Settings.RigScreens());", screens);
+            Assert.Contains("note.Text = PanelAddScreen.Note(type, entry, second);", screens);
+
+            // Which is the case once the kind and size's stock namespace is on the rig, and only then.
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            Assert.False(PanelAddScreen.SettingsTaken(rim, settings.RigScreens()));
+            settings.AddScreen(rim, "Rim");
+            Assert.True(PanelAddScreen.SettingsTaken(rim, settings.RigScreens()));
+            Assert.False(PanelAddScreen.SettingsTaken(faces.Entries.First(e => e.Width == 1920), settings.RigScreens()));
+            Assert.False(PanelAddScreen.SettingsTaken(companions.Entries[0], settings.RigScreens()));
+            settings.AddScreen(companions.Entries[1], "Tablet");
+            // A companion is one screen either way up, so its other orientation shares the namespace.
+            Assert.True(PanelAddScreen.SettingsTaken(companions.Entries[0], settings.RigScreens()));
+            Assert.False(PanelAddScreen.SettingsTaken(null, settings.RigScreens()));
         }
 
         /// <summary>
@@ -197,6 +395,39 @@ namespace OpenDashPlugin.Tests
             // In the user's terms rather than in the settings model's: the promise is that the rig
             // survives an edit, and the property names behind it are not something a driver acts on.
             Assert.Equal("Your settings and bindings are kept.", PanelAddScreen.EditCaption);
+            // The edit sheet's rows and presses, each in the words it is drawn in.
+            Assert.Equal("Edit", PanelAddScreen.EditTitle);
+            Assert.Equal("Edit Rim", PanelAddScreen.EditSheetTitle("Rim"));
+            Assert.Equal("Name", PanelAddScreen.NameTitle);
+            Assert.Equal("Also shown in SimHub's dashboard list.", PanelAddScreen.NameCaption);
+            // One name for the one question, on the Add sheet's step and the edit sheet's row.
+            Assert.Equal("Size", PanelAddScreen.SizeTitle);
+            Assert.Equal(PanelAddScreen.SizeStep, PanelAddScreen.SizeTitle);
+            Assert.Equal("Orientation", PanelAddScreen.OrientationTitle);
+            Assert.Equal("Dashboard", PanelAddScreen.ReinstallTitle);
+            Assert.Equal("Reinstall", PanelAddScreen.ReinstallButton);
+            Assert.Equal("Save", PanelAddScreen.SaveButton);
+            // In Save's own verb, and only what every Save does: one with nothing changed installs nothing.
+            Assert.Equal("Saves your changes.", PanelAddScreen.SaveTooltip);
+            Assert.DoesNotContain("writes", PanelAddScreen.SaveTooltip);
+            // In the verb of the button beside it, which has no hover to say it again; the line after it and the
+            // fix box's Install it again keep theirs.
+            Assert.Equal("Reinstalls this screen's dashboard, at its saved name and size.", PanelAddScreen.ReinstallCaption);
+            Assert.StartsWith(PanelAddScreen.ReinstallButton + "s ", PanelAddScreen.ReinstallCaption);
+            Assert.StartsWith("Installed Rim's dashboard again.", PanelAddScreen.Reinstalled("Rim"));
+            var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.DoesNotContain("reinstall.ToolTip", screens);
+            // A round screen keeps no settings and has no bindings, so its sheet promises neither.
+            Assert.Equal(PanelAddScreen.EditCaption, PanelAddScreen.EditCaptionFor(new ScreenInstance { Kind = Contract.KindFace }));
+            Assert.Equal(PanelAddScreen.EditCaption, PanelAddScreen.EditCaptionFor(new ScreenInstance { Kind = Contract.KindPitWall }));
+            Assert.Null(PanelAddScreen.EditCaptionFor(new ScreenInstance { Kind = Contract.KindSlots, Width = 480, Height = 480 }));
+            Assert.Contains("PanelAddScreen.EditCaptionFor(screen)", screens);
+            Assert.Equal("Goes back without changing anything.", PanelAddScreen.EditCancelTooltip);
+            // A failure says what happened and points at the log, where the installer's reason is written
+            // (voice.md), as Duplicate and Remove do.
+            Assert.Equal("Added Rim, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.AddFailed("Rim"));
+            // The resize happened before the write failed: the screen is its new size, and the line says so.
+            Assert.Equal("Rim is now 1280 × 480, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.ResizeFailed("Rim", "1280 × 480"));
             Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
             Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
         }
@@ -232,6 +463,44 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A screen at a size this build offers no package for -- a card face a migration made at 1280 x 480,
+        /// or a face size a later build dropped -- is never resized by a Save that only renamed it.
+        /// </summary>
+        /// <remarks>
+        /// The edit sheet's size row opened on the first size offered and held it as the answer, so Save took
+        /// the resize path: the screen's dashboard folder was removed and the screen became an 800 round.
+        /// </remarks>
+        [Fact]
+        public void A_screen_at_a_size_not_offered_is_not_resized_unless_a_size_is_picked()
+        {
+            var rounds = new[] { Package("OpenDash 480 round", Contract.KindSlots, 480, 480), Package("OpenDash 800 round", Contract.KindSlots, 800, 800) };
+            // The legacy card face is not among them: its row leads with its own size, and opens there.
+            Assert.Equal(-1, PanelAddScreen.OpensOn(rounds, 1280, 480));
+            var choices = PanelAddScreen.EditSizes(rounds, 1280, 480);
+            Assert.Equal(3, choices.Count);
+            Assert.Null(choices[0]);
+            Assert.Same(rounds[0], choices[1]);
+            // Nothing picked, or its own size picked again, is no resize, and so no rename becomes one.
+            Assert.False(PanelAddScreen.Resizes(null, 1280, 480));
+            Assert.False(PanelAddScreen.Resizes(choices[0], 1280, 480));
+            Assert.Equal(ScreenEdit.Rename, PanelAddScreen.Edit("Round", "Dial", PanelAddScreen.Resizes(null, 1280, 480)));
+            // A size picked is.
+            Assert.True(PanelAddScreen.Resizes(choices[2], 1280, 480));
+
+            // A screen at a size offered opens on it, and the row is the sizes alone.
+            Assert.Equal(1, PanelAddScreen.OpensOn(rounds, 800, 800));
+            Assert.Same(rounds, PanelAddScreen.EditSizes(rounds, 800, 800));
+            Assert.False(PanelAddScreen.Resizes(rounds[1], 800, 800));
+            Assert.True(PanelAddScreen.Resizes(rounds[0], 800, 800));
+
+            // The sheet holds no answer until one is picked, and Save asks the model.
+            var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
+            Assert.Contains("PanelAddScreen.EditSizes(PanelAddScreen.Offered(type), screen.Width, screen.Height)", screens);
+            Assert.Contains("PanelAddScreen.Resizes(entry, screen.Width, screen.Height)", screens);
+            Assert.DoesNotContain("?? offered[0]", screens);
+        }
+
+        /// <summary>
         /// The three lines the edit panel can leave behind, each naming what the driver is now waiting for.
         /// </summary>
         /// <remarks>
@@ -250,13 +519,18 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Rim", reinstalled);
             Assert.Contains("Restart SimHub", reinstalled);
 
-            // A failure names the screen and the reason, and claims nothing about restarting.
-            Assert.Contains("disk full", PanelAddScreen.ReinstallFailed("Rim", "disk full"));
-            Assert.DoesNotContain("Restart SimHub", PanelAddScreen.ReinstallFailed("Rim", "disk full"));
-            // A rename whose dashboard could not be written did happen: the card says Wheel, and the
-            // line has to admit the half that did not land rather than report a plain failure.
-            Assert.Contains("Renamed", PanelAddScreen.RenameFailed("Wheel", "disk full"));
-            Assert.Contains("disk full", PanelAddScreen.RenameFailed("Wheel", "disk full"));
+            // A failure names the screen and points at the log rather than repeating the installer's reason,
+            // which can be a sentence of its own in the settings model's words, and claims nothing about
+            // restarting.
+            var slots = "This build ships no package for a 1280 × 480 slots.";
+            Assert.Equal("Could not install Rim's dashboard. See SimHub's log.", PanelAddScreen.ReinstallFailed("Rim", slots));
+            Assert.DoesNotContain("slots", PanelAddScreen.ReinstallFailed("Rim", slots));
+            Assert.DoesNotContain("Restart SimHub", PanelAddScreen.ReinstallFailed("Rim", slots));
+            // A rename whose dashboard could not be installed did happen: the card says Wheel, and the
+            // line has to admit the half that did not land rather than report a plain failure, from the
+            // name the screen now has, as the success line reads.
+            Assert.Equal("Renamed to Wheel, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.RenameFailed("Wheel"));
+            Assert.StartsWith("Renamed to Wheel", PanelAddScreen.Renamed("Wheel"));
         }
 
         /// <summary>The reinstall says what it costs, and says more when there is something to lose.</summary>
@@ -264,10 +538,12 @@ namespace OpenDashPlugin.Tests
         public void The_reinstall_says_what_it_replaces()
         {
             Assert.DoesNotContain("edited", PanelAddScreen.ReinstallCaption);
-            // The Install tab's own promise, in the same words, because it is the same copy and the same
+            // The Updates page's own promise, in the same words, because it is the same copy and the same
             // button that puts it back.
             Assert.Contains("a copy is kept", PanelAddScreen.ReinstallEditedCaption);
             Assert.Contains("Put mine back", PanelAddScreen.ReinstallEditedCaption);
+            // Where "Put mine back" is now that the tabs have gone (#503).
+            Assert.EndsWith("\"Put mine back\" on the Updates page restores it.", PanelAddScreen.ReinstallEditedCaption);
         }
     }
 }

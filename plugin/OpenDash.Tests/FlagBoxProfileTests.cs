@@ -384,7 +384,9 @@ namespace OpenDashPlugin.Tests
             using (var root = new TempDir())
             {
                 var summary = FlagBoxProfile.Summary(FlagBoxProfile.Extract(root.Path, Self));
-                Assert.Contains("Lights", summary, StringComparison.Ordinal);
+                // The page the install press is on since #503: the top of the Matrix page.
+                Assert.Contains("Matrix page", summary, StringComparison.Ordinal);
+                Assert.DoesNotContain("under Lights", summary, StringComparison.Ordinal);
                 Assert.Contains("OpenDash Flag box.ledsprofile", summary, StringComparison.Ordinal);
             }
         }

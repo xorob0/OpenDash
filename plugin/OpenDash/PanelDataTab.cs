@@ -1,41 +1,27 @@
-// PanelDataTab.cs: the words the Data tab puts beside each of its controls, and the gap it sets them
-// at.
+// PanelDataTab.cs: the words the race data rows put beside each of their controls, which were the Data
+// tab's and are the Settings page's Race data section since #503.
 //
-// Apart from SettingsControl.Data.cs for the reason PanelLights.cs is apart from
-// SettingsControl.Lights.cs: the tab is WPF and the net8.0 test project cannot compile a line of it, so
-// copy a test can hold has to live where it can reach. Some rows here say something the canvas does not,
-// on purpose -- the Position row's sentences, the driver and team name rows, the delta reference's third
-// segment, the whole of the delta precision row and the clock row -- and a constant with a test on it is
-// the only way that stays a decision rather than a drift.
+// Apart from SettingsControl.Settings.cs for the reason PanelLights.cs is apart from
+// SettingsControl.Lights.cs: the page is WPF and the net8.0 test project cannot compile a line of it, so
+// copy a test can hold has to live where it can reach. Some rows here say something the Settings artboard
+// does not, on purpose -- the Position row's sentences, the captions under the rows it draws bare, and the
+// whole of the clock row -- and a constant with a test on it is the only way that stays a decision rather
+// than a drift.
 // Pure: no WPF types.
 namespace OpenDashPlugin
 {
     public static class PanelDataTab
     {
-        public const string SectionTitle = "These apply to every screen";
+        /// <summary>The heading the Settings page draws over these rows, which were the Data tab's: "Race
+        /// data", as the Settings artboard names the section (#503). The tab's own 22 px row gap went with
+        /// it; a row of the redesign carries its own padding.</summary>
+        public const string SectionTitle = "Race data";
 
         public const string SectionCaption = null;
 
-        /// <summary>Between one setting and the next on this tab, which is wider than the twenty every
-        /// other section on the panel is given.</summary>
-        /// <remarks>
-        /// The tab is short, so the column under the label reads as one block rather than as a handful
-        /// of separate settings unless they are pushed apart; the design audit takes the 22 off the
-        /// canvas. It is this tab's own number rather than PanelMetrics.SectionGap
-        /// because Install and Lights are long and lengthening them further buys nothing. 22 is off
-        /// design/tokens.json's space scale, which steps 16 to 24, so it is recorded here rather than
-        /// rounded to a token that would say something else.
-        /// </remarks>
-        public const double RowGap = 22;
-
-        /// <summary>The rev bar's words, which now belong to a screen's own pane rather than to this
-        /// tab. They stay here because this file is where the panel's copy a test can hold lives, and
-        /// because the row read exactly the same when it was rig-wide -- what changed is who it answers
-        /// for, not what it says.</summary>
-        public const string RevBarTitle = "Revbar";
-
         /// <summary>
-        /// Two answers, not three.
+        /// The rev bar's two answers, not three. Its title and caption are the Screens page's own
+        /// (PanelScreens.RevBarTitle); the values stay here, beside the labels the page draws them by.
         /// </summary>
         /// <remarks>
         /// "Shift lights" and "RPM bar" were offered as if they were tastes, and they are not: the bar
@@ -48,8 +34,6 @@ namespace OpenDashPlugin
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.
         /// </remarks>
-        public const string RevBarCaption = "Turn off if your wheel has its own shift lights.";
-
         public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
 
         public static readonly string[] RevBarLabels = { "On", "Off" };
@@ -68,6 +52,10 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PositionCaption = "Class also shows only your own class in lists. A zone can ask for that on its own.";
 
+        /// <summary>One label per mode, in the contract's order. "Class" rather than the artboard's "In class":
+        /// the caption begins with the word, and a value in a chooser is a name.</summary>
+        public static readonly string[] PositionLabels = { "Overall", "Class" };
+
         public const string DeltaTitle = "Delta reference";
 
         public const string DeltaCaption = "Which lap the delta compares against.";
@@ -76,12 +64,12 @@ namespace OpenDashPlugin
         /// <remarks>
         /// "Last lap" is the canvas's own name for that lap, the one the Last lap card and the Lap times
         /// page draw, so the row names a lap the driver has already seen a time for rather than
-        /// inventing a word for it. The canvas draws this row with the first two segments only; the
-        /// third is one it does not carry yet (#322).
+        /// inventing a word for it. The Settings artboard draws all three segments (#322). v0.3.0-rc.7
+        /// offered only the first two, so the Settings page tags the row New for the third.
         /// </remarks>
         public static readonly string[] DeltaLabels = { "Session best", "All-time best", "Last lap" };
 
-        /// <summary>The row under the delta reference, which the canvas does not draw at all (#322).</summary>
+        /// <summary>The row under the delta reference, as the Settings artboard draws it (#322).</summary>
         public const string DeltaPrecisionTitle = "Delta precision";
 
         /// <summary>What each answer is for, which is the one thing the two words cannot say.</summary>
@@ -107,9 +95,15 @@ namespace OpenDashPlugin
 
         public const string SessionCaption = "Auto picks laps or time to suit the session.";
 
+        /// <summary>One label per mode, in the contract's order.</summary>
+        public static readonly string[] SessionLabels = { "Auto", "Laps", "Time" };
+
         public const string BlueFlagTitle = "Blue flag detail";
 
         public const string BlueFlagCaption = "What shows next to a blue flag.";
+
+        /// <summary>One label per detail, in the contract's order.</summary>
+        public static readonly string[] BlueFlagLabels = { "Nothing", "Class", "Position and class" };
 
         public const string DriverNameTitle = "Driver names";
 

@@ -12,7 +12,7 @@ import type { Expr } from './bind.ts';
 // one direction the two can face.
 import { ALL_SHAPES } from './leds/strip.ts';
 
-const { add, and, concat, div, eq, fmt, iff, isnull, left, lt, mod, num, or, prop, str, truncate } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, isNull, left, lt, min, mod, num, or, prop, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -52,6 +52,17 @@ export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
  * flash, in the gear it is in -- from a table the plugin fetches (ADR 0018), and it is the default
  * because OpenDash's opinion is that the car is right. A car with no table, or a rig with no
  * plugin, falls back to the ladder iRacing publishes, drawn `leftToRight`.
+ *
+ * **Two of the four are retired from the panel, not from the profile.** The rebuilt panel (#503, per
+ * #369) offers one switch -- the car's own lights, or not -- and "not" is `leftToRight`.
+ * `meetInMiddle` and `f1` are {@link RETIRED_LED_RPM_STYLES}, and the plugin normalises a stored one
+ * to `leftToRight` -- on load and again on read -- rather than leave a strip on a style nobody can
+ * choose again, so this release's plugin never publishes either. They stay in two places all the
+ * same. In {@link LED_RPM_STYLES}, which therefore stays four, so that a stored `f1` is still a legal
+ * value when the plugin's choice check reads it, and is migrated rather than refused. And in every
+ * new strip profile as their conditional groups, because a profile can meet a publisher of `f1` that
+ * is not this plugin -- an older plugin it is installed beside, or a hand-imported profile's rig --
+ * and a strip matching no group goes dark.
  */
 export type LedRpmStyle = 'car' | 'leftToRight' | 'meetInMiddle' | 'f1';
 
@@ -213,6 +224,21 @@ export const CLASS_BEST_LAP = 'ClassBestLap';
 export type DeltaPrecision = 'hundredths' | 'thousandths';
 export const DELTA_PRECISION_SETTING = 'DeltaPrecision';
 
+/**
+ * Whether a flag shows while the car is in the pit lane. #503.
+ *
+ * On by default, which is what every surface drew before the choice existed. Off is for the driver
+ * who has learned to ignore a blue flag waved at them in the lane, where nobody is lapping anybody.
+ * It silences the flags and nothing else: a car alert is about the car and is as true in the lane as
+ * on the track, and the pit family on a strip is *about* the lane.
+ *
+ * Rig-wide, and shared rather than the lights', because every surface that draws a flag asks it --
+ * band D, the full-screen flag, the round faces' ring, the companion, the pit wall, the flag box and
+ * every strip -- so it is a setting of the rig's and not of any one of them. `flagsAllowedHere` in
+ * `flags.ts` is the one place it meets the pit lane itself, since this file reads no telemetry.
+ */
+export const FLAGS_IN_PIT_LANE_SETTING = 'FlagsInPitLane';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -246,6 +272,17 @@ export const MIRROR_COLOR_WIDTH = 9;
 /** The fifth centre, retired into `rpm`. Named so that the plugin can migrate it rather than guess. */
 export const RETIRED_LED_CENTRE = 'rpmOnly';
 
+/**
+ * The two rev light styles the rebuilt panel no longer offers, retired into `leftToRight`. #369, #503.
+ *
+ * Named for the reason {@link RETIRED_LED_CENTRE} is: the plugin migrates a stored one rather than
+ * guessing, and never publishes one. Unlike the retired centre they are still values of
+ * {@link LedRpmStyle}, so that a stored one is still legal when the plugin reads it and is migrated
+ * rather than refused, and still groups in every strip profile, so that a new profile used beside an
+ * older plugin -- which still publishes `f1` -- does not go dark.
+ */
+export const RETIRED_LED_RPM_STYLES: readonly LedRpmStyle[] = ['meetInMiddle', 'f1'];
+
 export const DEFAULTS = {
   ShiftLights: true,
   RevBar: 'shift' as RevBarMode,
@@ -274,6 +311,9 @@ export const DEFAULTS = {
   ClockFormat: '24h' as ClockFormat,
   // Two places, which is what the canvas draws and what reads at a glance.
   DeltaPrecision: 'hundredths' as DeltaPrecision,
+  // A flag keeps showing in the pit lane, which is what every surface drew before there was a
+  // choice, and what a driver being shown a black flag on the way in is owed.
+  FlagsInPitLane: true,
 } as const;
 
 /**
@@ -327,7 +367,9 @@ export function dashProperties(): string[] {
   // And the class best after them, published for the same reason and read by every package that
   // draws a session best. And the clock format after that, since every package's idle screen draws
   // the wall clock. #324. And the delta's precision after that, chosen rather than published, and
-  // appended for the same reason. #322.
+  // appended for the same reason. #322. And whether a flag shows in the pit lane after that: every
+  // surface that draws a flag reads it, the companion and the pit wall among them, so it has to be
+  // shared or `foreignProperties` would deny it to them. #503.
   const shared = [
     REV_BAR_SETTING,
     BLUE_FLAG_DETAIL_SETTING,
@@ -338,13 +380,26 @@ export function dashProperties(): string[] {
     CLASS_BEST_LAP,
     CLOCK_FORMAT_SETTING,
     DELTA_PRECISION_SETTING,
+    FLAGS_IN_PIT_LANE_SETTING,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
 
 /** The properties only a generated LED profile reads. ADR 0013. */
 export function ledProperties(): string[] {
-  return [LED_CENTRE_SETTING, LED_RPM_STYLE_SETTING, LED_FLAG_ANIMATION_SETTING, LED_MIRROR_FIT_SETTING, LED_MIRROR_READY, ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName), LED_SPOTTER_WHOLE_SETTING].map(propertyName);
+  return [
+    LED_CENTRE_SETTING,
+    LED_RPM_STYLE_SETTING,
+    LED_FLAG_ANIMATION_SETTING,
+    LED_MIRROR_FIT_SETTING,
+    LED_MIRROR_READY,
+    ...MIRROR_RUN_LENGTHS.map(ledMirrorRunName),
+    LED_SPOTTER_WHOLE_SETTING,
+    // Appended after the spotter switch, for the reason everything in this list is appended: both
+    // halves of the contract pin it in order. The strip's own brightness, then its effect switches. #503.
+    LED_BRIGHTNESS_SETTING,
+    ...ledEffectSettingNames(),
+  ].map(propertyName);
 }
 
 /** The name of the setting choosing what the middle of a strip shows. */
@@ -456,6 +511,89 @@ export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
 export const LED_SPOTTER_WHOLE_SETTING = 'LedSpotterWhole';
 
 /**
+ * A strip's own brightness, in percent, or nothing for "the same as the rig". #503.
+ *
+ * The rig's brightness trio is one answer for every light, which is right for most rigs and wrong for
+ * the one whose wheel is a hand's width from the driver's eyes and whose brow is a metre away. A bar
+ * with an answer of its own publishes it here under its namespace; the rig-wide name publishes null,
+ * and so does a bar with no answer. Null means the rig's, literally: such a strip is drawn at
+ * `flagBox.brightness()`, day and night, so it and the flag box cannot drift apart and the brightness
+ * buttons move both. A bar with an answer of its own is never brighter than the night brightness at
+ * night: {@link setting.ledBrightnessInForce} takes the lower of the two, so a strip turned up for
+ * daylight does not stay bright in a dark room.
+ */
+export const LED_BRIGHTNESS_SETTING = 'LedBrightness';
+
+/**
+ * The switch for every effect a strip can draw, and the effect ids each one governs. #370, #503.
+ *
+ * One switch per thing a driver would name rather than one per container: the eight flag rows are
+ * one switch, `LedEffectFlags`, because "no flags on my wheel" is a question a driver asks and "no
+ * debris flag on my wheel" is not. Every id `ALL_EFFECTS()` in `leds/effects.ts` produces is listed,
+ * which `leds.test.ts` holds; this file cannot import that one, which imports this.
+ *
+ * On by default, all of them, so that a switch nobody has touched takes nothing off a strip. Off
+ * means gone, and what ranks below it on the same lamp shows through: a lamp's guards are `not()` of
+ * the effects above it, and an effect switched off is not lit.
+ *
+ * No name here may carry the digit 1 or 2 -- `ContractTests.cs` holds the strips' names to that so
+ * that a mirror run cannot pass for a setting -- hence `PushToPass`.
+ *
+ * Written as one line per switch, in the order the plugin attaches them, and flattened below into
+ * {@link LED_EFFECTS}, one entry per effect id.
+ *
+ * A switch governs a signal rather than a catalogue row where the two differ: `LedEffectLowFuel`
+ * silences the low-fuel lamp and the fuel centre's low-fuel blink alike (`fuelBar` in
+ * `leds/rpmStrip.ts`), and leaves the fuel centre's level drawn.
+ */
+const LED_EFFECT_SWITCHES: Readonly<Record<string, readonly string[]>> = {
+  LedEffectTc: ['tc'],
+  LedEffectAbs: ['abs'],
+  LedEffectDrs: ['drs'],
+  LedEffectPushToPass: ['p2p'],
+  LedEffectLowFuel: ['lowFuel'],
+  LedEffectTemperature: ['temperature'],
+  LedEffectOilPressure: ['oilPressure'],
+  LedEffectFlags: ['flag.black', 'flag.caution', 'flag.yellow', 'flag.debris', 'flag.blue', 'flag.white', 'flag.green', 'flag.chequered'],
+  LedEffectSpotterLeft: ['spotter.left'],
+  LedEffectSpotterRight: ['spotter.right'],
+  LedEffectPitLane: ['pit.lane'],
+  LedEffectPitLimiter: ['pit.limiter'],
+  LedEffectPitSpeeding: ['pit.speeding'],
+  LedEffectTurnLeft: ['turn.left'],
+  LedEffectTurnRight: ['turn.right'],
+};
+
+/** Every effect id with the switch that governs it, in the switches' order. */
+export const LED_EFFECTS: readonly { id: string; setting: string }[] = Object.entries(LED_EFFECT_SWITCHES).flatMap(([setting, ids]) =>
+  ids.map((id) => ({ id, setting })),
+);
+
+/** On: a switch nobody has touched leaves the strip as it was. */
+export const DEFAULT_LED_EFFECT = true;
+
+/** The fifteen switches, once each, in the order {@link LED_EFFECTS} first names them. */
+export const ledEffectSettingNames = (): string[] => [...new Set(LED_EFFECTS.map((e) => e.setting))];
+
+/** The prefix every flag row's effect id carries: `flag.yellow`. `Contract.LedEffectFlagPrefix` mirrors it. */
+export const LED_EFFECT_FLAG_PREFIX = 'flag.';
+const LED_EFFECT_FLAGS_SETTING = 'LedEffectFlags';
+
+/**
+ * `LedEffectFlags` for `flag.yellow`: the switch that governs an effect.
+ *
+ * Any `flag.` id is the flags' switch, listed or not, which is the rule the plugin's
+ * `Contract.LedEffectSetting` applies: a flag row added to the effects is switched with the others
+ * on both sides without either table growing. Any other id it does not know throws.
+ */
+export function ledEffectSettingName(id: string): string {
+  const found = LED_EFFECTS.find((e) => e.id === id);
+  if (found !== undefined) return found.setting;
+  if (id.startsWith(LED_EFFECT_FLAG_PREFIX) && id.length > LED_EFFECT_FLAG_PREFIX.length) return LED_EFFECT_FLAGS_SETTING;
+  throw new RangeError(`contract: no LED effect ${JSON.stringify(id)}`);
+}
+
+/**
  * Whether the plugin is publishing a mirrored bar this frame: it has a table for this car, the
  * driver has asked for it, and the sim is in a gear it can draw. The one gate the mirror layer of
  * every strip profile hangs on, and false for all five of the ways there can be no mirror -- no
@@ -541,6 +679,35 @@ export const setting = {
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
   /** `isnull([OpenDash.LedSpotterWhole], false)`: whether a car alongside takes the whole strip. */
   ledSpotterWhole: (): Expr => isnull(prop(propertyName(LED_SPOTTER_WHOLE_SETTING)), String(DEFAULTS.LedSpotterWhole)),
+  /**
+   * `isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))`: the strip's own
+   * day brightness, or the rig's where the strip has none. #503.
+   */
+  ledBrightness: (): Expr => isnull(prop(propertyName(LED_BRIGHTNESS_SETTING)), flagBox.dayBrightness()),
+  /**
+   * The brightness a strip is drawn at:
+   *
+   * `if(isnull([OpenDash.LedBrightness]), flagBox.brightness(), if(night, min(own, nightBrightness), own))`
+   *
+   * With no brightness of its own it is the rig's, exactly what the flag box draws, night brightness
+   * included -- so at night it follows `LightsNightBrightness` even where that is above the day
+   * brightness, as the box does, and "null = the same as the rig" holds literally. With one, it is
+   * that, and at night the lower of it and the night brightness, so that night mode dims a strip
+   * turned up for daylight and never brightens one turned down.
+   */
+  ledBrightnessInForce: (): Expr =>
+    iff(
+      isNull(prop(propertyName(LED_BRIGHTNESS_SETTING))),
+      flagBox.brightness(),
+      // Defaulted all the same, so no branch of the file reads a bare property.
+      iff(eq(flagBox.nightMode(), 'true'), min(setting.ledBrightness(), flagBox.nightBrightness()), setting.ledBrightness()),
+    ),
+  /** `isnull([OpenDash.LedEffectFlags], true)`: the switch governing one effect, by the effect's id. */
+  ledEffect: (id: string): Expr => isnull(prop(propertyName(ledEffectSettingName(id))), String(DEFAULT_LED_EFFECT)),
+  /** `(isnull([OpenDash.LedEffectFlags], true)) = (true)`: whether that effect may light at all. */
+  ledEffectOn: (id: string): Expr => eq(setting.ledEffect(id), 'true'),
+  /** `isnull([OpenDash.FlagsInPitLane], true)`: whether a flag shows while the car is in the pit lane. #503. */
+  flagsInPitLane: (): Expr => isnull(prop(propertyName(FLAGS_IN_PIT_LANE_SETTING)), String(DEFAULTS.FlagsInPitLane)),
   /** `isnull([OpenDash.BlueFlagDetail], 'none')`: what a blue band says beyond its colour. */
   blueFlagDetail: (): Expr => isnull(prop(propertyName(BLUE_FLAG_DETAIL_SETTING)), str(DEFAULTS.BlueFlagDetail)),
   /** `isnull([OpenDash.BlueFlagDetail], 'none') = 'class'`: whether the band is in the given detail. */
@@ -773,6 +940,17 @@ export const zoneClassOnlySettingName = (face: FaceSize, zone: FaceZone): string
 export const barFieldSettingName = (face: FaceSize, slot: BarSlot): string => `${facePrefix(face)}Bar${slot}`;
 
 /**
+ * `Face1920x480ZoneBPosition`: where the page a zone is showing sits in its cycle, counting from one,
+ * as the plugin publishes it. #503.
+ *
+ * The plugin owns the page order now. The panel lets a driver arrange a zone's pages as well as tick
+ * them, and an expression cannot read a list, so only the plugin can say that the page showing is
+ * the third of five. {@link zoneCyclePosition} stays as the fallback: it counts in the catalogue's
+ * order, which is right for a zone nobody has rearranged and for a face with no plugin.
+ */
+export const zonePositionSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Position`;
+
+/**
  * Whether a zone's list pages show the player's own class rather than the whole field.
  *
  * Off, because most racing is single-class and a driver in one would not thank us for a
@@ -896,13 +1074,21 @@ export const zone = {
   lapReview: (face: FaceSize): Expr => isnull(prop(propertyName(lapReviewSettingName(face))), str(DEFAULT_LAP_REVIEW)),
   /** `... = 'race'`: whether this face is in the given lap review mode. */
   lapReviewIs: (face: FaceSize, mode: LapReviewMode): Expr => eq(zone.lapReview(face), str(mode)),
+  /**
+   * `isnull([OpenDash.Face1920x480ZoneBPosition], <the position in catalogue order>)`: where the
+   * page showing sits in the zone's cycle, counting from one. See {@link zonePositionSettingName}.
+   */
+  position: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zonePositionSettingName(face, z))), zoneCyclePosition(face, z)),
 };
 
 /** Every property one face reads, which is the group the plugin attaches for it. */
 export function facePropertyNames(face: FaceSize): string[] {
   const perZone = FACE_ZONE_LETTERS.flatMap((z) => [zonePageSettingName(face, z), zoneMaskSettingName(face, z), zoneStartSettingName(face, z), zoneClassOnlySettingName(face, z)]);
   const bar = BAR_SLOTS.map((slot) => barFieldSettingName(face, slot));
-  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face), revBarSettingName(face)];
+  // The four positions come after the rev bar rather than beside the zones they belong to, because
+  // both halves of the contract assert this group by index. #503.
+  const positions = FACE_ZONE_LETTERS.map((z) => zonePositionSettingName(face, z));
+  return [...perZone, ...bar, quickGlanceSettingName(face), flagFormatSettingName(face), lapReviewSettingName(face), revBarSettingName(face), ...positions];
 }
 
 /** Every zone property of every face that ships. */
@@ -939,13 +1125,18 @@ export const zoneCycleLength = (face: FaceSize, z: FaceZone): Expr => add(...pag
  * Where the page a zone is showing sits in its cycle, counting from one: the enabled pages before
  * it, plus itself. A page the mask has turned off counts as the one after the last enabled page
  * before it, which is a state the plugin's `Normalise` does not leave a zone in.
+ *
+ * The fallback of {@link zone.position} rather than the reading itself. It counts in the catalogue's
+ * order, and since #503 the panel can put a zone's pages in any order, which an expression cannot
+ * follow because it cannot read a list. The plugin publishes the position it cycles by, and this is
+ * what a zone counts where there is no plugin or the plugin has not said.
  */
 export const zoneCyclePosition = (face: FaceSize, z: FaceZone): Expr =>
   add(num(1), ...pagesForZone(z).map((_, i) => iff(lt(num(i), zone.page(face, z)), maskBit(face, z, i), num(0))));
 
-/** `2 / 3`: what a zone's header counts, which follows the mask and not the catalogue. */
+/** `2 / 3`: what a zone's header counts, which follows the mask and the plugin's order rather than the catalogue. */
 export const zoneCounter = (face: FaceSize, z: FaceZone): Expr =>
-  concat(fmt(zoneCyclePosition(face, z), '0'), str(' / '), fmt(zoneCycleLength(face, z), '0'));
+  concat(fmt(zone.position(face, z), '0'), str(' / '), fmt(zoneCycleLength(face, z), '0'));
 
 /** Every counter a zone could draw, so a caller can measure the box for the widest of them. */
 export function zoneCounterReadings(z: FaceZone): string[] {
@@ -1830,7 +2021,11 @@ function defaultByUnit(byUnit: Record<string, number>): Expr {
   return iff(eq(unit, str('Fahrenheit')), num(byUnit.Fahrenheit ?? celsius), iff(eq(unit, str('Kelvin')), num(byUnit.Kelvin ?? celsius), num(celsius)));
 }
 
-/** Every property the flag box profile reads. */
+/**
+ * Every property of the lights' own that the flag box profile reads. It also reads the shared
+ * `OpenDash.FlagsInPitLane`, which is declared in the dash group rather than here, and which the
+ * plugin attaches whatever lights are installed; every strip reads it the same way.
+ */
 export function flagBoxProperties(): string[] {
   // Five, not nine. Critical flags only, the gear and the two temperature thresholds moved under
   // the matrix that owns them; what is left is the rig's brightness trio and the one low-fuel

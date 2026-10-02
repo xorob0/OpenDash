@@ -961,10 +961,17 @@ counter counts.
 
 The counter is drawn by the face rather than by the zone, for the same reason the letter is —
 zones B and C share one dashboard file where they are the same rectangle, and a screen in it cannot
-know whose mask is deciding its length. The arithmetic is in the expression, which is what
+know whose mask is deciding its length. The length is in the expression, which is what
 [ADR 0009](../decisions/0009-does-the-plugin-compute.md) settled: a popcount is
 `truncate(mask / 2^i) % 2` summed over the catalogue, and the mask is a property that already
 exists. Without the plugin, the mask reads as its default and the counter says "n / 21".
+
+**The position is the plugin's since #503.** The panel lets a driver arrange a zone's pages as well
+as tick them, so "this is the third of five" depends on an order, and an expression cannot read an
+ordered list. The plugin publishes it as `Face<size>Zone<X>Position`, counting from one, and the
+counter reads that. The catalogue-order count -- the popcount of the mask below the page showing,
+plus one -- stays behind it as the `isnull` fallback, which is the right answer for a zone nobody has
+arranged and for a face with no plugin at all. ADR 0009's exception for it is written there.
 
 ---
 
@@ -1208,19 +1215,21 @@ and it is the first feature for which the plugin buys something material.
 
 ### What the panel draws
 
-`Plugin.dc.html` draws the Zones section as a plan of the face at 844 px wide: the rev bar strip,
-the bar with an end control at each side, zones B, A and C across the body at 246, 316 and 280, and
-band D along the foot. Every part is at the size the artboard gives it, because "zone C" means
-nothing until you see where zone C is.
+The Screens page draws a face as a picture of itself, to the `Screens` artboard of #503: the rev
+segments, the info bar with a field at each end and the car settings between them, zones B, A and C
+across the body, and band D along the foot ([plugin.md](plugin.md#screens)). `PanelFacePlan` scales
+the face's own proportions to the column, because "zone C" means nothing until you see where zone C
+is. Each part is a press that opens its aside: a zone's pages, or the info bar's fields. This replaces
+the plan of the face the four-tab panel drew to `Plugin.dc.html`.
 
-Four things the artboard does not settle, and what the panel does about each:
+Four things the earlier artboard did not settle, and what the panel does about each:
 
 | | |
 |---|---|
-| **The mask has no control drawn.** | It is the setting that decides how long a driver's cycle is, so it cannot simply be missing. The panel puts a second drop in each zone cell, reading "21 of 21 pages", opening a checkbox per page. Owed on the canvas. |
-| **Nor has the class filter.** | A checkbox reading "My class only", under the start page in each zone cell where a page would change, and along the strip for band D, whose controls lie in a row rather than stacked. Zone A alone is offered none. Owed on the canvas alongside the mask. |
-| **An end of the bar is drawn as one control** reading "Race · lap", and an end carries two fields. | The control stays one box and opens a panel with a picker for each, rather than splitting into two boxes the artboard does not have. |
-| **Nothing says what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once — forward because a cycle runs forward, so the next press of the button carries on rather than repeats. Turning off a zone's last enabled page is refused: a zone with an empty cycle has nothing to draw. |
+| **The mask had no control drawn.** | It is the setting that decides how long a driver's cycle is. Each zone cell reads its count, "4 of 21", and the zone's aside lists every page to tick and drag into order, with All and None, and Show all or Only ticked. The `Screens` artboard draws this now. |
+| **Nor had the class filter.** | "My class only", in the aside of each zone where a page would change. Zone A alone is offered none. |
+| **An end of the bar carries two fields.** | The info bar's aside has a picker for each field, rather than two boxes on the picture. |
+| **Nothing said what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once, because a cycle runs forward and the next press carries on rather than repeats. Unticking a zone's last page is refused: a zone with an empty cycle has nothing to draw. |
 
 Two zones showing the same page is reported and allowed, which the canvas is explicit about. The
 comparison is by page **id** and not page number, because the four catalogues overlap: zone A's
@@ -1307,10 +1316,10 @@ disagree with the design rather than merely lagging it. The disagreement is reco
 the catalogue would be read off.
 
 **The panel owes a round picker with it.** A face is configured on a picture of itself
-([ADR 0020](../decisions/0020-the-panel-draws-what-it-configures.md)), and the rectangular plan in
-[plugin.md](plugin.md) does not fit a disc. The picker the conversion needs is the arc, zone A in the
-middle and the catalogue zones where the card rects are. Until the conversion the round faces keep
-the Layout section they have, which assigns cards to slots.
+([ADR 0020](../decisions/0020-the-panel-draws-what-it-configures.md)), and the rectangular picture on
+the Screens page ([plugin.md](plugin.md#screens)) does not fit a disc. The picker the conversion needs
+is the arc, zone A in the middle and the catalogue zones where the card rects are. Until the
+conversion a round screen keeps its Cards on the disc, which assigns cards to slots.
 
 **The three obligations above are #487.** The two artboards, the round picker and the catalogue a
 140 × 108 box leaves are that ticket's work; #145 was the decision and closed with it, and #146

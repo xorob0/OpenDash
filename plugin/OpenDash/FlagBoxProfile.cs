@@ -11,7 +11,7 @@
 //
 // WHICH of the embedded profiles this is about is decided by name, and that is the whole of the
 // discriminator. SimHub gives both of its lighting families the same ".ledsprofile" extension: the
-// RGB LED strips the build now emits nineteen of, and the 8x8 matrix the flag box is. So the
+// RGB LED strips the build now emits a hundred and twenty-one of, and the 8x8 matrix the flag box is. So the
 // extension says nothing about which driver a file belongs to, and "the first .ledsprofile in the
 // assembly" -- which is what this used to take -- became a ten-LED RPM strip the moment the strips
 // were embedded, and would have been handed to RGBMatrixDriver.Settings.AddProfile as the flag box.
@@ -97,9 +97,10 @@ namespace OpenDashPlugin
         /// A profile's text, whether the bytes are JSON or a gzip of it.
         /// </summary>
         /// <remarks>
-        /// The grid is sixty-three shapes and a profile is a third of a megabyte of NCalc, four fifths
-        /// of it the same conditions written out once per LED; embedded raw that is twenty megabytes of
-        /// assembly for files nobody reads. Gzip takes it to five hundred kilobytes, and the file name
+        /// The build writes a hundred and twenty-two profiles, the strips wired from either end and the
+        /// flag box, and a profile is a third of a megabyte of NCalc, four fifths of it the same
+        /// conditions written out once per LED; embedded raw that is forty-four megabytes of assembly
+        /// for files nobody reads. Gzip takes it to under a megabyte, and the file name
         /// does not change with it -- the resource is still `OpenDash 3-9-3.ledsprofile`, so every name,
         /// every selection and every shape id is what it was, and only the reading of the bytes knows.
         ///
@@ -385,7 +386,7 @@ namespace OpenDashPlugin
 
                 Directory.CreateDirectory(folder);
                 File.WriteAllText(path, embedded, new UTF8Encoding(false));
-                log.Info("Wrote the flag box profile to " + path + ". Install it from the OpenDash settings page under Lights.");
+                log.Info("Wrote the flag box profile to " + path + ". Install it at the top of OpenDash's Matrix page.");
                 return new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = profileName, Json = embedded, Message = "Written" };
             }
             catch (Exception e)
@@ -457,7 +458,7 @@ namespace OpenDashPlugin
                     return "Flag box: could not write the profile (" + result.Message + ")";
                 default:
                     return "Flag box: " + (result.ProfileName ?? "profile") + " is at " + result.Path
-                        + ". Install it from the OpenDash settings page under Lights.";
+                        + ". Install it at the top of OpenDash's Matrix page.";
             }
         }
     }

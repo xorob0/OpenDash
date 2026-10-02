@@ -1110,8 +1110,13 @@ describe('the twenty-one pages reach the face', () => {
  * to ask the real expression what it answers. The point is that the arithmetic is checked against a
  * plain count rather than against itself.
  */
-function readCounter(expression: string, zone: 'B' | 'C', page: number, mask: number): string {
-  const js = expression
+function readCounter(expression: string, zone: 'B' | 'C', page: number, mask: number, position?: number): string {
+  // The position the plugin publishes (#503) wraps the arithmetic in an isnull() of its own. Absent,
+  // isnull([X], y) is y, which is `(y)` once the head is gone and its closing bracket kept; present,
+  // it is the published number, and the arithmetic inside is never asked.
+  const positionHead = `isnull([OpenDash.${REFERENCE}Zone${zone}Position], `;
+  const withPosition = position === undefined ? expression.split(positionHead).join('(') : expression.split(positionHead).join(`(${position}) ?? (`);
+  const js = withPosition
     .replace(new RegExp(`isnull\\(\\[OpenDash\\.${REFERENCE}Zone${zone}Pages\\], \\d+\\)`, 'g'), String(mask))
     .replace(new RegExp(`isnull\\(\\[OpenDash\\.${REFERENCE}Zone${zone}\\], \\d+\\)`, 'g'), String(page))
     .replace(/\bif\(/g, 'iff(')
@@ -1174,6 +1179,17 @@ describe('a zone counts its cycle, not its catalogue', () => {
         expect({ mask, page, read: readCounter(expression, 'B', page, mask) }).toMatchObject({ read: `${before + 1} / ${length}` });
       }
     }
+  });
+
+  test('the position the plugin publishes wins over the catalogue order, and the length still follows the mask', () => {
+    // The panel can put a zone's pages in any order and an expression cannot read a list, so the
+    // plugin says where in its own order the page showing sits (#503). Relative first and lap times
+    // last is lap times at 3 / 3, which the catalogue order would have counted as 1 / 3.
+    const expression = ((texts.find((t) => t.name === 'zoneB.counter')!.bindings!.Text as { formula: string }).formula);
+    expect(expression).toContain(`isnull([OpenDash.${REFERENCE}ZoneBPosition], `);
+    const three = (1 << 0) | (1 << 4) | (1 << 14);
+    expect(readCounter(expression, 'B', 0, three)).toBe('1 / 3');
+    expect(readCounter(expression, 'B', 0, three, 3)).toBe('3 / 3');
   });
 
   test('every reading of the counter fits the box it is measured for', () => {

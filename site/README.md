@@ -47,7 +47,7 @@ pages say so rather than inventing a file.
 | `/` | which sim, which host, what it costs; find your screen; download |
 | `/screens` | every size, to scale; the anatomy; the companion; the pit wall |
 | `/pages` | the 21 pages, captured; the face's other catalogues |
-| `/lights` | the car's own shift lights, the strip shapes, the flag box, the Lights tab |
+| `/lights` | the car's own shift lights, the strip shapes, the flag box, In the plugin (which page holds what) |
 | `/compare` | openDash beside the two competitors, dated |
 | `/install` | the plugin, the unblock step, nothing showing, and why there is no other way in |
 | `/download` | the plugin, what it carries, the release notes |
@@ -63,8 +63,8 @@ behind every file, and the pages show that version under the pictures; when it i
 being served they say so. `test/captures.test.ts` fails on a missing picture and warns on a stale
 one (`OPENDASH_SHOTS_STRICT=1` makes it fail).
 
-Files are `<slug>.png` for a package, `page-<id>.png` for a page and `panel-<tab>.png` for the
-plugin's settings. Two commands make them, both from the repository root:
+Files are `<slug>.png` for a package, `page-<id>.png` for a page and `panel-<page>.png` for a page
+of the plugin. Two commands make them, both from the repository root:
 
 ```bash
 bun run shots --scenarios gallery          # whole packages
@@ -79,6 +79,9 @@ bun scripts/sync-shots.ts ../build/shots/gallery
 
 It is run by hand rather than as part of a build: a capture that caught SimHub mid-reconnect is a
 photograph of a bug, and the only thing that catches one is an eye.
+
+TODO(#529): `panel-rig.png` and `panel-lights.png` show the old four tabs. #529 replaces them with
+the pages, from `bun run panel-shots` through `bun scripts/sync-shots.ts --panel`.
 
 The clips under `public/clips/` are the same idea in motion: raw frames of a dash window recorded
 by `bun run clips`, encoded on the host, with `clips.json` saying what was taken. A page shows a

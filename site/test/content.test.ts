@@ -10,19 +10,32 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { FLAG_CATALOGUE } from '../../packages/dash/src/flags.ts';
-import { ALL_SHAPES, LEGACY_SHAPES } from '../../packages/dash/src/leds/strip.ts';
+import { ALL_SHAPES, BASE_SHAPES, LEGACY_SHAPES } from '../../packages/dash/src/leds/strip.ts';
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
 import { downloads, flags, heroFace, readBuildManifest, releases, sitePackages, stripShapes, type Manifest } from '../scripts/content.ts';
+import { stripGrid } from '../lib/stripGrid.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const manifest: Manifest | null = readBuildManifest(repoRoot);
 
 describe('the strip shapes', () => {
-  const shapes = stripShapes(ALL_SHAPES, LEGACY_SHAPES);
+  const shapes = stripShapes(BASE_SHAPES, LEGACY_SHAPES);
 
-  test('are the sixty-two the build writes, five of them legacy', () => {
+  test('are the sixty-two shapes the build writes before their twins, five of them legacy', () => {
+    // The far-end twins #503 generates are not listed: each is a wiring, installed by a switch on the
+    // bar, and the one far-end shape here is the 4/14/4 that shipped as a row of its own.
     expect(shapes).toHaveLength(62);
     expect(shapes.filter((s) => s.legacy)).toHaveLength(5);
+    expect(shapes.filter((s) => s.id.endsWith('-reversed')).map((s) => s.id)).toEqual(['4-14-4-reversed']);
+  });
+
+  test('lay out as a grid of 0 to 4 LEDs a side, which is what the Lights page says', () => {
+    const grid = stripGrid(shapes);
+    expect(grid.sides).toEqual([0, 1, 2, 3, 4]);
+    expect(grid.centres).toEqual([4, 5, 6, 7, 8, 9, 10, 11, 12]);
+    // ...and a twin that reached the list would still not make a row: 5/10/5 wired from the far end
+    // is legacy's sibling, not a side of five.
+    expect(stripGrid(stripShapes(ALL_SHAPES, LEGACY_SHAPES)).sides).toEqual([0, 1, 2, 3, 4]);
   });
 
   test('have unique ids', () => {
@@ -33,10 +46,11 @@ describe('the strip shapes', () => {
     for (const s of shapes.filter((x) => !x.legacy)) expect(s.left).toBe(s.right);
   });
 
-  test.if(manifest !== null)('each one has a profile in the manifest, and the flag box makes sixty-three', () => {
+  test.if(manifest !== null)('each one has a profile in the manifest, as does its far-end twin, and the flag box makes a hundred and twenty-two', () => {
     const profiles = new Set(manifest!.ledProfiles ?? []);
-    for (const s of shapes) expect(profiles.has(`OpenDash ${s.id}.ledsprofile`)).toBe(true);
-    expect(profiles.size).toBe(63);
+    for (const s of ALL_SHAPES) expect(profiles.has(`OpenDash ${s.id}.ledsprofile`)).toBe(true);
+    for (const s of shapes) expect(profiles.has(`OpenDash ${s.id.replace(/-reversed$/, '')}-reversed.ledsprofile`) || s.id.endsWith('-fanatec')).toBe(true);
+    expect(profiles.size).toBe(122);
   });
 });
 

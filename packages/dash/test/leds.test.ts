@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
-import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledMirrorRunName, propertyName, setting, type LedCentre } from '../src/contract.ts';
+import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_EFFECTS, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledEffectSettingName, ledMirrorRunName, ledProperties, propertyName, setting, type LedCentre } from '../src/contract.ts';
 import { ALL_SHAPES, GRID_SHAPES, LEGACY_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
@@ -121,10 +121,33 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(profileFor('3-9-3').containers[0]!)).toBe('Groups.GameRunningGroup');
   });
 
-  test('only a shape the maker wired in an order of its own is remapped, and it covers every LED of the device', () => {
+  test('only the Fanatec wiring and the far-end twins are remapped, and each covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
-    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', '4-14-4-reversed']);
+    // Since #503 that is the Fanatec wiring and the far-end twin of every plain shape, and nothing
+    // else: the set is pinned exactly, so a twin that loses its list fails here as a new remap would.
+    const twins = ALL_SHAPES.filter((s) => s.id.endsWith('-reversed')).map((s) => s.id);
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', ...twins].sort());
+    expect(twins).toContain('4-14-4-reversed');
+    // Every plain shape has exactly one twin, with its geometry, and the twin reads the main run from
+    // the other end: its first stripLength positions are stripLength..1. That is what a strip of the
+    // main run's length fed from the far end has, whether or not the device carries extra runs.
+    const plain = ALL_SHAPES.filter((s) => !s.positions);
+    expect(plain.length).toBe(twins.length);
+    for (const s of plain) {
+      const twin = shapeById(`${s.id}-reversed`);
+      expect({ id: s.id, twin: twin !== undefined }).toMatchObject({ twin: true });
+      expect({ id: s.id, geometry: [twin!.left, twin!.centre, twin!.right, twin!.extraRuns] }).toEqual({ id: s.id, geometry: [s.left, s.centre, s.right, s.extraRuns] });
+      expect({ id: s.id, main: twin!.positions!.slice(0, stripLength(s)) }).toEqual({ id: s.id, main: [...reversedPositions(stripLength(s))] });
+      // ...and an extra run stays where it is wired, after the main run and in its own order.
+      expect({ id: s.id, extra: twin!.positions!.slice(stripLength(s)) }).toEqual({
+        id: s.id,
+        extra: Array.from({ length: deviceLength(s) - stripLength(s) }, (_, i) => stripLength(s) + 1 + i),
+      });
+    }
+    // The one twin with extra runs, spelled out: the GridSim row is the profile every plain 3/10/3
+    // strip uses, and reversing the whole device put its lamps on LEDs 19 to 34 of a strip of 16.
+    expect(shapeById('3-10-3-reversed')!.positions!.slice(0, 17)).toEqual([16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 17]);
     // SetResultBase indexes Positions[i] for every lit LED, so a list shorter than the run throws
     // once per frame. The validator catches it, and this catches a row that forgot to grow.
     for (const s of ALL_SHAPES.filter((s) => s.positions)) {
@@ -408,7 +431,10 @@ describe('the effect catalogue', () => {
   test('the strip and the box read one low-fuel threshold, so a rig has one answer to "am I low"', () => {
     const strip = ALL_EFFECTS().find((e) => e.id === 'lowFuel')!;
     const box = warningStates(1).find((s) => s.id === 'lowFuel')!;
-    expect(strip.when).toBe(box.raised);
+    // The row is the box's condition exactly; what the strip draws is that behind the strip's own
+    // switch for it, which the box does not have (#503).
+    expect(SIDE_EFFECTS.find((e) => e.id === 'lowFuel')!.when).toBe(box.raised);
+    expect(strip.when).toBe(`(${setting.ledEffectOn('lowFuel')}) and (${box.raised})`);
     expect(strip.when).toContain('[OpenDash.LightsLowFuelLaps]');
     // It read CarSettings_FuelAlertActive, which is SimHub's own alert and what the native container
     // reads. That is a different question from the one the box asks, so the number in the panel moved
@@ -620,7 +646,9 @@ describe('every generated profile', () => {
       });
       expect({ shape: shape.id, errors: result.errors.map((e) => `${e.code} ${e.path}`) }).toMatchObject({ errors: [] });
     }
-  });
+    // A hundred and twenty-one profiles built and validated take about three seconds here; CI runners
+    // have been a half slower than that (#425), which is too close to bun's five-second default.
+  }, 20_000);
 
   test('uses only ContainerTypes SimHub 9.12.6 resolves', () => {
     for (const shape of ALL_SHAPES) {
@@ -672,7 +700,7 @@ describe('every generated profile', () => {
     }
   });
 
-  test('obeys the rig brightness, which the flag box had to itself until now', () => {
+  test('obeys its own brightness, the rig\'s behind it, never above the night brightness at night', () => {
     // LightsBrightness, LightsNightBrightness and LightsNightMode are captioned "for every light
     // OpenDash drives", and a wheel strip and a brow read none of the three: the composed expression
     // had one reader, the matrix. The assertion is against contract.ts rather than against a copy of
@@ -685,10 +713,18 @@ describe('every generated profile', () => {
       const outer = shape.positions ? leds.childrenOf(p.containers[0]!)[0]! : p.containers[0]!;
       expect({ shape: shape.id, under: leds.childrenOf(outer).map((c) => leds.containerTypeOf(c)) }).toMatchObject({ under: ['Groups.BrightnessFormulaGroup'] });
       const fields = (bright[0] as Extract<leds.LedContainer, { kind: 'raw' }>).fields ?? {};
-      expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: flagBox.brightness() } });
+      // The strip's own brightness since #503, capped at night by the night brightness; with none of
+      // its own, flagBox.brightness() itself, which is what the matrix's group reads.
+      expect({ shape: shape.id, formula: fields.BrightnessFormula }).toMatchObject({ formula: { Expression: setting.ledBrightnessInForce() } });
       // ...and it reaches the file, with each read defaulted so a strip works with no plugin at all.
       const text = leds.serializeProfile(p);
-      for (const read of ['isnull([OpenDash.LightsNightMode], false)', 'isnull([OpenDash.LightsNightBrightness], 25)', 'isnull([OpenDash.LightsBrightness], 100)']) {
+      for (const read of [
+        'isnull([OpenDash.LightsNightMode], false)',
+        'isnull([OpenDash.LightsNightBrightness], 25)',
+        'isnull([OpenDash.LightsBrightness], 100)',
+        'isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))',
+        flagBox.brightness(),
+      ]) {
         expect({ shape: shape.id, read, present: text.includes(read) }).toMatchObject({ present: true });
       }
     }
@@ -804,6 +840,9 @@ describe('every generated profile', () => {
       for (const row of kids) {
         const at = `${shape.id} ${String(row.description)}`;
         expect({ at, threshold: row.blinkFormula?.expression.includes(box.raised) }).toMatchObject({ threshold: true });
+        // And the low-fuel switch silences it, as it does the lamp: one signal, one switch (#503).
+        expect({ at, switch: row.blinkFormula?.expression.includes(`(${setting.ledEffectOn('lowFuel')}) and (${box.raised})`) }).toMatchObject({ switch: true });
+        expect({ at, level: row.enabledFormula.expression.includes('LedEffectLowFuel') }).toMatchObject({ level: false });
         // The *height* is still FuelPercent, which is what a fuel bar is; only the threshold moved.
         expect({ at, height: row.enabledFormula.expression.includes('FuelPercent') }).toMatchObject({ height: true });
         expect({ at, fivePercent: row.blinkFormula?.expression.includes(ncalc.gt(ncalc.num(5), fuelPercent())) }).toMatchObject({ fivePercent: false });
@@ -922,3 +961,65 @@ describe('the per-gear shift table', () => {
   });
 });
 
+
+describe('the effect switches (#370, #503)', () => {
+  test('there is a switch for exactly the effects a strip draws, the flag rows sharing one', () => {
+    const drawn = ALL_EFFECTS().map((e) => e.id);
+    expect(new Set(LED_EFFECTS.map((e) => e.id))).toEqual(new Set(drawn));
+    expect(LED_EFFECTS).toHaveLength(drawn.length);
+    for (const e of ALL_EFFECTS()) {
+      if (e.id.startsWith('flag.')) expect({ id: e.id, setting: ledEffectSettingName(e.id) }).toEqual({ id: e.id, setting: 'LedEffectFlags' });
+    }
+    expect(() => ledEffectSettingName('kers')).toThrow(RangeError);
+  });
+
+  test('no strip setting outside the mirror runs carries the digit 1 or 2', () => {
+    // ContractTests.cs holds the plugin's list to the same rule, so that a run length cannot pass for
+    // a setting; it is why push to pass's switch is spelled out rather than P2p.
+    const runs = new Set(MIRROR_RUN_LENGTHS.map((n) => propertyName(ledMirrorRunName(n))));
+    const offenders = ledProperties().filter((name) => !runs.has(name) && /[12]/.test(name));
+    expect(offenders).toEqual([]);
+  });
+
+  test('every effect in every profile answers to its switch, and every flag to the pit lane as well, blink and all', () => {
+    const byLabel = new Map(ALL_EFFECTS().map((e) => [e.label, e]));
+    expect(byLabel.size).toBe(ALL_EFFECTS().length);
+    const effectOf = (description: string) =>
+      byLabel.get(description) ?? byLabel.get(description.replace(/, held$/, '')) ?? byLabel.get(description.replace(/, whole strip$/, ''));
+    const seen = new Set<string>();
+    for (const shape of ALL_SHAPES) {
+      for (const c of walk(rpmStripProfile(shape, stableGuid(`t/switches/${shape.id}`)).containers)) {
+        const effect = effectOf(descriptionOf(c));
+        if (effect === undefined) continue;
+        const formula =
+          c.kind === 'customStatus' ? c.enabledFormula.expression : c.kind === 'conditionalGroup' ? c.trigger.expression : undefined;
+        if (formula === undefined) continue;
+        seen.add(effect.id);
+        const at = { shape: shape.id, container: descriptionOf(c) };
+        expect({ ...at, switch: formula.includes(`isnull([OpenDash.${ledEffectSettingName(effect.id)}], true)`) }).toEqual({ ...at, switch: true });
+        if (effect.role === 'race') expect({ ...at, pitLane: formula.includes('[OpenDash.FlagsInPitLane]') }).toEqual({ ...at, pitLane: true });
+        // A blink carries the same terms, so it never outlives the light it belongs to.
+        const blink = c.kind === 'customStatus' ? c.blinkFormula?.expression : undefined;
+        if (blink === undefined) continue;
+        expect({ ...at, blinkSwitch: blink.includes(`isnull([OpenDash.${ledEffectSettingName(effect.id)}], true)`) }).toEqual({ ...at, blinkSwitch: true });
+        if (effect.role === 'race') expect({ ...at, blinkPitLane: blink.includes('[OpenDash.FlagsInPitLane]') }).toEqual({ ...at, blinkPitLane: true });
+      }
+    }
+    // And every effect was found somewhere, so the loop above tested something for each of them.
+    expect([...seen].sort()).toEqual(ALL_EFFECTS().map((e) => e.id).sort());
+  });
+
+  test('an effect switched off lets the one ranked under it on the same lamp show', () => {
+    // Structural rather than evaluated: a lower row's guard is not() of the higher row's `when`, and
+    // that `when` is the gated one, whose first term is the switch. So with the switch off the higher
+    // row is not lit and the guard is true -- off means gone, not dark.
+    const placed = walk(profileFor('4-14-4').containers).filter((c): c is Extract<leds.LedContainer, { kind: 'customStatus' }> => c.kind === 'customStatus');
+    const oil = ALL_EFFECTS().find((e) => e.id === 'oilPressure')!;
+    expect(oil.when.startsWith(`(${setting.ledEffectOn('oilPressure')}) and (`)).toBe(true);
+    const lowFuel = placed.find((c) => c.description === 'Low fuel')!;
+    expect(lowFuel.enabledFormula.expression).toContain(`!(${oil.when})`);
+    // And the rows themselves are ungated, so what a condition *is* is still readable on its own.
+    expect(SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!.when).not.toContain('LedEffect');
+    expect(flagEffects().every((e) => !e.when.includes('LedEffect') && !e.when.includes('FlagsInPitLane'))).toBe(true);
+  });
+});

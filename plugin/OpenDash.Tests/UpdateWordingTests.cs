@@ -170,6 +170,27 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_wrapped_paragraph_is_read_across_its_lines_to_the_end_of_its_first_sentence()
+        {
+            // CHANGELOG.md wraps at a hundred columns: the first physical line of 0.3.0-rc.7's body ends
+            // "A dashboard is", which is what the card showed on the VM (#529).
+            const string notes = "The candidate that has something to say when there is nothing to instrument. A dashboard is\n"
+                + "installed and opened before a session is joined, and what a rig showed in that moment was the racing\n"
+                + "face with no data in it.\n\n### Added\n- Something";
+            Assert.Equal("The candidate that has something to say when there is nothing to instrument.", UpdateWording.Summarise(notes));
+        }
+
+        [Fact]
+        public void A_first_sentence_too_long_for_the_card_is_cut_across_the_wrap()
+        {
+            var notes = new string('x', 90) + "\n" + new string('y', 90) + "\n\nNext paragraph.";
+            var summary = UpdateWording.Summarise(notes);
+            Assert.Equal(140, summary.Length);
+            Assert.StartsWith(new string('x', 90) + " y", summary);
+            Assert.EndsWith("…", summary);
+        }
+
+        [Fact]
         public void A_long_line_is_cut_and_an_empty_one_is_nothing()
         {
             var summary = UpdateWording.Summarise("## Heading\n" + new string('x', 400));

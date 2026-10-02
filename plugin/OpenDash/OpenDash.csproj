@@ -23,6 +23,10 @@
     <Reference Include="PresentationCore" />
     <Reference Include="WindowsBase" />
     <Reference Include="System.Xaml" />
+    <!-- The automation peers' patterns (IRangeValueProvider, IValueProvider) and their identifiers; see
+         Widgets.Automation.cs. Part of .NET Framework, as WPF is. -->
+    <Reference Include="UIAutomationProvider" />
+    <Reference Include="UIAutomationTypes" />
     <!-- SHMessageBox, SimHub's own dialog, answers with a System.Windows.Forms.DialogResult. -->
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
@@ -86,6 +90,18 @@
        be absent for the same reason the packages are: the plugin loads without it and says so. -->
   <ItemGroup>
     <EmbeddedResource Include="Resources/*.ledsprofile" />
+  </ItemGroup>
+
+  <!-- The flag box's glyphs as the build drew them, which the settings panel paints its Rig tiles and its
+       matrix preview from (PanelGlyphSheet.cs). Build output of packages/dash, written to
+       build/flag-box-glyphs.json and copied here by scripts/package.sh locally and, in ci.yml and
+       release.yml, by the opendash-dash artifact the plugin job downloads into Resources/; the same route
+       the profiles take, so both workflows' upload lists have to name it. Allowed to be absent for the
+       reason the profiles are: the plugin loads without it, and the panel draws its tiles without glyphs
+       rather than failing to open. PanelGlyphSheetTests fails on CI when it is missing, so a release does
+       not ship bare tiles silently. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources/flag-box-glyphs.json" LogicalName="OpenDash.FlagBoxGlyphs.json" Condition="Exists('Resources/flag-box-glyphs.json')" />
   </ItemGroup>
 
   <!-- The faces the settings panel draws in, extracted to a private folder at runtime (PanelFonts.cs).

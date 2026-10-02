@@ -1,8 +1,10 @@
 /**
- * Card 7, Fuel laps: SimHub's computed laps of fuel, one decimal. Red below one lap; `--` in
- * text.dim, the no-data glyph of every other card, until a lap has said what one costs.
+ * Card 7, Fuel laps: SimHub's computed laps of fuel, one decimal. Red below the rig's low-fuel
+ * threshold; `--` in text.dim, the no-data glyph of every other card, until a lap has said what one
+ * costs.
  */
 import { ncalc } from '../generator.ts';
+import { flagBox } from '../contract.ts';
 import { readout } from '../components/readout.ts';
 import { fuelIsSettled, NO_VALUE } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -17,9 +19,13 @@ export const fuelLaps = defineCard('fuelLaps', (slot, rung, prefix, meta) => {
   // face and the second screen answer it alike: SimHub extrapolates the lap in progress before the
   // first crossing and publishes an estimate that moves every frame, which this card used to name
   // while the two faces beside it drew their absence. #382. A settled estimate of zero is an empty
-  // tank rather than a missing reading, and it is drawn, in the red a tank under a lap earns.
+  // tank rather than a missing reading, and it is drawn, in the red a low tank earns.
   const settled = fuelIsSettled();
-  const low = lt(laps, num(1));
+  // Low is the one threshold in laps the driver set for every light, `LightsLowFuelLaps` with the
+  // box's deprecated name behind it, rather than a lap of its own: the strip, the box, the pop-up
+  // and the fuel telltale already ask it, and a card that went red at one lap beside a strip that
+  // lit at two was two answers to "am I low" on one rig. #503.
+  const low = lt(laps, flagBox.lowFuelLaps());
   return readout(
     slot,
     rung,

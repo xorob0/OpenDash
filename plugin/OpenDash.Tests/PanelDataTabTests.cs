@@ -1,4 +1,4 @@
-// PanelDataTabTests.cs: the Data tab's copy and its one spacing of its own.
+// PanelDataTabTests.cs: the race data rows' copy, which was the Data tab's and is the Settings page's.
 //
 // The Position row carries two sentences the canvas does not, which is a decision and not an oversight; a
 // later reader comparing the tab against the canvas would otherwise delete them as a difference. Pinning
@@ -16,16 +16,13 @@ namespace OpenDashPlugin.Tests
         public void The_section_says_what_the_canvas_says()
         {
             // The heading is the whole of what the section has to say, so it carries no caption
-            // restating it; docs/design/voice.md is the rule.
-            Assert.Equal("These apply to every screen", PanelDataTab.SectionTitle);
+            // restating it; docs/design/voice.md is the rule. The Settings page draws this constant and
+            // search finds the section by it.
+            Assert.Equal("Race data", PanelDataTab.SectionTitle);
             Assert.Null(PanelDataTab.SectionCaption);
-        }
-
-        [Fact]
-        public void The_rows_sit_wider_apart_than_a_section_elsewhere_on_the_panel()
-        {
-            Assert.Equal(22, PanelDataTab.RowGap);
-            Assert.NotEqual(PanelMetrics.SectionGap, PanelDataTab.RowGap);
+            var page = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => Path.GetFileName(p) == "SettingsControl.Settings.cs"));
+            Assert.Contains("PageSection(PanelDataTab.SectionTitle,", page);
+            Assert.Contains(PanelSettings.Search, entry => entry.Label == PanelDataTab.SectionTitle && entry.Route.Anchor == PanelSettings.AnchorRaceData);
         }
 
         /// <remarks>
@@ -38,13 +35,13 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Every_rig_setting_can_be_reached_from_the_panel()
         {
-            var sources = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var sources = string.Concat(RepoPaths.SettingsControlCode());
             var unreachable = Contract.SharedPropertyNames()
                 // The twelve slots are the card face's own and sit on that screen's pane, which writes
                 // them through Contract.SlotProperty rather than by name. ShiftLights has no control
                 // because RevBar supersedes it and SetRevBar writes both; the two cannot disagree. The
                 // idle screen's two are published rather than chosen, and the one setting behind them is
-                // the update check's switch on the Install tab (#83). The class best is published from
+                // the update check's switch on the Updates page (#83). The class best is published from
                 // SimHub's own frame and nobody sets it.
                 .Where(name => !name.StartsWith("Slot", StringComparison.Ordinal) && name != Contract.ShiftLights)
                 .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion && name != Contract.ClassBestLap)
@@ -60,6 +57,29 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Blue flag detail", PanelDataTab.BlueFlagTitle);
             // The three values are the control's to show; the caption says only what the row is about.
             Assert.Equal("What shows next to a blue flag.", PanelDataTab.BlueFlagCaption);
+            Assert.Equal(new[] { "Nothing", "Class", "Position and class" }, PanelDataTab.BlueFlagLabels);
+            Assert.Equal(Contract.BlueFlagDetails.Length, PanelDataTab.BlueFlagLabels.Length);
+            Assert.Contains("BuildSegmented(Contract.BlueFlagDetails, PanelDataTab.BlueFlagLabels,", string.Concat(RepoPaths.SettingsControlCode()));
+        }
+
+        /// <remarks>
+        /// "Class" and not the artboard's "In class": the pinned caption begins with the word, and a value in
+        /// a chooser is a name rather than a fragment (docs/design/voice.md).
+        /// </remarks>
+        [Fact]
+        public void The_position_and_session_rows_name_every_value_the_contract_declares()
+        {
+            Assert.Equal("Position", PanelDataTab.PositionTitle);
+            Assert.Equal("Session progress", PanelDataTab.SessionTitle);
+            Assert.Equal("Auto picks laps or time to suit the session.", PanelDataTab.SessionCaption);
+            Assert.Equal(new[] { "Overall", "Class" }, PanelDataTab.PositionLabels);
+            Assert.Equal(Contract.PositionModes.Length, PanelDataTab.PositionLabels.Length);
+            Assert.StartsWith(PanelDataTab.PositionLabels[1], PanelDataTab.PositionCaption, StringComparison.Ordinal);
+            Assert.Equal(new[] { "Auto", "Laps", "Time" }, PanelDataTab.SessionLabels);
+            Assert.Equal(Contract.SessionProgressModes.Length, PanelDataTab.SessionLabels.Length);
+            var source = string.Concat(RepoPaths.SettingsControlCode());
+            Assert.Contains("BuildSegmented(Contract.PositionModes, PanelDataTab.PositionLabels,", source);
+            Assert.Contains("BuildSegmented(Contract.SessionProgressModes, PanelDataTab.SessionLabels,", source);
         }
 
         /// <remarks>
@@ -81,7 +101,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <remarks>
-        /// The labels were an inline array in SettingsControl.Data.cs, where nothing could hold them to
+        /// The labels were an inline array in SettingsControl.Data.cs (now SettingsControl.Settings.cs), where nothing could hold them to
         /// the contract; the segmented control indexes them by value, so a third reference with two labels
         /// throws while the tab is drawn rather than in a test. #322 moved them here to be counted.
         /// </remarks>
@@ -93,14 +113,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Which lap the delta compares against.", PanelDataTab.DeltaCaption);
             Assert.Equal(new[] { "Session best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
             Assert.Equal(Contract.DeltaReferences.Length, PanelDataTab.DeltaLabels.Length);
-            var source = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var source = string.Concat(RepoPaths.SettingsControlCode());
             Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels,", source);
         }
 
         /// <remarks>
-        /// A row the canvas does not draw (#322), so its words are held here rather than to the canvas.
-        /// The labels are words and not worked examples: a numeral on the panel is drawn in Barlow, and the
-        /// canvas keeps numerals to Barlow Condensed.
+        /// The Settings artboard draws the row bare (#322); its caption is the build's, so its words are held
+        /// here. The labels are words and not worked examples, as the artboard's are: a numeral on the panel
+        /// is drawn in Barlow, and the canvas keeps numerals to Barlow Condensed.
         /// </remarks>
         [Fact]
         public void The_delta_precision_row_names_both_precisions_in_words()
@@ -110,7 +130,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "Hundredths", "Thousandths" }, PanelDataTab.DeltaPrecisionLabels);
             Assert.Equal(Contract.DeltaPrecisions.Length, PanelDataTab.DeltaPrecisionLabels.Length);
             Assert.DoesNotContain(PanelDataTab.DeltaPrecisionLabels, label => label.Any(char.IsDigit));
-            var source = string.Concat(RepoPaths.SettingsControlSources().Select(File.ReadAllText));
+            var source = string.Concat(RepoPaths.SettingsControlCode());
             Assert.Contains("BuildSegmented(Contract.DeltaPrecisions, PanelDataTab.DeltaPrecisionLabels,", source);
             // Directly under the reference it qualifies.
             var reference = source.IndexOf("Ui.Row(PanelDataTab.DeltaTitle,", StringComparison.Ordinal);

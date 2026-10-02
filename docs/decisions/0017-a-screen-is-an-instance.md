@@ -273,3 +273,23 @@ not the one its repaired size spells, so it does not read as a stock screen by i
 holds its package's folder. Nothing reads that difference except the add, which now asks whether the rig
 already holds the package's folder as well as its namespace before it hands either out; otherwise a round
 face added to such a rig would have been given the folder of the one it already has.
+
+---
+
+## Amended, 2026-10-02: the tabs became pages (#503)
+
+**What moved.** The Rig and Install tabs are gone
+([#503](https://github.com/xorob0/OpenDash/issues/503)). The screen cards and each screen's pane are on
+the Screens page, and the namespace this record has the panel show is in the screen's Details there,
+beside the SimHub name, the folder and the version. The Install tab's rows are the Updates page's In
+SimHub table, one row per dashboard, LED profile and matrix profile; the link to `plugin.md#install`
+above lands on the Updates section.
+
+**What did not move.** A screen is still the unit, and a strip is still an instance found by its own
+id. The rows still report rather than configure. The cost recorded above stands with one change: a
+strip's outdated profile is now also an issue on Home, with a press that opens the strip on the LEDs
+page, so a driver who never opens Updates is told.
+
+**A card face is called one.** A rectangular slots screen is a "Card face" on its card and header
+(`PanelScreens.CardFace`). It still reads the shared twelve slots, and the panel still does not tell
+the driver that a second one gets settings of its own.

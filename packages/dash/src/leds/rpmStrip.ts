@@ -27,7 +27,7 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { DEFAULTS, flagBox, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
+import { DEFAULTS, LED_CENTRES, LED_RPM_STYLES, setting } from '../contract.ts';
 import type { LedCentre, LedRpmStyle } from '../contract.ts';
 import { mirrorAvailable } from '../shift.ts';
 import { bandOf, bandSpan, ladderColors, ladderOrder, overRev, OVER_REV_COLOR, rungLit, stepLit, type Ladder } from './ladder.ts';
@@ -261,10 +261,15 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
  * Slow, which is what the catalogue's own low-fuel lamp blinks at: one condition cannot be urgent on
  * the centre and merely true on a lamp of the same strip. Its off phase is the low-fuel colour rather
  * than darkness, because here the second colour is the fact being reported.
+ *
+ * And answerable to the same switch as that lamp, `LedEffectLowFuel`: a driver who turns "Low fuel"
+ * off on a strip is asking for the strip to stop saying so, and the centre saying it in the same red
+ * is the same signal. The switch takes the blink and nothing else; the bar still shows the level,
+ * which is what a fuel centre was chosen for. #503.
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
   const percent = fuelPercent();
-  const low = tankIsLow();
+  const low = and(setting.ledEffectOn('lowFuel'), tankIsLow());
   return Array.from({ length: count }, (_, k) => ({
     kind: 'customStatus' as const,
     description: `fuel ${String(k + 1).padStart(2, '0')}`,
@@ -346,10 +351,13 @@ const effects = (shape: StripShape): leds.LedContainer[] => {
   // A car alongside over the whole run, when the driver has asked for that. The lamp version below
   // it is left exactly as it is: the group blanks its background when it triggers, so it paints over
   // the lamp rather than needing the lamp to know about it, and with the switch off it never
-  // triggers at all. Under the pit family, which is the one thing nothing paints over.
+  // triggers at all. Under the pit family, which is the one thing nothing paints over. The rows are
+  // the catalogue's gated ones rather than SPOTTER_EFFECTS itself, so a side the driver has switched
+  // off does not come back over the whole strip (#503).
+  const spotterIds = new Set(SPOTTER_EFFECTS.map((effect) => effect.id));
   const spotterWhole = placed.length === 0
     ? []
-    : SPOTTER_EFFECTS.map((effect) => ({
+    : ALL_EFFECTS().filter((effect) => spotterIds.has(effect.id)).map((effect) => ({
         kind: 'conditionalGroup' as const,
         description: `${effect.label}, whole strip`,
         trigger: { expression: and(eq(setting.ledSpotterWhole(), 'true'), effect.when) },
@@ -398,14 +406,19 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
 ];
 
 /**
- * The rig's brightness, over everything a strip draws.
+ * The strip's brightness, over everything a strip draws.
  *
  * `LightsBrightness`, `LightsNightBrightness` and `LightsNightMode` are named for the rig rather
  * than for one device, and the panel captions them "for every light OpenDash drives"; until this
  * container existed that sentence was untrue, because the only reader of the composed expression
- * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three. Both
- * artefacts now read the one `flagBox.brightness()`, so day, night and the switch resolve in a
- * single place and the two cannot drift apart.
+ * was the flag box (`leds/profile.ts`), so a wheel strip and a brow ignored all three.
+ *
+ * Since #503 a strip may also have a brightness of its own, `LedBrightness`, which the plugin
+ * publishes per bar. A bar with none is drawn at `flagBox.brightness()`, the expression the flag box
+ * reads, so a strip that follows the rig and the box beside it cannot come to hold two brightnesses,
+ * at night as by day. A bar with one is drawn at it, and at night at the lower of it and the night
+ * brightness ({@link setting.ledBrightnessInForce}), so a strip turned up for daylight is not left
+ * bright in a dark room. The flag box has no brightness of its own.
  *
  * `Groups.BrightnessFormulaGroup` is the strip's container of that kind and is one of the fifty-six
  * SimHub 9.12.6 resolves. It goes through `raw` because the generator models only the containers a
@@ -417,8 +430,8 @@ const treeFor = (shape: StripShape): leds.LedContainer[] => [
 const brightnessGroup = (children: readonly leds.LedContainer[]): leds.LedContainer => ({
   kind: 'raw',
   containerType: 'Groups.BrightnessFormulaGroup',
-  description: 'the rig brightness, day or night',
-  fields: { BrightnessFormula: leds.buildExpressionObject({ expression: flagBox.brightness() }) },
+  description: 'the strip brightness, day or night',
+  fields: { BrightnessFormula: leds.buildExpressionObject({ expression: setting.ledBrightnessInForce() }) },
   children,
 });
 

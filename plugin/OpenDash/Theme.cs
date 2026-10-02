@@ -30,6 +30,31 @@ namespace OpenDashPlugin
         public const string Caution = "#FFB300"; // color.caution.primary
         public const string Danger = "#FF2D46"; // color.danger.primary
 
+        // What the panel paints when it draws a light or a face band (#503): the same purposes the dash
+        // and the profiles draw with, so a flag emulated on the Rig page is the colour the box shows.
+        public const string FlagYellow = "#FFD400"; // purpose.flag.yellow
+        public const string FlagBlue = "#2E7BFF"; // purpose.flag.blue
+        public const string FlagWhite = "#FFFFFF"; // purpose.flag.white
+        public const string FlagGreen = "#00D96A"; // purpose.flag.green
+        public const string FlagRed = "#FF2D46"; // purpose.flag.red
+        public const string FlagOrange = "#FFB300"; // purpose.flag.orange
+        public const string FlagBlack = "#F5F7FA"; // purpose.flag.black
+        public const string FlagChequer = "#F5F7FA"; // purpose.flag.chequer
+        public const string OnFlag = "#0A0B0D"; // purpose.flag.onFlag
+        public const string PitLimiter = "#FFFFFF"; // purpose.pitLimiter
+        public const string ShiftStage1 = "#00D96A"; // purpose.shift.stage1
+        public const string ShiftStage2 = "#FFB300"; // purpose.shift.stage2
+        public const string ShiftStage3 = "#FF2D46"; // purpose.shift.stage3
+        public const string ShiftUnlit = "#33383F"; // purpose.shift.unlit
+        public const string FuelLow = "#FF2D46"; // purpose.fuel.low
+
+        // The panel's own second shades: the border of a fix box, the ink of a destructive press, and the
+        // tag a new control carries for one release.
+        public const string CautionDeep = "#A87600"; // color.caution.secondary
+        public const string DangerSoft = "#FF7A8A"; // color.danger.tint
+        public const string TagNewBorder = "#7431A8"; // palette.purple.300
+        public const string TagNewText = "#CF8CFF"; // palette.purple.100
+
         // Install status dot
         public const string StatusUpToDate = "#00D96A"; // purpose.status.upToDate
         public const string StatusUpdateAvailable = "#FFB300"; // purpose.status.updateAvailable
