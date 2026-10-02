@@ -93,8 +93,6 @@ namespace OpenDashPlugin
                 updatesReinstall = null;
                 updatesReinstallLine = null;
                 updatesPage = null;
-                updatesImportLine = null;
-                updatesImportPath = null;
                 updatesRunPresses.Clear();
             });
             OnLeave("Updates.applyWaiting", () => applyWaiting = false);

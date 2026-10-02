@@ -88,6 +88,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(32, PanelShell.MainPaddingBottom);
         }
 
+        /// <summary>The flag box's by-hand route wraps its path box under the press where a column has no room
+        /// for both (about 555 px), and keeps a copy's answer across a rebuild until the page is left (#523).</summary>
+        [Fact]
+        public void The_by_hand_route_wraps_and_keeps_its_answer_across_a_rebuild()
+        {
+            var profiles = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Profiles.cs")), @"\s+", " ");
+            Assert.Contains("var row = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, -PanelShell.ImportGap) };", profiles);
+            Assert.Contains("copy.Margin = new Thickness(0, 0, PanelShell.ImportGap, PanelShell.ImportGap);", profiles);
+            Assert.Contains("Margin = new Thickness(0, 0, 0, PanelShell.ImportGap),", profiles);
+            Assert.DoesNotContain("Ui.HStack(12, copy, path)", profiles);
+            Assert.Contains("OnLeave(\"FlagBox.importCopy\", () => { flagBoxCopied = null; flagBoxCopiedPath = null; });", profiles);
+            Assert.Contains("flagBoxLine = Ui.Caption(flagBoxCopied ?? FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);", profiles);
+            Assert.Contains("Text = flagBoxCopiedPath ?? plugin.FlagBox?.Path ?? string.Empty,", profiles);
+        }
+
         /// <summary>A page's title takes a tag after it in the shell's layout (#523), 12 apart as Rig.dc.html and
         /// Map.dc.html draw New, so no page rebuilds the title PageLayout drew to add one.</summary>
         [Fact]

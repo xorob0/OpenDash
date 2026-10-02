@@ -56,6 +56,19 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string EmptyRig = "Add the screen your rig has.";
         public const string Installing = "Installing";
+
+        /// <summary>The flag box's by-hand route (SettingsControl.Profiles.cs), which Matrix and Updates both
+        /// draw: its press, the press's hover, the path box's hover, and what a copy says. A failure points at
+        /// the log rather than quoting an exception (voice.md).</summary>
+        public const string CopyForImport = "Copy to SimHub's import folder";
+        public const string CopyForImportTooltip = "Puts a copy in Documents\\SimHub.";
+        public const string ImportPathTooltip = "Where OpenDash left the profile.";
+        public const string CopyForImportFailed = "Could not copy the profile. See SimHub's log.";
+
+        public static string CopiedForImport(string path)
+        {
+            return "Copied to " + path + ". In SimHub, open your device's profiles and press Import.";
+        }
         public const string Installed = "Installed";
         public const string NotInstalled = "Not installed";
         public const string InstallFailed = "Install failed";

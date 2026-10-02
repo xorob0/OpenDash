@@ -309,6 +309,10 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The page's own code, the draw files, as one string without comments.</summary>
+        /// <summary>The shell's SettingsControl.Profiles.cs, whose by-hand route the page draws, flattened.</summary>
+        private static string ProfilesCode() => System.Text.RegularExpressions.Regex.Replace(
+            RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Profiles.cs")), @"\s+", " ");
+
         private static string PageCode()
         {
             return string.Concat(RepoPaths.SettingsControlSources()
@@ -769,31 +773,29 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The flag box's by-hand route is drawn only while SimHub's matrix settings are out of reach,
-        /// and by this page, so it fits its column: the path box gives up width to the press beside it, never
-        /// wider than 320, where the shared route's fixed 320 beside the press is about 555 px and would clip
-        /// below 555 px.</summary>
+        /// and is the shell's shared route, which wraps the path box under the press where the column has no
+        /// room for both (#523), so the page no longer draws a copy of its own to fit.</summary>
         [Fact]
         public void The_flag_box_s_by_hand_route_fits_its_column()
         {
             Assert.True(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
             Assert.False(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled }));
             Assert.False(PanelUpdates.ShowsImportFallback(null));
-            Assert.Equal(320, PanelUpdates.ImportPathWidth);
-            Assert.Equal(12, PanelUpdates.ImportGap);
-            Assert.Equal(8, PanelUpdates.ImportLineGap);
-            Assert.Equal("Could not copy the profile. See SimHub's log.", PanelUpdates.CopyForImportFailed);
-            Assert.Equal("Copy to SimHub's import folder", PanelUpdates.CopyForImport);
-            Assert.Equal(@"Puts a copy in Documents\SimHub.", PanelUpdates.CopyForImportTooltip);
-            Assert.Equal("Where OpenDash left the profile.", PanelUpdates.ImportPathTooltip);
+            Assert.Equal(320, PanelShell.ImportPathWidth);
+            Assert.Equal(12, PanelShell.ImportGap);
+            Assert.Equal(8, PanelShell.ImportLineGap);
+            Assert.Equal("Could not copy the profile. See SimHub's log.", PanelCopy.CopyForImportFailed);
+            Assert.Equal("Copy to SimHub's import folder", PanelCopy.CopyForImport);
+            Assert.Equal(@"Puts a copy in Documents\SimHub.", PanelCopy.CopyForImportTooltip);
+            Assert.Equal("Where OpenDash left the profile.", PanelCopy.ImportPathTooltip);
             Assert.Equal(@"Copied to C:\Users\Rim\Documents\SimHub\flag-box.json. In SimHub, open your device's profiles and press Import.",
-                PanelUpdates.CopiedForImport(@"C:\Users\Rim\Documents\SimHub\flag-box.json"));
+                PanelCopy.CopiedForImport(@"C:\Users\Rim\Documents\SimHub\flag-box.json"));
             var code = PageCode();
             Assert.Contains("if (PanelUpdates.ShowsImportFallback(flagBoxPlan))", code);
-            Assert.Contains("var fallback = UpdatesFlagBoxFallback(flagBoxPlan);", code);
-            Assert.DoesNotContain("BuildFlagBoxImportFallback(", code);
-            Assert.DoesNotContain("MaxWidth = width", code);
-            Assert.Contains("new ColumnDefinition { Width = new GridLength(PanelUpdates.ImportBoxWeight, GridUnitType.Star), MaxWidth = PanelUpdates.ImportPathWidth }", code);
-            Assert.DoesNotContain("Width = 320", code);
+            Assert.Contains("var fallback = BuildFlagBoxImportFallback(flagBoxPlan);", code);
+            Assert.DoesNotContain("UpdatesFlagBoxFallback", code);
+            Assert.DoesNotContain("UpdatesCopyForImport", code);
+            Assert.DoesNotContain("updatesImport", code);
         }
 
         [Fact]
@@ -1161,17 +1163,17 @@ namespace OpenDashPlugin.Tests
 
             var unreachable = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json");
             Assert.Equal("Unknown", unreachable.State);
-            // The by-hand route under the table prints that sentence (UpdatesFlagBoxFallback), so the hover does not.
+            // The by-hand route under the table prints that sentence (BuildFlagBoxImportFallback), so the hover does not.
             Assert.Null(unreachable.Tooltip);
             Assert.True(PanelUpdates.ShowsImportFallback(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }));
             Assert.Equal(@"SimHub's matrix settings are not available. Import it by hand from C:\SimHub\OpenDash\flag-box.json.",
                 FlagBoxInstallPlan.Summary(new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }, @"C:\SimHub\OpenDash\flag-box.json"));
             // And the route draws it, as its line over the press and the path: with the hover gone, it is the
             // only place on the page that says why the row reads "Unknown" and where the file is.
-            var fallback = Method("private FrameworkElement UpdatesFlagBoxFallback(FlagBoxPlan plan)");
-            Assert.Contains("updatesImportLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);", fallback);
-            Assert.Contains("Text = plugin.FlagBox?.Path ?? string.Empty,", fallback);
-            Assert.Contains("return Ui.VStack(PanelUpdates.ImportLineGap, updatesImportLine, row);", fallback);
+            var fallback = ProfilesCode();
+            Assert.Contains("flagBoxLine = Ui.Caption(flagBoxCopied ?? FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);", fallback);
+            Assert.Contains("Text = flagBoxCopiedPath ?? plugin.FlagBox?.Path ?? string.Empty,", fallback);
+            Assert.Contains("var block = Ui.VStack(PanelShell.ImportLineGap, flagBoxLine, row);", fallback);
             // A build with no profile says so on the row, where no note under the table does.
             var notEmbedded = PanelUpdates.FlagBoxRow("OpenDash Flag box", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded }, null);
             Assert.Equal("Unknown", notEmbedded.State);
@@ -1903,11 +1905,12 @@ namespace OpenDashPlugin.Tests
                 "catch",
                 "PluginUpdate.AskToReopen(root, false);");
 
-            var import = Method("private void UpdatesCopyForImport()");
+            var import = ProfilesCode();
             InOrder(import,
                 "var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());",
                 "var ok = copied != null && copied.Status != FlagBoxStatus.Failed && copied.Status != FlagBoxStatus.NotEmbedded;",
-                "updatesImportLine.Text = ok ? PanelUpdates.CopiedForImport(copied.Path) : PanelUpdates.CopyForImportFailed;");
+                "flagBoxCopied = ok ? PanelCopy.CopiedForImport(copied.Path) : PanelCopy.CopyForImportFailed;",
+                "if (flagBoxLine != null) flagBoxLine.Text = flagBoxCopied;");
         }
 
         /// <summary>
@@ -1980,7 +1983,7 @@ namespace OpenDashPlugin.Tests
                 "foreach (var pair in UpdatesDashboardRows()) { Action<UpdatesRow> paint; rows.Children.Add(UpdatesTableRow(pair.Value, versionWidth, null, out paint));",
                 "var lights = UpdatesLightRows(strips, stripRows, flagBoxPlan, flagBoxRow, versionWidth); foreach (var row in lights) rows.Children.Add(row); if (rows.Children.Count == 1) rows.Children.Add(UpdatesTableEmpty());",
                 "foreach (var note in notes) children.Add(UpdatesNote(note));",
-                "if (PanelUpdates.ShowsImportFallback(flagBoxPlan)) { var fallback = UpdatesFlagBoxFallback(flagBoxPlan);",
+                "if (PanelUpdates.ShowsImportFallback(flagBoxPlan)) { var fallback = BuildFlagBoxImportFallback(flagBoxPlan);",
                 "children.Add(fallback);",
                 "var reinstall = Ui.Anchor(UpdatesReinstallRow(), PanelUpdates.AnchorReinstall);",
                 "return PageSection(PanelUpdates.InSimHubTitle, false, PanelUpdates.SectionGap, children.ToArray());");
@@ -2004,7 +2007,7 @@ namespace OpenDashPlugin.Tests
                 "return PageSection(PanelUpdates.SupportTitle, false, PanelUpdates.SectionGap, presses, caption, licence);");
 
             // The by-hand route's press reaches its copy.
-            Assert.Contains("copy.Click += (sender, args) => UpdatesCopyForImport();", Method("private FrameworkElement UpdatesFlagBoxFallback(FlagBoxPlan plan)"));
+            Assert.Contains("copy.Click += (sender, args) => CopyFlagBoxForImport();", ProfilesCode());
         }
 
         /// <summary>

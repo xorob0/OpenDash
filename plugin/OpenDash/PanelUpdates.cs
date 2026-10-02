@@ -548,26 +548,6 @@ namespace OpenDashPlugin
             return flagBoxPlan != null && flagBoxPlan.State == FlagBoxInstallState.Unavailable;
         }
 
-        /// <summary>The by-hand route's words, as the Matrix page's shared route says them, save its failure,
-        /// which points at the log rather than quoting an exception (voice.md).</summary>
-        public const string CopyForImport = "Copy to SimHub's import folder";
-        public const string CopyForImportTooltip = "Puts a copy in Documents\\SimHub.";
-        public const string ImportPathTooltip = "Where OpenDash left the profile.";
-        public const string CopyForImportFailed = "Could not copy the profile. See SimHub's log.";
-
-        public static string CopiedForImport(string path)
-        {
-            return "Copied to " + path + ". In SimHub, open your device's profiles and press Import.";
-        }
-
-        /// <summary>The route's rhythm: 8 under its line, 12 between the press and the box, and the box at most
-        /// the shared route's 320, giving up width to a narrow column rather than drawing past it. The box's
-        /// column outweighs the filler beside it, so it takes the room before the filler does.</summary>
-        public const double ImportLineGap = 8;
-        public const double ImportGap = 12;
-        public const double ImportPathWidth = 320;
-        public const double ImportBoxWeight = 1000;
-
         /// <summary>The table card's border, one on each side, which the rows are inside.</summary>
         public const double TableBorder = 2 * PanelMetrics.BorderWeight;
 

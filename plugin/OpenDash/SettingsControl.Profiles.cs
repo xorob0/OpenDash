@@ -50,11 +50,22 @@ namespace OpenDashPlugin
         private TextBlock flagBoxLine;
         private System.Windows.Controls.TextBox flagBoxPath;
 
+        /// <summary>What the last copy said and the path it named, kept across a rebuild of the page (a resize,
+        /// a sidebar flip, any press that redraws) so its answer is not lost, and let go when the page is left.</summary>
+        private string flagBoxCopied;
+        private string flagBoxCopiedPath;
+
         /// <summary>
         /// The by-hand route for the flag box, only when the one-click one is not there at all: ADR 0013 keeps
         /// the extracted file precisely so that there is something to import when the matrix driver cannot be
-        /// reached. Shared by Matrix, which draws it under the profile in its header, and Updates.
+        /// reached. Shared by Matrix, which draws it under the profile in its header, and Updates, under its
+        /// table.
         /// </summary>
+        /// <remarks>
+        /// The press and the path box are a wrap rather than a row (#523): side by side they are about 555 px,
+        /// which a narrow column does not have, so there the box drops under the press instead of being cut.
+        /// Each carries 12 under it and the row takes the last 12 back.
+        /// </remarks>
         private FrameworkElement BuildFlagBoxImportFallback(FlagBoxPlan plan)
         {
             OnDrop(() =>
@@ -62,31 +73,46 @@ namespace OpenDashPlugin
                 flagBoxLine = null;
                 flagBoxPath = null;
             });
-            flagBoxLine = Ui.Caption(FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
-            var copy = BuildSecondaryButton("Copy to SimHub's import folder", "Puts a copy in Documents\\SimHub.");
+            OnLeave("FlagBox.importCopy", () =>
+            {
+                flagBoxCopied = null;
+                flagBoxCopiedPath = null;
+            });
+            flagBoxLine = Ui.Caption(flagBoxCopied ?? FlagBoxInstallPlan.Summary(plan, plugin.FlagBox?.Path), BodyWidth);
+            var copy = BuildSecondaryButton(PanelCopy.CopyForImport, PanelCopy.CopyForImportTooltip);
             copy.Click += (sender, args) => CopyFlagBoxForImport();
+            copy.Margin = new Thickness(0, 0, PanelShell.ImportGap, PanelShell.ImportGap);
             var path = new TextBox
             {
-                Width = 320,
+                Width = PanelShell.ImportPathWidth,
                 IsReadOnly = true,
-                Text = plugin.FlagBox?.Path ?? string.Empty,
-                ToolTip = "Where OpenDash left the profile.",
+                Text = flagBoxCopiedPath ?? plugin.FlagBox?.Path ?? string.Empty,
+                ToolTip = PanelCopy.ImportPathTooltip,
+                Margin = new Thickness(0, 0, 0, PanelShell.ImportGap),
+                VerticalAlignment = VerticalAlignment.Center,
             };
             Ui.Field(path, Theme.ControlHeightSm);
             flagBoxPath = path;
-            var block = Ui.VStack(8, flagBoxLine, Ui.HStack(12, copy, path));
+            var row = new WrapPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, -PanelShell.ImportGap) };
+            row.Children.Add(copy);
+            row.Children.Add(path);
+            var block = Ui.VStack(PanelShell.ImportLineGap, flagBoxLine, row);
             block.HorizontalAlignment = HorizontalAlignment.Left;
             return block;
         }
 
+        /// <summary>Copies the flag box profile to where SimHub's import dialog opens, keeps what it said for a
+        /// rebuild, and says it on the route's line.</summary>
         private void CopyFlagBoxForImport()
         {
             var copied = FlagBoxProfile.CopyForImport(plugin.FlagBox, null, new SimHubInstallLog());
-            if (flagBoxPath != null && copied?.Path != null) flagBoxPath.Text = copied.Path;
-            if (flagBoxLine == null) return;
-            flagBoxLine.Text = copied != null && copied.Status == FlagBoxStatus.Failed
-                ? "Could not copy the profile: " + copied.Message
-                : "Copied to " + copied?.Path + ". In SimHub, open your device's profiles and press Import.";
+            var ok = copied != null && copied.Status != FlagBoxStatus.Failed && copied.Status != FlagBoxStatus.NotEmbedded;
+            // Not every refusal reaches the log by itself (no Documents folder), and the line points there.
+            if (!ok) Log.Warn("Copying the flag box profile for import failed: " + (copied?.Message ?? "no result"));
+            if (copied?.Path != null) flagBoxCopiedPath = copied.Path;
+            flagBoxCopied = ok ? PanelCopy.CopiedForImport(copied.Path) : PanelCopy.CopyForImportFailed;
+            if (flagBoxPath != null && flagBoxCopiedPath != null) flagBoxPath.Text = flagBoxCopiedPath;
+            if (flagBoxLine != null) flagBoxLine.Text = flagBoxCopied;
         }
 
         /// <summary>Asks SimHub what it holds for the flag box, without touching it.</summary>

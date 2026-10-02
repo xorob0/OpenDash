@@ -463,6 +463,12 @@ namespace OpenDashPlugin
         public const double TagHeight = 18;
         public const double TagPaddingX = 6;
         public const double TagTextSize = 10;
+        /// <summary>The flag box's by-hand route: 8 under its line, 12 between the press and the path box and
+        /// under each when the box wraps under the press, and the box 320 wide.</summary>
+        public const double ImportLineGap = 8;
+        public const double ImportGap = 12;
+        public const double ImportPathWidth = 320;
+
         /// <summary>Between a page's title and the tag after it (a page new in this release carries New):
         /// Rig.dc.html's and Map.dc.html's 12.</summary>
         public const double TitleTagGap = 12;
