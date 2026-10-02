@@ -36,7 +36,7 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_matrix_rows_say_what_the_artboard_and_the_voice_rulings_say()
+        public void The_matrix_rows_say_what_the_artboard_and_voice_md_say()
         {
             Assert.Equal("Matrix", PanelMatrix.Title);
             Assert.Equal("Priority", PanelMatrix.PriorityTitle);
@@ -69,8 +69,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// One noun for the thing a driver owns (ruling 59): a matrix, never a panel. The empty state is the
-        /// Matrix page's own and Home reads it, as it reads NoScreens and NoStrips.
+        /// One noun for the thing a driver owns (voice.md, "One word per thing"): a matrix, never a panel. The
+        /// empty state is the Matrix page's own and Home reads it, as it reads NoScreens and NoStrips.
         /// </summary>
         [Fact]
         public void A_matrix_is_called_a_matrix()
@@ -146,9 +146,9 @@ namespace OpenDashPlugin.Tests
                 pressable.Where(state => PanelMatrix.ProfileRow(state, "0.4.0").Style == PanelButton.Primary));
             Assert.Equal(PanelMatrix.Update, outdated.Button);
             // Every state carries the dot's ink, which the page draws itself: the line is the name and the version
-            // (ruling 55), so the dot is what tells an older profile from a current one, in the amber the
-            // sidebar's dot, Home and the Updates artboard give an update. The page hands it to Ui.Brush, which
-            // throws on a null one, so a state left without an ink would fail the whole page.
+            // (as Matrix.dc.html draws it), so the dot is what tells an older profile from a current one, in the
+            // amber the sidebar's dot, Home and the Updates artboard give an update. The page hands it to Ui.Brush,
+            // which throws on a null one, so a state left without an ink would fail the whole page.
             Assert.Equal(Theme.StatusUpdateAvailable, outdated.StateHex);
             Assert.Equal(Theme.StatusUpToDate, current.StateHex);
             Assert.NotEqual(current.StateHex, outdated.StateHex);
@@ -188,8 +188,9 @@ namespace OpenDashPlugin.Tests
                 Assert.True(PanelMatrix.ProfileHasButton(state));
             }
 
-            // One message in the order the driver acts on it: the verb (ruling 67: one per press; the name
-            // unquoted), the installer's note, then after a first install the select step in StepsLeft's form.
+            // One message in the order the driver acts on it: the verb (one per press, voice.md's "One word per
+            // thing"; the name unquoted), the installer's note, then after a first install the select step in
+            // StepsLeft's form.
             var one = new List<int> { 2 };
             var several = new List<int> { 1, 3 };
             var none = new List<int>();
@@ -1563,6 +1564,33 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>The page's anchor ids, which search, Home's fix rows and the capture scripts route to: a
         /// renamed one sends each of them to the page's top, so every id is pinned, and a new one is added here.</summary>
+        /// <summary>
+        /// The page justifies its words by what the tree holds -- voice.md's sections, plugin.md's departures
+        /// table, the artboards, a ticket -- and never by a numbered ruling in a workflow's scratch files, which
+        /// nobody reading the code can open. A ruling posted on a ticket is cited with the ticket ("#524, ruling
+        /// 8"). The files are read whole, comments included, since that is where a citation lives.
+        /// </summary>
+        [Fact]
+        public void The_page_cites_only_what_the_tree_holds()
+        {
+            foreach (var file in new[]
+            {
+                System.IO.Path.Combine("plugin", "OpenDash", "PanelMatrix.cs"),
+                System.IO.Path.Combine("plugin", "OpenDash", "SettingsControl.Matrix.cs"),
+                System.IO.Path.Combine("plugin", "OpenDash.Tests", "PanelMatrixTests.cs"),
+            })
+            {
+                var text = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), file));
+                var flat = System.Text.RegularExpressions.Regex.Replace(text, @"\s*(///|//)?\s+", " ");
+                // "ruling" and a number with no ticket before it; the pattern is split so this line is no citation.
+                var bare = System.Text.RegularExpressions.Regex.Matches(flat, @"(?<!#\d+, )\b" + "rul" + @"ings? \d+");
+                Assert.True(bare.Count == 0, file + ": " + string.Join(" | ", bare.Cast<System.Text.RegularExpressions.Match>().Select(m => m.Value)));
+                Assert.DoesNotContain("critic's " + "rulings", flat);
+                Assert.DoesNotContain("#503 " + "inventory", flat);
+                Assert.DoesNotContain("voice_" + "rulings", flat);
+            }
+        }
+
         [Fact]
         public void Its_anchor_ids_are_pinned()
         {

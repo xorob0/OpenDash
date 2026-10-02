@@ -3,9 +3,10 @@
 //
 // The page is Matrix.dc.html: the flag box profile on the title's line, a card for each matrix the rig has,
 // and for the one selected its preview beside what may take it over, in priority order, and what it shows
-// at rest. The words follow docs/design/voice.md where the artboard differs (the critic's rulings in the
-// #503 inventory): one noun, "matrix", for the thing a driver owns; the row names the panel has always used
-// ("Idle display", "Mounting side", "Redline flash"); and a profile named the way SimHub lists it.
+// at rest. The words follow docs/design/voice.md where the artboard differs, and docs/design/plugin.md's
+// departures table records each difference: one noun, "matrix", for the thing a driver owns; the row names
+// the panel has always used ("Idle display", "Mounting side", "Redline flash"); and a profile named the way
+// SimHub lists it.
 //
 // The matrix copy PanelLights still holds for the old tab is copied here rather than moved, because
 // PanelLights is the LEDs page's; this page reads none of it. Pure: no WPF.
@@ -21,9 +22,9 @@ namespace OpenDashPlugin
         public const string Title = "Matrix";
 
         /// <summary>
-        /// The empty state, here and under Home's Matrix eyebrow, which reads this constant. One noun for the
-        /// thing a driver owns (ruling 59): a matrix, never a panel, which in this panel is the settings
-        /// window itself.
+        /// The empty state, here and under Home's Matrix eyebrow, which reads this constant. One noun for the thing
+        /// a driver owns (voice.md, "One word per thing"): a matrix, never a panel, which in this panel is the
+        /// settings window itself.
         /// </summary>
         public const string NoPanels = "No matrices yet.";
 
@@ -33,13 +34,13 @@ namespace OpenDashPlugin
         // --- The profile, on the title's line ---------------------------------------------------------
 
         /// <summary>
-        /// What the flag box profile's line says after the profile's name, the ink of the dot beside it, and
-        /// the press. The Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither
-        /// page rewords a state for the other. The state is the version SimHub holds, since the name already
-        /// says which profile it is: "OpenDash Flag box · 0.5.0". With the line reduced to the name and the
-        /// version (ruling 55) the dot is the one part of it that tells an older profile from a current one, so
-        /// each state's ink is the dot's, drawn by the page itself (the words are text.secondary in every
-        /// state): a current profile green, an older one purpose.status.updateAvailable as the sidebar's dot,
+        /// What the flag box profile's line says after the profile's name, the ink of the dot beside it, and the
+        /// press. The Matrix page's own table: the Updates page's rows read PanelCopy.LightRow, so neither page
+        /// rewords a state for the other. The state is the version SimHub holds, since the name already says which
+        /// profile it is: "OpenDash Flag box · 0.5.0". With the line reduced to the name and the version, as
+        /// Matrix.dc.html's title line draws it, the dot is the one part of it that tells an older profile from a
+        /// current one, so each state's ink is the dot's, drawn by the page itself (the words are text.secondary in
+        /// every state): a current profile green, an older one purpose.status.updateAvailable as the sidebar's dot,
         /// Home and the Updates artboard draw it, a failed one red, and none purpose.status.notInstalled.
         /// </summary>
         public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion)
@@ -85,8 +86,8 @@ namespace OpenDashPlugin
             return plan == null ? FlagBoxInstallState.NotEmbedded : plan.State;
         }
 
-        /// <summary>Whether the by-hand import is drawn under the title's line (ruling 55): only when SimHub's
-        /// matrix settings could not be reached, since the press there does the rest.</summary>
+        /// <summary>Whether the by-hand import is drawn under the title's line, which Matrix.dc.html does not draw:
+        /// only when SimHub's matrix settings could not be reached, since the press there does the rest.</summary>
         public static bool ShowsImportFallback(FlagBoxInstallState state)
         {
             return state == FlagBoxInstallState.Unavailable;
@@ -144,18 +145,18 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What is said once the press has run, as one message in the order the driver acts on it, or null
-        /// when the line above already says it all. The verb first, one per press (ruling 67): Installed,
-        /// Updated over an older copy, Reinstalled over a current one, the name unquoted after it as on the
-        /// other pages. Then the installer's note when it has one (FlagBoxInstallPlan.BuiltInModeNote), which
-        /// has to be done before the profile can be selected at all, and makes the message caution rather
-        /// than information, as the LEDs page says the same note. Then, after a first install, which adds the
-        /// profile and does not select it, the select step in the form <see cref="StepsLeft"/> gives it
-        /// (<see cref="SelectStep"/>): for the one matrix, for each of several, and none on a rig with none.
-        /// A press that failed is said in its own verb, the one on the press the line drew
-        /// (<paramref name="pressedIn"/>, the line's state): Could not update after Update, Could not
-        /// reinstall after Reinstall, Could not install after Install, the Install offered after a failure
-        /// included, as the LEDs and Updates pages word the same failure.
+        /// What is said once the press has run, as one message in the order the driver acts on it, or null when the
+        /// line above already says it all. The verb first, one per press (voice.md, "One word per thing", which
+        /// holds verbs to it too): Installed, Updated over an older copy, Reinstalled over a current one, the name
+        /// unquoted after it as on the other pages. Then the installer's note when it has one
+        /// (FlagBoxInstallPlan.BuiltInModeNote), which has to be done before the profile can be selected at all,
+        /// and makes the message caution rather than information, as the LEDs page says the same note. Then, after
+        /// a first install, which adds the profile and does not select it, the select step in the form <see
+        /// cref="StepsLeft"/> gives it (<see cref="SelectStep"/>): for the one matrix, for each of several, and
+        /// none on a rig with none. A press that failed is said in its own verb, the one on the press the line drew
+        /// (<paramref name="pressedIn"/>, the line's state): Could not update after Update, Could not reinstall
+        /// after Reinstall, Could not install after Install, the Install offered after a failure included, as the
+        /// LEDs and Updates pages word the same failure.
         /// </summary>
         public static PanelMessage InstallSaid(FlagBoxInstallState before, FlagBoxInstallState pressedIn, FlagBoxInstallState after, string profile, string note, IList<int> panels)
         {
@@ -456,7 +457,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The device's field that picks which matrix it draws, spelt as SimHub labels it (ruling 69): the
+        /// The device's field that picks which matrix it draws, spelt as SimHub labels it: the
         /// localisation key ArduinoHardwareSettings_Label_RGBMatrixContent in SimHub.Plugins.dll and the same
         /// string in SimHubWPF.exe read "RGB Matrix content", and docs/flag-box.md tells drivers to set it by
         /// that name. Matrix.dc.html's "Matrix content: 2" names a field SimHub does not have.
@@ -698,9 +699,10 @@ namespace OpenDashPlugin
             return scenario;
         }
 
-        /// <summary>What the chips are, for a screen reader: a noun, as voice.md names a group (ruling 24),
-        /// the artboard's own from its clause "What to preview". Not "scenarios", which is the code's word for
-        /// PanelEmulation's chips and no page shows a driver.</summary>
+        /// <summary>What the chips are, for a screen reader: a noun, as voice.md's "The caption" says a heading
+        /// is, the artboard's own from its clause "What to preview", and one noun for the one set of chips on
+        /// every page (#524, ruling 6). Not "scenarios", which is the code's word for PanelEmulation's chips and
+        /// no page shows a driver.</summary>
         public const string PreviewChipsName = PanelRigMap.ScenariosName;
 
         /// <summary>The link under the preview, to the Rig page on the same scenario.</summary>
@@ -717,9 +719,9 @@ namespace OpenDashPlugin
         /// <summary>The gap between the preview and the priority list when they are stacked: the page's own.</summary>
         public const double StackedGap = 22;
 
-        /// <summary>The gap under the New tag, which sits on its own line over the preview's frame (ruling 7
-        /// tags the preview itself): the frame's padding is narrower than the tag is tall, so it cannot sit
-        /// inside the frame clear of the lamps.</summary>
+        /// <summary>The gap under the New tag, which sits on its own line over the preview's frame (Map.dc.html
+        /// marks the Live 8×8 preview itself new): the frame's padding is narrower than the tag is tall, so it
+        /// cannot sit inside the frame clear of the lamps.</summary>
         public const double NewTagGap = 8;
 
         // --- What may take the matrix over -------------------------------------------------------------
@@ -736,11 +738,11 @@ namespace OpenDashPlugin
         public const string WarningsTitle = "Warnings";
 
         /// <summary>
-        /// What may take the matrix over, first first, as ruling 56 and the artboard number it, fixed until
-        /// #505 lets a driver change it. This is not quite the box's own order: flag-box.md and profile.ts
-        /// (belowFlags) paint the spotter as an overlay over everything, a standing yellow included, and rank
-        /// the rest flags, pit lane, warnings, gear. The numbers are the ruling's; the disagreement is the
-        /// author's to settle, not this page's.
+        /// What may take the matrix over, first first, as Matrix.dc.html numbers it, fixed until #505 lets a
+        /// driver change it. This is not quite the box's own order: flag-box.md and profile.ts (belowFlags)
+        /// paint the spotter as an overlay over everything, a standing yellow included, and rank the rest
+        /// flags, pit lane, warnings, gear. The numbers are the artboard's; the disagreement is the author's
+        /// to settle, not this page's.
         /// </summary>
         public static readonly string[] Layers = { FlagsTitle, PitLaneTitle, SpotterTitle, WarningsTitle };
 
@@ -770,9 +772,9 @@ namespace OpenDashPlugin
         public const string ShiftColoursTitle = "Shift colours";
         public const string RedlineFlashTitle = "Redline flash";
 
-        /// <summary>The digit's colours following the car's own shift lights: "shift points", as voice.md's
-        /// rulings name them, since "thresholds" is the settings model's word and not the driver's; and
-        /// "Car-specific", the name voice.md gives the car's own tables, which is also what Lovely Sim Racing
+        /// <summary>The digit's colours following the car's own shift lights: "shift points", as plugin.md's
+        /// departures table records the row, since "thresholds" is the settings model's word and not the driver's;
+        /// and "Car-specific", the name voice.md gives the car's own tables, which is also what Lovely Sim Racing
         /// calls the tables behind them, so a driver who met them there recognises the word.</summary>
         public const string CarShiftPointsTitle = "Car-specific shift points";
 
@@ -862,8 +864,9 @@ namespace OpenDashPlugin
         // 12-padded line of its number (16 in the display family, 14 wide), 12, its name at 15 and its switch;
         // each option under it padded 7, at 14, its control 16 from its words; a line under an option at 12,
         // 2 below; the Thresholds link 8 before the switch. The artboard indents the options 46 because its
-        // lines start with a 10 px grip and 12; ruling 56 took the grips out, so the options and the rank-less
-        // SimHub device row start where a layer's name now does, the rank's 14 and 12 in.
+        // lines start with a 10 px grip and 12; the build draws no grip until #505 makes the order draggable, so
+        // the options and the rank-less SimHub device row start where a layer's name now does, the rank's 14 and 12
+        // in.
         public const double PriorityHeadGap = 8;
         public const double LayerPaddingY = 12;
         public const double LayerGap = 12;

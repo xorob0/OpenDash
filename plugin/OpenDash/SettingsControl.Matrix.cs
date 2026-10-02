@@ -360,7 +360,7 @@ namespace OpenDashPlugin
             all.Height = double.NaN;
             all.HorizontalAlignment = HorizontalAlignment.Left;
             all.Click += (sender, args) => Open(PanelPage.Rig, PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m)));
-            // New in this release (the Map's "Live 8×8 preview", ruling 7). The preview has no title to follow
+            // New in this release (Map.dc.html marks the "Live 8×8 preview" new). The preview has no title to follow
             // and the frame's padding is narrower than the tag is tall, so the tag has the frame's own line,
             // over it and clear of the lamps, rather than following the link to Rig.
             var tag = Ui.NewTag();
