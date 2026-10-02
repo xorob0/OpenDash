@@ -538,7 +538,24 @@ namespace OpenDashPlugin.Tests
                 "var sizes = ends > 0 ? new[] { ends, centre, ends } : new[] { centre };",
                 "foreach (var text in PanelLeds.PreviewLabels(ends, centre))",
                 "var chip = Ui.Chip(scenario.Value, id == ledsScenario, () =>",
-                "var link = Ui.LinkButton(PanelLeds.AllDevicesAtOnce);");
+                "var link = Ui.LinkButton(PanelLeds.AllDevicesAtOnce);",
+                "link.Click += (sender, args) => { var rig = PanelLeds.RigScenario(ledsScenario); if (rig != null) Open(PanelPage.Rig, rig); else Go(PanelPage.Rig); };");
+        }
+
+        /// <summary>"All devices at once" opens Rig on the chip picked here, as Matrix's link of the same words
+        /// does: each chip but Live is a PanelEmulation id Rig draws. Live has no Rig chip, so Rig keeps its own.</summary>
+        [Fact]
+        public void All_devices_at_once_opens_rig_on_the_chip_picked_here()
+        {
+            foreach (var chip in PanelLeds.Scenarios.Where(pair => pair.Key != PanelLeds.LiveScenario))
+            {
+                Assert.Equal(chip.Key, PanelLeds.RigScenario(chip.Key));
+                Assert.NotNull(PanelEmulation.Find(PanelLeds.RigScenario(chip.Key)));
+            }
+            Assert.Equal(PanelEmulation.Yellow, PanelLeds.RigScenario(PanelEmulation.Yellow));
+            Assert.Null(PanelLeds.RigScenario(PanelLeds.LiveScenario));
+            Assert.Null(PanelLeds.RigScenario(null));
+            Assert.Null(PanelLeds.RigScenario("not-a-chip"));
         }
 
         /// <summary>
@@ -1642,7 +1659,8 @@ namespace OpenDashPlugin.Tests
                 "picker.IsEnabled = movable;",
                 "var row = PanelLeds.DeviceRow(targets.Select(t => new LedDeviceEntry(t.Id, t.Name, t.Connected)).ToList(), current, declined);",
                 "drawn.SizeChanged += (sender, args) => picker.MaxWidth = PanelLeds.DevicePickerWidth(drawn.ActualWidth);",
-                "link.Click += (sender, args) => Go(PanelPage.Rig);",
+                "var rig = PanelLeds.RigScenario(ledsScenario);",
+                "if (rig != null) Open(PanelPage.Rig, rig);",
                 "Ui.Switch(PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns)),",
                 // Ruling 47: the width row only while the switch is on.
                 "width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;",

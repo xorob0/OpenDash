@@ -372,6 +372,14 @@ namespace OpenDashPlugin
         /// <summary>The link beside the chips, to the Rig page's picture of every device.</summary>
         public const string AllDevicesAtOnce = "All devices at once";
 
+        /// <summary>The Rig chip the link opens on: the one the driver picked here, since every chip but Live is a
+        /// PanelEmulation id Rig draws too, as Matrix's link carries its own; null for Live, which Rig has no chip
+        /// for, so Rig keeps its own selection.</summary>
+        public static string RigScenario(string scenario)
+        {
+            return scenario == LiveScenario || PanelEmulation.Find(scenario) == null ? null : scenario;
+        }
+
         /// <summary>The artboard's gap between the preview's groups.</summary>
         public const double PreviewGroupGap = 22;
 

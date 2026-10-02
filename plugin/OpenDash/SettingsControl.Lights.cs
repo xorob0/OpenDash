@@ -500,7 +500,12 @@ namespace OpenDashPlugin
             link.Height = PanelKit.ChipHeight;
             link.VerticalAlignment = VerticalAlignment.Top;
             link.Margin = new Thickness(12, 0, 0, 0);
-            link.Click += (sender, args) => Go(PanelPage.Rig);
+            link.Click += (sender, args) =>
+            {
+                var rig = PanelLeds.RigScenario(ledsScenario);
+                if (rig != null) Open(PanelPage.Rig, rig);
+                else Go(PanelPage.Rig);
+            };
             var top = new DockPanel { LastChildFill = true };
             DockPanel.SetDock(link, Dock.Right);
             top.Children.Add(link);
