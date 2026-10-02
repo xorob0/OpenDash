@@ -1,10 +1,11 @@
 // PanelWordsTests.cs: the words two or more pages draw for one thing, held to one constant (#524).
 //
-// Each ruling of #524 puts a word on the page that owns it and has every other page read it. A page that types
+// Each phrase plugin.md's departures table settles for one state is a constant on the page that owns it, and
+// every other page reads that constant. A page that types
 // its own copy, or rewords the one it reads, fails here rather than drifting: voice.md's "One word per thing"
-// across the whole panel, where each page's own tests hold only its own words. The restart phrase (ruling 1)
+// across the whole panel, where each page's own tests hold only its own words. The restart phrase
 // is held by PanelScreensTests.A_screen_waiting_for_the_restart_is_said_one_way_on_every_page, and the Matrix
-// link's plural of the Settings column (ruling 7) by PanelMatrixTests beside its route.
+// link's plural of the Settings column by PanelMatrixTests beside its route.
 using System.Linq;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace OpenDashPlugin.Tests
             return System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(path), @"\s+", " ");
         }
 
-        /// <summary>Ruling 2: a strip whose profile this build does not ship is "Not installed" on the LEDs
+        /// <summary>A strip whose profile this build does not ship is "Not installed" on the LEDs
         /// card, on Home and in the Updates table, which no longer says "Unknown" for it.</summary>
         [Fact]
         public void A_strip_whose_profile_the_build_does_not_ship_is_not_installed_on_every_page()
@@ -35,7 +36,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelLeds.NoProfileForStrip, row.Tooltip);
         }
 
-        /// <summary>Ruling 6: the scenario chips' section is "Preview" on Rig, Matrix, LEDs and Settings, the Rig
+        /// <summary>The scenario chips' section is "Preview" on Rig, Matrix, LEDs and Settings, the Rig
         /// page's constant, and Rig's "Emulation" is gone.</summary>
         [Fact]
         public void The_scenario_chips_are_called_preview_on_every_page()
@@ -51,7 +52,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Ui.Eyebrow(PanelSettings.PreviewTitle)", Source("SettingsControl.Settings.cs"));
         }
 
-        /// <summary>Ruling 7: the alert table's second column is "Trigger", and the Matrix page's link to it is
+        /// <summary>The alert table's second column is "Trigger", and the Matrix page's link to it is
         /// that word's plural.</summary>
         [Fact]
         public void The_alert_tables_second_column_is_trigger_and_the_matrix_links_to_it_by_that_word()
@@ -61,7 +62,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelSettings.AnchorAlerts, PanelMatrix.ThresholdsRoute.Anchor);
         }
 
-        /// <summary>Ruling 8: a matrix no device shows is "Not shown in SimHub" on the Matrix card, on Home's line,
+        /// <summary>A matrix no device shows is "Not shown in SimHub" on the Matrix card, on Home's line,
         /// as the Matrix fix box's title and in Home's issue; the matrix number is in the steps under the box.</summary>
         [Fact]
         public void A_matrix_no_device_shows_is_not_shown_in_SimHub_on_every_page()
@@ -82,7 +83,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("matrix 2", issue.Detail);
         }
 
-        /// <summary>Ruling 12: the Update press over an older profile says what it costs in one sentence,
+        /// <summary>The Update press over an older profile says what it costs in one sentence,
         /// FlagBoxInstallPlan.Replaces, on the LEDs strip header, the Matrix flag box and the Updates table.</summary>
         [Fact]
         public void The_update_press_says_what_it_replaces_on_every_page()
@@ -118,7 +119,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(typeof(PanelDataTab).GetField("RevBarCaption"));
         }
 
-        /// <summary>Ruling 3: a strip is the device and an LED profile is the file SimHub loads. The empty build is
+        /// <summary>A strip is the device and an LED profile is the file SimHub loads. The empty build is
         /// said in one sentence, the Updates table's, on the LEDs page's Add sheet too; the device's words name a
         /// strip; and no constant a page draws calls the file a "strip profile".</summary>
         [Fact]

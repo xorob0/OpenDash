@@ -432,7 +432,7 @@ namespace OpenDashPlugin
 
         // A strip's state, in the LEDs cards' own words, read from PanelLeds rather than copied (#524): Installed
         // and Not installed are PanelCopy's, which the Updates page's rows say too. A failed install, and a
-        // strip whose profile this build does not ship (ruling 2), read as Not installed, as the LEDs card reads
+        // strip whose profile this build does not ship, read as Not installed, as the LEDs card reads
         // them.
         public const string StripShowing = PanelLeds.Showing;
         public const string StripNotSelected = PanelLeds.NotSelected;
@@ -543,7 +543,7 @@ namespace OpenDashPlugin
 
         // --- Right now: matrix -----------------------------------------------------------------------------
 
-        /// <summary>The Matrix card's word for a slot no device shows, read from the card (#524, ruling 8).</summary>
+        /// <summary>The Matrix card's word for a slot no device shows, read from the card: one phrase for one state.</summary>
         public const string MatrixNotShown = PanelMatrix.NotShown;
 
         /// <summary>

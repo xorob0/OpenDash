@@ -349,7 +349,7 @@ namespace OpenDashPlugin
         // --- The scenario chips ---------------------------------------------------------------------
 
         /// <summary>What the scenario chips' section is called, on this page and on every page that draws chips
-        /// from PanelEmulation: Matrix, LEDs and Settings read this constant (#524, ruling 6). The artboard's
+        /// from PanelEmulation: Matrix, LEDs and Settings read this constant. The artboard's
         /// aria-label is "What to emulate", a wh-clause posing as a heading; a heading is a noun (voice.md), and
         /// the other pages' artboards say "What to preview", so the one noun is "Preview". The group entries
         /// still carry "emulate" and "emulation" as keywords, so a driver who types either finds the chips.</summary>

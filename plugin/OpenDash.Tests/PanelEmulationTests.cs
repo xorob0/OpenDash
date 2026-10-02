@@ -377,7 +377,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The emulation writes the dash's own band words (ruling 26), so each face band's text is read out of
+        /// The emulation writes the dash's own band words, so each face band's text is read out of
         /// packages/dash/src/flags.ts -- and the limiter's out of pitAlerts.ts -- rather than typed twice.
         /// </summary>
         [Theory]

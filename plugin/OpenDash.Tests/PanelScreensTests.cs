@@ -1184,7 +1184,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A screen written after SimHub started is said one way on every page (#524, ruling 1): the Screens
+        /// A screen written after SimHub started is said one way on every page: the Screens
         /// card's state and its fix box's title, Home's screen line, the first step under Home's issue and the
         /// Updates table's state are all PanelCopy.RestartToLoad. Home's issue title names the screen ("Rim is
         /// not in SimHub yet", the voice ruling on Main.dc.html's "Rim isn't in SimHub yet") and so does not
@@ -1299,7 +1299,7 @@ namespace OpenDashPlugin.Tests
                 "var glance = Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance); var zoneIndex = Contract.QuickGlanceZone(glance); var page = Contract.QuickGlancePage(glance);",
                 "Ui.ChoiceButton(PanelScreens.PitWallGlanceZoneLabels(), zoneIndex, chosen => { screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(chosen, Contract.QuickGlancePage(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance))); ScreensSave(screen, redraw); }",
                 "Ui.ChoiceButton(ZonePages.Standard.Select(p => p.Name).ToArray(), page, chosen => { screen.PitWallQuickGlance = Contract.PitWallQuickGlanceValue(Contract.QuickGlanceZone(Contract.NormalisePitWallQuickGlance(screen.PitWallQuickGlance)), chosen); ScreensSave(screen, redraw); }",
-                // The web view commits on blur or Enter (ruling 35).
+                // The web view commits on blur or Enter.
                 "box.LostFocus += (sender, args) => commit();",
                 "if (args.Key == Key.Enter) commit();",
                 "Ui.Switch(screen.PitWallClassOnly, on => { screen.PitWallClassOnly = on;",
@@ -1430,7 +1430,7 @@ namespace OpenDashPlugin.Tests
                 "PanelScreens.CardMeta(captured), PanelScreens.StateLabel(state), PanelScreens.StateHex(state),",
                 "var facts = Ui.Prose(PanelScreens.Facts(screen));",
                 "title.ToolTip = screen.Name;",
-                // Ruling 27: a screen written since SimHub started reads Restart SimHub to load it.
+                // A screen written since SimHub started reads Restart SimHub to load it.
                 "return PanelScreens.StateOf(Installed(screen), PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace));",
             })
             {

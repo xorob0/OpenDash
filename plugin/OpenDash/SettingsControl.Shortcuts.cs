@@ -153,8 +153,8 @@ namespace OpenDashPlugin
             var sections = new List<UIElement> { header, banner };
             sections.AddRange(groups.Select(group => (UIElement)group.Card));
             sections.Add(empty);
-            // The Map tags "Every button in one list" New, so the page's title carries the tag, as Rig's does
-            // (ruling 7).
+            // The Map tags "Every button in one list" New, so the page's title carries the tag, as Rig's
+            // does.
             var page = TaggedPageLayout(PanelShortcuts.Title, Ui.NewTag(), null, sections.ToArray());
             ShortcutsFollowSimHub(page, editors, changed, () => dropped);
             return page;

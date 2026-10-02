@@ -770,5 +770,36 @@ namespace OpenDashPlugin.Tests
                 Assert.False(Regex.IsMatch(text, @"</summary>\s*///\s*<summary>"), System.IO.Path.GetFileName(path) + " stacks two summaries on one member");
             }
         }
+
+        /// <summary>
+        /// The plugin justifies its words by what the tree holds -- voice.md's sections, plugin.md's departures
+        /// table, the artboards, a ticket -- or by the reason itself, and never by a numbered finding of a
+        /// workflow's scratch files, which nobody reading the code can open: a ruling, an ambiguity or an
+        /// uncovered case with a number after it. #524's rulings are rows of plugin.md's departures table, so a
+        /// comment says the reason the row gives rather than the number (#538). Every source is read whole,
+        /// comments included, since that is where a citation lives.
+        /// </summary>
+        [Fact]
+        public void No_comment_cites_a_finding_the_tree_does_not_hold()
+        {
+            var plugin = System.IO.Path.Combine(RepoPaths.Root(), "plugin");
+            var files = new[] { "OpenDash", "OpenDash.Tests" }
+                .SelectMany(project => System.IO.Directory.GetFiles(System.IO.Path.Combine(plugin, project), "*.cs"))
+                .ToList();
+            Assert.Contains(files, path => System.IO.Path.GetFileName(path) == "PanelUpdates.cs");
+            // Split, so this file is no citation of its own.
+            var finding = new Regex(@"\b(?:" + "rul" + "ings?|" + "ambigu" + "it(?:y|ies)|" + "uncov" + @"ered) \d+", RegexOptions.IgnoreCase);
+            foreach (var path in files)
+            {
+                var flat = Regex.Replace(System.IO.File.ReadAllText(path), @"\s*(///|//)?\s+", " ");
+                var cited = finding.Matches(flat).Cast<Match>().Select(m => m.Value).ToList();
+                Assert.True(cited.Count == 0, System.IO.Path.GetFileName(path) + ": " + string.Join(" | ", cited));
+                Assert.DoesNotContain("critic's " + "rulings", flat);
+                Assert.DoesNotContain("critic's " + "answer", flat);
+                Assert.DoesNotContain("#503 " + "inventory", flat);
+                Assert.DoesNotContain("voice_" + "rulings", flat);
+                Assert.DoesNotContain("rulings-" + "524", flat);
+            }
+        }
     }
 }

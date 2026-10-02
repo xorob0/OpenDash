@@ -299,7 +299,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// A matrix no device shows, titled by its name and the Matrix card's state for it (#524, ruling 8):
+        /// A matrix no device shows, titled by its name and the Matrix card's state for it, one phrase for one state:
         /// "Left pillar is not shown in SimHub". The matrix number is in the detail under it.
         /// </summary>
         public static string NotShownTitle(string name)
@@ -326,7 +326,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Under a screen SimHub has not read yet: the panel's one phrase for that state as the step
-        /// (PanelCopy.RestartToLoad, #524 ruling 1), then the step after it in the Screens fix box's words. The
+        /// (PanelCopy.RestartToLoad), then the step after it in the Screens fix box's words. The
         /// title names the screen, so a list of issues is read by what each is about.
         /// </summary>
         public static string ScreenRestartDetail(string name)

@@ -40,7 +40,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Low fuel", PanelSettings.LowFuelTitle);
             Assert.Equal("Oil temperature", PanelSettings.OilTempTitle);
             Assert.Equal("Water temperature", PanelSettings.WaterTempTitle);
-            // Ruling 66 and the critic's answer for the table: the number is in SimHub's unit, and the default
+            // The number is in SimHub's unit, and the default
             // is the empty box's placeholder rather than a sentence.
             Assert.Equal("In SimHub's unit.", PanelSettings.TemperatureCaption);
             Assert.Equal("Brightness", PanelSettings.BrightnessTitle);
@@ -789,7 +789,7 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// The page asks the rules above where it draws: the stacking rule in SettingsFit and on the rows sized
         /// for it, the fold on the table's surface columns and its folded row, the slider width, and Try on
-        /// the live rows alone (ruling 66). The rules are pure and tested on their own; this holds the calls.
+        /// the live rows alone. The rules are pure and tested on their own; this holds the calls.
         /// </summary>
         [Fact]
         public void The_page_asks_the_layout_rules_where_it_draws()
@@ -901,7 +901,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { "under", "over", "over", "over", "", "at", "under" }, PanelSettings.Alerts.Select(a => a.Op));
             // Every unit the table draws alone after the box has a letter in it. The tyre wear's percent sign
             // has none, so it sits inside the example, "70%", as the panel joins every percentage to its number
-            // (ruling 10: a glyph is a PanelIcons path or part of a longer literal).
+            // (a glyph is a PanelIcons path or part of a longer literal).
             Assert.Equal(new[] { "laps", null, null, "", "", "x", "V" }, PanelSettings.Alerts.Select(a => a.Unit));
             Assert.All(PanelSettings.Alerts.Where(a => !string.IsNullOrEmpty(a.Unit)), a => Assert.Matches(@"[\p{L}\p{Nd}]", a.Unit));
             Assert.False(PanelSettings.Alert(PanelSoon.PitWindowOpen.Title).HasThreshold);
@@ -930,7 +930,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelSettings.Alert("Nothing"));
             Assert.Equal(new[] { "Screens", "LEDs", "Matrix", "Races only" }, PanelSettings.SurfaceColumns);
             Assert.Equal("Alert", PanelSettings.AlertColumn);
-            // A heading is a noun (voice.md), where the artboard's "When" is an adverb: "Trigger" (#524, ruling 7),
+            // A heading is a noun (voice.md), where the artboard's "When" is an adverb: "Trigger",
             // which also covers Pit window open, an event with no threshold. Search still finds the table by
             // "threshold".
             Assert.Equal("Trigger", PanelSettings.ThresholdColumn);
@@ -1668,7 +1668,7 @@ namespace OpenDashPlugin.Tests
             }
         }
     
-        /// <summary>Low fuel's unit follows the number in its box (#524, ruling 11): "under [1] lap", "under [2]
+        /// <summary>Low fuel's unit agrees with the number in its box: "under [1] lap", "under [2]
         /// laps", and the plural for nothing readable, as it is typed.</summary>
         [Fact]
         public void Low_fuels_unit_is_lap_or_laps_by_the_value()

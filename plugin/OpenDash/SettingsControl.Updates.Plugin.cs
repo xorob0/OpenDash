@@ -325,7 +325,7 @@ namespace OpenDashPlugin
             // A copy that could not be put back is said by name, since the card still offers it once the
             // page is drawn again, and "nothing to put back" under it would say the opposite.
             var failed = new List<string>();
-            // The card shows a kept copy whatever the driver has done since (ruling 5), so a folder edited again
+            // The card shows a kept copy whatever the driver has done since, as the artboard draws it, so a folder edited again
             // is left as it is and named: Restore keeps no copy of what it replaces, and nothing has asked.
             var held = new List<string>();
             var edited = new HashSet<string>(plugin.Installer.EditedFolders.Where(f => f != null), StringComparer.OrdinalIgnoreCase);
@@ -583,7 +583,7 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// A light profile that is current is never rewritten: a rewrite could only cost the edits made to it in
-        /// SimHub. One that is older, missing or failed is written (ruling 70, PanelUpdates.BringsForward), the
+        /// SimHub. One that is older, missing or failed is written (PanelUpdates.BringsForward), the
         /// flag box's only on a rig with a matrix, where the table draws its row.
         /// </remarks>
         private void Reinstall()

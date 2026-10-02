@@ -179,7 +179,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// The status line is CarLightService's status, with "updated over a week ago" in place of its age where the copy
-        /// is (ruling 51), so the age is never given twice and "updated just now" never sits beside the note. The
+        /// is, so the age is never given twice and "updated just now" never sits beside the note. The
         /// page works the note out as it draws the row, since the status's own age is written only when the
         /// tables are read.
         /// </summary>

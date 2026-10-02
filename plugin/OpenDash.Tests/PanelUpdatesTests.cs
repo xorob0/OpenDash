@@ -605,7 +605,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// Put mine back never overwrites edits it did not ask about: it reads the disk first, and of what the
-        /// kept card offers -- every kept copy, since ruling 5 of #524 -- it restores only a folder the installer
+        /// kept card offers -- every kept copy, as the artboard draws it -- it restores only a folder the installer
         /// does not find edited again (PutsBack), naming the rest. PackageExtractor.Restore keeps no copy of what
         /// it replaces.
         /// </summary>
@@ -873,8 +873,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A folder that has gone outranks everything, as the Screens card and Home read it, then a
-        /// failure, then one SimHub has not loaded yet, which is said only when the shell's facts know it. The restart is said in ruling 69's words,
-        /// which fit the state column on one line where the Screens card's step does not, and the hover says
+        /// failure, then one SimHub has not loaded yet, which is said only when the shell's facts know it. The restart is said in the panel's one
+        /// phrase for it, which wraps in the state column where it does not fit one line, and the hover says
         /// only the step after it, never the state beside it again.</summary>
         [Fact]
         public void A_dashboard_row_puts_a_missing_folder_then_a_failure_then_a_restart_first()
@@ -901,7 +901,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Reinstall everything installs it again.", missing.Tooltip);
 
             var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
-            // The panel's one phrase for the state (#524, ruling 1), which drops ruling 69's "Waiting for a restart".
+            // The panel's one phrase for the state, which drops the table's old "Waiting for a restart".
             Assert.Equal("Restart SimHub to load it", waiting.State);
             Assert.Equal(PanelCopy.RestartToLoad, waiting.State);
             Assert.Equal(Theme.Caution, waiting.StateHex);
@@ -921,7 +921,7 @@ namespace OpenDashPlugin.Tests
         /// Every word the State column writes, dashboard and light rows alike, fits the cell on one line: the
         /// 150 column less the 7 dot and its 8 gap, measured in Barlow Regular 13 from the font the panel
         /// bundles. A longer state word wraps and makes its row the one taller row of the table, which the
-        /// restart's phrase does by ruling (#524, ruling 1), and so is measured on its own above.
+        /// restart's phrase does, since it is never trimmed, and so is measured on its own above.
         /// </summary>
         [Fact]
         public void Every_state_fits_its_cell_on_one_line()
@@ -983,7 +983,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>The sentences under the table: what the build ships and what the installer could not do,
-        /// then the light profiles' own, which uncovered 24 puts here, said only over a light row. Every note
+        /// then the light profiles' own, said only over a light row. Every note
         /// about the build opens the same way, and names the profiles as the rows do.</summary>
         [Fact]
         public void The_table_s_notes_say_what_the_build_ships_and_what_could_not_be_read()
@@ -1052,7 +1052,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(unreachable.Tooltip);
             Assert.Contains(PanelLightRows.Unavailable, PanelUpdates.TableNotes(true, null, false, true, true, true, false));
             var notEmbedded = PanelUpdates.StripRow("Wheel rim", new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded });
-            // As the LEDs card and Home say it (#524, ruling 2); the hover says why no press installs it.
+            // As the LEDs card and Home say it, one word for one state; the hover says why no press installs it.
             Assert.Equal("Not installed", notEmbedded.State);
             Assert.Equal("This build ships no profile for this strip.", notEmbedded.Tooltip);
             Assert.False(notEmbedded.OffersUpdate);
@@ -1124,7 +1124,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.3.0-rc.2", plans[0].Value.InstalledVersion);
             Assert.Same(census[1].Value, plans[1].Value);
             var row = PanelUpdates.StripRow("Brow", plans[0].Value);
-            // The LEDs card's and Home's word for it (#524, ruling 2), beside the version SimHub truly holds.
+            // The LEDs card's and Home's word for it, beside the version SimHub truly holds.
             Assert.Equal("Not installed", row.State);
             Assert.Equal("0.3.0-rc.2", row.Version);
             Assert.Equal(PanelUpdates.StripNotEmbedded, row.Tooltip);
@@ -1529,7 +1529,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(3, System.Text.RegularExpressions.Regex.Matches(code, @"UpdatesWriteStrips\(").Count);
         }
 
-        /// <summary>Ruling 70: an older, missing or failed profile is written, a current one never, and the
+        /// <summary>An older, missing or failed profile is written, a current one never, and the
         /// flag box only on a rig with a matrix, where the table draws its row.</summary>
         [Fact]
         public void Reinstall_everything_writes_older_and_missing_profiles_and_never_a_current_one()
@@ -1552,7 +1552,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_kept_card_names_what_was_kept()
         {
-            // A heading is a noun (#524, ruling 4); what was kept is the first line under it.
+            // A heading is a noun; what was kept is the first line under it.
             Assert.Equal("Kept copy", PanelUpdates.KeptHeading(1));
             Assert.Equal("Kept copies", PanelUpdates.KeptHeading(2));
             Assert.Equal("Your edited Main dash was kept.", PanelUpdates.KeptClause(new[] { "Main dash" }));
@@ -1577,7 +1577,7 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// A folder is on the kept card whenever a copy of edited work is there to put back, as the artboard
-        /// draws it (#524, ruling 5), whether or not the driver has edited the folder in SimHub since: Put mine
+        /// draws it, whether or not the driver has edited the folder in SimHub since: Put mine
         /// back is what leaves an edited folder alone (PutsBack).
         /// </summary>
         [Fact]
@@ -1615,7 +1615,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Could not put back Rim. See SimHub's log.", PanelUpdates.PutBack(0, new[] { "Rim" }));
             Assert.Equal("Put back 1 dashboard. Close and reopen the dashboard to see it. Could not put back Rim and Pit wall. See SimHub's log.",
                 PanelUpdates.PutBack(1, new[] { "Rim", "Pit wall" }));
-            // A folder edited since its copy was kept is left alone and named (#524, ruling 5).
+            // A folder edited since its copy was kept is left alone and named.
             Assert.Equal("Did not put back Rim, which you have edited since.", PanelUpdates.PutBack(0, null, new[] { "Rim" }));
             Assert.Equal("Put back 1 dashboard. Close and reopen the dashboard to see it. Did not put back Rim and Pit wall, which you have edited since.",
                 PanelUpdates.PutBack(1, new string[0], new[] { "Rim", "Pit wall" }));
