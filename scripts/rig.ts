@@ -262,7 +262,7 @@ const DELETE_BACKUPS = `Get-ChildItem -LiteralPath ${psq(BACKUPS)} -Filter ${psq
  * Writes the settings file with SimHub stopped, deletes the copies SimHub would restore an older rig
  * from, then starts it again so the plugin reads it.
  */
-function writeSettings(host: Host, settings: Record<string, unknown>): RunResult {
+function writeSettings(host: Host, settings: Record<string, unknown>, whileStopped = ''): RunResult {
   const local = path.join(repoRoot, 'build', 'vm-settings.json');
   mkdirSync(path.dirname(local), { recursive: true });
   writeFileSync(local, JSON.stringify(settings));
@@ -274,6 +274,7 @@ function writeSettings(host: Host, settings: Record<string, unknown>): RunResult
     `$ErrorActionPreference = 'Stop'
 Copy-Item ${psq(`${SHARE_UNC}\\opendash-settings.json`)} -Destination ${psq(SETTINGS)} -Force
 ${DELETE_BACKUPS}
+${whileStopped}
 'written'`,
     120,
   );
@@ -367,7 +368,11 @@ export function applyPreset(host: Host, preset: Preset): RunResult {
       return { ok: false, code: 1, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
     }
   }
-  const written = writeSettings(host, settings);
+  // The panel rig's missing folder is taken out while SimHub is stopped too, so that it appearing
+  // again is Init's doing. A folder left over from an earlier start was already there when the wait
+  // below began, so the wait passed at once, the delete beat Init, and Init wrote it straight back.
+  const dropRim = `Remove-Item -LiteralPath ${psq(`${DASH_TEMPLATES}\\${RIM_FOLDER}`)} -Recurse -Force -ErrorAction SilentlyContinue`;
+  const written = writeSettings(host, settings, preset === 'panel' ? dropRim : '');
   if (!written.ok) return written;
   if (preset !== 'panel') return { ...written, stdout: describe(settings) };
   // SimHub's process is up a second after it is started and the plugin's Init some while later; the
