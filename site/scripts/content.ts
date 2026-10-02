@@ -31,7 +31,7 @@
  * The functions are exported and pure so that test/content.test.ts can hold them against the
  * modules they read, without the generated file having to exist.
  */
-import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import {
   BAND_D_PAGES,
@@ -88,6 +88,35 @@ export interface Manifest {
   simHubVersion: string;
   packages: ManifestEntry[];
   ledProfiles?: string[];
+}
+
+/**
+ * The manifest of the build in `build/`, or null when there is not one this checkout can trust.
+ *
+ * Null covers two cases and deliberately does not distinguish them to the caller. There may be no
+ * build at all, which is the ordinary state of a fresh clone. Or there may be one from another
+ * commit: `bun run check` does not build, so `build/` holds whatever was last built here, and after
+ * a branch switch or a pull that is a different version of the product.
+ *
+ * The second case is the one worth the code. A stale manifest names packages that no longer exist
+ * and misses the ones that do, so the tests reading it fail by the handful, each reporting a missing
+ * photograph or an uninstalled package: ten failures that name neither the cause nor the remedy, for
+ * a tree where nothing is actually wrong. `dotnet test` has drawn this distinction from the
+ * beginning, in `BuildOutputFact` and in the message `PackageExtractorTests` prints; this is the
+ * same courtesy on the TypeScript side.
+ */
+export function readBuildManifest(repoRoot: string, warn: (message: string) => void = console.warn): Manifest | null {
+  const file = path.join(repoRoot, 'build', 'manifest.json');
+  if (!existsSync(file)) return null;
+  const manifest = JSON.parse(readFileSync(file, 'utf8')) as Manifest;
+  const version = readFileSync(path.join(repoRoot, 'VERSION'), 'utf8').trim();
+  if (manifest.version === version) return manifest;
+  warn(
+    `build/manifest.json carries version ${manifest.version}, whereas VERSION says ${version}. ` +
+      'That is build output which a branch switch does not refresh, so the tests that read it are ' +
+      'being skipped rather than failed: run `bun run build` and try again.',
+  );
+  return null;
 }
 
 export function sitePackages(manifest: { packages: ManifestEntry[] }): SitePackage[] {
