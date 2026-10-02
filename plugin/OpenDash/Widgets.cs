@@ -21,7 +21,6 @@ namespace OpenDashPlugin
         // was a path nothing checked. The names stay, because the call sites read better for them.
         public const string WarningIcon = PanelIcons.Alert;
         public const string ExternalLinkIcon = PanelIcons.External;
-        public const string RefreshIcon = PanelIcons.Refresh;
         /// <summary>The chevron a drop-down carries, as the canvas draws it.</summary>
         public const string ChevronIcon = PanelIcons.Chevron;
 
@@ -241,34 +240,6 @@ namespace OpenDashPlugin
             return grid;
         }
 
-        /// <summary>
-        /// A row of the Install tab: what the thing is on the left, the state it is in and the action on
-        /// the right, over a one pixel rule.
-        /// </summary>
-        /// <remarks>
-        /// A 28 px button and a 24 px pill inside 40 leave nothing above or below them, so the row carries
-        /// no vertical padding of its own and the rule is what separates one from the next.
-        /// </remarks>
-        public static Border InstallRow(string iconPath, string name, string caption, FrameworkElement pill, FrameworkElement button)
-        {
-            var text = VStack(0, Body(name), Label(caption, Theme.TextLabel));
-            var left = iconPath == null
-                ? (FrameworkElement)text
-                : HStack(PanelMetrics.RowIconGap, Icon(iconPath, Theme.TextLabel), text);
-            // A row with nothing to press is the package list, which says what is on disk and offers no
-            // action: HStack of a null child would throw, so the pill stands alone. A host that is empty
-            // for now is a button like any other, because HStack owes no gap beside a child that draws
-            // nothing, so its pill ends on the same edge as the package list's.
-            var row = Row(left, button == null ? (FrameworkElement)pill : HStack(PanelMetrics.RowRightGap, pill, button));
-            row.Height = PanelMetrics.RowHeight;
-            return new Border
-            {
-                BorderBrush = Brush(PanelMetrics.RowRule),
-                BorderThickness = new Thickness(0, 0, 0, PanelMetrics.BorderWeight),
-                Child = row,
-            };
-        }
-
         // Marks and status
 
         /// <summary>The 6 px square status dot.</summary>
@@ -281,15 +252,6 @@ namespace OpenDashPlugin
                 Fill = Brush(hex),
                 VerticalAlignment = VerticalAlignment.Center,
             };
-        }
-
-        /// <summary>A status: the dot and its tracked label, in the 24 px pill the canvas draws. The height
-        /// is the whole of what a pill adds, and it is what keeps a row of them on one baseline.</summary>
-        public static Panel StatusPill(string dotHex, string label, string labelHex)
-        {
-            var pill = HStack(PanelMetrics.PillGap, Dot(dotHex), Label(label, labelHex));
-            pill.Height = PanelMetrics.PillHeight;
-            return pill;
         }
 
         /// <summary>What a run reports while it is running: the word (<paramref name="word"/>, "Installing" unless
@@ -469,47 +431,6 @@ namespace OpenDashPlugin
         }
 
         // Drop-downs
-
-        /// <summary>
-        /// The field-styled box the canvas draws for every choice on the panel: zone fill, a one pixel
-        /// border, the text on the left and a chevron on the right. A ComboBox is the control for a
-        /// choice from a list; this is for the two choices a list cannot carry -- twenty-one checkboxes,
-        /// and the pair of fields at one end of the bar -- which open a panel instead.
-        /// </summary>
-        public static ToggleButton DropButton(double width, string text, string tooltip = null)
-        {
-            var caption = Text(text, Theme.SizeLabel, FontWeights.Normal, Theme.TextPrimary);
-            caption.TextTrimming = TextTrimming.CharacterEllipsis;
-            caption.TextWrapping = TextWrapping.NoWrap;
-            var chevron = Icon(ChevronIcon, Theme.TextSecondary);
-            chevron.HorizontalAlignment = HorizontalAlignment.Right;
-            var row = new DockPanel { LastChildFill = true };
-            DockPanel.SetDock(chevron, Dock.Right);
-            row.Children.Add(chevron);
-            row.Children.Add(caption);
-
-            var button = new ToggleButton
-            {
-                Width = width,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch,
-                Content = row,
-                Cursor = Cursors.Hand,
-                ToolTip = tooltip,
-            };
-            Field(button, Theme.ControlHeightSm);
-            // SimHub's ToggleButton style is a switch, so the drop button keeps the plain one and paints
-            // itself; asking for the styled template here would draw a slider where a box belongs.
-            button.Template = DropButtonTemplate();
-            button.Tag = caption;
-            return button;
-        }
-
-        /// <summary>Rewrites the caption of a drop button built above.</summary>
-        public static void SetDropText(ToggleButton button, string text)
-        {
-            var caption = button.Tag as TextBlock;
-            if (caption != null) caption.Text = text;
-        }
 
         /// <summary>A border around the content and nothing else: no chrome, no checked state, because the
         /// button's own brushes are the canvas's field and the popup below it is the affordance. The outline
@@ -807,23 +728,6 @@ namespace OpenDashPlugin
         }
 
         // SimHub integration
-
-        /// <summary>Applies a style from SimHub's application resources when it exists; false otherwise.</summary>
-        public static bool TryStyle(FrameworkElement element, object key)
-        {
-            try
-            {
-                var style = Application.Current?.TryFindResource(key) as Style;
-                if (style == null) return false;
-                element.Style = style;
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Style " + key + " could not be applied: " + ex.Message);
-                return false;
-            }
-        }
 
         public static void OpenUrl(string url)
         {

@@ -588,5 +588,24 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, PanelShell.SheetBodyPaddingBottom);
             Assert.Equal(0.6, PanelShell.SheetDimOpacity);
         }
+
+        /// <summary>The merge left controls nobody called -- the shell's old builders, the Install tab's rows and
+        /// pills, the drop button, the kit's ToggleRow and SegmentedRow, Profiles' ReinstallBar -- and they are
+        /// gone: a helper with no caller is a second way to draw a thing that drifts from the first unseen.</summary>
+        [Fact]
+        public void The_panel_keeps_no_control_nothing_calls()
+        {
+            var root = System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash");
+            var code = string.Join("\n", System.IO.Directory.GetFiles(root, "*.cs").Select(RepoPaths.Code));
+            foreach (var gone in new[]
+            {
+                "BuildChoice(", "BuildPageSelect(", "BuildPercentBox(", "BuildNumberBox(", "BuildNameBox(", "BuildPrimaryButton(",
+                "BuildDestructiveButton(", "BuildTextButton(", "InstallRow(", "StatusPill(", "DropButton(", "SetDropText(", "TryStyle(",
+                "RefreshIcon", "ToggleRow(", "SegmentedRow(", "ReinstallBar(",
+            })
+            {
+                Assert.False(Regex.IsMatch(code, @"\b" + Regex.Escape(gone)), gone + " is back");
+            }
+        }
     }
 }

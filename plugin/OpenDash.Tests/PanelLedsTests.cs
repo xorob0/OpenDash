@@ -292,13 +292,12 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// The page's presses go through one guarded install, the Updates page's own guard, and never straight to
-        /// ReinstallBar or InstallBar: read as text because the page is WPF.
+        /// InstallBar: read as text because the page is WPF.
         /// </summary>
         [Fact]
         public void Every_install_on_the_page_is_guarded()
         {
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.DoesNotContain("ReinstallBar(", leds);
             var guard = leds.Substring(leds.IndexOf("private static FlagBoxPlan LedsReinstall(", StringComparison.Ordinal));
             guard = guard.Substring(0, guard.IndexOf("return LedsLogged(bar, InstallBar(bar, found.Json));", StringComparison.Ordinal));
             Assert.Contains("var found = EmbeddedProfileOf(bar);", guard);

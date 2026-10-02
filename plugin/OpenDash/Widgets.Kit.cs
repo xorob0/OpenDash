@@ -280,21 +280,6 @@ namespace OpenDashPlugin
             };
         }
 
-        /// <summary>A row whose control is a switch.</summary>
-        public static Border ToggleRow(string title, bool on, Action<bool> changed, string caption = null, params FrameworkElement[] tags)
-        {
-            return SettingRow(title, Switch(on, changed), caption, tags);
-        }
-
-        /// <summary>A row whose control is a segmented choice. The labels are positional.</summary>
-        public static Border SegmentedRow(string title, string[] values, string[] labels, string selected, Action<string> changed, string caption = null, params FrameworkElement[] tags)
-        {
-            var options = values.Select((value, i) => new Segmented.Option(value, labels[i]));
-            var control = new Segmented(options, selected);
-            control.Changed += changed;
-            return SettingRow(title, control, caption, tags);
-        }
-
         /// <summary>A block of rows, one under the other, closed by a rule under the last.</summary>
         public static StackPanel Rows(params UIElement[] rows)
         {

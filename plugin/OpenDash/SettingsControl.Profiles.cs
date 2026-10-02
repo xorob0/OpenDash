@@ -257,15 +257,6 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Installs a strip's profile again from what this build embeds, by the profile it names.
-        /// NotEmbedded when the build carries no profile for it.</summary>
-        private FlagBoxPlan ReinstallBar(LedBar bar)
-        {
-            var found = EmbeddedProfileOf(bar);
-            if (found == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-            return InstallBar(bar, found.Json);
-        }
-
         /// <summary>
         /// Each of the rig's strips with what SimHub holds for it, off one read of every LED device.
         /// </summary>

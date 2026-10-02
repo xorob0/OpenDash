@@ -1777,12 +1777,11 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>One primary per page: the Updates page's one accented press is the update card's Download,
         /// and nothing else it draws is. Every way the panel draws an accented press is counted: the kit's
-        /// Primary kind, Ui.PrimaryButton, which the base's light rows drew their Update with, and the shell's
-        /// BuildPrimaryButton.</summary>
+        /// Primary kind, and Ui.PrimaryButton, which the base's light rows drew their Update with.</summary>
         [Fact]
         public void The_page_draws_one_primary_and_it_is_Download()
         {
-            var primary = Assert.Single(System.Text.RegularExpressions.Regex.Matches(PageCode(), @"PanelButtonKind\.Primary|Ui\.PrimaryButton\(|BuildPrimaryButton\("));
+            var primary = Assert.Single(System.Text.RegularExpressions.Regex.Matches(PageCode(), @"PanelButtonKind\.Primary|Ui\.PrimaryButton\("));
             Assert.Equal("PanelButtonKind.Primary", primary.Value);
             Assert.Contains("updatesDownload = Ui.Button(null, PanelButtonKind.Primary);", PageCode());
         }

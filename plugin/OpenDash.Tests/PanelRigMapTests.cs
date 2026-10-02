@@ -572,7 +572,7 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("SetName(realSwitch", page);
             Assert.DoesNotContain("SetName(chip", page);
             Assert.DoesNotContain("SetItemStatus(chip", page);
-            foreach (var write in new[] { "InstallBar(", "ReinstallBar(", "UpdateBars(", "InstallFlagBox(" }) Assert.DoesNotContain(write, page);
+            foreach (var write in new[] { "InstallBar(", "UpdateBars(", "InstallFlagBox(" }) Assert.DoesNotContain(write, page);
             // The page calls DrawsLighting, so a wheel's lighting press rebuilds it on SimHub's interface
             // thread: its build reads nothing of SimHub's devices, profiles or disk (foundation §4).
             foreach (var read in new[] { "LedTargets", "StripInstaller", "FlagBoxInstaller", "PackageExtractor", "SafePlan", "BarCensus" }) Assert.DoesNotContain(read, page);

@@ -342,7 +342,7 @@ namespace OpenDashPlugin
         // CheckAgain, which asks SimHub again and redraws (SettingsControl.Status.cs); ProfileSelected;
         // updateStatus and Check(manual), the update check's answer and asking it (SettingsControl.Live.cs);
         // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
-        // InstallBar, InstallFlagBox, BarCensus and ReinstallBar (SettingsControl.Profiles.cs);
+        // InstallBar, InstallFlagBox and BarCensus (SettingsControl.Profiles.cs);
         // BuildScreenPreview(screen, width).
         //
         // Ownership, file by file (each Panel*.cs with its own test, PanelFooTests.cs):
@@ -935,119 +935,11 @@ namespace OpenDashPlugin
             return control;
         }
 
-        /// <summary>
-        /// One value of a value set, as a drop-down: the control for a list longer than a segmented bar is
-        /// drawn for. The labels are positional, so values[i] is what labels[i] names.
-        /// </summary>
-        /// <remarks>
-        /// Ui.Field is the chrome, so the box carries the same ground, outline and ring as the fields beside
-        /// it. Its corner stays SimHub's: a ComboBox has no CornerRadius, and the template that would give it
-        /// one supplies the list under it as well, which Widgets.Field records.
-        /// </remarks>
-        private static ComboBox BuildChoice(string[] values, string[] labels, string selected, double width, Action<string> changed)
-        {
-            var box = new ComboBox { Width = width, HorizontalAlignment = HorizontalAlignment.Right };
-            Ui.Field(box, Theme.ControlHeightSm);
-            foreach (var label in labels) box.Items.Add(label);
-            var index = Array.IndexOf(values, selected);
-            box.SelectedIndex = index >= 0 ? index : 0;
-            box.SelectionChanged += (sender, args) =>
-            {
-                if (box.SelectedIndex < 0 || box.SelectedIndex >= values.Length) return;
-                changed(values[box.SelectedIndex]);
-            };
-            return box;
-        }
-
-        /// <summary>A page picker in page-number order, so that SelectedIndex is the page number.</summary>
-        private static ComboBox BuildPageSelect(IReadOnlyList<ZonePage> pages, int selected, double width, Action<int> changed)
-        {
-            var box = new ComboBox { Width = width, HorizontalAlignment = HorizontalAlignment.Left };
-            Ui.Field(box, Theme.ControlHeightSm);
-            foreach (var page in pages) box.Items.Add(page.Name);
-            box.SelectedIndex = selected >= 0 && selected < pages.Count ? selected : 0;
-            box.SelectionChanged += (sender, args) =>
-            {
-                if (box.SelectedIndex < 0) return;
-                changed(box.SelectedIndex);
-            };
-            return box;
-        }
-
-        private static FrameworkElement BuildPercentBox(int value, Action<int> changed) => BuildNumberBox(value, 0, 100, changed);
-
-        /// <summary>A small number field that repairs whatever is typed into it rather than refusing it.</summary>
-        private static FrameworkElement BuildNumberBox(int value, int min, int max, Action<int> changed)
-        {
-            var box = new TextBox
-            {
-                Width = 80,
-                HorizontalContentAlignment = HorizontalAlignment.Right,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Text = value.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            };
-            Ui.Field(box, Theme.ControlHeightSm);
-            Action commit = () =>
-            {
-                int parsed;
-                if (!int.TryParse(box.Text, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out parsed)) parsed = value;
-                if (parsed < min) parsed = min;
-                if (parsed > max) parsed = max;
-                box.Text = parsed.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                changed(parsed);
-            };
-            box.LostFocus += (sender, args) => commit();
-            box.KeyDown += (sender, args) =>
-            {
-                if (args.Key == Key.Enter) commit();
-            };
-            return box;
-        }
-
-        /// <summary>A text box for a name, at the width a form gives one.</summary>
-        private static TextBox BuildNameBox(string text, double width = 280)
-        {
-            var box = new TextBox
-            {
-                Width = width,
-                Text = text ?? string.Empty,
-                HorizontalAlignment = HorizontalAlignment.Right,
-            };
-            Ui.Field(box, Theme.ControlHeightSm);
-            return box;
-        }
-
-        /// <summary>The one accented action a page is allowed, which is the press somebody came to it to make.</summary>
-        private static Button BuildPrimaryButton(string content, string tooltip)
-        {
-            var button = Ui.PrimaryButton(content);
-            button.MinWidth = ButtonMinWidth;
-            button.ToolTip = tooltip;
-            return button;
-        }
-
-        /// <summary>Every other action: the outline the artboards draw.</summary>
+        /// <summary>A press that is not the page's one primary: the outline the artboards draw.</summary>
         private static Button BuildSecondaryButton(string content, string tooltip)
         {
             var button = Ui.OutlineButton(content);
             button.MinWidth = ButtonMinWidth;
-            button.ToolTip = tooltip;
-            return button;
-        }
-
-        /// <summary>The press that takes something away: the outline again, in danger.</summary>
-        private static Button BuildDestructiveButton(string content, string tooltip)
-        {
-            var button = Ui.DestructiveButton(content);
-            button.MinWidth = ButtonMinWidth;
-            button.ToolTip = tooltip;
-            return button;
-        }
-
-        /// <summary>An action its ink alone carries: no ground, no outline, no padding and no minimum width.</summary>
-        private static Button BuildTextButton(string content, string tooltip, string hex = Theme.TextPrimary)
-        {
-            var button = Ui.LinkButton(content, hex);
             button.ToolTip = tooltip;
             return button;
         }
