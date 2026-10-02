@@ -258,14 +258,15 @@ namespace OpenDashPlugin
                 canvas.Margin = new Thickness(outset);
                 // The ground scrolls across with the room.
                 canvas.Background = dots;
-                var scroller = new ScrollViewer
+                // A RigScroller, so the page keys a focused tile does not take go on to the page.
+                var scroller = new RigScroller
                 {
                     HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
                     VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-                    // As the shell's scrollers: no Tab stop between Reset layout and the first tile, no focus
-                    // taken by a press on the ground (which scrolled the page back up to the canvas), and no
-                    // arrow or page key swallowed for an axis it does not scroll. A tile's arrow keys still
-                    // scroll it across, through the tile's BringIntoView.
+                    // As the shell's scrollers: no Tab stop between Reset layout and the first tile, and no focus
+                    // taken by a press on the ground (which scrolled the page back up to the canvas). That is
+                    // all Focusable = false does: the keys are RigScroller's. A tile's arrow keys still scroll
+                    // it across, through the tile's BringIntoView.
                     Focusable = false,
                     Content = canvas,
                 };
@@ -298,6 +299,25 @@ namespace OpenDashPlugin
         /// <summary>Where a canvas that scrolls across was scrolled to, so a rebuild -- the night switch, a
         /// wheel's lighting press, a resize -- draws it there again rather than at its left end.</summary>
         private double rigScrollX;
+
+        /// <summary>The scroller a canvas wider than the page scrolls across in, which leaves the page keys to
+        /// the page.</summary>
+        /// <remarks>
+        /// Focusable = false only stops a scroller taking the focus. ScrollViewer.OnKeyDown is a class handler
+        /// and still runs for a key bubbling up from a focused tile, and it marks PageUp, PageDown and Ctrl+Home
+        /// or End handled whatever the axis. With a tile focused those keys did nothing: this scroller cannot
+        /// scroll down, and the page's never saw them. They now go on unhandled. Home and End alone still
+        /// throw the canvas to its ends, and the arrows are the tile's, which handles them first.
+        /// </remarks>
+        private sealed class RigScroller : ScrollViewer
+        {
+            protected override void OnKeyDown(KeyEventArgs e)
+            {
+                if (e.Key == Key.PageUp || e.Key == Key.PageDown) return;
+                if ((e.Key == Key.Home || e.Key == Key.End) && (Keyboard.Modifiers & ModifierKeys.Control) != 0) return;
+                base.OnKeyDown(e);
+            }
+        }
 
         /// <summary>Restores the canvas's scroll across once the scroller is laid out, and keeps it as it
         /// changes while this build is the page's.</summary>

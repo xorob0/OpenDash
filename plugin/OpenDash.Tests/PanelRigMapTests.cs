@@ -275,6 +275,7 @@ namespace OpenDashPlugin.Tests
                 "canvas.Margin = new Thickness(outset);",
                 // The ground on the room, so it scrolls across with it.
                 "canvas.Background = dots;",
+                "var scroller = new RigScroller",
                 "HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,",
                 "VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,",
                 // No Tab stop, no focus taken by a press on the ground, no page key swallowed.
@@ -295,6 +296,15 @@ namespace OpenDashPlugin.Tests
                 "if (hint != null) frame.Children.Add(hint);",
                 "frame.Children.Add(canvas);",
                 "return outline;");
+            // The scroller leaves the page keys a focused tile does not take to the page: Focusable = false
+            // keeps the focus off it, but not its class handler, which marked them handled on an axis it
+            // cannot scroll (#527).
+            Assert.DoesNotContain("new ScrollViewer", canvas);
+            InOrder(RigMethod("private sealed class RigScroller : ScrollViewer"),
+                "protected override void OnKeyDown(KeyEventArgs e)",
+                "if (e.Key == Key.PageUp || e.Key == Key.PageDown) return;",
+                "if ((e.Key == Key.Home || e.Key == Key.End) && (Keyboard.Modifiers & ModifierKeys.Control) != 0) return;",
+                "base.OnKeyDown(e);");
             // The scroller fills the frame rather than standing at its top, so its bar is along the foot.
             Assert.DoesNotContain("VerticalAlignment", Handler(canvas, "var scroller = new "));
             Assert.DoesNotContain("outline.Width", canvas);
