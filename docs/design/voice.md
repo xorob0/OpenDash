@@ -1,6 +1,6 @@
 # Voice in user-facing text
 
-**Last updated:** 2026-09-21
+**Last updated:** 2026-10-02
 **Status:** agreed, and applied across the settings panel.
 
 [brand.md](brand.md) settles what OpenDash looks like. This document settles what it sounds like,
@@ -174,7 +174,7 @@ thing on the page.
 and demands an answer, so it does owe the reader something beyond the demand, and what it owes them
 is what happens if they say no. The restart dialog says "until then you are running the old
 version", which is what makes the interruption worth it, since the version number and the status
-pill have both already moved and everything else on the tab reads as finished.
+pill have both already moved and everything else on the page reads as finished.
 
 ## One word per thing
 
@@ -188,15 +188,45 @@ it, so it reads "Removes this screen" beside a control already labelled "Remove 
 ## Where the words live
 
 Copy a test can hold lives in the pure `Panel*.cs` classes rather than inline in the WPF files,
-because `plugin/OpenDash.Tests` targets net8.0 and compiles none of the panel itself. This is why
-`PanelCopy`, `PanelDataTab`, `PanelLights`, `PanelLightRows`, `PanelAddScreen`, `PanelPackageRow`
-and `UpdateWording` exist at all, and moving a string into one of them is the whole of what it takes
-to put it under test. A sentence worth arguing about is worth pinning, and `PanelCopyTests` and
-`UpdateWordingTests` pin theirs character for character.
+because `plugin/OpenDash.Tests` targets net8.0 and compiles none of the panel itself. Moving a string
+into one of them is the whole of what it takes to put it under test. A sentence worth arguing about is
+worth pinning, and the page tests pin theirs character for character.
+
+**Each page owns its words.** A word is a constant in the class of the page that draws it first, and
+every other page that says the same thing reads that constant rather than typing it again:
+
+| class | words |
+|---|---|
+| `PanelHome` | Home: its sections, a device's line, the Check again lines |
+| `PanelAttention` | Home's issues: titles, details, the steps in SimHub, the presses |
+| `PanelRigMap`, `PanelEmulation` | Rig, and the Preview chips every page shares |
+| `PanelScreens`, `PanelAddScreen`, `PanelFacePlan` | Screens, its sheets, and a zone's name |
+| `PanelLeds`, `PanelLights` | LEDs and the Add an LED strip sheet |
+| `PanelMatrix` | Matrix |
+| `PanelShortcuts`, `PanelBindings` | Shortcuts, and a binding chip on any page |
+| `PanelSettings`, `PanelDataTab` | Settings |
+| `PanelUpdates`, `PanelLightRows`, `PanelConfirmation`, `UpdateWording` | Updates, and the restart dialog |
+| `PanelNav`, `PanelSearch`, `PanelShell` | the sidebar and search |
+| `PanelSoon` | every greyed row, the Soon and New tags |
+| `PanelCopy` | a phrase two pages say alike with no first owner: "Restart SimHub to load it", "Installed", "Not installed", the glance captions |
+
+So one state has one word wherever it is drawn: Home's line under a strip reads `PanelLeds.NotSelected`,
+and the Updates row for a screen waiting on a restart reads `PanelCopy.RestartToLoad`. A test that
+compares the two pages compares the constants.
 
 Two constraints come from outside this document. The module descriptions are mirrored between
 `Modules.cs` and `packages/dash/src/contract.ts`, and `ContractTests` fails a build in which the two
-disagree, so a description is edited in both places or in neither. And where
-`design/canvas/Plugin.dc.html` carries a caption, the canvas is the author's and is not edited from
-code; a divergence is recorded in [plugin.md](plugin.md) rather than resolved quietly in either
-direction.
+disagree, so a description is edited in both places or in neither. And the #503 artboards are the
+author's and are not edited from code. Where this document and an artboard's copy disagree, this
+document wins, and the divergence is a row in [plugin.md](plugin.md#departures-from-the-artboards)
+rather than resolved quietly in either direction.
+
+## New is for one release
+
+A control that is new in this release carries the New tag after its title. New means the last
+release could not do it: the tag marks whatever is unreleased since the last cut, which is more than
+the artboards tag. It is drawn for one release and removed at the next cut.
+A tag that outlives its release says nothing, since everything was new once.
+
+Soon is the other tag. It marks a greyed row whose ticket has not landed, and it goes when the ticket
+does ([plugin.md](plugin.md#soon)).
