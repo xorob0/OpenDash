@@ -224,5 +224,125 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Null(typeof(PanelCopy).GetMethod("ScreenRow"));
         }
+
+        /// <summary>
+        /// plugin.md's departures table says, for every place the built word differs from an artboard's, which
+        /// constant holds it, so a word cannot change in code without the doc moving, nor in the doc without the
+        /// code (#544). Every member a row names exists; every word its built column quotes is a value the row's
+        /// constants hold (a string constant, an element of a string list, a string a registry entry carries) or
+        /// those values joined as the panel joins them, by " · ", " › ", " | " or a box's brackets; and every
+        /// string constant it names is in its built column.
+        /// </summary>
+        /// <remarks>
+        /// A row whose built column quotes nothing describes rather than names ("the build's wording"). A word a
+        /// method the row names makes from what it is given ("Rim is not in SimHub yet") cannot be read off a
+        /// constant, so a row that names a method may quote one; its constants are still held both ways. The kit's
+        /// Ui is WPF, which this project does not compile. Those are the whole of what is not checked.
+        /// </remarks>
+        [Fact]
+        public void The_departures_table_names_the_constant_that_holds_each_built_word()
+        {
+            var rows = DeparturesRows();
+            Assert.True(rows.Count >= 60, "the departures table was not found whole in plugin.md");
+            var problems = new System.Collections.Generic.List<string>();
+            var checkedWords = 0;
+            foreach (var row in rows)
+            {
+                var named = Regex.Matches(row.Why, @"`([A-Z][A-Za-z]*)\.([A-Z][A-Za-z0-9]*)`").Cast<Match>().ToList();
+                if (named.Count == 0) problems.Add(row.Built + ": names no constant");
+                var quoted = Regex.Matches(row.Built, "\"([^\"]+)\"").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
+                var values = new System.Collections.Generic.List<string>();
+                var scalars = new System.Collections.Generic.List<string>();
+                var method = false;
+                foreach (var name in named)
+                {
+                    var owner = name.Groups[1].Value;
+                    var memberName = name.Groups[2].Value;
+                    if (owner == "Ui") continue;
+                    var type = typeof(PanelCopy).Assembly.GetType("OpenDashPlugin." + owner);
+                    if (type == null) { problems.Add(name.Value + ": no such type"); continue; }
+                    var field = type.GetField(memberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var property = type.GetProperty(memberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+                    var value = field != null ? field.GetValue(null) : property != null ? property.GetValue(null) : null;
+                    if (field != null || property != null)
+                    {
+                        values.AddRange(Strings(value));
+                        if (value is string) scalars.Add((string)value);
+                    }
+                    else if (type.GetMethods().Any(m => m.IsStatic && m.Name == memberName)) method = true;
+                    else problems.Add(name.Value + ": no such member");
+                }
+                if (quoted.Count == 0) continue;
+                foreach (var scalar in scalars.Where(s => !row.Built.Contains(s)))
+                {
+                    problems.Add(row.Built + ": does not say \"" + scalar + "\", the value of a constant it names");
+                }
+                foreach (var word in quoted)
+                {
+                    checkedWords++;
+                    if (!Holds(word, values) && !method) problems.Add(row.Built + ": \"" + word + "\" is not a value of " + string.Join(", ", named.Select(n => n.Value)));
+                }
+            }
+            Assert.True(problems.Count == 0, string.Join("\n", problems));
+            Assert.True(checkedWords >= 60, "only " + checkedWords + " built words were checked");
+        }
+
+        /// <summary>A quoted word is held by the values when it is one of them, or is two or more of them joined as
+        /// the panel joins them: "Delta precision · Hundredths | Thousandths", "Controls and events › NextScreen",
+        /// "over [70%]".</summary>
+        private static bool Holds(string word, System.Collections.Generic.ICollection<string> values)
+        {
+            if (values.Contains(word)) return true;
+            var parts = Regex.Split(word, @" · | › | \| | ?\[|\]").Select(part => part.Trim()).Where(part => part.Length > 0).ToList();
+            return parts.Count > 1 && parts.All(values.Contains);
+        }
+
+        private sealed class DepartureRow
+        {
+            public string Artboard;
+            public string Built;
+            public string Why;
+        }
+
+        /// <summary>The departures table's rows, read from plugin.md: the header and the rule left out, an escaped
+        /// pipe inside a cell kept as a pipe.</summary>
+        private static System.Collections.Generic.List<DepartureRow> DeparturesRows()
+        {
+            var doc = File.ReadAllText(Path.Combine(RepoPaths.Root(), "docs", "design", "plugin.md"));
+            var start = doc.IndexOf("\n## Departures from the artboards", StringComparison.Ordinal);
+            Assert.True(start >= 0, "plugin.md has no departures section");
+            var end = doc.IndexOf("\n## ", start + 1, StringComparison.Ordinal);
+            var section = doc.Substring(start, (end < 0 ? doc.Length : end) - start);
+            var rows = new System.Collections.Generic.List<DepartureRow>();
+            foreach (var line in section.Split('\n').Where(l => l.StartsWith("| ", StringComparison.Ordinal)))
+            {
+                var cells = line.Replace("\\|", "\u0001").Trim().Trim('|').Split('|').Select(c => c.Replace('\u0001', '|').Trim()).ToArray();
+                Assert.True(cells.Length == 3, "a departures row has three cells: " + line);
+                if (cells[0] == "artboard") continue;
+                rows.Add(new DepartureRow { Artboard = cells[0], Built = cells[1], Why = cells[2] });
+            }
+            return rows;
+        }
+
+        /// <summary>What a named member holds, as words: a string, a list's strings, or the strings an object it
+        /// holds carries in its own string properties (a registry entry's title, a scenario's label).</summary>
+        private static System.Collections.Generic.IEnumerable<string> Strings(object value)
+        {
+            if (value == null) yield break;
+            var text = value as string;
+            if (text != null) { yield return text; yield break; }
+            var many = value as System.Collections.IEnumerable;
+            if (many != null)
+            {
+                foreach (var item in many) foreach (var word in Strings(item)) yield return word;
+                yield break;
+            }
+            if (value.GetType().IsPrimitive || value.GetType().IsEnum) yield break;
+            foreach (var property in value.GetType().GetProperties().Where(p => p.GetIndexParameters().Length == 0))
+            {
+                if (property.PropertyType == typeof(string)) { var word = (string)property.GetValue(value); if (word != null) yield return word; }
+                else if (typeof(System.Collections.IEnumerable).IsAssignableFrom(property.PropertyType)) foreach (var word in Strings(property.GetValue(value))) yield return word;
+            }
+        }
     }
 }

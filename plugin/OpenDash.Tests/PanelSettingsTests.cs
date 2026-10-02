@@ -1512,7 +1512,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(18, PanelSettings.PreviewStagePadding);
             // The stage scales down where it does not fit, never up, and never wraps into a lopsided second line:
             // Ui.FitWidth, which PanelKitTests holds to Uniform, DownOnly and set left, as every fixed-size
-            // picture on the panel is. The artboard centres it: a departure for plugin.md to record.
+            // picture on the panel is. The artboard centres it, a departure plugin.md's Settings section records.
             var page = Page();
             Assert.Contains("Child = Ui.FitWidth(stage),", page);
             Assert.DoesNotContain("new Viewbox", page);

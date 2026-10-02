@@ -490,7 +490,7 @@ opens SimHub's log, and links the issue tracker and the guide.
 
 A greyed row is a promise with a ticket. It carries the Soon tag, its switch or choice drawn off, and
 the hover "Coming soon · #381" (`PanelSoon.Tip`). Its title is a noun phrase. `PanelSoon.All` is the
-registry, in the order the pages draw them, and `PanelSoonTests` holds it.
+registry, in the order the pages draw them, and `PanelSoonTests` holds it to this table, row for row.
 
 | page | row | ticket |
 |---|---|---|
@@ -560,6 +560,11 @@ artboard's is a row here, with the constant that holds it. A row marked *ruling 
 rulings of #524, taken under the standing rule that [voice.md](voice.md) beats artboard copy. Each is a
 constant on the page that owns it, read by every other page that draws it.
 
+`PanelCopyTests` reads this table. A word in quotes in the built column is a value of a constant the row
+names, or those values joined as the panel joins them, unless the row names the method that makes it; an
+example around a constant, such as a car's name, is left outside the quotes; and every string constant a
+row names is in its built column.
+
 | artboard | built | why |
 |---|---|---|
 | Sidebar: three rising bars | the mark, `media/logo.svg` | [brand.md](brand.md) rejected the bars. `Ui.Mark` |
@@ -574,24 +579,24 @@ constant on the page that owns it, read by every other page that draws it.
 | Main: "Dash brow isn't showing openDash" | "Dash brow's profile is not selected" | no contractions, and the wordmark is not spelled in a sentence. `PanelAttention.Find` |
 | Main: "Its profile is installed but not selected on the device." | "Installed, but not selected in SimHub." | the title names the profile; the caption says where. `PanelAttention.UnselectedDetail` |
 | Main: "Pick openDash Dash brow" | Select "Dash brow" | SimHub's own verb, and the name the profile is listed under. `PanelAttention.SelectSteps` |
-| Main: "Car-specific · Porsche table" | "Car's own rev lights · Porsche 911 GT3 R" | the #369 switch's own noun; "table" is internal vocabulary. `PanelHome.CarLightsLine` |
+| Main: "Car-specific · Porsche table" | "Car's own rev lights" · Porsche 911 GT3 R | the #369 switch's own noun; "table" is internal vocabulary. `PanelHome.CarLightsLine` |
 | Main: "Profile not selected" | "Not selected in SimHub" | the LEDs card's word. `PanelHome.StripNotSelected` |
-| Main: "Matrix 1 · gear" | "Matrix 1 · Gear" | the Idle display control's own case. `PanelLights.RestLabels` |
+| Main: "Matrix 1 · gear" | Matrix 1 · "Gear" | the Idle display control's own case. `PanelLights.RestLabels` |
 | Main: "send "openDash Rim" … from Dash Studio" | "Then assign "Rim" to its display in Dash Studio." | the dashboard is listed under the screen's name; one phrasing on Screens, Home and Updates. `PanelScreens.RestartDetail` |
-| Main, Screens, Updates: "Rim isn't in SimHub yet", "Not in SimHub yet", "Waiting for a restart" | "Restart SimHub to load it" on the Screens card and fix box, Home's line and step, and the Updates row; Home's title still names the screen, "Rim is not in SimHub yet" | one phrase for one state; a card too narrow for it wraps it, never trims it (*ruling 1*). `PanelCopy.RestartToLoad` |
+| Main, Screens, Updates: "Rim isn't in SimHub yet", "Not in SimHub yet", "Waiting for a restart" | "Restart SimHub to load it" on the Screens card and fix box, Home's line and step, and the Updates row; Home's title still names the screen, "Rim is not in SimHub yet" | one phrase for one state; a card too narrow for it wraps it, never trims it (*ruling 1*). `PanelCopy.RestartToLoad`; Home's title, `PanelAttention.Find` |
 | Updates: "Unknown" for a strip whose profile the build does not ship | "Not installed", as the LEDs card and Home say it | one word for one state; the flag box's row, and any row while SimHub cannot be read, keep "Unknown" (*ruling 2*). `PanelLeds.NotInstalled` |
-| LEDs, Updates, Main: "strip" and "LED profile" side by side | both stay: a *strip* is the device ("Add an LED strip", "No strips yet"), an *LED profile* is the file SimHub loads ("This build ships no LED profiles.") | two things, two nouns (*ruling 3*). `PanelUpdates.StripKind`, `PanelLightRows.NoProfiles` |
+| LEDs, Updates, Main: "strip" and "LED profile" side by side | both stay: a *strip* is the device ("Add an LED strip", "No strips yet."), an *LED profile* is the file SimHub loads ("This build ships no LED profiles.") | two things, two nouns (*ruling 3*). `PanelUpdates.StripKind`, `PanelLights.AddBar`, `PanelLeds.NoStrips`, `PanelLightRows.NoProfiles` |
 | Updates: "Your edited Rim was kept" as the card's title | heading "Kept copy" or "Kept copies", and "Your edited Rim was kept." as the first line under it | a heading is a noun (*ruling 4*). `PanelUpdates.KeptClause` |
 | Updates: the kept card | shown whenever a kept copy exists; Put mine back leaves a folder edited since as it is and says so | the build used to hide it once the folder was edited again (*ruling 5*). `PanelUpdates.ShowsKept` |
-| Rig: "What to emulate"; Matrix, LEDs, Settings: "What to preview" | "Preview" on all four; Rig's "Emulation" goes | a heading is a noun, and one noun for one set of chips (*ruling 6*). `PanelRigMap.ScenariosName` |
-| Settings: the alert table's "When" | "Trigger"; Matrix's Warnings link is its plural, "Triggers" | a heading is a noun, and it covers Pit window open, which has no threshold (*ruling 7*). `PanelSettings.ThresholdColumn` |
-| Matrix, Main: "No device in SimHub shows matrix 2", "is dark", "Matrix 2 · not set" | "Not shown in SimHub" on the Matrix card, Home's line, the Matrix fix box's title and Home's issue ("Left pillar is not shown in SimHub"); the matrix number is in the steps | one phrase for one state (*ruling 8*). `PanelMatrix.NotShown` |
+| Rig: "What to emulate"; Matrix, LEDs, Settings: "What to preview" | "Preview" on all four; Rig's *Emulation* goes | a heading is a noun, and one noun for one set of chips (*ruling 6*). `PanelRigMap.ScenariosName` |
+| Settings: the alert table's "When" | "Trigger"; Matrix's Warnings link is its plural, "Triggers" | a heading is a noun, and it covers Pit window open, which has no threshold (*ruling 7*). `PanelSettings.ThresholdColumn`, `PanelMatrix.ThresholdsLink` |
+| Matrix, Main: "No device in SimHub shows matrix 2", "is dark", "Matrix 2 · not set" | "Not shown in SimHub" on the Matrix card, Home's line, the Matrix fix box's title and Home's issue ("Left pillar is not shown in SimHub"); the matrix number is in the steps | one phrase for one state (*ruling 8*). `PanelMatrix.NotShown`; Home's issue, `PanelAttention.NotShownTitle` |
 | AddScreen: the second-copy note | the build's wording | ruled to stay as the build words it (*ruling 9*). `PanelAddScreen.Note` |
-| Settings: the greyed "Tyres show" row's "Temperature" / "then Pressure" | "Temperature" \| "Pressure" | two nouns, no fragment; #325 owns the words once it builds the row (*ruling 10*). `PanelSoon.TyreDisplay` |
+| Settings: the greyed "Tyres show" row's "Temperature" / "then Pressure" | "Temperature" \| "Pressure" | two nouns, no fragment; #325 owns the words once it builds the row (*ruling 10*). `PanelSoon.TyreDisplay`, `PanelSettings.TyreDisplayLabels` |
 | Settings: "under [2] laps" for every value | "under [1] lap", "under [2] laps" | the unit agrees with its number (*ruling 11*). `PanelSettings.LapsUnitFor` |
 | LEDs: the strip header's Update hover, "Updates this strip's profile in SimHub." | "Replaces the copy in SimHub, including your changes to it.", as on Matrix and Updates | the press says what it costs, one way on every page (*ruling 12*). `FlagBoxInstallPlan.Replaces` |
 | Rig: "Limiter on" | "Pit limiter" | the word the rest of the panel uses. `PanelEmulation.Groups` |
-| Rig: "Oil hot", "Water hot" | "Oil temperature", "Water temperature" | the Settings rows' names for the same alerts. `PanelSettings.OilTempTitle` |
+| Rig: "Oil hot", "Water hot" | "Oil temperature", "Water temperature" | the Settings rows' names for the same alerts. `PanelSettings.OilTempTitle`, `PanelSettings.WaterTempTitle` |
 | Rig: "Light the real hardware" | "Real hardware" | a greyed title is a noun phrase. `PanelRigMap.RealHardwareTitle` |
 | Rig: a face tile's band reads its content | the band is drawn empty at rest | "Band D" is the panel talking to itself. `PanelRigMap.FaceBandFor` |
 | Rig: PIT LIMITER written on band D | a limiter block over zone A | the dash draws it there. `PanelRigMap.FaceBandFor` |
@@ -619,9 +624,9 @@ constant on the page that owns it, read by every other page that draws it.
 | Shortcuts: "Run the Rig test", "Dismiss the alert on screen" | "Rig test", "Alert dismissal" | a greyed title is a noun phrase. `PanelSoon.RigTest`, `PanelSoon.AlertDismissal` |
 | Shortcuts: the clash line's "Fine if you meant it." | dropped; a zone mid-sentence is "zone D" | voice.md has no asides; one way to write a zone in running text, as Screens writes it. `PanelShortcuts.Clashes` |
 | Shortcuts: the filter's name "Show" | "Filter" | a name is a noun. `PanelShortcuts.FilterTitle` |
-| Shortcuts: "Devices › Phone" | "Controls and events › NextScreen" | the card's name is OpenDash's, not a device SimHub lists. `PanelShortcuts.ControlsAndEventsCrumb` |
+| Shortcuts: "Devices › Phone" | "Controls and events › NextScreen" | the card's name is OpenDash's, not a device SimHub lists. `PanelShortcuts.ControlsAndEventsCrumb`, `PanelShortcuts.NextScreenCrumb` |
 | Settings: "Delta against" | "Delta reference" | a label is a noun phrase. `PanelDataTab.DeltaTitle` |
-| Settings: "Delta decimals · 0.00 \| 0.000" | "Delta precision · Hundredths \| Thousandths" | the values are words, with no digits. `PanelDataTab.DeltaPrecisionLabels` |
+| Settings: "Delta decimals · 0.00 \| 0.000" | "Delta precision · Hundredths \| Thousandths" | the values are words, with no digits. `PanelDataTab.DeltaPrecisionTitle`, `PanelDataTab.DeltaPrecisionLabels` |
 | Settings: "Show team names" | "Team names" | a switch names the thing. `PanelDataTab.TeamNameTitle` |
 | Settings: "Next to a blue flag" | "Blue flag detail" | a noun phrase, not a prepositional fragment. `PanelDataTab.BlueFlagTitle` |
 | Settings: the oil and water captions | "In SimHub's unit.", the default as the placeholder | the row says which unit to type. `PanelSettings.TemperatureCaption` |
