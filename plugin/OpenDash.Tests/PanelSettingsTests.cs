@@ -96,6 +96,9 @@ namespace OpenDashPlugin.Tests
                 }))
                 .ToList();
             Assert.Contains("TyreDisplayLabels[] = Pressure", texts);
+            // Low fuel's two units, both drawn alone after the box, both read here and in the voice loop.
+            Assert.Contains("LapUnit = lap", texts);
+            Assert.Contains("LapsUnit = laps", texts);
             Assert.Contains("Alert.Example = 70%", texts);
             Assert.DoesNotContain(texts, text =>
             {
