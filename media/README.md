@@ -10,6 +10,10 @@ small and deliberate. A capture earns a place here by being referenced from a pu
 `bun run shots` writes to `build/shots/`, which is scratch and gitignored. Copy the one worth
 showing into `media/<issue>/` and leave the rest behind.
 
+The settings panel has its own command. `bun run panel-shots` photographs every page of the panel at
+every width it reads at into `build/panel/`, on one claim of the VM; `bun scripts/rig.ts panel` or
+`empty` puts a rig on first. The captures of the panel rebuild live in `media/503/`.
+
 ## `media/readme/`
 
 One directory is not a record of a pull request: `media/readme/` holds the four captures
