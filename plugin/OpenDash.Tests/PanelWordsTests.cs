@@ -92,5 +92,30 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(FlagBoxInstallPlan.Replaces, PanelUpdates.RowUpdateTooltip);
             Assert.Contains("install.ToolTip = action == PanelLeds.UpdateProfile ? PanelLeds.UpdateTooltip : PanelLeds.InstallTooltip;", Source("SettingsControl.Lights.cs"));
         }
+
+        /// <summary>plugin.md's departure notes describe the build that is drawn: the Matrix layer is "Warnings",
+        /// the inherited words the rebuild already changed are not listed as still to change, the artboard's
+        /// "Width" is placed under Rev lights where the build draws it, and the dead constants that kept the stale
+        /// words in the source are gone.</summary>
+        [Fact]
+        public void Plugin_md_describes_the_words_the_build_draws()
+        {
+            var doc = System.Text.RegularExpressions.Regex.Replace(
+                System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "docs", "design", "plugin.md")), @"\s+", " ");
+            Assert.Equal("Warnings", PanelMatrix.WarningsTitle);
+            Assert.DoesNotContain("\"Car warnings\" on a Matrix", doc);
+            Assert.Contains("\"Warnings\" on Rig (its scenario group) and on a Matrix panel", doc);
+            foreach (var changed in new[] { "\"Fill the strip | True size\"", "\"Add a matrix panel\" for", "\"Revbar\" for", "\"LED device\" for" })
+            {
+                Assert.DoesNotContain(changed, doc);
+            }
+            Assert.Equal(new[] { "Stretch to fit", "Actual size" }, PanelLights.MirrorFitLabels);
+            Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
+            Assert.Equal("Add a matrix", PanelMatrix.AddPanel);
+            Assert.Equal("Rev bar", PanelScreens.RevBarTitle);
+            Assert.Contains("| LEDs: \"Width\", under \"Rev lights\" | \"" + PanelLeds.MirrorFitTitle + "\" |", doc);
+            Assert.Null(typeof(PanelDataTab).GetField("RevBarTitle"));
+            Assert.Null(typeof(PanelDataTab).GetField("RevBarCaption"));
+        }
     }
 }

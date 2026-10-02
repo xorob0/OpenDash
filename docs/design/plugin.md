@@ -70,14 +70,12 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
 - **Two groups carry two words each, as the artboards do**, and are left for the author to settle since
   the canvas is theirs: the rig's night mode and brightness are "Lights" on Shortcuts (its rig group) and
   "Lighting" on Settings (its section), and Updates says "Lights" for the LED profiles; low fuel, oil and
-  water are "Warnings" on Rig (its scenario group), "Alerts" on Settings and "Car warnings" on a Matrix
-  panel. voice.md's one-word-per-thing rule would pick one noun per group.
+  water are "Warnings" on Rig (its scenario group) and on a Matrix panel (its layer), and "Alerts" on
+  Settings. voice.md's one-word-per-thing rule would pick one noun per group.
 - **The deliberate voice departures the pages draw today**, so that nobody comparing the two changes one
-  back. This is not every string that differs: the pages still to be rebuilt draw inherited words the
-  artboards replace (on LEDs "Fill the strip | True size" for "Stretch to fit | Actual size" and "LED
-  device" for "SimHub device", on Matrix "Add a matrix panel" for "Add a matrix", on Screens "Revbar" for
-  "Rev bar" and "Rev ring" and "Band D" for "In band D", on Updates "Reinstall" for "Repair everything"),
-  and those are the rebuild's to change rather than departures to keep. Each page adds its own rows as it
+  back. This is not every string that differs: two inherited words the artboards replace are still drawn
+  (on Screens "Band D" for "In band D", on Updates "Reinstall everything" for "Repair everything"), and
+  those are the rebuild's to change rather than departures to keep. Each page adds its own rows as it
   lands:
 
   | artboard | build | why |
@@ -95,7 +93,7 @@ Recorded here because [voice.md](voice.md) says every divergence is, and the can
   | Screens: "Show the last lap after the line" | "Lap review" | a label is a noun phrase, not a sentence |
   | Screens: the round block's cards | headed "Cards", the artboard's noun | never the settings model's "Slots" |
   | LEDs: "Use the car's own rev lights" | "Car's own rev lights" | a switch names the thing (#369) |
-  | LEDs: "Width", under "Every strip" | "Rev light width" | one noun for the car's lights across the row and its caption, and a search result that says which width |
+  | LEDs: "Width", under "Rev lights" | "Rev light width" | one noun for the car's lights across the row and its caption, and a search result that says which width |
   | Matrix: "The car's own shift points" | "Car-specific shift points" | voice.md's name for the car's tables |
   | LEDs: "Centre shows" | "Centre display" | voice.md's own example |
   | LEDs: "Flags animated" | "Flag animation" | a label is a noun phrase |

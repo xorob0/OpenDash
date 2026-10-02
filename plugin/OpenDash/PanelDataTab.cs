@@ -19,14 +19,9 @@ namespace OpenDashPlugin
 
         public const string SectionCaption = null;
 
-        /// <summary>The rev bar's words, which now belong to a screen's own pane rather than to this
-        /// tab. They stay here because this file is where the panel's copy a test can hold lives, and
-        /// because the row read exactly the same when it was rig-wide -- what changed is who it answers
-        /// for, not what it says.</summary>
-        public const string RevBarTitle = "Revbar";
-
         /// <summary>
-        /// Two answers, not three.
+        /// The rev bar's two answers, not three. Its title and caption are the Screens page's own
+        /// (PanelScreens.RevBarTitle); the values stay here, beside the labels the page draws them by.
         /// </summary>
         /// <remarks>
         /// "Shift lights" and "RPM bar" were offered as if they were tastes, and they are not: the bar
@@ -39,8 +34,6 @@ namespace OpenDashPlugin
         /// So the row is on or off, and off is the one that still means something: a wheel with its own
         /// LEDs does not need the strip, and the room goes back to the zones.
         /// </remarks>
-        public const string RevBarCaption = "Turn off if your wheel has its own shift lights.";
-
         public static readonly string[] RevBarValues = { Contract.RevBarShift, Contract.RevBarOff };
 
         public static readonly string[] RevBarLabels = { "On", "Off" };
