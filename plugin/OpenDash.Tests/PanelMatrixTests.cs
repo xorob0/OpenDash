@@ -273,6 +273,21 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Update brings it up to date.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, " ", "OpenDash Flag box", one));
             Assert.Equal("See SimHub's log.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Failed, "0.5.0", "OpenDash Flag box", one));
             Assert.Equal("See SimHub's log.", PanelMatrix.SeeLog);
+            // The Updates page's flag box row, state by state: older and failed alike; a current profile and a
+            // missing one hovered apart, as the summary says, and nowhere claimed to match.
+            foreach (FlagBoxInstallState state in new[] { FlagBoxInstallState.Outdated, FlagBoxInstallState.Failed })
+            {
+                Assert.Equal(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = state, EmbeddedVersion = "0.5.0" }, null),
+                    PanelMatrix.ProfileLineTooltip(state, "0.5.0", "OpenDash Flag box", one));
+            }
+            Assert.Null(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = FlagBoxInstallState.UpToDate, EmbeddedVersion = "0.5.0" }, null));
+            Assert.NotNull(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", "OpenDash Flag box", one));
+            Assert.NotNull(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled, EmbeddedVersion = "0.5.0" }, null));
+            Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotInstalled, "0.5.0", "OpenDash Flag box", one));
+            // The summary claims no more than that (comments included, so the file is read whole).
+            var panelMatrix = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs"));
+            Assert.DoesNotContain("one profile is never hovered two ways", panelMatrix);
+            Assert.Contains("An older profile and a failed one are hovered in the Updates", panelMatrix);
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
                 var hover = PanelMatrix.ProfileLineTooltip(state, "0.5.0", "OpenDash Flag box", one);

@@ -212,9 +212,13 @@ namespace OpenDashPlugin
         /// The hover on the title's line: in one sentence what the line cannot show, and nothing where the
         /// line, its press or the by-hand import under it already says it all (Not installed, whose press says
         /// what Install does; no profile in this build; SimHub's matrix settings out of reach). What a press
-        /// replaces is the press's own tooltip. The words are the Updates page's for the same profile in the
-        /// same state (PanelUpdates.UpdateBringsItTo and LightFailed on that branch), so one profile is never
-        /// hovered two ways on two pages.
+        /// replaces is the press's own tooltip. An older profile and a failed one are hovered in the Updates
+        /// page's words for the same profile in the same state (PanelUpdates.UpdateBringsItTo and
+        /// PanelUpdates.LightFailed). The other two states are hovered differently on the two pages, on
+        /// purpose. A current profile's hover here is the select step, which an earlier review asked for, while
+        /// the Updates row has none (PanelUpdates.FlagBoxTooltip: "a current one has none"). A missing profile
+        /// has no hover here, since the press beside the line is Install, while the Updates row names the press
+        /// (PanelUpdates.FlagBoxNotInstalled).
         /// </summary>
         /// <param name="profile">The profile as SimHub lists it, which the select step quotes.</param>
         /// <param name="panels">The rig's matrices: a current profile's hover is the select step, in the one
