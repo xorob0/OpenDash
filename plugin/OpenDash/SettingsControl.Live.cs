@@ -3,8 +3,10 @@
 //
 // One DispatcherTimer for the whole control, started when the panel is on screen and stopped when it is not:
 // the sidebar's live card reads what the plugin last copied out of SimHub's frame, and a page that shows
-// something live (Home's "Right now", LEDs' car line) asks for a callback with OnTick. Nothing SimHub is
-// asked on the tick; the attention checks run on Go and on "Check again" (SettingsControl.Status.cs).
+// something live (Home's "Right now", LEDs' car line) asks for a callback with OnTick. A tick reads what is held
+// in memory, SimHub's own settings included (the Settings tick reads GameUnitSettings' four Local*UnitString
+// properties, which are auto-properties), and never a device, a profile or the disk; the attention checks run on
+// Go and on "Check again" (SettingsControl.Status.cs).
 //
 // The update check's state is the shell's rather than the Updates page's, because the sidebar's badge and
 // Home's attention read it on every page. The Updates page draws it, and hears about an answer through

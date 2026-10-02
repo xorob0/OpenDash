@@ -88,6 +88,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(32, PanelShell.MainPaddingBottom);
         }
 
+        /// <summary>The clock's rule as amended (#523): a tick may read in-memory settings, SimHub's unit strings
+        /// included, and never a device, a profile or the disk.</summary>
+        [Fact]
+        public void A_tick_reads_memory_and_never_a_device_a_profile_or_the_disk()
+        {
+            var live = System.Text.RegularExpressions.Regex.Replace(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Live.cs")), @"\s*//\s*", " ");
+            Assert.DoesNotContain("Nothing SimHub is asked on the tick", live);
+            Assert.Contains("A tick reads what is held in memory, SimHub's own settings included", live);
+            Assert.Contains("and never a device, a profile or the disk", live);
+        }
+
         /// <summary>A rebuild in place puts keyboard focus back and leaves the scroll where the driver had it:
         /// focusing raises BringIntoView, which pulled the page back to the last control pressed (#523).</summary>
         [Fact]
