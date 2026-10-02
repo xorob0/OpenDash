@@ -48,7 +48,7 @@ namespace OpenDashPlugin.Tests
         public void SimHubs_prompt_is_given_a_description_of_the_plugin()
         {
             Assert.Equal("Dashboards for the screens on your rig, and a page to choose what each one shows.", PanelCopy.PluginDescription);
-            var plugin = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
+            var plugin = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
             Assert.Contains("[PluginDescription(PanelCopy.PluginDescription)]", plugin);
         }
 

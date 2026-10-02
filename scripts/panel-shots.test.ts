@@ -36,7 +36,42 @@ import {
 } from './panel-shots.ts';
 
 const plugin = path.resolve(import.meta.dir, '..', 'plugin', 'OpenDash');
-const read = (file: string): string => readFileSync(path.join(plugin, file), 'utf8');
+/**
+ * A C# source as code alone, as RepoPaths.Code reads it for the plugin's tests: its // and /* *\/ comments
+ * dropped, its string and character literals kept whole, so a constant named in a comment never satisfies a
+ * pin on the code.
+ */
+function code(source: string): string {
+  let out = '';
+  let i = 0;
+  while (i < source.length) {
+    const c = source[i]!;
+    const next = source[i + 1];
+    if (c === '/' && next === '/') {
+      while (i < source.length && source[i] !== '\n') i++;
+      continue;
+    }
+    if (c === '/' && next === '*') {
+      const end = source.indexOf('*/', i + 2);
+      i = end < 0 ? source.length : end + 2;
+      out += ' ';
+      continue;
+    }
+    if (c === '"' || c === "'") {
+      const start = i++;
+      const verbatim = c === '"' && source[start - 1] === '@';
+      while (i < source.length && source[i] !== c && (verbatim || source[i] !== '\n')) i += !verbatim && source[i] === '\\' ? 2 : 1;
+      i = Math.min(source.length, i + 1);
+      out += source.slice(start, i);
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+}
+
+const read = (file: string): string => code(readFileSync(path.join(plugin, file), 'utf8'));
 const shell = read('PanelShell.cs');
 const nav = read('PanelNav.cs');
 const metrics = read('PanelMetrics.cs');
@@ -79,6 +114,13 @@ function body(text: string, signature: RegExp): string {
 }
 
 describe('the mirror of the sidebar', () => {
+  test('reads the C# as code alone, so a comment never stands in for a constant', () => {
+    expect([...constants(code('// public const double Gone = 1;\n/* public const double Also = 2; */ public const double Kept = 3;')).keys()]).toEqual(['Kept']);
+    expect(code('var url = "https://example.org/a"; // note')).toBe('var url = "https://example.org/a"; ');
+    expect(code("var slash = '/'; var at = @\"C:\\x\"; // note")).toBe("var slash = '/'; var at = @\"C:\\x\"; ");
+    expect(constants(code('/// public const double Doc = 4;\n'))).toEqual(new Map());
+  });
+
   test('carries the numbers PanelShell.cs has', () => {
     const own = constants(shell);
     for (const [name, value] of Object.entries(SHELL)) expect({ name, value: evaluate(name, own) }).toEqual({ name, value });

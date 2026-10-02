@@ -86,7 +86,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_plugin_replaces_its_copy_only_when_something_moved()
         {
-            var source = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
+            var source = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
             Assert.Contains("private volatile LiveStatus live = LiveStatus.None;", source);
             Assert.Contains("if (!live.Is(gameName, gameRunning, carId, carModel, trackName, sessionType))", source);
             Assert.Contains("live = new LiveStatus(gameName, gameRunning, carId, carModel, trackName, sessionType);", source);

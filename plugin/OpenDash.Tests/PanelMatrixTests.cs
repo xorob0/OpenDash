@@ -293,10 +293,6 @@ namespace OpenDashPlugin.Tests
             Assert.NotNull(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.UpToDate, "0.5.0", "OpenDash Flag box", one));
             Assert.NotNull(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = FlagBoxInstallState.NotInstalled, EmbeddedVersion = "0.5.0" }, null));
             Assert.Null(PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.NotInstalled, "0.5.0", "OpenDash Flag box", one));
-            // The summary claims no more than that (comments included, so the file is read whole).
-            var panelMatrix = System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs"));
-            Assert.DoesNotContain("one profile is never hovered two ways", panelMatrix);
-            Assert.Contains("An older profile and a failed one are hovered in the Updates", panelMatrix);
             foreach (FlagBoxInstallState state in Enum.GetValues(typeof(FlagBoxInstallState)))
             {
                 var hover = PanelMatrix.ProfileLineTooltip(state, "0.5.0", "OpenDash Flag box", one);

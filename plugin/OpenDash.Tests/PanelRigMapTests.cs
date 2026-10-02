@@ -1962,7 +1962,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(9 + 1.4, PanelRigMap.TrackedWidth("W", 10, 0.14), 6);
             // The panel draws the band's words in SemiBold, and embeds that face.
             Assert.Contains("FontWeights.SemiBold, paint.InkHex, tracking", RigMethod("private static Border RigPainted("));
-            Assert.Contains("\"Barlow-SemiBold.ttf\"", File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelFonts.cs")));
+            Assert.Contains("\"Barlow-SemiBold.ttf\"", RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelFonts.cs")));
         }
 
         [Fact]
