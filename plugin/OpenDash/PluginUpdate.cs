@@ -24,6 +24,14 @@
 // happen; `Init` arms it again for a swap that timed out waiting, and since a waiter only outlives a
 // SimHub that has gone, the two can never be waiting at once.
 //
+// **`Init` arms only what is newer, and not for ever.** The staged file carried no version and `Init`
+// armed whatever it found, so a driver who staged 0.5.0 and then installed 0.6.0 by hand had 0.5.0 put
+// back over it at the next close, and a swap that failed every time left the panel saying "Restart
+// SimHub to finish updating", with no Update button, for good (#598). `Init` now reads the version out
+// of the staged assembly, clears one that is not newer than the plugin running, and gives up on one
+// that is still waiting after `MaxFailedSwaps` starts. Cleared, the panel
+// offers the update again, which is the way back from either.
+//
 // Pure but for the file system: no SimHub types, so OpenDash.Tests compiles it and pins the staging,
 // the script and the decision.
 using System;
@@ -44,6 +52,25 @@ namespace OpenDashPlugin
 
         /// <summary>Null when it worked; the reason otherwise, in the words the panel shows.</summary>
         public string Error { get; set; }
+    }
+
+    /// <summary>What a start does with a plugin it finds staged.</summary>
+    public enum StagedPluginVerdict
+    {
+        /// <summary>Newer than the plugin running and not yet given up on: the swap is armed again.</summary>
+        Arm,
+
+        /// <summary>The same version as the plugin running, or older: putting it in place would be a
+        /// downgrade, so it is removed.</summary>
+        NotNewer,
+
+        /// <summary>No version could be read out of it, so there is no telling what it would replace the
+        /// plugin with, and it is removed.</summary>
+        Unreadable,
+
+        /// <summary>Still waiting after <see cref="PluginUpdate.MaxFailedSwaps"/> starts: whatever stops the
+        /// swap will stop the next one too, so it is removed and the update offered again.</summary>
+        GiveUp,
     }
 
     public static class PluginUpdate
@@ -92,9 +119,35 @@ namespace OpenDashPlugin
         /// </remarks>
         public const int WaitSeconds = 4 * 60 * 60;
 
+        /// <summary>
+        /// Beside the staged assembly, the number of starts that have found it still waiting.
+        /// </summary>
+        /// <remarks>
+        /// Each of those starts is a swap that did not happen: the waiter armed before it either could not
+        /// move the file or gave up waiting. Staging writes a new assembly and removes the count with it.
+        /// </remarks>
+        public const string FailedSwapsName = StagedName + ".failed";
+
+        /// <summary>
+        /// How many starts may find the same staged assembly before it is given up on.
+        /// </summary>
+        /// <remarks>
+        /// Three, because the first can be a driver who pressed Update and drove past
+        /// <see cref="WaitSeconds"/>, and a swap that has failed three times in a row has a cause -- a
+        /// locked file, a folder the script cannot write -- that a fourth try will meet again. Giving up
+        /// removes the file, so the panel offers the update once more rather than promising a restart that
+        /// will not finish it.
+        /// </remarks>
+        public const int MaxFailedSwaps = 3;
+
         public static string StagedPath(string simHubRoot)
         {
             return Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), StagedName);
+        }
+
+        public static string FailedSwapsPath(string simHubRoot)
+        {
+            return Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), FailedSwapsName);
         }
 
         public static string ScriptPath(string simHubRoot)
@@ -206,6 +259,9 @@ namespace OpenDashPlugin
                     }
                     if (File.Exists(path)) File.Delete(path);
                     File.Move(partial, path);
+                    // A new assembly starts with no failed swaps behind it.
+                    var failed = FailedSwapsPath(simHubRoot);
+                    if (File.Exists(failed)) File.Delete(failed);
                 }
                 result.Path = path;
                 log.Info("Staged the new plugin at " + path + "; it is put in place when SimHub closes.");
@@ -228,23 +284,33 @@ namespace OpenDashPlugin
         /// be worse than the one it replaced is one rename away from being undone. The script deletes
         /// itself last, so a swap that never happened leaves both the staged assembly and the script
         /// that would have applied it, and the next shutdown tries again.
+        ///
+        /// **No path is written into it.** cmd reads a batch file in the console's OEM code page and
+        /// expands every `%` in what it reads, so a root written into the text came back wrong twice
+        /// over: `C:\Users\José` saved as UTF-8 was read as `Jos├⌐` in code page 437, and a `%` in a
+        /// folder name was taken for a variable. The `move` failed, the script gave up, and it did the
+        /// same at every close, so the plugin never updated. Every path is found from `%~dp0`, the
+        /// folder the script sits in, which cmd holds as UTF-16 and does not expand a second time; the
+        /// text is ASCII, so every code page reads it alike, and it is the same text for every root.
+        /// That leans on the script living in OpenDash's folder directly under SimHub's root, which
+        /// <see cref="FlagBoxProfile.FolderPath"/> decides and a test pins.
         /// </remarks>
-        public static string SwapScript(string simHubRoot)
+        public static string SwapScript()
         {
-            var installed = InstalledPath(simHubRoot);
-            var staged = StagedPath(simHubRoot);
-            var backup = Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), BackupName);
-            var reopen = ReopenPath(simHubRoot);
-            var exe = SimHubExePath(simHubRoot);
             var text = new StringBuilder();
             text.AppendLine("@echo off");
             text.AppendLine("rem Written by OpenDash to put a downloaded plugin in place once SimHub has closed.");
             text.AppendLine("rem It replaces " + DllName + " and keeps the one it replaced as " + BackupName + ".");
             text.AppendLine("rem " + ReopenName + " beside it means the driver asked for SimHub to be started again.");
-            text.AppendLine("setlocal");
+            text.AppendLine("rem Every path is found from where this script sits, so that a SimHub folder with an");
+            text.AppendLine("rem accent or a percent sign in its name is read the way it is written.");
+            // Off whatever the registry says, so that a `!` in a folder name stays a `!`.
+            text.AppendLine("setlocal DisableDelayedExpansion");
+            text.AppendLine("set \"here=%~dp0\"");
+            text.AppendLine("for %%I in (\"%~dp0..\") do set \"root=%%~fI\"");
             text.AppendLine("set /a waited=0");
             text.AppendLine(":wait");
-            text.AppendLine("tasklist /FI \"IMAGENAME eq SimHubWPF.exe\" | find /I \"SimHubWPF.exe\" >nul 2>&1 || goto swap");
+            text.AppendLine("tasklist /FI \"IMAGENAME eq " + SimHubExeName + "\" | find /I \"" + SimHubExeName + "\" >nul 2>&1 || goto swap");
             text.AppendLine("ping -n 2 127.0.0.1 >nul 2>&1");
             text.AppendLine("set /a waited+=1");
             text.AppendLine("if %waited% GEQ " + WaitSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + " goto giveup");
@@ -254,11 +320,11 @@ namespace OpenDashPlugin
             // does not leave a standing request to reopen: the next ordinary shutdown would honour it and
             // SimHub would come back from a close the driver meant.
             text.AppendLine("set reopen=0");
-            text.AppendLine("if exist \"" + reopen + "\" set reopen=1");
-            text.AppendLine("del \"" + reopen + "\" >nul 2>&1");
-            text.AppendLine("copy /y \"" + installed + "\" \"" + backup + "\" >nul 2>&1");
-            text.AppendLine("move /y \"" + staged + "\" \"" + installed + "\" >nul 2>&1 || goto giveup");
-            text.AppendLine("if \"%reopen%\"==\"1\" start \"\" \"" + exe + "\"");
+            text.AppendLine("if exist \"%here%" + ReopenName + "\" set reopen=1");
+            text.AppendLine("del \"%here%" + ReopenName + "\" >nul 2>&1");
+            text.AppendLine("copy /y \"%root%\\" + DllName + "\" \"%here%" + BackupName + "\" >nul 2>&1");
+            text.AppendLine("move /y \"%here%" + StagedName + "\" \"%root%\\" + DllName + "\" >nul 2>&1 || goto giveup");
+            text.AppendLine("if \"%reopen%\"==\"1\" start \"\" \"%root%\\" + SimHubExeName + "\"");
             text.AppendLine("del \"%~f0\" >nul 2>&1");
             text.AppendLine("exit /b 0");
             text.AppendLine(":giveup");
@@ -272,8 +338,8 @@ namespace OpenDashPlugin
         /// Writes the script and starts it, detached, so that it outlives the process that armed it.
         /// </summary>
         /// <remarks>
-        /// Called when an assembly is staged and again from `Init`, and does nothing at all unless one
-        /// actually is. The waiter spends its whole life watching for this process to end, so arming it
+        /// Called when an assembly is staged and again from `Init` through <see cref="Resume"/>, and does
+        /// nothing at all unless one actually is. The waiter spends its whole life watching for this process to end, so arming it
         /// early is what makes the swap survive a crash or a kill rather than only a tidy shutdown.
         /// `UseShellExecute` false with no window, so nobody gets a console flashing at them.
         /// </remarks>
@@ -281,7 +347,6 @@ namespace OpenDashPlugin
         {
             log = log ?? NullInstallLog.Instance;
             if (!Pending(simHubRoot)) return false;
-            var script = ScriptPath(simHubRoot);
             if (!Arm(simHubRoot))
             {
                 log.Error("The plugin swap script could not be written, so the plugin is unchanged.");
@@ -292,7 +357,9 @@ namespace OpenDashPlugin
                 var start = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = "/c \"" + script + "\"",
+                    // By name in its own folder, not by path: cmd expands a `%` on its command line as
+                    // well, and the working directory reaches it as UTF-16 whatever the root is called.
+                    Arguments = "/c .\\" + ScriptName,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = FlagBoxProfile.FolderPath(simHubRoot),
@@ -309,14 +376,163 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What a start does with a staged assembly of <paramref name="stagedVersion"/> while
+        /// <paramref name="runningVersion"/> runs, this start being the <paramref name="failedSwaps"/>th to
+        /// find it still waiting.
+        /// </summary>
+        /// <remarks>
+        /// Only a newer version is armed: one the same as the plugin running would swap a file for its
+        /// twin, and an older one is the downgrade of a driver who staged a release and then installed a
+        /// later one by hand (#598). The version is checked before the count, so that a stale file is
+        /// called stale in the log rather than a failure.
+        /// </remarks>
+        public static StagedPluginVerdict Judge(string stagedVersion, string runningVersion, int failedSwaps)
+        {
+            if (string.IsNullOrWhiteSpace(stagedVersion)) return StagedPluginVerdict.Unreadable;
+            if (Versioning.VersionCompare(stagedVersion, runningVersion) <= 0) return StagedPluginVerdict.NotNewer;
+            if (failedSwaps >= MaxFailedSwaps) return StagedPluginVerdict.GiveUp;
+            return StagedPluginVerdict.Arm;
+        }
+
+        /// <summary>
+        /// The version of the staged assembly, as its file says, or null when there is none to read.
+        /// </summary>
+        /// <remarks>
+        /// Read out of the file rather than written down beside it at staging, so that what is judged is
+        /// what would be put in place, whoever staged it and however. <see cref="FileVersionInfo"/> reads
+        /// the version resource without loading the assembly, which matters: a second OpenDash.dll loaded
+        /// into the process that runs the first would never be unloaded. Its product version is the
+        /// informational version, the VERSION file's "0.3.0-rc.7" with nothing dropped, where the assembly
+        /// version has lost the pre-release and would call every candidate of a release the same.
+        /// </remarks>
+        public static string StagedVersion(string simHubRoot)
+        {
+            try
+            {
+                var path = StagedPath(simHubRoot);
+                if (!File.Exists(path)) return null;
+                var version = FileVersionInfo.GetVersionInfo(path).ProductVersion;
+                if (string.IsNullOrWhiteSpace(version)) return null;
+                var plus = version.IndexOf('+');
+                return (plus > 0 ? version.Substring(0, plus) : version).Trim();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// At a start, arms the swap again for a staged assembly worth putting in place, and clears one
+        /// that is not. True when it armed.
+        /// </summary>
+        public static bool Resume(string simHubRoot, string runningVersion, IInstallLog log = null)
+        {
+            return Review(simHubRoot, runningVersion, log) == StagedPluginVerdict.Arm && Launch(simHubRoot, log);
+        }
+
+        /// <summary>
+        /// The whole of <see cref="Resume"/> but starting the waiter: counts this start against a staged
+        /// assembly and clears one that is not to be armed. Null when nothing is staged.
+        /// </summary>
+        /// <remarks>
+        /// A start that finds an assembly staged is a start where the last swap did not happen, so it is
+        /// counted, and <see cref="Judge"/> decides between arming the waiter again and clearing the file,
+        /// the reopen request and the script. Cleared, <see cref="Pending"/> is false and the panel offers
+        /// the update again rather than "Restart SimHub to finish updating" for ever. Apart from
+        /// <see cref="Resume"/> for the reason <see cref="Arm"/> is: starting a process is the one thing a
+        /// test cannot do here.
+        /// </remarks>
+        public static StagedPluginVerdict? Review(string simHubRoot, string runningVersion, IInstallLog log = null)
+        {
+            log = log ?? NullInstallLog.Instance;
+            if (!Pending(simHubRoot))
+            {
+                // A swap that happened leaves its count behind, which is all that is left to tidy.
+                TryDelete(FailedSwapsPath(simHubRoot));
+                return null;
+            }
+            var staged = StagedVersion(simHubRoot);
+            var failed = FailedSwaps(simHubRoot) + 1;
+            var verdict = Judge(staged, runningVersion, failed);
+            switch (verdict)
+            {
+                case StagedPluginVerdict.NotNewer:
+                    Clear(simHubRoot);
+                    log.Info("Removed the staged plugin " + staged + " rather than putting it in place: OpenDash " + runningVersion + " is running, and the staged one is not newer.");
+                    break;
+                case StagedPluginVerdict.Unreadable:
+                    Clear(simHubRoot);
+                    log.Warn("Removed the staged plugin rather than putting it in place: no version could be read from it.");
+                    break;
+                case StagedPluginVerdict.GiveUp:
+                    Clear(simHubRoot);
+                    log.Error("Gave up on the staged plugin " + staged + ": it was still waiting after " + MaxFailedSwaps + " starts, so the swap is failing. It was removed, and the update is offered again.");
+                    break;
+                default:
+                    WriteFailedSwaps(simHubRoot, failed);
+                    log.Info("The staged plugin " + staged + " was not put in place when SimHub last closed; arming the swap again (" + failed + " of " + MaxFailedSwaps + ").");
+                    break;
+            }
+            return verdict;
+        }
+
+        /// <summary>How many starts have found the staged assembly still waiting; 0 when none has, or when
+        /// the count cannot be read.</summary>
+        public static int FailedSwaps(string simHubRoot)
+        {
+            try
+            {
+                var path = FailedSwapsPath(simHubRoot);
+                int count;
+                return File.Exists(path) && int.TryParse(File.ReadAllText(path).Trim(), System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out count) ? count : 0;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+
+        private static void WriteFailedSwaps(string simHubRoot, int count)
+        {
+            Write(FailedSwapsPath(simHubRoot), count.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        }
+
+        /// <summary>
+        /// Removes the staged assembly and everything that would act on it.
+        /// </summary>
+        /// <remarks>
+        /// The assembly first, because it is what a swap moves: a waiter still running when the rest is
+        /// deleted finds nothing to put in place and gives up, leaving the plugin as it is.
+        /// </remarks>
+        private static void Clear(string simHubRoot)
+        {
+            TryDelete(StagedPath(simHubRoot));
+            TryDelete(ReopenPath(simHubRoot));
+            TryDelete(ScriptPath(simHubRoot));
+            TryDelete(FailedSwapsPath(simHubRoot));
+        }
+
+        private static void TryDelete(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        /// <summary>
         /// Puts the swap script where the waiter will read it, and says whether one can be run.
         /// </summary>
         /// <remarks>
         /// Apart from <see cref="Launch"/> because starting a process is the one thing a test cannot do
         /// here, and this is the whole of the decision. A waiter that is already running holds the file
         /// open, so the write fails -- and that is the right answer rather than an error, because the
-        /// script it is running says the same thing (the paths do not change between stagings) and the
-        /// arming that matters has already happened.
+        /// script it is running says the same thing (it is the same text for every root and every
+        /// staging) and the arming that matters has already happened.
         /// </remarks>
         public static bool Arm(string simHubRoot)
         {
@@ -329,7 +545,7 @@ namespace OpenDashPlugin
             {
                 return false;
             }
-            return Write(script, SwapScript(simHubRoot)) || File.Exists(script);
+            return Write(script, SwapScript()) || File.Exists(script);
         }
 
         private static bool Write(string path, string text)
