@@ -278,8 +278,10 @@ namespace OpenDashPlugin
                 PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
                 // And arm the plugin swap again if one is still waiting: the waiter armed when the
                 // assembly was staged gives up after a while, and a session that reaches here with a
-                // staged assembly is a session where the last swap did not happen. Inert otherwise.
-                PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
+                // staged assembly is a session where the last swap did not happen. Only a newer one, and
+                // not for ever: an older one is cleared rather than put back over this plugin (#598).
+                // Inert otherwise.
+                PluginUpdate.Resume(Installer.SimHubRoot, Version, new SimHubInstallLog());
                 // The rig decides what is written, and the installer reads it for itself (DashboardInstaller.Rig).
                 // Before ADR 0017 this wrote every package the plugin embeds on every start, so a user who owned
                 // one screen found fourteen dashboards in SimHub's list; now a screen exists because somebody
