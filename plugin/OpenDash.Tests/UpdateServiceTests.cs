@@ -630,6 +630,40 @@ namespace OpenDashPlugin.Tests
             Assert.False(PluginUpdate.Pending(root));
         }
 
+        /// <summary>
+        /// A release that publishes its packages beside the plugin, whose plugin downloads but cannot be written to
+        /// disk, installs none of them (#616): new dashboards on the old plugin is the mismatch the run exists to
+        /// avoid, and it is no less one for the plugin having failed after the download rather than during it.
+        /// </summary>
+        [Fact]
+        public void A_plugin_that_cannot_be_staged_stops_the_packages_it_was_published_with()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
+            var listing = ListingFor("v0.2.0", "OpenDash");
+            var fetcher = new Fetcher
+            {
+                Listing = listing.Insert(listing.LastIndexOf("]}]", StringComparison.Ordinal),
+                    ",{\"name\":\"" + PluginUpdate.AssetName + "\",\"browser_download_url\":\"" + PluginUrl + "\",\"size\":1}"),
+            };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            // A sound download that cannot be written: a folder stands where the assembly is written before it is
+            // moved into place, which is the disk refusing a write and not the release being wrong.
+            Directory.CreateDirectory(PluginUpdate.StagedPath(root) + ".part");
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.False(outcome.Ok);
+            Assert.False(outcome.PluginStaged);
+            Assert.Empty(outcome.Updated);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Contains("OpenDash itself could not be put in place", outcome.Line);
+            Assert.False(PluginUpdate.Pending(root));
+        }
+
         // What the bar is told
 
         /// <summary>
