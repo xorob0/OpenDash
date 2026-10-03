@@ -29,7 +29,8 @@
 // that is why this runs from a button rather than at startup: a profile paints hardware the user owns.
 //
 // Everything here needs SimHub types, so this file is NOT compiled into OpenDash.Tests; the decision
-// it acts on is in FlagBoxInstallPlan.cs, which is. The reflection-free chain is asserted by the
+// it acts on is in FlagBoxInstallPlan.cs and what it does to SimHub's lists is in
+// ProfileInstall.Core.cs, which are. The reflection-free chain is asserted by the
 // plugin building at all, and the two drivers are exercised on the VM (docs/dev-loop.md).
 using System;
 using System.Collections;
@@ -264,8 +265,12 @@ namespace OpenDashPlugin
     /// to drift between the two: match by ProfileId, remove ours from both lists, add the embedded one,
     /// save once, read the list back. See the file header for why it is written over `IProfile` and the
     /// non-generic `IList` rather than over SimHub's own generic settings interface.
+    ///
+    /// This half is what reaches SimHub: the driver, the parse, and the reading of one list entry as a
+    /// profile. The lists themselves -- what is removed, added, put back and counted -- are
+    /// ProfileInstall.Core.cs, which names no SimHub type and is compiled into OpenDash.Tests.
     /// </summary>
-    internal static class ProfileInstall
+    internal static partial class ProfileInstall
     {
         /// <summary>One lighting driver off the serial dash plugin's settings, or null when the chain is
         /// broken anywhere along it.</summary>
@@ -288,32 +293,10 @@ namespace OpenDashPlugin
         }
 
         /// <summary>What SimHub holds, reduced to what the decision needs, or null when it cannot be
-        /// read. Null is "could not be reached", which the plan turns into Unavailable; an empty list is
-        /// "SimHub has none of ours", which is NotInstalled, and the two must not be confused.</summary>
+        /// read. The rule is in ProfileInstall.Core.cs; this is it over SimHub's own profile type.</summary>
         internal static List<InstalledProfile> Census(IEnumerable profiles, string what)
         {
-            if (profiles == null) return null;
-            try
-            {
-                var census = new List<InstalledProfile>();
-                foreach (var entry in profiles)
-                {
-                    var profile = entry as IProfile;
-                    if (profile == null) continue;
-                    census.Add(new InstalledProfile
-                    {
-                        ProfileId = profile.ProfileId,
-                        Name = profile.Name,
-                        Description = profile.Description,
-                    });
-                }
-                return census;
-            }
-            catch (Exception e)
-            {
-                Log.Warn("SimHub's " + what + " profiles could not be read: " + e.Message);
-                return null;
-            }
+            return Census(profiles, Read, what, SimHubLog);
         }
 
         /// <summary>
@@ -349,153 +332,33 @@ namespace OpenDashPlugin
             "SimHub's AddProfile targets AvailableProfiles, which is BuiltInProfiles on a device with "
             + "built-in profiles switched on; the saved list is Profiles.";
 
-        /// <summary>
-        /// Removes our copies, adds the embedded ones and asks SimHub to save once, returning a plan per
-        /// member in the order given. A null member is one that could not be parsed: it is reported
-        /// NotEmbedded and nothing is touched on its behalf.
-        /// </summary>
+        /// <summary>The group install of ProfileInstall.Core.cs over SimHub's own profile type and log.</summary>
         internal static IList<FlagBoxPlan> Install(
             IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what, bool builtInMode = false, string where = null)
         {
-            var results = new FlagBoxPlan[embedded.Count];
-            var replaced = 0;
-            var changed = false;
-            for (var i = 0; i < embedded.Count; i++)
-            {
-                var profile = embedded[i] as IProfile;
-                if (profile == null)
-                {
-                    results[i] = new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-                    continue;
-                }
-                try
-                {
-                    // Ours is the one carrying our ProfileId. Anything else in either list is the user's
-                    // and is not touched, which is the whole reason this is safer than merging the file.
-                    //
-                    // Both lists. AvailableProfiles returns Profiles unless the settings filter by game
-                    // family or the device has built-in profiles switched on (ProfileSettingsBase.cs:422),
-                    // and a device maker's BuiltInLedsProfiles put the LED driver in the second case, so
-                    // there the two genuinely part company and removing from only one would leave a
-                    // duplicate. Adding goes to Profiles alone -- see ProfileInstall.WhyNotAddProfile --
-                    // and BuiltInProfiles is otherwise never touched: those are the maker's, not ours.
-                    replaced += Remove(profiles, profile.ProfileId);
-                    if (!ReferenceEquals(available, profiles))
-                    {
-                        replaced += Remove(available, profile.ProfileId);
-                    }
-
-                    add(i);
-                    changed = true;
-                }
-                catch (Exception e)
-                {
-                    Log.Error("Installing the " + Name(profile) + " profile into SimHub failed", e);
-                    results[i] = new FlagBoxPlan { State = FlagBoxInstallState.Failed };
-                }
-            }
-
-            // One save for the whole group, and only when something actually changed. SimHub serialises
-            // its own collection in one call, so the file on disk either holds the list as it now stands
-            // or is untouched; there is no state in which it holds half a group.
-            if (changed && !Save(save, what))
-            {
-                for (var i = 0; i < results.Length; i++)
-                {
-                    if (results[i] == null) results[i] = new FlagBoxPlan { State = FlagBoxInstallState.Failed };
-                }
-                return results;
-            }
-
-            // AddProfile re-GUIDs any profile whose id already exists in the target list
-            // (ProfileSettingsBase.cs:853-858), and the newcomer is the one it renames. That cannot
-            // happen while the removal above works, but if it ever stops working the symptom is silent:
-            // our profile becomes unrecognisable and the next install adds a second copy. Reading the
-            // list back costs one comparison per member and turns that into a log line.
-            var installed = Census(profiles, what);
-            var added = 0;
-            for (var i = 0; i < results.Length; i++)
-            {
-                if (results[i] != null) continue;
-                var profile = (IProfile)embedded[i];
-                var plan = FlagBoxInstallPlan.Decide(profile.ProfileId, profile.Description, installed);
-                if (plan.State == FlagBoxInstallState.UpToDate)
-                {
-                    added++;
-                }
-                else if (installed != null)
-                {
-                    // Only when the list could be read at all. A list that could not be read says
-                    // nothing about whether the profile is in it, and Census has already logged why.
-                    Log.Warn("The " + Name(profile) + " profile was added but cannot be found again by its id;"
-                        + " SimHub may have renumbered it because a copy was already present. Check SimHub's "
-                        + what + " profile list.");
-                }
-                results[i] = plan;
-            }
-
-            // Installed correctly and still not in the device's list, which is a state rather than a
-            // failure: the dropdown is bound to AvailableProfiles, the user has it pointed at the maker's
-            // built-in profiles, and no amount of installing puts ours among those. Said once per install
-            // and carried on every plan, so the row and the announcement can both say which switch it is.
-            if (builtInMode)
-            {
-                Log.Info(what + ": " + FlagBoxInstallPlan.BuiltInModeNote);
-                for (var i = 0; i < results.Length; i++)
-                {
-                    if (results[i] != null) results[i].Note = FlagBoxInstallPlan.BuiltInModeNote;
-                }
-            }
-
-            if (added > 0)
-            {
-                // Named, because "into SimHub" is what the reported bug sounded like from the log: there
-                // is no one list, and which device took the profile is the only thing worth saying.
-                Log.Info("Installed " + added + " " + what + " profile(s) into " + (string.IsNullOrEmpty(where) ? "SimHub" : where) + ", " + replaced
-                    + " of them replacing a copy already there. Select one on the device to use it:"
-                    + " installing adds a profile, it does not switch to one.");
-            }
-            return results;
+            return Install(profiles, available, embedded, add, save, what, Read, SimHubLog, builtInMode, where);
         }
 
-        /// <summary>Removes one profile id from both lists and saves once. False when nothing went,
-        /// which is also what a profile that was never there gives.</summary>
+        /// <summary>The uninstall of ProfileInstall.Core.cs over SimHub's own profile type and log.</summary>
         internal static bool Uninstall(IList profiles, IList available, Guid id, Action save, string what)
         {
-            var gone = Remove(profiles, id);
-            if (!ReferenceEquals(available, profiles)) gone += Remove(available, id);
-            if (gone == 0) return false;
-            if (!Save(save, what)) return false;
-            Log.Info("Removed " + gone + " " + what + " profile(s) from SimHub.");
-            return true;
+            return Uninstall(profiles, available, id, save, what, Read, SimHubLog);
         }
 
-        private static bool Save(Action save, string what)
-        {
-            try
-            {
-                save();
-                return true;
-            }
-            catch (Exception e)
-            {
-                Log.Error("SimHub could not save its " + what + " settings after installing", e);
-                return false;
-            }
-        }
+        private static readonly IInstallLog SimHubLog = new SimHubInstallLog();
 
-        /// <summary>Drops every copy of one profile id from a collection; returns how many went.</summary>
-        private static int Remove(IList list, Guid id)
+        /// <summary>One entry of a SimHub profile list as the decision sees it, or null when it is not a
+        /// profile at all. The one place the core's lists meet SimHub's `IProfile`.</summary>
+        private static InstalledProfile Read(object entry)
         {
-            if (list == null) return 0;
-            var mine = new List<object>();
-            foreach (var entry in list)
+            var profile = entry as IProfile;
+            if (profile == null) return null;
+            return new InstalledProfile
             {
-                var profile = entry as IProfile;
-                if (profile != null && profile.ProfileId == id) mine.Add(entry);
-            }
-            foreach (var old in mine) list.Remove(old);
-            return mine.Count;
+                ProfileId = profile.ProfileId,
+                Name = profile.Name,
+                Description = profile.Description,
+            };
         }
 
         /// <summary>The embedded JSON as SimHub's own profile object, or null when it cannot be read.</summary>
@@ -511,11 +374,6 @@ namespace OpenDashPlugin
                 Log.Error("The embedded " + what + " profile could not be read: " + e.Message);
                 return null;
             }
-        }
-
-        private static string Name(IProfile profile)
-        {
-            return string.IsNullOrEmpty(profile.Name) ? "light" : profile.Name;
         }
     }
 }

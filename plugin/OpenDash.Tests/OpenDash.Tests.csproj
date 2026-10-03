@@ -48,6 +48,7 @@
     <Compile Include="../OpenDash/PluginUpdate.cs" Link="Plugin/PluginUpdate.cs" />
     <Compile Include="../OpenDash/FlagBoxProfile.cs" Link="Plugin/FlagBoxProfile.cs" />
     <Compile Include="../OpenDash/FlagBoxInstallPlan.cs" Link="Plugin/FlagBoxInstallPlan.cs" />
+    <Compile Include="../OpenDash/ProfileInstall.Core.cs" Link="Plugin/ProfileInstall.Core.cs" />
     <Compile Include="../OpenDash/CarLightTable.cs" Link="Plugin/CarLightTable.cs" />
     <Compile Include="../OpenDash/CarLightMirror.cs" Link="Plugin/CarLightMirror.cs" />
     <Compile Include="../OpenDash/CarLightLibrary.cs" Link="Plugin/CarLightLibrary.cs" />
