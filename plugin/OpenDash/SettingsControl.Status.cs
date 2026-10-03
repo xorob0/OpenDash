@@ -28,9 +28,18 @@ namespace OpenDashPlugin
         /// null; a fact nobody could read is null inside it.</summary>
         private AttentionInput attentionFacts = new AttentionInput();
 
+        /// <summary>
+        /// SimHub's LED devices, read once each time the panel asks SimHub again and handed to everything that needs
+        /// them until the next: the census, Home's facts, the LEDs page's header and device row, and every press that
+        /// installs a strip's profile (PanelLedDevices, #611). Each read walks every device on this thread.
+        /// </summary>
+        private readonly PanelLedDevices<LedTarget> ledDevices = new PanelLedDevices<LedTarget>(LedTargets.All);
+
         /// <summary>Asks SimHub again and keeps the answer. Run on every Go, so it opens only the profiles of the rig's own strips; never on the tick.</summary>
         private void RefreshAttention()
         {
+            // Read again below, once, for this ask and the page built after it.
+            ledDevices.Forget();
             try
             {
                 attentionFacts = Attention();
@@ -112,7 +121,7 @@ namespace OpenDashPlugin
             {
                 try
                 {
-                    targets = LedTargets.All();
+                    targets = ledDevices.Targets;
                 }
                 catch (Exception ex)
                 {
@@ -122,8 +131,7 @@ namespace OpenDashPlugin
             foreach (var entry in census)
             {
                 var bar = entry.Key;
-                var wanted = LedBar.NormaliseDevice(bar.Device);
-                var target = targets.FirstOrDefault(t => string.Equals(t.Id, wanted, StringComparison.Ordinal));
+                var target = LedTargets.Find(bar.Device, targets);
                 input.Strips.Add(new AttentionStrip
                 {
                     Name = bar.Name,

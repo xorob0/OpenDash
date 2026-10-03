@@ -436,6 +436,28 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether a run this page started holds its presses off: an update downloading or installing, or Reinstall
+        /// everything or Put mine back writing the dashboards on their own thread.
+        /// </summary>
+        /// <remarks>
+        /// The two writes used to run on the click, so nothing could be pressed while they ran because SimHub's whole
+        /// window had stopped answering (#611). Off the interface thread the window answers, and the page holds off
+        /// what the update already holds off: Reinstall everything, Put mine back, Download and the light rows'
+        /// Update. Another page's press is not held here; whether it waits or is refused is #606's, which reads
+        /// UpdateService.Busy.
+        /// </remarks>
+        public static bool RunHolds(bool applying, bool writing)
+        {
+            return applying || writing;
+        }
+
+        /// <summary>
+        /// The head word of Reinstall everything's bar, the verb of its press, where the shared bar's
+        /// PanelCopy.Installing would give the press and its bar two verbs (voice.md: one word per thing).
+        /// </summary>
+        public const string Reinstalling = "Reinstalling";
+
+        /// <summary>
         /// Whether Check now can be pressed: only while the checks are on, since the check refuses a press
         /// with the switch off, and neither during a download nor while a check is already in flight.
         /// </summary>
@@ -1348,7 +1370,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Whether Put mine back writes a folder the card shows: only one the installer does not find
-        /// edited, since PackageExtractor.Restore keeps no copy of what it replaces and nothing has asked.</summary>
+        /// edited, since nothing has asked to replace the driver's later edits. What it does replace is OpenDash's
+        /// own, kept as the ordinary backup (PackageExtractor.Restore).</summary>
         /// <param name="edited">Whether the installer finds the folder in SimHub edited (PackageStatus.Edited).</param>
         public static bool PutsBack(bool edited)
         {

@@ -256,9 +256,14 @@ namespace OpenDashPlugin
             if (!StartWriting()) return new UpdateOutcome { Reason = StoppedReason };
             try
             {
-                var outcome = StageAndInstall(installer, replaceEdited, progress, plan, pluginBytes, downloaded);
-                if (settings != null) Settle(outcome, release, installer, settings, log);
-                return outcome;
+                // One writer in DashTemplates at a time: a press on the panel that writes a folder waits for this run
+                // rather than deleting a folder it is extracting into, and the run waits for the press (WriteLock).
+                lock (WriteLock)
+                {
+                    var outcome = StageAndInstall(installer, replaceEdited, progress, plan, pluginBytes, downloaded);
+                    if (settings != null) Settle(outcome, release, installer, settings, log);
+                    return outcome;
+                }
             }
             finally
             {
@@ -366,6 +371,19 @@ namespace OpenDashPlugin
             plan.Items.FirstOrDefault(i => i.Asset != null && i.Asset.Name == assetName)?.FolderName;
 
         private static readonly object WorkGate = new object();
+
+        /// <summary>
+        /// Held by whatever is writing DashTemplates off the interface thread, an update's install or a panel press
+        /// (<see cref="WriteInBackground"/>), so that two of them never write at once.
+        /// </summary>
+        /// <remarks>
+        /// Two writers over the same folders is the one combination that can delete a folder the other is extracting
+        /// into. While the presses ran on the interface thread they could not overlap each other; off it, a second
+        /// press waits here for the first, in the order they were pressed, which is the order they used to run in.
+        /// Whether a press should be refused while another run is busy, rather than queued, is #606's, and it reads
+        /// <see cref="Busy"/>, which counts every run that takes this lock.
+        /// </remarks>
+        private static readonly object WriteLock = new object();
         private static readonly ManualResetEventSlim Idle = new ManualResetEventSlim(true);
         private static int writing;
 
@@ -452,10 +470,60 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Runs a panel press that writes DashTemplates -- Reinstall everything, Put mine back, a screen written,
+        /// resized or removed -- off the interface thread, and says when it has.
+        /// </summary>
+        /// <remarks>
+        /// Each of those used to run on the click, and SimHub's whole window stopped answering while a package was
+        /// extracted, a folder hashed and a backup zipped: two and a half seconds for Reinstall everything on a rig of
+        /// five screens (#611). The press is counted as writing from the moment this returns, so <see cref="Busy"/>
+        /// says so before the work has even started and a SimHub closing meanwhile waits for it (WaitForIdle), as it
+        /// waits for an update's install. It is counted no longer once the work is done, and only then is
+        /// <paramref name="finished"/> called, so that a page redrawn from it reads Busy as false.
+        ///
+        /// Work queued behind another writer waits for it (<see cref="WriteLock"/>). What the work does to SimHub's
+        /// own objects is the caller's to keep off this thread: a light profile's install touches settings SimHub's
+        /// interface is bound to, and stays on the interface thread.
+        /// </remarks>
+        /// <param name="write">The disk work. What it throws is logged and handed to <paramref name="finished"/>.</param>
+        /// <param name="finished">Called on the work's thread with null, or with what the work threw.</param>
+        /// <returns>False, with nothing run and <paramref name="finished"/> never called, when SimHub's close has
+        /// already stopped this service: the press would write after shutdown had stopped waiting for writers.</returns>
+        public bool WriteInBackground(Action write, Action<Exception> finished)
+        {
+            if (write == null) throw new ArgumentNullException(nameof(write));
+            if (!StartWriting()) return false;
+            InBackground(() =>
+            {
+                Exception failure = null;
+                try
+                {
+                    lock (WriteLock)
+                    {
+                        write();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failure = ex;
+                    log.Error("A write to SimHub's dashboards failed in the background: " + ex);
+                }
+                finally
+                {
+                    FinishWriting();
+                }
+                finished?.Invoke(failure);
+            }, log);
+            return true;
+        }
+
+        /// <summary>
         /// Runs work off the caller's thread, swallowing everything.
         /// </summary>
         /// <remarks>
-        /// Nothing may run on the synchronous path of Init, and nothing may block on the thread SimHub calls it on.
+        /// Nothing that waits on the network may run on the synchronous path of Init, and nothing may block on the
+        /// thread SimHub calls it on. Init's own install of the rig's dashboards is the one write that stays there, and
+        /// says why (OpenDash.Init).
         /// An unobserved exception on a thread-pool thread terminates the process on .NET Framework, so SimHub would
         /// vanish without a dialog; hence the catch that looks like it catches too much and does not. Nothing run
         /// here is waited for at shutdown: work that rewrites DashTemplates counts itself, as Apply does.
@@ -486,8 +554,9 @@ namespace OpenDashPlugin
         /// </remarks>
         public static bool WaitForIdle(TimeSpan timeout) => Idle.Wait(timeout);
 
-        /// <summary>True while a run is staging the plugin or installing dashboards, which is what End waits for.
-        /// False while it is only downloading, since nothing on disk has been touched yet.</summary>
+        /// <summary>True while a run is staging the plugin or installing dashboards, or a panel press is writing them
+        /// (<see cref="WriteInBackground"/>), which is what End waits for. False while an update is only downloading,
+        /// since nothing on disk has been touched yet.</summary>
         public static bool Busy
         {
             get { lock (WorkGate) { return writing > 0; } }

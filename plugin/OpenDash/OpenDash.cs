@@ -292,6 +292,13 @@ namespace OpenDashPlugin
                 // downloaded this one, and this start is what writes them (#438); see EditedConsent.
                 var replaceEdited = EditedConsent.AppliesNow(Settings.ReplaceEditedFor, Version);
                 if (replaceEdited) Log.Info("Replacing edited dashboards, as asked when " + Version + " was downloaded");
+                // On Init's own thread, the one write that stays there (#611), because SimHub reads its template list
+                // once, as its plugins finish starting (docs/dev-loop.md): a folder written after that is not listed
+                // until the next restart, so an install moved off this path would leave every dashboard an update
+                // brought, which this start is what writes (#438), missing from SimHub's list until a second restart.
+                // On a rig that is current it writes nothing and reads each screen's sidecar and fingerprint, under a
+                // second for the whole of Init on the five-screen test rig, while SimHub is still starting, and nothing in
+                // it waits on the network. Every press that writes later runs off the interface thread.
                 Installer.EnsureInstalled(false, replaceEdited);
                 if (EditedConsent.Forget(Settings.ReplaceEditedFor, Version, PluginUpdate.Pending(Installer.SimHubRoot))) Settings.ReplaceEditedFor = null;
                 RetitleScreens(log);

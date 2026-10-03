@@ -189,8 +189,9 @@ namespace OpenDashPlugin
             var ns = bar.Namespace;
             ledsScenario = PanelLeds.ScenarioFor(ledsScenario, ledsScenarioFor, ns);
             ledsScenarioFor = ns;
-            IList<string> declined;
-            var targets = LedTargets.All(out declined);
+            // The page's one read of SimHub's devices, which the census before the build made (ledDevices).
+            var targets = ledDevices.Targets;
+            var declined = ledDevices.Declined;
 
             Action redrawOnlyPreview;
             var preview = LedsPreview(bar, out redrawOnlyPreview);
@@ -331,8 +332,7 @@ namespace OpenDashPlugin
         /// already walked.</summary>
         private static LedTarget LedsTargetOf(IList<LedTarget> targets, string device)
         {
-            var wanted = LedBar.NormaliseDevice(device);
-            return targets.FirstOrDefault(target => string.Equals(target.Id, wanted, StringComparison.Ordinal));
+            return LedTargets.Find(device, targets);
         }
 
         /// <summary>
@@ -358,7 +358,7 @@ namespace OpenDashPlugin
                 Log.Warn("The profile for " + bar.Name + " was not installed: the LED device it names is not in SimHub.");
                 return null;
             }
-            return LedsLogged(bar, InstallBar(bar, found.Json));
+            return LedsLogged(bar, InstallBar(bar, found.Json, targets));
         }
 
         /// <summary>An install's result, logged where it is not one, since StripInstaller returns Unavailable
@@ -1077,9 +1077,10 @@ namespace OpenDashPlugin
             }
             bar.Device = LedBar.NormaliseDevice(device);
             Save();
-            var plan = LedsLogged(bar, InstallBar(bar, found.Json));
+            var targets = ledDevices.Targets;
+            var plan = LedsLogged(bar, InstallBar(bar, found.Json, targets));
             var ok = plan.State == FlagBoxInstallState.UpToDate;
-            var target = LedTargets.Find(bar.Device);
+            var target = LedsTargetOf(targets, bar.Device);
             var line = ok ? PanelLeds.Moved(bar.Name, target == null ? null : target.Name, plan.Note) : PanelLeds.MovedNotInstalled(bar.Name, target == null ? null : target.Name);
             // The strip's device, and so whether its profile is selected, moved with the press: the card, the
             // fix box and the sidebar's dot are drawn again from what SimHub says now.
@@ -1150,9 +1151,9 @@ namespace OpenDashPlugin
             if (bar == null) return;
             var facts = StripFacts(ns);
             var before = facts == null ? null : facts.Profile;
-            // SimHub's devices walked once, for the guard, the install and the line.
-            IList<string> declined;
-            var targets = LedTargets.All(out declined);
+            // SimHub's devices as the page read them, for the guard, the install and the line.
+            var targets = ledDevices.Targets;
+            var declined = ledDevices.Declined;
             var blocked = LedsProfileBlocked(bar, targets, declined);
             var plan = blocked == null ? LedsReinstall(bar, targets) : null;
             Redraw();
@@ -1178,8 +1179,8 @@ namespace OpenDashPlugin
             Save();
             var facts = StripFacts(ns);
             var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);
-            IList<string> declined;
-            var targets = LedTargets.All(out declined);
+            var targets = ledDevices.Targets;
+            var declined = ledDevices.Declined;
             var blocked = LedsProfileBlocked(bar, targets, declined);
             var plan = blocked == null ? LedsReinstall(bar, targets) : null;
             Redraw();
@@ -1228,9 +1229,9 @@ namespace OpenDashPlugin
             Save();
             // Only where the page can install it: a rename must not take a profile that still lights out of
             // SimHub and put nothing back.
-            // SimHub's devices walked once, and only where the rename installs again.
-            IList<string> declined = null;
-            var targets = inSimHub ? LedTargets.All(out declined) : null;
+            // SimHub's devices as the page read them, and only where the rename installs again.
+            var targets = inSimHub ? ledDevices.Targets : null;
+            var declined = inSimHub ? ledDevices.Declined : null;
             var blocked = inSimHub ? LedsProfileBlocked(bar, targets, declined) : null;
             var ok = true;
             if (inSimHub && blocked == null)
@@ -1273,7 +1274,7 @@ namespace OpenDashPlugin
                 // Everywhere, not just the device the strip names: the device it was installed into may
                 // have been removed from SimHub since, and a profile nothing attaches settings to any
                 // more is a row in somebody's list that lights nothing.
-                takenOut = StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns));
+                takenOut = StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns), ledDevices.Targets);
             }
             catch (Exception ex)
             {
@@ -1321,8 +1322,8 @@ namespace OpenDashPlugin
             // Which device gets the profile. SimHub keeps one profile list per LED device, so this is
             // not a detail: a strip installed into the wrong one is written, saved and verified correctly
             // into a list the hardware does not read, which is exactly what a rig reported.
-            IList<string> notOffered;
-            var targets = LedTargets.All(out notOffered);
+            var targets = ledDevices.Targets;
+            var notOffered = ledDevices.Declined;
             var found = PanelLeds.FoundFanatec(targets.Select(t => t.Name));
             var preferred = LedTargets.Preferred(targets);
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
@@ -1645,8 +1646,8 @@ namespace OpenDashPlugin
             Select(PanelPage.Leds, bar.Namespace);
             // With no device SimHub lists there is nowhere to install: the strip is added, the press said no
             // more, and the line names the step left.
-            IList<string> declined;
-            var targets = LedTargets.All(out declined);
+            var targets = ledDevices.Targets;
+            var declined = ledDevices.Declined;
             var target = LedsTargetOf(targets, bar.Device);
             if (target == null)
             {

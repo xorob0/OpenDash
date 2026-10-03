@@ -157,13 +157,25 @@ namespace OpenDashPlugin
         /// </remarks>
         public static List<List<InstalledProfile>> InstalledEverywhere()
         {
-            return LedTargets.All().Select(target => ProfileInstall.Census(target.Settings.Profiles, "RGB LED")).ToList();
+            return InstalledEverywhere(LedTargets.All());
+        }
+
+        /// <summary><see cref="InstalledEverywhere()"/> over devices already read (#611).</summary>
+        public static List<List<InstalledProfile>> InstalledEverywhere(IEnumerable<LedTarget> targets)
+        {
+            return (targets ?? Enumerable.Empty<LedTarget>()).Select(target => ProfileInstall.Census(target.Settings.Profiles, "RGB LED")).ToList();
         }
 
         /// <summary>One shape, installed on one device. The list form with a single member.</summary>
         public static FlagBoxPlan Install(string embeddedJson, string device)
         {
             return Install(new[] { embeddedJson }, device)[0];
+        }
+
+        /// <summary>One shape, installed on one of devices already read (#611).</summary>
+        public static FlagBoxPlan Install(string embeddedJson, string device, IEnumerable<LedTarget> targets)
+        {
+            return Install(new[] { embeddedJson }, device, targets)[0];
         }
 
         /// <summary>
@@ -179,9 +191,16 @@ namespace OpenDashPlugin
         /// </summary>
         public static IList<FlagBoxPlan> Install(IEnumerable<string> embeddedJsons, string device)
         {
+            return Install(embeddedJsons, device, LedTargets.All());
+        }
+
+        /// <summary><see cref="Install(IEnumerable{string}, string)"/> into one of devices already read, so an install
+        /// the panel makes does not walk SimHub's devices again to find the one it already has (#611).</summary>
+        public static IList<FlagBoxPlan> Install(IEnumerable<string> embeddedJsons, string device, IEnumerable<LedTarget> targets)
+        {
             var parsed = (embeddedJsons ?? Enumerable.Empty<string>()).Select(Parse).ToList();
 
-            var target = LedTargets.Find(device);
+            var target = LedTargets.Find(device, targets);
             var settings = target?.Settings;
             if (settings == null)
             {
@@ -240,8 +259,14 @@ namespace OpenDashPlugin
         /// </remarks>
         public static bool UninstallEverywhere(Guid profileId)
         {
+            return UninstallEverywhere(profileId, LedTargets.All());
+        }
+
+        /// <summary><see cref="UninstallEverywhere(Guid)"/> over devices already read (#611).</summary>
+        public static bool UninstallEverywhere(Guid profileId, IEnumerable<LedTarget> targets)
+        {
             var gone = false;
-            foreach (var target in LedTargets.All())
+            foreach (var target in targets ?? Enumerable.Empty<LedTarget>())
             {
                 if (ProfileInstall.Uninstall(target.Settings.Profiles, target.Settings.AvailableProfiles, profileId, target.Save, "RGB LED")) gone = true;
             }

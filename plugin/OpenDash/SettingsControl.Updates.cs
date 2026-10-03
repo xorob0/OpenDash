@@ -48,6 +48,25 @@ namespace OpenDashPlugin
 
         private Button updatesReinstall;
 
+        /// <summary>Where Reinstall everything draws its bar while it writes, beside the press in place of its line.</summary>
+        private Border updatesReinstallProgress;
+
+        /// <summary>
+        /// Whether Reinstall everything or Put mine back is writing on its own thread (#611). Held outside the build,
+        /// as <see cref="applying"/> is, so a rebuild meanwhile draws the presses the run holds off disabled and
+        /// Reinstall everything's bar where it had got to.
+        /// </summary>
+        private bool updatesWriting;
+
+        /// <summary>How far Reinstall everything has got, from 0 to 1, for a rebuild while it writes.</summary>
+        private double updatesWritingFraction;
+
+        /// <summary>Whether the write is Reinstall everything's, which draws a bar; Put mine back's draws none.</summary>
+        private bool updatesWritingReinstall;
+
+        /// <summary>Whether a run this page started holds its presses off (PanelUpdates.RunHolds).</summary>
+        private bool UpdatesHeld => PanelUpdates.RunHolds(applying, updatesWriting);
+
         /// <summary>The presses a download holds off besides Reinstall everything and Check now: Put mine
         /// back and the light rows' Update, drawn after the run started or before it (ShowRun).</summary>
         private readonly List<Button> updatesRunPresses = new List<Button>();
@@ -92,6 +111,7 @@ namespace OpenDashPlugin
                 updatesLastChecked = null;
                 updatesCheckLine = null;
                 updatesReinstall = null;
+                updatesReinstallProgress = null;
                 updatesReinstallLine = null;
                 updatesPage = null;
                 updatesRunPresses.Clear();
@@ -115,7 +135,7 @@ namespace OpenDashPlugin
             // line per package into the log the support report carries; every press that writes a folder
             // reads it again itself. Not during a download either: the run works over the same record and
             // folders on the thread pool, and its completion reads them again before it redraws.
-            if (!updatesRead && !applying)
+            if (!updatesRead && !UpdatesHeld)
             {
                 plugin.Installer.Refresh();
                 updatesRead = true;
@@ -222,7 +242,7 @@ namespace OpenDashPlugin
             var text = Ui.VStack(PanelUpdates.KeptTextGap, title, Ui.Caption(PanelUpdates.KeptLine(kept.Select(k => k.Value).ToList()), BodyWidth));
             var restore = Ui.Button(PanelUpdates.PutMineBack, PanelButtonKind.Outline, PanelButtonSize.Small);
             restore.Click += (sender, args) => RestoreKept();
-            restore.IsEnabled = !applying;
+            restore.IsEnabled = !UpdatesHeld;
             updatesRunPresses.Add(restore);
 
             var body = UpdatesBeside(text, restore, PanelUpdates.KeptGap, width);
@@ -350,7 +370,7 @@ namespace OpenDashPlugin
             var log = UpdatesLogTail(root);
             // Not while a release downloads: the run works over the same record and folders on the thread
             // pool, so the report says what the page last read instead.
-            if (!applying) plugin.Installer.Refresh();
+            if (!UpdatesHeld) plugin.Installer.Refresh();
             var screens = UpdatesDashboardRows()
                 .Select(pair => new UpdatesReportItem(pair.Value.Name, PanelUpdates.ScreenDetail(pair.Key.Kind, pair.Key.Width, pair.Key.Height), pair.Value.Version, pair.Value.State))
                 .ToList();

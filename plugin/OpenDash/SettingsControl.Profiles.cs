@@ -38,13 +38,69 @@ namespace OpenDashPlugin
         /// </summary>
         private void InstallScreenAgain(ScreenInstance screen)
         {
-            var result = plugin.Installer.Write(screen);
-            Save(screen);
-            plugin.Installer.Refresh();
-            Select(PanelPage.Screens, screen.Namespace);
-            Redraw();
-            if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+            WriteScreenThen(() => plugin.Installer.Write(screen), result =>
+            {
+                Save(screen);
+                Select(PanelPage.Screens, screen.Namespace);
+                Redraw();
+                if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
+                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+            });
+        }
+
+        /// <summary>
+        /// Runs a press's writes to DashTemplates off the interface thread, and its ending back on it.
+        /// </summary>
+        /// <remarks>
+        /// Every press that writes a dashboard folder, puts one back or removes one comes through here, because each
+        /// used to run on the click and SimHub's whole window stopped answering while a package was extracted, a
+        /// folder hashed and a backup zipped (#611). The work is counted as writing (UpdateService.WriteInBackground),
+        /// so a SimHub closing meanwhile waits for it and two writers never overlap; whether a press should be refused
+        /// while another is running, rather than wait its turn, is #606's, which reads UpdateService.Busy.
+        ///
+        /// The ending is posted, never Invoked: End runs on the interface thread and waits there for writers, so
+        /// nothing on the work's thread may wait on that one. It runs on whatever page shows by then, so it reads the
+        /// settings and the disk afresh, and it keeps its own net, since nothing on a posted callback is caught for it.
+        /// </remarks>
+        /// <param name="write">The disk work, on the work's thread: it touches neither the panel nor SimHub's objects.</param>
+        /// <param name="done">The ending, on the interface thread, with null or what the work threw.</param>
+        private void WriteThen(Action write, Action<Exception> done)
+        {
+            var started = plugin.Updates.WriteInBackground(write, failure => Dispatcher.BeginInvoke(new Action(() =>
+            {
+                try
+                {
+                    done(failure);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Finishing a write to SimHub's dashboards on the panel failed", ex);
+                }
+            })));
+            // Only a SimHub that is closing turns a write away, and it is not going to draw the answer.
+            if (!started) Log.Warn("A write to SimHub's dashboards was not started: SimHub is closing.");
+        }
+
+        /// <summary>
+        /// <see cref="WriteThen"/> for a press on one screen's folder: the sheet that asked is closed at the press, the
+        /// installer reads the disk again after the write on the same thread, and the ending is handed the result, a
+        /// failed one where the work threw.
+        /// </summary>
+        /// <remarks>
+        /// Closed at the press rather than by the ending's Redraw, so that a sheet's Save or Add cannot be pressed a
+        /// second time while the first press is writing, which would add a second screen. The read after is the
+        /// write's because it hashes every folder on the rig, which on the interface thread was most of a second of
+        /// the window not answering by itself.
+        /// </remarks>
+        private void WriteScreenThen(Func<ScreenInstallResult> write, Action<ScreenInstallResult> done)
+        {
+            CloseSheet();
+            ScreenInstallResult result = null;
+            WriteThen(() =>
+            {
+                result = write();
+                plugin.Installer.Refresh();
+            }, failure => done(result ?? new ScreenInstallResult { Error = failure == null ? "nothing was written" : failure.Message }));
         }
 
         private TextBlock flagBoxLine;
@@ -241,14 +297,15 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Out of wherever it was first: a strip that has moved from the Arduino to a wheel must not leave a
         /// copy behind reading properties that now drive the wheel's, and the install only knows about the
-        /// device it is going to.
+        /// device it is going to. Both over <paramref name="targets"/>, the devices the page already read, where
+        /// each used to walk SimHub's devices again (#611).
         /// </remarks>
-        private static FlagBoxPlan InstallBar(LedBar bar, string embedded)
+        private static FlagBoxPlan InstallBar(LedBar bar, string embedded, IList<LedTarget> targets)
         {
             try
             {
-                StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(bar.Namespace));
-                return StripInstaller.Install(LedBarProfile.For(bar, embedded), bar.Device);
+                StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(bar.Namespace), targets);
+                return StripInstaller.Install(LedBarProfile.For(bar, embedded), bar.Device, targets);
             }
             catch (Exception ex)
             {
@@ -269,7 +326,7 @@ namespace OpenDashPlugin
             List<List<InstalledProfile>> devices;
             try
             {
-                devices = StripInstaller.InstalledEverywhere();
+                devices = StripInstaller.InstalledEverywhere(ledDevices.Targets);
             }
             catch (Exception ex)
             {

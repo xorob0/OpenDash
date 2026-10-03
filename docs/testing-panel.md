@@ -201,7 +201,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | UP-06 | Download | B:old | Click | "Downloading" bar; staged DLL; restart dialog; the card turns Staged and the badge "Restart" | V; J; then `bun run vm plugin` restores the branch DLL |
 | UP-07 | In SimHub table | RF after AS-08; B:old profiles then B:cur | Observe | Item / Version / State per row: Up to date, Update available, Missing, Not installed, Restart SimHub to load it | U; V |
 | UP-08 | Reinstall everything | UP-07 | Click | rows Up to date; folders rewritten; backups kept; the line starts "Reinstalled N dashboards." | J; V |
-| UP-09 | Kept copy | edit a .djson by hand, Reinstall everything | Observe | "Kept copy" card, "Your edited <name> was kept."; Put mine back | J; V |
+| UP-09 | Kept copy | edit a .djson by hand, Reinstall everything | Observe | "Kept copy" card, "Your edited <name> was kept."; Put mine back puts it back, its `_yours_` zip goes and the card with it; the replaced folder is `<folder>_backup.zip` (#608) | J; V |
 | UP-10 | Copy a support report | | Click | "Support report copied. Paste it into your issue."; clipboard holds versions, rig, devices, log tail; nothing sent (`Get-Clipboard` in run_in_desktop). The SimHub line names the installed release ("SimHub: 9.12.6, in C:\Program Files (x86)\SimHub\"), never 1.0.0.0 (#641) | J |
 | UP-11 | Open the log | | Click | Explorer/Notepad window on the log | V |
 | UP-12 | Links: Every release on GitHub, Report an issue, Read the guide | | Click | browser windows | V |

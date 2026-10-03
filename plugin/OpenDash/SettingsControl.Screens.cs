@@ -1027,13 +1027,14 @@ namespace OpenDashPlugin
                 case ScreenEdit.Rename:
                     RenameScreen(screen, wanted);
                     Save();
-                    var result = plugin.Installer.Write(screen);
-                    Save();
-                    plugin.Installer.Refresh();
-                    Select(PanelPage.Screens, screen.Namespace);
-                    Redraw();
-                    if (!result.Ok) Log.Warn("Writing " + screen.Name + " after a rename failed: " + result.Error);
-                    Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
+                    WriteScreenThen(() => plugin.Installer.Write(screen), result =>
+                    {
+                        Save();
+                        Select(PanelPage.Screens, screen.Namespace);
+                        Redraw();
+                        if (!result.Ok) Log.Warn("Writing " + screen.Name + " after a rename failed: " + result.Error);
+                        Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
+                    });
                     return;
                 default:
                     Save();
@@ -1057,13 +1058,14 @@ namespace OpenDashPlugin
         /// for a dashboard that is there but wrong.</summary>
         private void ReinstallScreen(ScreenInstance screen)
         {
-            var result = plugin.Installer.Write(screen);
-            Save(screen);
-            plugin.Installer.Refresh();
-            Select(PanelPage.Screens, screen.Namespace);
-            Redraw();
-            if (!result.Ok) Log.Warn("Reinstalling " + screen.Name + " failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+            WriteScreenThen(() => plugin.Installer.Write(screen), result =>
+            {
+                Save(screen);
+                Select(PanelPage.Screens, screen.Namespace);
+                Redraw();
+                if (!result.Ok) Log.Warn("Reinstalling " + screen.Name + " failed: " + result.Error);
+                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+            });
         }
 
         private void ResizeScreen(ScreenInstance screen, PackageEntry entry)
@@ -1075,36 +1077,42 @@ namespace OpenDashPlugin
             }
             var log = new SimHubInstallLog();
             // The old folder first: a screen that was the stock one at its old size owns that package's own
-            // folder, and leaving it behind would put a dashboard in SimHub's list that nothing answers for.
-            var old = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, log);
-            if (!old.Ok) Log.Warn("The old folder of " + screen.Name + " could not be removed: " + old.Error);
-
+            // folder, and leaving it behind would put a dashboard in SimHub's list that nothing answers for. Removed
+            // on the write's thread, by the folder the screen holds now, since the settings move it below.
+            var before = new ScreenInstance { Name = screen.Name, Folder = screen.Folder };
             Settings.ResizeScreen(screen, entry);
             Save();
-            var result = plugin.Installer.Write(screen);
-            Save();
-            plugin.Installer.Refresh();
-            Select(PanelPage.Screens, screen.Namespace);
-            Redraw();
-            if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
+            WriteScreenThen(() =>
+            {
+                var old = ScreenInstaller.Remove(before, plugin.Installer.SimHubRoot, log);
+                if (!old.Ok) Log.Warn("The old folder of " + before.Name + " could not be removed: " + old.Error);
+                return plugin.Installer.Write(screen);
+            }, result =>
+            {
+                Save();
+                Select(PanelPage.Screens, screen.Namespace);
+                Redraw();
+                if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
+                Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
+            });
         }
 
         private void AddScreen(PackageEntry entry, string name)
         {
             var screen = Settings.AddScreen(entry, name);
             Save();
-            var result = plugin.Installer.Write(screen);
-            Save();
-            plugin.Installer.Refresh();
-            Select(PanelPage.Screens, screen.Namespace);
-            Redraw();
+            WriteScreenThen(() => plugin.Installer.Write(screen), result =>
+            {
+                Save();
+                Select(PanelPage.Screens, screen.Namespace);
+                Redraw();
 
-            // Said at the moment it becomes true rather than left to be found: SimHub reads its template list
-            // once, at startup, and assigning a dashboard to a display is in another part of SimHub entirely.
-            // The dashboard is listed under its title, which is the name the driver just chose.
-            if (!result.Ok) Log.Warn("Installing " + screen.Name + " failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Added(screen.Name, screen.Name) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
+                // Said at the moment it becomes true rather than left to be found: SimHub reads its template list
+                // once, at startup, and assigning a dashboard to a display is in another part of SimHub entirely.
+                // The dashboard is listed under its title, which is the name the driver just chose.
+                if (!result.Ok) Log.Warn("Installing " + screen.Name + " failed: " + result.Error);
+                Say(result.Ok ? PanelAddScreen.Added(screen.Name, screen.Name) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
+            });
         }
 
         /// <summary>
@@ -1122,13 +1130,14 @@ namespace OpenDashPlugin
                 return;
             }
             Save();
-            var result = plugin.Installer.Write(copy);
-            Save();
-            plugin.Installer.Refresh();
-            Select(PanelPage.Screens, copy.Namespace);
-            Redraw();
-            if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
-            Say(result.Ok ? PanelAddScreen.Added(copy.Name, copy.Name) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
+            WriteScreenThen(() => plugin.Installer.Write(copy), result =>
+            {
+                Save();
+                Select(PanelPage.Screens, copy.Namespace);
+                Redraw();
+                if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
+                Say(result.Ok ? PanelAddScreen.Added(copy.Name, copy.Name) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
+            });
         }
 
         /// <summary>
@@ -1142,14 +1151,15 @@ namespace OpenDashPlugin
             remove.ToolTip = PanelScreens.RemoveTooltipFor(screen);
             remove.Click += (sender, args) =>
             {
-                var result = ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog());
-                Settings.RemoveScreen(screen.Namespace);
-                Save();
-                plugin.Installer.Refresh();
-                Select(PanelPage.Screens, null);
-                Redraw();
-                if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed: " + result.Error);
-                Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);
+                WriteScreenThen(() => ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog()), result =>
+                {
+                    Settings.RemoveScreen(screen.Namespace);
+                    Save();
+                    Select(PanelPage.Screens, null);
+                    Redraw();
+                    if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed: " + result.Error);
+                    Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);
+                });
             };
             var keep = Ui.Button(PanelScreens.KeepButton, PanelButtonKind.Ghost, PanelButtonSize.Large);
             keep.ToolTip = PanelScreens.KeepTooltip;

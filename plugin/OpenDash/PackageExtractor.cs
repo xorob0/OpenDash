@@ -19,7 +19,8 @@ namespace OpenDashPlugin
         public const string MetadataExtension = ".djson.metadata";
         public const string BackupSuffix = "_backup.zip";
 
-        /// <summary>Prefix of the copy kept when a folder somebody edited is replaced; never reclaimed.</summary>
+        /// <summary>Prefix of the copy kept when a folder somebody edited is replaced. No install reclaims it; putting it
+        /// back uses it up (Restore).</summary>
         public const string EditedSuffix = "_yours_";
 
         public static string InstalledFolder(string simHubRoot, string folderName)
@@ -455,15 +456,8 @@ namespace OpenDashPlugin
 
                 if (Directory.Exists(target))
                 {
-                    // Where the copy goes decides whether it survives. The routine backup is reclaimed by the next
-                    // install of the same folder, which is the ordinary one-deep undo. Work somebody authored is not
-                    // ordinary: it is kept under a name no later install can claim, because the consent to replace
-                    // it was given on the promise that a copy is kept, and a promise the next upgrade quietly breaks
-                    // is worse than no promise.
-                    var backupPath = holdsAuthoredWork
-                        ? Path.Combine(templates, folderName + EditedSuffix + Stamp() + ".zip")
-                        : Path.Combine(templates, folderName + BackupSuffix);
-                    result.BackupPath = Backup(target, backupPath, log);
+                    // Where the copy goes decides whether it survives (BackupPathFor).
+                    result.BackupPath = Backup(target, BackupPathFor(templates, folderName, holdsAuthoredWork), log);
                     DeleteDirectory(target);
                 }
                 Directory.Move(extracted, target);
@@ -485,16 +479,6 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Puts back the copy Install set aside, and reports whether there was one to put back.</summary>
-        /// <remarks>
-        /// Install writes <folder>_backup.zip before it replaces a folder, and until this existed nothing read it,
-        /// so "the previous package survives" was true and "it can be put back" was not. The backup stores entries
-        /// relative to the folder rather than under it, which is what ZipFile.CreateFromDirectory writes and the
-        /// opposite of a .simhubdash, so it extracts straight into the target.
-        ///
-        /// The folder being restored over is not backed up in its turn. A restore is the undo, and an undo that
-        /// leaves its own thing to undo is a worse answer than one that does not.
-        /// </remarks>
         /// <summary>Prefix of the folder an install extracts into before moving it into place.</summary>
         public const string StagingPrefix = "_OpenDash_staging_";
 
@@ -547,13 +531,30 @@ namespace OpenDashPlugin
             return kept;
         }
 
+        /// <summary>Puts back a copy Install set aside, and reports whether there was one to put back.</summary>
+        /// <remarks>
+        /// Install writes a copy before it replaces a folder, and until this existed nothing read it, so "the
+        /// previous package survives" was true and "it can be put back" was not. A copy stores entries relative to
+        /// the folder rather than under it, which is what ZipFile.CreateFromDirectory writes and the opposite of a
+        /// .simhubdash, so it extracts straight into the target.
+        ///
+        /// A restore replaces a folder, so it keeps a copy of what it replaces exactly as Install does, and it uses
+        /// up the copy it put back, which is the folder now (#608). It used to do neither: the copy stayed on the
+        /// shelf, so the panel offered "Put mine back" for ever, and a second press put the old copy back over
+        /// whatever had been edited since the first and kept nothing of it.
+        /// </remarks>
         /// <param name="from">Which copy to put back; the newest kept one when omitted.</param>
-        public static bool Restore(string simHubRoot, string folderName, IInstallLog log, string from = null)
+        /// <param name="holdsAuthoredWork">
+        /// Whether the folder being restored over is somebody's work, as Install takes it: its copy is then kept
+        /// where no install reclaims it and the panel offers it back. False for a folder OpenDash wrote and nobody
+        /// has touched, whose copy is the ordinary one-deep backup. Unknown is somebody's work.
+        /// </param>
+        public static bool Restore(string simHubRoot, string folderName, IInstallLog log, string from = null, bool holdsAuthoredWork = true)
         {
             log = log ?? NullInstallLog.Instance;
             var templates = Path.Combine(simHubRoot, DashTemplates);
-            var backupPath = from ?? KeptCopies(simHubRoot, folderName).FirstOrDefault() ?? Path.Combine(templates, folderName + BackupSuffix);
-            if (!File.Exists(backupPath))
+            var copy = from ?? KeptCopies(simHubRoot, folderName).FirstOrDefault() ?? Path.Combine(templates, folderName + BackupSuffix);
+            if (!File.Exists(copy))
             {
                 log.Warn("No previous copy of " + folderName + " was kept, so there is nothing to put back.");
                 return false;
@@ -563,7 +564,7 @@ namespace OpenDashPlugin
             var staging = Path.Combine(templates, "_OpenDash_restore_" + Guid.NewGuid().ToString("N"));
             try
             {
-                using (var zip = ZipFile.OpenRead(backupPath))
+                using (var zip = ZipFile.OpenRead(copy))
                 {
                     ExtractSafely(zip, staging);
                 }
@@ -571,9 +572,21 @@ namespace OpenDashPlugin
                 {
                     throw new InvalidDataException("The kept copy of " + folderName + " has no " + folderName + DashExtension + ".");
                 }
-                if (Directory.Exists(target)) DeleteDirectory(target);
+                // Backup throws when the copy cannot be taken, and the folder is then left as it is.
+                string keptAs = null;
+                if (Directory.Exists(target))
+                {
+                    keptAs = Backup(target, BackupPathFor(templates, folderName, holdsAuthoredWork), log);
+                    DeleteDirectory(target);
+                }
                 Directory.Move(staging, target);
-                log.Info("Put back the previous copy of " + folderName + " from " + backupPath);
+                log.Info("Put back the previous copy of " + folderName + " from " + copy);
+                // The ordinary backup restored over an untouched folder has just been rewritten with what it
+                // replaced, a swap, and is not spent.
+                if (keptAs == null || !string.Equals(Path.GetFullPath(copy), Path.GetFullPath(keptAs), StringComparison.OrdinalIgnoreCase))
+                {
+                    Spend(copy, log);
+                }
                 return true;
             }
             finally
@@ -645,8 +658,46 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// Where the copy of a folder about to be replaced goes, which decides whether it survives. The routine
+        /// backup is reclaimed by the next install of the same folder, which is the ordinary one-deep undo. Work
+        /// somebody authored is not ordinary: it is kept under a name no later install can claim, because the
+        /// consent to replace it was given on the promise that a copy is kept, and a promise the next upgrade
+        /// quietly breaks is worse than no promise.
+        /// </summary>
+        /// <remarks>
+        /// Two copies of one folder kept within a second used to share a name, and Backup deleted the first to
+        /// write the second, so a kept copy takes the next second that is free.
+        /// </remarks>
+        private static string BackupPathFor(string templates, string folderName, bool holdsAuthoredWork)
+        {
+            if (!holdsAuthoredWork) return Path.Combine(templates, folderName + BackupSuffix);
+            var at = DateTime.Now;
+            while (true)
+            {
+                var path = Path.Combine(templates, folderName + EditedSuffix + Stamp(at) + ".zip");
+                if (!File.Exists(path)) return path;
+                at = at.AddSeconds(1);
+            }
+        }
+
+        /// <summary>Removes a copy that has been put back, since the folder holds it now. A copy that cannot be
+        /// removed is only offered again, so it is reported rather than failing a restore that has happened.</summary>
+        private static void Spend(string copy, IInstallLog log)
+        {
+            try
+            {
+                File.Delete(copy);
+                log.Info("The copy put back is the folder now, so " + Path.GetFileName(copy) + " was removed");
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not remove " + copy + " once it was put back: " + ex.Message);
+            }
+        }
+
         /// <summary>A stamp that sorts, so a person can tell which copy is which without opening them.</summary>
-        private static string Stamp() => DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        private static string Stamp(DateTime at) => at.ToString("yyyyMMdd-HHmmss");
 
         /// <summary>Deletes recursively, retrying once: SimHub may still hold a file of a dashboard it just released.</summary>
         private static void DeleteDirectory(string folder)

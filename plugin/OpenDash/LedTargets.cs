@@ -109,8 +109,16 @@ namespace OpenDashPlugin
         /// unplugged and removed, or the settings file came from another rig.</summary>
         public static LedTarget Find(string id)
         {
+            return Find(id, All());
+        }
+
+        /// <summary><see cref="Find(string)"/> among devices already read, so a caller that has the list does not
+        /// walk SimHub's devices again to find one in it (#611).</summary>
+        public static LedTarget Find(string id, IEnumerable<LedTarget> targets)
+        {
+            if (targets == null) return null;
             var wanted = LedBar.NormaliseDevice(id);
-            return All().FirstOrDefault(t => string.Equals(t.Id, wanted, StringComparison.Ordinal));
+            return targets.FirstOrDefault(t => t != null && string.Equals(t.Id, wanted, StringComparison.Ordinal));
         }
 
         /// <summary>
