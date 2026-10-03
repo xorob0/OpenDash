@@ -354,7 +354,7 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("PendingRestart(", code);
             Assert.Contains("PluginUpdate.Pending(plugin.Installer.SimHubRoot)", code);
             // Nor under Reinstall everything or Put mine back, which write on their own thread (#611).
-            Assert.Contains("private bool UpdatesHeld => PanelUpdates.RunHolds(applying, updatesWriting);", code);
+            Assert.Contains("private bool UpdatesHeld => PanelUpdates.RunHolds(Updates.Applying, updatesWriting);", code);
             Assert.Contains("if (!updatesRead && !UpdatesHeld)", code);
             Assert.Contains("if (!UpdatesHeld) plugin.Installer.Refresh();", code);
             Assert.Contains("if (release != null) applyWaiting = false;", code);
@@ -441,14 +441,15 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("The update did not finish. See SimHub's log.", PanelUpdates.UpdateFailed);
             Assert.Equal(PanelUpdates.UpdateFailed, PanelUpdates.ReinstallFailed.Replace("reinstall", "update"));
 
-            // The completion clears the run before anything that can throw, keeps a net of its own, and offers
-            // the restart outside it.
+            // The run is over for the service before the completion is posted, so nothing the completion throws can
+            // leave a press held (UpdateServiceTests); the completion keeps a net of its own, and offers the restart
+            // outside it. It has no run of its own to clear any more: the page reads the service's (#606).
             var applied = apply.Substring(apply.IndexOf("private void UpdatesApplied(", StringComparison.Ordinal));
-            var cleared = applied.IndexOf("applying = false;", StringComparison.Ordinal);
+            Assert.DoesNotContain("applying", applied);
             var net = applied.IndexOf("try", StringComparison.Ordinal);
             var logged = applied.IndexOf("Log.Error(\"Finishing the update on the panel failed\", ex);", StringComparison.Ordinal);
             var restart = applied.IndexOf("if (outcome.PluginStaged) OfferRestart(release.Version);", StringComparison.Ordinal);
-            Assert.True(cleared >= 0 && net > cleared && logged > net && restart > logged, "applying is cleared first, the rest is caught, and the restart is offered after the net");
+            Assert.True(net >= 0 && logged > net && restart > logged, "the completion is caught, and the restart is offered after the net");
         }
 
         /// <summary>
@@ -675,7 +676,7 @@ namespace OpenDashPlugin.Tests
         public void The_page_draws_its_choices_from_PanelUpdates()
         {
             var code = FlatCode();
-            Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());", code);
+            Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, Updates.Applying, UpdatesPending());", code);
             Assert.Contains("Ui.Anchor(UpdatesInSimHubSection(updatesWidth, kept == null), PanelUpdates.AnchorPackages)", code);
             Assert.Contains("children.Add(keptAnchorHere ? Ui.Anchor(new Border { Child = reinstall }, PanelUpdates.AnchorKept) : reinstall);", code);
             Assert.Contains("var hasStrips = Settings.LedBarList().Any(bar => bar != null && bar.ProfileShapeId != null);", code);
@@ -1948,9 +1949,9 @@ namespace OpenDashPlugin.Tests
                 "var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited), onRestart: release.PluginAsset() != null);",
                 "if (press == PressOutcome.Ask) { UpdatesAsk(updatesCardLine, question); return; }",
                 "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
-                "applying = true;",
-                "UpdatesDrawCard(); UpdatesRefreshCheck();",
-                "plugin.ApplyUpdate(release, replaceEdited, report, outcome =>");
+                "var started = plugin.ApplyUpdate(release, replaceEdited, report, outcome =>",
+                "if (!started) { Say(PanelMessage.Caution(PanelWriteGate.WhileUpdating)); return; }",
+                "UpdatesDrawCard(); UpdatesRefreshCheck();");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(apply, @"var replaceEdited ="));
 
             InOrder(Method("private void Reinstall()"), "if (UpdatesHeld) return;", "UpdatesReadThen(ReinstallRead);");
@@ -1984,22 +1985,24 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_run_is_turned_on_before_it_starts_and_draws_its_presses_disabled()
         {
-            InOrder(Method("private void ApplyUpdate()"), "if (press == PressOutcome.Ask)", "applying = true;", "plugin.ApplyUpdate(");
+            // The run is the service's from the moment ApplyUpdate returns true (UpdateService.Applying), and the
+            // card is drawn after that, from it.
+            InOrder(Method("private void ApplyUpdate()"), "if (press == PressOutcome.Ask)", "var started = plugin.ApplyUpdate(", "if (!started)", "UpdatesDrawCard();");
             Assert.Contains("restore.IsEnabled = !UpdatesHeld; updatesRunPresses.Add(restore);", Method("private FrameworkElement UpdatesKeptCard(double width)"));
             Assert.Contains("updatesReinstall.IsEnabled = !UpdatesHeld;", Method("private FrameworkElement UpdatesReinstallRow()"));
             Assert.Contains("if (updatesWriting) ShowWrite();", Method("private FrameworkElement UpdatesReinstallRow()"));
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !UpdatesHeld; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesStripRow("));
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !UpdatesHeld; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesFlagBoxRow("));
-            InOrder(Method("private void UpdatesDrawCard()"), "updatesCardHost.Child = Ui.CardBox(card, 0);", "if (applying) ShowRun();");
-            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ShowRun()"));
-            Assert.Contains("applyingFraction = fraction; if (applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ApplyUpdate()"));
+            InOrder(Method("private void UpdatesDrawCard()"), "updatesCardHost.Child = Ui.CardBox(card, 0);", "if (Updates.Applying) ShowRun();");
+            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ShowRun()"));
+            Assert.Contains("if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ApplyUpdate()"));
             // The bar's host joins the card: since a download's card has no note, the bar is the only thing on
             // it that says a run is going, and a bar written into a detached host would leave the heading alone.
             InOrder(Method("private void UpdatesDrawCard()"),
                 "if (updatesCard == UpdatesCard.Downloading)",
                 "updatesProgressHost = new Border",
                 "text.Children.Add(updatesProgressHost);",
-                "if (applying) ShowRun();");
+                "if (Updates.Applying) ShowRun();");
             // One verb for one run: the kit's bar is headed "Downloading", as the press and the run's line say it,
             // never the shared bar's default "Installing" (#792: Ui.Progress takes the word, and the page's own
             // copy of the bar is gone).
@@ -2092,13 +2095,13 @@ namespace OpenDashPlugin.Tests
             var refresh = Method("private void UpdatesRefreshCheck()");
             Assert.Contains("if (updatesLastChecked != null) updatesLastChecked.Text = PanelUpdates.LastChecked(Settings.LastUpdateCheckTicks, DateTime.UtcNow);", refresh);
             Assert.Contains("var line = PanelUpdates.RowLine(updatesCard, updateStatus); updatesCheckLine.Text = line ?? string.Empty; updatesCheckLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;", refresh);
-            Assert.Contains("if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, applying, updateStatus.State);", refresh);
+            Assert.Contains("if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, Updates.Applying, updateStatus.State);", refresh);
             Assert.Contains("if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);", refresh);
             Assert.Contains("var cardLine = PanelUpdates.CardLine(updatesCard, updateStatus);", refresh);
             Assert.Contains("if (cardLine != null && updatesCardLine != null) { updatesCardLine.Text = cardLine; updatesCardLine.Visibility = Visibility.Visible; }", refresh);
 
             var card = Method("private void UpdatesDrawCard()");
-            Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());", card);
+            Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, Updates.Applying, UpdatesPending());", card);
             Assert.Contains("var heading = Ui.Heading(PanelUpdates.Heading(latest), true);", card);
             Assert.Contains("var note = PanelUpdates.CardNote(updatesCard, latest);", card);
             Assert.Contains("updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);", card);

@@ -38,6 +38,7 @@ namespace OpenDashPlugin
         /// </summary>
         private void InstallScreenAgain(ScreenInstance screen)
         {
+            if (WriteRefused()) return;
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {
                 Save(screen);
@@ -55,8 +56,9 @@ namespace OpenDashPlugin
         /// Every press that writes a dashboard folder, puts one back or removes one comes through here, because each
         /// used to run on the click and SimHub's whole window stopped answering while a package was extracted, a
         /// folder hashed and a backup zipped (#611). The work is counted as writing (UpdateService.WriteInBackground),
-        /// so a SimHub closing meanwhile waits for it and two writers never overlap; whether a press should be refused
-        /// while another is running, rather than wait its turn, is #606's, which reads UpdateService.Busy.
+        /// so a SimHub closing meanwhile waits for it and two writers never overlap. Every press asks
+        /// <see cref="WriteRefused"/> before it calls this, so one made while another writer is running is turned away
+        /// rather than queued (#606).
         ///
         /// The ending is posted, never Invoked: End runs on the interface thread and waits there for writers, so
         /// nothing on the work's thread may wait on that one. It runs on whatever page shows by then, so it reads the
@@ -79,6 +81,29 @@ namespace OpenDashPlugin
             })));
             // Only a SimHub that is closing turns a write away, and it is not going to draw the answer.
             if (!started) Log.Warn("A write to SimHub's dashboards was not started: SimHub is closing.");
+        }
+
+        /// <summary>
+        /// Refuses a press that would write SimHub's dashboards while an update is running or another press is still
+        /// writing, and says so (PanelWriteGate, #606).
+        /// </summary>
+        /// <remarks>
+        /// Asked at the top of every press that writes, before it has changed the settings or closed its sheet, so a
+        /// refused press has changed nothing and a sheet stays open with what was typed in it. Both facts are the
+        /// plugin's service's, which every panel SimHub builds shares, and every writer starts on this thread, so
+        /// nothing can start between this answer and the press's own WriteThen.
+        /// </remarks>
+        /// <returns>True when the press must stop here.</returns>
+        private bool WriteRefused()
+        {
+            var updating = Updates.Applying;
+            var refusal = PanelWriteGate.Refusal(updating, UpdateService.Busy);
+            if (refusal == null) return false;
+            Log.Info("A press that writes dashboards was refused: " + (updating ? "an update is running." : "another write is still running."));
+            // One line however many times the press is tried.
+            ClearMessages();
+            Say(PanelMessage.Caution(refusal));
+            return true;
         }
 
         /// <summary>

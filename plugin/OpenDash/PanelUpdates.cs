@@ -436,15 +436,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether a run this page started holds its presses off: an update downloading or installing, or Reinstall
-        /// everything or Put mine back writing the dashboards on their own thread.
+        /// Whether a run holds this page's presses off: an update downloading or installing (UpdateService.Applying,
+        /// whichever panel started it), or Reinstall everything or Put mine back writing the dashboards on their own
+        /// thread.
         /// </summary>
         /// <remarks>
         /// The two writes used to run on the click, so nothing could be pressed while they ran because SimHub's whole
         /// window had stopped answering (#611). Off the interface thread the window answers, and the page holds off
         /// what the update already holds off: Reinstall everything, Put mine back, Download and the light rows'
-        /// Update. Another page's press is not held here; whether it waits or is refused is #606's, which reads
-        /// UpdateService.Busy.
+        /// Update. A press elsewhere is not held, since nothing would redraw it when the run ended; it is refused at
+        /// the press instead (PanelWriteGate, #606).
         /// </remarks>
         public static bool RunHolds(bool applying, bool writing)
         {

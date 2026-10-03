@@ -642,9 +642,10 @@ namespace OpenDashPlugin
         /// SimHub that closes before the posted save runs saves in End, which waits for the part of the run that
         /// writes and so finds the consent and the screens' names already recorded.
         /// </remarks>
-        public void ApplyUpdate(ReleaseInfo release, bool replaceEdited, Action<double> progress, Action<UpdateOutcome> applied)
+        /// <returns>False, with nothing started, when an update is already running (UpdateService.Applying).</returns>
+        public bool ApplyUpdate(ReleaseInfo release, bool replaceEdited, Action<double> progress, Action<UpdateOutcome> applied)
         {
-            Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
+            return Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
             {
                 OnInterfaceThread(SaveSettings);
                 applied?.Invoke(outcome);

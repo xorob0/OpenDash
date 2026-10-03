@@ -1012,11 +1012,14 @@ namespace OpenDashPlugin
         /// screen listed under the name the driver had just stopped using.</summary>
         private void SaveEdit(ScreenInstance screen, string wanted, PackageEntry entry)
         {
+            var sizeChanged = PanelAddScreen.Resizes(entry, screen.Width, screen.Height);
+            var edit = PanelAddScreen.Edit(screen.Name, wanted, sizeChanged);
+            // An edit that writes the dashboard is refused whole while another writer runs, the sheet left open.
+            if (edit != ScreenEdit.None && WriteRefused()) return;
             // Whatever was changed, even nothing: pressing Save on a screen's own edit sheet is the driver
             // saying that this one is theirs.
             screen.Keep();
-            var sizeChanged = PanelAddScreen.Resizes(entry, screen.Width, screen.Height);
-            switch (PanelAddScreen.Edit(screen.Name, wanted, sizeChanged))
+            switch (edit)
             {
                 case ScreenEdit.Resize:
                     // The name first, so the folder ResizeScreen writes is titled with it rather than with the
@@ -1058,6 +1061,7 @@ namespace OpenDashPlugin
         /// for a dashboard that is there but wrong.</summary>
         private void ReinstallScreen(ScreenInstance screen)
         {
+            if (WriteRefused()) return;
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {
                 Save(screen);
@@ -1075,6 +1079,7 @@ namespace OpenDashPlugin
                 Redraw();
                 return;
             }
+            if (WriteRefused()) return;
             var log = new SimHubInstallLog();
             // The old folder first: a screen that was the stock one at its old size owns that package's own
             // folder, and leaving it behind would put a dashboard in SimHub's list that nothing answers for. Removed
@@ -1099,6 +1104,7 @@ namespace OpenDashPlugin
 
         private void AddScreen(PackageEntry entry, string name)
         {
+            if (WriteRefused()) return;
             var screen = Settings.AddScreen(entry, name);
             Save();
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
@@ -1121,6 +1127,7 @@ namespace OpenDashPlugin
         /// </summary>
         private void DuplicateScreen(ScreenInstance screen)
         {
+            if (WriteRefused()) return;
             var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
             var copy = Settings.DuplicateScreen(screen.Namespace, catalogue);
             if (copy == null)
@@ -1151,6 +1158,7 @@ namespace OpenDashPlugin
             remove.ToolTip = PanelScreens.RemoveTooltipFor(screen);
             remove.Click += (sender, args) =>
             {
+                if (WriteRefused()) return;
                 WriteScreenThen(() => ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog()), result =>
                 {
                     Settings.RemoveScreen(screen.Namespace);
