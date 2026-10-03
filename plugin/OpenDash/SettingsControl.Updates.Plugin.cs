@@ -431,46 +431,26 @@ namespace OpenDashPlugin
                 }));
             };
 
-            UpdateService.InBackground(() =>
+            // The run is the plugin's, and records what the rig is owed without the page (#613): the yes to
+            // replacing edited dashboards on restart and the names the driver gave their screens are settled on
+            // the run's thread, and the save is the plugin's. What is left here is drawing how it went.
+            plugin.ApplyUpdate(release, replaceEdited, report, outcome =>
             {
-                UpdateOutcome outcome;
-                string said;
-                try
-                {
-                    outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);
-                    said = outcome.Line;
-                }
-                catch (Exception ex)
-                {
-                    // A run that throws is still finished on the page: without a completion, applying would
-                    // stay true for the life of the control, the card would say "Downloading" until SimHub
-                    // restarts, and every press the run holds off would stay held off with it. The exception is
-                    // in the log, and the page says the failure in its own sentence, the shape
-                    // Reinstall everything's takes, rather than in UpdateOutcome.Line's reason slot.
-                    Log.Error("Applying " + release.Version + " failed", ex);
-                    outcome = new UpdateOutcome();
-                    said = PanelUpdates.UpdateFailed;
-                }
-                // The yes to replacing edited dashboards is spent by the next start, not by this run, when the
-                // dashboards come inside the plugin. Set here, before the run counts as finished, so that a
-                // SimHub closing mid-download saves it in End even though the completion below never runs.
-                //
-                // The one settings write off the interface thread, and an exception to OpenDash.cs's rule that
-                // the interface thread is the only writer: the counted run sets this one consent field before it
-                // finishes, so that End, which waits for the run (UpdateService.WaitForIdle) and then saves, keeps it. SimHub's
-                // close kills the process right after End, so the completion posted below never runs then.
-                if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;
-                // Posted, not Invoked: End runs on the interface thread and waits there for this run
-                // (UpdateService.WaitForIdle), so a synchronous Invoke would wait on End while End waits on it,
-                // and SimHub's close would hang the whole grace and then report an install that had finished.
-                Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome, said)));
-            }, new SimHubInstallLog(), mustFinish: true);
+                // A run that throws is still finished on the page: without a completion, applying would stay
+                // true for the life of the control, the card would say "Downloading" until SimHub restarts, and
+                // every press the run holds off would stay held off with it. The exception is in the log, and the
+                // page says the failure in its own sentence, the shape Reinstall everything's takes, rather than
+                // in UpdateOutcome.Line's reason slot.
+                var said = outcome == null ? PanelUpdates.UpdateFailed : outcome.Line;
+                // Posted, not Invoked: End runs on the interface thread and waits there for the part of the run
+                // that writes (UpdateService.WaitForIdle), so nothing on the run's thread may wait on that one.
+                Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome ?? new UpdateOutcome(), said)));
+            });
         }
 
         /// <summary>
-        /// A run's completion, on the interface thread: the run is over, the titles the driver gave their
-        /// screens go back on top, the settings are saved, and the page is drawn in the state the run left
-        /// when it is on screen.
+        /// A run's completion, on the interface thread: the run is over, and the page is drawn in the state the
+        /// run left when it is on screen. Nothing the rig is owed waits on it (#613).
         /// </summary>
         /// <remarks>
         /// Posted, so nothing waits on it and nothing it throws reaches the run's own net: it keeps its own,
@@ -496,14 +476,8 @@ namespace OpenDashPlugin
             applyingFraction = 0;
             try
             {
-                // An update writes the stock folders from their packages, so it brings the packages' own
-                // titles with it; the names the driver gave their screens go back on top before anything is
-                // saved. Nothing is rewritten where the title already reads that way.
-                var titles = new SimHubInstallLog();
-                foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);
-                // The record is written in memory by the installer and saved here, on the UI thread, which is
-                // the moment it is safe to serialise the settings.
-                Save();
+                // The screens' names are back and the settings saved by now, by the run and the plugin
+                // (UpdateService.Settle, OpenDash.ApplyUpdate); the page only reads the disk again.
                 plugin.Installer.Refresh();
                 // The idle screen's mark compares the release it offers with what the rig now runs, and the
                 // dashboards have just moved.

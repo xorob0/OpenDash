@@ -10,6 +10,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Text;
+using System.Threading;
 
 namespace OpenDashPlugin
 {
@@ -35,7 +36,12 @@ namespace OpenDashPlugin
         /// implementation must not let this decide the fetch: the caller draws it on the UI thread and a settings
         /// page that has closed makes that throw, which is no reason to report a download that arrived as failed.
         /// </param>
-        FetchResult GetBytes(string url, Action<double> progress = null);
+        /// <param name="cancel">
+        /// Set when SimHub is closing (UpdateService.StopDownloads). A cancelled fetch stops as soon as it can,
+        /// a request that is waiting on the network included, and fails: a download has written nothing, so it is
+        /// dropped rather than waited for.
+        /// </param>
+        FetchResult GetBytes(string url, Action<double> progress = null, CancellationToken cancel = default(CancellationToken));
     }
 
     public sealed class ReleaseClient : IReleaseSource
@@ -72,9 +78,9 @@ namespace OpenDashPlugin
 
         /// <summary>Fetches bytes, for a release asset. Follows the redirect GitHub answers with, and says how far
         /// through it is whenever the answer declared how long it would be.</summary>
-        public FetchResult GetBytes(string url, Action<double> progress = null)
+        public FetchResult GetBytes(string url, Action<double> progress = null, CancellationToken cancel = default(CancellationToken))
         {
-            return Send(url, response =>
+            return Send(url, cancel, response =>
             {
                 // Read before the stream is, because the header is what makes a fraction possible at all: an answer
                 // sent chunked declares -1, and a download whose length nobody knows can only say it began and ended.
@@ -88,6 +94,7 @@ namespace OpenDashPlugin
                     Report(progress, 0, ref reported);
                     while ((read = stream.Read(chunk, 0, chunk.Length)) > 0)
                     {
+                        if (cancel.IsCancellationRequested) return FetchResult.Failed(Cancelled);
                         if (buffer.Length + read > MaxDownloadBytes)
                         {
                             return FetchResult.Failed("the download is larger than " + MaxDownloadBytes + " bytes");
@@ -130,9 +137,22 @@ namespace OpenDashPlugin
             }
         }
 
-        private FetchResult Send(string url, Func<HttpWebResponse, FetchResult> read)
+        /// <summary>The reason a fetch that was cancelled gives.</summary>
+        public const string Cancelled = "stopped because SimHub is closing";
+
+        private FetchResult Send(string url, Func<HttpWebResponse, FetchResult> read) => Send(url, CancellationToken.None, read);
+
+        /// <remarks>
+        /// The cancel stops the read between chunks, and aborts the request as well, because a request waiting on a
+        /// socket that has stopped answering is not between chunks. On .NET Framework, which SimHub runs, the abort
+        /// ends that wait with a WebException whose status is RequestCanceled; the net8.0 HttpWebRequest the tests run
+        /// on does not honour it, which is why no test pins it. Nothing waits on a download at shutdown either way
+        /// (UpdateService.Busy), so the abort only frees the thread sooner.
+        /// </remarks>
+        private FetchResult Send(string url, CancellationToken cancel, Func<HttpWebResponse, FetchResult> read)
         {
             if (string.IsNullOrWhiteSpace(url)) return FetchResult.Failed("no address to fetch");
+            if (cancel.IsCancellationRequested) return FetchResult.Failed(Cancelled);
             try
             {
                 EnsureModernTls();
@@ -150,6 +170,7 @@ namespace OpenDashPlugin
                 request.UseDefaultCredentials = false;
                 request.CookieContainer = null;
 
+                using (cancel.Register(request.Abort))
                 using (var response = (HttpWebResponse)request.GetResponse())
                 {
                     if (response.StatusCode != HttpStatusCode.OK)

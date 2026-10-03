@@ -615,8 +615,30 @@ namespace OpenDashPlugin
         /// </remarks>
         public static readonly TimeSpan ShutdownGrace = TimeSpan.FromSeconds(20);
 
+        /// <summary>
+        /// Applies an update off the interface thread: the run settles the settings itself, the save is posted to
+        /// the interface thread, and <paramref name="applied"/> is called on the run's thread for the panel to redraw.
+        /// </summary>
+        /// <remarks>
+        /// The plugin's rather than the panel's, so that nothing the rig is owed waits on a settings page (#613). A
+        /// SimHub that closes before the posted save runs saves in End, which waits for the part of the run that
+        /// writes and so finds the consent and the screens' names already recorded.
+        /// </remarks>
+        public void ApplyUpdate(ReleaseInfo release, bool replaceEdited, Action<double> progress, Action<UpdateOutcome> applied)
+        {
+            Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
+            {
+                OnInterfaceThread(SaveSettings);
+                applied?.Invoke(outcome);
+            });
+        }
+
         public void End(PluginManager pluginManager)
         {
+            // A download has written nothing, so it is stopped rather than waited for; only a run that has started
+            // writing is (UpdateService.Busy). Stopped first, so a download that finishes now cannot start writing
+            // after the wait below has decided there was nothing to wait for.
+            updates?.StopDownloads();
             if (UpdateService.Busy)
             {
                 Log.Info("An update is still installing; waiting for it before SimHub closes.");

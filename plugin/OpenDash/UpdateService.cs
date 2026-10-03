@@ -1,12 +1,14 @@
 // UpdateService.cs: asking, and applying what the answer offers.
 //
 // The two public entry points are synchronous and return what happened, so that everything they decide is tested.
-// Threading is the caller's business and is one method at the bottom, because a background thread is the part that
-// can take SimHub down with it: an unobserved exception on the thread pool terminates the process on .NET Framework,
-// so nothing here is allowed to throw.
+// The threads are at the bottom, because a background thread is the part that can take SimHub down with it: an
+// unobserved exception on the thread pool terminates the process on .NET Framework, so nothing there is allowed to
+// throw. What a run owes the settings is done on the run's own thread, inside the part shutdown waits for, so that
+// it never depends on a settings page that may have closed (#613).
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace OpenDashPlugin
 {
@@ -92,6 +94,16 @@ namespace OpenDashPlugin
         private readonly IReleaseSource source;
         private readonly IInstallLog log;
 
+        /// <summary>Cancelled by <see cref="StopDownloads"/>, and handed to every download so that it stops.</summary>
+        private readonly CancellationTokenSource stopping = new CancellationTokenSource();
+
+        /// <summary>Whether <see cref="StopDownloads"/> has run. Read and written under <see cref="WorkGate"/>, so that
+        /// a run cannot start writing after shutdown has stopped waiting for it.</summary>
+        private bool stopped;
+
+        /// <summary>Why a run that SimHub's close stopped did not finish. Nothing on disk had been touched.</summary>
+        public const string StoppedReason = "SimHub closed before the download finished";
+
         public UpdateService(IReleaseSource source, IInstallLog log = null)
         {
             this.source = source ?? throw new ArgumentNullException(nameof(source));
@@ -175,7 +187,11 @@ namespace OpenDashPlugin
         /// downloads take the first half and the install the second, so that the bar crosses the panel once rather
         /// than reaching the end and starting again, which would say the run had finished twice.
         /// </param>
-        public UpdateOutcome Apply(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, Action<double> progress = null)
+        /// <param name="settings">
+        /// The settings to record what the run owes them in (<see cref="Settle"/>), or null for a caller that keeps
+        /// none. Recorded before the run stops counting as work shutdown waits for, so End's save keeps it.
+        /// </param>
+        public UpdateOutcome Apply(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, Action<double> progress = null, OpenDashSettings settings = null)
         {
             if (installer == null || release == null) return new UpdateOutcome { Reason = "there is nothing to apply" };
 
@@ -197,6 +213,9 @@ namespace OpenDashPlugin
             var downloads = plan.Items.Count + (pluginAsset == null ? 0 : 1);
             var slice = 0.5 / downloads;
             var fetchedSoFar = 0;
+            // Nothing is counted as work shutdown waits for until every byte is in hand. A download has written
+            // nothing, so SimHub closing during one stops it (StopDownloads) rather than waiting out the grace.
+            var cancel = stopping.Token;
 
             // The plugin first, and a failure to get it stops the run before anything on disk is touched.
             // That is the same rule the packages already follow, applied to the half that cannot be
@@ -206,7 +225,8 @@ namespace OpenDashPlugin
             byte[] pluginBytes = null;
             if (pluginAsset != null)
             {
-                var fetched = source.GetBytes(pluginAsset.DownloadUrl, within => progress?.Invoke(within * slice));
+                var fetched = source.GetBytes(pluginAsset.DownloadUrl, within => progress?.Invoke(within * slice), cancel);
+                if (cancel.IsCancellationRequested) return new UpdateOutcome { Reason = StoppedReason };
                 if (!fetched.Ok) return new UpdateOutcome { Reason = "OpenDash itself could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, pluginAsset.Digest))
                 {
@@ -219,7 +239,8 @@ namespace OpenDashPlugin
             foreach (var item in plan.Items)
             {
                 var from = fetchedSoFar * slice;
-                var fetched = source.GetBytes(item.Asset.DownloadUrl, within => progress?.Invoke(from + within * slice));
+                var fetched = source.GetBytes(item.Asset.DownloadUrl, within => progress?.Invoke(from + within * slice), cancel);
+                if (cancel.IsCancellationRequested) return new UpdateOutcome { Reason = StoppedReason };
                 if (!fetched.Ok) return new UpdateOutcome { Reason = item.FolderName + " could not be downloaded (" + fetched.Reason + ")" };
                 if (!Digest.Matches(fetched.Bytes, item.Asset.Digest))
                 {
@@ -229,6 +250,25 @@ namespace OpenDashPlugin
                 fetchedSoFar++;
             }
 
+            // From here the run writes, so it is counted and a SimHub closing now waits for it (WaitForIdle). It is let
+            // in only if shutdown has not already been: End stops the downloads before it reads Busy, under the same
+            // lock, so a run let in here is one End waits for and a run turned away here has written nothing.
+            if (!StartWriting()) return new UpdateOutcome { Reason = StoppedReason };
+            try
+            {
+                var outcome = StageAndInstall(installer, replaceEdited, progress, plan, pluginBytes, downloaded);
+                if (settings != null) Settle(outcome, release, installer, settings, log);
+                return outcome;
+            }
+            finally
+            {
+                FinishWriting();
+            }
+        }
+
+        /// <summary>The half of <see cref="Apply"/> that writes: the plugin staged, then the packages installed.</summary>
+        private UpdateOutcome StageAndInstall(DashboardInstaller installer, bool replaceEdited, Action<double> progress, UpdatePlan plan, byte[] pluginBytes, DownloadedPackageSource downloaded)
+        {
             // Staged before the dashboards are written, because staging is a file written beside the one
             // in use and changes nothing until SimHub exits; the swap itself is PluginUpdate's, out of
             // this process entirely.
@@ -288,41 +328,141 @@ namespace OpenDashPlugin
             };
         }
 
+        /// <summary>
+        /// What a run owes the settings, done on the run's own thread: the yes to replacing edited dashboards on
+        /// restart, and the names the driver gave their screens put back over the packages' own titles.
+        /// </summary>
+        /// <remarks>
+        /// Both used to be the panel's, in a completion that crossed to the interface thread (#613). That thread is
+        /// the one End runs on, a SimHub that is closing never gets round to the completion, and a call into a
+        /// settings page that has closed can throw (DashboardInstaller's progress remarks): the consent was lost and
+        /// the restarted plugin held every edited folder back. Done here, they are in memory before the run stops
+        /// counting as work shutdown waits for, so End's save keeps them; the caller saves them otherwise.
+        ///
+        /// A settings write off the interface thread, an exception to OpenDash.cs's rule that the interface thread is
+        /// the only writer, and of the kind the installer's folder record already is. The screens are copied before
+        /// they are walked, so a screen the panel adds meanwhile cannot break the walk.
+        /// </remarks>
+        public static void Settle(UpdateOutcome outcome, ReleaseInfo release, DashboardInstaller installer, OpenDashSettings settings, IInstallLog log = null)
+        {
+            if (outcome == null || release == null || installer == null || settings == null) return;
+            log = log ?? NullInstallLog.Instance;
+            // Spent by the next start, which is what writes the dashboards when they come inside the plugin.
+            if (outcome.ReplaceEditedOnRestart) settings.ReplaceEditedFor = release.Version;
+            try
+            {
+                // An update writes the stock folders from their packages, so it brings the packages' own titles
+                // with it. Nothing is rewritten where the title already reads that way.
+                foreach (var screen in settings.RigScreens().ToList()) ScreenInstaller.Retitle(screen, installer.SimHubRoot, installer.Record, log);
+            }
+            catch (Exception ex)
+            {
+                log.Warn("The screens' names could not be put back after the update: " + ex.Message);
+            }
+        }
+
         /// <summary>The folder an asset was fetched for, when the package itself could not be read.</summary>
         private static string FolderOf(UpdatePlan plan, string assetName) =>
             plan.Items.FirstOrDefault(i => i.Asset != null && i.Asset.Name == assetName)?.FolderName;
 
         private static readonly object WorkGate = new object();
-        private static readonly System.Threading.ManualResetEventSlim Idle = new System.Threading.ManualResetEventSlim(true);
-        private static int mustFinishCount;
+        private static readonly ManualResetEventSlim Idle = new ManualResetEventSlim(true);
+        private static int writing;
+
+        /// <summary>
+        /// Counts a run that is about to write DashTemplates, unless SimHub's close has already stopped this service.
+        /// </summary>
+        /// <remarks>
+        /// A thread-pool thread is a background thread, so the CLR terminates it at process exit without unwinding
+        /// and no finally runs: abandoning an install between the delete and the move leaves a dashboard folder that
+        /// is simply gone, and abandoning it at all leaves the staging folder behind. Such work is counted, and
+        /// WaitForIdle gives it a bounded chance to finish. Only that part is: the downloads before it have written
+        /// nothing and are stopped instead, which used to be counted too and held SimHub's close for the whole grace
+        /// over a download that could simply have been dropped (#613).
+        /// </remarks>
+        private bool StartWriting()
+        {
+            lock (WorkGate)
+            {
+                if (stopped) return false;
+                if (writing++ == 0) Idle.Reset();
+                return true;
+            }
+        }
+
+        private static void FinishWriting()
+        {
+            lock (WorkGate)
+            {
+                if (--writing == 0) Idle.Set();
+            }
+        }
+
+        /// <summary>
+        /// Stops every download this service has in flight or will start, and turns away a run that has not begun
+        /// writing yet. Called from End before it reads <see cref="Busy"/>.
+        /// </summary>
+        /// <remarks>
+        /// Under the lock StartWriting takes, so the two cannot interleave: a run counted before this is one Busy
+        /// reports and End waits for, and a run that reaches StartWriting after it writes nothing. The cancel is
+        /// outside the lock, because it runs the downloads' own callbacks, which abort their requests.
+        /// </remarks>
+        public void StopDownloads()
+        {
+            lock (WorkGate)
+            {
+                stopped = true;
+            }
+            try
+            {
+                stopping.Cancel();
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Stopping the update's downloads failed: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Applies an update off the caller's thread, and says how it went when it has.
+        /// </summary>
+        /// <remarks>
+        /// The whole of a run the panel starts, so that nothing a run owes the rig waits on the interface thread:
+        /// the settings are settled inside <see cref="Apply"/>, and <paramref name="finished"/> is called on the
+        /// run's own thread, for the caller to save and to redraw however it likes. Nothing here is counted as work
+        /// shutdown waits for; Apply counts its own writing.
+        /// </remarks>
+        /// <param name="finished">Called on the run's thread with the outcome, or with null when Apply threw, the
+        /// exception having been logged.</param>
+        public void ApplyInBackground(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, OpenDashSettings settings, Action<double> progress, Action<UpdateOutcome> finished)
+        {
+            InBackground(() =>
+            {
+                UpdateOutcome outcome = null;
+                try
+                {
+                    outcome = Apply(installer, release, replaceEdited, progress, settings);
+                }
+                catch (Exception ex)
+                {
+                    log.Error("Applying " + (release == null ? "the update" : release.Version) + " failed: " + ex);
+                }
+                finished?.Invoke(outcome);
+            }, log);
+        }
 
         /// <summary>
         /// Runs work off the caller's thread, swallowing everything.
         /// </summary>
-        /// <param name="mustFinish">
-        /// True for work that is rewriting DashTemplates. A thread-pool thread is a background thread, so the CLR
-        /// terminates it at process exit without unwinding and no finally runs: abandoning an install between the
-        /// delete and the move leaves a dashboard folder that is simply gone, and abandoning it at all leaves the
-        /// staging folder behind. Such work is counted, and WaitForIdle gives it a bounded chance to finish.
-        /// False for a check, which is a read and may be abandoned freely.
-        /// </param>
         /// <remarks>
         /// Nothing may run on the synchronous path of Init, and nothing may block on the thread SimHub calls it on.
         /// An unobserved exception on a thread-pool thread terminates the process on .NET Framework, so SimHub would
-        /// vanish without a dialog; hence the catch that looks like it catches too much and does not.
+        /// vanish without a dialog; hence the catch that looks like it catches too much and does not. Nothing run
+        /// here is waited for at shutdown: work that rewrites DashTemplates counts itself, as Apply does.
         /// </remarks>
-        public static void InBackground(Action work, IInstallLog log = null, bool mustFinish = false)
+        public static void InBackground(Action work, IInstallLog log = null)
         {
-            if (mustFinish)
-            {
-                lock (WorkGate)
-                {
-                    if (mustFinishCount++ == 0) Idle.Reset();
-                }
-            }
-            // Counted before the work is queued, so Busy is true the moment the caller returns rather than once
-            // the pool gets round to it.
-            System.Threading.ThreadPool.QueueUserWorkItem(_ =>
+            ThreadPool.QueueUserWorkItem(_ =>
             {
                 try
                 {
@@ -332,34 +472,25 @@ namespace OpenDashPlugin
                 {
                     (log ?? NullInstallLog.Instance).Error("An update check failed in the background: " + ex);
                 }
-                finally
-                {
-                    if (mustFinish)
-                    {
-                        lock (WorkGate)
-                        {
-                            if (--mustFinishCount == 0) Idle.Set();
-                        }
-                    }
-                }
             });
         }
 
         /// <summary>
-        /// Waits for work that is rewriting DashTemplates, and reports whether it finished.
+        /// Waits for a run that is rewriting DashTemplates, and reports whether it finished.
         /// </summary>
         /// <remarks>
         /// Called from the plugin's End, which SimHub runs on shutdown. Waiting there is the opposite of the usual
         /// advice and is right here: the alternative is the process exiting between a DeleteDirectory and the
-        /// Directory.Move that replaces what it deleted. A check is never waited for, since abandoning a read costs
-        /// nothing and a socket that never answers would hold SimHub's shutdown for its whole timeout.
+        /// Directory.Move that replaces what it deleted. A check or a download is never waited for, since abandoning
+        /// a read costs nothing and a socket that never answers would hold SimHub's shutdown for its whole timeout.
         /// </remarks>
         public static bool WaitForIdle(TimeSpan timeout) => Idle.Wait(timeout);
 
-        /// <summary>True while an install is in flight, which is what the panel refuses to start a second one on.</summary>
+        /// <summary>True while a run is staging the plugin or installing dashboards, which is what End waits for.
+        /// False while it is only downloading, since nothing on disk has been touched yet.</summary>
         public static bool Busy
         {
-            get { lock (WorkGate) { return mustFinishCount > 0; } }
+            get { lock (WorkGate) { return writing > 0; } }
         }
     }
 }
