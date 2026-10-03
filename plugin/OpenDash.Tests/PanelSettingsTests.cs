@@ -777,10 +777,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_control_goes_under_its_title_only_where_the_two_do_not_fit()
         {
-            Assert.True(PanelSettings.StacksControls(400));
-            Assert.True(PanelSettings.StacksControls(559));
-            Assert.False(PanelSettings.StacksControls(560));
-            Assert.False(PanelSettings.StacksControls(679));
+            Assert.Equal(560, PanelSettings.StackControlsBelow);
             Assert.DoesNotContain("!Narrow", Page());
             Assert.Equal(320, PanelSettings.SliderWidthFor(1000));
             Assert.Equal(300, PanelSettings.SliderWidthFor(300));
@@ -795,7 +792,7 @@ namespace OpenDashPlugin.Tests
         public void The_page_asks_the_layout_rules_where_it_draws()
         {
             var page = Page();
-            Assert.Contains("if (!PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))) return row;", page);
+            Assert.Contains("if (ContentWidthAtLeast(PanelSettings.StackControlsBelow)) return row;", page);
             // SettingsFit and SettingsNew give a row back untouched only when it is not one they can work on.
             Assert.Matches(Lines(
                 "if (parts == null || parts.Control == null || grid == null) return row;",
@@ -808,24 +805,23 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains("Ui.Soon(SettingsFit(Ui.SettingRow(PanelSoon." + greyed + ".Title,", page);
             }
-            Assert.Contains("var surfaces = PanelSettings.AlertSurfacesFit(ContentWidthUpTo(PanelSettings.AlertSurfacesFrom));", page);
+            Assert.Contains("var surfaces = ContentWidthAtLeast(PanelSettings.AlertSurfacesFrom);", page);
             Assert.Matches(@"if \(surfaces\)\s*\{\s*foreach \(var on in alert\.Surfaces\)", page);
             Assert.Matches(@"if \(!surfaces\)\s*\{\s*(//[^\n]*\s*)*folded = Ui\.Soon\(Ui\.SettingRow\(PanelSoon\.AlertDisplay\.Title, null\), PanelSoon\.AlertDisplay\);", page);
             Assert.Matches(@"if \(alert\.Live\)\s*\{\s*var link = Ui\.LinkButton\(PanelSettings\.TryLabel\);", page);
             Assert.Contains("brightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));", page);
             Assert.Contains("nightBrightness.Width = PanelSettings.SliderWidthFor(ContentWidthUpTo(PanelSettings.SliderWidth));", page);
-            // Every read of the width stops at the threshold it decides (PanelShell.RebuildsOnResize): a bare
+            // Every read of the width is as narrow as what it decides (PanelShell.RebuildsOnResize): a bare
             // ContentWidth has no ceiling, and a page that reads it is rebuilt by every settled resize at every
-            // width, which commits whatever is in a threshold box and takes the keyboard out of it. The caps
-            // stop that only above the largest of them, the fold's 680: the shell keeps the largest cap a build
-            // asks for and reads min(680, content) as one continuous width, so below 680 of content every
-            // settled resize still rebuilds the page, although it draws differently only at 320, 560 and 680.
-            // A read that records only which side of a threshold the build saw is the shell's to add.
-            var bare = new Regex(@"(?<![\w.])ContentWidth(?!UpTo)\b");
+            // width, which commits whatever is in a threshold box and takes the keyboard out of it. The stacking
+            // and the fold are read as thresholds, so only a resize across 560 or 680 rebuilds the page (#543);
+            // the sliders read the width up to their 320, which only the compact gutter goes under.
+            var bare = new Regex(@"(?<![\w.])ContentWidth(?!UpTo|AtLeast)\b");
             Assert.DoesNotMatch(bare, page);
-            Assert.Matches(bare, "PanelSettings.StacksControls(ContentWidth)");
-            Assert.DoesNotMatch(bare, "PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))");
-            Assert.Equal(4, Regex.Matches(page, @"ContentWidthUpTo\(").Count);
+            Assert.Matches(bare, "Stacks(ContentWidth)");
+            Assert.DoesNotMatch(bare, "ContentWidthAtLeast(PanelSettings.StackControlsBelow)");
+            Assert.Equal(2, Regex.Matches(page, @"ContentWidthUpTo\(").Count);
+            Assert.Equal(2, Regex.Matches(page, @"ContentWidthAtLeast\(").Count);
         }
 
         [Fact]
@@ -1006,9 +1002,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_surface_columns_fold_away_where_they_do_not_fit()
         {
-            Assert.True(PanelSettings.AlertSurfacesFit(680));
-            Assert.True(PanelSettings.AlertSurfacesFit(1112));
-            Assert.False(PanelSettings.AlertSurfacesFit(679));
+            Assert.Equal(680, PanelSettings.AlertSurfacesFrom);
             var page = Page();
             // Folded, the row is the name alone: a switch in the off position would say alerts are off.
             Assert.Contains("Ui.Soon(Ui.SettingRow(PanelSoon.AlertDisplay.Title, null), PanelSoon.AlertDisplay)", page);
@@ -1274,25 +1268,6 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("box.LostFocus += (sender, args) => commit();", box);
             Assert.Contains("if (args.Key == Key.Enter) commit();", box);
             Assert.Matches(@"placeholder = SettingsHint\(box, PanelSettings\.ThresholdText\(fallback\)\);\s*return SettingsOverlaid\(box, placeholder\);", box);
-
-            // Every box the driver types a number in -- both temperatures and Low fuel -- takes its next digit
-            // after its value when it is focused by Tab or by the shell's focus restore after a rebuild, whose
-            // new box starts with its caret at 0: "13", a rebuild, then "0" would read 013, which is 13.
-            Assert.Matches(Lines(
-                "var box = SettingsNumberField(PanelSettings.ThresholdText(value));",
-                "SettingsTypeAtEnd(box);"), box);
-            Assert.Matches(Lines(
-                "var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });",
-                "SettingsTypeAtEnd(lowFuel);"), page);
-            Assert.Matches(Lines(
-                "private static void SettingsTypeAtEnd(TextBox box)",
-                "{",
-                "box.GotKeyboardFocus += (sender, args) =>",
-                "{",
-                "if (Mouse.LeftButton != MouseButtonState.Pressed) box.CaretIndex = box.Text.Length;",
-                "};",
-                "}"), page);
-            Assert.Equal(2, Regex.Matches(page, @"SettingsTypeAtEnd\(\w+\);").Count);
         }
 
         /// <summary>

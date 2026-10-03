@@ -102,9 +102,9 @@ namespace OpenDashPlugin
         /// to do, the steps in SimHub where there are some, and the one press that helps.</summary>
         private FrameworkElement HomeAttentionCard()
         {
-            // Read once, and only up to where the rows stop changing: past PressBesideFrom every press sits
-            // beside its text, so a resize there leaves the page alone (PanelShell.RebuildsOnResize).
-            var beside = PanelHome.PressBeside(ContentWidthUpTo(PanelHome.PressBesideFrom));
+            // Read once, as the threshold the rows change at: from PressBesideFrom every press sits beside its
+            // text, so only a resize across it rebuilds the page (PanelShell.RebuildsOnResize).
+            var beside = ContentWidthAtLeast(PanelHome.PressBesideFrom);
             var rows = new StackPanel { Orientation = Orientation.Vertical };
             for (var i = 0; i < issues.Count; i++)
             {
@@ -209,9 +209,38 @@ namespace OpenDashPlugin
                 case HomePress.Open:
                     Open(issue.Page, issue.Subject, issue.Anchor);
                     return;
+                case HomePress.OpenFolder:
+                    HomeOpenFolder(issue.Subject);
+                    return;
                 default:
                     Go(issue.Route);
                     return;
+            }
+        }
+
+        /// <summary>Open the folder: Explorer on the kept settings, selected in their folder, or on SimHub's
+        /// _Backups when no copy holds them (PanelAttention's settings-unreadable issue, #643).</summary>
+        private void HomeOpenFolder(string path)
+        {
+            try
+            {
+                var isFile = System.IO.File.Exists(path);
+                if (!isFile && !System.IO.Directory.Exists(path))
+                {
+                    Say(PanelAttention.FolderFailed(path), false);
+                    return;
+                }
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = PanelHome.ExplorerArguments(path, isFile),
+                    UseShellExecute = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Opening " + path + " failed: " + ex.Message);
+                Say(PanelAttention.FolderFailed(path), false);
             }
         }
 

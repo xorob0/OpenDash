@@ -17,6 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using VisualTreeHelper = System.Windows.Media.VisualTreeHelper;
 using SimHub.Plugins;
 using SimHub.Plugins.Styles;
 using SimHub.Plugins.UI;
@@ -90,11 +91,12 @@ namespace OpenDashPlugin
         /// it held. Run and cleared on every Go and on every rebuild in place.</summary>
         private readonly List<Action> dropActions = new List<Action>();
 
-        /// <summary>The control width the page that is showing was built at, and the most of the content width
-        /// its build read (0 for none), so a resize rebuilds it only when what it was drawn from has moved
-        /// (PanelShell.RebuildsOnResize).</summary>
+        /// <summary>The control width the page that is showing was built at, the most of the content width
+        /// its build read (0 for none) and the thresholds it read the width as, so a resize rebuilds it only
+        /// when what it was drawn from has moved (PanelShell.RebuildsOnResize).</summary>
         private double builtControlWidth = -1;
         private double builtWidthRead;
+        private readonly List<double> builtThresholds = new List<double>();
 
         /// <summary>Holds a resize's rebuild until the window has stopped moving.</summary>
         private DispatcherTimer resizeSettle;
@@ -269,7 +271,7 @@ namespace OpenDashPlugin
         /// <summary>Whether the page that is showing was drawn from room that has moved since it was built.</summary>
         private bool PageRoomMoved()
         {
-            return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, SystemParameters.VerticalScrollBarWidth);
+            return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, builtThresholds, SystemParameters.VerticalScrollBarWidth);
         }
 
         private void SettleThenRebuild()
@@ -324,14 +326,19 @@ namespace OpenDashPlugin
         // bar, with no ceiling: the page fills it, rows and grids stretch, and prose keeps a measure --
         // PanelShell.ProseMaxWidth 620 for a caption or paragraph, 520 for a row's caption, BodyWidth 880 for
         // a message line, a caption that asks for it and the live preview), ContentWidthUpTo(most) (the same,
-        // for a build that draws nothing differently past most), Narrow (the rail: the sidebar is icons,
+        // for a build that draws nothing differently past most), ContentWidthAtLeast(threshold) (whether the
+        // content is at least that wide, for a build that draws differently only on either side of it: a resize
+        // rebuilds it only when the width crossed the threshold), ContentWidthAtSteps(steps) (the highest of
+        // several thresholds the content reaches, for a build that hands the width to rules that each test one
+        // of them), Narrow (the rail: the sidebar is icons,
         // below 1000 px, Rail and Compact alike) and
         // TwoColumns (the only test for laying two blocks side by side: the full sidebar and at least
         // PanelShell.TwoColumnFrom of content; Narrow false does not mean two columns fit -- from 1000 to
         // about 1080 px the sidebar is full and the content is 679 to 759 -- so a page lays blocks side by
         // side only when TwoColumns is true and stacks them otherwise, never testing !Narrow), all read while
         // building. After a resize the shell rebuilds the page when the layout or TwoColumns moved, or when
-        // the build read the width and what it read moved (PanelShell.RebuildsOnResize); a build that never
+        // the build read the width and what it read moved, or crossed a threshold it read
+        // (PanelShell.RebuildsOnResize); a build that never
         // read ContentWidth is not rebuilt by a resize at all. So anything a page has in flight (a download, a
         // press it is waiting on) lives in a field outside the build and the next build draws it from there,
         // and a page reads ContentWidth only where it draws from it. Every page takes the whole column, so no
@@ -473,6 +480,7 @@ namespace OpenDashPlugin
             try
             {
                 var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null;
+                var caret = focus != null ? CaretOf(Keyboard.FocusedElement as TextBox) : null;
                 CommitTyping();
                 DropPreview();
                 ClearTicks();
@@ -481,7 +489,7 @@ namespace OpenDashPlugin
                 var offset = mainScroll.VerticalOffset;
                 pageHost.Content = BuildPage(route);
                 mainScroll.ScrollToVerticalOffset(offset);
-                if (focus != null) RestoreFocus(pageHost, focus, offset);
+                if (focus != null) RestoreFocus(pageHost, focus, caret, offset);
             }
             finally
             {
@@ -625,11 +633,29 @@ namespace OpenDashPlugin
 
         /// <summary>The content width, or <paramref name="most"/> where the column is wider: for a build that
         /// draws nothing differently past it, such as the live preview at BodyWidth. A resize that leaves the
-        /// answer where it was does not rebuild the page.</summary>
+        /// answer where it was does not rebuild the page. A build that draws differently only on either side
+        /// of a width asks <see cref="ContentWidthAtLeast"/> instead, and is rebuilt only when it is crossed.</summary>
         private double ContentWidthUpTo(double most)
         {
             if (most > builtWidthRead) builtWidthRead = most;
             return Math.Min(most, ColumnRoom);
+        }
+
+        /// <summary>Whether the content is at least <paramref name="threshold"/> wide: for a build that draws
+        /// differently only on either side of it, such as Settings' stacked rows below 560. A resize rebuilds
+        /// the page only when the width crosses the threshold, so one between two thresholds rebuilds nothing.</summary>
+        private bool ContentWidthAtLeast(double threshold)
+        {
+            if (!builtThresholds.Contains(threshold)) builtThresholds.Add(threshold);
+            return ColumnRoom >= threshold;
+        }
+
+        /// <summary>The content width as a build that draws differently only at <paramref name="steps"/> sees
+        /// it (PanelShell.WidthAtSteps): the highest step it reaches, each read as a threshold. For a page that
+        /// hands the width to rules that each test one of the steps, as Updates does.</summary>
+        private double ContentWidthAtSteps(IEnumerable<double> steps)
+        {
+            return PanelShell.WidthAtSteps(steps, ContentWidthAtLeast);
         }
 
         /// <summary>The content width as the shell reads it for itself, which does not count as the build
@@ -702,29 +728,38 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Where a focused control sits under a root, as the child index at each level of the visual tree,
-        /// so the same place can be found in a rebuild that draws the same shape.
+        /// Where a focused control sits under a root: by the key of the nearest element above it that carries
+        /// one (Ui.FocusKeyOf: the setting it writes, or its row's search anchor) and the path from there, and
+        /// by the child index at each level of the visual tree from the root, for a control with no key above
+        /// it (PanelFocus, #645).
         /// </summary>
-        private static List<int> FocusPath(DependencyObject root, DependencyObject focused)
+        private static PanelFocusPath FocusPath(DependencyObject root, DependencyObject focused)
         {
-            if (root == null || focused == null) return null;
-            var path = new List<int>();
-            var node = focused;
-            while (node != null && node != root)
-            {
-                var parent = System.Windows.Media.VisualTreeHelper.GetParent(node);
-                if (parent == null) return null;
-                var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
-                var index = -1;
-                for (var i = 0; i < count; i++)
-                {
-                    if (System.Windows.Media.VisualTreeHelper.GetChild(parent, i) == node) { index = i; break; }
-                }
-                if (index < 0) return null;
-                path.Insert(0, index);
-                node = parent;
-            }
-            return node == root ? path : null;
+            return PanelFocus.Record<DependencyObject>(root, focused, VisualTreeHelper.GetParent, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf);
+        }
+
+        /// <summary>Whether a rebuild may hand the keyboard focus to this element.</summary>
+        private static bool Refocusable(DependencyObject node)
+        {
+            var element = node as UIElement;
+            return element != null && element.Focusable && element.IsVisible && element.IsEnabled;
+        }
+
+        /// <summary>Where the caret and the selection are in the box being typed in, or null when the focus is
+        /// not in a text box. Read before CommitTyping takes the focus off it.</summary>
+        private static PanelCaret CaretOf(TextBox box)
+        {
+            return box == null ? null : new PanelCaret(box.CaretIndex, box.SelectionStart, box.SelectionLength);
+        }
+
+        /// <summary>Puts the caret and the selection a rebuild recorded back on the box focused again, kept
+        /// inside the text it holds now (PanelCaret.Within).</summary>
+        private static void PutCaret(TextBox box, PanelCaret caret)
+        {
+            if (box == null || caret == null) return;
+            var at = caret.Within(box.Text.Length);
+            if (at.Selects) box.Select(at.SelectionStart, at.SelectionLength);
+            else box.CaretIndex = at.CaretIndex;
         }
 
         /// <summary>Puts keyboard focus on the first control of the page that is showing, once it is laid out.</summary>
@@ -733,10 +768,13 @@ namespace OpenDashPlugin
             Dispatcher.BeginInvoke(new Action(() => pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First))), DispatcherPriority.Loaded);
         }
 
-        /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
-        /// focusable thing above it when the rebuild is shaped differently there, and leaves the main scroll
+        /// <summary>Focuses the control at that place once the rebuild has been laid out -- found by its key
+        /// first, so a rebuild that moves the cells around it still finds it (#645), and by its position when
+        /// it has no key or the key is gone -- or the nearest focusable thing above it when the rebuild is
+        /// shaped differently there, and leaves the main scroll
         /// at <paramref name="offset"/>, where the driver had it -- unless a line has been said since, which
-        /// wins: the view stays at the top, on the line.</summary>
+        /// wins: the view stays at the top, on the line. A text box focused again takes back the caret and the
+        /// selection <paramref name="caret"/> recorded (#542).</summary>
         /// <remarks>
         /// Focusing a control raises its BringIntoView, which pulled the main scroll back to whatever the
         /// driver had last pressed and then scrolled away from: a wheel's lighting press or a threshold resize
@@ -747,26 +785,22 @@ namespace OpenDashPlugin
         /// So where Say has spoken since the rebuild (saidCount moved), focus goes back without bringing its
         /// control into view and the scroll is left where Say put it.
         /// </remarks>
-        private void RestoreFocus(DependencyObject root, List<int> path, double offset)
+        private void RestoreFocus(DependencyObject root, PanelFocusPath path, PanelCaret caret, double offset)
         {
             var said = saidCount;
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                DependencyObject node = root;
-                IInputElement last = null;
-                foreach (var index in path)
-                {
-                    if (index >= System.Windows.Media.VisualTreeHelper.GetChildrenCount(node)) break;
-                    node = System.Windows.Media.VisualTreeHelper.GetChild(node, index);
-                    var element = node as UIElement;
-                    if (element != null && element.Focusable && element.IsVisible && element.IsEnabled) last = element;
-                }
+                var last = PanelFocus.Find<DependencyObject>(root, path, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf, Refocusable) as IInputElement;
                 var spoke = saidCount != said;
                 RequestBringIntoViewEventHandler stay = (sender, args) => args.Handled = true;
                 if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);
                 try
                 {
-                    if (last != null) Keyboard.Focus(last);
+                    if (last != null)
+                    {
+                        Keyboard.Focus(last);
+                        PutCaret(last as TextBox, caret);
+                    }
                     else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
                 }
                 finally
@@ -790,6 +824,7 @@ namespace OpenDashPlugin
         {
             builtControlWidth = controlWidth;
             builtWidthRead = 0;
+            builtThresholds.Clear();
             pageDrawsLighting = false;
             lightingActions.Clear();
             try

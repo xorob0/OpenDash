@@ -418,6 +418,11 @@ deleted.
   it starts. Restart SimHub, then assign the dashboard to its display in Dash Studio.
 - Home lists what needs attention on your rig, each with its fix. Start there when something is
   wrong.
+- Home reads "OpenDash could not read its settings" and the rig is empty: the settings file was
+  damaged, for example by a hand edit, and OpenDash started on its defaults. It kept the file as
+  `PluginsData\Common\OpenDash.GeneralSettings.unreadable.json`. Close SimHub, correct that file or
+  take an earlier one from `PluginsData\Common\_Backups`, save it as `OpenDash.GeneralSettings.json`
+  and start SimHub.
 - The In SimHub table on the Updates page has a row for each dashboard on your rig and each LED and
   matrix profile, with the version SimHub holds and its state. Hover a row for the step that
   changes it.

@@ -216,9 +216,212 @@ namespace OpenDashPlugin.Tests
         public void A_rebuild_keeps_the_scroll_where_the_driver_left_it()
         {
             var shell = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
-            Assert.Contains("var offset = mainScroll.VerticalOffset; pageHost.Content = BuildPage(route); mainScroll.ScrollToVerticalOffset(offset); if (focus != null) RestoreFocus(pageHost, focus, offset);", shell);
-            Assert.Contains("if (last != null) Keyboard.Focus(last); else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); }", shell);
+            Assert.Contains("var offset = mainScroll.VerticalOffset; pageHost.Content = BuildPage(route); mainScroll.ScrollToVerticalOffset(offset); if (focus != null) RestoreFocus(pageHost, focus, caret, offset);", shell);
+            Assert.Contains("if (last != null) { Keyboard.Focus(last); PutCaret(last as TextBox, caret); } else pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First)); }", shell);
             Assert.Contains("if (spoke) return; mainScroll.ScrollToVerticalOffset(offset); Dispatcher.BeginInvoke(new Action(() => { if (saidCount == said) mainScroll.ScrollToVerticalOffset(offset); }), DispatcherPriority.Loaded);", shell);
+        }
+
+        /// <summary>
+        /// A rebuild in place keeps the caret and the selection of the box being typed in (#542): a rebuilt box
+        /// starts with its caret at 0, so "13", a wheel's night-mode press, then "0" read 013, which is 13. The
+        /// shell records them before CommitTyping takes the focus off the box and puts them back on the box it
+        /// focuses again, inside the text the box holds now; Settings' own fix for its number boxes is gone.
+        /// </summary>
+        [Fact]
+        public void A_rebuild_keeps_the_caret_where_the_driver_was_typing()
+        {
+            // Committing can rewrite the text, so every index is kept inside the text the box holds now.
+            var caret = new PanelCaret(3, 3, 0).Within(2);
+            Assert.Equal(2, caret.CaretIndex);
+            Assert.False(caret.Selects);
+            var held = new PanelCaret(1, 1, 0).Within(3);
+            Assert.Equal(1, held.CaretIndex);
+            Assert.False(held.Selects);
+            var selected = new PanelCaret(3, 1, 2).Within(3);
+            Assert.True(selected.Selects);
+            Assert.Equal(1, selected.SelectionStart);
+            Assert.Equal(2, selected.SelectionLength);
+            var shortened = new PanelCaret(4, 1, 3).Within(2);
+            Assert.Equal(1, shortened.SelectionStart);
+            Assert.Equal(1, shortened.SelectionLength);
+            Assert.Equal(2, shortened.CaretIndex);
+            var emptied = new PanelCaret(2, 0, 2).Within(0);
+            Assert.False(emptied.Selects);
+            Assert.Equal(0, emptied.CaretIndex);
+
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            // Recorded before CommitTyping, which takes the focus off the box, and handed to RestoreFocus.
+            Assert.Contains("var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null; var caret = focus != null ? CaretOf(Keyboard.FocusedElement as TextBox) : null; CommitTyping();", shell);
+            Assert.Contains("return box == null ? null : new PanelCaret(box.CaretIndex, box.SelectionStart, box.SelectionLength);", shell);
+            Assert.Contains("private void RestoreFocus(DependencyObject root, PanelFocusPath path, PanelCaret caret, double offset)", shell);
+            Assert.Contains("Keyboard.Focus(last); PutCaret(last as TextBox, caret);", shell);
+            Assert.Contains("var at = caret.Within(box.Text.Length); if (at.Selects) box.Select(at.SelectionStart, at.SelectionLength); else box.CaretIndex = at.CaretIndex;", shell);
+
+            // The Settings page's own fix, which put the caret at the end of every number box focused by
+            // anything but a press, is gone: the shell puts it where it was.
+            foreach (var source in RepoPaths.SettingsControlSources())
+            {
+                Assert.DoesNotContain("SettingsTypeAtEnd", RepoPaths.Code(source));
+            }
+        }
+
+        /// <summary>An element of a page as PanelFocus walks it: a key or none, focusable or not, its children.</summary>
+        private sealed class FocusNode
+        {
+            public FocusNode(string name, string key = null, bool focusable = false, params FocusNode[] children)
+            {
+                Name = name;
+                Key = key;
+                Focusable = focusable;
+                Children = children.ToList();
+                foreach (var c in Children) c.Parent = this;
+            }
+
+            public string Name { get; }
+            public string Key { get; }
+            public bool Focusable { get; }
+            public FocusNode Parent { get; private set; }
+            public System.Collections.Generic.List<FocusNode> Children { get; }
+
+            public FocusNode Find(string name)
+            {
+                if (Name == name) return this;
+                return Children.Select(c => c.Find(name)).FirstOrDefault(found => found != null);
+            }
+        }
+
+        private static PanelFocusPath RecordFocus(FocusNode root, FocusNode focused)
+        {
+            return PanelFocus.Record(root, focused, n => n.Parent, n => n.Children.Count, (n, i) => n.Children[i], n => n.Key);
+        }
+
+        private static FocusNode FindFocus(FocusNode root, PanelFocusPath at)
+        {
+            return PanelFocus.Find(root, at, n => n.Children.Count, (n, i) => n.Children[i], n => n.Key, n => n.Focusable);
+        }
+
+        /// <summary>
+        /// Settings' alert table as the visual tree draws it: one Grid whose children are every row's rule and
+        /// cells in turn, so the four surface columns, drawn from AlertSurfacesFrom up, move every cell after the
+        /// head along. Low fuel's box is keyed by its setting; the temperature boxes' key sits on the overlay
+        /// that draws their placeholder over them, one level above the box.
+        /// </summary>
+        private static FocusNode AlertPage(bool surfaces, bool keyed = true)
+        {
+            Func<string, FocusNode[]> checks = row => surfaces
+                ? Enumerable.Range(0, 4).Select(i => new FocusNode(row + " surface " + i)).ToArray()
+                : new FocusNode[0];
+            Func<string, string, FocusNode> threshold = (row, key) =>
+                new FocusNode(row + " threshold", null, false,
+                    new FocusNode(row + " threshold line", null, false,
+                        new FocusNode(row + " op"),
+                        key == "FlagBoxLowFuelLaps"
+                            ? new FocusNode(row + " box", keyed ? key : null, true)
+                            : new FocusNode(row + " overlay", keyed ? key : null, false, new FocusNode(row + " box", null, true), new FocusNode(row + " placeholder")),
+                        new FocusNode(row + " unit")));
+            var cells = new System.Collections.Generic.List<FocusNode> { new FocusNode("head rule"), new FocusNode("Alert"), new FocusNode("Threshold") };
+            cells.AddRange(checks("head"));
+            foreach (var (row, key) in new[] { ("Low fuel", "FlagBoxLowFuelLaps"), ("Oil temperature", "LightsOilTemp"), ("Water temperature", "LightsWaterTemp") })
+            {
+                cells.Add(new FocusNode(row + " rule"));
+                cells.Add(new FocusNode(row + " name", keyed ? "alert-" + row : null));
+                cells.Add(threshold(row, key));
+                cells.AddRange(checks(row));
+                cells.Add(new FocusNode(row + " try", null, true));
+            }
+            return new FocusNode("page", null, false,
+                new FocusNode("Flags", keyed ? "flags" : null, false, new FocusNode("Flags in the pit lane", null, true)),
+                new FocusNode("Alerts", keyed ? "alerts" : null, false,
+                    new FocusNode("heading"),
+                    new FocusNode("card", null, false, new FocusNode("table", null, false, cells.ToArray()))));
+        }
+
+        /// <summary>
+        /// A rebuild that changes the page's shape gives the focus back to the box the driver was in (#645): with
+        /// the caret in Oil temperature, widening across the alert table's threshold drew the surface columns and
+        /// the focus came back, by its position in the tree, in Low fuel, where End and 9 typed 29. The place is
+        /// recorded by the key of the nearest thing above the control that carries one, the setting the box
+        /// writes, and found by it first.
+        /// </summary>
+        [Fact]
+        public void A_rebuild_that_changes_the_page_shape_gives_the_focus_back_to_the_same_box()
+        {
+            var narrow = AlertPage(false);
+            var at = RecordFocus(narrow, narrow.Find("Oil temperature box"));
+            Assert.Equal("LightsOilTemp", at.Key);
+            Assert.Equal(0, at.Ordinal);
+            Assert.Equal(new[] { 0 }, at.UnderKey);
+
+            var wide = AlertPage(true);
+            Assert.Same(wide.Find("Oil temperature box"), FindFocus(wide, at));
+            // And back across the threshold, and for the box that carries its key itself.
+            var wideAt = RecordFocus(wide, wide.Find("Water temperature box"));
+            Assert.Same(narrow.Find("Water temperature box"), FindFocus(narrow, wideAt));
+            var fuel = RecordFocus(wide, wide.Find("Low fuel box"));
+            Assert.Empty(fuel.UnderKey);
+            Assert.Same(narrow.Find("Low fuel box"), FindFocus(narrow, fuel));
+
+            // The position alone is what took the focus to the wrong box: the same index in the wider table is
+            // Low fuel's.
+            var byPosition = new PanelFocusPath(null, 0, null, at.FromRoot);
+            Assert.Same(wide.Find("Low fuel box"), FindFocus(wide, byPosition));
+        }
+
+        /// <summary>A control with no key above it (a press, a chip) and a key the rebuild no longer draws are found
+        /// by their position from the root, as before #645: the nearest focusable thing on the way down.</summary>
+        [Fact]
+        public void A_control_with_no_key_is_given_the_focus_back_by_its_position()
+        {
+            var bare = AlertPage(false, keyed: false);
+            var at = RecordFocus(bare, bare.Find("Oil temperature box"));
+            Assert.Null(at.Key);
+            var again = AlertPage(false, keyed: false);
+            Assert.Same(again.Find("Oil temperature box"), FindFocus(again, at));
+
+            // A key the rebuild does not draw falls back to the position.
+            var keyed = AlertPage(false);
+            var gone = new PanelFocusPath("NoSuchSetting", 0, new int[0], RecordFocus(keyed, keyed.Find("Water temperature box")).FromRoot);
+            Assert.Same(keyed.Find("Water temperature box"), FindFocus(keyed, gone));
+
+            // Where the path runs off the rebuild, the nearest focusable thing above where it stopped.
+            var page = AlertPage(false);
+            var off = new PanelFocusPath(null, 0, null, new[] { 0, 0, 7 });
+            Assert.Same(page.Find("Flags in the pit lane"), FindFocus(page, off));
+            Assert.Null(FindFocus(page, new PanelFocusPath(null, 0, null, new[] { 1, 0 })));
+
+            // A control not under the root records nothing, and the rebuild hands the focus to the page's start.
+            Assert.Null(RecordFocus(page, bare.Find("Oil temperature box")));
+        }
+
+        /// <summary>A key drawn twice finds the one the driver was in, by its order in the tree.</summary>
+        [Fact]
+        public void A_key_drawn_twice_gives_the_focus_back_to_the_one_the_driver_was_in()
+        {
+            Func<FocusNode> page = () => new FocusNode("page", null, false,
+                new FocusNode("first", "row", false, new FocusNode("first box", null, true)),
+                new FocusNode("second", "row", false, new FocusNode("second box", null, true)));
+            var before = page();
+            var at = RecordFocus(before, before.Find("second box"));
+            Assert.Equal(1, at.Ordinal);
+            var after = new FocusNode("page", null, false, new FocusNode("index"), page().Children[0], page().Children[1]);
+            Assert.Equal("second box", FindFocus(after, at).Name);
+        }
+
+        /// <summary>The shell records and finds the focus through PanelFocus, keyed by Ui.FocusKeyOf (a FocusKey,
+        /// else the row's search anchor), and the alert table's boxes, whose row anchor is on the name cell beside
+        /// them rather than above them, carry the setting they write.</summary>
+        [Fact]
+        public void The_shell_keys_the_focus_by_the_setting_a_box_writes()
+        {
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            Assert.Contains("return PanelFocus.Record<DependencyObject>(root, focused, VisualTreeHelper.GetParent, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf);", shell);
+            Assert.Contains("var last = PanelFocus.Find<DependencyObject>(root, path, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf, Refocusable) as IInputElement;", shell);
+            Assert.DoesNotContain("List<int> FocusPath(", shell);
+
+            var settings = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Settings.cs")), @"\s+", " ");
+            Assert.Contains("Ui.FocusKey(lowFuel, nameof(OpenDashSettings.FlagBoxLowFuelLaps));", settings);
+            Assert.Contains("Ui.FocusKey(oilTemp, nameof(OpenDashSettings.LightsOilTemp));", settings);
+            Assert.Contains("Ui.FocusKey(waterTemp, nameof(OpenDashSettings.LightsWaterTemp));", settings);
         }
 
         /// <summary>
@@ -241,7 +444,7 @@ namespace OpenDashPlugin.Tests
                 "var said = saidCount; Dispatcher.BeginInvoke(",
                 "var spoke = saidCount != said;",
                 "if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);",
-                "if (last != null) Keyboard.Focus(last);",
+                "if (last != null) { Keyboard.Focus(last);",
                 "if (spoke) pageHost.RemoveHandler(FrameworkElement.RequestBringIntoViewEvent, stay);",
                 "if (spoke) return;",
                 "mainScroll.ScrollToVerticalOffset(offset);",
@@ -431,12 +634,13 @@ namespace OpenDashPlugin.Tests
             // The shell asks the rule, reading the width counts only when a build reads it, and a build starts
             // having read none.
             var shell = RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs"));
-            Assert.Contains("return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, SystemParameters.VerticalScrollBarWidth);", shell);
+            Assert.Contains("return PanelShell.RebuildsOnResize(builtControlWidth, controlWidth, builtWidthRead, builtThresholds, SystemParameters.VerticalScrollBarWidth);", shell);
             Assert.Contains("private double ContentWidth => ContentWidthUpTo(double.PositiveInfinity);", shell);
             Assert.Contains("private bool TwoColumns => PanelShell.TwoColumns(layout, ColumnRoom);", shell);
             var build = shell.Substring(shell.IndexOf("private FrameworkElement BuildPage(PanelRoute to)", StringComparison.Ordinal));
             build = build.Substring(0, build.IndexOf("switch (to.Page)", StringComparison.Ordinal));
             Assert.Contains("builtWidthRead = 0;", build);
+            Assert.Contains("builtThresholds.Clear();", build);
             // Only a page's own build reads ContentWidth: the shell reads ColumnRoom, which does not count, and
             // names ContentWidth only to declare it.
             string Code(string name) => RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == name));
@@ -445,6 +649,60 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, Reads(Code("SettingsControl.Sheet.cs")));
             Assert.Equal(0, Reads(Code("SettingsControl.Sidebar.cs")));
             Assert.Equal(0, Reads(Code("SettingsControl.Messages.cs")));
+        }
+
+        /// <summary>
+        /// A page that reads the content width as thresholds is rebuilt only when a resize crosses one (#543):
+        /// Settings draws differently at 560 and 680 and nowhere between, and read as a cap every settled resize
+        /// under 680 rebuilt it, committing the box being typed in and taking the keyboard out of it.
+        /// </summary>
+        [Fact]
+        public void A_resize_between_two_thresholds_rebuilds_nothing()
+        {
+            const double bar = 17;
+            var settings = new[] { PanelSettings.StackControlsBelow, PanelSettings.AlertSurfacesFrom };
+            // In the rail, 770 to 800 px of control is 633 to 663 of content: read as a cap at 680 the page
+            // was rebuilt by the resize...
+            Assert.Equal(PanelLayout.Rail, PanelShell.Layout(770));
+            Assert.InRange(PanelShell.ContentWidth(770, bar), PanelSettings.StackControlsBelow, PanelSettings.AlertSurfacesFrom);
+            Assert.InRange(PanelShell.ContentWidth(800, bar), PanelSettings.StackControlsBelow, PanelSettings.AlertSurfacesFrom);
+            Assert.True(PanelShell.RebuildsOnResize(770, 800, PanelSettings.AlertSurfacesFrom, bar));
+            // ...and read as thresholds, beside the sliders' 320, nothing is rebuilt between 560 and 680...
+            Assert.False(PanelShell.RebuildsOnResize(770, 800, PanelSettings.SliderWidth, settings, bar));
+            Assert.False(PanelShell.RebuildsOnResize(800, 770, PanelSettings.SliderWidth, settings, bar));
+            // ...nor past the higher, beside the full sidebar in one column and in two, nor under the lower.
+            Assert.False(PanelShell.RebuildsOnResize(1001, 1079, PanelSettings.SliderWidth, settings, bar));
+            Assert.False(PanelShell.RebuildsOnResize(1200, 1400, PanelSettings.SliderWidth, settings, bar));
+            Assert.True(PanelShell.ContentWidth(620, bar) < PanelSettings.StackControlsBelow);
+            Assert.False(PanelShell.RebuildsOnResize(600, 620, PanelSettings.SliderWidth, settings, bar));
+            // A resize across either rebuilds, in either direction, where nothing else moved.
+            foreach (var threshold in settings)
+            {
+                var across = Enumerable.Range(600, 400).First(w => PanelShell.ContentWidth(w, bar) >= threshold);
+                Assert.Equal(PanelShell.Layout(across - 1), PanelShell.Layout(across));
+                Assert.False(PanelShell.RebuildsOnResize(across - 1, across, 0, null, bar));
+                Assert.True(PanelShell.RebuildsOnResize(across - 1, across, 0, settings, bar));
+                Assert.True(PanelShell.RebuildsOnResize(across, across - 1, 0, settings, bar));
+            }
+            // No thresholds is the rule as it was.
+            Assert.Equal(PanelShell.RebuildsOnResize(1000, 1060, 880, bar), PanelShell.RebuildsOnResize(1000, 1060, 880, null, bar));
+
+            // Several steps read as one width: the highest the content reaches, every step asked, so each is
+            // recorded as read.
+            var asked = new System.Collections.Generic.List<double>();
+            System.Func<double, System.Func<double, bool>> at = content => step => { asked.Add(step); return content >= step; };
+            var steps = new double[] { 480, 520, 560 };
+            Assert.Equal(520, PanelShell.WidthAtSteps(steps, at(559)));
+            Assert.Equal(steps, asked);
+            Assert.Equal(560, PanelShell.WidthAtSteps(steps, at(3000)));
+            Assert.Equal(0, PanelShell.WidthAtSteps(steps, at(479)));
+            Assert.Equal(480, PanelShell.WidthAtSteps(steps, at(480)));
+            Assert.Equal(0, PanelShell.WidthAtSteps(null, at(600)));
+
+            // The shell records each threshold a build reads and answers from the column's room.
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            Assert.Contains("private bool ContentWidthAtLeast(double threshold) { if (!builtThresholds.Contains(threshold)) builtThresholds.Add(threshold); return ColumnRoom >= threshold; }", shell);
+            Assert.Contains("private double ContentWidthAtSteps(IEnumerable<double> steps) { return PanelShell.WidthAtSteps(steps, ContentWidthAtLeast); }", shell);
         }
 
         [Fact]

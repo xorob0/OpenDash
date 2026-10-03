@@ -1210,7 +1210,7 @@ export interface ScreenRect {
  * on screen: a window hanging off the bottom comes back with the off-screen part cut, which looks
  * exactly like a clipped glyph and wasted an afternoon.
  *
- * `crop` is in screen pixels, as `maximiseSimHub` and a UI Automation bounding rectangle report
+ * `crop` is in screen pixels, as `maximiseSimHub` and panel-shots's `measurePanel` report
  * them, and is taken out of the window's own picture after it is drawn: the bitmap starts at the
  * window's top-left, which on a maximised window is the invisible resize border at -8,-8, and the
  * offset is worked out on the guest from the rectangle it photographed. A crop that misses the
