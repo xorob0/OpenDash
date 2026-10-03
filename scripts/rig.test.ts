@@ -1,14 +1,17 @@
 /**
  * What `scripts/rig.ts` decides without a VM: that every face it names exists, that a screen takes
  * the stock namespace for its size, that the pages it sets are pages the catalogues have, and that
- * the panel rig is written in fields the plugin's settings classes read.
+ * the panel rig is written in fields the plugin's settings classes read; and, against a fake host,
+ * that it never restarts SimHub under another session's claim.
  */
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
 import { shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
-import { browShape, catalogueMask, GALLERY, galleryRig, panelRig, RIM_FOLDER, RIM_SHAPE, RIM_ZONE_B, RIM_ZONE_C, screenFor, type ManifestPackage } from './rig.ts';
+import { withFakeHost, type Answer } from './fakeHost.ts';
+import { browShape, catalogueMask, GALLERY, galleryRig, main, panelRig, RIM_FOLDER, RIM_SHAPE, RIM_ZONE_B, RIM_ZONE_C, screenFor, type ManifestPackage } from './rig.ts';
+import type { Claim } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
 const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
@@ -171,5 +174,90 @@ describe('the panel rig', () => {
 
   test.if(manifest !== null)('names only packages the build produced', () => {
     expect((panelRig(manifest!).Rig as unknown[]).length).toBe(5);
+  });
+});
+
+/**
+ * `gallery`, `clear` and the rest stop SimHub and write its settings, which is exactly what the claim
+ * exists to keep from happening under another session's `shots` or `clips`. So the command is checked
+ * first, the claim taken around the write, and a VM somebody else holds is left alone.
+ */
+describe('rig and the claim on the VM', () => {
+  const now = Date.now();
+  const theirs: Claim = { who: 'root@cumulus:~/dev/OpenDash/.claude/worktrees/agent-b', since: new Date(now - 60_000).toISOString(), note: 'shots 8x1' };
+  const isStop = (script: string) => script.includes('Stop-Process');
+  const lockIn = (share: string) => path.join(share, 'vm.lock');
+  const readLock = (share: string): Claim | null => (existsSync(lockIn(share)) ? (JSON.parse(readFileSync(lockIn(share), 'utf8')) as Claim) : null);
+
+  /**
+   * Runs rig's command line as the session `me`, against a guest that answers `guest`. `main` does
+   * all its work before its first await, so the lock is read back before the fake host is taken down.
+   */
+  async function rig(argv: string[], guest: (script: string, share: string) => Answer, lock: Claim | null) {
+    const before = process.env.OPENDASH_VM_WHO;
+    process.env.OPENDASH_VM_WHO = 'me';
+    const quiet = { log: console.log, error: console.error };
+    console.log = console.error = () => {};
+    try {
+      let stopped = false;
+      let after: Claim | null = null;
+      const done = withFakeHost(
+        (script, share) => {
+          if (isStop(script)) stopped = true;
+          return guest(script, share);
+        },
+        (host, _calls, share) => {
+          if (lock) writeFileSync(lockIn(share), `${JSON.stringify(lock)}\n`);
+          const code = main(argv, host);
+          after = readLock(share);
+          return code;
+        },
+      );
+      return { code: await done, stopped, after: after as Claim | null };
+    } finally {
+      console.log = quiet.log;
+      console.error = quiet.error;
+      if (before === undefined) delete process.env.OPENDASH_VM_WHO;
+      else process.env.OPENDASH_VM_WHO = before;
+    }
+  }
+
+  // A guest with no settings file on it, whose SimHub will not stop: enough to see what was tried.
+  const guest = (script: string): Answer => (isStop(script) ? { status: 1, stdout: 'SimHub is still running (pid 4242)' } : { stdout: 'missing' });
+
+  test.each(['clear', 'empty', 'gallery', 'panel'])('%s refuses while another session holds the VM, and never stops SimHub', async (preset) => {
+    const r = await rig([preset], guest, theirs);
+    expect(r.code).not.toBe(0);
+    expect(r.stopped).toBe(false);
+    expect(r.after).toEqual(theirs);
+  });
+
+  test('an unknown command is refused before the VM is touched', async () => {
+    let asked = false;
+    const r = await rig(['galery'], () => ((asked = true), {}), null);
+    expect(r.code).toBe(2);
+    expect(asked).toBe(false);
+  });
+
+  test('takes a free VM around the write, and gives it back after, even when the write failed', async () => {
+    let during: Claim | null = null;
+    const r = await rig(
+      ['clear'],
+      (script, share) => {
+        if (isStop(script)) during = readLock(share);
+        return guest(script);
+      },
+      null,
+    );
+    expect(r.stopped).toBe(true);
+    expect((during as Claim | null)?.who).toBe('me');
+    expect(r.after).toBeNull();
+  });
+
+  test("run inside the session's own claim, leaves that claim held as it was", async () => {
+    const mine: Claim = { who: 'me', since: new Date(now - 120_000).toISOString(), note: 'panel' };
+    const r = await rig(['clear'], guest, mine);
+    expect(r.stopped).toBe(true);
+    expect(r.after).toEqual(mine);
   });
 });

@@ -159,7 +159,7 @@ Two things make it usable from here:
 
 ### Photographing the settings panel
 
-`OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel` claims the VM, installs the
+`bun run panel-shots --menu-y <y> --rig panel` claims the VM, installs the
 plugin with its left-menu entry, seeds a rig of every kind of screen, strip and matrix
 (`bun scripts/rig.ts panel`; `empty` is a genuine first run), and photographs every page at SimHub
 widths of 700, 1000 and 1600 px and maximised into `build/panel/`, cropped to the panel. `--menu-y` is

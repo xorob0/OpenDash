@@ -360,9 +360,9 @@ function recordOne(host: Host, scenario: string, opts: RecordOptions, properties
   const emulator = startEmulator(host, { scenario, replace: true });
   if (!emulator.ok) return emulator;
 
-  // There is one VM and two sessions will fight over it, which is what the claim is for; the claim
-  // is taken and released rather than held atomically, so two commands that start within a moment
-  // of each other can both believe they have it. What that looks like is a trace labelled with the
+  // There is one VM and two sessions will fight over it, which is what the claim is for; but the
+  // winvm tools, and anything else that never claims, drive the guest whoever holds it (#218). What
+  // that looks like is a trace labelled with the
   // scenario that was asked for and holding the telemetry of the one somebody else started, and
   // nothing downstream could ever tell. So the emulator is asked what it is running, and the
   // process it answered as is checked again once the recording is done.

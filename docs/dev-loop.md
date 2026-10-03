@@ -46,7 +46,7 @@ The panel is WPF inside SimHub's window, so nothing has to be opened in Dash Stu
 entry in SimHub's left menu is clicked once and every page is one click on the sidebar.
 
 ```bash
-OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel   # every page at every width
+bun run panel-shots --menu-y <y> --rig panel   # every page at every width
 ```
 
 That one command claims the VM, packages and installs the plugin with its left-menu entry, puts the
@@ -102,6 +102,13 @@ it is one period of the emulator's rev sweep, so the loop seam is quiet. Every c
 SimHub produce confusing results rather than an error. A claim older than ninety minutes counts as
 abandoned, since a session that dies never releases one. `bun run vm who` says who has it and
 `bun run vm release` gives it back.
+
+A claim is the user, the machine and the checkout, as in `root@cumulus:~/dev/OpenDash/.claude/worktrees/agent-a`,
+so two worktrees on one machine are two sessions, while every command run from one checkout is the
+same one: a claim in one command carries into the next, and `bun run vm release` from a fresh shell
+gives it back. `OPENDASH_VM_WHO` overrides the name. The claim is a compare-and-swap under `flock` on
+the VM host, so two sessions claiming at the same moment leave one owner and the other is refused.
+`bun scripts/rig.ts` claims around its restart, and keeps a claim it found already yours.
 
 ## Why opening the dashboard is clicked
 

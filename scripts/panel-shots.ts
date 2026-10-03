@@ -168,9 +168,7 @@ export const USAGE = `panel-shots: photograph every page of the settings panel a
   --no-build   install the plugin DLL already built rather than packaging again
   --keep       leave the VM claimed and the emulator running when this returns
 
-It claims the VM as OPENDASH_VM_WHO, and refuses on the VM host when that is not set: every session
-there is root@cumulus otherwise, and two of them would both think the claim was theirs. Every step is
-gated on the claim still being this run's. A page taller than the panel is photographed in parts,
+It claims the VM, and every step is gated on the claim still being this run's. A page taller than the panel is photographed in parts,
 <page>-<width>-1of2.png and -2of2.png, scrolled with the mouse wheel. run.json and panel.json are
 written beside the pictures: provenance, and the width SimHub and the panel actually reached.
 `;
@@ -465,11 +463,6 @@ interface Shot {
 const firstLine = (r: RunResult): string => (r.stderr || r.stdout || 'no output').split('\n')[0]!.trim();
 
 export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<number> {
-  if (host.local && !process.env.OPENDASH_VM_WHO) {
-    console.error('Set OPENDASH_VM_WHO to a name of your own first, e.g. OPENDASH_VM_WHO=root@cumulus-503.');
-    console.error('Every session on this host claims as root@cumulus otherwise, and two of them would each take the other\'s claim for their own.');
-    return 1;
-  }
   if (opts.scenario !== null) {
     const known = scenarios();
     if (known.length > 0 && !known.includes(opts.scenario)) {

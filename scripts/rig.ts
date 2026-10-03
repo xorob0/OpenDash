@@ -28,7 +28,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
 import { GRID_SHAPES, shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
-import { fromShare, powershell, psq, resolveHost, simhubStart, simhubStop, sleep, toShare, type Host, type RunResult } from './vm.ts';
+import { fromShare, powershell, psq, resolveHost, simhubStart, simhubStop, sleep, toShare, withClaim, type Host, type RunResult } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
 const SIMHUB_DIR = 'C:\\Program Files (x86)\\SimHub';
@@ -351,25 +351,45 @@ const readManifest = (): { packages: ManifestPackage[] } | string => {
   return JSON.parse(readFileSync(manifestPath, 'utf8')) as { packages: ManifestPackage[] };
 };
 
+/** What a preset does to the settings it finds, or null for `empty`, which deletes them. */
+type Edit = ((settings: Record<string, unknown>) => void) | null;
+
+/**
+ * Decides what a preset writes, from build/ alone, so that a preset that cannot be put on (no
+ * manifest, a face the build did not produce) says so before the VM is claimed or SimHub stopped.
+ */
+function planPreset(preset: Preset): Edit | RunResult {
+  if (preset === 'empty') return null;
+  if (preset === 'clear') return (settings) => void (settings.Rig = []);
+  const manifest = readManifest();
+  if (typeof manifest === 'string') return { ok: false, code: 1, stdout: '', stderr: manifest };
+  try {
+    if (preset === 'gallery') {
+      const rig = galleryRig(manifest);
+      return (settings) => void (settings.Rig = rig);
+    }
+    const panel = panelRig(manifest);
+    return (settings) => void Object.assign(settings, panel);
+  } catch (e) {
+    return { ok: false, code: 1, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+const isPlan = (plan: Edit | RunResult): plan is Edit => plan === null || typeof plan === 'function';
+
 /**
  * Puts a preset on the VM and leaves SimHub running on it. The caller holds the VM's claim: this
  * stops and starts SimHub, and `panel` waits for the plugin before it deletes a folder.
  */
 export function applyPreset(host: Host, preset: Preset): RunResult {
-  if (preset === 'empty') return resetSettings(host);
+  const plan = planPreset(preset);
+  return isPlan(plan) ? putPreset(host, preset, plan) : plan;
+}
+
+function putPreset(host: Host, preset: Preset, edit: Edit): RunResult {
+  if (edit === null) return resetSettings(host);
   const settings = readSettings(host);
-  if (preset === 'clear') {
-    settings.Rig = [];
-  } else {
-    const manifest = readManifest();
-    if (typeof manifest === 'string') return { ok: false, code: 1, stdout: '', stderr: manifest };
-    try {
-      if (preset === 'gallery') settings.Rig = galleryRig(manifest);
-      else Object.assign(settings, panelRig(manifest));
-    } catch (e) {
-      return { ok: false, code: 1, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
-    }
-  }
+  edit(settings);
   // The panel rig's missing folder is taken out while SimHub is stopped too, so that it appearing
   // again is Init's doing. A folder left over from an earlier start was already there when the wait
   // below began, so the wait passed at once, the delete beat Init, and Init wrote it straight back.
@@ -397,11 +417,13 @@ const USAGE = `rig: put a set of screens on the VM's plugin, so the captures sho
   bun scripts/rig.ts empty      a genuine first run: the settings and SimHub's copies of them
                                 deleted, and every OpenDash folder taken out of DashTemplates
 
-SimHub is stopped and started again, because the plugin reads its settings once at startup. Claim
-the VM first (bun run vm claim), and chain on the claim with &&.
+SimHub is stopped and started again, because the plugin reads its settings once at startup, so a
+preset claims the VM for as long as it takes, and is refused while another session holds it. Run
+inside a claim of your own (bun run vm claim "..." && bun scripts/rig.ts panel), it leaves that
+claim held.
 `;
 
-export async function main(argv: readonly string[]): Promise<number> {
+export async function main(argv: readonly string[], host: Host = resolveHost()): Promise<number> {
   const command = argv[0] ?? 'show';
   if (command === '--help' || command === '-h' || command === 'help') {
     console.log(USAGE);
@@ -411,12 +433,17 @@ export async function main(argv: readonly string[]): Promise<number> {
     console.error(USAGE);
     return 2;
   }
-  const host = resolveHost();
   if (command === 'show') {
     console.log(describe(readSettings(host)));
     return 0;
   }
-  const applied = applyPreset(host, command as Preset);
+  const preset = command as Preset;
+  const plan = planPreset(preset);
+  if (!isPlan(plan)) {
+    console.error(plan.stderr);
+    return 1;
+  }
+  const applied = withClaim(host, `rig ${preset}`, () => putPreset(host, preset, plan));
   if (applied.stdout) console.log(applied.stdout);
   if (!applied.ok) console.error(applied.stderr || 'the preset did not take');
   return applied.ok ? 0 : 1;
