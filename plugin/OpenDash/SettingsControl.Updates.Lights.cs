@@ -40,12 +40,12 @@ namespace OpenDashPlugin
             return PanelUpdates.StripPlans(census, reachable, embedded.Keys);
         }
 
-        /// <summary>SimHub's LED devices, their names by id, off one read (LedTargets.All, which never throws):
+        /// <summary>SimHub's LED devices, their names by id, off the page's one read (ledDevices):
         /// whether a strip's device is listed, and the name the select step gives it.</summary>
-        private static IDictionary<string, string> UpdatesDevices()
+        private IDictionary<string, string> UpdatesDevices()
         {
             var devices = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var target in LedTargets.All())
+            foreach (var target in ledDevices.Targets)
             {
                 if (target != null && target.Id != null) devices[target.Id] = target.Name;
             }
@@ -124,11 +124,11 @@ namespace OpenDashPlugin
                 if (row.OffersUpdate)
                 {
                     var button = UpdatesRowPress();
-                    button.IsEnabled = !applying;
+                    button.IsEnabled = !UpdatesHeld;
                     updatesRunPresses.Add(button);
                     button.Click += (sender, args) =>
                     {
-                        if (applying) return;
+                        if (UpdatesHeld) return;
                         draw(update());
                         // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
                         RefreshAttention();
@@ -190,11 +190,11 @@ namespace OpenDashPlugin
                 if (row.OffersUpdate)
                 {
                     var button = UpdatesRowPress();
-                    button.IsEnabled = !applying;
+                    button.IsEnabled = !UpdatesHeld;
                     updatesRunPresses.Add(button);
                     button.Click += (sender, args) =>
                     {
-                        if (applying) return;
+                        if (UpdatesHeld) return;
                         draw(press());
                         // What needs fixing moved with the press: Home's list, the Matrix and Updates dots.
                         RefreshAttention();
@@ -236,7 +236,7 @@ namespace OpenDashPlugin
             foreach (var entry in PanelUpdates.StripsToWrite(census, reachable, wanted, listed))
             {
                 var bar = entry.Key;
-                var result = InstallBar(bar, embedded[bar.ProfileShapeId]);
+                var result = InstallBar(bar, embedded[bar.ProfileShapeId], ledDevices.Targets);
                 tally.Strip(bar.Name, PanelUpdates.DeviceName(devices, bar), entry.Value.State, result);
                 written[PanelUpdates.StripKey(bar)] = result;
             }

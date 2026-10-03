@@ -231,8 +231,15 @@ namespace OpenDashPlugin
             updatesReinstall.ToolTip = PanelUpdates.ReinstallTooltip;
             updatesReinstall.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesReinstallLine, ReplacingAction.Reinstall));
             updatesReinstall.Click += (sender, args) => Reinstall();
-            updatesReinstall.IsEnabled = !applying;
+            updatesReinstall.IsEnabled = !UpdatesHeld;
             updatesReinstall.VerticalAlignment = VerticalAlignment.Top;
+            // The bar sits where the line does: the question is answered by the time anything is written.
+            updatesReinstallProgress = new Border
+            {
+                HorizontalAlignment = HorizontalAlignment.Left,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(PanelUpdates.ReinstallLineGap, 0, 0, 0),
+            };
 
             var grid = new Grid { Margin = new Thickness(0, PanelUpdates.SectionGap, 0, 0) };
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
@@ -240,8 +247,11 @@ namespace OpenDashPlugin
             updatesReinstallLine.Margin = new Thickness(PanelUpdates.ReinstallLineGap, 0, 0, 0);
             Grid.SetColumn(updatesReinstall, 0);
             Grid.SetColumn(updatesReinstallLine, 1);
+            Grid.SetColumn(updatesReinstallProgress, 1);
             grid.Children.Add(updatesReinstall);
             grid.Children.Add(updatesReinstallLine);
+            grid.Children.Add(updatesReinstallProgress);
+            if (updatesWriting) ShowWrite();
             return grid;
         }
     }

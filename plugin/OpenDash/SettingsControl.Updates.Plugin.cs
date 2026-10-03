@@ -94,7 +94,7 @@ namespace OpenDashPlugin
             {
                 updatesDownload = Ui.Button(null, PanelButtonKind.Primary);
                 updatesDownload.MinWidth = ButtonMinWidth;
-                updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
+                updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);
                 updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));
                 updatesDownload.Click += (sender, args) => ApplyUpdate();
             }
@@ -222,7 +222,7 @@ namespace OpenDashPlugin
                 updatesCheckLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
             }
             if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, applying, updateStatus.State);
-            if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, applying);
+            if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);
             var cardLine = PanelUpdates.CardLine(updatesCard, updateStatus);
             // Only ever written, never cleared, here: the line is Download's question otherwise, and the
             // answer's redraw of the card takes this sentence away with the rest. Written in place of the
@@ -244,6 +244,20 @@ namespace OpenDashPlugin
             if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
             foreach (var press in updatesRunPresses) press.IsEnabled = false;
             if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
+        }
+
+        /// <summary>
+        /// Draws the write Reinstall everything or Put mine back is making into this build: the presses it holds off
+        /// disabled (PanelUpdates.RunHolds), and Reinstall everything's bar beside it at the fraction it last reported.
+        /// </summary>
+        private void ShowWrite()
+        {
+            if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
+            if (updatesDownload != null) updatesDownload.IsEnabled = false;
+            foreach (var press in updatesRunPresses) press.IsEnabled = false;
+            if (!updatesWritingReinstall) return;
+            if (updatesReinstallLine != null) updatesReinstallLine.Visibility = Visibility.Collapsed;
+            if (updatesReinstallProgress != null) updatesReinstallProgress.Child = Ui.Progress(updatesWritingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Reinstalling);
         }
 
         /// <summary>
@@ -318,41 +332,54 @@ namespace OpenDashPlugin
         /// </remarks>
         private void RestoreKept()
         {
-            if (applying) return;
+            if (UpdatesHeld) return;
             plugin.Installer.Refresh();
             var root = plugin.Installer.SimHubRoot;
-            var restored = 0;
-            // A copy that could not be put back is said by name, since the card still offers it once the
-            // page is drawn again, and "nothing to put back" under it would say the opposite.
-            var failed = new List<string>();
             // The card shows a kept copy whatever the driver has done since, as the artboard draws it, so a folder edited again
             // is left as it is and named: Restore keeps no copy of what it replaces, and nothing has asked.
             var held = new List<string>();
             var edited = new HashSet<string>(plugin.Installer.EditedFolders.Where(f => f != null), StringComparer.OrdinalIgnoreCase);
+            var putting = new List<KeyValuePair<string, string>>();
             foreach (var kept in UpdatesKept())
             {
-                var folder = kept.Key;
-                if (!PanelUpdates.PutsBack(edited.Contains(folder)))
-                {
-                    held.Add(kept.Value);
-                    continue;
-                }
-                try
-                {
-                    var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
-                    if (copy == null) continue;
-                    if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("Putting back " + folder + " failed", ex);
-                    failed.Add(kept.Value);
-                }
+                if (PanelUpdates.PutsBack(edited.Contains(kept.Key))) putting.Add(kept);
+                else held.Add(kept.Value);
             }
-            plugin.Installer.Refresh();
-            Save();
-            Redraw();
-            Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);
+            var restored = 0;
+            // A copy that could not be put back is said by name, since the card still offers it once the
+            // page is drawn again, and "nothing to put back" under it would say the opposite.
+            var failed = new List<string>();
+            updatesWriting = true;
+            updatesWritingReinstall = false;
+            ShowWrite();
+            // Off the interface thread (#611): a restore deletes the folder and unzips the kept copy in its place.
+            WriteThen(() =>
+            {
+                foreach (var kept in putting)
+                {
+                    var folder = kept.Key;
+                    try
+                    {
+                        var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
+                        if (copy == null) continue;
+                        if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error("Putting back " + folder + " failed", ex);
+                        failed.Add(kept.Value);
+                    }
+                }
+            }, failure =>
+            {
+                updatesWriting = false;
+                // Each folder keeps its own net above, so a failure here is the run's own and is said as nothing put back.
+                if (failure != null) failed.AddRange(putting.Select(kept => kept.Value).Except(failed));
+                plugin.Installer.Refresh();
+                Save();
+                Redraw();
+                Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);
+            });
         }
 
         /// <summary>
@@ -362,7 +389,7 @@ namespace OpenDashPlugin
         {
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
-            if (applying) return;
+            if (UpdatesHeld) return;
             // A check in flight holds Download off (UpdatesRefreshCheck), and its answer redraws the card: a
             // press that reached here anyway has nothing to act on yet, and "No release to install" would be
             // false in a moment.
@@ -564,7 +591,7 @@ namespace OpenDashPlugin
         {
             // Two installers over the same DashTemplates folders is the one combination that can delete a folder
             // one of them is extracting into, so whichever starts first holds the field.
-            if (applying) return;
+            if (UpdatesHeld) return;
 
             // From the disk at the press, for the reason ApplyUpdate reads it there.
             plugin.Installer.Refresh();
@@ -578,32 +605,53 @@ namespace OpenDashPlugin
             }
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
-            if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
+            // The rig as it stands at the press, over an installer of the run's own: the run writes what was asked
+            // for whatever the page does meanwhile, and the plugin's installer, which every page reads, is never
+            // half way through a run (#611). The record is the plugin's, so what is written is remembered.
+            var rig = Settings.RigScreens().Where(screen => screen != null).ToList();
+            var installer = new DashboardInstaller(plugin.Installer.SimHubRoot, new SimHubInstallLog(), plugin.Installer.PackageSource, plugin.Installer.Record)
+            {
+                Rig = () => rig,
+            };
             int replaced = 0, held = 0;
             var wroteFonts = false;
-            string failure = null;
-            try
+            updatesWriting = true;
+            updatesWritingReinstall = true;
+            updatesWritingFraction = 0;
+            ShowWrite();
+            // A folder is the finest grain the installer reports, so this is a handful of calls rather than the
+            // download's thousands; posted all the same, so the run is never paced by the panel.
+            Action<double> report = fraction => Dispatcher.BeginInvoke(new Action(() =>
             {
-                // Every screen on the rig, a second one of a size included: the installer reads the rig and
-                // writes each folder with the screen's own name and namespace, so there is nothing to add after.
+                updatesWritingFraction = fraction;
+                // The build that is showing now, which a rebuild since the press has replaced.
+                if (updatesWriting && updatesReinstallProgress != null) updatesReinstallProgress.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Reinstalling);
+            }));
+            // Every screen on the rig, a second one of a size included: the installer reads the rig and writes each
+            // folder with the screen's own name and namespace, so there is nothing to add after. Off the interface
+            // thread, since it extracts every package, hashes every folder and zips the edited ones (#611).
+            WriteThen(() =>
+            {
                 var writing = DateTime.UtcNow;
-                plugin.Installer.EnsureInstalled(true, replaceEdited);
-                replaced = plugin.Installer.Packages.Count(p => p.Extracted);
-                held = plugin.Installer.Packages.Count(p => p.HeldBack);
+                installer.EnsureInstalled(true, replaceEdited, report);
+                replaced = installer.Packages.Count(p => p.Extracted);
+                held = installer.Packages.Count(p => p.HeldBack);
                 // A font this press put into DashFonts is not drawn until SimHub restarts.
-                wroteFonts = PackageExtractor.FacesWrittenSince(plugin.Installer.SimHubRoot, writing) > 0;
-            }
-            catch (Exception ex)
+                wroteFonts = PackageExtractor.FacesWrittenSince(installer.SimHubRoot, writing) > 0;
+            }, failure =>
             {
-                Log.Error("Reinstall failed", ex);
-                failure = ex.Message;
-            }
-
-            var lights = failure == null ? UpdatesBringLightsForward() : null;
-            Save();
-            Redraw();
-            if (failure != null) Say(PanelUpdates.ReinstallFailed, false);
-            else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName(), Settings.MatrixPanels().ToList()), lights.Ok);
+                updatesWriting = false;
+                updatesWritingReinstall = false;
+                if (failure != null) Log.Error("Reinstall failed", failure);
+                // The light profiles are SimHub's own objects, which its interface is bound to, so they are brought
+                // forward here on the interface thread once the dashboards are done.
+                var lights = failure == null ? UpdatesBringLightsForward() : null;
+                plugin.Installer.Refresh();
+                Save();
+                Redraw();
+                if (failure != null) Say(PanelUpdates.ReinstallFailed, false);
+                else Say(PanelUpdates.ReinstallSummary(replaced, held, wroteFonts, lights, FlagBoxName(), Settings.MatrixPanels().ToList()), lights.Ok);
+            });
         }
     }
 }
