@@ -3,6 +3,7 @@
  * size a capture is scaled to.
  */
 import { describe, expect, test } from 'bun:test';
+import path from 'node:path';
 import { LIST_ORDER } from './dev.ts';
 import { mergePreviewRun, parseArgs, previewSize, PREVIEW_HEIGHT, PREVIEW_MIN_WIDTH } from './previews.ts';
 
@@ -70,5 +71,21 @@ describe('mergePreviewRun', () => {
   test('the file is written in a stable order, so a refresh is a readable diff', () => {
     const merged = mergePreviewRun({ schema: 1, previews: { 'OpenDash 850x480': record('a') } }, { OpenDash: record('b'), 'OpenDash 480 round': record('b') });
     expect(Object.keys(merged.previews)).toEqual(['OpenDash', 'OpenDash 480 round', 'OpenDash 850x480']);
+  });
+});
+
+describe('without ffmpeg', () => {
+  // Bun.spawnSync throws when the executable is not on the PATH rather than returning an exit code,
+  // so a check that spawned `ffmpeg -version` ended in a stack trace instead of its own message.
+  test('previews says so and exits non-zero, before it touches the VM', () => {
+    const r = Bun.spawnSync([process.execPath, path.join(import.meta.dir, 'previews.ts'), '--packages', 'OpenDash 850x480'], {
+      env: { ...process.env, PATH: path.dirname(process.execPath) },
+      stdout: 'pipe',
+      stderr: 'pipe',
+    });
+    const stderr = new TextDecoder().decode(r.stderr);
+    expect(stderr).not.toContain('Executable not found');
+    expect(stderr).toContain('ffmpeg is not on this machine');
+    expect(r.exitCode).toBe(1);
   });
 });

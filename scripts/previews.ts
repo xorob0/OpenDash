@@ -135,7 +135,9 @@ export function scaleInto(source: string, target: string): string | null {
 }
 
 export async function previews(opts: Options): Promise<number> {
-  if (Bun.spawnSync(['ffmpeg', '-version'], { stdout: 'pipe', stderr: 'pipe' }).exitCode !== 0) {
+  // Bun.which and not a spawn: spawning a program that is not on the PATH throws, and the message
+  // below would then be a stack trace.
+  if (!Bun.which('ffmpeg')) {
     console.error('ffmpeg is not on this machine, and the scaling needs it: apt install ffmpeg');
     return 1;
   }
