@@ -103,6 +103,12 @@ namespace OpenDashPlugin
         /// <summary>The failure, null when the package was read (and installed, when asked) without error.</summary>
         public string Error { get; set; }
 
+        /// <summary>
+        /// Why this run installed the folder without its fonts, null when it copied them or did not install. The folder
+        /// is in place and recorded, so it is not an <see cref="Error"/>: a press that wrote it says it did (#593).
+        /// </summary>
+        public string FontsError { get; set; }
+
         /// <summary>True when the folder on disk is not the one OpenDash wrote, so replacing it would destroy
         /// somebody's work. Biased towards true: no record and an unreadable folder both count. Always false on an
         /// entry <see cref="OutsideRig"/>, which nothing replaces.</summary>
@@ -135,6 +141,7 @@ namespace OpenDashPlugin
             // A folder that was refused is not up to date, and saying so was how Reinstall came to report success
             // for a dashboard it had deliberately not touched.
             if (HeldBack) line += " (you have edited this one, so it was left alone)";
+            if (FontsError != null) line += " (installed without its fonts: " + FontsError + ")";
             return Error == null ? line : line + " (" + Error + ")";
         }
     }
@@ -356,7 +363,10 @@ namespace OpenDashPlugin
             var mine = results.Where((result, index) => planned[index].Wanted).ToList();
             Status = (mine.Count == 0 ? results.Where(result => result.Status == InstallStatus.Failed) : mine)
                 .Aggregate(InstallStatus.UpToDate, (worst, result) => Worse(worst, result.Status));
-            LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null);
+            // A folder installed without its fonts went through, but it is drawn in other faces until they are copied,
+            // so it is what the page's note under the table points at when nothing worse happened.
+            LastError = results.Select(result => result.Error).FirstOrDefault(error => error != null)
+                ?? results.Select(result => result.FontsError).FirstOrDefault(error => error != null);
 
             if (results.Any(result => result.Extracted)) RefreshSimHubFonts();
         }
@@ -521,14 +531,17 @@ namespace OpenDashPlugin
                     using (var package = packages.Open(name))
                     {
                         var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork, planned.Screen);
+                        // Recorded before anything else can throw: the folder on disk is now OpenDash's, and a record
+                        // still holding the one it replaced reads it as edited on every run after (#593).
+                        record.Set(folder, FolderFingerprint.Of(installedFolder));
                         log.Info("Fonts copied: " + result.FontsCopied);
                         entry.KeptCopy = result.BackupPath;
+                        entry.FontsError = result.FontsError;
                     }
                     entry.Extracted = true;
+                    entry.Edited = false;
                     entry.InstalledVersion = ReadInstalled(folder);
                     entry.Status = Versioning.Decide(entry.InstalledVersion, entry.EmbeddedVersion);
-                    record.Set(folder, FolderFingerprint.Of(installedFolder));
-                    entry.Edited = false;
                 }
                 else if (entry.InstalledVersion != null && string.IsNullOrWhiteSpace(remembered))
                 {

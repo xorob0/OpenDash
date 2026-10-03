@@ -781,6 +781,49 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A folder put in place is recorded as OpenDash's own even when its fonts then could not be copied (#593).
+        /// </summary>
+        /// <remarks>
+        /// The fonts are copied after the new folder has replaced the old one, and a copy that threw used to throw out
+        /// of the install, past the line that records the new folder's fingerprint. The record kept the old folder's,
+        /// so the next run read a folder nobody had touched as edited: it was held back from every later install, and
+        /// Reinstall and Update asked "You have edited 1 dashboard" about it for good. DashFonts being a file is the
+        /// simplest way to make the copy fail on every platform; a folder SimHub's account may not write is the real one.
+        /// </remarks>
+        [Fact]
+        public void A_folder_whose_fonts_could_not_be_copied_is_recorded_and_not_read_as_edited()
+        {
+            var record = new MemoryFolderRecord();
+            Installer(new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.1.0")), record: record).EnsureInstalled(false);
+            var fonts = Path.Combine(root, PackageExtractor.DashFonts);
+            Directory.Delete(fonts, true);
+            File.WriteAllText(fonts, "not a folder");
+
+            var newer = new MemoryPackageSource().Add(WideName, SyntheticPackage.Zip("OpenDash", "0.2.0"));
+            var installer = Installer(newer, record: record);
+            installer.EnsureInstalled(false);
+
+            var entry = installer.Packages.Single();
+            Assert.True(entry.Extracted);
+            Assert.Equal("0.2.0", entry.InstalledVersion);
+            Assert.Equal(InstallStatus.UpToDate, entry.Status);
+            // Said rather than swallowed, and not as a failure: the dashboard is in place, drawn in other faces.
+            Assert.Null(entry.Error);
+            Assert.Contains("already exists", entry.FontsError);
+            Assert.Contains("installed without its fonts", entry.Describe());
+            Assert.Equal(entry.FontsError, installer.LastError);
+            Assert.True(record.Get("OpenDash") == FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, "OpenDash")),
+                "the record should hold the fingerprint of the folder just put in place");
+
+            // What every page reads the next time it looks.
+            var next = Installer(newer, record: record);
+            next.Refresh();
+            // Reinstall everything asks its question of these folders; the message is the line it would have put up.
+            Assert.True(next.EditedFolders.Count == 0, "Reinstall would ask: " + PanelUpdates.ReinstallQuestion(next.EditedFolders));
+            Assert.False(next.Packages.Single().Edited);
+        }
+
+        /// <summary>
         /// A folder OpenDash cannot read is one it cannot vouch for, which is the asking case rather than a failure.
         /// It used to be a failure that never went away, since the fingerprint is taken where Edited is assigned: the
         /// exception an unreadable file raises landed in the blanket catch of Process, the package was reported Failed,
