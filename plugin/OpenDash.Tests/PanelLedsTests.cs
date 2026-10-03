@@ -321,7 +321,7 @@ namespace OpenDashPlugin.Tests
         {
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             var guard = leds.Substring(leds.IndexOf("private static FlagBoxPlan LedsReinstall(", StringComparison.Ordinal));
-            guard = guard.Substring(0, guard.IndexOf("return LedsLogged(bar, InstallBar(bar, found.Json));", StringComparison.Ordinal));
+            guard = guard.Substring(0, guard.IndexOf("return LedsLogged(bar, InstallBar(bar, found.Json, targets));", StringComparison.Ordinal));
             Assert.Contains("var found = EmbeddedProfileOf(bar);", guard);
             Assert.Contains("if (found == null)", guard);
             Assert.Contains("if (LedsTargetOf(targets, bar.Device) == null)", guard);
@@ -338,15 +338,20 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (!string.Equals(ids[i], current, StringComparison.Ordinal)) chosen(ids[i]);", leds);
             // InstallBar is called in two places only: the guard, and a move, which installs on the device just
             // picked from SimHub's own list.
-            Assert.Equal(2, Occurrences(leds, "InstallBar(bar, found.Json)"));
+            Assert.Equal(2, Occurrences(leds, "InstallBar(bar, found.Json, targets)"));
             Assert.Contains("var embedded = EmbeddedProfileOf(bar) != null;", leds);
             Assert.Contains("var listed = LedsTargetOf(targets, bar.Device) != null;", leds);
             Assert.Contains(": PanelLeds.ProfileBlocked(embedded, listed, offered, declined);", leds);
             Assert.Contains("? PanelLeds.HeaderBlocked(embedded, listed, offered, declined)", leds);
             Assert.Contains("var blocked = LedsProfileBlocked(bar, targets, declined, true);", leds);
             Assert.Contains("var offered = targets.Count;", leds);
-            Assert.Contains("return targets.FirstOrDefault(target => string.Equals(target.Id, wanted, StringComparison.Ordinal));", leds);
-            Assert.Contains("var wanted = LedBar.NormaliseDevice(device);", leds);
+            // The find is LedTargets.Find over the list the page already read (#611), which normalises the id as a
+            // bar records it.
+            Assert.Contains("return LedTargets.Find(device, targets);", leds);
+            var find = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "LedTargets.cs"));
+            find = find.Substring(find.IndexOf("public static LedTarget Find(string id, IEnumerable<LedTarget> targets)", StringComparison.Ordinal));
+            Assert.Contains("var wanted = LedBar.NormaliseDevice(id);", find);
+            Assert.Contains("return targets.FirstOrDefault(t => t != null && string.Equals(t.Id, wanted, StringComparison.Ordinal));", find);
             Assert.Contains("var action = blocked == null ? PanelLeds.ProfileAction(profile) : null;", leds);
         }
 
@@ -454,17 +459,20 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// SimHub's LED devices are walked once a build and once a press, on SimHub's interface thread: the build's
-        /// walk is handed to the header, and each press reads the list once for its guard, its install and its
-        /// line. Only a move, whose line names the device after the install, walks again on its own.
+        /// SimHub's LED devices are walked once a build, on SimHub's interface thread, and the presses on the page use
+        /// that walk (#611): the build reads the list the census before it read (ledDevices) and hands it to the header,
+        /// and each press reads it for its guard, its install and its line. A move finds the device its line names in
+        /// the same list. PanelLedDevicesTests counts the reads.
         /// </summary>
         [Fact]
         public void SimHubs_devices_are_walked_once_a_build_and_once_a_press()
         {
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
+            Assert.Equal(0, Occurrences(leds, "LedTargets.All("));
             Assert.Equal(1, Occurrences(leds, "LedTargets.Find("));
-            Assert.Contains("var target = LedTargets.Find(bar.Device);", Body(leds, "private void MoveLedBar(", "private FrameworkElement BuildLedBarActions("));
-            Assert.Equal(1, Occurrences(Body(leds, "private FrameworkElement BuildLedsPage(", "private FrameworkElement LedsEveryStripSection("), "LedTargets.All("));
+            Assert.Contains("return LedTargets.Find(device, targets);", Body(leds, "private static LedTarget LedsTargetOf(", "private static FlagBoxPlan LedsReinstall("));
+            Assert.Contains("var target = LedsTargetOf(targets, bar.Device);", Body(leds, "private void MoveLedBar(", "private FrameworkElement BuildLedBarActions("));
+            Assert.Equal(1, Occurrences(Body(leds, "private FrameworkElement BuildLedsPage(", "private FrameworkElement LedsEveryStripSection("), "ledDevices.Targets"));
             Assert.Contains("var parts = new List<UIElement> { LedsHeader(bar, targets, declined) };", leds);
             foreach (var (method, next) in new[]
             {
@@ -475,7 +483,7 @@ namespace OpenDashPlugin.Tests
             })
             {
                 var body = Body(leds, method, next);
-                Assert.True(Occurrences(body, "LedTargets.All(") == 1, method + " walks SimHub's devices more than once");
+                Assert.True(Occurrences(body, "ledDevices.Targets") == 1, method + " does not take the page's devices once");
                 Assert.True(Occurrences(body, "LedsProfileBlocked(") <= 1, method + " asks twice whether it may install");
             }
         }
@@ -632,7 +640,7 @@ namespace OpenDashPlugin.Tests
                 "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
                 "if (plan == null) { Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), blocked))); return; }");
             Holds(Body(leds, "private void RenameLedBar(", "private void ShowRemoveLedBar("), "RenameLedBar",
-                "var targets = inSimHub ? LedTargets.All(out declined) : null; var blocked = inSimHub ? LedsProfileBlocked(bar, targets, declined) : null;",
+                "var targets = inSimHub ? ledDevices.Targets : null; var declined = inSimHub ? ledDevices.Declined : null; var blocked = inSimHub ? LedsProfileBlocked(bar, targets, declined) : null;",
                 "if (inSimHub && blocked == null) { var plan = LedsReinstall(bar, targets);",
                 "if (blocked != null) { Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.Renamed(bar.Name, false), blocked))); return; }");
             Holds(Body(leds, "private void AddLedBar(", null), "AddLedBar",
@@ -2142,7 +2150,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelLeds.RemovedCleanly(false, null));
             // The page keeps what the uninstall returned, and says the line in caution where it failed.
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.Contains("takenOut = StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns));", leds);
+            Assert.Contains("takenOut = StripInstaller.UninstallEverywhere(LedBarProfile.IdFor(ns), ledDevices.Targets);", leds);
             Assert.Contains("Say(PanelLeds.Removed(name, held, takenOut), PanelLeds.RemovedCleanly(held, takenOut));", leds);
         }
 

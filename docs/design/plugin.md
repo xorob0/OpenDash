@@ -478,8 +478,9 @@ matrix profile. A dashboard the driver edited is kept as a copy first. A newer p
 Matrix page's Reinstall is the one press that puts this build's older flag box profile over it, and only
 when the driver asks for it there.
 
-**The kept card** shows whenever a kept copy exists. Put mine back writes it back, and leaves a folder
-edited since as it is and says so, since putting back keeps no copy of what it replaces.
+**The kept card** shows whenever a kept copy exists. Put mine back writes it back and uses it up, so the
+card goes once every copy is back; what it replaces is kept as the ordinary backup. It leaves a folder
+edited since as it is and says so, since nothing has asked to replace those edits (#608).
 
 **Support** copies a report to paste (versions, devices and the last 200 log lines; nothing is sent),
 opens SimHub's log, and links the issue tracker and the guide.

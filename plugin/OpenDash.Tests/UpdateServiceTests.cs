@@ -973,5 +973,142 @@ namespace OpenDashPlugin.Tests
             Assert.True(log.Written.Wait(TimeSpan.FromSeconds(5)));
             Assert.Contains(log.Lines, line => line.Contains("failed in the background"));
         }
+
+        /// <summary>
+        /// A press on the panel that writes DashTemplates runs off the interface thread and is counted as writing from
+        /// the moment it is handed over until it has finished, so a SimHub closing meanwhile waits for it and #606 can
+        /// refuse a second writer on Busy; it says it has finished only once it no longer counts (#611).
+        /// </summary>
+        [Fact]
+        public void A_panel_write_runs_off_the_caller_s_thread_and_counts_as_writing_until_it_is_done()
+        {
+            var service = new UpdateService(new Fetcher());
+            var caller = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            var release = new System.Threading.ManualResetEventSlim();
+            var running = new System.Threading.ManualResetEventSlim();
+            var finished = new System.Threading.ManualResetEventSlim();
+            var ranOn = 0;
+            var busyAtFinish = true;
+            Exception handed = new Exception("not called");
+
+            Assert.True(service.WriteInBackground(() =>
+            {
+                ranOn = System.Threading.Thread.CurrentThread.ManagedThreadId;
+                running.Set();
+                release.Wait(TimeSpan.FromSeconds(10));
+            }, failure =>
+            {
+                handed = failure;
+                busyAtFinish = UpdateService.Busy;
+                finished.Set();
+            }));
+
+            // Counted before the work has even started: the press is a writer from the moment it returns.
+            Assert.True(UpdateService.Busy);
+            Assert.True(running.Wait(TimeSpan.FromSeconds(5)));
+            Assert.NotEqual(caller, ranOn);
+            Assert.False(UpdateService.WaitForIdle(TimeSpan.Zero));
+            release.Set();
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.Null(handed);
+            Assert.False(busyAtFinish);
+            Assert.True(UpdateService.WaitForIdle(TimeSpan.Zero));
+        }
+
+        /// <summary>Two writers never overlap: a second press waits for the first, as it did when both ran on the click.</summary>
+        [Fact]
+        public void A_second_panel_write_waits_for_the_first()
+        {
+            var service = new UpdateService(new Fetcher());
+            var release = new System.Threading.ManualResetEventSlim();
+            var firstRunning = new System.Threading.ManualResetEventSlim();
+            var bothDone = new System.Threading.CountdownEvent(2);
+            var order = new List<string>();
+
+            service.WriteInBackground(() =>
+            {
+                lock (order) order.Add("first starts");
+                firstRunning.Set();
+                release.Wait(TimeSpan.FromSeconds(10));
+                lock (order) order.Add("first ends");
+            }, failure => bothDone.Signal());
+            Assert.True(firstRunning.Wait(TimeSpan.FromSeconds(5)));
+            service.WriteInBackground(() => { lock (order) order.Add("second"); }, failure => bothDone.Signal());
+
+            // Long enough for the second to have run had nothing held it.
+            System.Threading.Thread.Sleep(200);
+            lock (order) Assert.Equal(new[] { "first starts" }, order);
+            release.Set();
+            Assert.True(bothDone.Wait(TimeSpan.FromSeconds(10)));
+            Assert.Equal(new[] { "first starts", "first ends", "second" }, order);
+            Assert.False(UpdateService.Busy);
+        }
+
+        /// <summary>A write that throws is logged and handed to its ending, which still runs, so the page stops showing it.</summary>
+        [Fact]
+        public void A_panel_write_that_throws_is_logged_and_still_finishes()
+        {
+            var log = new ListLog();
+            var service = new UpdateService(new Fetcher(), log);
+            var finished = new System.Threading.ManualResetEventSlim();
+            Exception handed = null;
+
+            Assert.True(service.WriteInBackground(() => { throw new IOException("disk full"); }, failure => { handed = failure; finished.Set(); }));
+
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.IsType<IOException>(handed);
+            Assert.Contains(log.Lines, line => line.Contains("failed in the background") && line.Contains("disk full"));
+            Assert.False(UpdateService.Busy);
+        }
+
+        /// <summary>
+        /// Every press on the panel that writes, puts back or removes a dashboard folder does it inside WriteThen, which
+        /// hands it to <see cref="UpdateService.WriteInBackground"/>: none runs on the click any more, where SimHub's
+        /// whole window stopped answering for as long as it took (#611). The panel is WPF and is read rather than run.
+        /// </summary>
+        [Fact]
+        public void The_panel_writes_dashboards_only_off_the_interface_thread()
+        {
+            var writes = new[] { "Installer.Write(", ".EnsureInstalled(", "PackageExtractor.Restore(", "ScreenInstaller.Remove(" };
+            var method = new System.Text.RegularExpressions.Regex(@"(private|public|internal|protected)[^;{}=]*\(");
+            var onTheClick = new List<string>();
+            var seen = 0;
+            foreach (var path in RepoPaths.SettingsControlSources())
+            {
+                var code = RepoPaths.Code(path);
+                foreach (var write in writes)
+                {
+                    for (var at = code.IndexOf(write, StringComparison.Ordinal); at >= 0; at = code.IndexOf(write, at + 1, StringComparison.Ordinal))
+                    {
+                        seen++;
+                        var before = code.Substring(0, at);
+                        var declared = method.Matches(before).Cast<System.Text.RegularExpressions.Match>().Select(m => m.Index).DefaultIfEmpty(-1).Max();
+                        var handed = Math.Max(before.LastIndexOf("WriteThen(", StringComparison.Ordinal), before.LastIndexOf("WriteScreenThen(", StringComparison.Ordinal));
+                        if (handed < declared) onTheClick.Add(Path.GetFileName(path) + ": " + code.Substring(at, Math.Min(60, code.Length - at)).Split('\n')[0]);
+                    }
+                }
+            }
+            // Reinstall everything, Put mine back, and the Screens page's add, duplicate, rename, resize, reinstall and
+            // remove, with Home's install again.
+            Assert.True(seen >= 9, "found only " + seen + " writes; the patterns no longer match the panel");
+            Assert.True(onTheClick.Count == 0, "Written on the interface thread:\n" + string.Join("\n", onTheClick));
+        }
+
+        /// <summary>Once SimHub's close has stopped the service a press writes nothing: shutdown has stopped waiting for writers.</summary>
+        [Fact]
+        public void A_panel_write_after_shutdown_has_begun_is_turned_away()
+        {
+            var service = new UpdateService(new Fetcher());
+            service.StopDownloads();
+            var ran = false;
+            var ended = false;
+
+            Assert.False(service.WriteInBackground(() => ran = true, failure => ended = true));
+
+            Assert.False(UpdateService.Busy);
+            System.Threading.Thread.Sleep(100);
+            Assert.False(ran);
+            Assert.False(ended);
+        }
     }
 }
