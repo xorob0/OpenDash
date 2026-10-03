@@ -304,13 +304,21 @@ namespace OpenDashPlugin
             return WriteTitle(folder, folderName, title, log);
         }
 
-        /// <summary>Replaces the first JSON string value after a key, or null when the key is not there.</summary>
+        /// <summary>Replaces the JSON string value of the first occurrence of a key, or null when the key is not there
+        /// or its value is not a string.</summary>
+        /// <remarks>
+        /// Only whitespace may stand between the key and the quote that opens its value. Taking the next quote
+        /// wherever it was turned <c>"Title":null,"X":"y"</c> into <c>"Title":null,"Rim":"y"</c>, the name of the
+        /// key after it overwritten (#620); a Title that is not a string is now reported as no Title, which is
+        /// what it is.
+        /// </remarks>
         private static string ReplaceFirstJsonString(string text, string key, string value)
         {
             var at = text.IndexOf(key, StringComparison.Ordinal);
             if (at < 0) return null;
-            var open = text.IndexOf('"', at + key.Length);
-            if (open < 0) return null;
+            var open = at + key.Length;
+            while (open < text.Length && char.IsWhiteSpace(text[open])) open++;
+            if (open >= text.Length || text[open] != '"') return null;
             var close = open + 1;
             while (close < text.Length && text[close] != '"')
             {
@@ -321,9 +329,22 @@ namespace OpenDashPlugin
             return text.Substring(0, open + 1) + Escape(value) + text.Substring(close);
         }
 
+        /// <summary>A string as the inside of a JSON string literal.</summary>
+        /// <remarks>
+        /// A control character has to be escaped as well as the quote and the backslash: JSON forbids one raw
+        /// inside a string, and a name with a tab in it was otherwise written into a file no strict reader accepts
+        /// (#620).
+        /// </remarks>
         private static string Escape(string value)
         {
-            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            var escaped = new System.Text.StringBuilder(value.Length + 8);
+            foreach (var c in value)
+            {
+                if (c == '\\' || c == '"') escaped.Append('\\').Append(c);
+                else if (c < ' ') escaped.Append("\\u").Append(((int)c).ToString("x4", System.Globalization.CultureInfo.InvariantCulture));
+                else escaped.Append(c);
+            }
+            return escaped.ToString();
         }
 
         /// <summary>The dashboard folder inside a package: the top-level directory holding <dir>.djson. Null when none.</summary>
