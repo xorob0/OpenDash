@@ -348,7 +348,8 @@ Copy-Item ${psq(GUEST_OUT)} ${psq(`${SHARE_UNC}\\opendash-trace.ndjson`)} -Force
 function recordOne(host: Host, scenario: string, opts: RecordOptions, properties: readonly string[]): RunResult {
   console.log(`\n${scenario}: asking SimHub for ${opts.frames} frames at ${opts.hz} Hz`);
   stopEmulator(host);
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const requested = writeRequest(host, scenario, opts, properties);
   if (!requested.ok) return requested;
   // SimHub reads the request once, in Init, so it has to start after the request is in place.
@@ -370,6 +371,7 @@ function recordOne(host: Host, scenario: string, opts: RecordOptions, properties
     return fail(`the emulator on the VM is running ${running === undefined ? 'a scenario it does not name' : JSON.stringify(running)}, not ${JSON.stringify(scenario)}; something else is driving the VM, see \`bun run vm who\``);
   }
   const pid = runningPid(host);
+  if (!pid.ok) return pid;
 
   // The warm-up plus the recorded span, and two minutes more. The VM has two virtual processors and
   // SimHub logs "IRacing missing sample" on it under load, so the telemetry does not always arrive
@@ -380,7 +382,9 @@ function recordOne(host: Host, scenario: string, opts: RecordOptions, properties
   if (!waited.ok) return waited;
   console.log(`  recorded ${waited.stdout}`);
 
-  if (runningPid(host) !== pid) return fail('the emulator was replaced while the recording ran, so the trace is of somebody else\'s scenario; see `bun run vm who`');
+  const after = runningPid(host);
+  if (!after.ok) return fail(`could not tell whether the emulator was replaced while the recording ran, so the trace may be of somebody else's scenario: ${after.stderr}`);
+  if (after.pid !== pid.pid) return fail('the emulator was replaced while the recording ran, so the trace is of somebody else\'s scenario; see `bun run vm who`');
   stopEmulator(host);
   return collect(host, scenario, opts.outDir, simHub);
 }
@@ -436,7 +440,11 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
       console.error(recorder.stderr || recorder.stdout);
       return 1;
     }
-    simhubStop(host);
+    const stopped = simhubStop(host);
+    if (!stopped.ok) {
+      console.error(stopped.stderr);
+      return 1;
+    }
     const installed = installRecorder(host);
     if (!installed.ok) {
       console.error(installed.stderr || installed.stdout);
@@ -468,9 +476,13 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
     if (!opts.keep) {
       // SimHub has to be down to let go of the DLL, and is left running because that is how every
       // other command on this VM expects to find it.
-      simhubStop(host);
+      // Best effort, since the run is over either way, but said out loud: a recorder left in, or a
+      // SimHub left down, is what the next command on this VM would otherwise trip over.
+      const stopped = simhubStop(host);
+      if (!stopped.ok) console.error(`${stopped.stderr}; the recorder could not be taken out`);
       removeRecorder(host);
-      simhubStart(host);
+      const started = simhubStart(host);
+      if (!started.ok) console.error(started.stderr);
       release(host);
     } else {
       console.log('\nthe recorder is still installed and the VM is still claimed (--keep)');

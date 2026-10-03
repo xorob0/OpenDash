@@ -1,21 +1,28 @@
 /**
  * The parts of `scripts/vm.ts` that are decidable without a VM: quoting, the CLIXML that
  * PowerShell writes over SSH, how the host is chosen, when a claim on the VM has gone stale and
- * how a run notices that its own claim changed hands.
- * Everything else in that file is a remote side effect and is proved by running it.
+ * how a run notices that its own claim changed hands, and what a step makes of a guest that says it
+ * failed, which is asked of a fake host (`fakeHost.ts`). Everything else in that file is a remote
+ * side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { withFakeHost, type Answer } from './fakeHost.ts';
 import {
   bindPairs,
   claimLost,
   cleanClixml,
   inputMapping,
+  install,
   parseActivation,
   parseInputSettings,
   PRESS,
   psq,
   resolveHost,
   shq,
+  simhubStart,
   withBindings,
   withKeyboardReader,
   withoutBindings,
@@ -329,5 +336,62 @@ describe("SimHub's record of what each input does", () => {
     const off: PluginActivation[] = [{ ClassName: 'SimHub.Plugins.InputPlugins.KeyboardReaderPlugin', IsEnabled: false, ShowInMainMenu: false, ShowInMainMenuPosition: 0 }];
     expect(withKeyboardReader(off)).toEqual([{ ...off[0]!, IsEnabled: true }]);
     expect(withKeyboardReader([])).toEqual([{ ...off[0]!, IsEnabled: true }]);
+  });
+});
+
+describe('a SimHub that does not start', () => {
+  // What the guest printed, word for word, when SimHub was kept from starting on the VM (#629).
+  const NEVER_APPEARED = 'SimHub did not appear; check a screenshot';
+  const isStart = (script: string) => script.includes("Start-ScheduledTask -TaskName 'SimHub'");
+  const isStop = (script: string) => script.includes('Stop-Process');
+  const isExpand = (script: string) => script.includes('ExtractToDirectory');
+
+  /** A build/ holding one package, which is all `install` reads of it before the guest takes over. */
+  function withBuild<T>(body: (dir: string) => T): T {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'opendash-build-'));
+    writeFileSync(path.join(dir, 'OpenDash Test.simhubdash'), 'not a real package');
+    try {
+      return body(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  test.each([0, 1])('is a failed start, whatever the guest exits with (%i)', (status) => {
+    const r = withFakeHost(
+      (script) => (isStart(script) ? { status, stdout: NEVER_APPEARED } : {}),
+      (host) => simhubStart(host),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('SimHub did not start');
+  });
+
+  test('a start the guest saw is a success, and so is one already running', () => {
+    for (const stdout of ['started (pid 4242)', 'already running']) {
+      const r = withFakeHost((script) => (isStart(script) ? { stdout } : {}), (host) => simhubStart(host));
+      expect(r).toMatchObject({ ok: true, stdout });
+    }
+  });
+
+  test('fails `vm install`, after saying what it installed', () => {
+    const guest = (script: string): Answer => {
+      if (isStop(script)) return { stdout: 'stopped' };
+      if (isExpand(script)) return { stdout: 'installed: OpenDash Test' };
+      if (isStart(script)) return { stdout: NEVER_APPEARED };
+      return {};
+    };
+    const r = withBuild((dir) => withFakeHost(guest, (host) => install(host, ['OpenDash Test'], dir)));
+    expect(r.ok).toBe(false);
+    expect(r.stdout).toContain('installed: OpenDash Test');
+    expect(r.stderr).toContain('SimHub did not start');
+  });
+
+  test('a stop that fails ends `vm install` before anything is expanded under a running SimHub', () => {
+    const guest = (script: string): Answer => (isStop(script) ? { status: 1, stdout: 'SimHub is still running (pid 4242)' } : { stdout: 'ok' });
+    const { r, expanded } = withBuild((dir) =>
+      withFakeHost(guest, (host, calls) => ({ r: install(host, ['OpenDash Test'], dir), expanded: calls.some((c) => c.script !== null && isExpand(c.script)) })),
+    );
+    expect(r.ok).toBe(false);
+    expect(expanded).toBe(false);
   });
 });

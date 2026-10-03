@@ -64,12 +64,29 @@ export interface RunResult {
   stderr: string;
 }
 
+/** What a command run on the container host came back with. */
+export interface Spawned {
+  status: number | null;
+  stdout: string | null;
+  stderr: string | null;
+}
+
+/**
+ * What carries a command to the container host. Every step that reaches the guest goes through it,
+ * PowerShell included, so a test with no VM can put a fake guest here and see what the helpers make
+ * of its answers, a failure above all. Nothing but a test replaces it.
+ */
+export const transport = {
+  run: (argv: readonly string[], timeoutMs: number): Spawned =>
+    spawnSync(argv[0]!, argv.slice(1), { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 }),
+};
+
 /** Runs a shell command on the container host, directly or over SSH. */
 export function onHost(host: Host, command: string, timeoutMs = 180_000): RunResult {
   const argv = host.local
     ? ['bash', '-lc', command]
     : ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', host.name, command];
-  const r = spawnSync(argv[0]!, argv.slice(1), { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
+  const r = transport.run(argv, timeoutMs);
   return {
     ok: r.status === 0,
     code: r.status ?? -1,
@@ -195,19 +212,45 @@ export function sleep(seconds: number): void {
 
 // --------------------------------------------------------------------------------- SimHub
 
-export const simhubStop = (host: Host): RunResult =>
-  powershell(
+/**
+ * A step on the guest that did not do what it was for, saying what it was and what the guest said.
+ * The exit code is kept unless it was 0, which a failure is never reported with.
+ */
+function failed(what: string, r: RunResult): RunResult {
+  const said = [r.stdout.trim(), r.stderr.trim()].filter(Boolean).join('\n');
+  return { ok: false, code: r.code === 0 ? 1 : r.code, stdout: '', stderr: `${what}: ${said || `the guest answered nothing (exit ${r.code})`}` };
+}
+
+/**
+ * Stops SimHub and waits until its process is gone. A stop that did not take is a failure, because
+ * whatever comes next edits files SimHub reads once at startup: done under a running SimHub, the
+ * edit is never read, or is written over when it exits.
+ */
+export function simhubStop(host: Host): RunResult {
+  const r = powershell(
     host,
     `$p = Get-Process SimHubWPF -ErrorAction SilentlyContinue
 if (-not $p) { 'not running'; exit 0 }
 $p | Stop-Process -Force
+$deadline = (Get-Date).AddSeconds(20)
+while ($p = Get-Process SimHubWPF -ErrorAction SilentlyContinue) {
+  if ((Get-Date) -gt $deadline) { "SimHub is still running (pid $($p.Id -join ', ')) 20s after it was stopped"; exit 1 }
+  Start-Sleep -Milliseconds 500
+}
 Start-Sleep -Seconds 3
 'stopped'`,
     90,
   );
+  return r.ok ? r : failed('SimHub did not stop', r);
+}
 
+/**
+ * Starts SimHub through its scheduled task and waits for the process. Only a process the guest saw
+ * is a start: a guest that waited it out, or could not be asked, is a failure, whatever it exited
+ * with, so that a SimHub that never came up stops the step rather than being reported as installed.
+ */
 export function simhubStart(host: Host, waitSeconds = 40): RunResult {
-  return powershell(
+  const r = powershell(
     host,
     `if (Get-Process SimHubWPF -ErrorAction SilentlyContinue) { 'already running'; exit 0 }
 Start-ScheduledTask -TaskName 'SimHub'
@@ -217,9 +260,12 @@ while ((Get-Date) -lt $deadline) {
   if ($p) { "started (pid $($p.Id))"; exit 0 }
   Start-Sleep 1
 }
-'SimHub did not appear; check a screenshot'`,
+'SimHub did not appear within ${waitSeconds}s; check a screenshot'
+exit 1`,
     waitSeconds + 60,
   );
+  const said = r.stdout.trim();
+  return r.ok && (said.startsWith('started') || said === 'already running') ? r : failed('SimHub did not start', r);
 }
 
 /**
@@ -265,8 +311,7 @@ Get-Content $log.FullName -Tail ${Math.max(1, Math.trunc(lines))}`,
  * rescanned. Reports what reached the guest, because a silent copy to the wrong place is the
  * failure this command exists to prevent.
  */
-export function install(host: Host, packages: readonly string[]): RunResult {
-  const buildDir = path.join(repoRoot, 'build');
+export function install(host: Host, packages: readonly string[], buildDir = path.join(repoRoot, 'build')): RunResult {
   if (!existsSync(buildDir)) return { ok: false, code: 1, stdout: '', stderr: 'build/ does not exist; run `bun run build` first' };
 
   const wanted = packages.length > 0 ? packages : ['*'];
@@ -283,7 +328,8 @@ export function install(host: Host, packages: readonly string[]): RunResult {
     if (!r.ok) return r;
   }
 
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const names = [...localFiles].map((f) => f.replace(/\.simhubdash$/, ''));
   const expand = powershell(
     host,
@@ -313,6 +359,7 @@ Get-ChildItem (Join-Path $dt 'OpenDash*\\_SHFonts\\*.ttf') -ErrorAction Silently
   );
   if (!expand.ok) return expand;
   const started = simhubStart(host);
+  if (!started.ok) return { ...started, stdout: expand.stdout };
   return { ...expand, stdout: `${expand.stdout}\n${started.stdout}` };
 }
 
@@ -340,7 +387,8 @@ export function installPlugin(host: Host, build = true, menu = false): RunResult
     }
   }
   if (!existsSync(dll)) return { ok: false, code: 1, stdout: '', stderr: `no plugin at ${dll}` };
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const sent = toShare(host, dll, 'OpenDash.dll');
   if (!sent.ok) return sent;
   const copy = powershell(
@@ -356,6 +404,7 @@ Unblock-File -LiteralPath $dest -ErrorAction SilentlyContinue
   const activated = activatePlugin(host, OPENDASH_PLUGIN_CLASS, menu);
   if (!activated.ok) return activated;
   const started = simhubStart(host);
+  if (!started.ok) return { ...started, stdout: copy.stdout };
   return { ...copy, stdout: `${copy.stdout}\n${started.stdout}` };
 }
 
@@ -638,7 +687,8 @@ export function bindActions(host: Host, pairs: readonly { action: string; key: s
     return { ok: false, code: 2, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
   }
 
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const written = editGuestJson(host, SIMHUB_SETTINGS, 'PluginManagerSettings.json', 'bound', (text) =>
     `${JSON.stringify(withBindings(parseInputSettings(text), mappings), null, 2)}\n`,
   );
@@ -652,7 +702,8 @@ export function bindActions(host: Host, pairs: readonly { action: string; key: s
 
 /** Removes every key binding `bindActions` makes for a plugin's actions, and restarts SimHub. */
 export function unbindActions(host: Host, pluginName: string): RunResult {
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   let removed = 0;
   const cleared = editGuestJson(host, SIMHUB_SETTINGS, 'PluginManagerSettings.json', 'unbound', (text) => {
     const result = withoutBindings(parseInputSettings(text), pluginName);

@@ -266,7 +266,8 @@ function writeSettings(host: Host, settings: Record<string, unknown>, whileStopp
   const local = path.join(repoRoot, 'build', 'vm-settings.json');
   mkdirSync(path.dirname(local), { recursive: true });
   writeFileSync(local, JSON.stringify(settings));
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const sent = toShare(host, local, 'opendash-settings.json');
   if (!sent.ok) return sent;
   const copied = powershell(
@@ -288,7 +289,8 @@ ${whileStopped}
  * Deleting the file alone brings the previous rig back from `_b1`, which is why the copies go too.
  */
 function resetSettings(host: Host): RunResult {
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const cleared = powershell(
     host,
     `$ErrorActionPreference = 'Stop'
