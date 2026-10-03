@@ -42,13 +42,15 @@ bun run package                                 # build + plugin with the packag
 dotnet test plugin/OpenDash.Tests               # plugin unit tests
 ```
 
-**Those four compile neither the panel nor the site**, and CI compiles both, so a change to either
-passes here and goes red there. Run the one that covers what you touched:
+**Those four do not compile the panel**, and CI does, so a change to it passes here and goes red
+there. Build it when you touched it:
 
 ```bash
 dotnet build plugin/OpenDash/OpenDash.csproj    # the WPF panel: SettingsControl*.cs, Widgets.cs, Segmented.cs
-cd site && bun run typecheck                    # the site, which the root typecheck does not reach
 ```
+
+`bun run check` does reach the site: its `typecheck:site` step installs `site/` from its own lockfile
+and runs `cd site && bun run typecheck`, which covers `site/scripts/` as well.
 
 `plugin/OpenDash.Tests` targets net8.0 and the panel is net48 WPF, so the test project picks up only
 the pure `Panel*.cs` classes by pattern and a panel that does not compile passes every test. The way

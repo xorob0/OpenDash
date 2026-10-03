@@ -14,7 +14,7 @@ there and like it, bring the change back into the TypeScript.
 
 ```bash
 bun install
-bun run check      # typecheck + tests, must pass before a pull request
+bun run check      # typecheck (the site's too) + tests, must pass before a pull request
 bun run build      # writes build/OpenDash.simhubdash
 ```
 
