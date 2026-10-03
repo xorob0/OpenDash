@@ -47,6 +47,9 @@ namespace OpenDashPlugin
         /// <summary>The screens whose properties and actions are attached; see AttachAddedScreens (#636).</summary>
         private readonly ScreenAttachments attached = new ScreenAttachments();
 
+        /// <summary>The strips whose own properties are attached; see AttachAddedBars (#565).</summary>
+        private readonly BarAttachments attachedBars = new BarAttachments();
+
         /// <summary>What AttachActions registers an action with, kept for the screens added after Init. Null
         /// until Init has registered the rig's.</summary>
         private RegisterAction registerAction;
@@ -479,24 +482,32 @@ namespace OpenDashPlugin
             }
             // One group per bar the rig holds, under that bar's own namespace, which is what lets two
             // strips be configured apart: the profile installed for a bar carries these names as
-            // literals, rewritten from the rig-wide ones above by LedBarProfile. The namespace is
-            // captured rather than the bar, because the panel replaces the settings object on every
-            // change and a delegate holding the old bar would report the old value for ever.
-            foreach (var bar in Settings.LedBarList())
+            // literals, rewritten from the rig-wide ones above by LedBarProfile. A bar added after this
+            // is attached when the panel saves it, by AttachAddedBars through the same method (#565).
+            foreach (var bar in attachedBars.Take(Settings.LedBarList())) AttachBarProperties(bar.Namespace);
+        }
+
+        /// <summary>
+        /// One bar's group, under its own namespace: what Init attaches for each bar of the rig and
+        /// AttachAddedBars for each bar added after it (#565).
+        /// </summary>
+        /// <remarks>
+        /// The namespace is captured rather than the bar, because the panel replaces the settings object
+        /// on every change and a delegate holding the old bar would report the old value for ever.
+        /// </remarks>
+        private void AttachBarProperties(string ns)
+        {
+            this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCentre), () => Settings.BarCentre(ns));
+            this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
+            this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
+            this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedSpotterWhole), () => Settings.BarSpotterWhole(ns));
+            // Its own brightness, null while it follows the rig's, and one switch per effect, read
+            // through the first effect id each switch answers for. #503.
+            this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedBrightness), () => Settings.BarBrightness(ns));
+            foreach (var setting in Contract.LedEffectSettings())
             {
-                var ns = bar.Namespace;
-                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedCentre), () => Settings.BarCentre(ns));
-                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedRpmStyle), () => Settings.BarRpmStyle(ns));
-                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedFlagAnimation), () => Settings.BarFlagAnimation(ns));
-                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedSpotterWhole), () => Settings.BarSpotterWhole(ns));
-                // Its own brightness, null while it follows the rig's, and one switch per effect, read
-                // through the first effect id each switch answers for. #503.
-                this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedBrightness), () => Settings.BarBrightness(ns));
-                foreach (var setting in Contract.LedEffectSettings())
-                {
-                    var effect = Contract.LedEffectPrimaryId(setting);
-                    this.AttachDelegate(LedBarProfile.Property(ns, setting), () => Settings.BarEffectEnabled(ns, effect));
-                }
+                var effect = Contract.LedEffectPrimaryId(setting);
+                this.AttachDelegate(LedBarProfile.Property(ns, setting), () => Settings.BarEffectEnabled(ns, effect));
             }
         }
 
@@ -668,6 +679,14 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Attaching a screen added in this session failed", ex);
+            }
+            try
+            {
+                AttachAddedBars();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Attaching an LED strip added in this session failed", ex);
             }
         }
 
@@ -935,6 +954,27 @@ namespace OpenDashPlugin
                 AttachScreenProperties(screen);
                 ScreenActions.RegisterScreen(() => Settings, screen, registerAction);
                 Log.Info("Attached the properties and actions of " + screen.Name + " (" + screen.Namespace + "), added in this session");
+            }
+        }
+
+        /// <summary>
+        /// Attaches the properties of every LED strip added since Init, the way Init did for the strips it
+        /// found (#565).
+        /// </summary>
+        /// <remarks>
+        /// Called from SaveSettings, which the LEDs page's Add calls before it installs the strip's
+        /// profile, so the profile finds its names waiting. SimHub reads a property by name every time a
+        /// profile asks and retries a name it has not found, as it does for a dashboard (AttachAddedScreens).
+        /// A strip owns no action. Nothing happens before Init has attached the rig, which is what a null
+        /// registration means.
+        /// </remarks>
+        private void AttachAddedBars()
+        {
+            if (registerAction == null) return;
+            foreach (var bar in attachedBars.Take(Settings.LedBarList()))
+            {
+                AttachBarProperties(bar.Namespace);
+                Log.Info("Attached the properties of the LED strip " + bar.Name + " (" + bar.Namespace + "), added in this session");
             }
         }
     }
