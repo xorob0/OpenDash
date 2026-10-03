@@ -83,6 +83,9 @@ function syncDir(from: string): number {
       continue;
     }
     const name = stableName(file, capture.scenario);
+    // A run over several scenarios photographs a package once per scenario, and the site has one
+    // name for it: the later picture is the one kept, which is worth saying rather than doing quietly.
+    if (files[name]) console.warn(`${file} replaces the ${files[name].scenario} capture already copied to shots/${name}`);
     copyFileSync(source, path.join(outDir, name));
     files[name] = toEntry(capture);
     console.log(`${file} -> shots/${name}`);
