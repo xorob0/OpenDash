@@ -92,16 +92,11 @@ jobs:
       - name: Check the flag box glyphs arrived
         run: test -s plugin/OpenDash/Resources/flag-box-glyphs.json
 
-      # Gzipped in place, keeping the .ledsprofile name, as scripts/package.sh does for a local build.
-      # Plain, the hundred and twenty-two profiles are about forty-four megabytes of NCalc in the
-      # assembly, and the zip this job builds is the one file a release hands over (#438).
+      # Gzipped in place, keeping the .ledsprofile name, by the script ci.yml and scripts/package.sh
+      # run too. Plain, the hundred and twenty-two profiles are about forty-four megabytes of NCalc in
+      # the assembly, and the zip this job builds is the one file a release hands over (#438).
       - name: Compress the LED profiles
-        run: |
-          set -euo pipefail
-          for profile in plugin/OpenDash/Resources/*.ledsprofile; do
-            gzip -9 -c "$profile" > "$profile.gz"
-            mv "$profile.gz" "$profile"
-          done
+        run: bash plugin/scripts/compress-profiles.sh
 
       - name: Test plugin logic
         run: dotnet test plugin/OpenDash.Tests
