@@ -296,35 +296,31 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What is said once a bar exists: the steps OpenDash does not take, in the order they are done, as
-        /// voice.md's own example has them. The restart comes first, since the plugin publishes a strip's own
-        /// settings only for the strips it held when SimHub started; then selecting the profile, which
-        /// installing adds and does not select. A note the install returned (the device lists only its maker's
-        /// profiles) comes before both, since nothing is listed to select until it is done.
+        /// voice.md's own example has them: selecting the profile, which installing adds and does not select.
+        /// A note the install returned (the device lists only its maker's profiles) comes first, since nothing
+        /// is listed to select until it is done.
         /// </summary>
         /// <remarks>
         /// It names the device, because "your LED device" was the whole confusion: a profile goes into
         /// one device's list and OpenDash used to always pick the Arduino's, so somebody reading this
         /// line went to their wheel and found nothing. Now the line says where to look.
+        ///
+        /// No restart: the plugin attaches a strip's own settings when the strip is saved, so a strip added
+        /// in a running SimHub takes them at once (#565). Until then the line asked for one, because the
+        /// plugin published them only for the strips it held when SimHub started.
         /// </remarks>
         public static string BarAdded(string name, string device, string note = null)
         {
-            var select = PanelLeds.SelectIt(name, device);
-            var steps = BarAddedRestart + char.ToLowerInvariant(select[0]) + select.Substring(1);
-            return "Added " + name + ". " + (string.IsNullOrWhiteSpace(note) ? string.Empty : note.Trim() + " ") + steps;
+            return "Added " + name + ". " + (string.IsNullOrWhiteSpace(note) ? string.Empty : note.Trim() + " ") + PanelLeds.SelectIt(name, device);
         }
-
-        /// <summary>The restart BarAdded asks for, pinned apart so it goes when the plugin attaches a strip's
-        /// settings as the strip is added.</summary>
-        public const string BarAddedRestart = "Restart SimHub, then ";
 
         /// <summary>
         /// A strip added whose profile could not be installed. It points at the log (voice.md's failure form),
-        /// then names the steps left in order: the LEDs header's Install, and the restart the strip's own
-        /// settings wait on, as <see cref="BarAdded"/> says it.
+        /// then names the step left: the LEDs header's Install. No restart, as <see cref="BarAdded"/> says.
         /// </summary>
         public static string BarAddFailed(string name)
         {
-            return "Added " + name + ", but its profile could not be installed. See SimHub's log, then install it here and restart SimHub.";
+            return "Added " + name + ", but its profile could not be installed. See SimHub's log, then install it here.";
         }
 
         /// <summary>The strip's Rename press. Saving installs the profile again where SimHub holds it, so
