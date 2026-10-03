@@ -61,9 +61,30 @@ namespace OpenDashPlugin.Tests
                 return marker < 0 ? 1 : int.Parse(url.Substring(marker + "&page=".Length));
             }
 
-            public FetchResult GetBytes(string url, Action<double> progress = null)
+            /// <summary>When set, every download waits for it to be set, as a slow connection would.</summary>
+            public System.Threading.ManualResetEventSlim Gate { get; set; }
+
+            /// <summary>Set once a download is waiting at <see cref="Gate"/>.</summary>
+            public System.Threading.ManualResetEventSlim Waiting { get; } = new System.Threading.ManualResetEventSlim();
+
+            /// <summary>A download that arrives whatever the cancel says, as one whose last byte landed as SimHub closed.</summary>
+            public bool IgnoresCancel { get; set; }
+
+            public FetchResult GetBytes(string url, Action<double> progress = null, System.Threading.CancellationToken cancel = default)
             {
                 Requested.Add(url);
+                if (Gate != null)
+                {
+                    Waiting.Set();
+                    try
+                    {
+                        if (!Gate.Wait(TimeSpan.FromSeconds(10), IgnoresCancel ? System.Threading.CancellationToken.None : cancel)) return FetchResult.Failed("the gate was never opened");
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return FetchResult.Failed(ReleaseClient.Cancelled);
+                    }
+                }
                 if (!Assets.TryGetValue(url, out var bytes)) return FetchResult.Failed("nothing at " + url);
                 // The real client reports as the bytes arrive, once per whole percent. Three reports is enough for a
                 // test to see the shape of what the caller does with them, and a fetch that fails reports nothing.
@@ -76,6 +97,12 @@ namespace OpenDashPlugin.Tests
                 }
                 return new FetchResult { Ok = true, Bytes = bytes };
             }
+        }
+
+        private sealed class ThrowingSource : IReleaseSource
+        {
+            public FetchResult GetString(string url) => throw new InvalidOperationException("boom");
+            public FetchResult GetBytes(string url, Action<double> progress = null, System.Threading.CancellationToken cancel = default) => throw new InvalidOperationException("boom");
         }
 
         private static string ListingFor(string tag, params string[] folders)
@@ -719,28 +746,203 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
         }
 
+        // A run in the background, and SimHub closing during it (#613)
+
+        /// <summary>A run of a release that publishes the OpenDash package, applied the way the panel applies it,
+        /// with every download held at the fetcher's gate until the test opens it.</summary>
+        private (UpdateService service, Fetcher fetcher, DashboardInstaller installer) HeldRun(IFolderRecord record = null)
+        {
+            var installer = Installed("0.1.0", record ?? new MemoryFolderRecord(), "OpenDash");
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash"), Gate = new System.Threading.ManualResetEventSlim() };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            return (service, fetcher, installer);
+        }
+
         /// <summary>
-        /// Work that is rewriting DashTemplates must be waitable, because a thread-pool thread is a background
-        /// thread the CLR terminates at process exit without unwinding: abandoning an install between the delete of
-        /// a dashboard folder and the move that replaces it leaves the folder gone.
+        /// Only the part of a run that writes is waited for at shutdown. A thread-pool thread is a background thread
+        /// the CLR terminates at process exit without unwinding, so abandoning an install between the delete of a
+        /// dashboard folder and the move that replaces it leaves the folder gone, and End waits for that part. A
+        /// download has written nothing, and holding SimHub's close for twenty seconds over one was the bug.
         /// </summary>
         [Fact]
-        public void An_install_in_flight_is_waited_for_and_a_check_is_not()
+        public void Busy_is_false_while_a_run_is_only_downloading_and_true_while_it_writes()
         {
             Assert.False(UpdateService.Busy);
+            var (service, fetcher, installer) = HeldRun();
+            var whileWriting = new List<(bool busy, bool idle)>();
+            Action<double> progress = fraction =>
+            {
+                // The second half of the bar is the install.
+                if (fraction > 0.5) lock (whileWriting) whileWriting.Add((UpdateService.Busy, UpdateService.WaitForIdle(TimeSpan.Zero)));
+            };
+            UpdateOutcome outcome = null;
+            var finished = new System.Threading.ManualResetEventSlim();
+
+            service.ApplyInBackground(installer, service.LastReleases[0], false, null, progress, o => { outcome = o; finished.Set(); });
+
+            Assert.True(fetcher.Waiting.Wait(TimeSpan.FromSeconds(5)));
+            Assert.False(UpdateService.Busy);
+            // Shutdown would not wait here: nothing on disk has been touched.
             Assert.True(UpdateService.WaitForIdle(TimeSpan.Zero));
 
-            var release = new System.Threading.ManualResetEventSlim();
-            var started = new System.Threading.ManualResetEventSlim();
-            UpdateService.InBackground(() => { started.Set(); release.Wait(TimeSpan.FromSeconds(10)); }, null, mustFinish: true);
+            fetcher.Gate.Set();
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            // And it would have waited while the dashboards were being written.
+            Assert.NotEmpty(whileWriting);
+            Assert.All(whileWriting, seen => Assert.Equal((true, false), seen));
+            Assert.False(UpdateService.Busy);
+        }
 
-            Assert.True(started.Wait(TimeSpan.FromSeconds(5)));
-            Assert.True(UpdateService.Busy);
-            // Shutdown would block here rather than killing the thread mid-install.
-            Assert.False(UpdateService.WaitForIdle(TimeSpan.FromMilliseconds(50)));
+        /// <summary>
+        /// SimHub closing stops a download rather than waiting for it, and the run writes nothing afterwards.
+        /// </summary>
+        [Fact]
+        public void Closing_SimHub_stops_a_download_and_the_run_writes_nothing()
+        {
+            var (service, fetcher, installer) = HeldRun();
+            UpdateOutcome outcome = null;
+            var finished = new System.Threading.ManualResetEventSlim();
+            service.ApplyInBackground(installer, service.LastReleases[0], false, null, null, o => { outcome = o; finished.Set(); });
+            Assert.True(fetcher.Waiting.Wait(TimeSpan.FromSeconds(5)));
 
-            release.Set();
-            Assert.True(UpdateService.WaitForIdle(TimeSpan.FromSeconds(10)));
+            // What End does: stop the downloads, then wait only if a run is writing.
+            service.StopDownloads();
+            Assert.False(UpdateService.Busy);
+
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(5)), "the download was stopped rather than left to its gate");
+            Assert.False(outcome.Ok);
+            Assert.Equal(UpdateService.StoppedReason, outcome.Reason);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+        }
+
+        /// <summary>
+        /// A download whose last byte lands as SimHub closes does not start writing after End has decided there was
+        /// nothing to wait for, which would be the abandoned install the wait exists to prevent.
+        /// </summary>
+        [Fact]
+        public void A_download_that_arrives_after_SimHub_closed_writes_nothing()
+        {
+            var (service, fetcher, installer) = HeldRun();
+            fetcher.IgnoresCancel = true;
+            UpdateOutcome outcome = null;
+            var finished = new System.Threading.ManualResetEventSlim();
+            service.ApplyInBackground(installer, service.LastReleases[0], false, null, null, o => { outcome = o; finished.Set(); });
+            Assert.True(fetcher.Waiting.Wait(TimeSpan.FromSeconds(5)));
+
+            service.StopDownloads();
+            Assert.False(UpdateService.Busy);
+            fetcher.Gate.Set();
+
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.Equal(UpdateService.StoppedReason, outcome.Reason);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.False(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// The yes to replacing edited dashboards on restart is in the settings when the run says it has finished,
+        /// with nothing on the panel's side having run. It used to be recorded only by the panel's completion on the
+        /// interface thread, which a closed page or a closing SimHub never runs, and the restarted plugin then held
+        /// every edited folder back.
+        /// </summary>
+        [Fact]
+        public void ReplaceEditedOnRestart_reaches_the_settings_without_the_panel_s_callback()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson"), "{\"mine\":true}");
+            installer.Refresh();
+            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            var settings = new OpenDashSettings();
+            string recorded = "the run never finished";
+            UpdateOutcome outcome = null;
+            var finished = new System.Threading.ManualResetEventSlim();
+
+            // The panel's part is the callback, and this one does nothing but look.
+            service.ApplyInBackground(installer, service.LastReleases[0], true, settings, null, o =>
+            {
+                outcome = o;
+                recorded = settings.ReplaceEditedFor;
+                finished.Set();
+            });
+
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.True(outcome.ReplaceEditedOnRestart);
+            Assert.Equal("0.2.0", recorded);
+        }
+
+        /// <summary>
+        /// The names the driver gave their screens go back over the packages' own titles by the run itself, and the
+        /// record is taken again of what that wrote, so the folder still reads as OpenDash's.
+        /// </summary>
+        [Fact]
+        public void The_run_puts_the_screens_names_back_without_the_panel()
+        {
+            var record = new MemoryFolderRecord();
+            var (service, fetcher, installer) = HeldRun(record);
+            fetcher.Gate.Set();
+            var settings = new OpenDashSettings
+            {
+                Rig = new List<ScreenInstance> { new ScreenInstance { Kind = Contract.KindFace, Width = 1280, Height = 480, Folder = "OpenDash", Name = "Main dash" } },
+            };
+            var finished = new System.Threading.ManualResetEventSlim();
+
+            service.ApplyInBackground(installer, service.LastReleases[0], false, settings, null, o => finished.Set());
+
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            var folder = PackageExtractor.InstalledFolder(root, "OpenDash");
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Contains("\"Title\":\"Main dash\"", File.ReadAllText(Path.Combine(folder, "OpenDash.djson.metadata")));
+            Assert.Equal(FolderFingerprint.Of(folder), record.Get("OpenDash"));
+        }
+
+        /// <summary>
+        /// The plugin is what the two halves above are wired to, and its file needs SimHub to compile, so the wiring is
+        /// read rather than run: End stops the downloads before it reads Busy, and the run the panel starts hands the
+        /// service the settings and posts the save itself rather than leaving it to the page.
+        /// </summary>
+        [Fact]
+        public void The_plugin_stops_downloads_at_shutdown_and_owns_the_run_s_save()
+        {
+            var code = System.Text.RegularExpressions.Regex.Replace(
+                RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs")), @"\s+", " ");
+            var end = code.Substring(code.IndexOf("public void End(PluginManager pluginManager)", StringComparison.Ordinal));
+            var stop = end.IndexOf("updates?.StopDownloads();", StringComparison.Ordinal);
+            var busy = end.IndexOf("if (UpdateService.Busy)", StringComparison.Ordinal);
+            var save = end.IndexOf("SaveSettings();", StringComparison.Ordinal);
+            Assert.True(stop >= 0 && busy > stop && save > busy, "End stops the downloads, then waits for a run that writes, then saves");
+
+            Assert.Contains("Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome => { OnInterfaceThread(SaveSettings); applied?.Invoke(outcome); });", code);
+        }
+
+        /// <summary>A run that throws still says it has finished, with no outcome, so the page can stop showing it.</summary>
+        [Fact]
+        public void A_run_that_throws_still_finishes_and_says_so()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
+            var lister = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            long ticks = 0;
+            var asked = new UpdateService(lister);
+            asked.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            var log = new ListLog();
+            // A source that throws stands in for anything Apply did not expect.
+            var service = new UpdateService(new ThrowingSource(), log);
+            UpdateOutcome outcome = new UpdateOutcome();
+            var finished = new System.Threading.ManualResetEventSlim();
+
+            service.ApplyInBackground(installer, asked.LastReleases[0], false, null, null, o => { outcome = o; finished.Set(); });
+
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.Null(outcome);
+            Assert.Contains(log.Lines, line => line.Contains("Applying 0.2.0 failed"));
             Assert.False(UpdateService.Busy);
         }
 
