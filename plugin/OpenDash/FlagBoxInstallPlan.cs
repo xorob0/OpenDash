@@ -24,6 +24,10 @@ namespace OpenDashPlugin
         Outdated,
         /// <summary>Installing failed; the message says why.</summary>
         Failed,
+        /// <summary>SimHub has a newer OpenDash profile than this build carries: a later build installed it
+        /// and an earlier plugin is running now. Nothing is offered over it, since the press would put the
+        /// older profile back; the plugin's own update is what brings the two level.</summary>
+        Newer,
     }
 
     /// <summary>One profile already in SimHub, reduced to what the decision needs.</summary>
@@ -98,6 +102,11 @@ namespace OpenDashPlugin
         /// names the press rather than either verb and both branches carry it.</summary>
         public const string Replaces = "Replaces the copy in SimHub, including your changes to it.";
 
+        /// <summary>The same warning over a copy newer than this build's, where the press also goes back a
+        /// version: the one press that does, and only where the driver asks for that one profile (the Matrix
+        /// page's Reinstall). Reinstall everything and the rows' Update never write it.</summary>
+        public const string ReplacesNewer = "Replaces the newer copy in SimHub with this build's older one, including your changes to it.";
+
         /// <summary>
         /// The version the build stamped into a profile description, or null.
         /// Mirrors flagBoxVersion() in packages/dash/src/leds/profile.ts; the two are one contract and
@@ -146,13 +155,32 @@ namespace OpenDashPlugin
                 if (profile == null || profile.ProfileId != embeddedId) continue;
                 plan.Existing = profile.ProfileId;
                 plan.InstalledVersion = VersionOf(profile.Description);
-                plan.State = string.Equals(plan.InstalledVersion, plan.EmbeddedVersion, StringComparison.Ordinal)
-                    ? FlagBoxInstallState.UpToDate
-                    : FlagBoxInstallState.Outdated;
+                plan.State = Compare(plan.InstalledVersion, plan.EmbeddedVersion);
                 return plan;
             }
             plan.State = FlagBoxInstallState.NotInstalled;
             return plan;
+        }
+
+        /// <summary>
+        /// The installed copy's version against this build's: the same string is current, a later version is
+        /// newer, and anything else is older, a copy with no version among them, since nothing says it is
+        /// current. Compared as versions (<see cref="Versioning.VersionCompare"/>), never as strings, so
+        /// 0.3.0-rc.10 is later than 0.3.0-rc.9 and 0.3.0 is later than 0.3.0-rc.7. Newer only when both carry
+        /// a version: a build that stamps none has nothing to be older than.
+        /// </summary>
+        public static FlagBoxInstallState Compare(string installedVersion, string embeddedVersion)
+        {
+            if (string.Equals(installedVersion, embeddedVersion, StringComparison.Ordinal)) return FlagBoxInstallState.UpToDate;
+            if (installedVersion != null && embeddedVersion != null && Versioning.VersionCompare(installedVersion, embeddedVersion) > 0)
+                return FlagBoxInstallState.Newer;
+            return FlagBoxInstallState.Outdated;
+        }
+
+        /// <summary>Whether SimHub holds a copy of the profile, whatever its version: current, older or newer.</summary>
+        public static bool InSimHub(FlagBoxInstallState state)
+        {
+            return state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated || state == FlagBoxInstallState.Newer;
         }
 
         /// <summary>
@@ -220,7 +248,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>How loudly a state has to be reported, lowest first. A failure the user can act on
-        /// beats a state they cannot, and "one of these is missing" beats "the rest are current".</summary>
+        /// beats a state they cannot, and "one of these is missing" beats "the rest are current". A newer copy
+        /// sits between an older one and a current one: nothing is offered over it, but a group holding one
+        /// does not read as current.</summary>
         private static int Severity(FlagBoxInstallState state)
         {
             switch (state)
@@ -230,7 +260,8 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.Unavailable: return 2;
                 case FlagBoxInstallState.NotInstalled: return 3;
                 case FlagBoxInstallState.Outdated: return 4;
-                default: return 5;
+                case FlagBoxInstallState.Newer: return 5;
+                default: return 6;
             }
         }
 
@@ -264,6 +295,10 @@ namespace OpenDashPlugin
                     return "A newer profile is available ("
                         + (plan.InstalledVersion ?? "unknown") + " to " + (plan.EmbeddedVersion ?? "unknown")
                         + "). " + Replaces;
+                case FlagBoxInstallState.Newer:
+                    return PanelCopy.NewerThanBuild
+                        + (plan.InstalledVersion == null ? ". " : " (" + plan.InstalledVersion + "). ")
+                        + PanelCopy.NewerHover(plan.EmbeddedVersion);
                 default:
                     return "Install failed. See SimHub's log.";
             }

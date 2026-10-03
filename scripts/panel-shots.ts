@@ -15,8 +15,10 @@
  * **The width is the control's, never SimHub's window's.** SimHub draws its own left menu beside the
  * plugin, so a SimHub window 1000 pixels wide gives the panel well under 1000, and the panel draws
  * its rail there: every item 63 px higher than on the full sidebar and at 27.5 across instead of
- * 107.5. So the control's rectangle is measured on the guest, by UI Automation, as the element whose
- * class is SettingsControl, and everything is clicked and cropped from that. The display's scale is
+ * 107.5. Maximised, SimHub also centres the page in a column of its own, about 1400 px wide. So the
+ * control's rectangle is measured on the guest, by its colours in a picture of SimHub's window (see
+ * "measuring" below: SimHub exposes no UI Automation tree to ask), and everything is clicked and
+ * cropped from that. The display's scale is
  * measured too (GetDpiForWindow) and every panel number is multiplied by it, although the VM runs
  * at 100 % and the factor is 1 there.
  *
@@ -24,10 +26,26 @@
  * every plugin SimHub lists above it. `--menu-y` is that, measured by the caller from a screenshot,
  * and there is no default: a guessed y clicks another plugin's page and photographs it eight times.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { build as buildEmulator, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
-import { captureWindow, click, guiProblem, inDesktopScript, maximiseSimHub, movePointer, parseClientArea, wheel, WINDOW_HELPER, type ClientArea, type ScreenRect } from './gui.ts';
+import {
+  captureWindow,
+  click,
+  DASH_STUDIO,
+  guiProblem,
+  hex,
+  inDesktopScript,
+  maximiseSimHub,
+  movePointer,
+  parseClientArea,
+  sameColour,
+  wheel,
+  WINDOW_HELPER,
+  type ClientArea,
+  type Rgb,
+  type ScreenRect,
+} from './gui.ts';
 import { applyPreset, type Preset } from './rig.ts';
 import { provenance, writeRun, type RunCapture } from './shotsRun.ts';
 import { claim, claimLost, installPlugin, readClaim, release, resolveHost, sleep, status, up, waitReady, whoAmI, type Host, type RunResult } from './vm.ts';
@@ -249,15 +267,42 @@ export function shotFile(page: Page, width: Width, part = 1, parts = 1): string 
 }
 
 // --------------------------------------------------------------------------------- measuring
+//
+// SimHub 9.12.6's main window exposes no UI Automation children at all: FromHandle has no
+// descendants and FromPoint inside the panel returns the Window (#640). And the panel is not simply
+// the client area less SimHub's menu: maximised, SimHub centres a plugin's page in a column about
+// 1400 px wide with its licence offer under it. So the panel is found by its own colours, along one
+// row and one column of a picture of SimHub's window. Its sidebar is painted Theme.SurfaceInset from
+// top to bottom, a colour nothing of SimHub's draws, and its main column Theme.SurfaceBase; SimHub's
+// page around it is #252525. The guest reports the runs of colour, and everything made of them is
+// decided here, where panel-shots.test.ts can hold it to real rows read on the VM.
 
-/** A scroll viewer in the panel, as UI Automation reports it. */
-export interface Scroller {
-  rect: ScreenRect;
-  scrollable: boolean;
-  /** How much of the content is in view, in percent. */
-  viewSize: number;
-  /** How far down it is scrolled, in percent, or -1 when it cannot scroll. */
-  percent: number;
+/** Theme.cs's surfaces the panel is found by. panel-shots.test.ts reads them out of Theme.cs. */
+export const PANEL_COLOURS = {
+  /** Theme.SurfaceInset: the sidebar, from the panel's top to its bottom. */
+  SurfaceInset: [0x06, 0x07, 0x08],
+  /** Theme.SurfaceBase: the main column behind every page. */
+  SurfaceBase: [0x0a, 0x0b, 0x0d],
+  /** Theme.SurfaceZone: the active sidebar item. */
+  SurfaceZone: [0x14, 0x16, 0x1a],
+  /** Theme.Rule: the sidebar's right-hand border. */
+  Rule: [0x1c, 0x1f, 0x24],
+} as const satisfies Record<string, Rgb>;
+
+/** SimHub's page behind a plugin's, the colour every gap around the panel is. */
+export const SIMHUB_PAGE: Rgb = DASH_STUDIO.page;
+
+/**
+ * The shortest run of the sidebar's colour that is the sidebar: the rail is 55 px of it at 100 %, and
+ * nothing SimHub draws is that colour at all, so this only keeps a stray pixel from counting.
+ */
+export const MIN_SIDEBAR_RUN = 40;
+
+/** A stretch of one colour along the row or the column the guest read, first and last inclusive, in screen pixels. */
+export interface Span {
+  from: number;
+  to: number;
+  colour: Rgb;
 }
 
 /** What one look at SimHub's window found. */
@@ -267,11 +312,82 @@ export interface PanelMeasure {
   /** Device-independent pixels to screen pixels: SimHub's DPI over 96. */
   scale: number;
   zoomed: boolean;
-  /** The OpenDash control, or null when SimHub is not showing it. */
+  /** The OpenDash panel, or null when SimHub is not showing it. */
   control: ScreenRect | null;
-  scrollers: Scroller[];
-  /** The buttons in the sidebar's strip, by the name UI Automation gives them. */
-  buttons: { rect: ScreenRect; name: string }[];
+  /** How wide the panel's sidebar is drawn, its border included, in screen pixels; 0 with no panel. */
+  sidebar: number;
+  /** A hash of the main column's pixels, when the look was asked for one: equal hashes, the same picture. */
+  signature: string | null;
+  /** The colours at the points the look was asked to read, in the order asked. */
+  probes: { x: number; y: number; colour: Rgb }[];
+}
+
+const isRgb = (v: unknown): v is Rgb => Array.isArray(v) && v.length === 3 && v.every((c) => Number.isInteger(c) && c >= 0 && c <= 255);
+
+/** The spans of a `row` or `col` line, or null when the line is missing or is not a list of spans. */
+export function parseSpans(stdout: string, kind: 'row' | 'col'): { at: number; spans: Span[] } | null {
+  const line = stdout
+    .split('\n')
+    .map((l) => l.replace(/^﻿/, '').trim())
+    .find((l) => l.startsWith(`${kind} `));
+  if (!line) return null;
+  const m = /^\w+ (-?\d+) (.*)$/.exec(line);
+  if (!m) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(m[2]!);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(parsed)) return null;
+  const spans: Span[] = [];
+  for (const s of parsed) {
+    if (!Array.isArray(s) || s.length !== 3 || !Number.isInteger(s[0]) || !Number.isInteger(s[1]) || !isRgb(s[2])) return null;
+    spans.push({ from: s[0], to: s[1], colour: s[2] });
+  }
+  return { at: Number(m[1]), spans };
+}
+
+/**
+ * The panel's rectangle and its sidebar's width, from the spans across SimHub's client area at `row`
+ * and down the column the guest chose inside the sidebar; or null when no run of the sidebar's colour
+ * is long enough to be one, which is SimHub showing another page.
+ *
+ * Left is where the sidebar's colour starts, top and bottom where it stops down the column. Right is
+ * the end of the last run of the main column's colour, so a scroll bar's thumb inside the panel is
+ * inside the crop. SimHub places the panel at fractional pixels, so an edge can be one pixel blended
+ * half-way to SimHub's page; such a pixel is the panel's, and is counted in.
+ */
+export function findPanel(row: readonly Span[], rowY: number, column: readonly Span[] | null): { control: ScreenRect; sidebar: number } | null {
+  const isPage = (s: Span | undefined): boolean => s === undefined || sameColour(s.colour, SIMHUB_PAGE);
+  const blended = (s: Span | undefined): boolean => s !== undefined && s.from === s.to && !isPage(s);
+
+  const at = row.findIndex((s) => sameColour(s.colour, PANEL_COLOURS.SurfaceInset) && s.to - s.from + 1 >= MIN_SIDEBAR_RUN);
+  if (at < 0) return null;
+  const left = blended(row[at - 1]) ? row[at]!.from - 1 : row[at]!.from;
+
+  // The sidebar ends where the main column starts: past its border, whatever colour that is drawn.
+  let after = at + 1;
+  while (after < row.length && sameColour(row[after]!.colour, PANEL_COLOURS.Rule)) after++;
+  const sidebar = (row[after]?.from ?? row[at]!.to + 1) - left;
+
+  let last = -1;
+  for (let i = row.length - 1; i > at; i--) {
+    if (sameColour(row[i]!.colour, PANEL_COLOURS.SurfaceBase)) {
+      last = i;
+      break;
+    }
+  }
+  if (last < 0) return null;
+  const right = blended(row[last + 1]) ? row[last]!.to + 1 : row[last]!.to;
+
+  if (!column) return null;
+  const down = column.findIndex((s) => s.from <= rowY && rowY <= s.to);
+  if (down < 0 || !sameColour(column[down]!.colour, PANEL_COLOURS.SurfaceInset)) return null;
+  const top = blended(column[down - 1]) ? column[down]!.from - 1 : column[down]!.from;
+  const bottom = blended(column[down + 1]) ? column[down]!.to + 1 : column[down]!.to;
+
+  return { control: { left, top, width: right - left + 1, height: bottom - top + 1 }, sidebar };
 }
 
 const rectOf = (parts: readonly string[]): ScreenRect | null => {
@@ -285,9 +401,8 @@ export function parseMeasure(stdout: string): PanelMeasure | null {
   let client: ScreenRect | null = null;
   let dpi = 96;
   let zoomed = false;
-  let control: ScreenRect | null = null;
-  const scrollers: Scroller[] = [];
-  const buttons: { rect: ScreenRect; name: string }[] = [];
+  let signature: string | null = null;
+  const probes: PanelMeasure['probes'] = [];
   for (const raw of stdout.split('\n')) {
     const line = raw.replace(/^﻿/, '').trim();
     const [kind, ...rest] = line.split(/\s+/);
@@ -295,39 +410,48 @@ export function parseMeasure(stdout: string): PanelMeasure | null {
     else if (kind === 'client') client = rectOf(rest);
     else if (kind === 'dpi' && Number(rest[0]) > 0) dpi = Number(rest[0]);
     else if (kind === 'zoomed') zoomed = rest[0] === '1';
-    else if (kind === 'control' && rest[0] !== 'none') control = rectOf(rest);
-    else if (kind === 'scroller') {
-      const rect = rectOf(rest.slice(0, 4));
-      const [scrollable, viewSize, percent] = rest.slice(4, 7).map(Number);
-      if (rect && [scrollable, viewSize, percent].every((n) => Number.isFinite(n))) scrollers.push({ rect, scrollable: scrollable === 1, viewSize: viewSize!, percent: percent! });
-    } else if (kind === 'button') {
-      const rect = rectOf(rest.slice(0, 4));
-      if (rect) buttons.push({ rect, name: rest.slice(4).join(' ') });
+    else if (kind === 'signature' && /^[0-9a-f]+$/i.test(rest[0] ?? '')) signature = rest[0]!.toLowerCase();
+    else if (kind === 'probe') {
+      const [x, y] = rest.slice(0, 2).map(Number);
+      let colour: unknown = null;
+      try {
+        colour = JSON.parse(rest.slice(2).join(''));
+      } catch {
+        colour = null;
+      }
+      if (Number.isFinite(x) && Number.isFinite(y) && isRgb(colour)) probes.push({ x: x!, y: y!, colour });
     }
   }
   if (!window || !client) return null;
-  return { window, client, scale: dpi / 96, zoomed, control, scrollers, buttons };
+  const row = parseSpans(stdout, 'row');
+  const found = row ? findPanel(row.spans, row.at, parseSpans(stdout, 'col')?.spans ?? null) : null;
+  return { window, client, scale: dpi / 96, zoomed, control: found?.control ?? null, sidebar: found?.sidebar ?? 0, signature, probes };
 }
 
 /**
- * The page's own scroll viewer: the largest one right of the sidebar. The sidebar has one of its own,
- * with its bar hidden, and a page may hold small ones inside it; the page's is the one that is the
- * whole main column.
+ * The layout the sidebar is drawn in, read off its width: the full sidebar is 216 wide and the rail
+ * 56, so anything nearer the full width is Full. Rail and Compact draw the same rail, so a rail is
+ * called by the control's width. panel-shots compares this with layoutFor(control width), which is the
+ * mirror's answer, and says so when they disagree.
  */
-export function mainColumn(measure: PanelMeasure): Scroller | null {
-  const control = measure.control;
-  if (!control) return null;
-  const sidebarRight = control.left + sidebarWidthFor(layoutFor(control.width / measure.scale)) * measure.scale;
-  const candidates = measure.scrollers.filter((s) => s.rect.left >= sidebarRight - 2 && s.rect.width > 0 && s.rect.height > 0);
-  candidates.sort((a, b) => b.rect.width * b.rect.height - a.rect.width * a.rect.height);
-  return candidates[0] ?? null;
+export function drawnLayout(sidebar: number, controlWidth: number, scale = 1): Layout {
+  const dip = sidebar / scale;
+  if (dip >= (SHELL.SidebarWidth + SHELL.RailWidth) / 2) return 'Full';
+  return controlWidth / scale >= SHELL.RailFrom ? 'Rail' : 'Compact';
 }
 
-/** How many pictures a page takes: one, or as many viewports as its content is tall. */
-export function partsFor(column: Scroller | null): number {
-  if (!column || !column.scrollable || column.viewSize <= 0 || column.viewSize >= 99.5) return 1;
-  return Math.ceil(100 / column.viewSize - 0.005);
+/** The page's own column: the panel right of its sidebar, which is what scrolls. */
+export function mainColumn(measure: PanelMeasure): ScreenRect | null {
+  const control = measure.control;
+  if (!control || measure.sidebar <= 0 || measure.sidebar >= control.width) return null;
+  return { left: control.left + measure.sidebar, top: control.top, width: control.width - measure.sidebar, height: control.height };
 }
+
+/**
+ * The most pictures one page is taken in. A page is scrolled a viewport at a time until its column
+ * stops changing, which is its foot; this is only the stop for a column that never does.
+ */
+export const MAX_PARTS = 8;
 
 /** WPF's ScrollViewer: three lines of sixteen device-independent pixels a wheel notch. */
 export const WHEEL_NOTCH = 48;
@@ -335,71 +459,99 @@ export const WHEEL_NOTCH = 48;
 /** The notches that move a viewport of that height by a viewport, less one notch of overlap. */
 export const notchesPerViewport = (viewportDip: number): number => Math.max(1, Math.floor(viewportDip / WHEEL_NOTCH) - 1);
 
-/** The sidebar button a click lands on, or null when it lands on none. */
-export function buttonAt(point: { x: number; y: number }, buttons: PanelMeasure['buttons']): string | null {
-  const hit = buttons.find((b) => point.x >= b.rect.left && point.x < b.rect.left + b.rect.width && point.y >= b.rect.top && point.y < b.rect.top + b.rect.height);
-  return hit ? hit.name || '(unnamed)' : null;
-}
+/** Where to read whether a click opened its page: low in the item, below its icon and its words, on the active item's colour. */
+export const activeProbe = (at: { x: number; y: number }, scale = 1): { x: number; y: number } => ({ x: at.x, y: at.y + (SHELL.NavItemHeight / 2 - 4) * scale });
 
 /**
- * Looks at SimHub's main window: its rectangle, its client area, its DPI, and by UI Automation the
- * OpenDash control, the scroll viewers in it and the buttons down its sidebar.
+ * Looks at SimHub's main window: its rectangle, its client area and its DPI, and a picture of it,
+ * read along the row half-way down the client area and down a column two pixels into the first run
+ * of the sidebar's colour on that row. With `region`, a hash of the pixels inside it too, and with
+ * `probes`, the colour at each of those points.
  *
- * The search is in the raw view, which holds every element with an automation peer; the control view
- * the default search walks may leave a UserControl out. It runs in the desktop session, as every
- * window call must, and it is made DPI aware before it measures, so the rectangles are the pixels a
- * VNC click lands on.
+ * It runs in the desktop session, as every window call must, and it is made DPI aware before it
+ * measures, so the coordinates are the pixels a VNC click lands on. The picture is PrintWindow's, as
+ * captureWindow takes it, so what is measured is what is photographed.
  */
-export function measurePanel(host: Host): RunResult & { measure?: PanelMeasure } {
+export function measurePanel(host: Host, opts: { region?: ScreenRect | null; probes?: readonly { x: number; y: number }[] } = {}): RunResult & { measure?: PanelMeasure } {
+  const region = opts.region ? [opts.region.left, opts.region.top, opts.region.width, opts.region.height].map(Math.round).join(', ') : null;
+  const probes = (opts.probes ?? []).map((p) => `[OpenDashLook]::Probe($px, $w, $hgt, $r[0], $r[1], ${Math.round(p.x)}, ${Math.round(p.y)})`).join('\n');
+  const [ir, ig, ib] = PANEL_COLOURS.SurfaceInset;
   const r = inDesktopScript(
     host,
     `${WINDOW_HELPER}
-Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+Add-Type -AssemblyName System.Drawing
 Add-Type -TypeDefinition @'
-using System; using System.Runtime.InteropServices;
-public class OpenDashDpi {
+using System; using System.Drawing; using System.Drawing.Imaging; using System.Runtime.InteropServices; using System.Text;
+public class OpenDashLook {
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] public static extern uint GetDpiForWindow(IntPtr h);
+  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr hdc, uint flags);
+  public static int[] Pixels(IntPtr h, int w, int hgt) {
+    using (var bmp = new Bitmap(w, hgt, PixelFormat.Format32bppArgb)) {
+      using (var g = Graphics.FromImage(bmp)) { IntPtr hdc = g.GetHdc(); PrintWindow(h, hdc, 2); g.ReleaseHdc(hdc); }
+      var data = bmp.LockBits(new Rectangle(0, 0, w, hgt), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+      var px = new int[w * hgt];
+      for (int y = 0; y < hgt; y++) Marshal.Copy(data.Scan0 + y * data.Stride, px, y * w, w);
+      bmp.UnlockBits(data);
+      return px;
+    }
+  }
+  static string Rgb(int c) { return string.Format("[{0},{1},{2}]", (c >> 16) & 255, (c >> 8) & 255, c & 255); }
+  // Runs of one colour along a row (or down a column) of the picture, in screen pixels.
+  public static string Runs(int[] px, int w, int hgt, bool row, int at, int ox, int oy) {
+    var sb = new StringBuilder("["); int n = row ? w : hgt; int start = 0; int last = 0; bool first = true;
+    for (int i = 0; i <= n; i++) {
+      int c = i < n ? (row ? px[at * w + i] : px[i * w + at]) & 0xFFFFFF : -1;
+      if (i == 0) { last = c; continue; }
+      if (c != last) {
+        int o = row ? ox : oy;
+        sb.AppendFormat("{0}[{1},{2},{3}]", first ? "" : ",", start + o, i - 1 + o, Rgb(last));
+        first = false; start = i; last = c;
+      }
+    }
+    return sb.Append("]").ToString();
+  }
+  static bool Near(int c, int r, int g, int b) { return Math.Abs(((c >> 16) & 255) - r) <= 2 && Math.Abs(((c >> 8) & 255) - g) <= 2 && Math.Abs((c & 255) - b) <= 2; }
+  // The first x on the row where the sidebar's colour runs for at least the length asked, or -1.
+  public static int FirstRun(int[] px, int w, int y, int r, int g, int b, int length) {
+    int run = 0;
+    for (int x = 0; x < w; x++) { if (Near(px[y * w + x], r, g, b)) { if (++run >= length) return x - length + 1; } else run = 0; }
+    return -1;
+  }
+  // FNV-1a over every pixel of a rectangle of the screen, clipped to the picture.
+  public static string Hash(int[] px, int w, int hgt, int ox, int oy, int l, int t, int rw, int rh) {
+    uint h = 2166136261;
+    for (int y = Math.Max(0, t - oy); y < Math.Min(hgt, t - oy + rh); y++)
+      for (int x = Math.Max(0, l - ox); x < Math.Min(w, l - ox + rw); x++) { h ^= (uint)(px[y * w + x] & 0xFFFFFF); h *= 16777619; }
+    return h.ToString("x8");
+  }
+  public static string Probe(int[] px, int w, int hgt, int ox, int oy, int x, int y) {
+    int bx = x - ox, by = y - oy;
+    if (bx < 0 || by < 0 || bx >= w || by >= hgt) return "";
+    return string.Format("probe {0} {1} {2}", x, y, Rgb(px[by * w + bx]));
+  }
 }
-'@
-[OpenDashDpi]::SetProcessDPIAware() | Out-Null
-$inv = [Globalization.CultureInfo]::InvariantCulture
+'@ -ReferencedAssemblies System.Drawing
+[OpenDashLook]::SetProcessDPIAware() | Out-Null
 $proc = Get-Process SimHubWPF -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $proc -or $proc.MainWindowHandle -eq [IntPtr]::Zero) { 'SimHub has no main window'; exit }
 $h = $proc.MainWindowHandle
 $r = [OpenDashWindows]::Rect($h); "window {0} {1} {2} {3}" -f $r[0], $r[1], $r[2], $r[3]
 $c = [OpenDashWindows]::Client($h); "client {0} {1} {2} {3}" -f $c[0], $c[1], $c[2], $c[3]
 $dpi = 96
-try { $d = [OpenDashDpi]::GetDpiForWindow($h); if ($d -gt 0) { $dpi = $d } } catch { }
+try { $d = [OpenDashLook]::GetDpiForWindow($h); if ($d -gt 0) { $dpi = $d } } catch { }
 "dpi $dpi"
 "zoomed $([int][OpenDashWindows]::IsZoomed($h))"
-$A = [System.Windows.Automation.AutomationElement]
-$cache = New-Object System.Windows.Automation.CacheRequest
-$cache.TreeFilter = [System.Windows.Automation.Automation]::RawViewCondition
-$cache.AutomationElementMode = [System.Windows.Automation.AutomationElementMode]::Full
-$cache.Add($A::ClassNameProperty)
-$cache.Push()
-try {
-  function Box($e) { $b = $e.Current.BoundingRectangle; '{0} {1} {2} {3}' -f [Math]::Round($b.X), [Math]::Round($b.Y), [Math]::Round($b.Width), [Math]::Round($b.Height) }
-  $root = $A::FromHandle($h)
-  $all = [System.Windows.Automation.TreeScope]::Descendants
-  $ctl = $root.FindFirst($all, (New-Object System.Windows.Automation.PropertyCondition($A::ClassNameProperty, 'SettingsControl')))
-  if (-not $ctl) { 'control none'; exit }
-  "control $(Box $ctl)"
-  $cb = $ctl.Current.BoundingRectangle
-  foreach ($sv in $ctl.FindAll($all, (New-Object System.Windows.Automation.PropertyCondition($A::ClassNameProperty, 'ScrollViewer')))) {
-    $p = $null
-    if ($sv.TryGetCurrentPattern([System.Windows.Automation.ScrollPattern]::Pattern, [ref]$p)) {
-      $s = $p.Current
-      "scroller $(Box $sv) $([int]$s.VerticallyScrollable) $($s.VerticalViewSize.ToString($inv)) $($s.VerticalScrollPercent.ToString($inv))"
-    }
-  }
-  $strip = $cb.X + ${SHELL.SidebarWidth} * $dpi / 96
-  foreach ($b in $ctl.FindAll($all, (New-Object System.Windows.Automation.PropertyCondition($A::ControlTypeProperty, [System.Windows.Automation.ControlType]::Button)))) {
-    $bb = $b.Current.BoundingRectangle
-    if ($bb.Width -gt 0 -and $bb.X -lt $strip) { "button $(Box $b) $($b.Current.Name)" }
-  }
-} finally { $cache.Pop() }`,
+$w = $r[2]; $hgt = $r[3]
+$px = [OpenDashLook]::Pixels($h, $w, $hgt)
+# Half-way down the client area: below every sidebar item at every width, above its foot.
+$y = [int]($c[1] + $c[3] / 2)
+"row $y $([OpenDashLook]::Runs($px, $w, $hgt, $true, $y - $r[1], $r[0], $r[1]))"
+$x = [OpenDashLook]::FirstRun($px, $w, $y - $r[1], ${ir}, ${ig}, ${ib}, ${MIN_SIDEBAR_RUN})
+# Two pixels in, clear of a blended edge and left of every item's background.
+if ($x -ge 0) { "col $($x + 2 + $r[0]) $([OpenDashLook]::Runs($px, $w, $hgt, $false, $x + 2, $r[0], $r[1]))" }
+${region ? `"signature $([OpenDashLook]::Hash($px, $w, $hgt, $r[0], $r[1], ${region}))"` : ''}
+${probes}`,
     240,
   );
   if (!r.ok) return r;
@@ -574,7 +726,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
       if (!looked?.measure) return 1;
       const measure = looked.measure;
       if (!measure.control) {
-        console.error(`  SimHub is not showing OpenDash: the click at y ${opts.menuY} opened something else, or nothing. Take \`bun run vm shot\` and measure the entry again.`);
+        console.error(`  SimHub is not showing OpenDash: no run of the sidebar's colour crosses its window, so the click at y ${opts.menuY} opened something else, or nothing. Take \`bun run vm shot\` and measure the entry again.`);
         return 1;
       }
       const control = measure.control;
@@ -588,13 +740,15 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
         layout,
       };
       widths.push(record);
-      console.log(`  SimHub ${record.simHubWidth} px, the panel ${record.controlWidth} x ${record.controlHeight}, ${layout}${measure.scale !== 1 ? ` at ${measure.scale}x` : ''}`);
+      console.log(`  SimHub ${record.simHubWidth} px, the panel ${record.controlWidth} x ${record.controlHeight} at ${control.left},${control.top}, ${layout}${measure.scale !== 1 ? ` at ${measure.scale}x` : ''}`);
+      const drawn = drawnLayout(measure.sidebar, control.width, measure.scale);
+      if (drawn !== layout) console.log(`  the sidebar is drawn ${measure.sidebar} px wide, which is ${drawn}, where the mirror says ${layout}; the mirror may be off`);
+      const column = mainColumn(measure);
+      const viewport = notchesPerViewport((column?.height ?? control.height) / measure.scale);
 
       for (const pageName of opts.pages) {
         const at = clickFor(pageName, control, measure.scale);
-        const landsOn = buttonAt(at, measure.buttons);
-        if (measure.buttons.length > 0 && landsOn === null) console.log(`  ${pageName}: the click at ${Math.round(at.x)},${Math.round(at.y)} is on no sidebar button UI Automation reports; the mirror may be off`);
-        if (!step(`  ${pageName}${landsOn ? ` (${landsOn})` : ''}`, () => click(host, at.x, at.y))) {
+        if (!step(`  ${pageName}`, () => click(host, at.x, at.y))) {
           if (lost) return 1;
           shots.push({ file: shotFile(pageName, width), ok: false, why: 'the click failed' });
           continue;
@@ -602,31 +756,58 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
         park();
         sleep(1.5);
 
-        const after = measurePanel(host);
-        const column = after.measure ? mainColumn(after.measure) : null;
-        const parts = partsFor(column);
-        const crop = after.measure?.control ?? control;
-        for (let part = 1; part <= parts; part++) {
+        // The item clicked is the open page's when it is drawn in the active item's colour.
+        const probe = activeProbe(at, measure.scale);
+        let look = measurePanel(host, { region: column, probes: [probe] });
+        const seen = look.measure?.probes[0];
+        if (seen && !sameColour(seen.colour, PANEL_COLOURS.SurfaceZone)) {
+          console.log(`  ${pageName}: the item clicked at ${Math.round(at.x)},${Math.round(at.y)} is not drawn as the open one (${hex(seen.colour)} at ${seen.x},${seen.y}); the mirror may be off`);
+        }
+
+        // A viewport a picture, until the column stops changing: that is the page's foot, and the
+        // picture that did not change is not taken twice.
+        let signature = look.measure?.signature ?? null;
+        let scrolled = 0;
+        const taken: string[] = [];
+        let failed: string | null = null;
+        for (let part = 1; part <= MAX_PARTS; part++) {
           if (!stillOurs()) {
             console.error(`  stopped: ${lost}`);
             return 1;
           }
-          if (part > 1 && column) {
-            const viewport = column.rect.height / measure.scale;
-            // The last part is scrolled to the very bottom, so it ends where the page ends.
-            const notches = part === parts ? notchesPerViewport(viewport) * parts + 10 : notchesPerViewport(viewport);
-            wheel(host, column.rect.left + 10 * measure.scale, column.rect.top + column.rect.height / 2, notches);
+          if (part > 1) {
+            if (!column || signature === null) break;
+            wheel(host, column.left + 10 * measure.scale, column.top + column.height / 2, viewport);
+            scrolled += viewport;
             park();
             sleep(1);
+            look = measurePanel(host, { region: column });
+            const next = look.measure?.signature ?? null;
+            if (next === null || next === signature) break;
+            signature = next;
           }
-          const file = shotFile(pageName, width, part, parts);
-          const captured = captureWindow(host, { mainWindowOf: 'SimHubWPF' }, path.join(opts.outDir, file), crop);
-          shots.push({ file, ok: captured.ok, why: captured.ok ? undefined : firstLine(captured) });
-          console.log(`    ${file}: ${captured.ok ? captured.stdout.split(' to ')[0] : `failed (${firstLine(captured)})`}`);
-          if (captured.ok) run.captures[file] = { kind: 'panel', panel: pageName, scenario: opts.scenario, width: Math.round(crop.width), height: Math.round(crop.height), lapsSeen: null };
+          const temp = `.${pageName}-${widthLabel(width)}-part${part}.png`;
+          const captured = captureWindow(host, { mainWindowOf: 'SimHubWPF' }, path.join(opts.outDir, temp), control);
+          if (!captured.ok) {
+            failed = firstLine(captured);
+            break;
+          }
+          taken.push(temp);
+          if (part === MAX_PARTS) console.log(`    ${pageName} was still scrolling after ${MAX_PARTS} pictures; the rest of it is not photographed`);
+        }
+        for (const [i, temp] of taken.entries()) {
+          const file = shotFile(pageName, width, i + 1, taken.length);
+          renameSync(path.join(opts.outDir, temp), path.join(opts.outDir, file));
+          shots.push({ file, ok: true });
+          run.captures[file] = { kind: 'panel', panel: pageName, scenario: opts.scenario, width: Math.round(control.width), height: Math.round(control.height), lapsSeen: null };
+          console.log(`    ${file}: ${Math.round(control.width)}x${Math.round(control.height)}`);
+        }
+        if (failed !== null) {
+          shots.push({ file: shotFile(pageName, width, taken.length + 1, taken.length + 1), ok: false, why: failed });
+          console.log(`    ${pageName}: failed (${failed})`);
         }
         // Back to the top, so the next page is not opened scrolled and a re-run starts where this one did.
-        if (parts > 1 && column) wheel(host, column.rect.left + 10 * measure.scale, column.rect.top + column.rect.height / 2, -(notchesPerViewport(column.rect.height / measure.scale) * parts + 10));
+        if (scrolled > 0 && column) wheel(host, column.left + 10 * measure.scale, column.top + column.height / 2, -(scrolled + 10));
         park();
       }
       // Written after every width, so a run that stops short still says what it photographed.

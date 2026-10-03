@@ -165,6 +165,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(HomePress.CheckAgain, PanelHome.Press(Issue(PanelAttention.StripUnselected + "x", PanelPage.Leds, null, PanelIssueAction.CheckAgain)));
         }
 
+        /// <summary>Settings SimHub could not read (#643): the warning, as a dashboard that is gone wears it, and a
+        /// press that opens Explorer on the kept file, selected in its folder, or on _Backups when no copy holds it.</summary>
+        [Fact]
+        public void Settings_SimHub_could_not_read_open_the_folder_they_are_kept_in()
+        {
+            const string copy = @"C:\SimHub\PluginsData\Common\OpenDash.GeneralSettings.unreadable.json";
+            const string backups = @"C:\SimHub\PluginsData\Common\_Backups";
+            var issue = PanelAttention.Find(new AttentionInput { SettingsUnreadable = true, SettingsCopy = copy, SettingsBackups = backups }).Single();
+            Assert.Equal(PanelIcons.Warning, PanelHome.IssueIcon(issue));
+            Assert.Equal(HomePress.OpenFolder, PanelHome.Press(issue));
+            Assert.Equal(HomePress.Go, PanelHome.Press(Issue(PanelAttention.SettingsUnreadable, PanelPage.Home, null, PanelIssueAction.OpenFolder)));
+            Assert.Equal("/select,\"" + copy + "\"", PanelHome.ExplorerArguments(copy, true));
+            Assert.Equal("\"" + backups + "\"", PanelHome.ExplorerArguments(backups, false));
+            // The row is drawn from its words, so the key moves with them.
+            Assert.Contains(PanelAttention.SettingsUnreadableTitle, PanelHome.DrawnFrom(new[] { issue }));
+        }
+
         /// <summary>A press is a row's trailing action and sits beside its text wherever the text keeps 300 of
         /// room beside the widest press, the rail's widths included; it goes under the text only narrower.</summary>
         [Fact]
@@ -179,17 +196,13 @@ namespace OpenDashPlugin.Tests
                 PanelMetrics.BorderWeight * 2 + PanelHome.IssuePaddingX * 2 + PanelHome.IconWell + PanelHome.IconGap + PanelHome.IconGap + PanelHome.PressMaxWidth + PanelHome.PressTextMinWidth);
             Assert.Equal(PanelHome.PressTextMinWidth,
                 PanelHome.PressBesideFrom - PanelMetrics.BorderWeight * 2 - PanelHome.IssuePaddingX * 2 - PanelHome.IconWell - PanelHome.IconGap - PanelHome.IconGap - PanelHome.PressMaxWidth);
-            Assert.True(PanelHome.PressBeside(602));
-            Assert.False(PanelHome.PressBeside(601));
-            Assert.False(PanelHome.PressBeside(600));
             // The rail's content, from a control of 760 with a scroll bar, keeps its presses beside, as the
             // full sidebar's does.
             Assert.Equal(PanelLayout.Rail, PanelShell.Layout(760));
-            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(760, 17)));
-            Assert.True(PanelHome.PressBeside(PanelShell.TwoColumnFrom));
+            Assert.True(PanelShell.ContentWidth(760, 17) >= PanelHome.PressBesideFrom);
+            Assert.True(PanelShell.TwoColumnFrom >= PanelHome.PressBesideFrom);
             // The column has no ceiling, and a 4K window's keeps its presses beside too.
-            Assert.True(PanelHome.PressBeside(PanelShell.ContentWidth(3840, 17)));
-            Assert.False(PanelHome.PressBeside(400));
+            Assert.True(PanelShell.ContentWidth(3840, 17) >= PanelHome.PressBesideFrom);
         }
 
         private static AttentionStrip Brow(FlagBoxInstallState? profile, bool? selected, string device = "Wheel")
@@ -703,6 +716,11 @@ namespace OpenDashPlugin.Tests
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Outdated, null), "Update available", Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.UpToDate, true), "Showing", Theme.TextSecondary, Theme.StatusUpToDate);
             Line(PanelHome.StripLine(false, null, FlagBoxInstallState.UpToDate, null), "Installed", Theme.TextSecondary, null);
+            // #642: a copy newer than this build's has no update to offer, and reads as a current one does.
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Newer, true), "Showing", Theme.TextSecondary, Theme.StatusUpToDate);
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Newer, null), "Installed", Theme.TextSecondary, null);
+            Line(PanelHome.StripLine(false, null, FlagBoxInstallState.Newer, false), "Not selected in SimHub", Theme.Caution, Theme.Caution);
+            Line(PanelHome.StripLine(true, "Car", FlagBoxInstallState.Newer, true), "Car's own rev lights · Car", Theme.TextSecondary, Theme.StatusUpToDate);
 
             // Not there: the LEDs card's Install press, in the secondary ink. A failed install is one that is not
             // installed, as the LEDs card says it: nothing Home reads ever reports Failed.
@@ -1274,13 +1292,17 @@ namespace OpenDashPlugin.Tests
         {
             var code = PageCode();
             // An issue's press asks the content's width, since it is a row's trailing action and not a second
-            // block, read once for the card and only up to PressBesideFrom, past which nothing is drawn
-            // differently: a resize of a wide panel then leaves Home alone (PanelShell.RebuildsOnResize).
-            Assert.Contains("var beside = PanelHome.PressBeside(ContentWidthUpTo(PanelHome.PressBesideFrom)); var rows = new StackPanel", code);
-            Assert.Single(Regex.Matches(code, @"\bContentWidthUpTo\("));
+            // block, read once for the card as the threshold PressBesideFrom, on either side of which nothing is
+            // drawn differently: only a resize across it rebuilds Home (PanelShell.RebuildsOnResize).
+            Assert.Contains("var beside = ContentWidthAtLeast(PanelHome.PressBesideFrom); var rows = new StackPanel", code);
+            Assert.Single(Regex.Matches(code, @"\bContentWidthAtLeast\("));
+            Assert.Empty(Regex.Matches(code, @"\bContentWidthUpTo\("));
             Assert.Empty(Regex.Matches(code, @"\bContentWidth\b(?!\s*\()"));
-            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, PanelHome.PressBesideFrom, 17));
-            Assert.False(PanelShell.RebuildsOnResize(1300, 1301, PanelHome.PressBesideFrom, 17));
+            var beside = new[] { PanelHome.PressBesideFrom };
+            Assert.False(PanelShell.RebuildsOnResize(3000, 3840, 0, beside, 17));
+            Assert.False(PanelShell.RebuildsOnResize(1300, 1301, 0, beside, 17));
+            Assert.False(PanelShell.RebuildsOnResize(680, 700, 0, beside, 17));
+            Assert.True(PanelShell.RebuildsOnResize(700, 720, 0, beside, 17));
             Assert.Contains("var align = hasSteps || !beside ? VerticalAlignment.Top : VerticalAlignment.Center;", code);
             Assert.Contains("var beside = TwoColumns;", code);
             Assert.DoesNotContain("!Narrow", code);

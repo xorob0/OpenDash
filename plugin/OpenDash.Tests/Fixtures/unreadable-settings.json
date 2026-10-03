@@ -1,0 +1,10 @@
+{
+  "ShiftLights": true,
+  "Rig": 5,
+  "LedBars": [
+    {
+      "Name": "Dash brow",
+      "Namespace": "LedBar1"
+    }
+  ]
+}

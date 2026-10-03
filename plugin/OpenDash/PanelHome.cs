@@ -45,6 +45,9 @@ namespace OpenDashPlugin
 
         /// <summary>Writes the screen's dashboard back.</summary>
         Reinstall,
+
+        /// <summary>Shows the issue's subject, a file or a folder, in Explorer.</summary>
+        OpenFolder,
     }
 
     public static class PanelHome
@@ -146,6 +149,7 @@ namespace OpenDashPlugin
             if (id == PanelAttention.ScreensUnclaimed) return PanelIcons.Screens;
             if (id == PanelAttention.UpdateRestart) return PanelIcons.Restart;
             if (id == PanelAttention.UpdateAvailable) return PanelIcons.Updates;
+            // A missing dashboard and settings SimHub could not read: something gone, not something waiting.
             return PanelIcons.Warning;
         }
 
@@ -158,8 +162,19 @@ namespace OpenDashPlugin
             {
                 case PanelIssueAction.CheckAgain: return HomePress.CheckAgain;
                 case PanelIssueAction.Reinstall: return issue.Subject == null ? HomePress.Go : HomePress.Reinstall;
+                case PanelIssueAction.OpenFolder: return issue.Subject == null ? HomePress.Go : HomePress.OpenFolder;
                 default: return issue.Subject == null ? HomePress.Go : HomePress.Open;
             }
+        }
+
+        /// <summary>
+        /// What Explorer is started with for an Open the folder press: a file is selected in its folder, so the
+        /// kept settings are the one row highlighted beside the ones SimHub reads; a folder is opened.
+        /// </summary>
+        public static string ExplorerArguments(string path, bool isFile)
+        {
+            var quoted = "\"" + (path ?? string.Empty) + "\"";
+            return isFile ? "/select," + quoted : quoted;
         }
 
         /// <summary>
@@ -206,17 +221,13 @@ namespace OpenDashPlugin
         /// column of words, and the press goes under the text instead.</summary>
         public const double PressTextMinWidth = 300;
 
-        /// <summary>The content width from which an issue's press sits beside its text: the attention card's
-        /// border on each side (Ui.CardBox), the row's padding, the icon well and its gap, the press's gap and
-        /// its widest, and the text column's narrowest.</summary>
+        /// <summary>The content width from which an issue's press sits beside its text, as a row's trailing
+        /// action does at any width the text column keeps its room, the rail's included; under it the press
+        /// goes under the text. The attention card's border on each side (Ui.CardBox), the row's padding, the
+        /// icon well and its gap, the press's gap and its widest, and the text column's narrowest. The page
+        /// reads it as a threshold (ContentWidthAtLeast).</summary>
         public const double PressBesideFrom = PanelMetrics.BorderWeight * 2 + IssuePaddingX * 2 + IconWell + IconGap + IconGap + PressMaxWidth + PressTextMinWidth;
 
-        /// <summary>Whether an issue's press sits beside its text, as a row's trailing action does at any width
-        /// the text column keeps its room, the rail's included; where it would not, it goes under the text.</summary>
-        public static bool PressBeside(double contentWidth)
-        {
-            return contentWidth >= PressBesideFrom;
-        }
 
         /// <summary>
         /// What Home says after Check again, from the issues and the strip's facts as SimHub gave them the second
@@ -244,7 +255,7 @@ namespace OpenDashPlugin
             if (still != null) return PanelMessage.Caution(Checked + still.Title + ".");
             var profile = strip == null ? null : strip.Profile;
             if (profile == FlagBoxInstallState.NotEmbedded) return PanelMessage.Caution(Checked + CheckedNoProfile + StripName(strip, false) + ".");
-            var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+            var installed = FlagBoxInstallPlan.InSimHub(profile ?? FlagBoxInstallState.NotInstalled);
             var missing = profile == FlagBoxInstallState.NotInstalled || profile == FlagBoxInstallState.Failed;
             // SimHub's LED settings could not be read, or say nothing about this strip's profile.
             if (!installed && !missing) return PanelMessage.Caution(Checked + PanelLightRows.Unavailable);
@@ -532,7 +543,7 @@ namespace OpenDashPlugin
         public static HomeLine StripLine(bool live, string carName, FlagBoxInstallState? profile, bool? selected)
         {
             if (StripNotInstalledFor(profile)) return new HomeLine(StripNotInstalled, Theme.TextSecondary, null);
-            var installed = profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+            var installed = FlagBoxInstallPlan.InSimHub(profile ?? FlagBoxInstallState.NotInstalled);
             if (installed && selected == false) return new HomeLine(StripNotSelected, Theme.Caution, Theme.Caution);
             if (profile == FlagBoxInstallState.Outdated) return new HomeLine(StripUpdateAvailable, Theme.StatusUpdateAvailable, Theme.StatusUpdateAvailable);
             var dot = installed && selected == true ? Theme.StatusUpToDate : null;

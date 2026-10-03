@@ -147,6 +147,15 @@ namespace OpenDashPlugin
                 input.FlagBoxName = FlagBoxName();
             }
 
+            // Read once at start, before the first save (OpenDash.LoadSettings): it stands for the session.
+            var rescue = plugin.Rescue;
+            if (rescue != null && rescue.Unreadable)
+            {
+                input.SettingsUnreadable = true;
+                input.SettingsCopy = rescue.CopyPath;
+                input.SettingsBackups = rescue.BackupsPath;
+            }
+
             input.RestartPending = PendingRestart();
             input.UpdateAvailable = updateStatus.State == UpdateState.UpdateAvailable;
             input.OfferedVersion = updateStatus.LatestVersion;

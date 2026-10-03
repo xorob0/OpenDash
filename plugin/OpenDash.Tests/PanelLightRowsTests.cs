@@ -240,6 +240,8 @@ namespace OpenDashPlugin.Tests
             // green beside a profile SimHub holds, the failure red, and status.notInstalled otherwise.
             Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.UpToDate));
             Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.Outdated));
+            // #642: a copy newer than this build's is in SimHub and lights, so it wears the installed green too.
+            Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.Newer));
             Assert.Equal(Theme.StatusFailed, PanelLightRows.DotHex(FlagBoxInstallState.Failed));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.NotInstalled));
             Assert.Equal(Theme.StatusNotInstalled, PanelLightRows.DotHex(FlagBoxInstallState.Unavailable));

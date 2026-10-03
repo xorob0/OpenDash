@@ -221,7 +221,7 @@ namespace OpenDashPlugin.Tests
             // The installer's note is said as it reads, without the space round it.
             Assert.Equal(noted.Text, PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", "  " + FlagBoxInstallPlan.BuiltInModeNote + " ", one).Text);
             // A first install that SimHub reads back as older (FlagBoxInstallPlan.Decide reads Outdated whenever
-            // the versions differ) still installed it: the same message as a current one, never a failure.
+            // the versions differ and SimHub's is not the later) still installed it: the same message as a current one, never a failure.
             var readOlder = PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.Outdated, "OpenDash Flag box", null, one);
             Assert.Equal(PanelMatrix.InstallSaid(FlagBoxInstallState.NotInstalled, FlagBoxInstallState.NotInstalled, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one).Text, readOlder.Text);
             Assert.StartsWith("Installed OpenDash Flag box. ", readOlder.Text);
@@ -277,7 +277,7 @@ namespace OpenDashPlugin.Tests
             // already shows the version SimHub has, and already says the install failed.
             Assert.Equal("Update brings it to 0.5.0.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, "0.5.0", "OpenDash Flag box", one));
             Assert.Equal("Update brings it to 0.5.0.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, " 0.5.0 ", "OpenDash Flag box", one));
-            // FlagBoxInstallPlan.Decide reads Outdated whenever the versions differ, one of them missing included.
+            // FlagBoxInstallPlan.Decide reads Outdated whenever SimHub's copy is not later, one version missing included.
             Assert.Equal("Update brings it up to date.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, null, "OpenDash Flag box", one));
             Assert.Equal("Update brings it up to date.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Outdated, " ", "OpenDash Flag box", one));
             Assert.Equal("See SimHub's log.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Failed, "0.5.0", "OpenDash Flag box", one));
@@ -795,6 +795,37 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var said = PanelMatrix.RenameSaid(before, PanelMatrix.NameOf(Settings.MatrixName(matrix), matrix));", matrix);
         }
 
+        /// <summary>
+        /// #642: plugin 0.3.0-rc.1 over a flag box profile 0.3.0-rc.7 installed offered Update, the page's primary,
+        /// and the press would have gone back a version. The line says the copy is newer, beside its version and
+        /// the installed dot; the press is Reinstall, as over a current copy, for a driver who asks for this
+        /// build's own, and its hover says it goes back; the line's hover is the Updates row's.
+        /// </summary>
+        [Fact]
+        public void A_newer_profile_is_said_plainly_and_never_offered_as_an_update()
+        {
+            var one = new List<int> { 2 };
+            var row = PanelMatrix.ProfileRow(FlagBoxInstallState.Newer, "0.3.0-rc.7");
+            Assert.Equal("0.3.0-rc.7 · Newer than this build", row.State);
+            Assert.Equal(Theme.StatusUpToDate, row.StateHex);
+            Assert.Equal("Reinstall", row.Button);
+            Assert.Equal(PanelButton.Outline, row.Style);
+            Assert.NotEqual(PanelMatrix.Update, row.Button);
+            Assert.Equal("OpenDash Flag box · 0.3.0-rc.7 · Newer than this build", PanelMatrix.ProfileLine("OpenDash Flag box", FlagBoxInstallState.Newer, "0.3.0-rc.7"));
+            Assert.True(PanelMatrix.ProfileHasButton(FlagBoxInstallState.Newer));
+            Assert.Equal(FlagBoxInstallPlan.ReplacesNewer, PanelMatrix.ProfileTooltip(FlagBoxInstallState.Newer, FlagBoxInstallState.NotInstalled));
+            // After a failed Reinstall over it, the Install offered is warned as the press it was made in was.
+            Assert.Equal(FlagBoxInstallPlan.ReplacesNewer, PanelMatrix.ProfileTooltip(FlagBoxInstallState.Failed, FlagBoxInstallState.Newer));
+            Assert.Equal("Update OpenDash to match it: this build ships 0.3.0-rc.1.", PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Newer, "0.3.0-rc.1", "OpenDash Flag box", one));
+            Assert.Equal(PanelUpdates.FlagBoxTooltip(new FlagBoxPlan { State = FlagBoxInstallState.Newer, EmbeddedVersion = "0.3.0-rc.1" }, null),
+                PanelMatrix.ProfileLineTooltip(FlagBoxInstallState.Newer, "0.3.0-rc.1", "OpenDash Flag box", one));
+            Assert.Equal(Theme.StatusUpToDate, PanelLightRows.DotHex(FlagBoxInstallState.Newer));
+            // The Reinstall the driver asked for is said as a reinstall, with no select step: SimHub had it.
+            Assert.Equal("Reinstalled OpenDash Flag box.", PanelMatrix.InstallSaid(FlagBoxInstallState.Newer, FlagBoxInstallState.Newer, FlagBoxInstallState.UpToDate, "OpenDash Flag box", null, one).Text);
+            Assert.Equal("Could not reinstall OpenDash Flag box. See SimHub's log.", PanelMatrix.InstallSaid(FlagBoxInstallState.Newer, FlagBoxInstallState.Newer, FlagBoxInstallState.Failed, "OpenDash Flag box", null, one).Text);
+            Assert.False(PanelMatrix.NeedsInstall(FlagBoxInstallState.Newer));
+        }
+
         [Fact]
         public void Adding_says_the_steps_left_on_the_device()
         {
@@ -804,6 +835,7 @@ namespace OpenDashPlugin.Tests
             {
                 { FlagBoxInstallState.UpToDate, "Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2." },
                 { FlagBoxInstallState.Outdated, "Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2." },
+                { FlagBoxInstallState.Newer, "Select \"OpenDash Flag box\" on your matrix's device in SimHub and set RGB Matrix content to 2." },
                 { FlagBoxInstallState.NotInstalled, "Install OpenDash Flag box at the top of this page, then select it on your matrix's device in SimHub and set RGB Matrix content to 2." },
                 { FlagBoxInstallState.Failed, "Install OpenDash Flag box at the top of this page, then select it on your matrix's device in SimHub and set RGB Matrix content to 2." },
                 { FlagBoxInstallState.Unavailable, "Import OpenDash Flag box by hand from the top of this page, then select it on your matrix's device in SimHub and set RGB Matrix content to 2." },

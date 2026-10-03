@@ -225,6 +225,9 @@ namespace OpenDashPlugin
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
+                case FlagBoxInstallState.Newer:
+                    // A newer copy than this build's lights as a current one does: the Updates table says
+                    // it is newer, and the card offers nothing over it (ProfileAction).
                     if (selected == false) return NotSelected;
                     if (profile.Value == FlagBoxInstallState.Outdated) return UpdateAvailable;
                     return selected == true ? Showing : Installed;
@@ -1141,8 +1144,10 @@ namespace OpenDashPlugin
             return inSimHub ? "Renamed to " + name + " in OpenDash and SimHub." : "Renamed to " + name + ".";
         }
 
-        /// <summary>Whether a rename installs the profile again: only where SimHub holds it, up to date or not,
-        /// so SimHub's list carries the new name. A profile SimHub lacks has no name there to change.</summary>
+        /// <summary>Whether a rename installs the profile again: only where SimHub holds it, up to date or older,
+        /// so SimHub's list carries the new name. A profile SimHub lacks has no name there to change, and one
+        /// newer than this build's is left as it is: the install would put the older profile back, which a
+        /// rename does not ask for.</summary>
         public static bool RenameReinstalls(FlagBoxInstallState? profile)
         {
             return profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
@@ -1226,7 +1231,7 @@ namespace OpenDashPlugin
         /// install replaces a copy rather than adding one the driver has still to select.</summary>
         public static bool HeldInSimHub(FlagBoxInstallState? profile)
         {
-            return profile == FlagBoxInstallState.UpToDate || profile == FlagBoxInstallState.Outdated;
+            return profile.HasValue && FlagBoxInstallPlan.InSimHub(profile.Value);
         }
 
         /// <summary>The Add sheet's press where SimHub offers no LED device: the strip is added, and its profile

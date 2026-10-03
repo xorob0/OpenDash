@@ -46,7 +46,9 @@ namespace OpenDashPlugin
         /// <param name="hasMatrix">Whether the rig has a matrix. Without one, Home files no update issue, the
         /// sidebar draws no dot and Updates leaves the profile's row out (PanelUpdates.DrawsFlagBoxRow), so an
         /// older profile's Update is an outline press like Install and Reinstall rather than the page's one
-        /// primary: no page offers it as something to act on while nothing on the rig uses it.</param>
+        /// primary: no page offers it as something to act on while nothing on the rig uses it. A copy newer than
+        /// this build's reads its version and PanelCopy.NewerThanBuild, "OpenDash Flag box · 0.3.0-rc.7 · Newer
+        /// than this build", with the installed dot and Reinstall, never Update.</param>
         public static RowAction ProfileRow(FlagBoxInstallState state, string installedVersion, bool hasMatrix = true)
         {
             var installed = string.IsNullOrEmpty(installedVersion) ? Installed : installedVersion;
@@ -56,6 +58,11 @@ namespace OpenDashPlugin
                     return new RowAction(installed, Theme.StatusUpdateAvailable, Update, hasMatrix ? PanelButton.Primary : PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
                     return new RowAction(installed, Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
+                case FlagBoxInstallState.Newer:
+                    // Installed and working, so the installed dot; never Update, which would go back a version.
+                    // Reinstall stays, as over a current copy, for a driver who asks for this build's own, and
+                    // its hover says it goes back (ProfileTooltip).
+                    return new RowAction(installed + " · " + PanelCopy.NewerThanBuild, Theme.StatusUpToDate, "Reinstall", PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
                     return new RowAction(PanelCopy.InstallFailed, Theme.StatusFailed, "Install", PanelButton.Outline);
                 default:
@@ -125,6 +132,7 @@ namespace OpenDashPlugin
         public static string ProfileTooltip(FlagBoxInstallState state, FlagBoxInstallState pressedFrom)
         {
             var held = state == FlagBoxInstallState.Failed ? pressedFrom : state;
+            if (held == FlagBoxInstallState.Newer) return FlagBoxInstallPlan.ReplacesNewer;
             return InSimHub(held) ? FlagBoxInstallPlan.Replaces : InstallTooltip;
         }
 
@@ -145,7 +153,7 @@ namespace OpenDashPlugin
         /// <summary>Whether SimHub holds a copy of the profile, which a press then replaces.</summary>
         private static bool InSimHub(FlagBoxInstallState state)
         {
-            return state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Outdated;
+            return FlagBoxInstallPlan.InSimHub(state);
         }
 
         /// <summary>
@@ -168,12 +176,14 @@ namespace OpenDashPlugin
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
+                case FlagBoxInstallState.Newer:
+                    // Reinstall is the press over a current copy and over a newer one alike.
                     var verb = before == FlagBoxInstallState.Outdated ? "Updated "
-                        : before == FlagBoxInstallState.UpToDate ? "Reinstalled " : "Installed ";
+                        : before == FlagBoxInstallState.UpToDate || before == FlagBoxInstallState.Newer ? "Reinstalled " : "Installed ";
                     var parts = new List<string> { verb + profile + "." };
                     var noted = !string.IsNullOrWhiteSpace(note);
                     if (noted) parts.Add(note.Trim());
-                    var first = before != FlagBoxInstallState.Outdated && before != FlagBoxInstallState.UpToDate;
+                    var first = !InSimHub(before);
                     var select = first ? SelectStep(profile, panels) : null;
                     if (select != null) parts.Add(select);
                     return new PanelMessage(string.Join(" ", parts), noted ? PanelTone.Caution : PanelTone.Info);
@@ -239,6 +249,10 @@ namespace OpenDashPlugin
                 case FlagBoxInstallState.Outdated:
                     // The line already shows the version SimHub has: the hover names the one the press brings.
                     return UpdateBringsItTo(embeddedVersion);
+                case FlagBoxInstallState.Newer:
+                    // The line already says it is newer: the hover names this build's version and the way
+                    // forward, in the Updates row's words for the same state.
+                    return PanelCopy.NewerHover(embeddedVersion);
                 case FlagBoxInstallState.Failed:
                     // The line already says the install failed: the hover says where to look.
                     return SeeLog;
@@ -517,6 +531,7 @@ namespace OpenDashPlugin
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
+                case FlagBoxInstallState.Newer:
                     return SelectOn(profile) + YourDevice + content;
                 case FlagBoxInstallState.NotEmbedded:
                     return NoProfile;
@@ -543,7 +558,7 @@ namespace OpenDashPlugin
         /// is what decides the ink it is said in.</summary>
         public static bool NeedsInstall(FlagBoxInstallState state)
         {
-            return state != FlagBoxInstallState.UpToDate && state != FlagBoxInstallState.Outdated;
+            return !InSimHub(state);
         }
 
         /// <summary>The fix box's title, drawn only when something has read that no device shows the matrix: the

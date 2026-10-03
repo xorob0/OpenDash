@@ -105,6 +105,7 @@ issues, most urgent first, in the order a driver has to act:
 
 | rule | title | page | press |
 |---|---|---|---|
+| the settings file is there and SimHub could not read it | "OpenDash could not read its settings", then where the file is kept and the steps | Home | Open the folder |
 | a screen's folder is gone | "Rim's dashboard is missing from SimHub" | Screens | Install it again |
 | a screen written since SimHub started | "Rim is not in SimHub yet", then "Restart SimHub to load it." and the Dash Studio step | Screens | Open Rim |
 | a strip's profile installed and not selected | "Dash brow's profile is not selected", then the steps in SimHub's menus | LEDs | Check again |
@@ -114,6 +115,19 @@ issues, most urgent first, in the order a driver has to act:
 | the flag box profile is older | "OpenDash Flag box has an update" | Matrix | Open Matrix |
 | an update waits for SimHub to close | "Restart SimHub to finish updating" | Updates | Open Updates |
 | a newer release is on offer | "OpenDash 0.5.1 is available" | Updates | Open Updates |
+
+**Settings SimHub could not read come first** (#643), because every other rule reads the rig, and
+that rig is the defaults OpenDash fell back to. SimHub hands a plugin its defaults when neither
+`OpenDash.GeneralSettings.json` nor any `_Backups` copy can be read, and logs Newtonsoft's exception;
+OpenDash's first save would then write the defaults over the file. So when SimHub fell back and the
+file is there with something in it, `SettingsRescue` copies it beside itself as
+`OpenDash.GeneralSettings.unreadable.json` before that save, and OpenDash runs on the defaults. A copy
+already there is never overwritten; when it holds another file, the issue names SimHub's `_Backups`,
+where the save moved this one. The steps close SimHub first, because OpenDash saves when SimHub
+closes and would write over a file restored while it runs, then have the kept file corrected, or an
+earlier one taken from `_Backups`, and saved under the settings file's name, then start SimHub. The
+press opens Explorer on the copy, or on `_Backups`. Home's own sidebar item wears the dot, since the
+fix is in no page of the panel.
 
 A missing folder comes before a restart, because restarting will not bring it back. Both come before
 the lights, because a screen is what most rigs have. The out-of-date profile and the waiting update
@@ -454,8 +468,15 @@ Reinstall everything under it, the kept copies, and Support (`Updates` artboard)
 its version and state. An older light profile whose device SimHub lists gets a small Update press in
 its row, and Home's strip-update fix lands on the first row that offers one.
 
+**A light profile newer than this build** (a later OpenDash installed it and an earlier one is running)
+reads "Newer than this build" in the installed ink, with no Update press, and its hover names the
+version this build ships and the plugin's own update as the way forward. Home files no item for it.
+The versions are compared as versions, so 0.3.0-rc.10 is later than 0.3.0-rc.9 (#642).
+
 **Reinstall everything** installs every dashboard on the rig again, and each older or missing LED and
-matrix profile. A dashboard the driver edited is kept as a copy first.
+matrix profile. A dashboard the driver edited is kept as a copy first. A newer profile is left alone; the
+Matrix page's Reinstall is the one press that puts this build's older flag box profile over it, and only
+when the driver asks for it there.
 
 **The kept card** shows whenever a kept copy exists. Put mine back writes it back, and leaves a folder
 edited since as it is and says so, since putting back keeps no copy of what it replaces.
@@ -637,6 +658,7 @@ row names is in its built column.
 | Updates: "Repair everything" | "Reinstall everything" | the press reinstalls, and its hover and the Screens page say so; not yet ruled. `PanelConfirmation.ReinstallLabel` |
 | Screens: "In band D" | "Band D" | the zone's name as the picture draws it; not yet ruled. `PanelScreens.FlagLabels` |
 | Updates: "Car tables:" in the support report | "Car Data:" | one name for the data. `PanelUpdates.Report` |
+| Updates, Matrix: no state for a light profile newer than the plugin | "Newer than this build" on the Updates row and the Matrix line, with the hover "Update OpenDash to match it" and the version this build ships | no artboard draws the state; a press over it would go back a version (#642). `PanelCopy.NewerThanBuild`, `PanelCopy.NewerStep` |
 
 **Two groups carry two words each, as the artboards do**, and are left for the author since the canvas
 is theirs: the rig's night mode and brightness are "Lights" on Shortcuts (its rig group) and "Lighting"

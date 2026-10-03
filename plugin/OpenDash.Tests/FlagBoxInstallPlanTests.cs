@@ -81,6 +81,82 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Update", PanelCopy.LightRow(plan.State, plan.InstalledVersion).Button);
         }
 
+        /// <summary>
+        /// #642: plugin 0.3.0-rc.1 over profiles a later 0.3.0-rc.7 installed read "Update available", and the
+        /// press would have put the older profile back. A later version in SimHub is its own state, compared as
+        /// versions and never as strings, with nothing to press on the Updates table.
+        /// </summary>
+        [Fact]
+        public void A_newer_version_installed_is_newer_and_offers_nothing()
+        {
+            const string Rc1 = "The alert catalogue. Built by OpenDash 0.3.0-rc.1; do not edit here.";
+            const string Rc7 = "The alert catalogue. Built by OpenDash 0.3.0-rc.7; do not edit here.";
+            var plan = FlagBoxInstallPlan.Decide(Ours, Rc1, new[] { Profile(Ours, Rc7) });
+            Assert.Equal(FlagBoxInstallState.Newer, plan.State);
+            Assert.False(plan.WouldChange);
+            Assert.Equal("0.3.0-rc.7", plan.InstalledVersion);
+            Assert.Equal("0.3.0-rc.1", plan.EmbeddedVersion);
+            var row = PanelCopy.LightRow(plan.State, plan.InstalledVersion);
+            Assert.Null(row.Button);
+            Assert.Equal("Newer than this build", row.State);
+            Assert.Equal(PanelCopy.NewerThanBuild, row.State);
+            Assert.Equal(Theme.StatusUpToDate, row.StateHex);
+            // The other way round is still an update.
+            Assert.Equal(FlagBoxInstallState.Outdated, FlagBoxInstallPlan.Decide(Ours, Rc7, new[] { Profile(Ours, Rc1) }).State);
+            Assert.Equal(FlagBoxInstallState.Newer, FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V2) }).State);
+        }
+
+        [Theory]
+        // As versions: rc.10 is later than rc.9, which a string comparison gets backwards.
+        [InlineData("0.3.0-rc.10", "0.3.0-rc.9", FlagBoxInstallState.Newer)]
+        [InlineData("0.3.0-rc.9", "0.3.0-rc.10", FlagBoxInstallState.Outdated)]
+        // A release is later than its own release candidates, and a candidate earlier than the release.
+        [InlineData("0.3.0", "0.3.0-rc.7", FlagBoxInstallState.Newer)]
+        [InlineData("0.3.0-rc.7", "0.3.0", FlagBoxInstallState.Outdated)]
+        [InlineData("0.10.0", "0.9.0", FlagBoxInstallState.Newer)]
+        [InlineData("0.3.0-rc.7", "0.3.0-rc.7", FlagBoxInstallState.UpToDate)]
+        // No version on either side says nothing about which is later, so a copy is never newer without one.
+        [InlineData(null, "0.3.0", FlagBoxInstallState.Outdated)]
+        [InlineData("0.3.0", null, FlagBoxInstallState.Outdated)]
+        [InlineData(null, null, FlagBoxInstallState.UpToDate)]
+        public void Versions_are_compared_as_versions(string installed, string embedded, FlagBoxInstallState expected)
+        {
+            Assert.Equal(expected, FlagBoxInstallPlan.Compare(installed, embedded));
+            Func<string, string> stamp = v => v == null ? "A profile." : "Built by OpenDash " + v + ".";
+            Assert.Equal(expected, FlagBoxInstallPlan.Decide(Ours, stamp(embedded), new[] { Profile(Ours, stamp(installed)) }).State);
+        }
+
+        [Fact]
+        public void A_newer_copy_is_in_SimHub_and_its_summary_points_at_the_plugins_update()
+        {
+            Assert.True(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.Newer));
+            Assert.True(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.UpToDate));
+            Assert.True(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.Outdated));
+            Assert.False(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.NotInstalled));
+            Assert.False(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.Failed));
+            Assert.False(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.Unavailable));
+            Assert.False(FlagBoxInstallPlan.InSimHub(FlagBoxInstallState.NotEmbedded));
+            var newer = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V2) });
+            Assert.Equal("Newer than this build (0.3.0). Update OpenDash to match it: this build ships 0.2.0-rc.1.", FlagBoxInstallPlan.Summary(newer, null));
+            Assert.DoesNotContain(FlagBoxInstallPlan.Replaces, FlagBoxInstallPlan.Summary(newer, null));
+            Assert.Equal("Update OpenDash to match it: this build ships 0.3.0-rc.1.", PanelCopy.NewerHover(" 0.3.0-rc.1 "));
+            Assert.Equal("Update OpenDash to match it.", PanelCopy.NewerHover(null));
+            Assert.Equal("Replaces the newer copy in SimHub with this build's older one, including your changes to it.", FlagBoxInstallPlan.ReplacesNewer);
+        }
+
+        [Fact]
+        public void A_newer_member_keeps_a_group_from_reading_current_and_never_hides_an_older_one()
+        {
+            var here = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V1) });
+            var newer = FlagBoxInstallPlan.Decide(Ours, V1, new[] { Profile(Ours, V2) });
+            var old = FlagBoxInstallPlan.Decide(Ours, V2, new[] { Profile(Ours, V1) });
+            Assert.Equal(FlagBoxInstallState.Newer, FlagBoxInstallPlan.Combine(new[] { here, newer }).State);
+            Assert.Equal(FlagBoxInstallState.Outdated, FlagBoxInstallPlan.Combine(new[] { newer, old }).State);
+            // Across devices the better reading wins: a current copy over a newer one.
+            Assert.Equal(FlagBoxInstallState.UpToDate, FlagBoxInstallPlan.Better(newer, here).State);
+            Assert.Equal(FlagBoxInstallState.Newer, FlagBoxInstallPlan.Better(old, newer).State);
+        }
+
         [Fact]
         public void A_profile_the_user_made_is_never_ours_to_replace()
         {
