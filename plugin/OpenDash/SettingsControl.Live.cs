@@ -72,10 +72,6 @@ namespace OpenDashPlugin
         /// <summary>Whether the answer on its way was asked for by a press, which it owes a sentence either way.</summary>
         private bool askedManually;
 
-        /// <summary>Whether an update is being applied. The line and the buttons are the run's until it
-        /// finishes, so an answer that lands meanwhile is not drawn.</summary>
-        private bool applying;
-
         /// <summary>The plugin's, not the panel's own: the check Init queued and the one this panel asks for are
         /// the same service, so the releases either found are the ones an update applies.</summary>
         private UpdateService Updates => plugin.Updates;
@@ -133,8 +129,9 @@ namespace OpenDashPlugin
             var manual = askedManually;
             askedManually = false;
             // The check Init queued can land while an update is installing, and the line and the buttons are
-            // the install's until it finishes; what it says about the rig afterwards is its own to decide.
-            if (applying) return;
+            // the install's until it finishes; what it says about the rig afterwards is its own to decide. The run
+            // is the service's (UpdateService.Applying), whichever panel started it (#606).
+            if (Updates.Applying) return;
             if (answer == null)
             {
                 // The service declined after all. Whatever was showing before is still the truth.
