@@ -168,9 +168,7 @@ export const USAGE = `panel-shots: photograph every page of the settings panel a
   --no-build   install the plugin DLL already built rather than packaging again
   --keep       leave the VM claimed and the emulator running when this returns
 
-It claims the VM as OPENDASH_VM_WHO, and refuses on the VM host when that is not set: every session
-there is root@cumulus otherwise, and two of them would both think the claim was theirs. Every step is
-gated on the claim still being this run's. A page taller than the panel is photographed in parts,
+It claims the VM, and every step is gated on the claim still being this run's. A page taller than the panel is photographed in parts,
 <page>-<width>-1of2.png and -2of2.png, scrolled with the mouse wheel. run.json and panel.json are
 written beside the pictures: provenance, and the width SimHub and the panel actually reached.
 `;
@@ -465,11 +463,6 @@ interface Shot {
 const firstLine = (r: RunResult): string => (r.stderr || r.stdout || 'no output').split('\n')[0]!.trim();
 
 export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<number> {
-  if (host.local && !process.env.OPENDASH_VM_WHO) {
-    console.error('Set OPENDASH_VM_WHO to a name of your own first, e.g. OPENDASH_VM_WHO=root@cumulus-503.');
-    console.error('Every session on this host claims as root@cumulus otherwise, and two of them would each take the other\'s claim for their own.');
-    return 1;
-  }
   if (opts.scenario !== null) {
     const known = scenarios();
     if (known.length > 0 && !known.includes(opts.scenario)) {
@@ -569,7 +562,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
     sleep(3);
 
     mkdirSync(opts.outDir, { recursive: true });
-    const run = { ...provenance(opts.scenario), captures: {} as Record<string, RunCapture> };
+    const run = { ...provenance(), captures: {} as Record<string, RunCapture> };
 
     for (const width of opts.widths) {
       const sized = step(`sizing SimHub to ${width === 'max' ? 'maximised' : `${width} px`}`, () => sizeSimHub(host, width));
@@ -630,7 +623,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
           const captured = captureWindow(host, { mainWindowOf: 'SimHubWPF' }, path.join(opts.outDir, file), crop);
           shots.push({ file, ok: captured.ok, why: captured.ok ? undefined : firstLine(captured) });
           console.log(`    ${file}: ${captured.ok ? captured.stdout.split(' to ')[0] : `failed (${firstLine(captured)})`}`);
-          if (captured.ok) run.captures[file] = { kind: 'panel', panel: pageName, width: Math.round(crop.width), height: Math.round(crop.height), lapsSeen: null };
+          if (captured.ok) run.captures[file] = { kind: 'panel', panel: pageName, scenario: opts.scenario, width: Math.round(crop.width), height: Math.round(crop.height), lapsSeen: null };
         }
         // Back to the top, so the next page is not opened scrolled and a re-run starts where this one did.
         if (parts > 1 && column) wheel(host, column.rect.left + 10 * measure.scale, column.rect.top + column.rect.height / 2, -(notchesPerViewport(column.rect.height / measure.scale) * parts + 10));

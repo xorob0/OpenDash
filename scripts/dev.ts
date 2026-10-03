@@ -16,7 +16,7 @@ import path from 'node:path';
 import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
 import { captureDashboard, guiProblem, openDashboard, placeDashboards } from './gui.ts';
 import { BASE_FACE } from '../packages/dash/src/zones/index.ts';
-import { claim, claimLost, install, readClaim, release, resolveHost, screenshot, simhubStop, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
+import { claim, claimLost, install, readClaim, release, resolveHost, screenshot, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
 
@@ -166,7 +166,6 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     }
 
     step(4, steps, `installing ${opts.packageName} and restarting SimHub`);
-    simhubStop(host);
     const installed = install(host, [opts.packageName]);
     if (!installed.ok) {
       console.error(installed.stderr || installed.stdout);
@@ -224,7 +223,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
 
     console.log('');
     console.log(`  package   ${opts.packageName}, installed and open`);
-    console.log(`  telemetry ${opts.scenario}, emulator pid ${runningPid(host) ?? 'unknown'}`);
+    console.log(`  telemetry ${opts.scenario}, emulator pid ${runningPid(host).pid ?? 'unknown'}`);
     console.log(`  screen    ${captured.ok ? shot : '(not captured)'}`);
     console.log(`  logs      bun run vm logs 80        SimHub`);
     console.log(`            bun run emulator tail 20  the telemetry being replayed`);

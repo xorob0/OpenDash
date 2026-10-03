@@ -26,6 +26,7 @@ describe('the clips', () => {
     for (const c of sidecar.clips) {
       for (const f of Object.values(c.files)) expect({ f, exists: existsSync(path.join(clipsDir, f)) }).toEqual({ f, exists: true });
       expect(c.takenAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+      expect({ slug: c.slug, version: c.version, commit: c.commit }).toEqual({ slug: c.slug, version: expect.stringMatching(/^\d+\.\d+\.\d+/), commit: expect.stringMatching(/^[0-9a-f]{7,40}$/) });
     }
   });
 
@@ -65,8 +66,16 @@ describe('merging a clip', () => {
   test('replaces by slug and keeps the rest', () => {
     const before = { schema: 1 as const, version: '0.3.0-rc.5', commit: 'a', simHubVersion: '9.12.6', clips: [entry('b'), entry('a')] };
     const after = mergeClip(before, { ...entry('b'), frames: 141 }, { version: '0.3.0-rc.6', commit: 'c', simHubVersion: '9.12.6' });
+    expect(after.schema).toBe(2);
     expect(after.clips.map((c) => c.slug)).toEqual(['a', 'b']);
     expect(after.clips[1]?.frames).toBe(141);
-    expect(after.version).toBe('0.3.0-rc.6');
+  });
+
+  test('stamps the clip it brought, and leaves the others with the recording that made them', () => {
+    // A schema 1 sidecar, as it was committed until #627: the newest recording's provenance for all.
+    const before = { schema: 1 as const, version: '0.3.0-rc.5', commit: 'a', simHubVersion: '9.12.6', clips: [entry('b'), entry('a')] };
+    const after = mergeClip(before, { ...entry('b'), frames: 141 }, { version: '0.3.0-rc.6', commit: 'c', simHubVersion: '9.12.6' });
+    expect(after.clips.find((c) => c.slug === 'b')).toMatchObject({ version: '0.3.0-rc.6', commit: 'c' });
+    expect(after.clips.find((c) => c.slug === 'a')).toMatchObject({ version: '0.3.0-rc.5', commit: 'a' });
   });
 });

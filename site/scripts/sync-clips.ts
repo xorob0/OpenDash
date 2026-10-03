@@ -5,35 +5,36 @@
  *
  * Run by hand after watching them, for the same reason sync-shots is: a clip that caught SimHub
  * reconnecting is a film of a bug. An entry is replaced by slug, so re-recording one clip leaves
- * the others as they were.
+ * the others as they were, each with the version and commit it was recorded from.
  *
  *   bun scripts/sync-clips.ts ../build/clips
  */
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import type { ClipRecord } from '../../scripts/clips.ts';
-import type { ClipEntry, ClipsSidecar } from '../lib/clips.ts';
+import { upgradeClips, type ClipEntry, type ClipProvenance, type ClipsSidecar, type ClipsSidecarV1 } from '../lib/clips.ts';
 
 const outDir = path.resolve(import.meta.dir, '..', 'public', 'clips');
 const sidecarPath = path.join(outDir, 'clips.json');
 
 export function readSidecar(file = sidecarPath): ClipsSidecar {
-  if (!existsSync(file)) return { schema: 1, version: '', commit: '', simHubVersion: '', clips: [] };
-  return JSON.parse(readFileSync(file, 'utf8')) as ClipsSidecar;
+  if (!existsSync(file)) return { schema: 2, clips: [] };
+  return upgradeClips(JSON.parse(readFileSync(file, 'utf8')) as ClipsSidecar | ClipsSidecarV1);
 }
 
-/** The entry replaces any with the same slug; the sidecar's provenance becomes the newest clip's. */
-export function mergeClip(sidecar: ClipsSidecar, entry: ClipEntry, record: Pick<ClipRecord, 'version' | 'commit' | 'simHubVersion'>): ClipsSidecar {
+/** A clip as its recording describes it, before it is stamped with the build it was recorded from. */
+type Unstamped = Omit<ClipEntry, keyof ClipProvenance>;
+
+/** The entry, stamped with its recording, replaces any with the same slug; the other clips keep their own. */
+export function mergeClip(sidecar: ClipsSidecar | ClipsSidecarV1, entry: Unstamped, record: Pick<ClipRecord, keyof ClipProvenance>): ClipsSidecar {
+  const { version, commit, simHubVersion } = record;
   return {
-    schema: 1,
-    version: record.version,
-    commit: record.commit,
-    simHubVersion: record.simHubVersion,
-    clips: [...sidecar.clips.filter((c) => c.slug !== entry.slug), entry].sort((a, b) => a.slug.localeCompare(b.slug)),
+    schema: 2,
+    clips: [...upgradeClips(sidecar).clips.filter((c) => c.slug !== entry.slug), { ...entry, version, commit, simHubVersion }].sort((a, b) => a.slug.localeCompare(b.slug)),
   };
 }
 
-export function entryFor(record: ClipRecord, bytes: ClipEntry['bytes']): ClipEntry {
+export function entryFor(record: ClipRecord, bytes: ClipEntry['bytes']): Unstamped {
   return {
     slug: record.slug,
     package: record.package,

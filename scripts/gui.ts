@@ -581,21 +581,32 @@ Start-ScheduledTask -TaskName '${tag}'
 'launched'`,
     90,
   );
-  if (!launched.ok) return launched;
+  const unregister = () => powershell(host, `Unregister-ScheduledTask -TaskName '${tag}' -Confirm:$false -ErrorAction SilentlyContinue`, 60);
+  if (!launched.ok) {
+    // Registered and not started is possible, and so is neither; both leave the script behind.
+    onHost(host, `rm -f ${share}`);
+    unregister();
+    return launched;
+  }
   // The wait happens on the host, in the same command as the read. Polling from here cost one
   // SSH round trip per second, which made a handful of these calls slower than the clicking they
   // were there to verify.
   // OPENDASH_GUI_DEBUG keeps the script and its output on the share, and names them, which is the
   // only way to see why a step that runs on the far side of a scheduled task produced nothing.
+  // A script that never wrote its marker timed out, and says so: read as an empty answer, it was
+  // "no dashboard open" or "nothing happened", which every caller believed.
   const keep = Boolean(process.env.OPENDASH_GUI_DEBUG);
+  const seconds = Math.max(1, Math.trunc(timeoutSeconds));
   const read = onHost(
     host,
-    `for i in $(seq 1 ${Math.max(1, Math.trunc(timeoutSeconds))}); do [ -f ${done} ] && break; sleep 1; done
+    `for i in $(seq 1 ${seconds}); do [ -f ${done} ] && break; sleep 1; done
+finished=no; [ -f ${done} ] && finished=yes
 cat ${out} 2>/dev/null | tr -d '\\000'
-${keep ? `echo "[debug] kept ${share}, ${out} and ${done}" >&2` : `rm -f ${share} ${out} ${done}`}`,
+${keep ? `echo "[debug] kept ${share}, ${out} and ${done}" >&2` : `rm -f ${share} ${out} ${done}`}
+[ $finished = yes ] || { echo "the script run in the desktop timed out: it had not finished after ${seconds}s" >&2; exit 124; }`,
     (timeoutSeconds + 30) * 1000,
   );
-  if (!keep) powershell(host, `Unregister-ScheduledTask -TaskName '${tag}' -Confirm:$false -ErrorAction SilentlyContinue`, 60);
+  if (!keep) unregister();
   return read;
 }
 
@@ -672,8 +683,11 @@ public class OpenDashWindows {
 '@
 `;
 
-/** The dashboards SimHub currently has open in a window, by name. */
-export function openDashboards(host: Host): string[] {
+/**
+ * The dashboards SimHub currently has open in a window, by name, or null when the desktop could not
+ * be asked. Null is kept apart from an empty list, which is a desktop that answered "none".
+ */
+export function openDashboards(host: Host, timeoutSeconds = 120): string[] | null {
   const r = inDesktopScript(
     host,
     `${WINDOW_HELPER}
@@ -681,7 +695,9 @@ foreach ($h in [OpenDashWindows]::Visible()) {
   $t = [OpenDashWindows]::Title($h)
   if ($t -match ' \\(WPF Renderer\\)$') { $t -replace ' \\(WPF Renderer\\)$', '' }
 }`,
+    timeoutSeconds,
   );
+  if (!r.ok) return null;
   return r.stdout
     .split('\n')
     .map((l) => l.replace(/^﻿/, '').trim())
@@ -990,6 +1006,9 @@ function seeRow(host: Host, client: ClientArea, at: { x: number; y: number }, ro
 const openFailedPng = (name: string): string =>
   path.join(path.resolve(import.meta.dir, '..'), 'build', `vm-open-${name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '')}.png`);
 
+/** What `openDashboard` says when the desktop could not tell it which dashboards are open. */
+const NO_LIST = 'could not read which dashboards SimHub has open: the script run in the desktop timed out or failed';
+
 /**
  * Opens a dashboard in a window: Dash Studio, dismiss the track-layout offer, filter the list,
  * hover the row so its Start button appears, click it, then Windowed from the Quick run menu.
@@ -1011,6 +1030,7 @@ const openFailedPng = (name: string): string =>
  */
 export function openDashboard(host: Host, opts: OpenOptions): RunResult {
   const already = openDashboards(host);
+  if (already === null) return { ok: false, code: 1, stdout: '', stderr: NO_LIST };
   if (already.includes(opts.name)) return { ok: true, code: 0, stdout: `${opts.name} is already open`, stderr: '' };
 
   const size = screenSize(host);
@@ -1135,6 +1155,8 @@ export function openDashboard(host: Host, opts: OpenOptions): RunResult {
       click(host, aim.windowed.x, aim.windowed.y, HOVER_SECONDS);
       sleep(14);
       const open = openDashboards(host);
+      // Unread is not unopened: guessing again would open a second copy of a dashboard that is there.
+      if (open === null) return { ok: false, code: 1, stdout: '', stderr: `${NO_LIST}, after pressing Start` };
       if (open.includes(opts.name)) return { ok: true, code: 0, stdout: openedLine(opts.name, i + 1, underOffer), stderr: '' };
       // A guess at the wrong offset lands on another row and opens the wrong dashboard. Close what
       // this opened before guessing again, so a failure leaves the rig as it found it.

@@ -81,11 +81,27 @@ export function tracedScenarioNames(): string[] {
   return scenarios().filter((name) => !UNTRACED_SCENARIOS.includes(name));
 }
 
-/** The emulator's process id on the VM, or null when none is running. */
-export function runningPid(host: Host): number | null {
+/** Whether the emulator is running: its process id, or null when none is. */
+export type PidResult = RunResult & { pid: number | null };
+
+/**
+ * The emulator's process id on the VM, null when none is running, or a failure when the guest could
+ * not be asked. The failure is kept apart from "none" because a caller that reads "none" goes on to
+ * start one, and starting one beside another is the two-writer fault this file exists to prevent: an
+ * SSH call that failed is not grounds for that.
+ */
+export function runningPid(host: Host): PidResult {
   const r = powershell(host, `$p = Get-Process IrsdkEmulator -ErrorAction SilentlyContinue; if ($p) { $p.Id } else { '' }`, 60);
-  const pid = Number.parseInt(r.stdout.trim(), 10);
-  return Number.isFinite(pid) && pid > 0 ? pid : null;
+  const answer = r.stdout.trim();
+  if (r.ok && answer === '') return { ...r, pid: null };
+  if (r.ok && /^\d+(\s+\d+)*$/.test(answer)) return { ...r, pid: Number.parseInt(answer, 10) };
+  return {
+    ok: false,
+    code: r.code === 0 ? 1 : r.code,
+    stdout: '',
+    stderr: `could not tell whether an emulator is running: ${r.stderr.trim() || answer || `the guest answered nothing (exit ${r.code})`}`,
+    pid: null,
+  };
 }
 
 /** Builds the emulator unless the exe is already there. It cross-builds from any platform. */
@@ -132,7 +148,9 @@ Copy-Item ${psq(`${SHARE_UNC}\\irsdk-emulator\\scenarios\\*`)} (Join-Path $dir '
  * process ignores the file, which means it was started without one.
  */
 export function stop(host: Host, timeoutSeconds = 20): RunResult {
-  if (runningPid(host) === null) return { ok: true, code: 0, stdout: 'not running', stderr: '' };
+  const running = runningPid(host);
+  if (!running.ok) return running;
+  if (running.pid === null) return { ok: true, code: 0, stdout: 'not running', stderr: '' };
   return powershell(
     host,
     `New-Item -ItemType File -Force -Path ${psq(GUEST_STOP)} | Out-Null
@@ -166,14 +184,17 @@ export function start(host: Host, opts: StartOptions): RunResult {
     return { ok: false, code: 1, stdout: '', stderr: `unknown scenario "${opts.scenario}"; the repository ships ${known.join(', ')}` };
   }
 
-  const pid = runningPid(host);
-  if (pid !== null) {
+  const running = runningPid(host);
+  if (!running.ok) {
+    return { ...running, stderr: `${running.stderr}\nNot starting one beside it blind: two writers to the shared memory make SimHub drop the connection. Try again.` };
+  }
+  if (running.pid !== null) {
     if (!opts.replace) {
       return {
         ok: false,
         code: 1,
         stdout: '',
-        stderr: `an emulator is already running (pid ${pid}). Two writers to the shared memory make SimHub drop the connection.\nStop it with \`bun run emulator stop\`, or start with --replace.`,
+        stderr: `an emulator is already running (pid ${running.pid}). Two writers to the shared memory make SimHub drop the connection.\nStop it with \`bun run emulator stop\`, or start with --replace.`,
       };
     }
     const stopped = stop(host);
@@ -190,10 +211,10 @@ export function start(host: Host, opts: StartOptions): RunResult {
   const deadline = Date.now() + waitSeconds * 1000;
   while (Date.now() < deadline) {
     const now = runningPid(host);
-    if (now !== null) {
+    if (now.ok && now.pid !== null) {
       sleep(3);
       const line = tail(host, 1);
-      return { ok: true, code: 0, stdout: `running ${opts.scenario} (pid ${now})\n${line.stdout}`, stderr: '' };
+      return { ok: true, code: 0, stdout: `running ${opts.scenario} (pid ${now.pid})\n${line.stdout}`, stderr: '' };
     }
     sleep(2);
   }
@@ -215,17 +236,9 @@ Get-Content ${psq(GUEST_LOG)} -Tail ${Math.max(1, Math.trunc(lines))}`,
   );
 }
 
-/**
- * Follows the log in the local terminal, so the per-second line the emulator prints on the VM is
- * visible here. It polls rather than streaming, since the transport is one SSH round trip per read
- * and the line only changes once a second anyway.
- *
- * Nothing here catches a signal, deliberately. On Bun 1.3.3 `process.on('SIGINT', ...)` registers
- * a handler that is never called, and registering it suppresses the default action, so a follow
- * loop that armed one could not be stopped with Ctrl-C at all: worse than not trying. The trap
- * lives in `scripts/emulator.sh`, which is what `bun run emulator` invokes, because a shell trap
- * does run.
- */
+/** The lines of the log that count laps: a run's banner, and a completed lap. */
+const LAP_LINES = 'IrsdkEmulator - scenario|lap \\d+ completed in';
+
 /**
  * The laps the running scenario has completed since it started, read from the log.
  *
@@ -234,9 +247,20 @@ Get-Content ${psq(GUEST_LOG)} -Tail ${Math.max(1, Math.trunc(lines))}`,
  * last-lap columns, fuel averages, stint counters and recorded track map all fill on a completed
  * lap it has observed, and a photograph taken before the first one carries blanks that look like
  * bugs. `waitForLaps` blocks until `n` have gone by, or gives up after `timeoutSeconds`.
+ *
+ * The whole log is searched for the two kinds of line rather than its tail read. The emulator
+ * writes a status line every second, so a tail of any fixed length loses the banner a few minutes
+ * into a run and counts only the laps still in it, which a long batch of captures used to store in
+ * `run.json` as the laps it had seen.
  */
 export function lapsCompleted(host: Host): number {
-  const lines = tail(host, 400).stdout.split('\n');
+  const found = powershell(
+    host,
+    `if (-not (Test-Path ${psq(GUEST_LOG)})) { exit 0 }
+Select-String -LiteralPath ${psq(GUEST_LOG)} -Pattern '${LAP_LINES}' | ForEach-Object { $_.Line }`,
+    90,
+  );
+  const lines = found.stdout.split('\n');
   const banner = lines.map((l, i) => (l.includes('IrsdkEmulator - scenario') ? i : -1)).filter((i) => i >= 0).pop() ?? -1;
   return lines.slice(banner + 1).filter((l) => /lap \d+ completed in/.test(l)).length;
 }
@@ -256,6 +280,16 @@ export function waitForLaps(host: Host, n: number, timeoutSeconds = 420): boolea
   return false;
 }
 
+/**
+ * Follows the log in the local terminal, so the per-second line the emulator prints on the VM is
+ * visible here. It polls rather than streaming, since the transport is one SSH round trip per read
+ * and the line only changes once a second anyway.
+ *
+ * Nothing here catches a signal, deliberately. Bun calls a SIGINT handler only when its event
+ * loop turns, and a script blocked in `spawnSync` carries on past Ctrl-C until it does, so a
+ * handler here would not stop the loop when asked. The trap lives in `scripts/emulator.sh`, which
+ * is what `bun run emulator` invokes, because a shell trap runs at once.
+ */
 export async function follow(host: Host): Promise<void> {
   let seen = '';
   for (;;) {
@@ -264,7 +298,9 @@ export async function follow(host: Host): Promise<void> {
       seen = line;
       console.log(line);
     }
-    if (runningPid(host) === null) {
+    // Only a guest that answered "none" has stopped; one that could not be asked is asked again.
+    const running = runningPid(host);
+    if (running.ok && running.pid === null) {
       console.log('the emulator has stopped');
       return;
     }
@@ -322,8 +358,9 @@ export async function main(argv: readonly string[]): Promise<void> {
     case 'stop':
       return report(stop(host));
     case 'status': {
-      const pid = runningPid(host);
-      return report({ ok: true, code: 0, stdout: pid === null ? 'not running' : `running (pid ${pid})`, stderr: '' });
+      const running = runningPid(host);
+      if (!running.ok) return report(running);
+      return report({ ok: true, code: 0, stdout: running.pid === null ? 'not running' : `running (pid ${running.pid})`, stderr: '' });
     }
     case 'tail':
       return report(tail(host, Number(rest[0] ?? 20)));
