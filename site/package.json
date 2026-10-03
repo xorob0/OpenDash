@@ -8,7 +8,7 @@
     "dev": "bun run generate && next dev",
     "build": "bun run generate && next build",
     "start": "next start",
-    "typecheck": "bun run generate && tsc --noEmit"
+    "typecheck": "bun run generate && tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json"
   },
   "dependencies": {
     "@prisma/client": "^6.16.0",

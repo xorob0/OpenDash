@@ -77,6 +77,6 @@ if (import.meta.main) {
   const tokens = JSON.parse(await Bun.file(tokensPath).text()) as Record<string, unknown>;
   mkdirSync(path.dirname(outPath), { recursive: true });
   writeFileSync(outPath, stylesheet(tokens));
-  const count = [tokens.palette, tokens.color, tokens.purpose].reduce((n, group) => n + flatten(group).length, 0);
+  const count = [tokens.palette, tokens.color, tokens.purpose].reduce<number>((n, group) => n + flatten(group).length, 0);
   console.log(`wrote ${path.relative(repoRoot, outPath)} (${count} colour tokens from tokens ${(tokens.$meta as Node)?.version})`);
 }
