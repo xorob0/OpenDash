@@ -971,6 +971,41 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(4, read.RigScreens().Count);
         }
 
+        /// <summary>
+        /// A folder an older plugin spelled with a trailing dot is spelled as Windows wrote it, and given a
+        /// folder of its own where that one is another screen's.
+        /// </summary>
+        /// <remarks>
+        /// A screen named "Rim." was given "OpenDash Rim." (#620), which Windows writes as "OpenDash Rim": a folder
+        /// SimHub cannot list, since its main dashboard was renamed "OpenDash Rim..djson", and on a rig that already
+        /// had a Rim, that screen's folder too. Spelled as it is on disk, the next start finds no dashboard installed
+        /// under the folder and writes one SimHub lists.
+        /// </remarks>
+        [Fact]
+        public void A_folder_spelled_with_a_trailing_dot_is_spelled_as_Windows_wrote_it()
+        {
+            var settings = new OpenDashSettings { Rig = new List<ScreenInstance>() };
+            settings.Normalise();
+            var entry = new PackageEntry { Package = "p", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 };
+            var main = settings.AddScreen(entry, "Main dash");
+            var rim = settings.AddScreen(entry, "Rim");
+            var dotted = settings.AddScreen(entry, "Rim.");
+            var wheel = settings.AddScreen(entry, "Wheel.");
+            // As the plugin before #620 wrote them.
+            dotted.Folder = "OpenDash Rim.";
+            wheel.Folder = "OpenDash Wheel. ";
+
+            var read = JsonSerializer.Deserialize<OpenDashSettings>(JsonSerializer.Serialize(settings));
+            read.Normalise();
+
+            Assert.Equal("OpenDash 1280x480", read.ScreenByNamespace(main.Namespace).Folder);
+            Assert.Equal("OpenDash Rim", read.ScreenByNamespace(rim.Namespace).Folder);
+            Assert.Equal("OpenDash Rim 2", read.ScreenByNamespace(dotted.Namespace).Folder);
+            Assert.Equal("OpenDash Wheel", read.ScreenByNamespace(wheel.Namespace).Folder);
+            // The names are the driver's, and stay as they were typed.
+            Assert.Equal("Rim.", read.ScreenByNamespace(dotted.Namespace).Name);
+        }
+
         [Fact]
         public void A_screen_that_has_just_been_added_starts_from_the_defaults()
         {

@@ -1193,10 +1193,37 @@ namespace OpenDashPlugin
                 kept.Add(screen);
             }
             Rig = kept;
+            SpellFoldersAsWritten(kept);
             AnswerUnclaimed(kept);
             // Spent: MigratedRig() has emptied it into the rig, and a second copy left behind would be
             // serialised, read by something one day, and disagree.
             if (Faces != null && Faces.Count > 0) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
+        }
+
+        /// <summary>
+        /// Spells a folder an older plugin gave a trailing dot or space as Windows wrote it.
+        /// </summary>
+        /// <remarks>
+        /// A screen named "Rim." was given the folder "OpenDash Rim." (#620). Windows wrote it as "OpenDash Rim", with
+        /// a main dashboard SimHub never looks for inside, and on a rig that already had a Rim it wrote it over that
+        /// screen's folder. Spelled as it is on disk, the folder holds no dashboard under its own name, so the next
+        /// start reads it as not installed and writes one SimHub lists. Where another screen holds that folder,
+        /// the two have been writing over each other, and this one is given a folder of its own instead. The folder
+        /// is spelled anew here and nowhere else for the reason a stock folder's case is (#467): every caller then
+        /// reads the one spelling.
+        /// </remarks>
+        private static void SpellFoldersAsWritten(List<ScreenInstance> rig)
+        {
+            foreach (var screen in rig)
+            {
+                if (screen.Folder == null) continue;
+                var written = PackageCatalogue.FolderOnDisk(screen.Folder);
+                if (string.Equals(written, screen.Folder, StringComparison.Ordinal)) continue;
+                var others = rig.Where(other => !ReferenceEquals(other, screen) && other.Folder != null).Select(other => other.Folder).ToList();
+                var shared = written.Length == 0
+                    || others.Any(folder => string.Equals(PackageCatalogue.FolderOnDisk(folder), written, StringComparison.OrdinalIgnoreCase));
+                screen.Folder = shared ? PackageCatalogue.UniqueFolder(screen.Name, others, null) : written;
+            }
         }
 
         /// <summary>

@@ -410,14 +410,18 @@ namespace OpenDashPlugin
         /// a folder cannot be, since the brackets would reach a path; a numeral after the name is what a
         /// folder takes. <paramref name="stock"/> is the package's own folder, which is never given out
         /// here -- the screen that holds it is the stock one, and this is only asked for the others.
+        ///
+        /// The folder never ends in a dot or a space, because Windows drops those from the last segment of a
+        /// path (<see cref="FolderOnDisk"/>), and the folders it is compared against are compared as Windows
+        /// writes them for the same reason.
         /// </remarks>
         public static string UniqueFolder(string name, IEnumerable<string> taken, string stock)
         {
-            var used = new HashSet<string>(taken ?? new string[0], StringComparer.OrdinalIgnoreCase);
-            if (stock != null) used.Add(stock);
+            var used = new HashSet<string>((taken ?? new string[0]).Where(folder => folder != null).Select(FolderOnDisk), StringComparer.OrdinalIgnoreCase);
+            if (stock != null) used.Add(FolderOnDisk(stock));
             var slug = (name ?? string.Empty).Trim();
             foreach (var bad in System.IO.Path.GetInvalidFileNameChars()) slug = slug.Replace(bad, ' ');
-            slug = slug.Trim();
+            slug = FolderOnDisk(slug).Trim();
             if (slug.Length == 0) slug = "screen";
             var candidate = PrimaryFolder + " " + slug;
             var n = 2;
@@ -427,6 +431,24 @@ namespace OpenDashPlugin
                 n++;
             }
             return candidate;
+        }
+
+        /// <summary>
+        /// A folder name as Windows writes it: without the dots and the spaces at its end.
+        /// </summary>
+        /// <remarks>
+        /// Win32 drops them from the last segment of a path, so a folder asked for as "OpenDash Rim." is created as
+        /// "OpenDash Rim", while the main dashboard renamed after it inside became "OpenDash Rim..djson". SimHub
+        /// finds a dashboard as &lt;folder&gt;/&lt;folder&gt;.djson, so it looked for "OpenDash Rim.djson", found
+        /// nothing and listed nothing (#620). Whitespace of every kind is dropped, not only the space, because
+        /// the others are invalid in a file name on Windows and would have become spaces on the way here.
+        /// </remarks>
+        public static string FolderOnDisk(string folder)
+        {
+            if (folder == null) return null;
+            var end = folder.Length;
+            while (end > 0 && (folder[end - 1] == '.' || char.IsWhiteSpace(folder[end - 1]))) end--;
+            return folder.Substring(0, end);
         }
 
         /// <summary>A name nothing else on the rig carries, so two cards are never both "1280 × 480".</summary>

@@ -623,6 +623,72 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A Title that holds no string is left alone and reported, rather than written over the next key.
+        /// </summary>
+        /// <remarks>
+        /// The rewrite took the first quote after <c>"Title":</c> wherever it was, so <c>"Title":null,"X":"y"</c>
+        /// had the name of the key after it overwritten and the file was no longer JSON SimHub could read (#620).
+        /// </remarks>
+        [Fact]
+        public void A_Title_that_holds_no_string_is_left_alone_and_reported_as_no_Title()
+        {
+            var folder = Templates("OpenDash Rim");
+            Directory.CreateDirectory(folder);
+            const string text = "{\"Title\":null,\"X\":\"y\"}";
+            var spaced = "{\"Title\" : \n\t null , \"X\":\"y\"}";
+            File.WriteAllText(Path.Combine(folder, "OpenDash Rim.djson"), text);
+            File.WriteAllText(Path.Combine(folder, "OpenDash Rim.djson.metadata"), spaced);
+            var log = new ListLog();
+
+            Assert.False(PackageExtractor.Retitle(root, "OpenDash Rim", "Rim", log));
+
+            Assert.Equal(text, File.ReadAllText(Path.Combine(folder, "OpenDash Rim.djson")));
+            Assert.Equal(spaced, File.ReadAllText(Path.Combine(folder, "OpenDash Rim.djson.metadata")));
+            Assert.Contains("warn: No Title in OpenDash Rim.djson; SimHub will list this screen under its folder name.", log.Lines);
+            Assert.Contains("warn: No Title in OpenDash Rim.djson.metadata; SimHub will list this screen under its folder name.", log.Lines);
+        }
+
+        /// <summary>
+        /// A title is written as JSON whatever it holds: a quote, a backslash, a tab, a newline or any other
+        /// control character.
+        /// </summary>
+        /// <remarks>
+        /// Only the quote and the backslash were escaped, so a name with a tab in it was written raw into the
+        /// string, which JSON forbids (#620). Json.NET, which SimHub reads these files with, happens to let a raw
+        /// control character through, so the files are read back twice: by System.Text.Json, which holds to the
+        /// standard and refused what was written before, and by Json.NET, which has to read the name exactly.
+        /// The space after the colon is how a file Dash Studio has saved spells the key, so it is the spelling
+        /// the rewrite has to find.
+        /// </remarks>
+        [Fact]
+        public void A_title_with_a_tab_or_a_newline_is_written_as_valid_JSON()
+        {
+            var folder = Templates("OpenDash Rim");
+            Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder, "OpenDash Rim.djson"), "{\"Version\":2,\"Metadata\":{\"Title\": \"OpenDash 1280x480\"}}");
+            File.WriteAllText(Path.Combine(folder, "OpenDash Rim.djson.metadata"), "{\"Title\":\"OpenDash 1280x480\",\"DashboardVersion\":\"1.0.0\"}");
+            const string title = "Rim\tleft\nside \"A\" \\ \u0001\u001f\u007f";
+
+            Assert.True(PackageExtractor.Retitle(root, "OpenDash Rim", title, null));
+
+            foreach (var name in new[] { "OpenDash Rim.djson", "OpenDash Rim.djson.metadata" })
+            {
+                var text = File.ReadAllText(Path.Combine(folder, name));
+                using (var strict = System.Text.Json.JsonDocument.Parse(text))
+                {
+                    var holder = name.EndsWith(".metadata", StringComparison.Ordinal) ? strict.RootElement : strict.RootElement.GetProperty("Metadata");
+                    Assert.Equal(title, holder.GetProperty("Title").GetString());
+                }
+            }
+            var main = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(Path.Combine(folder, "OpenDash Rim.djson")));
+            var metadata = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(Path.Combine(folder, "OpenDash Rim.djson.metadata")));
+            Assert.Equal(title, (string)main["Metadata"]["Title"]);
+            Assert.Equal(2, (int)main["Version"]);
+            Assert.Equal(title, (string)metadata["Title"]);
+            Assert.Equal("1.0.0", (string)metadata["DashboardVersion"]);
+        }
+
+        /// <summary>
         /// A folder whose spelling differs from the package's only in case still installs.
         /// </summary>
         /// <remarks>
