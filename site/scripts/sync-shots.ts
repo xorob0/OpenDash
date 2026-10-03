@@ -4,7 +4,7 @@
  * from.
  *
  * `bun run shots` photographs packages into build/shots/<scenario>/ as `NN-<slug>-<scenario>.png`,
- * numbered so a listing reads in the order the loop ran; `bun scripts/modules.ts` photographs the
+ * numbered so a listing reads in the order the loop ran; `bun run modules` photographs the
  * pages as `page-<id>.png`. Both write a run.json beside the pictures with the version, commit,
  * scenario and laps seen. The site wants a stable name with no ordinal and no scenario in it, so a
  * reshoot on another scenario changes a line in one file rather than every reference on the site:
@@ -73,7 +73,7 @@ function pngSize(file: string): { width: number; height: number } {
 function syncDir(from: string): number {
   const run = readRun(from);
   if (!run) {
-    console.error(`${from} has no run.json; it was not made by bun run shots or bun scripts/modules.ts`);
+    console.error(`${from} has no run.json; it was not made by bun run shots or bun run modules`);
     return 1;
   }
   const files: Record<string, CaptureEntry> = {};

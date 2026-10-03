@@ -275,6 +275,25 @@ Remove-Item (Join-Path ${psq(SIMHUB_DIR)} ${psq(REQUEST_NAME)}) -Force -ErrorAct
   return forgetPlugin(host, RECORDER_CLASS);
 }
 
+/**
+ * Takes the recorder out of SimHub and leaves SimHub running, which is how every other command on
+ * this VM expects to find it. SimHub has to be down to let go of the DLL. Run when a recording
+ * ends, and by `scripts/interrupted.ts` when one is interrupted. Best effort, since the run is over
+ * either way, but said out loud: a recorder left in, or a SimHub left down, is what the next
+ * command on this VM would otherwise trip over.
+ */
+export function putBack(host: Host): RunResult {
+  const problems: string[] = [];
+  const stopped = simhubStop(host);
+  if (!stopped.ok) problems.push(`${stopped.stderr}; the recorder may still be installed`);
+  const removed = removeRecorder(host);
+  if (!removed.ok) problems.push(`the recorder may still be installed: ${removed.stderr || removed.stdout}`);
+  const started = simhubStart(host);
+  if (!started.ok) problems.push(started.stderr);
+  if (problems.length > 0) return fail(problems.join('\n'));
+  return { ok: true, code: 0, stdout: `took the recorder out; SimHub ${started.stdout}`, stderr: '' };
+}
+
 /** Writes the request the recorder reads at startup. SimHub must be restarted afterwards to see it. */
 function writeRequest(host: Host, scenario: string, opts: RecordOptions, properties: readonly string[]): RunResult {
   const request = {
@@ -474,15 +493,8 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
   } finally {
     stopEmulator(host);
     if (!opts.keep) {
-      // SimHub has to be down to let go of the DLL, and is left running because that is how every
-      // other command on this VM expects to find it. Best effort, since the run is over either way,
-      // but said out loud: a recorder left in, or a SimHub left down, is what the next command on
-      // this VM would otherwise trip over.
-      const stopped = simhubStop(host);
-      if (!stopped.ok) console.error(`${stopped.stderr}; the recorder may still be installed`);
-      removeRecorder(host);
-      const started = simhubStart(host);
-      if (!started.ok) console.error(started.stderr);
+      const back = putBack(host);
+      if (!back.ok) console.error(back.stderr);
       release(host);
     } else {
       console.log('\nthe recorder is still installed and the VM is still claimed (--keep)');

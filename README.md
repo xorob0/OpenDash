@@ -259,7 +259,7 @@ top of that the dashboard and the plugin are checked by hand on a Windows VM run
 where [tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds scripted iRacing telemetry
 so that every card can be seen with real values. `bun run shots` is the same VM photographing a
 package, and it is where the images at the top of this file come from;
-`bun scripts/modules.ts` is the same loop for the twenty-one companion modules, one to a picture.
+`bun run modules` is the same loop for the twenty-one companion modules, one to a picture.
 
 ## Contributing
 

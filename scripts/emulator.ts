@@ -285,11 +285,10 @@ export function waitForLaps(host: Host, n: number, timeoutSeconds = 420): boolea
  * visible here. It polls rather than streaming, since the transport is one SSH round trip per read
  * and the line only changes once a second anyway.
  *
- * Nothing here catches a signal, deliberately. On Bun 1.3.3 `process.on('SIGINT', ...)` registers
- * a handler that is never called, and registering it suppresses the default action, so a follow
- * loop that armed one could not be stopped with Ctrl-C at all: worse than not trying. The trap
- * lives in `scripts/emulator.sh`, which is what `bun run emulator` invokes, because a shell trap
- * does run.
+ * Nothing here catches a signal, deliberately. Bun calls a SIGINT handler only when its event
+ * loop turns, and a script blocked in `spawnSync` carries on past Ctrl-C until it does, so a
+ * handler here would not stop the loop when asked. The trap lives in `scripts/emulator.sh`, which
+ * is what `bun run emulator` invokes, because a shell trap runs at once.
  */
 export async function follow(host: Host): Promise<void> {
   let seen = '';

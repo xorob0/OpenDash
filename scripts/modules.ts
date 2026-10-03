@@ -22,9 +22,9 @@
  * the page dots and the flag band are all still the companion's own, which is why the dots read
  * "one of twenty-one" in every picture.
  *
- *   bun scripts/modules.ts                       # all 21, on the green scenario
- *   bun scripts/modules.ts --modules fuel,tyres  # by id
- *   bun scripts/modules.ts --scenario race --keep
+ *   bun run modules                       # all 21, on the green scenario
+ *   bun run modules --modules fuel,tyres  # by id
+ *   bun run modules --scenario race --keep
  *
  * The packages it installs are named `OpenDash module <nn> <id>` so that they sort in catalogue
  * order in Dash Studio's list and never collide with a shipped name. They are scratch: nothing
@@ -110,7 +110,7 @@ export function parseArgs(argv: readonly string[]): Options | { help: true } {
 
 const USAGE = `modules: photograph every companion module on its own.
 
-  bun scripts/modules.ts [--modules a,b] [--scenario green] [--out dir] [--keep]
+  bun run modules [--modules a,b] [--scenario green] [--out dir] [--keep]
 
   --modules   comma separated module ids; default all ${MODULE_CATALOGUE.length}
               ${MODULE_CATALOGUE.map((m) => m.id).join(', ')}

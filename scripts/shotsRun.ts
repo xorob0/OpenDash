@@ -4,7 +4,7 @@
  *
  * A capture presented as the product has to say which product: which version, which commit,
  * whether the tree was clean, which emulator scenario, and how many laps SimHub had seen when the
- * picture was taken. `bun run shots` and `bun scripts/modules.ts` write it; `site/scripts/sync-shots.ts`
+ * picture was taken. `bun run shots` and `bun run modules` write it; `site/scripts/sync-shots.ts`
  * reads it and merges it into `site/public/shots/captures.json`, which the site shows under its
  * pictures. The reshoot in #375 is what made this necessary: the site said three times that none of
  * its pictures was a mock-up, and every one of them was a version old.
