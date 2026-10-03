@@ -291,14 +291,12 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A row whose control goes under its title when the content is too narrow for the two side by side
-        /// (PanelSettings.StacksControls): the widest row, the greyed Colour vision, needs about 510. The
-        /// width is read only up to the threshold, so a resize above it rebuilds nothing. Below the alert
-        /// table's 680 every settled resize still rebuilds the page, since the shell reads the largest cap as
-        /// one continuous width; a read of which side of a threshold the build saw is the shell's to add.
+        /// (PanelSettings.StackControlsBelow): the widest row, the greyed Colour vision, needs about 510. The
+        /// width is read as a threshold, so only a resize across it rebuilds the page.
         /// </summary>
         private Border SettingsFit(Border row)
         {
-            if (!PanelSettings.StacksControls(ContentWidthUpTo(PanelSettings.StackControlsBelow))) return row;
+            if (ContentWidthAtLeast(PanelSettings.StackControlsBelow)) return row;
             var parts = row.Tag as RowParts;
             var grid = row.Child as Grid;
             if (parts == null || parts.Control == null || grid == null) return row;
@@ -424,7 +422,6 @@ namespace OpenDashPlugin
         private static FrameworkElement SettingsThresholdBox(int? value, int? fallback, int max, Action<int> changed, out TextBlock placeholder)
         {
             var box = SettingsNumberField(PanelSettings.ThresholdText(value));
-            SettingsTypeAtEnd(box);
             var last = value ?? 0;
             Action commit = () =>
             {
@@ -441,25 +438,6 @@ namespace OpenDashPlugin
             };
             placeholder = SettingsHint(box, PanelSettings.ThresholdText(fallback));
             return SettingsOverlaid(box, placeholder);
-        }
-
-        /// <summary>
-        /// A number box focused by anything but a press -- Tab, or the shell putting the keyboard back after a
-        /// rebuild -- takes its next digit after its value, where a right-aligned number is read from.
-        /// </summary>
-        /// <remarks>
-        /// The page draws the lighting, so a wheel's night-mode or brightness press, or a resize across a
-        /// threshold, rebuilds it under a driver typing a threshold. The shell commits what is typed and
-        /// focuses the new box, whose caret starts at 0, left of the digits: '13' and then '0' became '013',
-        /// which reads 13, and the oil warning stayed at 13. A press leaves the caret where it landed. The
-        /// shell's RestoreFocus putting the caret back is the whole fix, and is the shell's to make.
-        /// </remarks>
-        private static void SettingsTypeAtEnd(TextBox box)
-        {
-            box.GotKeyboardFocus += (sender, args) =>
-            {
-                if (Mouse.LeftButton != MouseButtonState.Pressed) box.CaretIndex = box.Text.Length;
-            };
         }
 
         /// <summary>Whether the last read of SimHub's units failed, so a failure the tick meets every second is
@@ -617,8 +595,8 @@ namespace OpenDashPlugin
         private FrameworkElement SettingsAlerts(string[] units)
         {
             var temperature = units[1];
-            // The width is read only up to the fold, so a resize above it rebuilds nothing.
-            var surfaces = PanelSettings.AlertSurfacesFit(ContentWidthUpTo(PanelSettings.AlertSurfacesFrom));
+            // The width is read as the fold's threshold, so only a resize across it rebuilds the page.
+            var surfaces = ContentWidthAtLeast(PanelSettings.AlertSurfacesFrom);
             var grid = new Grid();
             // With the surface columns, the names take the artboard's 30% and the slack spreads over the four
             // (each held to its heading's width, SettingsAlertHeader); without them the names take it all.
@@ -637,7 +615,6 @@ namespace OpenDashPlugin
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var lowFuel = Ui.NumberInput(Settings.FlagBoxLowFuelLaps, 0, PanelSettings.LowFuelMax, v => { Settings.FlagBoxLowFuelLaps = v; Save(); });
-            SettingsTypeAtEnd(lowFuel);
             TextBlock oilDefault, waterDefault;
             var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); }, out oilDefault);
             var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); }, out waterDefault);

@@ -84,6 +84,21 @@ namespace OpenDashPlugin
         public string State { get; private set; }
     }
 
+    /// <summary>One entry of Windows' list of installed programs, as much of it as the support report reads.</summary>
+    public sealed class UninstallEntry
+    {
+        public UninstallEntry(string displayName, string displayVersion, string installLocation)
+        {
+            DisplayName = displayName;
+            DisplayVersion = displayVersion;
+            InstallLocation = installLocation;
+        }
+
+        public string DisplayName { get; private set; }
+        public string DisplayVersion { get; private set; }
+        public string InstallLocation { get; private set; }
+    }
+
     /// <summary>What the support report is made of, gathered by the page at the press.</summary>
     public sealed class UpdatesReportInput
     {
@@ -573,14 +588,20 @@ namespace OpenDashPlugin
         /// </summary>
         public static double VersionWidth(double contentWidth, bool hasPress = false)
         {
-            var name = contentWidth - TableBorder - 2 * TableRowPaddingX - ColumnWidth(TableVersionWidth) - ColumnWidth(TableStateWidth)
-                - (hasPress ? TablePressColumn : 0);
-            return name >= TableNameMin ? TableVersionWidth : 0;
+            return contentWidth >= VersionFrom(hasPress) ? TableVersionWidth : 0;
+        }
+
+        /// <summary>The content width from which the version column is drawn: 480 without a press, 560 with
+        /// one, where the name keeps <see cref="TableNameMin"/>.</summary>
+        public static double VersionFrom(bool hasPress)
+        {
+            return TableBorder + 2 * TableRowPaddingX + ColumnWidth(TableVersionWidth) + ColumnWidth(TableStateWidth)
+                + (hasPress ? TablePressColumn : 0) + TableNameMin;
         }
 
         /// <summary>
-        /// The widest content width the page draws anything differently at, and so the most of it the build
-        /// reads (ContentWidthUpTo): <see cref="VersionWidth"/>'s threshold with a press, 2 + 32 + 126 + 166 +
+        /// The widest content width the page draws anything differently at, the highest of
+        /// <see cref="WidthSteps"/>: <see cref="VersionWidth"/>'s threshold with a press, 2 + 32 + 126 + 166 +
         /// 80 + 154 = 560, the highest of the page's three width decisions (the other two are the version
         /// column's 480 without a press and <see cref="ButtonBesideFrom"/>'s 520). Past it the page is drawn
         /// the same at every width, so a resize there leaves the page alone -- its question, the by-hand
@@ -589,6 +610,15 @@ namespace OpenDashPlugin
         /// </summary>
         public const double WidthDrawnUpTo = TableBorder + 2 * TableRowPaddingX + TableVersionWidth + TableGap + TableStateWidth + TableGap
             + TablePressColumn + TableNameMin;
+
+        /// <summary>
+        /// The content widths the page draws differently at, and the only ones it reads the width as
+        /// (ContentWidthAtSteps): the version column's 480 without a press, <see cref="ButtonBesideFrom"/>'s 520
+        /// and the version column's 560 with one. Every width decision on the page is "at least one of these",
+        /// so the page decides the same from the highest step the content reaches as from the width itself,
+        /// and a resize rebuilds it only when it crosses one: not at every pixel under 560, as a cap did.
+        /// </summary>
+        public static readonly double[] WidthSteps = { VersionFrom(false), ButtonBesideFrom, VersionFrom(true) };
 
         /// <summary>Whether any light row draws its Update press, which takes the press column's room from
         /// every row: a profile older than this build's, on a device SimHub lists.</summary>
@@ -853,7 +883,8 @@ namespace OpenDashPlugin
         /// and neither has one SimHub's LED settings hide, since the note under the table says why
         /// (PanelLightRows.Unavailable, TableNotes). An older profile names the version its Update brings, in
         /// the dashboard rows' form (BringsItTo), and leaves what the press costs to the press's own tooltip; a
-        /// missing one names the press on this page that installs it, whose own line then gives the select
+        /// newer one, which offers no press, names the version this build ships and the plugin's own update
+        /// (PanelCopy.NewerHover); a missing one names the press on this page that installs it, whose own line then gives the select
         /// step in the page's one form.
         /// </summary>
         public static string StripTooltip(FlagBoxPlan plan)
@@ -867,6 +898,8 @@ namespace OpenDashPlugin
                     return null;
                 case FlagBoxInstallState.Outdated:
                     return UpdateBringsItTo(plan.EmbeddedVersion);
+                case FlagBoxInstallState.Newer:
+                    return PanelCopy.NewerHover(plan.EmbeddedVersion);
                 case FlagBoxInstallState.Unavailable:
                     return null;
                 case FlagBoxInstallState.NotEmbedded:
@@ -902,8 +935,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, a missing one
-        /// names the press on this page, and a current one has none, as a current strip's has none. A failed
+        /// The flag box row's tooltip in each state. An older profile is said as a strip's is, and so is a newer
+        /// one, a missing one names the press on this page, and a current one has none, as a current strip's has none. A failed
         /// one says where to look. One SimHub's matrix settings hide has none: the by-hand route under the
         /// table prints FlagBoxInstallPlan.Summary's sentence for it, and the hover would repeat it. The rest,
         /// a build with no profile among them, are FlagBoxInstallPlan.Summary's.
@@ -919,6 +952,8 @@ namespace OpenDashPlugin
                     return null;
                 case FlagBoxInstallState.Outdated:
                     return UpdateBringsItTo(plan.EmbeddedVersion);
+                case FlagBoxInstallState.Newer:
+                    return PanelCopy.NewerHover(plan.EmbeddedVersion);
                 case FlagBoxInstallState.Failed:
                     return LightFailed;
                 case FlagBoxInstallState.Unavailable:
@@ -1018,8 +1053,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// Whether Reinstall everything writes a light profile SimHub holds in this state: an
         /// older one, and one that is missing or whose install failed. Never one that is current, since a
-        /// rewrite could only cost the edits made to it in SimHub, and never where SimHub cannot be reached
-        /// or the build carries no profile.
+        /// rewrite could only cost the edits made to it in SimHub, never one newer than this build's, which a
+        /// rewrite would put back a version (the Matrix page's Reinstall does, when the driver asks for that
+        /// one), and never where SimHub cannot be reached or the build carries no profile.
         /// </summary>
         public static bool BringsForward(FlagBoxInstallState state)
         {
@@ -1426,8 +1462,67 @@ namespace OpenDashPlugin
                 + (fetched.HasValue ? " (fetched " + fetched.Value.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) + ")" : string.Empty);
         }
 
-        /// <summary>SimHub's executable, under its own folder, whose file version is the report's SimHub version.</summary>
+        /// <summary>
+        /// SimHub's executable, under its own folder, whose file version the report falls back to when SimHub's
+        /// install entry is not found. SimHub 9.12.6 stamps it, and every assembly attribute, 1.0.0.0 (#641).
+        /// </summary>
         public const string SimHubExe = "SimHubWPF.exe";
+
+        /// <summary>
+        /// Where Windows lists what is installed, each a key under HKEY_LOCAL_MACHINE: SimHub's installer is 32-bit,
+        /// so its entry is under WOW6432Node, and the 64-bit list is read after it. The entry's DisplayVersion is
+        /// SimHub's version as its own status bar shows it ("9.12.6"); its DisplayName on the test VM is
+        /// "SimHub version 9.12.6" (#641).
+        /// </summary>
+        public static readonly string[] UninstallKeys =
+        {
+            @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+            @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+        };
+
+        /// <summary>The report's SimHub version when neither the install entry nor the executable names one.</summary>
+        public const string SimHubVersionNotFound = "version not found";
+
+        /// <summary>
+        /// SimHub's version off the install entries Windows lists, or null: the entry SimHub's installer wrote,
+        /// whose DisplayName is "SimHub" or "SimHub version 9.12.6", and among several (an install moved, or one
+        /// left behind) the one whose InstallLocation is the SimHub this plugin runs in.
+        /// </summary>
+        public static string SimHubInstalledVersion(IEnumerable<UninstallEntry> entries, string root)
+        {
+            var simHub = (entries ?? Enumerable.Empty<UninstallEntry>())
+                .Where(entry => entry != null && IsSimHubName(entry.DisplayName) && !string.IsNullOrWhiteSpace(entry.DisplayVersion))
+                .ToList();
+            var chosen = simHub.FirstOrDefault(entry => SameFolder(entry.InstallLocation, root)) ?? simHub.FirstOrDefault();
+            return chosen == null ? null : chosen.DisplayVersion.Trim();
+        }
+
+        /// <summary>
+        /// The report's SimHub version: the install entry's when there is one. Without it, the executable's file
+        /// version, said to be that, unless it is the 1.0.0.0 (or 0.0.0.0) SimHub stamps every build with, which
+        /// names no release; and otherwise <see cref="SimHubVersionNotFound"/>.
+        /// </summary>
+        public static string SimHubVersion(string installed, string fileVersion)
+        {
+            if (!string.IsNullOrWhiteSpace(installed)) return installed.Trim();
+            var file = fileVersion == null ? string.Empty : fileVersion.Trim();
+            if (file.Length == 0 || file == "1.0.0.0" || file == "0.0.0.0") return SimHubVersionNotFound;
+            return file + ", read from " + SimHubExe;
+        }
+
+        private static bool IsSimHubName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return false;
+            var trimmed = name.Trim();
+            return string.Equals(trimmed, "SimHub", StringComparison.OrdinalIgnoreCase)
+                || trimmed.StartsWith("SimHub version ", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool SameFolder(string a, string b)
+        {
+            if (string.IsNullOrWhiteSpace(a) || string.IsNullOrWhiteSpace(b)) return false;
+            return string.Equals(a.Trim().TrimEnd('\\', '/'), b.Trim().TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase);
+        }
 
         /// <summary>Where SimHub writes its log, under its own folder: Logs\SimHub.txt is the current one and
         /// SimHub.N.txt the rotations (docs/testing-vm.md).</summary>

@@ -94,6 +94,14 @@ rig of one screen back at the next start, whereas deleting it together with ever
 `OpenDash.GeneralSettings_b*.json` left the Rig tab empty. Resetting a plugin's settings thus means
 deleting those copies as well, which is what `plugin/INSTALL.md` says under Uninstall.
 
+A file that is there and cannot be read is skipped the same way: the reader logs Newtonsoft's
+exception and goes on to `_b1`. When no copy can be read either it returns null, and
+`ReadCommonSettings` returns the factory's value, so the factory being called is the one sign a plugin
+gets. (A file that deserialises to null, an empty one, returns null at once without trying the
+copies.) On the VM a settings file with `"Rig": 5` and no `_Backups` copies started OpenDash on its
+defaults and the first save wrote them over it, which is why `OpenDash.LoadSettings` sets such a file
+aside before that save (#643, `SettingsRescue`).
+
 ## Lifecycle
 
 `PluginManager` is injected before `Init()`, which runs once at startup. `DataUpdate()` runs

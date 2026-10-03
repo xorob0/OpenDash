@@ -224,10 +224,6 @@ namespace OpenDashPlugin
         /// <summary>Between a title and the New or Soon tag after it: the artboard's .t gap.</summary>
         public const double TitleTagGap = 8;
 
-        public static bool StacksControls(double contentWidth)
-        {
-            return contentWidth < StackControlsBelow;
-        }
 
         // --- Race data ---------------------------------------------------------------------------------
 
@@ -466,10 +462,6 @@ namespace OpenDashPlugin
         /// fold into one greyed "Alert display" row under the table, so the live columns keep their room.</summary>
         public const double AlertSurfacesFrom = 680;
 
-        public static bool AlertSurfacesFit(double contentWidth)
-        {
-            return contentWidth >= AlertSurfacesFrom;
-        }
 
         /// <summary>The artboard's th width: 30% of the table for the alert's name, where the surface columns are
         /// drawn. The rest spreads over the surface columns, as the artboard's auto layout spreads it, rather

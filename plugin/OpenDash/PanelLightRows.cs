@@ -395,7 +395,7 @@ namespace OpenDashPlugin
         /// A fixed ink per state, read off no page's table. It read PanelCopy.LightRow, then PanelMatrix.ProfileRow,
         /// and each time the table it read was reworded by the page that owns it the dot moved with it: when
         /// ProfileRow's words gave up their ink, this returned null and Ui.Brush(null) threw while the Matrix
-        /// page built. A profile in SimHub, older or current, is the installed green the pill's words sit beside;
+        /// page built. A profile in SimHub, older, current or newer, is the installed green the pill's words sit beside;
         /// a failed one is the failure red; every state with no profile to show, SimHub's settings out of reach
         /// and a build with none included, is status.notInstalled, which the canvas draws that dot in.
         /// </remarks>
@@ -405,6 +405,7 @@ namespace OpenDashPlugin
             {
                 case FlagBoxInstallState.UpToDate:
                 case FlagBoxInstallState.Outdated:
+                case FlagBoxInstallState.Newer:
                     return Theme.StatusUpToDate;
                 case FlagBoxInstallState.Failed:
                     return Theme.StatusFailed;

@@ -724,7 +724,21 @@ namespace OpenDashPlugin.Tests
             }
             Assert.NotEqual(PanelUpdates.VersionWidth(at, hasPress: true), PanelUpdates.VersionWidth(at - 1, hasPress: true));
             var code = PageCode();
-            Assert.Contains("updatesWidth = ContentWidthUpTo(PanelUpdates.WidthDrawnUpTo);", code);
+            // Read as the steps it draws differently at (#543): the highest the content reaches decides every
+            // rule the same as the width itself, so a resize between two steps rebuilds nothing.
+            Assert.Equal(new double[] { 480, 520, 560 }, PanelUpdates.WidthSteps);
+            Assert.Equal(PanelUpdates.WidthDrawnUpTo, PanelUpdates.WidthSteps.Max());
+            Assert.Equal(PanelUpdates.WidthDrawnUpTo, PanelUpdates.VersionFrom(true));
+            for (var width = 300.0; width <= 700; width += 0.5)
+            {
+                var seen = PanelShell.WidthAtSteps(PanelUpdates.WidthSteps, step => width >= step);
+                Assert.Equal(PanelUpdates.ButtonBeside(width), PanelUpdates.ButtonBeside(seen));
+                Assert.Equal(PanelUpdates.VersionWidth(width), PanelUpdates.VersionWidth(seen));
+                Assert.Equal(PanelUpdates.VersionWidth(width, hasPress: true), PanelUpdates.VersionWidth(seen, hasPress: true));
+            }
+            Assert.False(PanelShell.RebuildsOnResize(1000, 1060, 0, PanelUpdates.WidthSteps, 17));
+            Assert.Contains("updatesWidth = ContentWidthAtSteps(PanelUpdates.WidthSteps);", code);
+            Assert.DoesNotContain("ContentWidthUpTo(", code);
             Assert.DoesNotContain("= ContentWidth;", code);
             Assert.False(System.Text.RegularExpressions.Regex.IsMatch(code, @"\bContentWidth\b(?!UpTo)"), "the Updates files never read the width whole");
         }
@@ -759,6 +773,41 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var anchor = PanelUpdates.LightsAnchor(lightRows);", code);
             Assert.Contains("if (anchor >= 0) Ui.Anchor(lights[anchor], PanelUpdates.AnchorLights);", code);
             Assert.Contains("else Ui.Anchor(table, PanelUpdates.AnchorLights);", code);
+        }
+
+        /// <summary>
+        /// #642: plugin 0.3.0-rc.1 over strip and flag box profiles 0.3.0-rc.7 installed offered Update on both
+        /// rows, and the press would have gone back a version. A newer copy's row says so in the installed ink,
+        /// offers no Update, and its hover names this build's version and the plugin's own update; Reinstall
+        /// everything and the rows' Update leave it alone.
+        /// </summary>
+        [Fact]
+        public void A_profile_newer_than_this_build_is_said_plainly_and_left_alone()
+        {
+            var newer = new FlagBoxPlan { State = FlagBoxInstallState.Newer, InstalledVersion = "0.3.0-rc.7", EmbeddedVersion = "0.3.0-rc.1" };
+            var hover = "Update OpenDash to match it: this build ships 0.3.0-rc.1.";
+            foreach (var row in new[] { PanelUpdates.StripRow("Wheel rim", newer), PanelUpdates.FlagBoxRow("OpenDash Flag box", newer, null) })
+            {
+                Assert.Equal("Newer than this build", row.State);
+                Assert.Equal(Theme.StatusUpToDate, row.StateHex);
+                Assert.Equal(Theme.StatusUpToDate, row.DotHex);
+                Assert.Equal("0.3.0-rc.7", row.Version);
+                Assert.Equal(hover, row.Tooltip);
+                Assert.False(row.OffersUpdate);
+            }
+            Assert.Equal(hover, PanelUpdates.StripTooltip(newer));
+            Assert.Equal(hover, PanelUpdates.FlagBoxTooltip(newer, null));
+            Assert.False(PanelUpdates.TableHasPress(new[] { PanelUpdates.StripRow("Wheel rim", newer), PanelUpdates.FlagBoxRow("OpenDash Flag box", newer, null) }));
+            Assert.Equal(-1, PanelUpdates.LightsAnchor(new[] { PanelUpdates.StripRow("Wheel rim", newer) }));
+
+            // Reinstall everything writes neither, and no row's Update writes the strip.
+            Assert.False(PanelUpdates.BringsForward(FlagBoxInstallState.Newer));
+            Assert.False(PanelUpdates.BringsFlagBoxForward(true, FlagBoxInstallState.Newer));
+            var bar = new LedBar { Namespace = "BarRim", Name = "Wheel rim" };
+            Assert.False(PanelUpdates.ReinstallWrites(bar, FlagBoxInstallState.Newer));
+            Assert.False(PanelUpdates.RowUpdateWrites(PanelUpdates.StripKey(bar))(bar, FlagBoxInstallState.Newer));
+            var census = new[] { new KeyValuePair<LedBar, FlagBoxPlan>(bar, newer) };
+            Assert.Empty(PanelUpdates.StripsToWrite(census, true, PanelUpdates.ReinstallWrites, b => true));
         }
 
         /// <summary>Only a row that draws its Update takes the press column: an older light profile on a
@@ -1705,6 +1754,56 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("unknown", PanelUpdates.CarTables(null, null));
         }
 
+        /// <summary>
+        /// The report names SimHub by the version its installer recorded (#641): SimHubWPF.exe's file version is
+        /// 1.0.0.0 in 9.12.6, and a report that said so sent a reader after the wrong release.
+        /// </summary>
+        [Fact]
+        public void The_report_names_SimHub_by_its_install_entry_and_says_when_it_could_not()
+        {
+            // The 32-bit list first, where SimHub's installer writes, then the 64-bit one.
+            Assert.Equal(new[]
+            {
+                @"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+            }, PanelUpdates.UninstallKeys);
+
+            const string Root = @"C:\Program Files (x86)\SimHub\";
+            // The entry as the test VM has it, among programs that are not SimHub.
+            var vm = new[]
+            {
+                new UninstallEntry("Microsoft Visual C++ 2015 Redistributable", "14.0.24215", null),
+                new UninstallEntry("SimHub version 9.12.6", "9.12.6", Root),
+                new UninstallEntry("SimHub Lovely plugin", "2.0.0", Root),
+            };
+            Assert.Equal("9.12.6", PanelUpdates.SimHubInstalledVersion(vm, Root));
+            Assert.Equal("9.12.6", PanelUpdates.SimHubInstalledVersion(new[] { new UninstallEntry("SimHub", " 9.12.6 ", null) }, Root));
+            // Two installs listed: the one this SimHub runs from, whatever its trailing separator or case.
+            var two = new[]
+            {
+                new UninstallEntry("SimHub version 9.9.5", "9.9.5", @"D:\Old SimHub"),
+                new UninstallEntry("SimHub version 9.12.6", "9.12.6", @"c:\program files (x86)\simhub"),
+            };
+            Assert.Equal("9.12.6", PanelUpdates.SimHubInstalledVersion(two, Root));
+            // No entry, an entry with no version, or a list that could not be read.
+            Assert.Null(PanelUpdates.SimHubInstalledVersion(new[] { vm[0], vm[2] }, Root));
+            Assert.Null(PanelUpdates.SimHubInstalledVersion(new[] { new UninstallEntry("SimHub version 9.12.6", " ", Root) }, Root));
+            Assert.Null(PanelUpdates.SimHubInstalledVersion(null, Root));
+
+            // The words: the entry's version as it is; the file version only without an entry, and said to be it;
+            // never 1.0.0.0, which names no release.
+            Assert.Equal("9.12.6", PanelUpdates.SimHubVersion("9.12.6", "1.0.0.0"));
+            Assert.Equal("9.9.5.0, read from SimHubWPF.exe", PanelUpdates.SimHubVersion(null, "9.9.5.0"));
+            Assert.Equal("version not found", PanelUpdates.SimHubVersion(null, "1.0.0.0"));
+            Assert.Equal("version not found", PanelUpdates.SimHubVersion(" ", "0.0.0.0"));
+            Assert.Equal("version not found", PanelUpdates.SimHubVersion(null, null));
+            Assert.Equal(PanelUpdates.SimHubVersionNotFound, PanelUpdates.SimHubVersion(null, ""));
+
+            // And so the report's line.
+            var report = PanelUpdates.Report(new UpdatesReportInput { SimHubVersion = PanelUpdates.SimHubVersion(null, "1.0.0.0"), SimHubRoot = Root });
+            Assert.Contains(@"SimHub: version not found, in C:\Program Files (x86)\SimHub\" + Environment.NewLine, report);
+        }
+
         [Fact]
         public void The_report_carries_the_versions_the_rig_and_the_log_and_nothing_else()
         {
@@ -2174,10 +2273,23 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Contains(source, input);
             }
+            // SimHub's version off its install entry first, and off the executable only without one (#641): the
+            // file version of SimHubWPF.exe is 1.0.0.0 in 9.12.6. The words, and which of the two, are
+            // PanelUpdates.SimHubVersion's.
             var simHub = Method("private static string UpdatesSimHubVersion(string root)");
             InOrder(simHub,
+                "var installed = PanelUpdates.SimHubInstalledVersion(UpdatesUninstallEntries(), root);",
+                "if (string.IsNullOrWhiteSpace(installed))",
                 "var exe = Path.Combine(root ?? string.Empty, PanelUpdates.SimHubExe);",
-                "return File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;");
+                "fileVersion = File.Exists(exe) ? FileVersionInfo.GetVersionInfo(exe).FileVersion : null;",
+                "return PanelUpdates.SimHubVersion(installed, fileVersion);");
+            var uninstall = Method("private static IList<UninstallEntry> UpdatesUninstallEntries()");
+            InOrder(uninstall,
+                "foreach (var path in PanelUpdates.UninstallKeys)",
+                "try",
+                "using (var list = Registry.LocalMachine.OpenSubKey(path))",
+                "entries.Add(new UninstallEntry(entry.GetValue(\"DisplayName\") as string, entry.GetValue(\"DisplayVersion\") as string, entry.GetValue(\"InstallLocation\") as string));",
+                "catch (Exception ex)");
 
             var tail = Method("private static IList<string> UpdatesLogTail(string root)");
             InOrder(tail,
