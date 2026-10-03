@@ -553,7 +553,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("UpdatesAsk(updatesCardLine, question);", apply);
             Assert.DoesNotContain("updatesReinstallLine", apply);
 
-            var reinstall = Method("private void Reinstall()");
+            var reinstall = Method("private void ReinstallRead()");
             Assert.Contains("confirmation.Press(ReplacingAction.Reinstall, edited, question, updatesReinstallLine == null ? null : updatesReinstallLine.Text);", reinstall);
             Assert.Contains("UpdatesAsk(updatesReinstallLine, question);", reinstall);
             Assert.DoesNotContain("updatesCardLine", reinstall);
@@ -591,12 +591,23 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_run_holds_off_every_press_that_writes()
         {
-            foreach (var signature in new[] { "private void ApplyUpdate()", "private void RestoreKept()", "private void Reinstall()" })
+            foreach (var (signature, read) in new[]
+            {
+                ("private void ApplyUpdate()", "plugin.Installer.Refresh();"),
+                // Both read the disk off the interface thread before they decide (#611).
+                ("private void RestoreKept()", "UpdatesReadThen(RestoreKeptRead);"),
+                ("private void Reinstall()", "UpdatesReadThen(ReinstallRead);"),
+            })
             {
                 var body = Method(signature);
                 var guard = body.IndexOf("if (UpdatesHeld) return;", StringComparison.Ordinal);
-                Assert.True(guard >= 0 && guard < body.IndexOf("plugin.Installer.Refresh();", StringComparison.Ordinal), signature + " returns during a run before it reads or writes");
+                Assert.True(guard >= 0 && guard < body.IndexOf(read, StringComparison.Ordinal), signature + " returns during a run before it reads or writes");
             }
+            // The read holds the page's presses while it runs and gives them back before the press decides.
+            InOrder(Method("private void UpdatesReadThen(Action decide)"),
+                "updatesWriting = true;", "ShowWrite();",
+                "WriteThen(() => plugin.Installer.Refresh(), failure => { updatesWriting = false; ShowWriteDone();",
+                "decide();");
             var lights = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => p.EndsWith("SettingsControl.Updates.Lights.cs", StringComparison.Ordinal))), @"\s+", " ");
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(lights, @"\{ if \(UpdatesHeld\) return; draw\((update|press)\(\)\);").Count);
 
@@ -628,16 +639,16 @@ namespace OpenDashPlugin.Tests
         {
             var code = FlatCode();
             Assert.Contains("if (!PanelUpdates.ShowsKept(copies)) continue;", code);
-            var restore = Method("private void RestoreKept()");
-            var read = restore.IndexOf("plugin.Installer.Refresh();", StringComparison.Ordinal);
+            Assert.Contains("UpdatesReadThen(RestoreKeptRead);", Method("private void RestoreKept()"));
+            var restore = Method("private void RestoreKeptRead()");
             var edited = restore.IndexOf("var edited = new HashSet<string>(plugin.Installer.EditedFolders.Where(f => f != null), StringComparer.OrdinalIgnoreCase);", StringComparison.Ordinal);
             var each = restore.IndexOf("foreach (var kept in UpdatesKept())", StringComparison.Ordinal);
             var skip = restore.IndexOf("if (PanelUpdates.PutsBack(edited.Contains(kept.Key))) putting.Add(kept); else held.Add(kept.Value);", StringComparison.Ordinal);
             var write = restore.IndexOf("PackageExtractor.Restore(", StringComparison.Ordinal);
-            Assert.True(read >= 0 && edited > read && each > edited, "the disk is read before the copies are chosen");
+            Assert.True(edited >= 0 && each > edited, "the disk is read before the copies are chosen");
             Assert.True(skip > each && write > skip, "an edited folder is passed over before anything is written");
             // Off the interface thread (#611): the restores are the work handed to WriteThen, over the folders chosen above.
-            InOrder(restore, "updatesWriting = true;", "ShowWrite();", "WriteThen(() => { foreach (var kept in putting)", "PackageExtractor.Restore(", "}, failure => { updatesWriting = false;");
+            InOrder(restore, "updatesWriting = true;", "ShowWrite();", "WriteThen(() => { foreach (var kept in putting)", "PackageExtractor.Restore(", "plugin.Installer.Refresh(); }, failure => { updatesWriting = false;");
             Assert.Contains("Say(PanelUpdates.PutBack(restored, failed, held),", restore);
             Assert.True(PanelUpdates.PutsBack(edited: false));
             Assert.False(PanelUpdates.PutsBack(edited: true));
@@ -1942,10 +1953,10 @@ namespace OpenDashPlugin.Tests
                 "plugin.ApplyUpdate(release, replaceEdited, report, outcome =>");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(apply, @"var replaceEdited ="));
 
-            var reinstall = Method("private void Reinstall()");
+            InOrder(Method("private void Reinstall()"), "if (UpdatesHeld) return;", "UpdatesReadThen(ReinstallRead);");
+            var reinstall = Method("private void ReinstallRead()");
             InOrder(reinstall,
-                "if (UpdatesHeld) return;",
-                "plugin.Installer.Refresh();",
+                "var edited = plugin.Installer.EditedFolders;",
                 "var question = PanelUpdates.ReinstallQuestion(UpdatesNames(edited));",
                 "if (press == PressOutcome.Ask) { UpdatesAsk(updatesReinstallLine, question); return; }",
                 "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
@@ -1956,7 +1967,7 @@ namespace OpenDashPlugin.Tests
                 "ShowWrite();",
                 "WriteThen(() =>",
                 "installer.EnsureInstalled(true, replaceEdited, report);",
-                "}, failure => { updatesWriting = false;",
+                "plugin.Installer.Refresh(); }, failure => { updatesWriting = false;",
                 "var lights = failure == null ? UpdatesBringLightsForward() : null;",
                 "Save();",
                 "Redraw();",
@@ -2021,15 +2032,15 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("{ if (UpdatesHeld) return; draw(update()); RefreshAttention(); RefreshSidebar(); UpdatesSay(said); };", Method("private FrameworkElement UpdatesStripRow("));
             Assert.Contains("if (line != null) Say(line, said.Ok);", Method("private void UpdatesSay(UpdatesLightsTally said)"));
 
-            InOrder(Method("private void RestoreKept()"),
-                "plugin.Installer.Refresh();",
+            InOrder(Method("private void RestoreKeptRead()"),
                 "foreach (var kept in UpdatesKept())",
                 "if (PanelUpdates.PutsBack(edited.Contains(kept.Key))) putting.Add(kept); else held.Add(kept.Value);",
                 "foreach (var kept in putting) { var folder = kept.Key;",
                 "var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));",
                 "if (copy == null) continue;",
                 "if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;",
-                "plugin.Installer.Refresh(); Save(); Redraw(); Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);");
+                "plugin.Installer.Refresh(); }, failure =>",
+                "Save(); Redraw(); Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);");
 
             InOrder(Method("private void UpdatesApplied("),
                 "try",
@@ -2251,7 +2262,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var screens = Settings.RigScreens(); return (folders ?? Enumerable.Empty<string>()).Select(folder => PanelUpdates.ScreenName(screens, folder)).ToList();", names);
             // Both questions name what they replace through UpdatesNames, never the installer's folders.
             Assert.Contains("UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited),", Method("private void ApplyUpdate()"));
-            Assert.Contains("PanelUpdates.ReinstallQuestion(UpdatesNames(edited));", Method("private void Reinstall()"));
+            Assert.Contains("PanelUpdates.ReinstallQuestion(UpdatesNames(edited));", Method("private void ReinstallRead()"));
 
             Assert.Contains("foreach (var target in ledDevices.Targets) { if (target != null && target.Id != null) devices[target.Id] = target.Name;", Method("private IDictionary<string, string> UpdatesDevices()"));
 

@@ -260,6 +260,38 @@ namespace OpenDashPlugin
             if (updatesReinstallProgress != null) updatesReinstallProgress.Child = Ui.Progress(updatesWritingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Reinstalling);
         }
 
+        /// <summary>Gives back the presses <see cref="ShowWrite"/> held, as far as nothing else holds them.</summary>
+        private void ShowWriteDone()
+        {
+            if (updatesReinstall != null) updatesReinstall.IsEnabled = !UpdatesHeld;
+            if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);
+            foreach (var press in updatesRunPresses) press.IsEnabled = !UpdatesHeld;
+        }
+
+        /// <summary>
+        /// Reads the rig's folders from the disk off the interface thread, holding the page's presses while it does,
+        /// then <paramref name="decide"/>s on the interface thread: Reinstall everything's question and Put mine
+        /// back's choice are both made from the disk as it is at the press.
+        /// </summary>
+        /// <remarks>
+        /// The read hashes every folder on the rig and opens every package the build carries, which on the interface
+        /// thread was most of a second of the window not answering before the press had done anything (#611). It goes
+        /// through WriteThen, as the writes do, so that it never reads a folder half way through being written.
+        /// </remarks>
+        private void UpdatesReadThen(Action decide)
+        {
+            updatesWriting = true;
+            updatesWritingReinstall = false;
+            ShowWrite();
+            WriteThen(() => plugin.Installer.Refresh(), failure =>
+            {
+                updatesWriting = false;
+                ShowWriteDone();
+                if (failure != null) Log.Warn("Reading the dashboards before the press failed, so it goes on from the last read: " + failure.Message);
+                decide();
+            });
+        }
+
         /// <summary>
         /// A binding that draws Download's or Reinstall everything's label from the confirmation each time the
         /// press's own line changes.
@@ -328,12 +360,18 @@ namespace OpenDashPlugin
         /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back,
         /// and this is the press that keeps the promise. It reads the disk first, so a folder edited in Dash
         /// Studio since the card was drawn is the driver's and is left alone (UpdatesKept): PackageExtractor.Restore
-        /// deletes the folder it restores into and keeps no copy of it.
+        /// deletes the folder it restores into and keeps no copy of it. The read and the restores are both off the
+        /// interface thread (#611), and the choice between them is made on it.
         /// </remarks>
         private void RestoreKept()
         {
             if (UpdatesHeld) return;
-            plugin.Installer.Refresh();
+            UpdatesReadThen(RestoreKeptRead);
+        }
+
+        /// <summary>Put mine back once the disk has been read: which copies go back, and putting them back.</summary>
+        private void RestoreKeptRead()
+        {
             var root = plugin.Installer.SimHubRoot;
             // The card shows a kept copy whatever the driver has done since, as the artboard draws it, so a folder edited again
             // is left as it is and named: Restore keeps no copy of what it replaces, and nothing has asked.
@@ -370,12 +408,13 @@ namespace OpenDashPlugin
                         failed.Add(kept.Value);
                     }
                 }
+                // The read the page is drawn from, on this thread too, since it hashes every folder on the rig.
+                plugin.Installer.Refresh();
             }, failure =>
             {
                 updatesWriting = false;
                 // Each folder keeps its own net above, so a failure here is the run's own and is said as nothing put back.
                 if (failure != null) failed.AddRange(putting.Select(kept => kept.Value).Except(failed));
-                plugin.Installer.Refresh();
                 Save();
                 Redraw();
                 Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);
@@ -592,9 +631,13 @@ namespace OpenDashPlugin
             // Two installers over the same DashTemplates folders is the one combination that can delete a folder
             // one of them is extracting into, so whichever starts first holds the field.
             if (UpdatesHeld) return;
+            // From the disk at the press, for the reason ApplyUpdate reads it there, and off the interface thread.
+            UpdatesReadThen(ReinstallRead);
+        }
 
-            // From the disk at the press, for the reason ApplyUpdate reads it there.
-            plugin.Installer.Refresh();
+        /// <summary>Reinstall everything once the disk has been read: its question, or the run.</summary>
+        private void ReinstallRead()
+        {
             var edited = plugin.Installer.EditedFolders;
             var question = PanelUpdates.ReinstallQuestion(UpdatesNames(edited));
             var press = confirmation.Press(ReplacingAction.Reinstall, edited, question, updatesReinstallLine == null ? null : updatesReinstallLine.Text);
@@ -638,6 +681,8 @@ namespace OpenDashPlugin
                 held = installer.Packages.Count(p => p.HeldBack);
                 // A font this press put into DashFonts is not drawn until SimHub restarts.
                 wroteFonts = PackageExtractor.FacesWrittenSince(installer.SimHubRoot, writing) > 0;
+                // The plugin's installer, which the page is drawn from, reads what the run wrote on this thread too.
+                plugin.Installer.Refresh();
             }, failure =>
             {
                 updatesWriting = false;
@@ -646,7 +691,6 @@ namespace OpenDashPlugin
                 // The light profiles are SimHub's own objects, which its interface is bound to, so they are brought
                 // forward here on the interface thread once the dashboards are done.
                 var lights = failure == null ? UpdatesBringLightsForward() : null;
-                plugin.Installer.Refresh();
                 Save();
                 Redraw();
                 if (failure != null) Say(PanelUpdates.ReinstallFailed, false);

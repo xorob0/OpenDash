@@ -1030,7 +1030,6 @@ namespace OpenDashPlugin
                     WriteScreenThen(() => plugin.Installer.Write(screen), result =>
                     {
                         Save();
-                        plugin.Installer.Refresh();
                         Select(PanelPage.Screens, screen.Namespace);
                         Redraw();
                         if (!result.Ok) Log.Warn("Writing " + screen.Name + " after a rename failed: " + result.Error);
@@ -1062,7 +1061,6 @@ namespace OpenDashPlugin
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {
                 Save(screen);
-                plugin.Installer.Refresh();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Reinstalling " + screen.Name + " failed: " + result.Error);
@@ -1092,7 +1090,6 @@ namespace OpenDashPlugin
             }, result =>
             {
                 Save();
-                plugin.Installer.Refresh();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
@@ -1107,7 +1104,6 @@ namespace OpenDashPlugin
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {
                 Save();
-                plugin.Installer.Refresh();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
 
@@ -1137,7 +1133,6 @@ namespace OpenDashPlugin
             WriteScreenThen(() => plugin.Installer.Write(copy), result =>
             {
                 Save();
-                plugin.Installer.Refresh();
                 Select(PanelPage.Screens, copy.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
@@ -1160,7 +1155,6 @@ namespace OpenDashPlugin
                 {
                     Settings.RemoveScreen(screen.Namespace);
                     Save();
-                    plugin.Installer.Refresh();
                     Select(PanelPage.Screens, null);
                     Redraw();
                     if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed: " + result.Error);

@@ -41,7 +41,6 @@ namespace OpenDashPlugin
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {
                 Save(screen);
-                plugin.Installer.Refresh();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
@@ -83,18 +82,25 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// <see cref="WriteThen"/> for a press on one screen's folder: the sheet that asked is closed at the press, and
-        /// the ending is handed the result, a failed one where the work threw.
+        /// <see cref="WriteThen"/> for a press on one screen's folder: the sheet that asked is closed at the press, the
+        /// installer reads the disk again after the write on the same thread, and the ending is handed the result, a
+        /// failed one where the work threw.
         /// </summary>
         /// <remarks>
         /// Closed at the press rather than by the ending's Redraw, so that a sheet's Save or Add cannot be pressed a
-        /// second time while the first press is writing, which would add a second screen.
+        /// second time while the first press is writing, which would add a second screen. The read after is the
+        /// write's because it hashes every folder on the rig, which on the interface thread was most of a second of
+        /// the window not answering by itself.
         /// </remarks>
         private void WriteScreenThen(Func<ScreenInstallResult> write, Action<ScreenInstallResult> done)
         {
             CloseSheet();
             ScreenInstallResult result = null;
-            WriteThen(() => result = write(), failure => done(result ?? new ScreenInstallResult { Error = failure == null ? "nothing was written" : failure.Message }));
+            WriteThen(() =>
+            {
+                result = write();
+                plugin.Installer.Refresh();
+            }, failure => done(result ?? new ScreenInstallResult { Error = failure == null ? "nothing was written" : failure.Message }));
         }
 
         private TextBlock flagBoxLine;
