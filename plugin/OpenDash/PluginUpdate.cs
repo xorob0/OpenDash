@@ -228,23 +228,33 @@ namespace OpenDashPlugin
         /// be worse than the one it replaced is one rename away from being undone. The script deletes
         /// itself last, so a swap that never happened leaves both the staged assembly and the script
         /// that would have applied it, and the next shutdown tries again.
+        ///
+        /// **No path is written into it.** cmd reads a batch file in the console's OEM code page and
+        /// expands every `%` in what it reads, so a root written into the text came back wrong twice
+        /// over: `C:\Users\José` saved as UTF-8 was read as `Jos├⌐` in code page 437, and a `%` in a
+        /// folder name was taken for a variable. The `move` failed, the script gave up, and it did the
+        /// same at every close, so the plugin never updated. Every path is found from `%~dp0`, the
+        /// folder the script sits in, which cmd holds as UTF-16 and does not expand a second time; the
+        /// text is ASCII, so every code page reads it alike, and it is the same text for every root.
+        /// That leans on the script living in OpenDash's folder directly under SimHub's root, which
+        /// <see cref="FlagBoxProfile.FolderPath"/> decides and a test pins.
         /// </remarks>
-        public static string SwapScript(string simHubRoot)
+        public static string SwapScript()
         {
-            var installed = InstalledPath(simHubRoot);
-            var staged = StagedPath(simHubRoot);
-            var backup = Path.Combine(FlagBoxProfile.FolderPath(simHubRoot), BackupName);
-            var reopen = ReopenPath(simHubRoot);
-            var exe = SimHubExePath(simHubRoot);
             var text = new StringBuilder();
             text.AppendLine("@echo off");
             text.AppendLine("rem Written by OpenDash to put a downloaded plugin in place once SimHub has closed.");
             text.AppendLine("rem It replaces " + DllName + " and keeps the one it replaced as " + BackupName + ".");
             text.AppendLine("rem " + ReopenName + " beside it means the driver asked for SimHub to be started again.");
-            text.AppendLine("setlocal");
+            text.AppendLine("rem Every path is found from where this script sits, so that a SimHub folder with an");
+            text.AppendLine("rem accent or a percent sign in its name is read the way it is written.");
+            // Off whatever the registry says, so that a `!` in a folder name stays a `!`.
+            text.AppendLine("setlocal DisableDelayedExpansion");
+            text.AppendLine("set \"here=%~dp0\"");
+            text.AppendLine("for %%I in (\"%~dp0..\") do set \"root=%%~fI\"");
             text.AppendLine("set /a waited=0");
             text.AppendLine(":wait");
-            text.AppendLine("tasklist /FI \"IMAGENAME eq SimHubWPF.exe\" | find /I \"SimHubWPF.exe\" >nul 2>&1 || goto swap");
+            text.AppendLine("tasklist /FI \"IMAGENAME eq " + SimHubExeName + "\" | find /I \"" + SimHubExeName + "\" >nul 2>&1 || goto swap");
             text.AppendLine("ping -n 2 127.0.0.1 >nul 2>&1");
             text.AppendLine("set /a waited+=1");
             text.AppendLine("if %waited% GEQ " + WaitSeconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + " goto giveup");
@@ -254,11 +264,11 @@ namespace OpenDashPlugin
             // does not leave a standing request to reopen: the next ordinary shutdown would honour it and
             // SimHub would come back from a close the driver meant.
             text.AppendLine("set reopen=0");
-            text.AppendLine("if exist \"" + reopen + "\" set reopen=1");
-            text.AppendLine("del \"" + reopen + "\" >nul 2>&1");
-            text.AppendLine("copy /y \"" + installed + "\" \"" + backup + "\" >nul 2>&1");
-            text.AppendLine("move /y \"" + staged + "\" \"" + installed + "\" >nul 2>&1 || goto giveup");
-            text.AppendLine("if \"%reopen%\"==\"1\" start \"\" \"" + exe + "\"");
+            text.AppendLine("if exist \"%here%" + ReopenName + "\" set reopen=1");
+            text.AppendLine("del \"%here%" + ReopenName + "\" >nul 2>&1");
+            text.AppendLine("copy /y \"%root%\\" + DllName + "\" \"%here%" + BackupName + "\" >nul 2>&1");
+            text.AppendLine("move /y \"%here%" + StagedName + "\" \"%root%\\" + DllName + "\" >nul 2>&1 || goto giveup");
+            text.AppendLine("if \"%reopen%\"==\"1\" start \"\" \"%root%\\" + SimHubExeName + "\"");
             text.AppendLine("del \"%~f0\" >nul 2>&1");
             text.AppendLine("exit /b 0");
             text.AppendLine(":giveup");
@@ -281,7 +291,6 @@ namespace OpenDashPlugin
         {
             log = log ?? NullInstallLog.Instance;
             if (!Pending(simHubRoot)) return false;
-            var script = ScriptPath(simHubRoot);
             if (!Arm(simHubRoot))
             {
                 log.Error("The plugin swap script could not be written, so the plugin is unchanged.");
@@ -292,7 +301,9 @@ namespace OpenDashPlugin
                 var start = new ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = "/c \"" + script + "\"",
+                    // By name in its own folder, not by path: cmd expands a `%` on its command line as
+                    // well, and the working directory reaches it as UTF-16 whatever the root is called.
+                    Arguments = "/c .\\" + ScriptName,
                     UseShellExecute = false,
                     CreateNoWindow = true,
                     WorkingDirectory = FlagBoxProfile.FolderPath(simHubRoot),
@@ -315,8 +326,8 @@ namespace OpenDashPlugin
         /// Apart from <see cref="Launch"/> because starting a process is the one thing a test cannot do
         /// here, and this is the whole of the decision. A waiter that is already running holds the file
         /// open, so the write fails -- and that is the right answer rather than an error, because the
-        /// script it is running says the same thing (the paths do not change between stagings) and the
-        /// arming that matters has already happened.
+        /// script it is running says the same thing (it is the same text for every root and every
+        /// staging) and the arming that matters has already happened.
         /// </remarks>
         public static bool Arm(string simHubRoot)
         {
@@ -329,7 +340,7 @@ namespace OpenDashPlugin
             {
                 return false;
             }
-            return Write(script, SwapScript(simHubRoot)) || File.Exists(script);
+            return Write(script, SwapScript()) || File.Exists(script);
         }
 
         private static bool Write(string path, string text)
