@@ -695,18 +695,55 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// What the start made of a settings file SimHub could not read: whether it was, and where the file was
+        /// set aside. Never null. Home's settings-unreadable issue reads it (#643).
+        /// </summary>
+        public SettingsRescue Rescue { get; private set; } = SettingsRescue.Read;
+
         private void LoadSettings()
         {
+            // SimHub calls the factory only when neither the file nor any _Backups copy could be read, or there is
+            // none; a file that is there with something in it is then one it could not read, and it is set aside
+            // here, before Init's first save writes the defaults over it. See SettingsRescue.
+            var defaulted = false;
             try
             {
-                Settings = this.ReadCommonSettings<OpenDashSettings>(SettingsKey, () => new OpenDashSettings()) ?? new OpenDashSettings();
+                Settings = this.ReadCommonSettings<OpenDashSettings>(SettingsKey, () => { defaulted = true; return new OpenDashSettings(); });
+                if (Settings == null)
+                {
+                    defaulted = true;
+                    Settings = new OpenDashSettings();
+                }
             }
             catch (Exception ex)
             {
                 Log.Error("Reading the settings failed; using the defaults", ex);
+                defaulted = true;
                 Settings = new OpenDashSettings();
             }
+            if (defaulted)
+            {
+                try
+                {
+                    Rescue = SettingsRescue.Inspect(SettingsPath(), true, new SimHubInstallLog());
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Looking at the settings file SimHub could not read failed", ex);
+                }
+            }
             Settings.Normalise();
+        }
+
+        /// <summary>The file ReadCommonSettings reads and SaveCommonSettings writes, named as SimHub names it:
+        /// PluginsData\Common\OpenDash.GeneralSettings.json, relative to SimHub's working folder as SimHub reads
+        /// it, and made whole here so that the panel can say where the copy is.</summary>
+        private string SettingsPath()
+        {
+            var manager = PluginManager ?? SimHub.Plugins.PluginManager.GetInstance();
+            if (manager == null) return null;
+            return System.IO.Path.GetFullPath(manager.GetCommonStoragePath(GetType().Name + "." + SettingsKey + ".json"));
         }
 
         /// <summary>

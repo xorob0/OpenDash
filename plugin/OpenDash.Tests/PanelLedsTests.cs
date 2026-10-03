@@ -205,12 +205,34 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Theme.TextSecondary, PanelLeds.StateHex(FlagBoxInstallState.UpToDate, null));
         }
 
+        /// <summary>
+        /// #642: a strip whose profile in SimHub is newer than this build's reads as a current one on the card,
+        /// with no press over it, and it is held in SimHub; a rename leaves it as it is, since installing again
+        /// would put the older profile back, which a rename does not ask for.
+        /// </summary>
+        [Fact]
+        public void A_newer_profile_reads_as_current_and_nothing_puts_the_older_one_back()
+        {
+            Assert.Equal(PanelLeds.Showing, PanelLeds.StateText(FlagBoxInstallState.Newer, true));
+            Assert.Equal(PanelLeds.Installed, PanelLeds.StateText(FlagBoxInstallState.Newer, null));
+            Assert.Equal(PanelLeds.NotSelected, PanelLeds.StateText(FlagBoxInstallState.Newer, false));
+            Assert.Equal(Theme.StatusUpToDate, PanelLeds.StateHex(FlagBoxInstallState.Newer, true));
+            Assert.Null(PanelLeds.ProfileAction(FlagBoxInstallState.Newer));
+            Assert.Null(PanelLeds.ProfileAction(FlagBoxInstallState.Newer, true, true));
+            Assert.True(PanelLeds.HeldInSimHub(FlagBoxInstallState.Newer));
+            Assert.True(PanelLeds.CardLit(FlagBoxInstallState.Newer, true));
+            Assert.False(PanelLeds.RenameReinstalls(FlagBoxInstallState.Newer));
+            Assert.True(PanelLeds.RenameReinstalls(FlagBoxInstallState.UpToDate));
+            Assert.True(PanelLeds.RenameReinstalls(FlagBoxInstallState.Outdated));
+        }
+
         [Theory]
         [InlineData(null, null)]
         [InlineData(FlagBoxInstallState.Unavailable, null)]
         [InlineData(FlagBoxInstallState.NotEmbedded, null)]
         [InlineData(FlagBoxInstallState.UpToDate, null)]
         [InlineData(FlagBoxInstallState.NotInstalled, "Install")]
+        [InlineData(FlagBoxInstallState.Newer, null)]
         [InlineData(FlagBoxInstallState.Failed, "Install")]
         [InlineData(FlagBoxInstallState.Outdated, "Update")]
         public void The_header_offers_the_press_the_profile_needs(FlagBoxInstallState? profile, string press)

@@ -74,6 +74,29 @@ namespace OpenDashPlugin
         public const string InstallFailed = "Install failed";
 
         /// <summary>
+        /// A light profile SimHub holds at a later version than this build carries (FlagBoxInstallState.Newer):
+        /// a later OpenDash installed it and an earlier one is running. One phrase for the one state, on the
+        /// Updates table's row and the Matrix page's line; no artboard draws it, so plugin.md's departures table
+        /// records it. Nothing is offered over it, since a press would put the older profile back.
+        /// </summary>
+        public const string NewerThanBuild = "Newer than this build";
+
+        /// <summary>The way forward from a newer profile: the plugin's own update.</summary>
+        public const string NewerStep = "Update OpenDash to match it";
+
+        /// <summary>
+        /// A newer profile's hover on the Updates row and the Matrix line, one sentence as every hover on the
+        /// Matrix line is: the step that brings the two level, the plugin's own update, then the version this
+        /// build ships, which neither shows: 'Update OpenDash to match it: this build ships 0.3.0-rc.1.'
+        /// </summary>
+        public static string NewerHover(string embeddedVersion)
+        {
+            return string.IsNullOrWhiteSpace(embeddedVersion)
+                ? NewerStep + "."
+                : NewerStep + ": this build ships " + embeddedVersion.Trim() + ".";
+        }
+
+        /// <summary>
         /// A dashboard written after SimHub started, which SimHub has not read yet: one phrase for the one state
         /// on every page that draws it, as plugin.md's departures table records. The Screens card's state and its fix box's title, Home's
         /// screen line and the first step of Home's issue, and the Updates table's state all read this constant.
@@ -171,7 +194,8 @@ namespace OpenDashPlugin
         ///
         /// The state is a word and the version has a column of its own, so the words are the four the
         /// dashboards' rows use (InstallStatus.Label): an older profile is "Update available" in the update
-        /// ink, as the artboard draws "Out of date". The one press the table carries is an older profile's
+        /// ink, as the artboard draws "Out of date". A newer one than this build's is <see cref="NewerThanBuild"/>,
+        /// in the installed ink, with no press. The one press the table carries is an older profile's
         /// Update (PanelUpdates.RowUpdate), and every other state offers none, so its button is null; the
         /// page draws it as an outline, its one primary being the update card's Download. A state the page
         /// cannot know -- SimHub's settings out of reach, or no profile in this build to compare with -- is
@@ -190,6 +214,9 @@ namespace OpenDashPlugin
                     return new RowAction(InstallStatus.UpdateAvailable.Label(), Theme.StatusUpdateAvailable, PanelUpdates.RowUpdate, PanelButton.Outline);
                 case FlagBoxInstallState.UpToDate:
                     return new RowAction(InstallStatus.UpToDate.Label(), Theme.StatusUpToDate, null, PanelButton.Outline);
+                case FlagBoxInstallState.Newer:
+                    // In SimHub and working, so the installed ink; no press, since Update would go back a version.
+                    return new RowAction(NewerThanBuild, Theme.StatusUpToDate, null, PanelButton.Outline);
                 case FlagBoxInstallState.Failed:
                     return new RowAction(InstallFailed, Theme.StatusFailed, null, PanelButton.Outline);
                 case FlagBoxInstallState.Unavailable:

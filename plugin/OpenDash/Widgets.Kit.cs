@@ -1789,6 +1789,27 @@ namespace OpenDashPlugin
             return element == null ? null : element.GetValue(AnchorProperty) as string;
         }
 
+        /// <summary>The name a rebuild in place finds a control by to give it the keyboard focus back (#645): the
+        /// setting it writes, set where the row's anchor does not sit above the control, as on the alert table,
+        /// whose anchors are on the name cells beside the boxes.</summary>
+        public static readonly DependencyProperty FocusKeyProperty =
+            DependencyProperty.RegisterAttached("FocusKey", typeof(string), typeof(Ui), new PropertyMetadata(null));
+
+        /// <summary>Names an element for the focus a rebuild hands back, and returns it.</summary>
+        public static T FocusKey<T>(T element, string key) where T : DependencyObject
+        {
+            if (element != null) element.SetValue(FocusKeyProperty, key);
+            return element;
+        }
+
+        /// <summary>The key PanelFocus records an element by: its FocusKey, or else its search anchor, which every
+        /// row of a page carries.</summary>
+        public static string FocusKeyOf(DependencyObject element)
+        {
+            if (element == null) return null;
+            return element.GetValue(FocusKeyProperty) as string ?? AnchorOf(element);
+        }
+
         /// <summary>The first element under <paramref name="root"/> carrying that anchor, or null.</summary>
         public static FrameworkElement FindAnchor(DependencyObject root, string id)
         {
