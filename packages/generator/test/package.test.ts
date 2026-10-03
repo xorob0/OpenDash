@@ -1,6 +1,7 @@
 /** writePackage and zipPackage: on-disk layout, sidecars, fonts, and a reproducible zip. */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -220,6 +221,34 @@ describe('zipPackage', () => {
       // Zip keeps seconds in two-second steps, so an odd one would not survive the round trip.
       expect(when.getSeconds() % 2).toBe(0);
     }
+  });
+
+  test('previewMtime stamps the same fields in every time zone, on the morning the clocks go forward too', () => {
+    // Zip stores the local fields of the Date, so the stamp is reproducible only if every zone reads
+    // back the fields it was built from (#605). The first two inputs hash to 02:xx on the day summer
+    // time began in 2000 in Berlin (26 March) and in New York (2 April), an hour neither zone has,
+    // which a local Date moves to 03:xx there and leaves alone in UTC. A time zone is read once, when
+    // the process starts, so each zone gets a process of its own.
+    const inputs = ['berlin 5161', 'newyork 5635', ...Array.from({ length: 64 }, (_, i) => `picture ${i}`)];
+    const fieldsIn = (tz: string): { offset: number; fields: number[][] } => {
+      const script = `
+        import { previewMtime } from ${JSON.stringify(join(import.meta.dir, '..', 'src', 'package.ts'))};
+        const fields = ${JSON.stringify(inputs)}.map((s) => {
+          const d = previewMtime(new TextEncoder().encode(s));
+          return [d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds()];
+        });
+        console.log(JSON.stringify({ offset: new Date(2000, 6, 1).getTimezoneOffset(), fields }));`;
+      const run = spawnSync(process.execPath, ['-e', script], { env: { ...process.env, TZ: tz }, encoding: 'utf8' });
+      expect([tz, run.status, run.stderr]).toEqual([tz, 0, '']);
+      return JSON.parse(run.stdout);
+    };
+    // Khartoum skipped noon on 15 January 2000 and Nuuk 22:00 on 25 March, the jumps nearest the
+    // hours the stamp keeps to.
+    const zones = ['UTC', 'Europe/Berlin', 'America/New_York', 'Australia/Lord_Howe', 'Africa/Khartoum', 'America/Nuuk'];
+    const runs = zones.map(fieldsIn);
+    // Each process really was in its zone, or the comparison below would prove nothing.
+    expect(new Set(runs.map((r) => r.offset)).size).toBe(zones.length);
+    for (const [i, tz] of zones.entries()) expect([tz, runs[i]!.fields]).toEqual([tz, runs[0]!.fields]);
   });
 
   test('a custom mtime and level are honoured', () => {
