@@ -107,13 +107,41 @@ const USAGE = `shots: photograph every package on one claim of the VM.
   --keep       leave the emulator running and the VM claimed when this returns
   --warm-laps  laps to let the emulator complete before the first picture; default 2
 
-Every run writes run.json beside its pictures: version, commit, scenario, and the laps SimHub had
-seen at each capture. site/scripts/sync-shots.ts reads it.
+Every run writes run.json beside its pictures: the version and commit once, and for every picture
+the scenario it was taken on and the laps SimHub had seen. site/scripts/sync-shots.ts reads it.
 
 It claims the VM once for the whole batch, installs every package in one pass so SimHub restarts
 once, and restarts the emulator once per scenario. A reviewed capture belongs in media/<issue>/;
 build/shots is scratch.
 `;
+
+/**
+ * Every step `shots` takes on the VM, and the emulator build, gathered in one object so that a test
+ * can answer them in place of the guest, as `steps` in modules.ts does for the modules capture.
+ */
+export const steps = {
+  readClaim,
+  claim,
+  release,
+  status,
+  up,
+  waitReady,
+  guiProblem,
+  install,
+  buildEmulator,
+  uploadEmulator,
+  startEmulator,
+  stopEmulator,
+  waitForLaps,
+  lapsCompleted,
+  closeDashboards,
+  openDashboard,
+  placeDashboards,
+  captureDashboard,
+  sleep,
+  /** Read from build/manifest.json, which a test has no reason to have built. */
+  packageSize,
+};
 
 export interface Shot {
   packageName: string;
@@ -137,6 +165,10 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
     console.error(`one of ${built.join(', ')}`);
     return 1;
   }
+
+  const { readClaim, claim, release, status, up, waitReady, guiProblem, install } = steps;
+  const { buildEmulator, uploadEmulator, startEmulator, stopEmulator, waitForLaps, lapsCompleted } = steps;
+  const { closeDashboards, openDashboard, placeDashboards, captureDashboard, sleep, packageSize } = steps;
 
   const held = readClaim(host);
   if (held && held.who !== whoAmI()) {
@@ -203,6 +235,9 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
     mkdirSync(opts.outDir, { recursive: true });
     let index = 1;
     const total = opts.packages.length * opts.scenarios.length;
+    // One record for the whole run, every scenario's pictures in it. A record per scenario written
+    // to the one run.json left only the last scenario's pictures with provenance (#627).
+    const run = { ...provenance(), captures: {} as Record<string, RunCapture> };
 
     for (const scenario of opts.scenarios) {
       console.log(`\nscenario ${scenario}`);
@@ -218,8 +253,6 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
         console.log(`  letting ${opts.warmLaps} lap${opts.warmLaps > 1 ? 's' : ''} go by first`);
         if (!waitForLaps(host, opts.warmLaps)) console.error('  the laps did not come; photographing anyway, so look at the last-lap columns');
       }
-      const run = { ...provenance(scenario), captures: {} as Record<string, RunCapture> };
-
       for (const packageName of opts.packages) {
         const file = path.join(opts.outDir, shotName(index, packageName, scenario));
         process.stdout.write(`  [${index}/${total}] ${packageName} `);
@@ -248,7 +281,7 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
         taken.push({ packageName, scenario, file, ok: captured.ok, why: captured.ok ? undefined : captured.stderr.split('\n')[0] });
         console.log(captured.ok ? 'photographed' : `capture failed (${captured.stderr.split('\n')[0]})`);
         if (captured.ok && size) {
-          run.captures[path.basename(file)] = { kind: 'package', package: packageName, width: size.width, height: size.height, lapsSeen: lapsCompleted(host) };
+          run.captures[path.basename(file)] = { kind: 'package', package: packageName, scenario, width: size.width, height: size.height, lapsSeen: lapsCompleted(host) };
         }
 
         // Closed before the next one opens. Ten dash windows rendering at once on two cores is
@@ -256,7 +289,7 @@ export async function shots(host: Host, opts: ShotsOptions): Promise<number> {
         closeDashboards(host);
         index += 1;
       }
-      // Written even when the run stopped short: what was photographed is still provenance.
+      // Written after every scenario, so a run that stops short still says what it photographed.
       writeRun(opts.outDir, run);
       if (lost) break;
     }

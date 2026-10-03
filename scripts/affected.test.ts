@@ -7,9 +7,12 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { COMMENT_MARKER, compare, digest, parseArgs, report, type Digest } from './affected.ts';
+import { COMMENT_MARKER, compare, compareBuilds, digest, parseArgs, report, type Comparison, type Digest } from './affected.ts';
 
 const digestOf = (entries: Record<string, string>): Digest => new Map(Object.entries(entries));
+const nothingMoved: Comparison = { added: [], removed: [], changed: [], unchanged: [] };
+/** A report over packages alone, which is what most of these are about. */
+const packageReport = (packages: Comparison, baseSha = 'abc1234567890'): string => report({ packages, profiles: nothingMoved }, baseSha);
 
 describe('reading the arguments', () => {
   test('nothing compares against main', () => {
@@ -71,69 +74,127 @@ describe('what the report says', () => {
   const nothing = { added: [], removed: [], changed: [], unchanged: ['OpenDash'] };
 
   test('a branch that moves no package output says nothing at all', () => {
-    expect(report(nothing, 'abc1234567890')).toBe('');
+    expect(packageReport(nothing, 'abc1234567890')).toBe('');
   });
 
   test('a report carries the marker that lets CI find its own comment', () => {
-    expect(report({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890')).toContain(COMMENT_MARKER);
+    expect(packageReport({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890')).toContain(COMMENT_MARKER);
   });
 
   test('every package that moved is named', () => {
-    const body = report({ added: ['OpenDash 800 round'], removed: ['OpenDash 480 round'], changed: ['OpenDash'], unchanged: [] }, 'abc1234567890');
+    const body = packageReport({ added: ['OpenDash 800 round'], removed: ['OpenDash 480 round'], changed: ['OpenDash'], unchanged: [] }, 'abc1234567890');
     expect(body).toContain('`OpenDash`');
     expect(body).toContain('`OpenDash 800 round` (new)');
     expect(body).toContain('`OpenDash 480 round` (removed)');
   });
 
   test('the heading counts everything that moved', () => {
-    expect(report({ added: ['b'], removed: ['c'], changed: ['a'], unchanged: [] }, 'abc1234567890')).toContain('3 packages to look at');
+    expect(packageReport({ added: ['b'], removed: ['c'], changed: ['a'], unchanged: [] }, 'abc1234567890')).toContain('3 packages to look at');
   });
 
   test('one package is not pluralised', () => {
-    expect(report({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890')).toContain('1 package to look at');
+    expect(packageReport({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890')).toContain('1 package to look at');
   });
 
   test('the capture command offers exactly what moved', () => {
-    const body = report({ added: ['OpenDash 800 round'], removed: [], changed: ['OpenDash'], unchanged: ['OpenDash Pit wall'] }, 'abc1234567890');
+    const body = packageReport({ added: ['OpenDash 800 round'], removed: [], changed: ['OpenDash'], unchanged: ['OpenDash Pit wall'] }, 'abc1234567890');
     expect(body).toContain("bun run shots --packages 'OpenDash,OpenDash 800 round'");
     expect(body).not.toContain('OpenDash Pit wall');
   });
 
   test('a package the branch removed is not offered to the VM, which could not open it', () => {
-    const body = report({ added: [], removed: ['OpenDash 480 round'], changed: [], unchanged: [] }, 'abc1234567890');
+    const body = packageReport({ added: [], removed: ['OpenDash 480 round'], changed: [], unchanged: [] }, 'abc1234567890');
     expect(body).toContain('`OpenDash 480 round` (removed)');
     expect(body).not.toContain('bun run shots');
   });
 
+  test('a branch that moves only an LED profile names it, under a heading that counts it', () => {
+    const body = report({ packages: { ...nothing }, profiles: { ...nothingMoved, changed: ['OpenDash Flag box'] } }, 'abc1234567890');
+    expect(body).toContain(COMMENT_MARKER);
+    expect(body).toContain('### 1 LED profile to look at');
+    expect(body).toContain('- `OpenDash Flag box`');
+    expect(body).not.toContain('package');
+  });
+
+  test('a profile is never offered to the VM, which has no screen of it to capture', () => {
+    const body = report({ packages: { ...nothing }, profiles: { ...nothingMoved, changed: ['OpenDash Flag box'], added: ['OpenDash 4-14-4'] } }, 'abc1234567890');
+    expect(body).toContain('- `OpenDash 4-14-4` (new)');
+    expect(body).not.toContain('bun run shots');
+  });
+
+  test('packages and profiles together are counted and listed apart', () => {
+    const body = report(
+      { packages: { ...nothing, changed: ['OpenDash'] }, profiles: { ...nothingMoved, changed: ['OpenDash Flag box'], removed: ['OpenDash 0-4-0'] } },
+      'abc1234567890',
+    );
+    expect(body).toContain('### 1 package and 2 LED profiles to look at');
+    expect(body).toContain("bun run shots --packages 'OpenDash'");
+    const profilesAt = body.indexOf('LED profiles, which have no screen to capture:');
+    expect(body.indexOf('- `OpenDash`')).toBeLessThan(profilesAt);
+    expect(body.indexOf('- `OpenDash Flag box`')).toBeGreaterThan(profilesAt);
+    expect(body).toContain('- `OpenDash 0-4-0` (removed)');
+  });
+
   test('the base is named, so a stale comment can be recognised', () => {
-    expect(report({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890fff')).toContain('abc123456789');
+    expect(packageReport({ ...nothing, changed: ['OpenDash'] }, 'abc1234567890fff')).toContain('abc123456789');
   });
 });
 
 describe('reading a build from disk', () => {
-  /** A build directory holding the manifest and the zips it names, with the given contents. */
-  const buildDir = (packages: Record<string, string>): string => {
+  /** A build directory holding the manifest and the zips and profiles it names, with the given contents. */
+  const buildDir = (packages: Record<string, string>, profiles: Record<string, string> = {}): string => {
     const dir = mkdtempSync(path.join(tmpdir(), 'affected-'));
     const entries = Object.keys(packages).map((folder) => ({ folder, file: `${folder}.simhubdash` }));
-    writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: entries }));
+    const ledProfiles = Object.keys(profiles).map((name) => `${name}.ledsprofile`);
+    writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: entries, ledProfiles }));
     for (const [folder, contents] of Object.entries(packages)) writeFileSync(path.join(dir, `${folder}.simhubdash`), contents);
+    for (const [name, contents] of Object.entries(profiles)) writeFileSync(path.join(dir, `${name}.ledsprofile`), contents);
     return dir;
   };
 
   test('every package the manifest names is hashed', () => {
-    const digests = digest(buildDir({ OpenDash: 'one', 'OpenDash 800x480': 'two' }));
-    expect([...digests.keys()].sort()).toEqual(['OpenDash', 'OpenDash 800x480']);
+    const { packages } = digest(buildDir({ OpenDash: 'one', 'OpenDash 800x480': 'two' }));
+    expect([...packages.keys()].sort()).toEqual(['OpenDash', 'OpenDash 800x480']);
+  });
+
+  test('every LED profile the manifest names is hashed, under its name without the extension', () => {
+    const { profiles } = digest(buildDir({ OpenDash: 'one' }, { 'OpenDash Flag box': 'box', 'OpenDash 4-14-4': 'strip' }));
+    expect([...profiles.keys()].sort()).toEqual(['OpenDash 4-14-4', 'OpenDash Flag box']);
   });
 
   test('the same bytes hash the same and different bytes do not', () => {
-    const same = digest(buildDir({ a: 'identical', b: 'identical', c: 'other' }));
-    expect(same.get('a')).toBe(same.get('b'));
-    expect(same.get('a')).not.toBe(same.get('c'));
+    const { packages } = digest(buildDir({ a: 'identical', b: 'identical', c: 'other' }));
+    expect(packages.get('a')).toBe(packages.get('b'));
+    expect(packages.get('a')).not.toBe(packages.get('c'));
+  });
+
+  // The bug in #632: the profiles were never read, so this report was empty, CI posted nothing and
+  // deleted the comment an earlier push had left.
+  test('two builds that differ only in one LED profile report that profile', () => {
+    const base = digest(buildDir({ OpenDash: 'same' }, { 'OpenDash Flag box': 'one', 'OpenDash 4-14-4': 'strip' }));
+    const head = digest(buildDir({ OpenDash: 'same' }, { 'OpenDash Flag box': 'two', 'OpenDash 4-14-4': 'strip' }));
+    const changes = compareBuilds(base, head);
+    expect(changes.packages).toMatchObject({ changed: [], added: [], removed: [], unchanged: ['OpenDash'] });
+    expect(changes.profiles).toMatchObject({ changed: ['OpenDash Flag box'], unchanged: ['OpenDash 4-14-4'] });
+    expect(report(changes, 'abc1234567890')).toContain('- `OpenDash Flag box`');
+  });
+
+  test('a base whose manifest lists no profiles has none, and the profiles of the branch read as new', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'affected-'));
+    writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: [] }));
+    const head = digest(buildDir({}, { 'OpenDash Flag box': 'box' }));
+    expect(compareBuilds(digest(dir), head).profiles.added).toEqual(['OpenDash Flag box']);
   });
 
   test('a zip the manifest names but the build did not write is an error, not a silent absence', () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'affected-'));
     writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: [{ folder: 'OpenDash', file: 'OpenDash.simhubdash' }] }));
+    expect(() => digest(dir)).toThrow();
+  });
+
+  test('a profile the manifest names but the build did not write is an error too', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'affected-'));
+    writeFileSync(path.join(dir, 'manifest.json'), JSON.stringify({ packages: [], ledProfiles: ['OpenDash Flag box.ledsprofile'] }));
     expect(() => digest(dir)).toThrow();
   });
 

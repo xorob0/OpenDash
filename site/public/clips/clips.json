@@ -1,8 +1,5 @@
 {
-  "schema": 1,
-  "version": "0.3.0-rc.6",
-  "commit": "b671ca9",
-  "simHubVersion": "9.12.6",
+  "schema": 2,
   "clips": [
     {
       "slug": "opendash",
@@ -24,7 +21,10 @@
         "webm": 108747,
         "mp4": 131277,
         "poster": 91868
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-1280x400",
@@ -46,7 +46,10 @@
         "webm": 75329,
         "mp4": 86556,
         "poster": 62360
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-1280x480",
@@ -68,7 +71,10 @@
         "webm": 73714,
         "mp4": 90652,
         "poster": 55066
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-1280x720",
@@ -90,7 +96,10 @@
         "webm": 130238,
         "mp4": 151701,
         "poster": 99676
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-480-round",
@@ -112,7 +121,10 @@
         "webm": 29061,
         "mp4": 41361,
         "poster": 11734
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-600x686",
@@ -134,7 +146,10 @@
         "webm": 32941,
         "mp4": 46285,
         "poster": 26929
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-800-round",
@@ -156,7 +171,10 @@
         "webm": 50303,
         "mp4": 66118,
         "poster": 27506
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-800x286",
@@ -178,7 +196,10 @@
         "webm": 49884,
         "mp4": 59573,
         "poster": 25437
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-800x480",
@@ -200,7 +221,10 @@
         "webm": 41855,
         "mp4": 53601,
         "poster": 31400
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-850x480",
@@ -222,7 +246,10 @@
         "webm": 87719,
         "mp4": 105097,
         "poster": 54727
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-companion",
@@ -244,7 +271,10 @@
         "webm": 34120,
         "mp4": 39006,
         "poster": 31305
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     },
     {
       "slug": "opendash-pit-wall",
@@ -266,7 +296,10 @@
         "webm": 219682,
         "mp4": 260569,
         "poster": 233922
-      }
+      },
+      "version": "0.3.0-rc.6",
+      "commit": "b671ca9",
+      "simHubVersion": "9.12.6"
     }
   ]
 }

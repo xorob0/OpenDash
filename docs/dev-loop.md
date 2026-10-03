@@ -163,7 +163,10 @@ nothing a lamp at night, and no two pictures that differ only in hue.
 order — fifteen flags, the pit family, the spotter on each side, the three warnings, then a gear
 sweep through the redline — six seconds apart, in a fixed order, and loops after 156 s, so two
 runs are comparable and the whole thing can be watched twice without restarting. The emulator's
-`--selfcheck` runs it in memory on Linux and is part of what CI checks:
+`--selfcheck` runs it in memory on Linux and is part of what CI checks: the Dev tools job in
+[ci.yml](../.github/workflows/ci.yml) builds the emulator and the trace recorder on every pull
+request and runs this, so a compile error in either tool goes red there rather than at the next
+`bun run dev` or `bun run record`:
 
 ```bash
 export PATH="$HOME/.dotnet:$PATH"; export DOTNET_ROOT="$HOME/.dotnet"

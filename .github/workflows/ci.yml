@@ -1,12 +1,15 @@
 # ci.yml: builds and tests the dashboard package (Bun) and the SimHub plugin (.NET) on every push
 # and pull request. The plugin job embeds the dash job's .simhubdash output, so it runs second, and
 # the site job needs the same output to know which packages exist.
-# A third job compares the built packages against the base and keeps one comment saying which of
-# them a reviewer should look at; it depends on neither of the others and runs beside them.
+# The tools job builds the emulator and the trace recorder and runs the emulator's selfcheck; it
+# needs nothing from the others and runs beside them.
+# The affected job compares the built packages against the base and keeps one comment saying which
+# of them a reviewer should look at; it too depends on no other job.
 # The site's Docker image is not built here but in site-image.yml, which runs on a path filter: the
 # site job below builds the site in a full checkout, where the whole tree is present, so it cannot
 # see what the image's build stage forgot to copy.
-# Spec: docs section 12. Keep the build steps in sync with release.yml.
+# Spec: docs section 12. The plugin job is release.yml's, step for step, and
+# scripts/workflows.test.ts fails when the two differ in anything but their comments.
 name: CI
 
 on:
@@ -106,21 +109,22 @@ jobs:
       - name: Check the flag box glyphs arrived
         run: test -s plugin/OpenDash/Resources/flag-box-glyphs.json
 
+      # As a release does, and before the tests, so the plugin tested here reads its profiles through
+      # FlagBoxProfile's gzip path, the one a user's plugin takes (#628).
+      - name: Compress the LED profiles
+        run: bash plugin/scripts/compress-profiles.sh
+
       - name: Test plugin logic
         run: dotnet test plugin/OpenDash.Tests
 
       - name: Build plugin
         run: dotnet build plugin/OpenDash -c Release
 
+      # Always the script, never a hand-rolled zip: it is what puts the font licence beside the DLL.
       - name: Package plugin
         run: |
           set -euo pipefail
-          if [ -f plugin/scripts/package-plugin.sh ]; then
-            bash plugin/scripts/package-plugin.sh
-          else
-            mkdir -p build
-            zip -j build/OpenDash-plugin.zip plugin/OpenDash/bin/Release/net48/OpenDash.dll plugin/INSTALL.md
-          fi
+          bash plugin/scripts/package-plugin.sh
           ls -l build/OpenDash-plugin.zip
 
       - name: Upload plugin
@@ -131,6 +135,36 @@ jobs:
             build/OpenDash-plugin.zip
             plugin/OpenDash/bin/Release/net48/OpenDash.dll
           if-no-files-found: error
+
+  # The C# tools of the dev loop, which nothing else compiles: the emulator `bun run dev` starts on
+  # the VM and the trace recorder `bun run record` installs there. Without this job a change that
+  # breaks either surfaces only when somebody next drives the VM (#628). The emulator's deliverable
+  # is net48 and runs only on Windows; devcheck builds the same sources for net8.0, which is what
+  # runs the selfcheck here, on the flag box scenario docs/dev-loop.md names.
+  tools:
+    name: Dev tools
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Build the emulator
+        run: dotnet build tools/irsdk-emulator -c Release
+
+      - name: Build the emulator for Linux
+        run: dotnet build tools/irsdk-emulator/devcheck -c Release
+
+      - name: Self-check the emulator
+        working-directory: tools/irsdk-emulator
+        run: dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll --selfcheck flagbox
+
+      - name: Build the trace recorder
+        run: dotnet build tools/trace-recorder -c Release
 
   site:
     name: Website
@@ -221,10 +255,10 @@ jobs:
 
             try {
               if (body === '') {
-                // No package output moved. A comment left from an earlier push would now be a lie,
-                // so it goes rather than being updated to say nothing.
+                // Neither a package nor an LED profile moved. A comment left from an earlier push
+                // would now be a lie, so it goes rather than being updated to say nothing.
                 if (mine) await github.rest.issues.deleteComment({ ...context.repo, comment_id: mine.id });
-                core.info('no package output moved; nothing posted');
+                core.info('no package or LED profile moved; nothing posted');
                 return;
               }
               if (mine) await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body });

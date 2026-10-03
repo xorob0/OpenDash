@@ -19,7 +19,7 @@
  *   bun run clips --packages 'OpenDash 1280x480'     # one more
  *   bun run clips --encode-only                      # re-encode what build/clips holds
  */
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { LIST_ORDER, packageSize } from './dev.ts';
 import { build as buildEmulator, scenarios, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, waitForLaps } from './emulator.ts';
@@ -125,13 +125,18 @@ export interface EncodeInput {
   preroll: number;
 }
 
-const common = (i: EncodeInput): string[] => [
+/** The raw frames as ffmpeg's input: every command starts here. */
+const source = (i: EncodeInput): string[] => [
   '-y',
   '-f', 'rawvideo',
   '-pix_fmt', 'bgra',
   '-video_size', `${i.width}x${i.height}`,
   '-framerate', i.inputFps.toFixed(3),
   '-i', i.raw,
+];
+
+const common = (i: EncodeInput): string[] => [
+  ...source(i),
   '-ss', String(i.preroll),
   '-t', String(i.seconds),
   '-vf', 'pad=ceil(iw/2)*2:ceil(ih/2)*2',
@@ -169,32 +174,54 @@ export const mp4Args = (i: EncodeInput, out: string, crf = 22): string[] => [
 
 /** The first kept frame, so the poster and the clip's first frame are the same pixels. */
 export const posterArgs = (i: EncodeInput, out: string): string[] => [
-  '-y',
-  '-f', 'rawvideo',
-  '-pix_fmt', 'bgra',
-  '-video_size', `${i.width}x${i.height}`,
-  '-framerate', i.inputFps.toFixed(3),
-  '-i', i.raw,
+  ...source(i),
   '-ss', String(i.preroll),
   '-frames:v', '1',
   '-pix_fmt', 'rgb24',
   out,
 ];
 
-/** For a release body, which renders a GIF and not a video. Smaller and slower than the site's clip. */
+/**
+ * For a release body, which renders a GIF and not a video. Smaller and slower than the site's clip:
+ * its own filter sets the rate and the size, so it takes neither the pad nor the `-r` of the others.
+ */
 export const gifArgs = (i: EncodeInput, out: string): string[] => [
-  ...common(i).filter((a) => a !== '-r' && !/^\d+$/.test(a) || a === String(i.seconds) || a === String(i.preroll)),
+  ...source(i),
+  '-ss', String(i.preroll),
+  '-t', String(i.seconds),
+  '-an',
   '-vf', 'fps=12,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3',
   '-loop', '0',
   out,
 ];
 
+/** `length` bytes of a recording from `offset`, fewer where it ends first. */
+export type ReadAt = (offset: number, length: number) => Uint8Array;
+
+/** Reads a file a range at a time: a raw recording is hundreds of megabytes, about 870 at 1080p. */
+export const fileReader = (file: string): ReadAt => (offset, length) => {
+  const bytes = new Uint8Array(length);
+  const fd = openSync(file, 'r');
+  try {
+    let got = 0;
+    while (got < length) {
+      const n = readSync(fd, bytes, got, length - got, offset + got);
+      if (n === 0) break;
+      got += n;
+    }
+    return bytes.subarray(0, got);
+  } finally {
+    closeSync(fd);
+  }
+};
+
 /** Whether nothing moved: the first and last kept frames are byte for byte the same picture. */
-export function frozen(raw: Uint8Array, width: number, height: number, frames: number, skip: number): boolean {
+export function frozen(read: ReadAt, width: number, height: number, frames: number, skip: number): boolean {
   const frameBytes = width * height * 4;
-  if (frames - skip < 2 || raw.byteLength < frames * frameBytes) return false;
-  const first = raw.subarray(skip * frameBytes, (skip + 1) * frameBytes);
-  const last = raw.subarray((frames - 1) * frameBytes, frames * frameBytes);
+  if (frames - skip < 2) return false;
+  const first = read(skip * frameBytes, frameBytes);
+  const last = read((frames - 1) * frameBytes, frameBytes);
+  if (first.byteLength < frameBytes || last.byteLength < frameBytes) return false;
   return Bun.hash(first) === Bun.hash(last);
 }
 
@@ -207,8 +234,8 @@ const run = (args: string[]): { ok: boolean; err: string } => {
   return { ok: r.exitCode === 0, err: new TextDecoder().decode(r.stderr).trim().split('\n').slice(-4).join('\n') };
 };
 
-/** Encodes one recorded clip directory in place. */
-export function encode(dir: string, opts: { gif: boolean }): { ok: boolean; why?: string; bytes?: { webm: number; mp4: number; poster: number } } {
+/** Encodes one recorded clip directory in place. `reader` is how the frozen check reads the frames. */
+export function encode(dir: string, opts: { gif: boolean }, reader: (file: string) => ReadAt = fileReader): { ok: boolean; why?: string; bytes?: { webm: number; mp4: number; poster: number } } {
   const recordPath = path.join(dir, RECORD_FILE);
   const raw = path.join(dir, 'frames.raw');
   const ticks = path.join(dir, 'frames.ticks');
@@ -217,7 +244,7 @@ export function encode(dir: string, opts: { gif: boolean }): { ok: boolean; why?
   const inputFps = existsSync(ticks) ? measuredFps(readFileSync(ticks, 'utf8')) || record.recording.measuredFps : record.recording.measuredFps;
   const input: EncodeInput = { raw, width: record.recording.width, height: record.recording.height, inputFps, outputFps: record.fps, seconds: record.seconds, preroll: record.preroll };
   const skip = Math.round(inputFps * record.preroll);
-  if (frozen(new Uint8Array(readFileSync(raw)), input.width, input.height, record.recording.frames, skip)) {
+  if (frozen(reader(raw), input.width, input.height, record.recording.frames, skip)) {
     return { ok: false, why: 'nothing moved during the clip: SimHub was probably not connected to the emulator (bun run vm logs 40)' };
   }
   const base = path.join(dir, record.slug);
@@ -370,7 +397,7 @@ export async function clips(host: Host, opts: ClipsOptions): Promise<number> {
         slug,
         package: packageName,
         scenario: opts.scenario,
-        ...(({ version, commit, simHubVersion }) => ({ version, commit, simHubVersion }))(provenance(opts.scenario)),
+        ...(({ version, commit, simHubVersion }) => ({ version, commit, simHubVersion }))(provenance()),
         takenAt: new Date().toISOString(),
         seconds: opts.seconds,
         fps,
