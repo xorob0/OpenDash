@@ -247,7 +247,7 @@ export async function run(host: Host, opts: Options): Promise<number> {
     // of the wait, not of the page.
     console.log('  letting 2 laps go by first');
     if (!waitForLaps(host, 2)) console.error('  the laps did not come; photographing anyway');
-    const run = { ...provenance(opts.scenario), captures: {} as Record<string, RunCapture> };
+    const run = { ...provenance(), captures: {} as Record<string, RunCapture> };
 
     mkdirSync(opts.outDir, { recursive: true });
     let taken = 0;
@@ -264,7 +264,7 @@ export async function run(host: Host, opts: Options): Promise<number> {
       const shot = captureDashboard(host, name, file);
       if (shot.ok) {
         taken += 1;
-        run.captures[path.basename(file)] = { kind: 'page', page: meta.id, width: SIZE.width, height: SIZE.height, lapsSeen: lapsCompleted(host) };
+        run.captures[path.basename(file)] = { kind: 'page', page: meta.id, scenario: opts.scenario, width: SIZE.width, height: SIZE.height, lapsSeen: lapsCompleted(host) };
         console.log(`  [${index + 1}/${wanted.length}] ${meta.name} photographed`);
       } else {
         console.error(`  [${index + 1}/${wanted.length}] ${meta.name}: ${shot.stderr.trim()}`);

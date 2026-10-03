@@ -9,7 +9,7 @@ import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { MODULE_CATALOGUE } from '../packages/dash/src/contract.ts';
-import { RUN_FILE } from './shotsRun.ts';
+import { readRun, RUN_FILE } from './shotsRun.ts';
 import { packageNameFor, parseArgs, run, steps, type Options } from './modules.ts';
 import type { Host, RunResult } from './vm.ts';
 
@@ -117,6 +117,8 @@ describe('a run whose setup went through', () => {
     expect(opened).toEqual(wanted.map((m) => packageNameFor(m.number, m.id)));
     expect(taken.filter((s) => s === 'captureDashboard')).toHaveLength(2);
     expect(readdirSync(opts.outDir)).toEqual([RUN_FILE]);
+    // The same record `bun run shots` writes: the run's tree once, the scenario on every picture.
+    expect(readRun(opts.outDir)?.captures).toMatchObject({ 'page-fuel.png': { kind: 'page', scenario: 'green' }, 'page-tyres.png': { kind: 'page', scenario: 'green' } });
   });
 
   test('laps that do not come are said, and the modules are still photographed', async () => {

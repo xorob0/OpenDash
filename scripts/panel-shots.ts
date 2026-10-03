@@ -562,7 +562,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
     sleep(3);
 
     mkdirSync(opts.outDir, { recursive: true });
-    const run = { ...provenance(opts.scenario), captures: {} as Record<string, RunCapture> };
+    const run = { ...provenance(), captures: {} as Record<string, RunCapture> };
 
     for (const width of opts.widths) {
       const sized = step(`sizing SimHub to ${width === 'max' ? 'maximised' : `${width} px`}`, () => sizeSimHub(host, width));
@@ -623,7 +623,7 @@ export async function panelShots(host: Host, opts: PanelShotsOptions): Promise<n
           const captured = captureWindow(host, { mainWindowOf: 'SimHubWPF' }, path.join(opts.outDir, file), crop);
           shots.push({ file, ok: captured.ok, why: captured.ok ? undefined : firstLine(captured) });
           console.log(`    ${file}: ${captured.ok ? captured.stdout.split(' to ')[0] : `failed (${firstLine(captured)})`}`);
-          if (captured.ok) run.captures[file] = { kind: 'panel', panel: pageName, width: Math.round(crop.width), height: Math.round(crop.height), lapsSeen: null };
+          if (captured.ok) run.captures[file] = { kind: 'panel', panel: pageName, scenario: opts.scenario, width: Math.round(crop.width), height: Math.round(crop.height), lapsSeen: null };
         }
         // Back to the top, so the next page is not opened scrolled and a re-run starts where this one did.
         if (parts > 1 && column) wheel(host, column.rect.left + 10 * measure.scale, column.rect.top + column.rect.height / 2, -(notchesPerViewport(column.rect.height / measure.scale) * parts + 10));

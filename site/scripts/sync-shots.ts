@@ -10,11 +10,13 @@
  * reshoot on another scenario changes a line in one file rather than every reference on the site:
  * `<slug>.png` for a package, `page-<id>.png` for a page, `panel-<tab>.png` for the plugin.
  *
- * This copies the pictures under those names and merges the run's provenance into
- * public/shots/captures.json, which is what the pages read to say under a picture which version
- * it shows. It is run by hand after looking at the captures, never as part of a build: a capture
- * that caught SimHub mid-reconnect is a photograph of a bug, and the only thing that catches one
- * is an eye.
+ * This copies the pictures under those names and records each one in public/shots/captures.json
+ * with the run that took it, which is what the pages read to say under a picture which version it
+ * shows. Only the entries it copies are stamped: a sync of the modules alone leaves the package
+ * captures with the older run that took them, rather than relabelling them as this one (#627).
+ *
+ * It is run by hand after looking at the captures, never as part of a build: a capture that caught
+ * SimHub mid-reconnect is a photograph of a bug, and the only thing that catches one is an eye.
  *
  *   bun scripts/sync-shots.ts ../build/shots/gallery
  *   bun scripts/sync-shots.ts ../build/shots/modules
@@ -24,7 +26,7 @@
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { provenance, readRun, type RunCapture } from '../../scripts/shotsRun.ts';
-import type { CaptureEntry, CapturesSidecar } from '../lib/captures.ts';
+import { upgradeCaptures, type CaptureEntry, type CapturesSidecar, type CapturesSidecarV1, type Provenance } from '../lib/captures.ts';
 
 const outDir = path.resolve(import.meta.dir, '..', 'public', 'shots');
 const sidecarPath = path.join(outDir, 'captures.json');
@@ -38,31 +40,28 @@ export function stableName(file: string, scenario: string | null): string {
 }
 
 export function readSidecar(file = sidecarPath): CapturesSidecar {
-  if (!existsSync(file)) return { schema: 1, version: '', commit: '', date: '', simHubVersion: '', scenario: '', files: {} };
-  return JSON.parse(readFileSync(file, 'utf8')) as CapturesSidecar;
+  if (!existsSync(file)) return { schema: 2, files: {} };
+  return upgradeCaptures(JSON.parse(readFileSync(file, 'utf8')) as CapturesSidecar | CapturesSidecarV1);
 }
 
-const toEntry = (c: RunCapture, scenario: string | null): CaptureEntry => ({
+/** A capture as a run describes it, before it is stamped with the run that took it. */
+type Unstamped = Omit<CaptureEntry, keyof Provenance>;
+
+const toEntry = (c: RunCapture): Unstamped => ({
   kind: c.kind,
   ...(c.package ? { package: c.package } : {}),
   ...(c.page ? { page: c.page } : {}),
   ...(c.panel ? { panel: c.panel } : {}),
   width: c.width,
   height: c.height,
-  scenario: c.kind === 'panel' ? null : scenario,
+  scenario: c.kind === 'panel' ? null : c.scenario,
 });
 
-/** The run's provenance becomes the sidecar's, and its files join the sidecar's files. */
-export function merge(sidecar: CapturesSidecar, run: { version: string; commit: string; date: string; simHubVersion: string; scenario: string | null }, files: Record<string, CaptureEntry>): CapturesSidecar {
-  return {
-    schema: 1,
-    version: run.version,
-    commit: run.commit,
-    date: run.date,
-    simHubVersion: run.simHubVersion,
-    scenario: run.scenario ?? sidecar.scenario,
-    files: { ...sidecar.files, ...files },
-  };
+/** The run's files join the sidecar's, each stamped with the run; the files it did not bring keep their own. */
+export function merge(sidecar: CapturesSidecar | CapturesSidecarV1, run: Provenance, files: Record<string, Unstamped>): CapturesSidecar {
+  const { version, commit, date, simHubVersion } = run;
+  const stamped = Object.fromEntries(Object.entries(files).map(([file, e]) => [file, { ...e, version, commit, date, simHubVersion }]));
+  return { schema: 2, files: { ...upgradeCaptures(sidecar).files, ...stamped } };
 }
 
 function pngSize(file: string): { width: number; height: number } {
@@ -76,21 +75,22 @@ function syncDir(from: string): number {
     console.error(`${from} has no run.json; it was not made by bun run shots or bun run modules`);
     return 1;
   }
-  const files: Record<string, CaptureEntry> = {};
+  const files: Record<string, Unstamped> = {};
   for (const [file, capture] of Object.entries(run.captures)) {
     const source = path.join(from, file);
     if (!existsSync(source)) {
       console.error(`${file} is in run.json but not on disk; skipped`);
       continue;
     }
-    const name = stableName(file, run.scenario);
+    const name = stableName(file, capture.scenario);
     copyFileSync(source, path.join(outDir, name));
-    files[name] = toEntry(capture, run.scenario);
+    files[name] = toEntry(capture);
     console.log(`${file} -> shots/${name}`);
   }
   if (run.dirty) console.warn('the tree was dirty when these were taken; the commit in the sidecar is not the whole story');
   writeFileSync(sidecarPath, `${JSON.stringify(merge(readSidecar(), run, files), null, 2)}\n`);
-  console.log(`${Object.keys(files).length} captures from ${run.version} (${run.commit}) on ${run.scenario ?? 'no scenario'} into site/public/shots`);
+  const on = [...new Set(Object.values(files).map((f) => f.scenario ?? 'no scenario'))].join(', ');
+  console.log(`${Object.keys(files).length} captures from ${run.version} (${run.commit}) on ${on || 'nothing'} into site/public/shots`);
   return 0;
 }
 
@@ -102,12 +102,13 @@ function syncPanel(tab: string, source: string): number {
   const name = `panel-${tab}.png`;
   copyFileSync(source, path.join(outDir, name));
   const size = pngSize(source);
-  const sidecar = readSidecar();
-  const files = { [name]: toEntry({ kind: 'panel', panel: tab, ...size, lapsSeen: null }, null) };
-  // A panel picture joins the run the dashboards were shot in; it does not restamp the sidecar's
-  // version, commit or date, which are the run's. A sidecar with no run yet takes the tree's.
-  const run = sidecar.version ? sidecar : { ...provenance(null), scenario: sidecar.scenario };
-  writeFileSync(sidecarPath, `${JSON.stringify(merge(sidecar, run, files), null, 2)}\n`);
+  const files = { [name]: toEntry({ kind: 'panel', panel: tab, scenario: null, ...size, lapsSeen: null }) };
+  // The run `bun run panel-shots` wrote beside the picture says which build it shows. A picture
+  // with none is stamped with the tree as it is now, which is only as true as the tree is unchanged.
+  const run = readRun(path.dirname(source));
+  const taken = run?.captures[path.basename(source)] ? run : provenance();
+  if (taken !== run) console.warn(`${source} has no run.json naming it beside it; recorded as the tree at ${taken.commit}`);
+  writeFileSync(sidecarPath, `${JSON.stringify(merge(readSidecar(), taken, files), null, 2)}\n`);
   console.log(`${source} -> shots/${name} (${size.width}x${size.height})`);
   return 0;
 }

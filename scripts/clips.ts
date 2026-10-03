@@ -370,7 +370,7 @@ export async function clips(host: Host, opts: ClipsOptions): Promise<number> {
         slug,
         package: packageName,
         scenario: opts.scenario,
-        ...(({ version, commit, simHubVersion }) => ({ version, commit, simHubVersion }))(provenance(opts.scenario)),
+        ...(({ version, commit, simHubVersion }) => ({ version, commit, simHubVersion }))(provenance()),
         takenAt: new Date().toISOString(),
         seconds: opts.seconds,
         fps,

@@ -181,7 +181,7 @@ export async function previews(opts: Options): Promise<number> {
       commit: run?.commit ?? '',
       dirty: run?.dirty ?? true,
       date: run?.date ?? new Date().toISOString().slice(0, 10),
-      scenario: run?.scenario ?? opts.scenario,
+      scenario: run?.captures[shot]?.scenario ?? opts.scenario,
       lapsSeen: run?.captures[shot]?.lapsSeen ?? null,
       ...size,
     };
