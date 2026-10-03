@@ -1000,6 +1000,11 @@ namespace OpenDashPlugin
         /// own scanner.</summary>
         public Dictionary<string, string> FolderFingerprints { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Fingerprint of SimHub/OpenDash/OpenDash Flag box.ledsprofile as OpenDash last wrote it, or null
+        /// before it has written one. The file's counterpart of <see cref="FolderFingerprints"/>: a file that no
+        /// longer matches it is the driver's, and FlagBoxProfile.Extract leaves it alone (#618).</summary>
+        public string FlagBoxFingerprint { get; set; }
+
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
@@ -2116,8 +2121,8 @@ namespace OpenDashPlugin
             QuickGlance = other.QuickGlance;
             // The plugin's own fields, which no panel row writes and which were never carried until a
             // rig press began saving a copy: the update opt-out and what it last heard (ADR 0012), the
-            // edited-dashboard consent, and the fingerprints that tell a driver's Dash Studio work from
-            // OpenDash's. The dictionary is cloned under its own comparer, so that two spellings a
+            // edited-dashboard consent, and the fingerprints that tell a driver's Dash Studio work and
+            // their edited flag box file from OpenDash's. The dictionary is cloned under its own comparer, so that two spellings a
             // case-sensitive one kept apart cannot collide in the copy and throw.
             CheckForUpdates = other.CheckForUpdates;
             LastUpdateCheckTicks = other.LastUpdateCheckTicks;
@@ -2126,6 +2131,7 @@ namespace OpenDashPlugin
             FolderFingerprints = other.FolderFingerprints == null
                 ? null
                 : new Dictionary<string, string>(other.FolderFingerprints, other.FolderFingerprints.Comparer);
+            FlagBoxFingerprint = other.FlagBoxFingerprint;
             Normalise();
         }
     }
