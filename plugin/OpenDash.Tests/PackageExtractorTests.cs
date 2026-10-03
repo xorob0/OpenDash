@@ -89,6 +89,107 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// Putting a kept copy back uses it up: the copy is the folder now, and a copy left on the shelf kept the
+        /// panel's "Put mine back" offered for ever, however many times it had been pressed (#608).
+        /// </summary>
+        [Fact]
+        public void After_a_restore_the_same_kept_copy_is_not_offered_again()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "my work")), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+            var kept = PackageExtractor.KeptCopies(root, "OpenDash").First(path => path.Contains(PackageExtractor.EditedSuffix));
+
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null, kept));
+
+            Assert.Equal("my work", File.ReadAllText(Path.Combine(Templates("OpenDash"), "mine.djson")));
+            Assert.False(File.Exists(kept), "the copy put back is spent");
+            Assert.DoesNotContain(kept, PackageExtractor.KeptCopies(root, "OpenDash"));
+        }
+
+        /// <summary>
+        /// A restore replaces a folder, so it keeps a copy of what it replaces as an install does: a second restore
+        /// used to put the old copy back over whatever had been edited since the first, and keep nothing (#608).
+        /// </summary>
+        [Fact]
+        public void A_second_restore_cannot_overwrite_a_newer_folder_without_leaving_a_copy_of_it()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "my work")), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null, PackageExtractor.KeptCopies(root, "OpenDash")[0]));
+
+            // Edited after the first restore, then a second one: whatever it puts back, the edit survives in a copy.
+            File.WriteAllText(Path.Combine(Templates("OpenDash"), "mine.djson"), "later edits");
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null));
+
+            Assert.Contains(PackageExtractor.KeptCopies(root, "OpenDash"), path => Entry(path, "mine.djson") == "later edits");
+        }
+
+        /// <summary>
+        /// The restore the panel makes is over OpenDash's own folder, the one an install wrote in place of somebody's
+        /// work. Its copy is the ordinary one-deep backup, so once the work is back nothing is left to offer (#608).
+        /// </summary>
+        [Fact]
+        public void Restoring_over_OpenDashs_own_folder_leaves_nothing_to_put_back()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "my work")), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+            var kept = PackageExtractor.KeptCopies(root, "OpenDash")[0];
+
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null, kept, holdsAuthoredWork: false));
+
+            Assert.Equal("my work", File.ReadAllText(Path.Combine(Templates("OpenDash"), "mine.djson")));
+            var left = PackageExtractor.KeptCopies(root, "OpenDash");
+            Assert.False(PanelUpdates.ShowsKept(left));
+            // What it replaced is the ordinary backup, so the undo can itself be undone.
+            Assert.Equal(new[] { Path.Combine(root, "DashTemplates", "OpenDash" + PackageExtractor.BackupSuffix) }, left);
+            Assert.Equal("0.2.0", Versioning.ParseDashboardVersion(Entry(left[0], "OpenDash.djson.metadata")));
+        }
+
+        /// <summary>
+        /// Putting the ordinary backup back over an untouched folder swaps the two: the backup is rewritten with what
+        /// it replaced rather than spent, so a second restore is the undo of the first.
+        /// </summary>
+        [Fact]
+        public void Restoring_the_ordinary_backup_over_an_untouched_folder_swaps_them()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null);
+
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null, holdsAuthoredWork: false));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null, holdsAuthoredWork: false));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+        }
+
+        /// <summary>
+        /// Two copies kept of one folder within a second used to share a name, and the second deleted the first.
+        /// The later copy takes the next free second, so it still sorts as the newer.
+        /// </summary>
+        [Fact]
+        public void Two_copies_kept_within_a_second_are_both_kept_and_the_later_sorts_first()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "first")), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+            Directory.CreateDirectory(Templates("OpenDash"));
+            File.WriteAllText(Path.Combine(Templates("OpenDash"), "mine.djson"), "second");
+            PackageExtractor.Install(Package("OpenDash", "0.3.0"), root, null, holdsAuthoredWork: true);
+
+            var kept = PackageExtractor.KeptCopies(root, "OpenDash").Where(path => path.Contains(PackageExtractor.EditedSuffix)).ToList();
+            Assert.Equal(new[] { "second", "first" }, kept.Select(path => Entry(path, "mine.djson")));
+        }
+
+        /// <summary>One entry of a kept copy, which stores its entries relative to the folder; null when absent.</summary>
+        private static string Entry(string zipPath, string name)
+        {
+            using (var zip = ZipFile.OpenRead(zipPath))
+            {
+                var entry = zip.GetEntry(name);
+                if (entry == null) return null;
+                using (var reader = new StreamReader(entry.Open())) return reader.ReadToEnd();
+            }
+        }
+
+        /// <summary>
         /// The one case a backup exists for, a disk that is full or a file that is locked, used to be the one case
         /// where it silently did nothing and the dashboard was deleted anyway.
         /// </summary>
