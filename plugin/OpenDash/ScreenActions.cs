@@ -48,17 +48,30 @@ namespace OpenDashPlugin
             foreach (var screen in current.RigScreens())
             {
                 if (screen == null) continue;
-                foreach (var name in screen.ActionNames())
-                {
-                    Action press;
-                    Action release;
-                    Resolve(settings, screen.Namespace, name, out press, out release);
-                    register(name, press, release);
-                }
+                RegisterScreen(settings, screen, register);
             }
             foreach (var name in Contract.RigActionNames())
             {
                 register(name, RigPress(settings, name, persist), null);
+            }
+        }
+
+        /// <summary>
+        /// Registers one screen's actions, in the order Contract.ScreenActionNames lists them: what Register
+        /// does for each screen of the rig at startup, and what the plugin does for a screen added after it
+        /// (#636).
+        /// </summary>
+        public static void RegisterScreen(Func<OpenDashSettings> settings, ScreenInstance screen, RegisterAction register)
+        {
+            if (settings == null) throw new ArgumentNullException(nameof(settings));
+            if (register == null) throw new ArgumentNullException(nameof(register));
+            if (screen == null) return;
+            foreach (var name in screen.ActionNames())
+            {
+                Action press;
+                Action release;
+                Resolve(settings, screen.Namespace, name, out press, out release);
+                register(name, press, release);
             }
         }
 
