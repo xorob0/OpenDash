@@ -62,8 +62,20 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # The log of a red run says little once a rerun has gone green, and a test that timed out prints
+      # no assertion at all, so the run keeps a JUnit report: every test's duration, and the failure
+      # text of every test that failed, "test timed out" included. It is written outside the tree and
+      # uploaded whether the tests passed or not; only a cancelled run has nothing to keep (#547).
       - name: Test
-        run: bun test
+        run: bun test --reporter=junit --reporter-outfile="$RUNNER_TEMP/test-report.xml"
+
+      - name: Upload the test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: opendash-test-report
+          path: ${{ runner.temp }}/test-report.xml
+          if-no-files-found: warn
 
       - name: Build dashboard packages
         run: bun run build

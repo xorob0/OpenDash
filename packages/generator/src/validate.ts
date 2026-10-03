@@ -144,6 +144,9 @@ interface Context {
   files: Map<string, Dashboard>;
   ids: Map<string, string>;
   fonts: FontRef[];
+  /** `declaredProperties` and `foreignProperties` without the prefix, made once per package rather than once per expression. */
+  declared: Set<string>;
+  foreign: Set<string>;
 }
 
 const checkId = (ctx: Context, id: string, explicit: boolean, path: string): void => {
@@ -155,9 +158,7 @@ const checkId = (ctx: Context, id: string, explicit: boolean, path: string): voi
 
 const checkProperties = (ctx: Context, expression: string, path: string): void => {
   const prefix = `${ctx.opts.propertyPrefix}.`;
-  const bare = (p: string): string => (p.startsWith(prefix) ? p.slice(prefix.length) : p);
-  const declared = new Set(ctx.opts.declaredProperties.map(bare));
-  const foreign = new Set((ctx.opts.foreignProperties ?? []).map(bare));
+  const { declared, foreign } = ctx;
   for (const ref of propertyReferences(expression)) {
     if (!ref.startsWith(prefix)) continue;
     const name = ref.slice(prefix.length);
@@ -587,7 +588,11 @@ const checkFonts = (ctx: Context): void => {
 /** Validates a package. `errors` block the build; `warnings` are printed. */
 export const validatePackage = (pkg: DashPackage, opts: ValidateOptions): ValidationResult => {
   const c = new Collector();
-  const ctx: Context = { c, opts, pkg, files: new Map(), ids: new Map(), fonts: [] };
+  const prefix = `${opts.propertyPrefix}.`;
+  const bare = (p: string): string => (p.startsWith(prefix) ? p.slice(prefix.length) : p);
+  const declared = new Set(opts.declaredProperties.map(bare));
+  const foreign = new Set((opts.foreignProperties ?? []).map(bare));
+  const ctx: Context = { c, opts, pkg, files: new Map(), ids: new Map(), fonts: [], declared, foreign };
   const root = pkg.folderName;
 
   if (typeof root !== 'string' || root.trim() === '') c.error('package/folder-name', root, 'folderName is empty');
