@@ -3,6 +3,7 @@
 // precisely the kind of change that reads as harmless in a diff.
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -21,6 +22,8 @@ namespace OpenDashPlugin.Tests
         /// <summary>The headers of one request, copied out before the listener recycles the context.</summary>
         internal sealed class NameValueCollection2
         {
+            /// <summary>The client's end of the connection the request came over, which tells one connection from another.</summary>
+            public string Connection { get; set; }
             public Dictionary<string, string> Headers { get; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             public string this[string name] => Headers.TryGetValue(name, out var value) ? value : null;
         }
@@ -28,6 +31,9 @@ namespace OpenDashPlugin.Tests
         private string answer = "[]";
         private byte[] answerBytes;
         private int status = 200;
+
+        /// <summary>Statuses to answer with before falling back to <see cref="status"/>, one per request, in order.</summary>
+        private readonly Queue<int> statuses = new Queue<int>();
 
         public ReleaseClientTests()
         {
@@ -65,11 +71,11 @@ namespace OpenDashPlugin.Tests
                 {
                     var context = listener.GetContext();
 
-                    var record = new NameValueCollection2();
+                    var record = new NameValueCollection2 { Connection = context.Request.RemoteEndPoint?.ToString() };
                     foreach (string key in context.Request.Headers) record.Headers[key] = context.Request.Headers[key];
                     lock (seen) seen.Add(record);
 
-                    context.Response.StatusCode = status;
+                    lock (statuses) context.Response.StatusCode = statuses.Count > 0 ? statuses.Dequeue() : status;
                     var body = answerBytes ?? Encoding.UTF8.GetBytes(answer);
                     context.Response.ContentLength64 = body.Length;
                     context.Response.OutputStream.Write(body, 0, body.Length);
@@ -138,6 +144,60 @@ namespace OpenDashPlugin.Tests
             Assert.False(result.Ok);
             Assert.Contains("404", result.Reason);
             Assert.Null(result.Body);
+        }
+
+        /// <summary>
+        /// A refusal gives its connection back, so a run of them neither piles up connections nor stalls the request
+        /// after it.
+        /// </summary>
+        /// <remarks>
+        /// The refusal is a WebException whose Response is the server's answer, body and connection included. The
+        /// worry was net48, which allows two connections per host to the whole of SimHub: two refusals left to the
+        /// collector would make a third "Check now" wait out the timeout. Run on the guest, net48 turned out to buffer
+        /// an error body of up to 64 KB and release the connection whether or not the answer was disposed, so it
+        /// never stalled. The net8 HttpWebRequest this test runs on does keep an undisposed refusal's connection, and
+        /// so opens a new one for every request; counting the connections is what fails when the dispose goes. The
+        /// limit is pinned to two and the timings are kept so that a runtime that does hold to it shows the stall.
+        /// </remarks>
+        [Fact]
+        public void A_refusal_gives_its_connection_back()
+        {
+            var limit = ServicePointManager.DefaultConnectionLimit;
+            ServicePointManager.DefaultConnectionLimit = 2;
+            try
+            {
+                answer = "{\"message\":\"API rate limit exceeded\",\"documentation_url\":\"https://docs.github.com/rest\"}";
+                lock (statuses) for (var i = 0; i < 4; i++) statuses.Enqueue(403);
+                var client = new ReleaseClient("0.1.0");
+
+                for (var i = 0; i < 4; i++)
+                {
+                    var watch = Stopwatch.StartNew();
+                    var refused = client.GetString(prefix);
+                    Assert.False(refused.Ok);
+                    Assert.Contains("403", refused.Reason);
+                    Assert.InRange(watch.ElapsedMilliseconds, 0, 5000);
+                }
+
+                var answered = Stopwatch.StartNew();
+                var result = client.GetString(prefix);
+                Assert.True(result.Ok, result.Reason);
+                Assert.InRange(answered.ElapsedMilliseconds, 0, 5000);
+
+                List<string> connections;
+                int requests;
+                lock (seen)
+                {
+                    requests = seen.Count;
+                    connections = seen.Select(r => r.Connection).Distinct().ToList();
+                }
+                Assert.Equal(5, requests);
+                Assert.InRange(connections.Count, 1, 2);
+            }
+            finally
+            {
+                ServicePointManager.DefaultConnectionLimit = limit;
+            }
         }
 
         [Fact]
