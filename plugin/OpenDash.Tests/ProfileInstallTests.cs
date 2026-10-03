@@ -47,6 +47,94 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void An_add_that_throws_leaves_the_old_copy_in_both_lists()
+        {
+            var mine = Profile("Rim", Old);
+            var theirs = Profile("Theirs", Old);
+            var profiles = new List<object> { mine, theirs };
+            var available = new List<object> { theirs, mine };
+            var saves = 0;
+
+            var plans = Install(profiles, available, new[] { Profile("Rim", New) }, i => throw new InvalidOperationException("SimHub said no"), () => saves++, new ListLog());
+
+            Assert.Equal(FlagBoxInstallState.Failed, plans[0].State);
+            Assert.Equal(new[] { "Rim old", "Theirs old" }, Names(profiles));
+            Assert.Equal(new[] { "Theirs old", "Rim old" }, Names(available));
+            Assert.Equal(0, saves);
+        }
+
+        [Fact]
+        public void An_add_that_throws_half_way_takes_back_what_it_added_and_puts_the_old_copy_where_it_was()
+        {
+            var profiles = new List<object> { Profile("Rim", Old), Profile("Theirs", Old) };
+            var incoming = Profile("Rim", New);
+
+            var plans = Install(profiles, profiles, new[] { incoming }, i =>
+            {
+                profiles.Add(incoming);
+                throw new InvalidOperationException("RefreshSortedProfiles threw");
+            }, () => { }, new ListLog());
+
+            Assert.Equal(FlagBoxInstallState.Failed, plans[0].State);
+            Assert.Equal(new[] { "Rim old", "Theirs old" }, Names(profiles));
+        }
+
+        [Fact]
+        public void A_group_with_one_failed_member_saves_that_member_as_it_was()
+        {
+            var profiles = new List<object> { Profile("Rim", Old), Profile("Brow", Old) };
+            var rim = Profile("Rim", New);
+            var brow = Profile("Brow", New);
+            string[] saved = null;
+
+            var plans = Install(profiles, profiles, new[] { rim, brow }, i =>
+            {
+                if (i == 1) throw new InvalidOperationException("SimHub said no");
+                profiles.Add(rim);
+            }, () => saved = Names(profiles), new ListLog());
+
+            Assert.Equal(FlagBoxInstallState.UpToDate, plans[0].State);
+            Assert.Equal(FlagBoxInstallState.Failed, plans[1].State);
+            // What SimHub serialised: the new Rim, and the old Brow rather than no Brow at all.
+            Assert.Equal(new[] { "Brow old", "Rim new" }, saved);
+        }
+
+        [Fact]
+        public void A_replaced_profile_is_counted_once_when_the_two_lists_are_different_collections()
+        {
+            var mine = Profile("Rim", Old);
+            var profiles = new List<object> { mine };
+            var available = new List<object> { mine };
+            var incoming = Profile("Rim", New);
+            var log = new ListLog();
+
+            var plans = Install(profiles, available, new[] { incoming }, i => profiles.Add(incoming), () => { }, log);
+
+            Assert.Equal(FlagBoxInstallState.UpToDate, plans[0].State);
+            Assert.Empty(available);
+            Assert.Contains(
+                "info: Installed 1 RGB LED profile(s) into Wheel, 1 of them replacing a copy already there."
+                + " Select one on the device to use it: installing adds a profile, it does not switch to one.",
+                log.Lines);
+        }
+
+        [Fact]
+        public void A_failed_member_is_not_counted_as_a_replacement()
+        {
+            var profiles = new List<object> { Profile("Rim", Old), Profile("Brow", Old) };
+            var rim = Profile("Rim", New);
+            var log = new ListLog();
+
+            Install(profiles, profiles, new[] { rim, Profile("Brow", New) }, i =>
+            {
+                if (i == 1) throw new InvalidOperationException("SimHub said no");
+                profiles.Add(rim);
+            }, () => { }, log);
+
+            Assert.Contains(log.Lines, line => line.StartsWith("info: Installed 1 RGB LED profile(s) into Wheel, 1 of them replacing", StringComparison.Ordinal));
+        }
+
+        [Fact]
         public void An_install_replaces_ours_and_leaves_everything_else_where_it_was()
         {
             var profiles = new List<object> { Profile("Theirs", Old), Profile("Rim", Old), Profile("Other", Old) };
