@@ -244,7 +244,8 @@ a row of the In SimHub table on the Updates page.
 If SimHub's matrix settings cannot be reached, the line offers no press. OpenDash writes the profile
 to `SimHub\OpenDash\OpenDash Flag box.ledsprofile` and shows its path under the line, with
 **Copy to SimHub's import folder** beside it, and you can import that file through SimHub's own
-profile import.
+profile import. A copy of that file you have edited is left as it is; delete it and restart SimHub
+for OpenDash's current one.
 
 Before any of that, set the matrix's **rotation** and **serpentine** on the device in SimHub. Those
 belong to SimHub rather than to OpenDash, because the right values depend on which corner your data

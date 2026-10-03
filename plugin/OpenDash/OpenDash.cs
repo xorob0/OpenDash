@@ -311,7 +311,8 @@ namespace OpenDashPlugin
             try
             {
                 // Extracted, not installed: ADR 0013. The user imports it, and the panel says so.
-                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog());
+                // Settings remember what was written, so a file the driver edited is kept (#618); saved below.
+                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog(), Settings);
             }
             catch (Exception ex)
             {

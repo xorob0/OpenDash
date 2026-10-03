@@ -72,6 +72,11 @@ file through SimHub's own profile import on your matrix device, and everything b
 way. That file is also what you copy to a second machine, and what to open if you want to read what
 OpenDash is asking your hardware to do.
 
+OpenDash refreshes the file when it carries a newer profile, but once you have edited it, it is
+yours: OpenDash leaves it as it is from then on, and SimHub's log says so at each start. Delete it
+and restart SimHub to get OpenDash's current one back. The **Install** press is not affected either
+way, since it hands SimHub OpenDash's own profile rather than the file.
+
 ## 3. Say which box is which
 
 SimHub composes up to **four matrix contents**, so you can run more than one box. On the **Matrix**

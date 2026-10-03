@@ -278,17 +278,112 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void RefreshesAProfileThatHasChanged()
+        public void WithNothingRememberedADifferentFileIsRefreshedAndThenWatched()
+        {
+            // Every rig the first time a release that keeps the record starts: the file is some older build's, and
+            // an edit made before OpenDash started looking cannot be seen. Adopted, as an unrecorded dashboard is.
+            using (var root = new TempDir())
+            {
+                var settings = new OpenDashSettings();
+                var path = Path.Combine(FlagBoxProfile.FolderPath(root.Path), FlagBoxProfile.FileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, "{\"Name\":\"an older build\"}");
+
+                var result = FlagBoxProfile.Extract(root.Path, Self, null, settings);
+
+                Assert.Equal(FlagBoxStatus.Extracted, result.Status);
+                Assert.Equal(result.Json, File.ReadAllText(path));
+                Assert.Equal(FlagBoxProfile.FingerprintOf(File.ReadAllBytes(path)), settings.FlagBoxFingerprint);
+            }
+        }
+
+        [Fact]
+        public void KeepsAFileTheDriverEditedSinceOpenDashWroteIt()
+        {
+            // #618. The doc always said so and the code overwrote the edit at every SimHub start.
+            using (var root = new TempDir())
+            {
+                var settings = new OpenDashSettings();
+                var first = FlagBoxProfile.Extract(root.Path, Self, null, settings);
+                var written = settings.FlagBoxFingerprint;
+                var edited = File.ReadAllText(first.Path).Replace("\"Name\": \"OpenDash Flag box\"", "\"Name\": \"My flag box\"");
+                Assert.NotEqual(first.Json, edited);
+                File.WriteAllText(first.Path, edited);
+                var log = new ListLog();
+
+                var second = FlagBoxProfile.Extract(root.Path, Self, log, settings);
+
+                Assert.Equal(FlagBoxStatus.Kept, second.Status);
+                Assert.Equal(edited, File.ReadAllText(first.Path));
+                // Still a record of what OpenDash wrote, not of the edit, so the file stays the driver's next time.
+                Assert.Equal(written, settings.FlagBoxFingerprint);
+                Assert.Equal(FlagBoxStatus.Kept, FlagBoxProfile.Extract(root.Path, Self, null, settings).Status);
+                // One line, saying why and how to get OpenDash's copy back.
+                var line = Assert.Single(log.Lines);
+                Assert.StartsWith("info: Left the flag box profile at " + first.Path, line, StringComparison.Ordinal);
+                Assert.Contains("edited since OpenDash wrote it", line, StringComparison.Ordinal);
+                // The panel installs the embedded profile, never the file, so the edit changes nothing SimHub is handed.
+                Assert.Equal(first.Json, second.Json);
+                Assert.Equal("OpenDash Flag box", second.ProfileName);
+            }
+        }
+
+        [Fact]
+        public void RefreshesAnUneditedFileWhenTheEmbeddedProfileChanges()
+        {
+            // An older build wrote the file and remembered it, and nobody has touched it since: the update brings
+            // the new profile, as ADR 0013's "the plugin refreshes the extracted file" says it does.
+            using (var root = new TempDir())
+            {
+                var path = Path.Combine(FlagBoxProfile.FolderPath(root.Path), FlagBoxProfile.FileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                var older = new System.Text.UTF8Encoding(false).GetBytes("{\"Name\":\"OpenDash Flag box\",\"Version\":\"an older build\"}");
+                File.WriteAllBytes(path, older);
+                var settings = new OpenDashSettings { FlagBoxFingerprint = FlagBoxProfile.FingerprintOf(older) };
+
+                var result = FlagBoxProfile.Extract(root.Path, Self, null, settings);
+
+                Assert.Equal(FlagBoxStatus.Extracted, result.Status);
+                Assert.Equal(result.Json, File.ReadAllText(path));
+                Assert.Equal(FlagBoxProfile.FingerprintOf(File.ReadAllBytes(path)), settings.FlagBoxFingerprint);
+                Assert.Equal(result.Fingerprint, settings.FlagBoxFingerprint);
+            }
+        }
+
+        [Fact]
+        public void DeletingAKeptFileBringsOpenDashsCopyBack()
         {
             using (var root = new TempDir())
             {
+                var settings = new OpenDashSettings();
+                var first = FlagBoxProfile.Extract(root.Path, Self, null, settings);
+                File.WriteAllText(first.Path, "{\"Name\":\"mine\"}");
+                Assert.Equal(FlagBoxStatus.Kept, FlagBoxProfile.Extract(root.Path, Self, null, settings).Status);
+
+                File.Delete(first.Path);
+                var again = FlagBoxProfile.Extract(root.Path, Self, null, settings);
+
+                Assert.Equal(FlagBoxStatus.Extracted, again.Status);
+                Assert.Equal(first.Json, File.ReadAllText(first.Path));
+            }
+        }
+
+        [Fact]
+        public void AFileThatMatchesTheEmbeddedProfileIsAdoptedWithoutBeingRewritten()
+        {
+            // A rig whose file is already current when the record arrives: remembered without a write, so the
+            // timestamp still says when the profile last changed.
+            using (var root = new TempDir())
+            {
                 var first = FlagBoxProfile.Extract(root.Path, Self);
-                File.WriteAllText(first.Path, "{\"Name\":\"an older build\"}");
+                var written = File.GetLastWriteTimeUtc(first.Path);
+                var settings = new OpenDashSettings();
 
-                var second = FlagBoxProfile.Extract(root.Path, Self);
+                var second = FlagBoxProfile.Extract(root.Path, Self, null, settings);
 
-                Assert.Equal(FlagBoxStatus.Extracted, second.Status);
-                Assert.Contains("OpenDash Flag box", File.ReadAllText(second.Path), StringComparison.Ordinal);
+                Assert.Equal(FlagBoxStatus.UpToDate, second.Status);
+                Assert.Equal(written, File.GetLastWriteTimeUtc(first.Path));
+                Assert.Equal(FlagBoxProfile.FingerprintOf(File.ReadAllBytes(first.Path)), settings.FlagBoxFingerprint);
             }
         }
 
