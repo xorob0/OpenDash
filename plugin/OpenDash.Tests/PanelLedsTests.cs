@@ -2098,25 +2098,27 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal("Add and install", PanelLeds.AddPress(true));
             Assert.Equal("Add", PanelLeds.AddPress(false));
-            // The steps left in order: a device in SimHub, the profile installed here, then the restart the strip's
-            // own settings wait on, as BarAdded says it.
-            Assert.Equal("Added Rim. Add your wheel or Arduino in SimHub, install Rim's profile here, then restart SimHub.", PanelLeds.AddedWithoutDevice("Rim"));
+            // The steps left in order: a device in SimHub, then the profile installed here. No restart: the strip's
+            // own settings are attached when it is saved (#565).
+            Assert.Equal("Added Rim. Add your wheel or Arduino in SimHub, then install Rim's profile here.", PanelLeds.AddedWithoutDevice("Rim"));
             Assert.Equal(PanelLeds.AddedWithoutDevice("Rim"), PanelLeds.AddedWithoutDevice("Rim", new string[0]));
             // Where SimHub lists a device OpenDash passed over (#437), the line does not send the driver to add
             // hardware SimHub already has: it says what the SimHub device row under it says.
-            // It still names the two steps every add without an install leaves, in BarAddFailed's form: the strip's
-            // own properties attach only when SimHub starts.
-            Assert.Equal("Added Rim, but Fanatec CSL Elite has no LEDs OpenDash can reach. See SimHub's log, then install Rim's profile here and restart SimHub.",
+            // It still names the step every add without an install leaves, in BarAddFailed's form.
+            Assert.Equal("Added Rim, but Fanatec CSL Elite has no LEDs OpenDash can reach. See SimHub's log, then install Rim's profile here.",
                 PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
             Assert.Contains(PanelLights.Unreached(new[] { "Fanatec CSL Elite" }), PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }));
             Assert.StartsWith(PanelLeds.DeviceRow(null, "wheel", new[] { "Fanatec CSL Elite" }).Caption.TrimEnd('.'), PanelLights.NotOffered(new[] { "Fanatec CSL Elite" }));
-            Assert.EndsWith("See SimHub's log, then install it here and restart SimHub.", PanelLights.BarAddFailed("Rim"));
-            Assert.Contains("Restart SimHub", PanelLights.BarAdded("Rim", "Wheel"));
+            Assert.EndsWith("See SimHub's log, then install it here.", PanelLights.BarAddFailed("Rim"));
+            // And no line an Add says asks for a restart any more.
+            foreach (var line in new[] { PanelLights.BarAdded("Rim", "Wheel"), PanelLights.BarAddFailed("Rim"), PanelLeds.AddedWithoutDevice("Rim"), PanelLeds.AddedWithoutDevice("Rim", new[] { "Fanatec CSL Elite" }) })
+            {
+                Assert.DoesNotContain("restart", line, StringComparison.OrdinalIgnoreCase);
+            }
         }
 
         /// <summary>
-        /// Every press that installs names the select in one form, PanelLeds.SelectIt, and an Add says it behind
-        /// the restart.
+        /// Every press that installs names the select in one form, PanelLeds.SelectIt, an Add's line included.
         /// </summary>
         [Fact]
         public void The_select_step_has_one_form()
@@ -2126,8 +2128,8 @@ namespace OpenDashPlugin.Tests
             Assert.EndsWith(select, PanelLeds.ProfileInstalled("Rim", "Wheel"));
             Assert.EndsWith(select, PanelLeds.Moved("Rim", "Wheel"));
             Assert.EndsWith(select, PanelLeds.ReverseSaid("Rim", true, false, "Wheel"));
-            Assert.EndsWith(PanelLights.BarAddedRestart + "s" + select.Substring(1), PanelLights.BarAdded("Rim", "Wheel"));
-            Assert.EndsWith(PanelLights.BarAddedRestart + "s" + PanelLeds.SelectIt("Rim", null).Substring(1), PanelLights.BarAdded("Rim", null));
+            Assert.EndsWith(select, PanelLights.BarAdded("Rim", "Wheel"));
+            Assert.EndsWith(PanelLeds.SelectIt("Rim", null), PanelLights.BarAdded("Rim", null));
         }
 
         /// <summary>
