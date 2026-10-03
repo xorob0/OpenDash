@@ -618,6 +618,11 @@ namespace OpenDashPlugin
             TextBlock oilDefault, waterDefault;
             var oilTemp = SettingsThresholdBox(Settings.LightsOilTemp, PanelSettings.TemperatureDefault(true, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsOilTemp(v); Save(); }, out oilDefault);
             var waterTemp = SettingsThresholdBox(Settings.LightsWaterTemp, PanelSettings.TemperatureDefault(false, temperature), PanelSettings.TemperatureMax, v => { Settings.SetLightsWaterTemp(v); Save(); }, out waterDefault);
+            // Keyed by what they write, so a rebuild that adds or drops the surface columns, which moves every
+            // cell after the head along, gives the focus back to the same box (#645).
+            Ui.FocusKey(lowFuel, nameof(OpenDashSettings.FlagBoxLowFuelLaps));
+            Ui.FocusKey(oilTemp, nameof(OpenDashSettings.LightsOilTemp));
+            Ui.FocusKey(waterTemp, nameof(OpenDashSettings.LightsWaterTemp));
             settingsUnitsFollow.Add(now =>
             {
                 oilDefault.Text = PanelSettings.ThresholdText(PanelSettings.TemperatureDefault(true, now[1]));

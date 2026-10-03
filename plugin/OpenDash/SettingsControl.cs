@@ -17,6 +17,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
+using VisualTreeHelper = System.Windows.Media.VisualTreeHelper;
 using SimHub.Plugins;
 using SimHub.Plugins.Styles;
 using SimHub.Plugins.UI;
@@ -727,29 +728,21 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Where a focused control sits under a root, as the child index at each level of the visual tree,
-        /// so the same place can be found in a rebuild that draws the same shape.
+        /// Where a focused control sits under a root: by the key of the nearest element above it that carries
+        /// one (Ui.FocusKeyOf: the setting it writes, or its row's search anchor) and the path from there, and
+        /// by the child index at each level of the visual tree from the root, for a control with no key above
+        /// it (PanelFocus, #645).
         /// </summary>
-        private static List<int> FocusPath(DependencyObject root, DependencyObject focused)
+        private static PanelFocusPath FocusPath(DependencyObject root, DependencyObject focused)
         {
-            if (root == null || focused == null) return null;
-            var path = new List<int>();
-            var node = focused;
-            while (node != null && node != root)
-            {
-                var parent = System.Windows.Media.VisualTreeHelper.GetParent(node);
-                if (parent == null) return null;
-                var count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
-                var index = -1;
-                for (var i = 0; i < count; i++)
-                {
-                    if (System.Windows.Media.VisualTreeHelper.GetChild(parent, i) == node) { index = i; break; }
-                }
-                if (index < 0) return null;
-                path.Insert(0, index);
-                node = parent;
-            }
-            return node == root ? path : null;
+            return PanelFocus.Record<DependencyObject>(root, focused, VisualTreeHelper.GetParent, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf);
+        }
+
+        /// <summary>Whether a rebuild may hand the keyboard focus to this element.</summary>
+        private static bool Refocusable(DependencyObject node)
+        {
+            var element = node as UIElement;
+            return element != null && element.Focusable && element.IsVisible && element.IsEnabled;
         }
 
         /// <summary>Where the caret and the selection are in the box being typed in, or null when the focus is
@@ -775,8 +768,10 @@ namespace OpenDashPlugin
             Dispatcher.BeginInvoke(new Action(() => pageHost.MoveFocus(new TraversalRequest(FocusNavigationDirection.First))), DispatcherPriority.Loaded);
         }
 
-        /// <summary>Focuses the control at that place once the rebuild has been laid out, or the nearest
-        /// focusable thing above it when the rebuild is shaped differently there, and leaves the main scroll
+        /// <summary>Focuses the control at that place once the rebuild has been laid out -- found by its key
+        /// first, so a rebuild that moves the cells around it still finds it (#645), and by its position when
+        /// it has no key or the key is gone -- or the nearest focusable thing above it when the rebuild is
+        /// shaped differently there, and leaves the main scroll
         /// at <paramref name="offset"/>, where the driver had it -- unless a line has been said since, which
         /// wins: the view stays at the top, on the line. A text box focused again takes back the caret and the
         /// selection <paramref name="caret"/> recorded (#542).</summary>
@@ -790,20 +785,12 @@ namespace OpenDashPlugin
         /// So where Say has spoken since the rebuild (saidCount moved), focus goes back without bringing its
         /// control into view and the scroll is left where Say put it.
         /// </remarks>
-        private void RestoreFocus(DependencyObject root, List<int> path, PanelCaret caret, double offset)
+        private void RestoreFocus(DependencyObject root, PanelFocusPath path, PanelCaret caret, double offset)
         {
             var said = saidCount;
             Dispatcher.BeginInvoke(new Action(() =>
             {
-                DependencyObject node = root;
-                IInputElement last = null;
-                foreach (var index in path)
-                {
-                    if (index >= System.Windows.Media.VisualTreeHelper.GetChildrenCount(node)) break;
-                    node = System.Windows.Media.VisualTreeHelper.GetChild(node, index);
-                    var element = node as UIElement;
-                    if (element != null && element.Focusable && element.IsVisible && element.IsEnabled) last = element;
-                }
+                var last = PanelFocus.Find<DependencyObject>(root, path, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf, Refocusable) as IInputElement;
                 var spoke = saidCount != said;
                 RequestBringIntoViewEventHandler stay = (sender, args) => args.Handled = true;
                 if (spoke) pageHost.AddHandler(FrameworkElement.RequestBringIntoViewEvent, stay);

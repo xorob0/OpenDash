@@ -253,7 +253,7 @@ namespace OpenDashPlugin.Tests
             // Recorded before CommitTyping, which takes the focus off the box, and handed to RestoreFocus.
             Assert.Contains("var focus = pageHost.IsKeyboardFocusWithin ? FocusPath(pageHost, Keyboard.FocusedElement as DependencyObject) : null; var caret = focus != null ? CaretOf(Keyboard.FocusedElement as TextBox) : null; CommitTyping();", shell);
             Assert.Contains("return box == null ? null : new PanelCaret(box.CaretIndex, box.SelectionStart, box.SelectionLength);", shell);
-            Assert.Contains("private void RestoreFocus(DependencyObject root, List<int> path, PanelCaret caret, double offset)", shell);
+            Assert.Contains("private void RestoreFocus(DependencyObject root, PanelFocusPath path, PanelCaret caret, double offset)", shell);
             Assert.Contains("Keyboard.Focus(last); PutCaret(last as TextBox, caret);", shell);
             Assert.Contains("var at = caret.Within(box.Text.Length); if (at.Selects) box.Select(at.SelectionStart, at.SelectionLength); else box.CaretIndex = at.CaretIndex;", shell);
 
@@ -263,6 +263,165 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.DoesNotContain("SettingsTypeAtEnd", RepoPaths.Code(source));
             }
+        }
+
+        /// <summary>An element of a page as PanelFocus walks it: a key or none, focusable or not, its children.</summary>
+        private sealed class FocusNode
+        {
+            public FocusNode(string name, string key = null, bool focusable = false, params FocusNode[] children)
+            {
+                Name = name;
+                Key = key;
+                Focusable = focusable;
+                Children = children.ToList();
+                foreach (var c in Children) c.Parent = this;
+            }
+
+            public string Name { get; }
+            public string Key { get; }
+            public bool Focusable { get; }
+            public FocusNode Parent { get; private set; }
+            public System.Collections.Generic.List<FocusNode> Children { get; }
+
+            public FocusNode Find(string name)
+            {
+                if (Name == name) return this;
+                return Children.Select(c => c.Find(name)).FirstOrDefault(found => found != null);
+            }
+        }
+
+        private static PanelFocusPath RecordFocus(FocusNode root, FocusNode focused)
+        {
+            return PanelFocus.Record(root, focused, n => n.Parent, n => n.Children.Count, (n, i) => n.Children[i], n => n.Key);
+        }
+
+        private static FocusNode FindFocus(FocusNode root, PanelFocusPath at)
+        {
+            return PanelFocus.Find(root, at, n => n.Children.Count, (n, i) => n.Children[i], n => n.Key, n => n.Focusable);
+        }
+
+        /// <summary>
+        /// Settings' alert table as the visual tree draws it: one Grid whose children are every row's rule and
+        /// cells in turn, so the four surface columns, drawn from AlertSurfacesFrom up, move every cell after the
+        /// head along. Low fuel's box is keyed by its setting; the temperature boxes' key sits on the overlay
+        /// that draws their placeholder over them, one level above the box.
+        /// </summary>
+        private static FocusNode AlertPage(bool surfaces, bool keyed = true)
+        {
+            Func<string, FocusNode[]> checks = row => surfaces
+                ? Enumerable.Range(0, 4).Select(i => new FocusNode(row + " surface " + i)).ToArray()
+                : new FocusNode[0];
+            Func<string, string, FocusNode> threshold = (row, key) =>
+                new FocusNode(row + " threshold", null, false,
+                    new FocusNode(row + " threshold line", null, false,
+                        new FocusNode(row + " op"),
+                        key == "FlagBoxLowFuelLaps"
+                            ? new FocusNode(row + " box", keyed ? key : null, true)
+                            : new FocusNode(row + " overlay", keyed ? key : null, false, new FocusNode(row + " box", null, true), new FocusNode(row + " placeholder")),
+                        new FocusNode(row + " unit")));
+            var cells = new System.Collections.Generic.List<FocusNode> { new FocusNode("head rule"), new FocusNode("Alert"), new FocusNode("Threshold") };
+            cells.AddRange(checks("head"));
+            foreach (var (row, key) in new[] { ("Low fuel", "FlagBoxLowFuelLaps"), ("Oil temperature", "LightsOilTemp"), ("Water temperature", "LightsWaterTemp") })
+            {
+                cells.Add(new FocusNode(row + " rule"));
+                cells.Add(new FocusNode(row + " name", keyed ? "alert-" + row : null));
+                cells.Add(threshold(row, key));
+                cells.AddRange(checks(row));
+                cells.Add(new FocusNode(row + " try", null, true));
+            }
+            return new FocusNode("page", null, false,
+                new FocusNode("Flags", keyed ? "flags" : null, false, new FocusNode("Flags in the pit lane", null, true)),
+                new FocusNode("Alerts", keyed ? "alerts" : null, false,
+                    new FocusNode("heading"),
+                    new FocusNode("card", null, false, new FocusNode("table", null, false, cells.ToArray()))));
+        }
+
+        /// <summary>
+        /// A rebuild that changes the page's shape gives the focus back to the box the driver was in (#645): with
+        /// the caret in Oil temperature, widening across the alert table's threshold drew the surface columns and
+        /// the focus came back, by its position in the tree, in Low fuel, where End and 9 typed 29. The place is
+        /// recorded by the key of the nearest thing above the control that carries one, the setting the box
+        /// writes, and found by it first.
+        /// </summary>
+        [Fact]
+        public void A_rebuild_that_changes_the_page_shape_gives_the_focus_back_to_the_same_box()
+        {
+            var narrow = AlertPage(false);
+            var at = RecordFocus(narrow, narrow.Find("Oil temperature box"));
+            Assert.Equal("LightsOilTemp", at.Key);
+            Assert.Equal(0, at.Ordinal);
+            Assert.Equal(new[] { 0 }, at.UnderKey);
+
+            var wide = AlertPage(true);
+            Assert.Same(wide.Find("Oil temperature box"), FindFocus(wide, at));
+            // And back across the threshold, and for the box that carries its key itself.
+            var wideAt = RecordFocus(wide, wide.Find("Water temperature box"));
+            Assert.Same(narrow.Find("Water temperature box"), FindFocus(narrow, wideAt));
+            var fuel = RecordFocus(wide, wide.Find("Low fuel box"));
+            Assert.Empty(fuel.UnderKey);
+            Assert.Same(narrow.Find("Low fuel box"), FindFocus(narrow, fuel));
+
+            // The position alone is what took the focus to the wrong box: the same index in the wider table is
+            // Low fuel's.
+            var byPosition = new PanelFocusPath(null, 0, null, at.FromRoot);
+            Assert.Same(wide.Find("Low fuel box"), FindFocus(wide, byPosition));
+        }
+
+        /// <summary>A control with no key above it (a press, a chip) and a key the rebuild no longer draws are found
+        /// by their position from the root, as before #645: the nearest focusable thing on the way down.</summary>
+        [Fact]
+        public void A_control_with_no_key_is_given_the_focus_back_by_its_position()
+        {
+            var bare = AlertPage(false, keyed: false);
+            var at = RecordFocus(bare, bare.Find("Oil temperature box"));
+            Assert.Null(at.Key);
+            var again = AlertPage(false, keyed: false);
+            Assert.Same(again.Find("Oil temperature box"), FindFocus(again, at));
+
+            // A key the rebuild does not draw falls back to the position.
+            var keyed = AlertPage(false);
+            var gone = new PanelFocusPath("NoSuchSetting", 0, new int[0], RecordFocus(keyed, keyed.Find("Water temperature box")).FromRoot);
+            Assert.Same(keyed.Find("Water temperature box"), FindFocus(keyed, gone));
+
+            // Where the path runs off the rebuild, the nearest focusable thing above where it stopped.
+            var page = AlertPage(false);
+            var off = new PanelFocusPath(null, 0, null, new[] { 0, 0, 7 });
+            Assert.Same(page.Find("Flags in the pit lane"), FindFocus(page, off));
+            Assert.Null(FindFocus(page, new PanelFocusPath(null, 0, null, new[] { 1, 0 })));
+
+            // A control not under the root records nothing, and the rebuild hands the focus to the page's start.
+            Assert.Null(RecordFocus(page, bare.Find("Oil temperature box")));
+        }
+
+        /// <summary>A key drawn twice finds the one the driver was in, by its order in the tree.</summary>
+        [Fact]
+        public void A_key_drawn_twice_gives_the_focus_back_to_the_one_the_driver_was_in()
+        {
+            Func<FocusNode> page = () => new FocusNode("page", null, false,
+                new FocusNode("first", "row", false, new FocusNode("first box", null, true)),
+                new FocusNode("second", "row", false, new FocusNode("second box", null, true)));
+            var before = page();
+            var at = RecordFocus(before, before.Find("second box"));
+            Assert.Equal(1, at.Ordinal);
+            var after = new FocusNode("page", null, false, new FocusNode("index"), page().Children[0], page().Children[1]);
+            Assert.Equal("second box", FindFocus(after, at).Name);
+        }
+
+        /// <summary>The shell records and finds the focus through PanelFocus, keyed by Ui.FocusKeyOf (a FocusKey,
+        /// else the row's search anchor), and the alert table's boxes, whose row anchor is on the name cell beside
+        /// them rather than above them, carry the setting they write.</summary>
+        [Fact]
+        public void The_shell_keys_the_focus_by_the_setting_a_box_writes()
+        {
+            var shell = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.cs")), @"\s+", " ");
+            Assert.Contains("return PanelFocus.Record<DependencyObject>(root, focused, VisualTreeHelper.GetParent, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf);", shell);
+            Assert.Contains("var last = PanelFocus.Find<DependencyObject>(root, path, VisualTreeHelper.GetChildrenCount, VisualTreeHelper.GetChild, Ui.FocusKeyOf, Refocusable) as IInputElement;", shell);
+            Assert.DoesNotContain("List<int> FocusPath(", shell);
+
+            var settings = Regex.Replace(RepoPaths.Code(RepoPaths.SettingsControlSources().Single(p => System.IO.Path.GetFileName(p) == "SettingsControl.Settings.cs")), @"\s+", " ");
+            Assert.Contains("Ui.FocusKey(lowFuel, nameof(OpenDashSettings.FlagBoxLowFuelLaps));", settings);
+            Assert.Contains("Ui.FocusKey(oilTemp, nameof(OpenDashSettings.LightsOilTemp));", settings);
+            Assert.Contains("Ui.FocusKey(waterTemp, nameof(OpenDashSettings.LightsWaterTemp));", settings);
         }
 
         /// <summary>
