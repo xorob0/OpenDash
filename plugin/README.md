@@ -48,3 +48,7 @@ plugin/scripts/package-plugin.sh
 zips `OpenDash.dll` and `INSTALL.md` into `build/OpenDash-plugin.zip`, the file a release
 attaches and `INSTALL.md` describes. It refuses to run without the Release build and warns when
 the DLL was built without an embedded dashboard.
+
+`plugin/scripts/compress-profiles.sh` gzips the `.ledsprofile` files in `Resources/` in place
+before the build. CI, a release and `scripts/package.sh` all run it, so the plugin CI tests embeds
+its profiles the way the released one does.
