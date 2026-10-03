@@ -11,6 +11,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { withFakeHost, type Answer } from './fakeHost.ts';
 import {
+  bindActions,
   bindPairs,
   claim,
   claimLost,
@@ -24,8 +25,10 @@ import {
   release,
   resolveHost,
   shq,
+  SIMHUB_SETTINGS,
   simhubStart,
   transport,
+  unbindActions,
   whoAmI,
   withBindings,
   withKeyboardReader,
@@ -533,5 +536,123 @@ describe('a SimHub that does not start', () => {
     );
     expect(r.ok).toBe(false);
     expect(expanded).toBe(false);
+  });
+});
+
+describe('`bun run vm bind` on the guest', () => {
+  // SimHub's two files as the VM holds them, the activation list with the keyboard reader off. Both
+  // are written by SimHub's own serializer, which puts a byte order mark in front.
+  const SETTINGS = SIMHUB_SETTINGS;
+  const ACTIVATION = SIMHUB_SETTINGS.replace('PluginManagerSettings.json', 'PluginsActivation.json');
+  const settings = {
+    EventMessageSettings: { 'Pit limiter': { Duration: 5, Enabled: false } },
+    InputActionMapping: [{ Target: 'SerialDashPlugin.NextScreen', PressType: 1, GameRestriction: { SupportedGames: [] }, Trigger: 'SerialDashPlugin.SCREEN1_BUTTON2' }],
+  };
+  const activation: PluginActivation[] = [
+    { ClassName: 'SimHub.Plugins.OutputPlugins.Dash.SerialDashPlugin', IsEnabled: true, ShowInMainMenu: false, ShowInMainMenuPosition: 0 },
+    { ClassName: 'SimHub.Plugins.InputPlugins.KeyboardReaderPlugin', IsEnabled: false, ShowInMainMenu: false, ShowInMainMenuPosition: 0 },
+  ];
+  const files = (): Record<string, string> => ({
+    [SETTINGS]: `﻿${JSON.stringify(settings, null, 2)}`,
+    [ACTIVATION]: `﻿${JSON.stringify(activation, null, 2)}`,
+  });
+  const F7 = [{ action: 'OpenDash.RimCycleZoneC', key: 'F7' }];
+
+  /**
+   * A guest with SimHub's files on its disk, answering the scripts `bind` sends as Windows would: a
+   * copy to the share puts the file there, a copy back replaces the guest's, and a stop or a start
+   * answers what `stop` and `start` say. Every script it is sent is kept, in order.
+   */
+  function guestWith(disk: Map<string, string>, stop: Answer = { stdout: 'stopped' }, start: Answer = { stdout: 'started (pid 4242)' }) {
+    const sent: string[] = [];
+    const answer = (script: string, share: string): Answer => {
+      sent.push(script);
+      if (script.includes('Stop-Process')) return stop;
+      if (script.includes('Start-ScheduledTask')) return start;
+      const out = /Copy-Item -LiteralPath '([^']+)' -Destination '\\\\host\.lan\\Data\\([^']+)'/.exec(script);
+      if (out) {
+        const text = disk.get(out[1]!);
+        if (text === undefined) return { stdout: 'missing' };
+        writeFileSync(path.join(share, out[2]!), text);
+        return { stdout: 'copied' };
+      }
+      const back = /Copy-Item '\\\\host\.lan\\Data\\([^']+)' -Destination '([^']+)'/.exec(script);
+      if (back) {
+        disk.set(back[2]!, readFileSync(path.join(share, back[1]!), 'utf8'));
+        return { stdout: 'written' };
+      }
+      return {};
+    };
+    return { sent, answer };
+  }
+  const writes = (sent: string[]) => sent.filter((s) => s.includes("Copy-Item '\\\\host.lan\\Data\\"));
+  // PowerShell 5.1 can turn a list into {"value": [...], "Count": n} on its way through ConvertTo-Json,
+  // and Set-Content -Encoding UTF8 puts a byte order mark on what it writes, so neither may write a
+  // file SimHub reads at startup.
+  const throughPowerShell = (sent: string[]) => sent.filter((s) => /ConvertTo-Json|Set-Content|Out-File/.test(s));
+
+  test('writes both files from the host, never through ConvertTo-Json, with SimHub stopped around them', () => {
+    const disk = new Map(Object.entries(files()));
+    const guest = guestWith(disk);
+    const r = withFakeHost(guest.answer, (host) => bindActions(host, [{ action: 'OpenDash.RimCycleZoneC', key: 'f7' }]));
+    expect(r).toMatchObject({ ok: true, stdout: 'OpenDash.RimCycleZoneC <- F7' });
+
+    expect(throughPowerShell(guest.sent)).toEqual([]);
+    expect(guest.sent[0]).toContain('Stop-Process');
+    expect(guest.sent.at(-1)).toContain('Start-ScheduledTask');
+    expect(writes(guest.sent)).toHaveLength(2);
+
+    const bound = disk.get(SETTINGS)!;
+    expect(bound.startsWith('{')).toBe(true);
+    expect(JSON.parse(bound)).toEqual({
+      ...settings,
+      InputActionMapping: [
+        ...settings.InputActionMapping,
+        { Target: 'OpenDash.RimCycleZoneC', Trigger: 'KeyboardReaderPlugin.F7', PressType: PRESS.shortAndLong, GameRestriction: { SupportedGames: [] } },
+      ],
+    });
+    const enabled = disk.get(ACTIVATION)!;
+    expect(enabled.startsWith('[')).toBe(true);
+    expect(parseActivation(enabled)).toEqual([activation[0]!, { ...activation[1]!, IsEnabled: true }]);
+  });
+
+  test('leaves the plugin list as it was when the keyboard reader is already on', () => {
+    const on = JSON.stringify(withKeyboardReader(activation), null, 2);
+    const disk = new Map(Object.entries({ ...files(), [ACTIVATION]: on }));
+    const guest = guestWith(disk);
+    expect(withFakeHost(guest.answer, (host) => bindActions(host, F7)).ok).toBe(true);
+    expect(disk.get(ACTIVATION)).toBe(on);
+    expect(writes(guest.sent)).toHaveLength(1);
+  });
+
+  test('a SimHub that would not stop ends it before either file is read, and is not started', () => {
+    const disk = new Map(Object.entries(files()));
+    const guest = guestWith(disk, { status: 1, stdout: 'SimHub is still running (pid 4242) 20s after it was stopped' });
+    const r = withFakeHost(guest.answer, (host) => bindActions(host, F7));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('SimHub did not stop');
+    expect(guest.sent).toHaveLength(1);
+    expect(disk.get(SETTINGS)).toBe(files()[SETTINGS]);
+  });
+
+  test('a SimHub that does not come back fails the binding', () => {
+    const guest = guestWith(new Map(Object.entries(files())), undefined, { stdout: 'SimHub did not appear within 40s; check a screenshot' });
+    const r = withFakeHost(guest.answer, (host) => bindActions(host, F7));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('SimHub did not start');
+  });
+
+  test('unbind takes the binding out again the same way, and restarts SimHub', () => {
+    const disk = new Map(Object.entries(files()));
+    const guest = guestWith(disk);
+    const r = withFakeHost(guest.answer, (host) => {
+      bindActions(host, F7);
+      guest.sent.length = 0;
+      return unbindActions(host, 'OpenDash');
+    });
+    expect(r).toMatchObject({ ok: true, stdout: 'removed 1 binding of OpenDash' });
+    expect(throughPowerShell(guest.sent)).toEqual([]);
+    expect(guest.sent.at(-1)).toContain('Start-ScheduledTask');
+    expect(JSON.parse(disk.get(SETTINGS)!)).toEqual(settings);
   });
 });
