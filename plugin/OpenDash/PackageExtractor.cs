@@ -418,7 +418,9 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Extracts the package into DashTemplates, replacing an existing folder (kept as <folder>_backup.zip),
-        /// and copies the package fonts that DashFonts does not have in those bytes. Throws on failure; the caller logs and reports.</summary>
+        /// and copies the package fonts that DashFonts does not have in those bytes. Throws when the folder could not be put
+        /// in place; the caller logs and reports. Fonts that could not be copied are reported in the result's FontsError
+        /// instead, since by then the folder is installed.</summary>
         /// <param name="holdsAuthoredWork">
         /// True when the folder being replaced is one somebody has edited, so the copy set aside must outlive the
         /// next install rather than being reclaimed by it.
@@ -463,7 +465,17 @@ namespace OpenDashPlugin
                 Directory.Move(extracted, target);
                 log.Info("Installed " + folderName + " " + (result.Version ?? "(no version)") + " into " + target);
 
-                result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
+                // From here the folder is in place, so nothing may throw: a caller that saw an exception would not record
+                // the folder it now holds, and would read it as edited from then on (#593).
+                try
+                {
+                    result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
+                }
+                catch (Exception ex)
+                {
+                    result.FontsError = ex.Message;
+                    log.Warn("Installed " + folderName + " without its fonts, which could not be copied into DashFonts: " + ex.Message);
+                }
                 return result;
             }
             finally

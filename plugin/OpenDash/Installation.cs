@@ -50,6 +50,16 @@ namespace OpenDashPlugin
 
         public int FontsCopied { get; set; }
 
+        /// <summary>
+        /// Why the package's fonts could not be copied into DashFonts, null when they were or there were none to copy.
+        /// </summary>
+        /// <remarks>
+        /// The folder is in place either way, which is why this is reported here rather than thrown (#593): the fonts
+        /// are copied after the new folder has replaced the old one, and an exception out of the install skipped the
+        /// caller's record of the folder it had just written, so the next run read that folder as somebody's edit.
+        /// </remarks>
+        public string FontsError { get; set; }
+
         /// <summary>Path of the zip made from the previous folder, null when there was none.</summary>
         public string BackupPath { get; set; }
     }

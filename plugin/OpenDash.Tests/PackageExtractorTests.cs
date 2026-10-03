@@ -427,6 +427,38 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// Fonts that cannot be copied do not throw out of an install whose folder is already in place (#593); the
+        /// result says why, so the caller can both record the folder and tell the driver.
+        /// </summary>
+        [Fact]
+        public void Fonts_that_cannot_be_copied_are_reported_by_an_install_that_put_its_folder_in_place()
+        {
+            using (var package = Package("OpenDash", "0.1.0")) PackageExtractor.Install(package, root, null);
+            var fonts = Path.Combine(root, "DashFonts");
+            Directory.Delete(fonts, true);
+            File.WriteAllText(fonts, "not a folder");
+
+            var log = new ListLog();
+            InstallResult result;
+            using (var package = Package("OpenDash", "0.2.0")) result = PackageExtractor.Install(package, root, log);
+
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal(0, result.FontsCopied);
+            Assert.NotNull(result.FontsError);
+            Assert.NotNull(result.BackupPath);
+            Assert.Contains(log.Lines, line => line.StartsWith("warn: Installed OpenDash without its fonts"));
+        }
+
+        [Fact]
+        public void An_install_that_copied_its_fonts_reports_no_font_error()
+        {
+            InstallResult result;
+            using (var package = Package("OpenDash", "0.1.0")) result = PackageExtractor.Install(package, root, null);
+            Assert.Equal(2, result.FontsCopied);
+            Assert.Null(result.FontsError);
+        }
+
+        /// <summary>
         /// A face whose bytes changed under its name reaches the rig, and the one it replaces is kept.
         /// </summary>
         /// <remarks>
