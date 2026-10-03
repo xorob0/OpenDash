@@ -1246,19 +1246,18 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A strip added while SimHub offered no LED device: the steps left, in order, which start in SimHub. The
-        /// profile is installed here once there is a device, by the header's Install or the device row, and the
-        /// restart comes last, since the plugin publishes a strip's own settings only for the strips it held when
-        /// SimHub started (PanelLights.BarAdded says the same).
+        /// profile is installed here once there is a device, by the header's Install or the device row. No
+        /// restart: the strip's own settings are attached when it is saved (#565, PanelLights.BarAdded).
         /// </summary>
         /// <remarks>Where SimHub lists LED devices OpenDash passed over (#437), the first step is not to add hardware
         /// SimHub already has: the line says which devices OpenDash cannot reach and points at the log, as the
-        /// SimHub device row under it does, then names the two steps every add without an install leaves, in
+        /// SimHub device row under it does, then names the step every add without an install leaves, in
         /// PanelLights.BarAddFailed's form.</remarks>
         public static string AddedWithoutDevice(string name, IList<string> declined = null)
         {
             var passed = PanelLights.Unreached(declined);
-            if (passed != null) return "Added " + name + ", but " + passed + ". See SimHub's log, then install " + name + "'s profile here and restart SimHub.";
-            return "Added " + name + ". Add your wheel or Arduino in SimHub, install " + name + "'s profile here, then restart SimHub.";
+            if (passed != null) return "Added " + name + ", but " + passed + ". See SimHub's log, then install " + name + "'s profile here.";
+            return "Added " + name + ". Add your wheel or Arduino in SimHub, then install " + name + "'s profile here.";
         }
 
 
