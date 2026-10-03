@@ -255,10 +255,10 @@ jobs:
 
             try {
               if (body === '') {
-                // No package output moved. A comment left from an earlier push would now be a lie,
-                // so it goes rather than being updated to say nothing.
+                // Neither a package nor an LED profile moved. A comment left from an earlier push
+                // would now be a lie, so it goes rather than being updated to say nothing.
                 if (mine) await github.rest.issues.deleteComment({ ...context.repo, comment_id: mine.id });
-                core.info('no package output moved; nothing posted');
+                core.info('no package or LED profile moved; nothing posted');
                 return;
               }
               if (mine) await github.rest.issues.updateComment({ ...context.repo, comment_id: mine.id, body });
