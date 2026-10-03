@@ -405,10 +405,10 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// A download's completion is posted to the interface thread, never waited on from the pool: End runs
-        /// on that thread and waits for the run (UpdateService.WaitForIdle), so a synchronous Invoke inside
-        /// the counted work hung SimHub's close for the whole grace. The yes to replacing edited dashboards on
-        /// restart is set before the run counts as finished, so End's save keeps it when the completion does
-        /// not run.
+        /// on that thread and waits for the part of the run that writes (UpdateService.WaitForIdle), so a
+        /// synchronous Invoke from the run hung SimHub's close for the whole grace. Nothing the rig is owed is
+        /// the page's any more (#613): the run is the plugin's, which settles the consent and the screens' names
+        /// on the run's thread and saves (UpdateServiceTests pins that half), and the completion only draws.
         /// </summary>
         [Fact]
         public void A_download_s_completion_never_waits_on_the_thread_that_waits_for_it()
@@ -417,20 +417,20 @@ namespace OpenDashPlugin.Tests
             var apply = code.Substring(code.IndexOf("private void ApplyUpdate()", StringComparison.Ordinal));
             apply = apply.Substring(0, apply.IndexOf("private async void OfferRestart(", StringComparison.Ordinal));
             Assert.DoesNotContain("Dispatcher.Invoke(", apply);
-            var work = apply.IndexOf("outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);", StringComparison.Ordinal);
-            var consent = apply.IndexOf("if (outcome.ReplaceEditedOnRestart) Settings.ReplaceEditedFor = release.Version;", StringComparison.Ordinal);
-            var posted = apply.IndexOf("Dispatcher.BeginInvoke(new Action(() =>", work, StringComparison.Ordinal);
-            Assert.True(work >= 0 && consent > work && posted > consent, "the consent is set on the pool thread before the completion is posted");
-            Assert.Contains("}, new SimHubInstallLog(), mustFinish: true);", apply);
+            Assert.DoesNotContain("mustFinish", apply);
+            Assert.DoesNotContain("Settings.ReplaceEditedFor", apply);
+            Assert.DoesNotContain("ScreenInstaller.Retitle(", apply);
+            Assert.DoesNotContain("Save();", apply);
+            var flat = System.Text.RegularExpressions.Regex.Replace(apply, @"\s+", " ");
+            InOrder(flat,
+                "plugin.ApplyUpdate(release, replaceEdited, report, outcome =>",
+                "var said = outcome == null ? PanelUpdates.UpdateFailed : outcome.Line;",
+                "Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome ?? new UpdateOutcome(), said)));");
 
-            // A run that throws still posts a completion, carrying a failed outcome whose line points at the log.
-            var caught = apply.IndexOf("said = PanelUpdates.UpdateFailed;", StringComparison.Ordinal);
-            Assert.True(caught > work && caught < consent, "a throw inside Apply becomes a failed outcome before the completion is posted");
-            Assert.Contains("Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome, said)));", apply);
-            // In the page's own sentence, the shape its other failure takes, and never in the outcome's reason slot.
+            // A run that throws still posts a completion, carrying a failed outcome, and the page says the failure
+            // in its own sentence, the shape its other failure takes, and never in the outcome's reason slot.
             Assert.Equal("The update did not finish. See SimHub's log.", PanelUpdates.UpdateFailed);
             Assert.Equal(PanelUpdates.UpdateFailed, PanelUpdates.ReinstallFailed.Replace("reinstall", "update"));
-            Assert.Contains("outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report); said = outcome.Line;", System.Text.RegularExpressions.Regex.Replace(apply, @"\s+", " "));
 
             // The completion clears the run before anything that can throw, keeps a net of its own, and offers
             // the restart outside it.
@@ -1923,8 +1923,7 @@ namespace OpenDashPlugin.Tests
                 "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
                 "applying = true;",
                 "UpdatesDrawCard(); UpdatesRefreshCheck();",
-                "UpdateService.InBackground(",
-                "outcome = Updates.Apply(plugin.Installer, release, replaceEdited, report);");
+                "plugin.ApplyUpdate(release, replaceEdited, report, outcome =>");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(apply, @"var replaceEdited ="));
 
             var reinstall = Method("private void Reinstall()");
@@ -1951,7 +1950,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_run_is_turned_on_before_it_starts_and_draws_its_presses_disabled()
         {
-            InOrder(Method("private void ApplyUpdate()"), "if (press == PressOutcome.Ask)", "applying = true;", "UpdateService.InBackground(");
+            InOrder(Method("private void ApplyUpdate()"), "if (press == PressOutcome.Ask)", "applying = true;", "plugin.ApplyUpdate(");
             Assert.Contains("restore.IsEnabled = !applying; updatesRunPresses.Add(restore);", Method("private FrameworkElement UpdatesKeptCard(double width)"));
             Assert.Contains("updatesReinstall.IsEnabled = !applying;", Method("private FrameworkElement UpdatesReinstallRow()"));
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !applying; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesStripRow("));
@@ -2009,8 +2008,6 @@ namespace OpenDashPlugin.Tests
 
             InOrder(Method("private void UpdatesApplied("),
                 "try",
-                "foreach (var screen in Settings.RigScreens()) ScreenInstaller.Retitle(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, titles);",
-                "Save();",
                 "plugin.Installer.Refresh();",
                 "plugin.RefreshUpdateMark();",
                 "updateStatus = UpdateMark.Applied(updateStatus, outcome.Ok, release.Version, plugin.RigVersion);",

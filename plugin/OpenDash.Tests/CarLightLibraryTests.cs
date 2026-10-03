@@ -62,7 +62,7 @@ namespace OpenDashPlugin.Tests
             // The progress callback is accepted and dropped: CarLightLibrary fetches the archive without
             // one, because the tables arrive on a background update rather than behind a bar somebody
             // is watching.
-            public FetchResult GetBytes(string url, Action<double> progress = null)
+            public FetchResult GetBytes(string url, Action<double> progress = null, System.Threading.CancellationToken cancel = default)
             {
                 Requested.Add(url);
                 if (Failure != null) return FetchResult.Failed(Failure);

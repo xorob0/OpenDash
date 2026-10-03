@@ -211,6 +211,39 @@ namespace OpenDashPlugin.Tests
             Assert.False(string.IsNullOrWhiteSpace(result.Reason));
         }
 
+        /// <summary>
+        /// A download stops at the next chunk once SimHub closes, and comes back as a failure rather than as the part
+        /// of the body that had arrived (#613).
+        /// </summary>
+        [Fact]
+        public void A_download_cancelled_part_way_stops_and_fails()
+        {
+            answerBytes = Enumerable.Range(0, 3000000).Select(i => (byte)(i % 251)).ToArray();
+            using (var cancel = new System.Threading.CancellationTokenSource())
+            {
+                // Cancelled at the first report past the start, which the client makes between chunks.
+                var result = new ReleaseClient("0.1.0").GetBytes(prefix, fraction => { if (fraction > 0) cancel.Cancel(); }, cancel.Token);
+
+                Assert.False(result.Ok);
+                Assert.Equal(ReleaseClient.Cancelled, result.Reason);
+                Assert.Null(result.Bytes);
+            }
+        }
+
+        [Fact]
+        public void A_download_cancelled_before_it_starts_asks_nothing()
+        {
+            using (var cancel = new System.Threading.CancellationTokenSource())
+            {
+                cancel.Cancel();
+                var result = new ReleaseClient("0.1.0").GetBytes(prefix, null, cancel.Token);
+
+                Assert.False(result.Ok);
+                Assert.Equal(ReleaseClient.Cancelled, result.Reason);
+                lock (seen) Assert.Empty(seen);
+            }
+        }
+
         [Fact]
         public void Bytes_come_back_whole()
         {
