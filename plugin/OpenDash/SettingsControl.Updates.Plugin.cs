@@ -359,9 +359,10 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The confirmation before replacing an edited dashboard promises that a copy is kept and can be put back,
         /// and this is the press that keeps the promise. It reads the disk first, so a folder edited in Dash
-        /// Studio since the card was drawn is the driver's and is left alone (UpdatesKept): PackageExtractor.Restore
-        /// deletes the folder it restores into and keeps no copy of it. The read and the restores are both off the
-        /// interface thread (#611), and the choice between them is made on it.
+        /// Studio since the card was drawn is the driver's and is left alone (UpdatesKept): nothing has asked to
+        /// replace it. What it does restore over is OpenDash's own folder, kept as the ordinary backup, and the copy
+        /// it puts back is used up (PackageExtractor.Restore), so the card goes once its copies are back (#608).
+        /// The read and the restores are both off the interface thread (#611), and the choice between them is made on it.
         /// </remarks>
         private void RestoreKept()
         {
@@ -374,7 +375,7 @@ namespace OpenDashPlugin
         {
             var root = plugin.Installer.SimHubRoot;
             // The card shows a kept copy whatever the driver has done since, as the artboard draws it, so a folder edited again
-            // is left as it is and named: Restore keeps no copy of what it replaces, and nothing has asked.
+            // is left as it is and named: nothing has asked to replace it.
             var held = new List<string>();
             var edited = new HashSet<string>(plugin.Installer.EditedFolders.Where(f => f != null), StringComparer.OrdinalIgnoreCase);
             var putting = new List<KeyValuePair<string, string>>();
@@ -400,7 +401,9 @@ namespace OpenDashPlugin
                     {
                         var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));
                         if (copy == null) continue;
-                        if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;
+                        // Only a folder the installer does not find edited is put back over (PutsBack), so what it
+                        // replaces is OpenDash's own and its copy is the ordinary backup, which the card does not offer.
+                        if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy, holdsAuthoredWork: false)) restored++;
                     }
                     catch (Exception ex)
                     {

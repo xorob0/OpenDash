@@ -1370,7 +1370,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Whether Put mine back writes a folder the card shows: only one the installer does not find
-        /// edited, since PackageExtractor.Restore keeps no copy of what it replaces and nothing has asked.</summary>
+        /// edited, since nothing has asked to replace the driver's later edits. What it does replace is OpenDash's
+        /// own, kept as the ordinary backup (PackageExtractor.Restore).</summary>
         /// <param name="edited">Whether the installer finds the folder in SimHub edited (PackageStatus.Edited).</param>
         public static bool PutsBack(bool edited)
         {

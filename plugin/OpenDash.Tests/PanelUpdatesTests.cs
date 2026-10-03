@@ -631,8 +631,8 @@ namespace OpenDashPlugin.Tests
         /// <summary>
         /// Put mine back never overwrites edits it did not ask about: it reads the disk first, and of what the
         /// kept card offers -- every kept copy, as the artboard draws it -- it restores only a folder the installer
-        /// does not find edited again (PutsBack), naming the rest. PackageExtractor.Restore keeps no copy of what
-        /// it replaces.
+        /// does not find edited again (PutsBack), naming the rest. What it replaces is therefore OpenDash's own, kept
+        /// as the ordinary backup the card does not offer, and the copy it puts back is used up (#608).
         /// </summary>
         [Fact]
         public void Put_mine_back_restores_only_what_the_card_offers_from_a_fresh_read()
@@ -2038,7 +2038,7 @@ namespace OpenDashPlugin.Tests
                 "foreach (var kept in putting) { var folder = kept.Key;",
                 "var copy = PackageExtractor.KeptCopies(root, folder).FirstOrDefault(path => path.Contains(PackageExtractor.EditedSuffix));",
                 "if (copy == null) continue;",
-                "if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy)) restored++;",
+                "if (PackageExtractor.Restore(root, folder, new SimHubInstallLog(), copy, holdsAuthoredWork: false)) restored++;",
                 "plugin.Installer.Refresh(); }, failure =>",
                 "Save(); Redraw(); Say(PanelUpdates.PutBack(restored, failed, held), restored > 0 && failed.Count == 0 && held.Count == 0);");
 
