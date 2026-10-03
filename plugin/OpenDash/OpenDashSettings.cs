@@ -1000,6 +1000,11 @@ namespace OpenDashPlugin
         /// own scanner.</summary>
         public Dictionary<string, string> FolderFingerprints { get; set; } = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
+        /// <summary>Fingerprint of SimHub/OpenDash/OpenDash Flag box.ledsprofile as OpenDash last wrote it, or null
+        /// before it has written one. The file's counterpart of <see cref="FolderFingerprints"/>: a file that no
+        /// longer matches it is the driver's, and FlagBoxProfile.Extract leaves it alone (#618).</summary>
+        public string FlagBoxFingerprint { get; set; }
+
         /// <summary>Clamps every value into its contract: unknown modes and card numbers fall back to the defaults,
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
@@ -1188,10 +1193,37 @@ namespace OpenDashPlugin
                 kept.Add(screen);
             }
             Rig = kept;
+            SpellFoldersAsWritten(kept);
             AnswerUnclaimed(kept);
             // Spent: MigratedRig() has emptied it into the rig, and a second copy left behind would be
             // serialised, read by something one day, and disagree.
             if (Faces != null && Faces.Count > 0) Faces = new Dictionary<string, FaceSettings>(StringComparer.Ordinal);
+        }
+
+        /// <summary>
+        /// Spells a folder an older plugin gave a trailing dot or space as Windows wrote it.
+        /// </summary>
+        /// <remarks>
+        /// A screen named "Rim." was given the folder "OpenDash Rim." (#620). Windows wrote it as "OpenDash Rim", with
+        /// a main dashboard SimHub never looks for inside, and on a rig that already had a Rim it wrote it over that
+        /// screen's folder. Spelled as it is on disk, the folder holds no dashboard under its own name, so the next
+        /// start reads it as not installed and writes one SimHub lists. Where another screen holds that folder,
+        /// the two have been writing over each other, and this one is given a folder of its own instead. The folder
+        /// is spelled anew here and nowhere else for the reason a stock folder's case is (#467): every caller then
+        /// reads the one spelling.
+        /// </remarks>
+        private static void SpellFoldersAsWritten(List<ScreenInstance> rig)
+        {
+            foreach (var screen in rig)
+            {
+                if (screen.Folder == null) continue;
+                var written = PackageCatalogue.FolderOnDisk(screen.Folder);
+                if (string.Equals(written, screen.Folder, StringComparison.Ordinal)) continue;
+                var others = rig.Where(other => !ReferenceEquals(other, screen) && other.Folder != null).Select(other => other.Folder).ToList();
+                var shared = written.Length == 0
+                    || others.Any(folder => string.Equals(PackageCatalogue.FolderOnDisk(folder), written, StringComparison.OrdinalIgnoreCase));
+                screen.Folder = shared ? PackageCatalogue.UniqueFolder(screen.Name, others, null) : written;
+            }
         }
 
         /// <summary>
@@ -2116,8 +2148,8 @@ namespace OpenDashPlugin
             QuickGlance = other.QuickGlance;
             // The plugin's own fields, which no panel row writes and which were never carried until a
             // rig press began saving a copy: the update opt-out and what it last heard (ADR 0012), the
-            // edited-dashboard consent, and the fingerprints that tell a driver's Dash Studio work from
-            // OpenDash's. The dictionary is cloned under its own comparer, so that two spellings a
+            // edited-dashboard consent, and the fingerprints that tell a driver's Dash Studio work and
+            // their edited flag box file from OpenDash's. The dictionary is cloned under its own comparer, so that two spellings a
             // case-sensitive one kept apart cannot collide in the copy and throw.
             CheckForUpdates = other.CheckForUpdates;
             LastUpdateCheckTicks = other.LastUpdateCheckTicks;
@@ -2126,6 +2158,7 @@ namespace OpenDashPlugin
             FolderFingerprints = other.FolderFingerprints == null
                 ? null
                 : new Dictionary<string, string>(other.FolderFingerprints, other.FolderFingerprints.Comparer);
+            FlagBoxFingerprint = other.FlagBoxFingerprint;
             Normalise();
         }
     }

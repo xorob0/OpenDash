@@ -30,6 +30,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace OpenDashPlugin
@@ -43,6 +44,8 @@ namespace OpenDashPlugin
         UpToDate,
         /// <summary>The file was written or refreshed.</summary>
         Extracted,
+        /// <summary>The file has changed since OpenDash wrote it, so it was left as it is (#618).</summary>
+        Kept,
         /// <summary>Extraction failed; the message says why.</summary>
         Failed,
     }
@@ -61,6 +64,10 @@ namespace OpenDashPlugin
         public string Json { get; set; }
 
         public string Message { get; set; }
+
+        /// <summary>The fingerprint of the file as OpenDash last wrote it, for the settings to remember: the new one
+        /// after a write, the recorded one when an edited file was kept. Null when nothing could be vouched for.</summary>
+        public string Fingerprint { get; set; }
     }
 
     /// <summary>Extracts the embedded flag box profile beside SimHub, and never further than that.</summary>
@@ -349,12 +356,25 @@ namespace OpenDashPlugin
             return FieldOf(json, "Name");
         }
 
-        /// <summary>Writes the embedded profile into SimHub/OpenDash/ when it is missing or has changed.
+        /// <summary>
+        /// Writes the embedded profile into SimHub/OpenDash/ when it is missing or has changed, and leaves a file
+        /// the driver has edited alone.
+        /// </summary>
+        /// <remarks>
+        /// The house rule the dashboards keep (FolderFingerprint, ADR 0013's "never touches a profile the user has
+        /// edited") applied to one file. <paramref name="settings"/> remembers a hash of what was last written; a
+        /// file on disk that no longer matches it changed after OpenDash wrote it, and is kept rather than
+        /// overwritten at every start. Deleting it is how a driver asks for OpenDash's own copy back.
         ///
-        /// A file the user has edited is left alone: the check is against what was last written, which is
-        /// what the embedded copy is compared with. Identical content is not rewritten, so the file's
-        /// timestamp means what it says.</summary>
-        public static FlagBoxResult Extract(string simHubRoot, Assembly assembly, IInstallLog log = null)
+        /// Nothing remembered -- no settings, or every rig the first time a release that keeps the record starts --
+        /// reads as a file OpenDash may write, the way an unrecorded dashboard folder is adopted: an edit made before
+        /// OpenDash started looking cannot be seen, and holding back every rig's older copy for ever would be the
+        /// worse mistake. Identical content is not rewritten, so the file's timestamp means what it says.
+        ///
+        /// Whatever happens to the file, the result carries the embedded profile: the panel installs that, never the
+        /// file, so a kept edit changes nothing SimHub is handed.
+        /// </remarks>
+        public static FlagBoxResult Extract(string simHubRoot, Assembly assembly, IInstallLog log = null, OpenDashSettings settings = null)
         {
             log = log ?? NullInstallLog.Instance;
             string resource = ResourceName(assembly);
@@ -379,20 +399,44 @@ namespace OpenDashPlugin
                 if (embedded == null) throw new InvalidOperationException("resource " + resource + " could not be opened");
 
                 string profileName = ProfileNameOf(embedded);
-                if (File.Exists(path) && string.Equals(File.ReadAllText(path), embedded, StringComparison.Ordinal))
+                byte[] bytes = new UTF8Encoding(false).GetBytes(embedded);
+                string wanted = FingerprintOf(bytes);
+                string onDisk = File.Exists(path) ? FingerprintOf(File.ReadAllBytes(path)) : null;
+                string remembered = settings?.FlagBoxFingerprint;
+                FlagBoxResult result;
+                if (string.Equals(onDisk, wanted, StringComparison.Ordinal))
                 {
-                    return new FlagBoxResult { Status = FlagBoxStatus.UpToDate, Path = path, ProfileName = profileName, Json = embedded, Message = "Up to date" };
+                    result = new FlagBoxResult { Status = FlagBoxStatus.UpToDate, Path = path, ProfileName = profileName, Json = embedded, Message = "Up to date", Fingerprint = wanted };
                 }
-
-                Directory.CreateDirectory(folder);
-                File.WriteAllText(path, embedded, new UTF8Encoding(false));
-                log.Info("Wrote the flag box profile to " + path + ". Install it at the top of OpenDash's Matrix page.");
-                return new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = profileName, Json = embedded, Message = "Written" };
+                else if (onDisk != null && !string.IsNullOrWhiteSpace(remembered) && !string.Equals(onDisk, remembered, StringComparison.Ordinal))
+                {
+                    log.Info("Left the flag box profile at " + path + " as it is, because it has been edited since OpenDash wrote it. Delete it and restart SimHub for OpenDash's current copy.");
+                    result = new FlagBoxResult { Status = FlagBoxStatus.Kept, Path = path, ProfileName = profileName, Json = embedded, Message = "Edited, kept", Fingerprint = remembered };
+                }
+                else
+                {
+                    Directory.CreateDirectory(folder);
+                    File.WriteAllBytes(path, bytes);
+                    log.Info("Wrote the flag box profile to " + path + ". Install it at the top of OpenDash's Matrix page.");
+                    result = new FlagBoxResult { Status = FlagBoxStatus.Extracted, Path = path, ProfileName = profileName, Json = embedded, Message = "Written", Fingerprint = wanted };
+                }
+                // Recorded but not saved, as the folder record is: Init saves once its writes are done.
+                if (settings != null) settings.FlagBoxFingerprint = result.Fingerprint;
+                return result;
             }
             catch (Exception e)
             {
                 log.Error("Could not write the flag box profile to " + path + ": " + e.Message);
                 return new FlagBoxResult { Status = FlagBoxStatus.Failed, Path = path, Message = e.Message };
+            }
+        }
+
+        /// <summary>A file's fingerprint, spelled the way FolderFingerprint spells a folder's.</summary>
+        internal static string FingerprintOf(byte[] content)
+        {
+            using (var hash = SHA256.Create())
+            {
+                return "sha256:" + BitConverter.ToString(hash.ComputeHash(content)).Replace("-", string.Empty).ToLowerInvariant();
             }
         }
 

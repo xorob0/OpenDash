@@ -293,6 +293,36 @@ namespace OpenDashPlugin.Tests
             return folders;
         }
 
+        /// <summary>
+        /// A screen's folder never ends in a dot or a space, whatever its name ends in.
+        /// </summary>
+        /// <remarks>
+        /// Windows drops a trailing dot or space from the last segment of a path, so a screen named "Rim." was
+        /// given the folder "OpenDash Rim." and written into "OpenDash Rim", with its main dashboard renamed to
+        /// "OpenDash Rim..djson" inside it. SimHub looks for "OpenDash Rim/OpenDash Rim.djson", found nothing and
+        /// did not list the screen, and where the rig already had a Rim the copy was written over that screen's
+        /// folder (#620). A folder recorded with a trailing dot is the same folder on disk as the one without, so
+        /// it is taken under that spelling too.
+        /// </remarks>
+        [Fact]
+        public void A_folder_never_ends_in_a_dot_or_a_space()
+        {
+            var none = new string[0];
+            Assert.Equal("OpenDash Rim", PackageCatalogue.UniqueFolder("Rim.", none, "OpenDash 1280x480"));
+            Assert.Equal("OpenDash Rim", PackageCatalogue.UniqueFolder("Rim . . ", none, "OpenDash 1280x480"));
+            Assert.Equal("OpenDash screen", PackageCatalogue.UniqueFolder("...", none, "OpenDash 1280x480"));
+            Assert.Equal("OpenDash St. Rim", PackageCatalogue.UniqueFolder("St. Rim", none, "OpenDash 1280x480"));
+            foreach (var name in new[] { "Rim.", "Rim. ", "Rim ..", "Rim\t.", "Rim.\n" })
+            {
+                var folder = PackageCatalogue.UniqueFolder(name, none, "OpenDash 1280x480");
+                Assert.False(folder.EndsWith(".", StringComparison.Ordinal) || char.IsWhiteSpace(folder[folder.Length - 1]), name + " gave \"" + folder + "\"");
+            }
+
+            // Two folders that differ only by a trailing dot are one folder on Windows.
+            Assert.Equal("OpenDash Rim 2", PackageCatalogue.UniqueFolder("Rim.", new[] { "OpenDash Rim" }, "OpenDash 1280x480"));
+            Assert.Equal("OpenDash Rim 2", PackageCatalogue.UniqueFolder("Rim", new[] { "OpenDash Rim." }, "OpenDash 1280x480"));
+        }
+
         /// <summary>The packages a release would embed, from the folder the plugin embeds if it has been
         /// filled and from the dash build output otherwise, or null when neither holds any.</summary>
         private static IPackageSource TheBuiltPackages()
