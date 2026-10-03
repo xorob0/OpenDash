@@ -589,7 +589,7 @@ namespace OpenDashPlugin
         private void CatchUp()
         {
             ForgetBindings();
-            if (updateStatus.State == UpdateState.Checking && !plugin.UpdateCheckInFlight && !applying)
+            if (updateStatus.State == UpdateState.Checking && !plugin.UpdateCheckInFlight && !Updates.Applying)
             {
                 var last = plugin.LastUpdateStatus;
                 updateStatus = last == null

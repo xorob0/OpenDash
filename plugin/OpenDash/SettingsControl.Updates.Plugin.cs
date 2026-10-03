@@ -49,7 +49,7 @@ namespace OpenDashPlugin
             updatesCardLine = null;
             updatesDownload = null;
             updatesProgressHost = null;
-            updatesCard = PanelUpdates.CardFor(updateStatus.State, applying, UpdatesPending());
+            updatesCard = PanelUpdates.CardFor(updateStatus.State, Updates.Applying, UpdatesPending());
             if (updatesCard == UpdatesCard.None)
             {
                 updatesCardHost.Child = null;
@@ -108,7 +108,7 @@ namespace OpenDashPlugin
             card.Children.Add(head);
             if (updatesCard == UpdatesCard.Available) card.Children.Add(UpdatesReleaseNotes());
             updatesCardHost.Child = Ui.CardBox(card, 0);
-            if (applying) ShowRun();
+            if (Updates.Applying) ShowRun();
             if (hadFocus) UpdatesRefocus(updatesDownload, updatesCheckNow);
         }
 
@@ -221,7 +221,7 @@ namespace OpenDashPlugin
                 updatesCheckLine.Text = line ?? string.Empty;
                 updatesCheckLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
             }
-            if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, applying, updateStatus.State);
+            if (updatesCheckNow != null) updatesCheckNow.IsEnabled = PanelUpdates.CheckNowEnabled(Settings.CheckForUpdates, Updates.Applying, updateStatus.State);
             if (updatesDownload != null) updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);
             var cardLine = PanelUpdates.CardLine(updatesCard, updateStatus);
             // Only ever written, never cleared, here: the line is Download's question otherwise, and the
@@ -243,7 +243,7 @@ namespace OpenDashPlugin
             if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
             if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
             foreach (var press in updatesRunPresses) press.IsEnabled = false;
-            if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(applyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
+            if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
         }
 
         /// <summary>
@@ -366,12 +366,15 @@ namespace OpenDashPlugin
         private void RestoreKept()
         {
             if (UpdatesHeld) return;
+            if (WriteRefused()) return;
             UpdatesReadThen(RestoreKeptRead);
         }
 
         /// <summary>Put mine back once the disk has been read: which copies go back, and putting them back.</summary>
         private void RestoreKeptRead()
         {
+            // Asked again once the disk has been read, since a press elsewhere may have started meanwhile.
+            if (WriteRefused()) return;
             var root = plugin.Installer.SimHubRoot;
             // The card shows a kept copy whatever the driver has done since, as the artboard draws it, so a folder edited again
             // is left as it is and named: Restore keeps no copy of what it replaces, and nothing has asked.
@@ -429,6 +432,8 @@ namespace OpenDashPlugin
             // A second click before the first has been answered used to fall straight through the confirmation,
             // because the confirming branch returned without disabling anything.
             if (UpdatesHeld) return;
+            // A press elsewhere still writing, or a run another panel started (#606).
+            if (WriteRefused()) return;
             // A check in flight holds Download off (UpdatesRefreshCheck), and its answer redraws the card: a
             // press that reached here anyway has nothing to act on yet, and "No release to install" would be
             // false in a moment.
@@ -474,10 +479,6 @@ namespace OpenDashPlugin
             }
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
-            applying = true;
-            applyingFraction = 0;
-            UpdatesDrawCard();
-            UpdatesRefreshCheck();
 
             // The run reports per chunk of a several-megabyte download, which is thousands of calls, and every
             // one of them crosses to the interface thread. Only a whole percent is drawn, so only a whole
@@ -491,27 +492,36 @@ namespace OpenDashPlugin
                 shown = percent;
                 Dispatcher.BeginInvoke(new Action(() =>
                 {
-                    applyingFraction = fraction;
-                    // The build that is showing now, which a rebuild since the press has replaced.
-                    if (applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
+                    // The build that is showing now, which a rebuild since the press has replaced; a rebuild draws
+                    // the fraction the service last heard (UpdateService.ApplyingFraction).
+                    if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
                 }));
             };
 
             // The run is the plugin's, and records what the rig is owed without the page (#613): the yes to
             // replacing edited dashboards on restart and the names the driver gave their screens are settled on
             // the run's thread, and the save is the plugin's. What is left here is drawing how it went.
-            plugin.ApplyUpdate(release, replaceEdited, report, outcome =>
+            var started = plugin.ApplyUpdate(release, replaceEdited, report, outcome =>
             {
-                // A run that throws is still finished on the page: without a completion, applying would stay
-                // true for the life of the control, the card would say "Downloading" until SimHub restarts, and
-                // every press the run holds off would stay held off with it. The exception is in the log, and the
-                // page says the failure in its own sentence, the shape Reinstall everything's takes, rather than
-                // in UpdateOutcome.Line's reason slot.
+                // A run that throws is still finished on the page: the service stops counting it as running either
+                // way, and the card is drawn again from that. The exception is in the log, and the page says the
+                // failure in its own sentence, the shape Reinstall everything's takes, rather than in
+                // UpdateOutcome.Line's reason slot.
                 var said = outcome == null ? PanelUpdates.UpdateFailed : outcome.Line;
                 // Posted, not Invoked: End runs on the interface thread and waits there for the part of the run
                 // that writes (UpdateService.WaitForIdle), so nothing on the run's thread may wait on that one.
                 Dispatcher.BeginInvoke(new Action(() => UpdatesApplied(release, outcome ?? new UpdateOutcome(), said)));
             });
+            // Only a run already going turns this one away, and the gate above has just said none is; the line is
+            // said all the same rather than drawing a run that is not there.
+            if (!started)
+            {
+                Say(PanelMessage.Caution(PanelWriteGate.WhileUpdating));
+                return;
+            }
+            // The run is the service's from here (UpdateService.Applying), and the card is drawn from it.
+            UpdatesDrawCard();
+            UpdatesRefreshCheck();
         }
 
         /// <summary>
@@ -538,8 +548,8 @@ namespace OpenDashPlugin
         /// for a run that threw.</param>
         private void UpdatesApplied(ReleaseInfo release, UpdateOutcome outcome, string said)
         {
-            applying = false;
-            applyingFraction = 0;
+            // The run was over for the service before this was posted (UpdateService.ApplyInBackground), so every
+            // press it held reads as free from here, on this panel or any other.
             try
             {
                 // The screens' names are back and the settings saved by now, by the run and the plugin
@@ -629,8 +639,10 @@ namespace OpenDashPlugin
         private void Reinstall()
         {
             // Two installers over the same DashTemplates folders is the one combination that can delete a folder
-            // one of them is extracting into, so whichever starts first holds the field.
+            // one of them is extracting into: a run this page started holds the press off, and any other writer
+            // refuses it (#606).
             if (UpdatesHeld) return;
+            if (WriteRefused()) return;
             // From the disk at the press, for the reason ApplyUpdate reads it there, and off the interface thread.
             UpdatesReadThen(ReinstallRead);
         }
@@ -638,6 +650,8 @@ namespace OpenDashPlugin
         /// <summary>Reinstall everything once the disk has been read: its question, or the run.</summary>
         private void ReinstallRead()
         {
+            // Asked again once the disk has been read, since a press elsewhere may have started meanwhile.
+            if (WriteRefused()) return;
             var edited = plugin.Installer.EditedFolders;
             var question = PanelUpdates.ReinstallQuestion(UpdatesNames(edited));
             var press = confirmation.Press(ReplacingAction.Reinstall, edited, question, updatesReinstallLine == null ? null : updatesReinstallLine.Text);

@@ -256,8 +256,8 @@ namespace OpenDashPlugin
             if (!StartWriting()) return new UpdateOutcome { Reason = StoppedReason };
             try
             {
-                // One writer in DashTemplates at a time: a press on the panel that writes a folder waits for this run
-                // rather than deleting a folder it is extracting into, and the run waits for the press (WriteLock).
+                // One writer in DashTemplates at a time: the panel refuses a press while this run goes (PanelWriteGate),
+                // and one that got in first is waited for here rather than deleting a folder the run extracts into.
                 lock (WriteLock)
                 {
                     var outcome = StageAndInstall(installer, replaceEdited, progress, plan, pluginBytes, downloaded);
@@ -378,10 +378,10 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Two writers over the same folders is the one combination that can delete a folder the other is extracting
-        /// into. While the presses ran on the interface thread they could not overlap each other; off it, a second
-        /// press waits here for the first, in the order they were pressed, which is the order they used to run in.
-        /// Whether a press should be refused while another run is busy, rather than queued, is #606's, and it reads
-        /// <see cref="Busy"/>, which counts every run that takes this lock.
+        /// into. The panel refuses a press made while another writer is running (PanelWriteGate, which reads
+        /// <see cref="Busy"/> and <see cref="Applying"/>), and every writer starts from the interface thread, so the
+        /// lock is rarely contended; it stays as the guarantee rather than the policy, and whichever comes second
+        /// waits here for the first.
         /// </remarks>
         private static readonly object WriteLock = new object();
         private static readonly ManualResetEventSlim Idle = new ManualResetEventSlim(true);
@@ -449,24 +449,47 @@ namespace OpenDashPlugin
         /// the settings are settled inside <see cref="Apply"/>, and <paramref name="finished"/> is called on the
         /// run's own thread, for the caller to save and to redraw however it likes. Nothing here is counted as work
         /// shutdown waits for; Apply counts its own writing.
+        ///
+        /// The run is <see cref="Applying"/> from the moment this returns true until just before
+        /// <paramref name="finished"/> is called, so that a page redrawn from it reads the run as over. That is the
+        /// service's rather than a page's, because SimHub builds a new settings control on every
+        /// GetWPFSettingsControl, and a flag on the control that pressed Download said nothing to the next one,
+        /// which offered Download again and started a second run (#606).
         /// </remarks>
         /// <param name="finished">Called on the run's thread with the outcome, or with null when Apply threw, the
         /// exception having been logged.</param>
-        public void ApplyInBackground(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, OpenDashSettings settings, Action<double> progress, Action<UpdateOutcome> finished)
+        /// <returns>False, with nothing run and <paramref name="finished"/> never called, when a run is already
+        /// going.</returns>
+        public bool ApplyInBackground(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, OpenDashSettings settings, Action<double> progress, Action<UpdateOutcome> finished)
         {
+            lock (WorkGate)
+            {
+                if (applying) return false;
+                applying = true;
+                applyingFraction = 0;
+            }
             InBackground(() =>
             {
                 UpdateOutcome outcome = null;
                 try
                 {
-                    outcome = Apply(installer, release, replaceEdited, progress, settings);
+                    outcome = Apply(installer, release, replaceEdited, fraction =>
+                    {
+                        lock (WorkGate) applyingFraction = fraction;
+                        progress?.Invoke(fraction);
+                    }, settings);
                 }
                 catch (Exception ex)
                 {
                     log.Error("Applying " + (release == null ? "the update" : release.Version) + " failed: " + ex);
                 }
+                finally
+                {
+                    lock (WorkGate) applying = false;
+                }
                 finished?.Invoke(outcome);
             }, log);
+            return true;
         }
 
         /// <summary>
@@ -481,7 +504,8 @@ namespace OpenDashPlugin
         /// waits for an update's install. It is counted no longer once the work is done, and only then is
         /// <paramref name="finished"/> called, so that a page redrawn from it reads Busy as false.
         ///
-        /// Work queued behind another writer waits for it (<see cref="WriteLock"/>). What the work does to SimHub's
+        /// Work queued behind another writer waits for it (<see cref="WriteLock"/>); the panel asks PanelWriteGate
+        /// first, so a press is refused rather than queued while another is busy (#606). What the work does to SimHub's
         /// own objects is the caller's to keep off this thread: a light profile's install touches settings SimHub's
         /// interface is bound to, and stays on the interface thread.
         /// </remarks>
@@ -555,11 +579,29 @@ namespace OpenDashPlugin
         public static bool WaitForIdle(TimeSpan timeout) => Idle.Wait(timeout);
 
         /// <summary>True while a run is staging the plugin or installing dashboards, or a panel press is writing them
-        /// (<see cref="WriteInBackground"/>), which is what End waits for. False while an update is only downloading,
-        /// since nothing on disk has been touched yet.</summary>
+        /// (<see cref="WriteInBackground"/>). End waits for it, and the panel refuses a press that would write
+        /// meanwhile (PanelWriteGate). False while an update is only downloading, since nothing on disk has been
+        /// touched yet; the panel reads <see cref="Applying"/> for that.</summary>
         public static bool Busy
         {
             get { lock (WorkGate) { return writing > 0; } }
+        }
+
+        private bool applying;
+        private double applyingFraction;
+
+        /// <summary>True while an update this service was handed (<see cref="ApplyInBackground"/>) is running, from
+        /// the press to its outcome, download included. The panel holds its own update presses off on it, refuses a
+        /// press that writes on it (PanelWriteGate), and draws the run from it whichever control started it.</summary>
+        public bool Applying
+        {
+            get { lock (WorkGate) { return applying; } }
+        }
+
+        /// <summary>How far the running update has got, from 0 to 1, for a page drawn while it runs.</summary>
+        public double ApplyingFraction
+        {
+            get { lock (WorkGate) { return applyingFraction; } }
         }
     }
 }
