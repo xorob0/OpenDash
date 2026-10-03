@@ -2,9 +2,13 @@
  * What `scripts/gui.ts` decides without a VM: whether the guest's display is in the mode its
  * coordinates were measured in, where in SimHub's window each click lands, what a look at Dash
  * Studio reads, and what a failure to open a dashboard says first. The clicking itself is a remote
- * side effect and is proved by running it.
+ * side effect and is proved by running it, except for what a script run in the desktop makes of
+ * one that never finished, which is asked of a fake host (`fakeHost.ts`).
  */
 import { describe, expect, test } from 'bun:test';
+import { readdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { withFakeHost, type Answer } from './fakeHost.ts';
 import {
   aimAt,
   cardsIn,
@@ -13,7 +17,9 @@ import {
   EXPECTED_SCREEN,
   guessRow,
   hex,
+  inDesktopScript,
   lookPoints,
+  openDashboards,
   openedLine,
   openFailure,
   parseClientArea,
@@ -511,5 +517,51 @@ describe("where the clicks land in SimHub's window", () => {
     expect(aimAt(maximised, 336, true).search).toEqual({ x: 2004, y: 274 });
     // The row is wherever it was found; only the search box moves with the offer here.
     expect(aimAt(maximised, 397, true).row).toEqual({ x: 1471, y: 397 });
+  });
+});
+
+describe('a script run in the desktop', () => {
+  const isLaunch = (script: string) => script.includes('New-ScheduledTaskAction');
+  /** The scheduled task doing its job: the output, then the marker the host waits for. */
+  const runs =
+    (output: string) =>
+    (script: string, share: string): Answer => {
+      if (!isLaunch(script)) return {};
+      const tag = /Data\\(opendash_gui_\w+)\.ps1/.exec(script)?.[1];
+      writeFileSync(path.join(share, `${tag}.out`), output);
+      writeFileSync(path.join(share, `${tag}.done`), 'done');
+      return { stdout: 'launched' };
+    };
+  /** A task that was started and never finished, which is what a hung or dead desktop looks like. */
+  const hangs = (script: string): Answer => (isLaunch(script) ? { stdout: 'launched' } : {});
+
+  test('brings back what it printed, and leaves nothing on the share', () => {
+    const { r, left } = withFakeHost(runs('SimHub\nOpenDash 8.8 (main)\n'), (host, _calls, share) => ({
+      r: inDesktopScript(host, "'hello'", 5),
+      left: readdirSync(share),
+    }));
+    expect(r).toMatchObject({ ok: true, stdout: 'SimHub\nOpenDash 8.8 (main)' });
+    expect(left).toEqual([]);
+  });
+
+  test('that times out is a failure that says so, not an empty answer', () => {
+    const { r, left } = withFakeHost(hangs, (host, _calls, share) => ({ r: inDesktopScript(host, "'hello'", 1), left: readdirSync(share) }));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('timed out');
+    expect(left).toEqual([]);
+  });
+
+  test('that could not be launched leaves no script behind on the share', () => {
+    const { r, left } = withFakeHost(
+      (script) => (isLaunch(script) ? { status: 1, stderr: 'Register-ScheduledTask : Access is denied.' } : {}),
+      (host, _calls, share) => ({ r: inDesktopScript(host, "'hello'", 1), left: readdirSync(share) }),
+    );
+    expect(r.ok).toBe(false);
+    expect(left).toEqual([]);
+  });
+
+  test('a list of open dashboards that timed out is no list, rather than none open', () => {
+    expect(withFakeHost(hangs, (host) => openDashboards(host, 1))).toBeNull();
+    expect(withFakeHost(runs('OpenDash 8.8\n'), (host) => openDashboards(host, 5))).toEqual(['OpenDash 8.8']);
   });
 });

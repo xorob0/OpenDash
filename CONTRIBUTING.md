@@ -112,8 +112,8 @@ so in the pull request rather than leaving it unsaid.
 
 Which packages to photograph is not a matter of judgement, because a card is shared and an edit to
 one of them reaches every face it appears on. `bun run affected` builds the branch and the commit
-it forked from, compares the packages the two builds wrote, and prints the `bun run shots` command
-that captures exactly those. CI runs the same comparison on every pull request and keeps the answer
+it forked from, compares the packages and LED profiles the two builds wrote, and prints the
+`bun run shots` command that captures exactly the packages; a profile has no screen to capture. CI runs the same comparison on every pull request and keeps the answer
 in one comment, so a reviewer sees the reach of a change without running anything.
 
 The same list answers a second question. `packages/dash/previews/<folder>.png` is the thumbnail

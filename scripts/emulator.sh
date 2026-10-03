@@ -2,9 +2,9 @@
 # Entry point for `bun run emulator`. Everything it does lives in emulator.ts; this exists only so
 # that Ctrl-C stops the emulator on the VM.
 #
-# On Bun 1.3.3, `process.on('SIGINT', ...)` registers a handler that is never called, and merely
-# registering it suppresses the default action, so a follow loop that armed one could not be
-# stopped at all. A shell trap does run, so the trap is here and the TypeScript arms nothing.
+# Bun calls a `process.on('SIGINT', ...)` handler only when its event loop turns, so a script
+# blocked in spawnSync carries on past Ctrl-C (see interruptible.sh). A shell trap runs at once, so
+# the trap is here and the TypeScript arms nothing.
 #
 # Only `start --follow` needs it. Every other subcommand returns on its own and is exec'd, so that
 # it keeps this script's exit status and signals reach it directly.

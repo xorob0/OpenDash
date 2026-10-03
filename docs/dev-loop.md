@@ -33,6 +33,7 @@ bun run dev --scenario untimed                 # a lap race with no clock: #387'
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
 | [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
 | [`bun run shots`](../scripts/shots.ts) | several packages photographed on one claim, into `build/shots/` |
+| [`bun run modules`](../scripts/modules.ts) | the twenty-one companion modules, one to a picture, on one claim |
 | [`bun run previews`](../scripts/previews.ts) | the same captures, scaled and committed as the thumbnails SimHub's dashboard list draws |
 | [`bun scripts/rig.ts`](../scripts/rig.ts) | a rig written into the plugin's settings: `panel` for the panel's captures, `gallery` for the site's, `clear`, `empty` for a first run, `show` |
 | [`bun run panel-shots`](../scripts/panel-shots.ts) | every page of the settings panel at every width, on one claim, into `build/panel/` |
@@ -46,7 +47,7 @@ The panel is WPF inside SimHub's window, so nothing has to be opened in Dash Stu
 entry in SimHub's left menu is clicked once and every page is one click on the sidebar.
 
 ```bash
-OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel   # every page at every width
+bun run panel-shots --menu-y <y> --rig panel   # every page at every width
 ```
 
 That one command claims the VM, packages and installs the plugin with its left-menu entry, puts the
@@ -102,6 +103,19 @@ it is one period of the emulator's rev sweep, so the loop seam is quiet. Every c
 SimHub produce confusing results rather than an error. A claim older than ninety minutes counts as
 abandoned, since a session that dies never releases one. `bun run vm who` says who has it and
 `bun run vm release` gives it back.
+
+A claim is the user, the machine and the checkout, as in `root@cumulus:~/dev/OpenDash/.claude/worktrees/agent-a`,
+so two worktrees on one machine are two sessions, while every command run from one checkout is the
+same one: a claim in one command carries into the next, and `bun run vm release` from a fresh shell
+gives it back. `OPENDASH_VM_WHO` overrides the name. The claim is a compare-and-swap under `flock` on
+the VM host, so two sessions claiming at the same moment leave one owner and the other is refused.
+`bun scripts/rig.ts` claims around its restart, and keeps a claim it found already yours.
+
+Ctrl-C on `dev`, `shots`, `record` or `modules` puts the VM back before it returns: the
+emulator is stopped, `record`'s trace recorder is taken out of SimHub, and the claim is released if
+it is still this session's. When another session has claimed the VM by then, nothing on it is
+touched. `--keep` is honoured on Ctrl-C as well. A second Ctrl-C abandons the putting back. `clips`
+has its own wrapper, which stops the emulator and releases the claim.
 
 ## Why opening the dashboard is clicked
 
@@ -236,10 +250,14 @@ vm` restarts SimHub by killing it. So every install brings the offer back, and a
 it away blind cannot tell a click that took from one that missed. `openDashboard` looks (#308), and
 [testing-vm.md](testing-vm.md) has how to bring the offer back on purpose to test against it.
 
-**Bun does not deliver signals to a handler.** On 1.3.3, `process.on('SIGINT', ...)` registers a
-handler that is never called, and registering it suppresses the default action, so a long running
-Bun script that arms one cannot be interrupted at all. Where a clean stop matters, the trap lives
-in a shell wrapper: `scripts/emulator.sh` is the example.
+**Bun runs a signal handler only when its event loop turns.** A Bun script with no SIGINT handler
+dies of Ctrl-C on the spot and skips every `finally`. One with a handler, `process.on('SIGINT',
+...)`, has it called only once the event loop next runs, and the VM scripts are chains of
+`spawnSync` that never yield: Ctrl-C kills the SSH call in flight, the script carries on to its next
+step, and the handler waits for the end of the run (measured on Bun 1.3.3 and 1.4.2, #625). So
+where a clean stop matters, the trap lives in a shell wrapper: `scripts/interruptible.sh` runs
+`dev`, `shots`, `record` and `modules`, and `scripts/emulator.sh` and `scripts/clips.sh` are their
+own. Run through `bun run`, not `bun scripts/<name>.ts`, or the wrapper is not there.
 
 **GDI+ will not write to the share.** `Bitmap.Save` to `\\host.lan\Data\...` reports success and
 leaves nothing behind, so a capture is saved to the guest's own disk and copied afterwards.

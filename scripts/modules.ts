@@ -22,9 +22,9 @@
  * the page dots and the flag band are all still the companion's own, which is why the dots read
  * "one of twenty-one" in every picture.
  *
- *   bun scripts/modules.ts                       # all 21, on the green scenario
- *   bun scripts/modules.ts --modules fuel,tyres  # by id
- *   bun scripts/modules.ts --scenario race --keep
+ *   bun run modules                       # all 21, on the green scenario
+ *   bun run modules --modules fuel,tyres  # by id
+ *   bun run modules --scenario race --keep
  *
  * The packages it installs are named `OpenDash module <nn> <id>` so that they sort in catalogue
  * order in Dash Studio's list and never collide with a shipped name. They are scratch: nothing
@@ -49,6 +49,33 @@ const repoRoot = path.resolve(import.meta.dir, '..');
 
 /** The landscape companion. The portrait one is the same modules in a narrower box. */
 const SIZE = COMPANION_SIZES[0]!;
+
+/**
+ * Every step `run` takes on the VM, and the emulator build, gathered in one object so that a test
+ * can answer them in place of the guest, as `transport` lets the fake host answer SSH. The run is
+ * a sequence of these, and what is worth pinning is what it makes of their answers.
+ */
+export const steps = {
+  readClaim,
+  claim,
+  release,
+  status,
+  up,
+  waitReady,
+  guiProblem,
+  install,
+  buildEmulator,
+  uploadEmulator,
+  startEmulator,
+  stopEmulator,
+  waitForLaps,
+  lapsCompleted,
+  closeDashboards,
+  openDashboard,
+  placeDashboards,
+  captureDashboard,
+  sleep,
+};
 
 /** `OpenDash module 05 fuel`: sorts in catalogue order and cannot collide with a shipped name. */
 export const packageNameFor = (number: number, id: string): string =>
@@ -88,6 +115,8 @@ export interface Options {
   scenario: string;
   outDir: string;
   keep: boolean;
+  /** Where the single-module packages are written for `install`; build/, which is what it globs. */
+  buildDir: string;
 }
 
 const list = (value: string | undefined): string[] | undefined =>
@@ -105,12 +134,13 @@ export function parseArgs(argv: readonly string[]): Options | { help: true } {
     scenario: flagValue('scenario') ?? 'green',
     outDir: flagValue('out') ?? path.join(repoRoot, 'build/shots/modules'),
     keep: argv.includes('--keep'),
+    buildDir: path.join(repoRoot, 'build'),
   };
 }
 
 const USAGE = `modules: photograph every companion module on its own.
 
-  bun scripts/modules.ts [--modules a,b] [--scenario green] [--out dir] [--keep]
+  bun run modules [--modules a,b] [--scenario green] [--out dir] [--keep]
 
   --modules   comma separated module ids; default all ${MODULE_CATALOGUE.length}
               ${MODULE_CATALOGUE.map((m) => m.id).join(', ')}
@@ -130,6 +160,10 @@ export async function run(host: Host, opts: Options): Promise<number> {
     console.error(`unknown module${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`);
     return 1;
   }
+
+  const { readClaim, claim, release, status, up, waitReady, guiProblem, install } = steps;
+  const { buildEmulator, uploadEmulator, startEmulator, stopEmulator, waitForLaps, lapsCompleted } = steps;
+  const { closeDashboards, openDashboard, placeDashboards, captureDashboard, sleep } = steps;
 
   const held = readClaim(host);
   if (held && held.who !== whoAmI()) {
@@ -166,7 +200,7 @@ export async function run(host: Host, opts: Options): Promise<number> {
     // there would be embedded in the next release, so they are deleted the moment SimHub has them
     // — which is as soon as install returns, since from then on the copies that matter are the
     // ones on the VM.
-    const buildDir = path.join(repoRoot, 'build');
+    const buildDir = opts.buildDir;
     mkdirSync(buildDir, { recursive: true });
     const version = readVersion();
     console.log(`building ${wanted.length} single-module packages`);
@@ -178,7 +212,7 @@ export async function run(host: Host, opts: Options): Promise<number> {
     });
 
     console.log('installing them, which restarts SimHub once');
-    const installed = install(host, folders);
+    const installed = install(host, folders, buildDir);
     for (const folder of folders) {
       rmSync(path.join(buildDir, folder), { recursive: true, force: true });
       rmSync(path.join(buildDir, `${folder}.simhubdash`), { force: true });
@@ -188,17 +222,32 @@ export async function run(host: Host, opts: Options): Promise<number> {
       return 1;
     }
 
+    // Each step is checked before the next: an emulator that did not build, reach the guest or start
+    // leaves SimHub idle, and the run would otherwise wait out the laps and photograph twenty-one
+    // idle screens under the scenario's name, with a run.json saying the scenario was running.
     console.log(`starting the emulator on "${opts.scenario}"`);
-    buildEmulator();
-    uploadEmulator(host);
-    startEmulator(host, { scenario: opts.scenario, replace: true });
+    const emulator = buildEmulator();
+    if (!emulator.ok) {
+      console.error(emulator.stderr || emulator.stdout);
+      return 1;
+    }
+    const uploaded = uploadEmulator(host);
+    if (!uploaded.ok) {
+      console.error(uploaded.stderr);
+      return 1;
+    }
+    const running = startEmulator(host, { scenario: opts.scenario, replace: true });
+    if (!running.ok) {
+      console.error(running.stderr);
+      return 1;
+    }
     sleep(6);
     // The pages that read a history (lap history, sectors, stint, the recorded track map) are blank
     // until SimHub has watched a lap or two complete; photographing them before that is a picture
     // of the wait, not of the page.
     console.log('  letting 2 laps go by first');
     if (!waitForLaps(host, 2)) console.error('  the laps did not come; photographing anyway');
-    const run = { ...provenance(opts.scenario), captures: {} as Record<string, RunCapture> };
+    const run = { ...provenance(), captures: {} as Record<string, RunCapture> };
 
     mkdirSync(opts.outDir, { recursive: true });
     let taken = 0;
@@ -215,7 +264,7 @@ export async function run(host: Host, opts: Options): Promise<number> {
       const shot = captureDashboard(host, name, file);
       if (shot.ok) {
         taken += 1;
-        run.captures[path.basename(file)] = { kind: 'page', page: meta.id, width: SIZE.width, height: SIZE.height, lapsSeen: lapsCompleted(host) };
+        run.captures[path.basename(file)] = { kind: 'page', page: meta.id, scenario: opts.scenario, width: SIZE.width, height: SIZE.height, lapsSeen: lapsCompleted(host) };
         console.log(`  [${index + 1}/${wanted.length}] ${meta.name} photographed`);
       } else {
         console.error(`  [${index + 1}/${wanted.length}] ${meta.name}: ${shot.stderr.trim()}`);

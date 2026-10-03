@@ -68,7 +68,7 @@ of the plugin. Two commands make them, both from the repository root:
 
 ```bash
 bun run shots --scenarios gallery          # whole packages
-bun scripts/modules.ts --scenario gallery  # each page alone
+bun run modules --scenario gallery  # each page alone
 ```
 
 Then look at the captures, and copy the ones worth keeping in:

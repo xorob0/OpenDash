@@ -14,22 +14,47 @@ describe('stableName', () => {
 });
 
 describe('merge', () => {
-  test('takes the run’s provenance and keeps the files it did not touch', () => {
+  test('keeps the files it did not touch, and each capture keeps its own scenario', () => {
+    const stamp = { version: '0.2.0-rc.1', commit: '4997cbd', date: '2026-09-16', simHubVersion: '9.12.6' };
     const before = {
-      schema: 1 as const,
-      version: '0.2.0-rc.1',
-      commit: '4997cbd',
-      date: '2026-09-16',
-      simHubVersion: '9.12.6',
-      scenario: 'green',
-      files: { 'opendash.png': { kind: 'package' as const, package: 'OpenDash', width: 1920, height: 480, scenario: 'green' }, 'page-fuel.png': { kind: 'page' as const, page: 'fuel', width: 850, height: 480, scenario: 'green' } },
+      schema: 2 as const,
+      files: {
+        'opendash.png': { kind: 'package' as const, package: 'OpenDash', width: 1920, height: 480, scenario: 'green', ...stamp },
+        'page-fuel.png': { kind: 'page' as const, page: 'fuel', width: 850, height: 480, scenario: 'green', ...stamp },
+      },
     };
-    const after = merge(before, { version: '0.3.0-rc.5', commit: 'abc1234', date: '2026-09-23', simHubVersion: '9.12.6', scenario: 'gallery' }, {
+    const after = merge(before, { version: '0.3.0-rc.5', commit: 'abc1234', date: '2026-09-23', simHubVersion: '9.12.6' }, {
       'opendash.png': { kind: 'package', package: 'OpenDash', width: 1920, height: 480, scenario: 'gallery' },
     });
-    expect(after.version).toBe('0.3.0-rc.5');
-    expect(after.scenario).toBe('gallery');
+    expect(after.schema).toBe(2);
+    expect(Object.keys(after.files).sort()).toEqual(['opendash.png', 'page-fuel.png']);
     expect(after.files['opendash.png']?.scenario).toBe('gallery');
-    expect(after.files['page-fuel.png']?.scenario).toBe('green');
+    expect(after.files['page-fuel.png']).toEqual(before.files['page-fuel.png']);
+  });
+});
+
+describe('a partial sync', () => {
+  // A schema 1 sidecar, as it was committed until #627: one run's provenance for every file.
+  const before = {
+    schema: 1 as const,
+    version: '0.2.0-rc.1',
+    commit: '4997cbd',
+    date: '2026-09-16',
+    simHubVersion: '9.12.6',
+    scenario: 'green',
+    files: {
+      'opendash.png': { kind: 'package' as const, package: 'OpenDash', width: 1920, height: 480, scenario: 'green' },
+      'page-fuel.png': { kind: 'page' as const, page: 'fuel', width: 850, height: 480, scenario: 'green' },
+    },
+  };
+  const run = { version: '0.3.0-rc.5', commit: 'abc1234', date: '2026-09-23', simHubVersion: '9.12.6' };
+  const after = merge(before, run, { 'opendash.png': { kind: 'package', package: 'OpenDash', width: 1920, height: 480, scenario: 'gallery' } });
+
+  test('stamps the captures it brought with the run that took them', () => {
+    expect(after.files['opendash.png']).toMatchObject({ version: '0.3.0-rc.5', commit: 'abc1234', date: '2026-09-23' });
+  });
+
+  test('leaves the captures it did not bring with the run that took them, not the newest one', () => {
+    expect(after.files['page-fuel.png']).toMatchObject({ version: '0.2.0-rc.1', commit: '4997cbd', date: '2026-09-16' });
   });
 });

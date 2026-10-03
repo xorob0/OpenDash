@@ -6,6 +6,8 @@
  * from the thing that actually changed, and a card is shared: an edit to one of them reaches every
  * face that card appears on. The files a diff touches therefore answer the wrong question. This
  * builds the branch and the commit it forked from, and compares the packages the two builds wrote.
+ * The LED profiles are compared beside them: a profile is not a package (ADR 0013), but it is build
+ * output a driver installs, and a branch that changes only the flag box has still changed something.
  *
  * The comparison is a byte comparison, which is only meaningful because the packages are
  * reproducible: `writePackage` sorts the zip entries and stamps the same fixed timestamp on every
@@ -16,7 +18,7 @@
  * command that captures exactly those on the VM.
  *
  * The report goes to stdout and progress goes to stderr, so that CI can capture one without the
- * other. Nothing on stdout means no package output moved.
+ * other. Nothing on stdout means neither a package nor a profile moved.
  */
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -44,7 +46,7 @@ export const USAGE = `affected: which packages a change reaches, computed from t
   --keep   leave build/affected in place, to look at the two builds by hand
   --help   print this text
 
-It writes the report to stdout and prints nothing at all when no package output moved.
+It writes the report to stdout and prints nothing at all when no package and no LED profile moved.
 `;
 
 export interface AffectedOptions {
@@ -52,14 +54,32 @@ export interface AffectedOptions {
   keep: boolean;
 }
 
-/** One package as the build left it: the folder SimHub imports it under, and the bytes of its zip. */
+/** One kind of build output by name, each with the hash of its bytes. */
 export type Digest = ReadonlyMap<string, string>;
+
+/**
+ * A build as the comparison sees it. A package is named by the folder SimHub imports it under, and
+ * a profile likewise by the file the build wrote, without the extension: `OpenDash Flag box`, as
+ * docs/flag-box.md calls it, and `OpenDash 4-14-4` for the strip SimHub lists as `OpenDash 4/14/4`,
+ * the slash being a path separator (see `rpmStripFileName`). The file is what the manifest names
+ * and what a reviewer finds in build/.
+ */
+export interface BuildDigest {
+  packages: Digest;
+  profiles: Digest;
+}
 
 export interface Comparison {
   added: readonly string[];
   removed: readonly string[];
   changed: readonly string[];
   unchanged: readonly string[];
+}
+
+/** What moved between two builds, packages and profiles apart, because only a package can be photographed. */
+export interface Changes {
+  packages: Comparison;
+  profiles: Comparison;
 }
 
 interface ManifestEntry {
@@ -88,19 +108,23 @@ function run(argv: readonly string[], cwd: string): string {
 }
 
 /**
- * Reads a build's output into folder name and hash.
+ * Reads a build's output into name and hash, for every package and every LED profile its manifest
+ * lists.
  *
  * The hash covers the `.simhubdash` rather than the unzipped folder because the zip is what SimHub
- * imports and what a release ships, and it already contains every file the folder holds.
+ * imports and what a release ships, and it already contains every file the folder holds. A profile
+ * is a single file, so it is hashed as it is.
  */
-export function digest(outDir: string): Digest {
-  const manifest = JSON.parse(readFileSync(path.join(outDir, MANIFEST_FILE), 'utf8')) as { packages: ManifestEntry[] };
-  const digests = new Map<string, string>();
-  for (const entry of manifest.packages) {
-    const bytes = readFileSync(path.join(outDir, entry.file));
-    digests.set(entry.folder, createHash('sha256').update(bytes).digest('hex'));
-  }
-  return digests;
+export function digest(outDir: string): BuildDigest {
+  const manifest = JSON.parse(readFileSync(path.join(outDir, MANIFEST_FILE), 'utf8')) as { packages: ManifestEntry[]; ledProfiles?: string[] };
+  const hashOf = (file: string): string => createHash('sha256').update(readFileSync(path.join(outDir, file))).digest('hex');
+  const packages = new Map<string, string>();
+  for (const entry of manifest.packages) packages.set(entry.folder, hashOf(entry.file));
+  // A base built before the manifest listed its profiles has none to compare, and every profile the
+  // branch builds then reads as new, which is the honest answer to a question that base cannot ask.
+  const profiles = new Map<string, string>();
+  for (const file of manifest.ledProfiles ?? []) profiles.set(path.parse(file).name, hashOf(file));
+  return { packages, profiles };
 }
 
 /** What moved between two builds. Sorted, so that a report of the same change reads the same twice. */
@@ -117,6 +141,11 @@ export function compare(base: Digest, head: Digest): Comparison {
   const removed = [...base.keys()].filter((folder) => !head.has(folder));
   const sorted = (names: string[]): string[] => names.sort((a, b) => a.localeCompare(b));
   return { added: sorted(added), removed: sorted(removed), changed: sorted(changed), unchanged: sorted(unchanged) };
+}
+
+/** {@link compare} for each kind of output a build writes. */
+export function compareBuilds(base: BuildDigest, head: BuildDigest): Changes {
+  return { packages: compare(base.packages, head.packages), profiles: compare(base.profiles, head.profiles) };
 }
 
 /**
@@ -150,7 +179,7 @@ function linkDependencies(tree: string): void {
  * every package's metadata: left alone, a release commit would report all twenty-two packages as
  * changed and say nothing about what a reviewer should look at.
  */
-function buildBase(sha: string, outDir: string): Digest {
+function buildBase(sha: string, outDir: string): BuildDigest {
   const tree = path.join(WORK_DIR, 'base-tree');
   // A run killed before its cleanup leaves the checkout registered although the directory is gone,
   // and git then refuses to add the same path again. Pruning first makes a second run work.
@@ -166,28 +195,45 @@ function buildBase(sha: string, outDir: string): Digest {
   }
 }
 
-/** The report body, or an empty string when no package output moved. */
-export function report(comparison: Comparison, baseSha: string): string {
-  const { added, changed, removed } = comparison;
-  const moved = added.length + changed.length + removed.length;
-  if (moved === 0) return '';
+/** `3 packages`, `1 LED profile`. */
+const count = (n: number, noun: string): string => `${n} ${noun}${n === 1 ? '' : 's'}`;
 
-  const lines = [
-    COMMENT_MARKER,
-    `### ${moved} package${moved === 1 ? '' : 's'} to look at`,
-    '',
-    ...changed.map((folder) => `- \`${folder}\``),
-    ...added.map((folder) => `- \`${folder}\` (new)`),
-    ...removed.map((folder) => `- \`${folder}\` (removed)`),
-    '',
-    'This list is computed from the packages the build wrote rather than from the files the diff',
-    'touches, because a card is shared and an edit to one of them reaches every face it appears on.',
+/** The lines that name what moved of one kind, in the order changed, new, removed. */
+const listOf = ({ changed, added, removed }: Comparison): string[] => [
+  ...changed.map((name) => `- \`${name}\``),
+  ...added.map((name) => `- \`${name}\` (new)`),
+  ...removed.map((name) => `- \`${name}\` (removed)`),
+];
+
+const movedIn = ({ added, changed, removed }: Comparison): number => added.length + changed.length + removed.length;
+
+/** The report body, or an empty string when neither a package nor a profile moved. */
+export function report({ packages, profiles }: Changes, baseSha: string): string {
+  const movedPackages = movedIn(packages);
+  const movedProfiles = movedIn(profiles);
+  if (movedPackages + movedProfiles === 0) return '';
+
+  const heading = [
+    ...(movedPackages > 0 ? [count(movedPackages, 'package')] : []),
+    ...(movedProfiles > 0 ? [count(movedProfiles, 'LED profile')] : []),
+  ].join(' and ');
+  const lines = [COMMENT_MARKER, `### ${heading} to look at`, ''];
+  if (movedPackages > 0) lines.push(...listOf(packages), '');
+  if (movedProfiles > 0) {
+    // Apart from the packages and kept out of the capture command below: a profile paints LEDs,
+    // not a screen, so there is nothing of it for `bun run shots` to photograph.
+    if (movedPackages > 0) lines.push('LED profiles, which have no screen to capture:', '');
+    lines.push(...listOf(profiles), '');
+  }
+  lines.push(
+    'This list is computed from what the build wrote rather than from the files the diff touches,',
+    'because a card is shared and an edit to one of them reaches every face it appears on.',
     `Compared against \`${baseSha.slice(0, 12)}\`.`,
-  ];
+  );
 
   // Capturing something the build no longer produces is not possible, so a removal is reported
   // without being offered to the VM.
-  const capturable = [...changed, ...added];
+  const capturable = [...packages.changed, ...packages.added];
   if (capturable.length > 0) {
     lines.push(
       '',
@@ -204,7 +250,7 @@ export function report(comparison: Comparison, baseSha: string): string {
   return `${lines.join('\n')}\n`;
 }
 
-export function affected(opts: AffectedOptions): Comparison {
+export function affected(opts: AffectedOptions): Changes {
   const baseSha = run(['git', 'merge-base', 'HEAD', opts.base], repoRoot).trim();
   if (baseSha === '') throw new Error(`no merge base between HEAD and ${opts.base}`);
 
@@ -218,11 +264,12 @@ export function affected(opts: AffectedOptions): Comparison {
     run(['bun', 'packages/dash/src/build.ts', '--out', headOut], repoRoot);
     const head = digest(headOut);
 
-    const comparison = compare(base, head);
-    const { changed, added, removed, unchanged } = comparison;
-    progress(`${changed.length} changed, ${added.length} new, ${removed.length} removed, ${unchanged.length} untouched`);
-    process.stdout.write(report(comparison, baseSha));
-    return comparison;
+    const changes = compareBuilds(base, head);
+    for (const [kind, { changed, added, removed, unchanged }] of [['packages', changes.packages], ['LED profiles', changes.profiles]] as const) {
+      progress(`${kind}: ${changed.length} changed, ${added.length} new, ${removed.length} removed, ${unchanged.length} untouched`);
+    }
+    process.stdout.write(report(changes, baseSha));
+    return changes;
   } finally {
     if (!opts.keep) rmSync(WORK_DIR, { recursive: true, force: true });
   }

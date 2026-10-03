@@ -1,11 +1,17 @@
 /**
  * What `bun run shots` decides before it touches the VM: how its arguments are read, which
  * packages it walks by default, and what it calls the files it writes. The loop itself is a
- * sequence of remote steps and is proved by running it.
+ * sequence of remote steps, answered here by `steps` in place of the guest, so that what it writes
+ * beside the pictures can be read back.
  */
-import { describe, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, spyOn, test } from 'bun:test';
+import { mkdtempSync, rmSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { LIST_ORDER } from './dev.ts';
-import { FACES, parseArgs, shotName } from './shots.ts';
+import { FACES, parseArgs, shotName, shots, steps, type ShotsOptions } from './shots.ts';
+import { readRun, upgradeRun } from './shotsRun.ts';
+import type { Host, RunResult } from './vm.ts';
 
 describe('reading the arguments', () => {
   test('nothing means every face on green', () => {
@@ -80,5 +86,68 @@ describe('what a capture is called', () => {
   test('every face produces a distinct file name in one scenario', () => {
     const names = new Set(FACES.map((f, i) => shotName(i + 1, f, 'green')));
     expect(names.size).toBe(FACES.length);
+  });
+});
+
+describe('what a run writes beside its pictures', () => {
+  const host: Host = { local: true, name: 'fake' };
+  const ok = (stdout = ''): RunResult => ({ ok: true, code: 0, stdout, stderr: '' });
+  const real = { ...steps };
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(os.tmpdir(), 'opendash-shots-'));
+    // Every step answering as a guest with the emulator running does.
+    Object.assign(steps, {
+      readClaim: () => null,
+      claim: () => ok('claimed'),
+      release: () => ok('released'),
+      status: () => ok('guest-ssh: up'),
+      up: () => ok(),
+      waitReady: () => true,
+      guiProblem: () => null,
+      install: () => ok('installed'),
+      buildEmulator: () => ok(),
+      uploadEmulator: () => ok('uploaded'),
+      startEmulator: () => ok('running'),
+      stopEmulator: () => ok('stopped cleanly'),
+      waitForLaps: () => true,
+      lapsCompleted: () => 2,
+      closeDashboards: () => [],
+      openDashboard: () => ok(),
+      placeDashboards: () => ok(),
+      captureDashboard: () => ok(),
+      sleep: () => {},
+      packageSize: (name: string) => (name === 'OpenDash' ? { width: 1920, height: 480 } : { width: 850, height: 480 }),
+    } satisfies Partial<typeof steps>);
+    spyOn(console, 'log').mockImplementation(() => {});
+    spyOn(process.stdout, 'write').mockImplementation(() => true);
+  });
+
+  afterEach(() => {
+    Object.assign(steps, real);
+    (console.log as unknown as { mockRestore(): void }).mockRestore();
+    (process.stdout.write as unknown as { mockRestore(): void }).mockRestore();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const opts = (): ShotsOptions => ({ packages: ['OpenDash', 'OpenDash 850x480'], scenarios: ['green', 'notc'], outDir: dir, noBuild: true, keep: false, warmLaps: 2 });
+
+  test('a run over two scenarios leaves a record for every picture, each naming its own scenario', async () => {
+    expect(await shots(host, opts())).toBe(0);
+    const run = readRun(dir);
+    expect(Object.fromEntries(Object.entries(run?.captures ?? {}).map(([file, c]) => [file, c.scenario]))).toEqual({
+      [shotName(1, 'OpenDash', 'green')]: 'green',
+      [shotName(2, 'OpenDash 850x480', 'green')]: 'green',
+      [shotName(3, 'OpenDash', 'notc')]: 'notc',
+      [shotName(4, 'OpenDash 850x480', 'notc')]: 'notc',
+    });
+  });
+});
+
+describe('a run.json written before #627', () => {
+  test('reads as the current schema, every capture taking the one scenario the file named', () => {
+    const v1 = { schema: 1 as const, scenario: 'gallery', version: '0.3.0-rc.6', commit: '2b876e2', dirty: false, date: '2026-09-22', simHubVersion: '9.12.6', captures: { '01-opendash-gallery.png': { kind: 'package' as const, package: 'OpenDash', width: 1920, height: 480, lapsSeen: 2 } } };
+    expect(upgradeRun(v1)).toEqual({ schema: 2, version: '0.3.0-rc.6', commit: '2b876e2', dirty: false, date: '2026-09-22', simHubVersion: '9.12.6', captures: { '01-opendash-gallery.png': { kind: 'package', package: 'OpenDash', width: 1920, height: 480, lapsSeen: 2, scenario: 'gallery' } } });
   });
 });
