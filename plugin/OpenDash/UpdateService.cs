@@ -52,9 +52,6 @@ namespace OpenDashPlugin
         /// <summary>Whether the new plugin is staged and will be put in place when SimHub closes.</summary>
         public bool PluginStaged { get; set; }
 
-        /// <summary>Why the plugin could not be staged, when the dashboards went in and it did not.</summary>
-        public string PluginReason { get; set; }
-
         /// <summary>Whether the dashboards this run wrote brought a font into DashFonts, which the running SimHub
         /// cannot draw until it restarts (<see cref="UpdateWording.RestartToSee"/>).</summary>
         public bool FontsWritten { get; set; }
@@ -85,7 +82,6 @@ namespace OpenDashPlugin
                         ? UpdateWording.Restart
                         : UpdateWording.RestartWithDashboards(FollowPlugin.Count, EditedFollowing.Count, ReplaceEditedOnRestart));
                 }
-                if (PluginReason != null) line += "OpenDash itself could not be updated (" + PluginReason + "). ";
                 return line + UpdateWording.ToSee(FontsWritten);
             }
         }
@@ -241,9 +237,11 @@ namespace OpenDashPlugin
             // reached on a shutdown that times out or a process that is killed, and the waiter has to
             // outlive both.
             if (staged != null && staged.Ok) PluginUpdate.Launch(installer.SimHubRoot, log);
-            // A release that carries the plugin and nothing else has done nothing when the plugin could not be
-            // staged, which is every release since #438. That is a failure, not "nothing to replace".
-            if (staged != null && !staged.Ok && plan.IsEmpty)
+            // A plugin that could not be staged stops the run here, before any package is written, for the reason a
+            // failed download does: the release's dashboards on the old plugin are the mismatch this path exists to
+            // avoid (#616). For a release that carries the plugin and nothing else, which is every release since
+            // #438, nothing has been done at all, and that is a failure too rather than "nothing to replace".
+            if (staged != null && !staged.Ok)
             {
                 return new UpdateOutcome { Reason = "OpenDash itself could not be put in place (" + staged.Error + ")", NotCarried = plan.NotCarried };
             }
@@ -262,8 +260,8 @@ namespace OpenDashPlugin
             // telling somebody that "" could not be installed is no better than telling them nothing.
             // What the release does not publish on its own it carries inside the plugin, once that is staged: the new
             // assembly embeds every package, and its first start writes each folder whose version it does not
-            // match. Only then, though -- a plugin that could not be staged brings nothing, and those folders really
-            // are not in this release.
+            // match. Only then, though -- a release that carries no plugin brings nothing, and those folders really
+            // are not in this release. (One whose plugin could not be staged has already stopped above.)
             var pluginStaged = staged != null && staged.Ok;
             var following = pluginStaged ? plan.NotCarried : new string[0];
             var editedFollowing = installer.Packages
@@ -286,7 +284,6 @@ namespace OpenDashPlugin
                 ReplaceEditedOnRestart = replaceEdited && editedFollowing.Count > 0,
                 Reason = failed.Count == 0 ? null : (target.LastError ?? string.Join(", ", failed) + " could not be installed"),
                 PluginStaged = pluginStaged,
-                PluginReason = staged == null || staged.Ok ? null : staged.Error,
                 FontsWritten = PackageExtractor.FacesWrittenSince(installer.SimHubRoot, writing) > 0,
             };
         }
