@@ -25,7 +25,9 @@ for profile in "${profiles[@]}"; do
   if [[ "$(od -An -tx1 -N2 "$profile" | tr -d ' \n')" == "1f8b" ]]; then
     continue
   fi
-  gzip -9 -c "$profile" > "$profile.gz"
+  # -n: no name and no mtime in the header. The build rewrites every profile, so without it the
+  # same profile gzips to new bytes on every build, and the assembly that embeds it with them (#605).
+  gzip -9 -n -c "$profile" > "$profile.gz"
   mv "$profile.gz" "$profile"
   compressed=$((compressed + 1))
 done
