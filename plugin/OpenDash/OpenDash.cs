@@ -44,6 +44,13 @@ namespace OpenDashPlugin
 
         private DashboardInstaller installer;
 
+        /// <summary>The screens whose properties and actions are attached; see AttachAddedScreens (#636).</summary>
+        private readonly ScreenAttachments attached = new ScreenAttachments();
+
+        /// <summary>What AttachActions registers an action with, kept for the screens added after Init. Null
+        /// until Init has registered the rig's.</summary>
+        private RegisterAction registerAction;
+
         /// <summary>
         /// Built on first use rather than eagerly, because the record of what OpenDash wrote into each folder lives
         /// in the settings and the settings are read in Init. The lambdas read Settings each time, so the record and
@@ -304,7 +311,8 @@ namespace OpenDashPlugin
             try
             {
                 // Extracted, not installed: ADR 0013. The user imports it, and the panel says so.
-                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog());
+                // Settings remember what was written, so a file the driver edited is kept (#618); saved below.
+                FlagBox = FlagBoxProfile.Extract(Installer.SimHubRoot, typeof(OpenDash).Assembly, new SimHubInstallLog(), Settings);
             }
             catch (Exception ex)
             {
@@ -653,6 +661,14 @@ namespace OpenDashPlugin
             {
                 Log.Error("Saving the settings failed", ex);
             }
+            try
+            {
+                AttachAddedScreens();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Attaching a screen added in this session failed", ex);
+            }
         }
 
         /// <summary>
@@ -739,11 +755,10 @@ namespace OpenDashPlugin
         /// OpenDashSettings.DeclaredProperties() lists them: a rig and not the catalogue, because eight
         /// faces of twenty-one properties is a hundred and sixty-eight names for a rig of two screens.
         ///
-        /// A screen added while SimHub is running therefore has no properties until it is restarted.
-        /// That is not a new limitation: SimHub reads its dashboard list once at startup too, so the
-        /// screen a user has just added is not one they can open in this session either. Until then its
-        /// bindings fall back to the defaults they carry, which is what a package does with no plugin at
-        /// all.
+        /// A screen added while SimHub is running is attached when the panel saves it, by
+        /// AttachAddedScreens through the same AttachScreenProperties this calls, so the two cannot list
+        /// different names. Until #636 nothing did: SimHub listed the new screen's dashboard and drew it,
+        /// and every binding it read fell through to its literal default until SimHub restarted.
         /// </remarks>
         private void AttachProperties()
         {
@@ -793,62 +808,67 @@ namespace OpenDashPlugin
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
             // a delegate that searched the rig by namespace would be searching a rig that has moved.
-            foreach (var screen in Settings.RigScreens())
+            foreach (var screen in attached.Take(Settings.RigScreens())) AttachScreenProperties(screen);
+        }
+
+        /// <summary>
+        /// One screen's group, under its own namespace: what Init attaches for each screen of the rig and
+        /// AttachAddedScreens for each screen added after it (#636).
+        /// </summary>
+        private void AttachScreenProperties(ScreenInstance s)
+        {
+            if (s.IsFace)
             {
-                var s = screen;
-                if (s.IsFace)
+                foreach (var letter in Contract.FaceZoneLetters)
                 {
-                    foreach (var letter in Contract.FaceZoneLetters)
-                    {
-                        var captured = letter;
-                        this.AttachDelegate(Contract.ZonePageProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Zone(captured));
-                        this.AttachDelegate(Contract.ZoneMaskProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Mask(captured));
-                        this.AttachDelegate(Contract.ZoneStartProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Start(captured));
-                        this.AttachDelegate(Contract.ZoneClassOnlyProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).IsClassOnly(captured));
-                    }
-                    foreach (var slot in Contract.BarSlots)
-                    {
-                        var captured = slot;
-                        this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
-                    }
-                    this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
-                    this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
-                    this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
-                    this.AttachDelegate(Contract.RevBarProperty(s.Namespace), () => Settings.ScreenRevBar(s.Namespace));
-                    // Where each zone's page sits in the order its driver chose, which the zone's header
-                    // counts; an expression cannot sort, so the plugin says. #503.
-                    foreach (var letter in Contract.FaceZoneLetters)
-                    {
-                        var captured = letter;
-                        this.AttachDelegate(Contract.ZonePositionProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Position(captured));
-                    }
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZonePageProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Zone(captured));
+                    this.AttachDelegate(Contract.ZoneMaskProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Mask(captured));
+                    this.AttachDelegate(Contract.ZoneStartProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Start(captured));
+                    this.AttachDelegate(Contract.ZoneClassOnlyProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).IsClassOnly(captured));
                 }
-                else if (s.IsCompanion)
+                foreach (var slot in Contract.BarSlots)
                 {
-                    for (var module = 1; module <= Modules.Count; module++)
-                    {
-                        var captured = module;
-                        this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
-                    }
-                    // The page the companion is on, which its screens' enabled expressions follow. Live
-                    // state and not a saved setting: Init puts it back on the start module, exactly as
-                    // it puts every zone back on the page it opens on.
-                    this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
-                    this.AttachDelegate(Contract.CompanionFlagFormatProperty(s.Namespace), () => Settings.ScreenCompanionFlagFormat(s.Namespace));
-                    this.AttachDelegate(Contract.CompanionOpenOnProperty(s.Namespace), () => Settings.ScreenCompanionOpenOn(s.Namespace));
+                    var captured = slot;
+                    this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
                 }
-                else if (s.IsPitWall)
+                this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
+                this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
+                this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
+                this.AttachDelegate(Contract.RevBarProperty(s.Namespace), () => Settings.ScreenRevBar(s.Namespace));
+                // Where each zone's page sits in the order its driver chose, which the zone's header
+                // counts; an expression cannot sort, so the plugin says. #503.
+                foreach (var letter in Contract.FaceZoneLetters)
                 {
-                    foreach (var slot in Contract.PitWallZoneSlots)
-                    {
-                        var captured = slot;
-                        this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured.Key));
-                    }
-                    this.AttachDelegate(Contract.PitWallPageProperty(s.Namespace), () => Settings.ScreenPitWallPage(s.Namespace));
-                    this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
-                    this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
-                    this.AttachDelegate(Contract.PitWallFlagFormatProperty(s.Namespace), () => Settings.ScreenPitWallFlagFormat(s.Namespace));
+                    var captured = letter;
+                    this.AttachDelegate(Contract.ZonePositionProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Position(captured));
                 }
+            }
+            else if (s.IsCompanion)
+            {
+                for (var module = 1; module <= Modules.Count; module++)
+                {
+                    var captured = module;
+                    this.AttachDelegate(Contract.ModuleProperty(s.Namespace, captured), () => Settings.ScreenModule(s.Namespace, captured));
+                }
+                // The page the companion is on, which its screens' enabled expressions follow. Live
+                // state and not a saved setting: Init puts it back on the start module, exactly as
+                // it puts every zone back on the page it opens on.
+                this.AttachDelegate(Contract.CompanionPageProperty(s.Namespace), () => Settings.ScreenCompanionPage(s.Namespace));
+                this.AttachDelegate(Contract.CompanionFlagFormatProperty(s.Namespace), () => Settings.ScreenCompanionFlagFormat(s.Namespace));
+                this.AttachDelegate(Contract.CompanionOpenOnProperty(s.Namespace), () => Settings.ScreenCompanionOpenOn(s.Namespace));
+            }
+            else if (s.IsPitWall)
+            {
+                foreach (var slot in Contract.PitWallZoneSlots)
+                {
+                    var captured = slot;
+                    this.AttachDelegate(Contract.ZoneProperty(s.Namespace, captured), () => Settings.ScreenZone(s.Namespace, captured.Key));
+                }
+                this.AttachDelegate(Contract.PitWallPageProperty(s.Namespace), () => Settings.ScreenPitWallPage(s.Namespace));
+                this.AttachDelegate(Contract.WebViewUrlProperty(s.Namespace), () => Settings.ScreenWebViewUrl(s.Namespace));
+                this.AttachDelegate(Contract.PitWallClassOnlyProperty(s.Namespace), () => Settings.ScreenPitWallClassOnly(s.Namespace));
+                this.AttachDelegate(Contract.PitWallFlagFormatProperty(s.Namespace), () => Settings.ScreenPitWallFlagFormat(s.Namespace));
             }
         }
 
@@ -879,16 +899,43 @@ namespace OpenDashPlugin
         /// night mode and the brightness steps (#503) -- change settings, so ScreenActions follows each
         /// of their presses with the save handed in here, queued onto SimHub's interface thread because
         /// a press arrives on whichever thread SimHub reads the button on.
+        ///
+        /// The registration is kept, so that a screen added later registers its own through the same
+        /// call (AttachAddedScreens). SimHub keeps the first action registered under a name and ignores
+        /// a second, which is why a screen is registered once, when ScreenAttachments hands it out.
         /// </summary>
         private void AttachActions(PluginManager pluginManager)
         {
-            ScreenActions.Register(() => Settings, (name, press, release) =>
+            registerAction = (name, press, release) =>
                 pluginManager.AddAction(
                     name,
                     typeof(OpenDash),
                     (manager, action) => press(),
-                    release == null ? null : (Action<PluginManager, string>)((manager, action) => release())),
-                () => OnInterfaceThread(SaveRigPress));
+                    release == null ? null : (Action<PluginManager, string>)((manager, action) => release()));
+            ScreenActions.Register(() => Settings, registerAction, () => OnInterfaceThread(SaveRigPress));
+        }
+
+        /// <summary>
+        /// Attaches the properties and registers the actions of every screen added since Init, the way Init
+        /// did for the rig it found (#636).
+        /// </summary>
+        /// <remarks>
+        /// Called from SaveSettings, which every path that adds a screen ends in -- Add, Duplicate, and
+        /// anything later -- so no path has to remember to call it. SimHub reads a property by name every
+        /// time a binding asks, retrying a name it has not found, so a dashboard already drawing the screen
+        /// picks the names up on its next frames without being reopened; a delegate attached after Init is
+        /// a delegate like any other to it. Nothing happens before Init has attached the rig, which is what
+        /// a null registration means.
+        /// </remarks>
+        private void AttachAddedScreens()
+        {
+            if (registerAction == null) return;
+            foreach (var screen in attached.Take(Settings.RigScreens()))
+            {
+                AttachScreenProperties(screen);
+                ScreenActions.RegisterScreen(() => Settings, screen, registerAction);
+                Log.Info("Attached the properties and actions of " + screen.Name + " (" + screen.Namespace + "), added in this session");
+            }
         }
     }
 }
