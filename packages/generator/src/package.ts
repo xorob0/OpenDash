@@ -163,8 +163,11 @@ export const previewMtime = (bytes: Uint8Array): Date => {
   const digest = md5Hex(bytes);
   const part = (at: number, of: number): number => parseInt(digest.slice(at, at + 4), 16) % of;
   // Day 1..28 and an even second, so that no derived value can be a date zip cannot store or a
-  // second it would round away.
-  return new Date(ZIP_MTIME.getFullYear(), part(0, 12), 1 + part(4, 28), part(8, 24), part(12, 60), 2 * part(16, 30));
+  // second it would round away. And an hour of 13..20, because a local Date moves an hour the
+  // clocks skipped and zip would store the moved one: 02:30 on 26 March 2000 reads 03:30 in Berlin
+  // and 02:30 in UTC. Every forward jump of 2000 in the tz database skipped a night hour, noon
+  // (Khartoum, 15 January) or 22:00 (Nuuk, Easter Island); none touched 13:00 to 20:59 (#605).
+  return new Date(ZIP_MTIME.getFullYear(), part(0, 12), 1 + part(4, 28), 13 + part(8, 8), part(12, 60), 2 * part(16, 30));
 };
 
 /**

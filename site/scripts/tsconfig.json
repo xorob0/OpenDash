@@ -1,0 +1,6 @@
+// The site's generators run under Bun, not Next, and read the repository's own scripts, so they are
+// checked as the root scripts/ are rather than by ../tsconfig.json, which excludes them (#545).
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["**/*.ts"]
+}

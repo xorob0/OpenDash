@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -97,6 +97,27 @@ describe('compress-profiles.sh', () => {
       // A second run, as when package.sh is run twice over one Resources folder, is not a gzip of a gzip.
       expect(run(dir).status).toBe(0);
       expect(readFileSync(join(dir, 'OpenDash 0-10-0.ledsprofile'))).toEqual(once);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('gzips a profile to the same bytes whenever it was written, so a rebuild embeds the same file', () => {
+    // The build rewrites every profile, so a gzip header with the file's name and mtime in it made
+    // every build's assembly a new one (#605).
+    const dir = mkdtempSync(join(tmpdir(), 'opendash-profiles-'));
+    try {
+      const profile = join(dir, 'OpenDash 0-10-0.ledsprofile');
+      const gzipped = (mtime: Date) => {
+        writeFileSync(profile, '{"Name":"OpenDash 0-10-0"}\n');
+        utimesSync(profile, mtime, mtime);
+        expect(run(dir).status).toBe(0);
+        return readFileSync(profile);
+      };
+      const first = gzipped(new Date('2026-10-01T12:00:00Z'));
+      expect(gzipped(new Date('2026-10-02T12:00:00Z'))).toEqual(first);
+      // FLG (byte 3) carries no FNAME, and MTIME (bytes 4..7) is nought.
+      expect([first[3], first.readUInt32LE(4)]).toEqual([0, 0]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
