@@ -475,11 +475,11 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
     stopEmulator(host);
     if (!opts.keep) {
       // SimHub has to be down to let go of the DLL, and is left running because that is how every
-      // other command on this VM expects to find it.
-      // Best effort, since the run is over either way, but said out loud: a recorder left in, or a
-      // SimHub left down, is what the next command on this VM would otherwise trip over.
+      // other command on this VM expects to find it. Best effort, since the run is over either way,
+      // but said out loud: a recorder left in, or a SimHub left down, is what the next command on
+      // this VM would otherwise trip over.
       const stopped = simhubStop(host);
-      if (!stopped.ok) console.error(`${stopped.stderr}; the recorder could not be taken out`);
+      if (!stopped.ok) console.error(`${stopped.stderr}; the recorder may still be installed`);
       removeRecorder(host);
       const started = simhubStart(host);
       if (!started.ok) console.error(started.stderr);
