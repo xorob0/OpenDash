@@ -161,8 +161,13 @@ namespace OpenDashPlugin
             }
             catch (WebException ex)
             {
-                var http = ex.Response as HttpWebResponse;
-                return FetchResult.Failed(http != null ? "the server answered " + (int)http.StatusCode : ex.Status.ToString());
+                // A refusal carries the server's answer, and the answer owns a connection. net48 happens to buffer an
+                // error body of up to 64 KB and let the connection go, so leaving it to the collector costs nothing
+                // there today; the net8 HttpWebRequest the tests run on keeps it checked out until it is disposed.
+                using (var http = ex.Response as HttpWebResponse)
+                {
+                    return FetchResult.Failed(http != null ? "the server answered " + (int)http.StatusCode : ex.Status.ToString());
+                }
             }
             catch (Exception ex)
             {
