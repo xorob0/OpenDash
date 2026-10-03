@@ -16,6 +16,13 @@
  * instead, because neither ever reaches a package: the page mask, which the plugin normalises and
  * which no expression reads (ContractTests and SettingsTests), and the quick glance, which is a
  * plugin action rather than something a dashboard reads.
+ *
+ * Structural does not mean in memory. Every package here is built the way the build builds it,
+ * which reads the bundled fonts and measures the artwork from disk (`fontsForPackage`,
+ * `packImages`), and validating every package is some of the slowest work in the suite. The two
+ * assertions over the packages nobody broke therefore build theirs at `describe` scope, off the
+ * per-test clock, and report every failing package at once, so that a red run says why, whether it
+ * was an error or the clock (#547).
  */
 import { describe, expect, test } from 'bun:test';
 import {
@@ -32,7 +39,7 @@ import { packImages } from '../src/build.ts';
 import { buildPackage, fontsForPackage } from '../src/dashboard.ts';
 import { LAYOUTS } from '../src/layouts/index.ts';
 import { buildScreenPackage, SCREEN_PACKAGES } from '../src/screens/index.ts';
-import { validatePackage, type DashPackage, type WidgetItem } from '../src/generator.ts';
+import { formatIssues, validatePackage, type DashPackage, type ValidationIssue, type WidgetItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, buildZoneFace, sizeOf } from '../src/zones/index.ts';
 
@@ -76,6 +83,21 @@ const widgetsOf = (pkg: DashPackage): WidgetItem[] =>
   pkg.dashboards.flatMap((d) => d.screens.flatMap((s) => [...walkItems(s.items)])).filter((i): i is WidgetItem => i.kind === 'widget');
 
 const errorCodes = (pkg: DashPackage): string[] => validatePackage(pkg, VALIDATE).errors.map((e) => e.code);
+
+/**
+ * Every package that has errors, each with all of them, and nothing for one that has none.
+ *
+ * One object for the whole set rather than an expectation per package, because an expectation
+ * throws at the first package it fails on and the errors of every later one are never printed;
+ * when such a test goes red once and a rerun turns it green, the message is all that is left.
+ */
+const errorsByPackage = (owned: OwnedPackage[], validate: (owned: OwnedPackage) => ValidationIssue[]): Record<string, string[]> =>
+  Object.fromEntries(
+    owned.flatMap((one) => {
+      const errors = validate(one);
+      return errors.length === 0 ? [] : [[one.pkg.folderName, formatIssues(errors).split('\n')]];
+    }),
+  );
 
 describe('every zone selects a page it has', () => {
   test('a zone widget binds its screen index to a declared property', () => {
@@ -225,18 +247,25 @@ describe('the guards bite', () => {
     expect(codes).not.toContain('property/undeclared');
   });
 
+  /**
+   * Every package the build produces, which no test in this file touches, built at `describe` scope.
+   *
+   * Collection is not on the per-test clock, as #427 found for the reproducibility builds, so the
+   * build costs the file its wall clock and no test its five seconds. The validation stays in the
+   * bodies below, because it is what they assert. The breakages above build their own packages, so
+   * nothing they do reaches these, and the two bodies below only read them.
+   */
+  const untouched = everyPackage();
+
   test('every built package reads only its own screen', () => {
     // Every package, and not the faces alone: a card face owns no screen at all, so the whole of
     // every group is foreign to it, and the two second screens own one each.
-    for (const { pkg, screen } of everyPackage()) {
-      const result = validatePackage(pkg, { ...VALIDATE, foreignProperties: foreignProperties(screen) });
-      expect({ folder: pkg.folderName, errors: result.errors }).toMatchObject({ errors: [] });
-    }
+    const failing = errorsByPackage(untouched, ({ pkg, screen }) => validatePackage(pkg, { ...VALIDATE, foreignProperties: foreignProperties(screen) }).errors);
+    expect(failing).toEqual({});
   });
 
   test('and none of those codes appears in a package nobody broke', () => {
-    for (const pkg of packages()) {
-      expect({ pkg: pkg.folderName, codes: errorCodes(pkg) }).toMatchObject({ codes: [] });
-    }
+    const zoned = untouched.filter(({ screen }) => screen !== undefined);
+    expect(errorsByPackage(zoned, ({ pkg }) => validatePackage(pkg, VALIDATE).errors)).toEqual({});
   });
 });

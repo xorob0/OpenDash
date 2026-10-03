@@ -54,6 +54,19 @@ describe('the plugin CI builds', () => {
   });
 });
 
+describe('the dash job', () => {
+  // A test that fails once and passes on the rerun leaves only what the run kept, and a timeout
+  // prints no assertion diff, so the run keeps a report with the failure text in it (#547).
+  test('keeps a JUnit report of its tests, uploaded when they fail as when they pass', () => {
+    const dash = job(ci, 'dash');
+    const outfile = dash.match(/run: bun test --reporter=junit --reporter-outfile="\$RUNNER_TEMP\/([^"]+)"/)?.[1];
+    expect(outfile).toBeDefined();
+    const upload = dash.slice(dash.indexOf('- name: Upload the test report'));
+    expect(upload).toMatch(/^- name: Upload the test report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+uses: actions\/upload-artifact@v4/);
+    expect(upload).toContain(`path: \${{ runner.temp }}/${outfile}`);
+  });
+});
+
 describe('the development tools', () => {
   // What `bun run dev` and `bun run record` build on their way to the VM, and the Linux build of the
   // emulator that runs its selfcheck, which docs/dev-loop.md says CI checks.
