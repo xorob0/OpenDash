@@ -159,7 +159,7 @@ Two things make it usable from here:
 
 ### Photographing the settings panel
 
-`OPENDASH_VM_WHO=<you> bun run panel-shots --menu-y <y> --rig panel` claims the VM, installs the
+`bun run panel-shots --menu-y <y> --rig panel` claims the VM, installs the
 plugin with its left-menu entry, seeds a rig of every kind of screen, strip and matrix
 (`bun scripts/rig.ts panel`; `empty` is a genuine first run), and photographs every page at SimHub
 widths of 700, 1000 and 1600 px and maximised into `build/panel/`, cropped to the panel. `--menu-y` is
@@ -232,10 +232,11 @@ ssh -L 8006:127.0.0.1:8006 -L 3389:127.0.0.1:3389 -L 8888:127.0.0.1:8888 root@<v
   file inside the guest useless for deciding which of two is newer. SimHub's logs are the case
   that bites: `SimHub.txt` is the one being written and `SimHub.N.txt` are rotations with N
   growing as they age, so `bun run vm logs` chooses on that rather than on a timestamp.
-- **Bun does not deliver signals here.** On Bun 1.3.3 `process.on('SIGINT', ...)` registers a
-  handler that is never called, and registering it suppresses the default action, so a long
-  running Bun script that arms one cannot be stopped with Ctrl-C at all. Anything that has to
-  clean up on an interrupt puts the trap in a shell wrapper, as `scripts/emulator.sh` does.
+- **Bun runs a signal handler only when its event loop turns.** Without a handler, Ctrl-C kills
+  a Bun script without running its `finally`; with one, a script blocked in `spawnSync` carries on
+  to its next step and the handler runs at the end (Bun 1.3.3 and 1.4.2). Anything that has to
+  clean up on an interrupt puts the trap in a shell wrapper, as `scripts/interruptible.sh` and
+  `scripts/emulator.sh` do.
 - **Pinned SimHub version.** 9.12.6. Do not let the VM auto-update; the format is
   undocumented and a newer SimHub is a different test target. Windows Update is disabled too.
 - **A VNC client releases every held key when it disconnects.** So a key held in one call and

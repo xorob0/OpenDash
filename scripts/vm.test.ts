@@ -1,21 +1,32 @@
 /**
  * The parts of `scripts/vm.ts` that are decidable without a VM: quoting, the CLIXML that
  * PowerShell writes over SSH, how the host is chosen, when a claim on the VM has gone stale and
- * how a run notices that its own claim changed hands.
- * Everything else in that file is a remote side effect and is proved by running it.
+ * how a run notices that its own claim changed hands, and what a step makes of a guest that says it
+ * failed, which is asked of a fake host (`fakeHost.ts`). Everything else in that file is a remote
+ * side effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { withFakeHost, type Answer } from './fakeHost.ts';
 import {
   bindPairs,
+  claim,
   claimLost,
   cleanClixml,
   inputMapping,
+  install,
   parseActivation,
   parseInputSettings,
   PRESS,
   psq,
+  release,
   resolveHost,
   shq,
+  simhubStart,
+  transport,
+  whoAmI,
   withBindings,
   withKeyboardReader,
   withoutBindings,
@@ -159,6 +170,142 @@ describe('when the claim changes hands under a run', () => {
     // Its own claim expired rather than being taken, and a batch of twenty faces can last that
     // long; saying somebody took the VM would send the reader after a session that never existed.
     expect(claimLost(null, '2026-09-13T11:00:00.000Z', me, now)).toBeNull();
+  });
+});
+
+/**
+ * Who a session is, for the lock. One machine runs several sessions at once, a worktree each, so the
+ * machine and the user are not enough; the checkout is what tells them apart. Not the process: a
+ * session claims in one command and works in the next (`bun run vm claim && bun run dev`), and
+ * releases from a third, and all three have to be the same owner.
+ */
+describe('who holds the VM', () => {
+  const env = { USER: 'root', HOSTNAME: 'cumulus', HOME: '/root' };
+
+  test('two checkouts on one machine are two sessions', () => {
+    const a = whoAmI(env, '/root/dev/OpenDash/.claude/worktrees/agent-a');
+    const b = whoAmI(env, '/root/dev/OpenDash/.claude/worktrees/agent-b');
+    expect(a).not.toBe(b);
+    expect(a.startsWith('root@cumulus')).toBe(true);
+  });
+
+  test('the same checkout is the same session, whichever process asks', () => {
+    expect(whoAmI(env, '/root/dev/OpenDash')).toBe(whoAmI({ ...env }, '/root/dev/OpenDash'));
+  });
+
+  test('says where the checkout is, so a reader can go and find the session', () => {
+    expect(whoAmI(env, '/root/dev/OpenDash')).toBe('root@cumulus:~/dev/OpenDash');
+    expect(whoAmI({ USER: 'tim', HOSTNAME: 'laptop', HOME: '/Users/tim' }, '/opt/src/OpenDash')).toBe('tim@laptop:/opt/src/OpenDash');
+  });
+
+  test('OPENDASH_VM_WHO still overrides it', () => {
+    expect(whoAmI({ ...env, OPENDASH_VM_WHO: 'root@cumulus-633' }, '/root/dev/OpenDash')).toBe('root@cumulus-633');
+  });
+});
+
+/**
+ * The lock itself, against a host whose share is a temporary directory. The race is the one two
+ * sessions starting together run into: both read the lock free, and both used to write it.
+ */
+describe('the claim on the VM', () => {
+  const now = new Date('2026-10-03T08:00:00.000Z');
+  const lockIn = (share: string) => path.join(share, 'vm.lock');
+  const write = (share: string, c: Claim) => writeFileSync(lockIn(share), `${JSON.stringify(c)}\n`);
+  const read = (share: string): Claim | null => (existsSync(lockIn(share)) ? (JSON.parse(readFileSync(lockIn(share), 'utf8')) as Claim) : null);
+  const theirs: Claim = { who: 'root@cumulus:~/dev/OpenDash/.claude/worktrees/agent-b', since: '2026-10-03T07:59:00.000Z', note: '#218 shots' };
+
+  /** Runs `body` as the session `who`, on a fake host with no guest behind it. */
+  function as<T>(who: string, body: (host: Parameters<typeof claim>[0], share: string) => T): T {
+    const before = process.env.OPENDASH_VM_WHO;
+    process.env.OPENDASH_VM_WHO = who;
+    try {
+      return withFakeHost(() => ({}), (host, _calls, share) => body(host, share));
+    } finally {
+      if (before === undefined) delete process.env.OPENDASH_VM_WHO;
+      else process.env.OPENDASH_VM_WHO = before;
+    }
+  }
+
+  /** Lets `step` run on the host just after the first command that reads the lock, as a second session would. */
+  function afterFirstRead(step: () => void): void {
+    const run = transport.run;
+    let done = false;
+    transport.run = (argv, timeoutMs) => {
+      const r = run(argv, timeoutMs);
+      if (!done && /^cat /.test(argv[argv.length - 1]!)) {
+        done = true;
+        step();
+      }
+      return r;
+    };
+  }
+
+  test('a free VM is taken, and the lock names who took it', () => {
+    as('me', (host, share) => {
+      expect(claim(host, '#633', now)).toMatchObject({ ok: true, stdout: 'claimed by me' });
+      expect(read(share)).toEqual({ who: 'me', since: now.toISOString(), note: '#633' });
+    });
+  });
+
+  test('a fresh claim by another session is refused and left as it was', () => {
+    as('me', (host, share) => {
+      write(share, theirs);
+      const r = claim(host, '#633', now);
+      expect(r.ok).toBe(false);
+      expect(r.stderr).toContain(theirs.who);
+      expect(read(share)).toEqual(theirs);
+    });
+  });
+
+  test('a claim older than ninety minutes is abandoned, and taken over', () => {
+    as('me', (host, share) => {
+      write(share, { ...theirs, since: '2026-10-03T06:29:00.000Z' });
+      expect(claim(host, '#633', now).ok).toBe(true);
+      expect(read(share)?.who).toBe('me');
+    });
+  });
+
+  test('our own claim is taken again, so a claim can be chained into a command that claims', () => {
+    as('me', (host, share) => {
+      write(share, { who: 'me', since: '2026-10-03T07:30:00.000Z', note: 'vm claim' });
+      expect(claim(host, 'dev', now).ok).toBe(true);
+      expect(read(share)).toEqual({ who: 'me', since: now.toISOString(), note: 'dev' });
+    });
+  });
+
+  test('a session that takes the lock between our read and our write keeps it, and we are refused', () => {
+    as('me', (host, share) => {
+      afterFirstRead(() => write(share, theirs));
+      const r = claim(host, '#633', now);
+      expect(r.ok).toBe(false);
+      expect(r.stderr).toContain(theirs.who);
+      expect(read(share)).toEqual(theirs);
+    });
+  });
+
+  test('release gives back our own claim', () => {
+    as('me', (host, share) => {
+      write(share, { who: 'me', since: '2026-10-03T07:30:00.000Z', note: '' });
+      expect(release(host, now)).toMatchObject({ ok: true, stdout: 'released' });
+      expect(read(share)).toBeNull();
+    });
+  });
+
+  test("release refuses another session's claim and leaves it", () => {
+    as('me', (host, share) => {
+      write(share, theirs);
+      expect(release(host, now).ok).toBe(false);
+      expect(read(share)).toEqual(theirs);
+    });
+  });
+
+  test('release does not delete a claim another session took after ours went stale', () => {
+    as('me', (host, share) => {
+      write(share, { who: 'me', since: '2026-10-03T06:00:00.000Z', note: '' });
+      afterFirstRead(() => write(share, theirs));
+      expect(release(host, now).ok).toBe(false);
+      expect(read(share)).toEqual(theirs);
+    });
   });
 });
 
@@ -329,5 +476,62 @@ describe("SimHub's record of what each input does", () => {
     const off: PluginActivation[] = [{ ClassName: 'SimHub.Plugins.InputPlugins.KeyboardReaderPlugin', IsEnabled: false, ShowInMainMenu: false, ShowInMainMenuPosition: 0 }];
     expect(withKeyboardReader(off)).toEqual([{ ...off[0]!, IsEnabled: true }]);
     expect(withKeyboardReader([])).toEqual([{ ...off[0]!, IsEnabled: true }]);
+  });
+});
+
+describe('a SimHub that does not start', () => {
+  // What the guest printed, word for word, when SimHub was kept from starting on the VM (#629).
+  const NEVER_APPEARED = 'SimHub did not appear; check a screenshot';
+  const isStart = (script: string) => script.includes("Start-ScheduledTask -TaskName 'SimHub'");
+  const isStop = (script: string) => script.includes('Stop-Process');
+  const isExpand = (script: string) => script.includes('ExtractToDirectory');
+
+  /** A build/ holding one package, which is all `install` reads of it before the guest takes over. */
+  function withBuild<T>(body: (dir: string) => T): T {
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'opendash-build-'));
+    writeFileSync(path.join(dir, 'OpenDash Test.simhubdash'), 'not a real package');
+    try {
+      return body(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  test.each([0, 1])('is a failed start, whatever the guest exits with (%i)', (status) => {
+    const r = withFakeHost(
+      (script) => (isStart(script) ? { status, stdout: NEVER_APPEARED } : {}),
+      (host) => simhubStart(host),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('SimHub did not start');
+  });
+
+  test('a start the guest saw is a success, and so is one already running', () => {
+    for (const stdout of ['started (pid 4242)', 'already running']) {
+      const r = withFakeHost((script) => (isStart(script) ? { stdout } : {}), (host) => simhubStart(host));
+      expect(r).toMatchObject({ ok: true, stdout });
+    }
+  });
+
+  test('fails `vm install`, after saying what it installed', () => {
+    const guest = (script: string): Answer => {
+      if (isStop(script)) return { stdout: 'stopped' };
+      if (isExpand(script)) return { stdout: 'installed: OpenDash Test' };
+      if (isStart(script)) return { stdout: NEVER_APPEARED };
+      return {};
+    };
+    const r = withBuild((dir) => withFakeHost(guest, (host) => install(host, ['OpenDash Test'], dir)));
+    expect(r.ok).toBe(false);
+    expect(r.stdout).toContain('installed: OpenDash Test');
+    expect(r.stderr).toContain('SimHub did not start');
+  });
+
+  test('a stop that fails ends `vm install` before anything is expanded under a running SimHub', () => {
+    const guest = (script: string): Answer => (isStop(script) ? { status: 1, stdout: 'SimHub is still running (pid 4242)' } : { stdout: 'ok' });
+    const { r, expanded } = withBuild((dir) =>
+      withFakeHost(guest, (host, calls) => ({ r: install(host, ['OpenDash Test'], dir), expanded: calls.some((c) => c.script !== null && isExpand(c.script)) })),
+    );
+    expect(r.ok).toBe(false);
+    expect(expanded).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Entry point for `bun run clips`. Everything it does lives in clips.ts; this exists only so that
-# Ctrl-C stops the emulator and releases the VM, since Bun never delivers SIGINT to a handler (see
-# emulator.sh). --encode-only touches no VM and is exec'd directly.
+# Ctrl-C stops the emulator and releases the VM, since Bun runs no SIGINT handler while it is
+# blocked in spawnSync (see interruptible.sh). --encode-only touches no VM and is exec'd directly.
 set -uo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

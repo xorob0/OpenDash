@@ -64,12 +64,29 @@ export interface RunResult {
   stderr: string;
 }
 
+/** What a command run on the container host came back with. */
+export interface Spawned {
+  status: number | null;
+  stdout: string | null;
+  stderr: string | null;
+}
+
+/**
+ * What carries a command to the container host. Every step that reaches the guest goes through it,
+ * PowerShell included, so a test with no VM can put a fake guest here and see what the helpers make
+ * of its answers, a failure above all. Nothing but a test replaces it.
+ */
+export const transport = {
+  run: (argv: readonly string[], timeoutMs: number): Spawned =>
+    spawnSync(argv[0]!, argv.slice(1), { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 }),
+};
+
 /** Runs a shell command on the container host, directly or over SSH. */
 export function onHost(host: Host, command: string, timeoutMs = 180_000): RunResult {
   const argv = host.local
     ? ['bash', '-lc', command]
     : ['ssh', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', host.name, command];
-  const r = spawnSync(argv[0]!, argv.slice(1), { encoding: 'utf8', timeout: timeoutMs, maxBuffer: 64 * 1024 * 1024 });
+  const r = transport.run(argv, timeoutMs);
   return {
     ok: r.status === 0,
     code: r.status ?? -1,
@@ -195,19 +212,45 @@ export function sleep(seconds: number): void {
 
 // --------------------------------------------------------------------------------- SimHub
 
-export const simhubStop = (host: Host): RunResult =>
-  powershell(
+/**
+ * A step on the guest that did not do what it was for, saying what it was and what the guest said.
+ * The exit code is kept unless it was 0, which a failure is never reported with.
+ */
+function failed(what: string, r: RunResult): RunResult {
+  const said = [r.stdout.trim(), r.stderr.trim()].filter(Boolean).join('\n');
+  return { ok: false, code: r.code === 0 ? 1 : r.code, stdout: '', stderr: `${what}: ${said || `the guest answered nothing (exit ${r.code})`}` };
+}
+
+/**
+ * Stops SimHub and waits until its process is gone. A stop that did not take is a failure, because
+ * whatever comes next edits files SimHub reads once at startup: done under a running SimHub, the
+ * edit is never read, or is written over when it exits.
+ */
+export function simhubStop(host: Host): RunResult {
+  const r = powershell(
     host,
     `$p = Get-Process SimHubWPF -ErrorAction SilentlyContinue
 if (-not $p) { 'not running'; exit 0 }
 $p | Stop-Process -Force
+$deadline = (Get-Date).AddSeconds(20)
+while ($p = Get-Process SimHubWPF -ErrorAction SilentlyContinue) {
+  if ((Get-Date) -gt $deadline) { "SimHub is still running (pid $($p.Id -join ', ')) 20s after it was stopped"; exit 1 }
+  Start-Sleep -Milliseconds 500
+}
 Start-Sleep -Seconds 3
 'stopped'`,
     90,
   );
+  return r.ok ? r : failed('SimHub did not stop', r);
+}
 
+/**
+ * Starts SimHub through its scheduled task and waits for the process. Only a process the guest saw
+ * is a start: a guest that waited it out, or could not be asked, is a failure, whatever it exited
+ * with, so that a SimHub that never came up stops the step rather than being reported as installed.
+ */
 export function simhubStart(host: Host, waitSeconds = 40): RunResult {
-  return powershell(
+  const r = powershell(
     host,
     `if (Get-Process SimHubWPF -ErrorAction SilentlyContinue) { 'already running'; exit 0 }
 Start-ScheduledTask -TaskName 'SimHub'
@@ -217,9 +260,12 @@ while ((Get-Date) -lt $deadline) {
   if ($p) { "started (pid $($p.Id))"; exit 0 }
   Start-Sleep 1
 }
-'SimHub did not appear; check a screenshot'`,
+'SimHub did not appear within ${waitSeconds}s; check a screenshot'
+exit 1`,
     waitSeconds + 60,
   );
+  const said = r.stdout.trim();
+  return r.ok && (said.startsWith('started') || said === 'already running') ? r : failed('SimHub did not start', r);
 }
 
 /**
@@ -265,8 +311,7 @@ Get-Content $log.FullName -Tail ${Math.max(1, Math.trunc(lines))}`,
  * rescanned. Reports what reached the guest, because a silent copy to the wrong place is the
  * failure this command exists to prevent.
  */
-export function install(host: Host, packages: readonly string[]): RunResult {
-  const buildDir = path.join(repoRoot, 'build');
+export function install(host: Host, packages: readonly string[], buildDir = path.join(repoRoot, 'build')): RunResult {
   if (!existsSync(buildDir)) return { ok: false, code: 1, stdout: '', stderr: 'build/ does not exist; run `bun run build` first' };
 
   const wanted = packages.length > 0 ? packages : ['*'];
@@ -283,7 +328,8 @@ export function install(host: Host, packages: readonly string[]): RunResult {
     if (!r.ok) return r;
   }
 
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const names = [...localFiles].map((f) => f.replace(/\.simhubdash$/, ''));
   const expand = powershell(
     host,
@@ -313,6 +359,7 @@ Get-ChildItem (Join-Path $dt 'OpenDash*\\_SHFonts\\*.ttf') -ErrorAction Silently
   );
   if (!expand.ok) return expand;
   const started = simhubStart(host);
+  if (!started.ok) return { ...started, stdout: expand.stdout };
   return { ...expand, stdout: `${expand.stdout}\n${started.stdout}` };
 }
 
@@ -340,7 +387,8 @@ export function installPlugin(host: Host, build = true, menu = false): RunResult
     }
   }
   if (!existsSync(dll)) return { ok: false, code: 1, stdout: '', stderr: `no plugin at ${dll}` };
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const sent = toShare(host, dll, 'OpenDash.dll');
   if (!sent.ok) return sent;
   const copy = powershell(
@@ -356,6 +404,7 @@ Unblock-File -LiteralPath $dest -ErrorAction SilentlyContinue
   const activated = activatePlugin(host, OPENDASH_PLUGIN_CLASS, menu);
   if (!activated.ok) return activated;
   const started = simhubStart(host);
+  if (!started.ok) return { ...started, stdout: copy.stdout };
   return { ...copy, stdout: `${copy.stdout}\n${started.stdout}` };
 }
 
@@ -638,7 +687,8 @@ export function bindActions(host: Host, pairs: readonly { action: string; key: s
     return { ok: false, code: 2, stdout: '', stderr: e instanceof Error ? e.message : String(e) };
   }
 
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   const written = editGuestJson(host, SIMHUB_SETTINGS, 'PluginManagerSettings.json', 'bound', (text) =>
     `${JSON.stringify(withBindings(parseInputSettings(text), mappings), null, 2)}\n`,
   );
@@ -652,7 +702,8 @@ export function bindActions(host: Host, pairs: readonly { action: string; key: s
 
 /** Removes every key binding `bindActions` makes for a plugin's actions, and restarts SimHub. */
 export function unbindActions(host: Host, pluginName: string): RunResult {
-  simhubStop(host);
+  const stopped = simhubStop(host);
+  if (!stopped.ok) return stopped;
   let removed = 0;
   const cleared = editGuestJson(host, SIMHUB_SETTINGS, 'PluginManagerSettings.json', 'unbound', (text) => {
     const result = withoutBindings(parseInputSettings(text), pluginName);
@@ -672,13 +723,15 @@ export interface Claim {
   note: string;
 }
 
-/** Who is currently using the VM, or null when nobody is. A stale claim counts as nobody. */
-export function readClaim(host: Host, now = new Date()): Claim | null {
-  const r = onHost(host, `cat ${shq(LOCK_PATH)} 2>/dev/null || true`, 60_000);
-  if (!r.stdout) return null;
+/** The lock file as it stands on the host, trimmed, or '' when there is none. */
+const readLock = (host: Host): string => onHost(host, `cat ${shq(LOCK_PATH)} 2>/dev/null || true`, 60_000).stdout;
+
+/** The claim a lock file holds, or null when nobody holds it. A stale claim counts as nobody. */
+function parseClaim(text: string, now: Date): Claim | null {
+  if (!text) return null;
   let claim: Claim;
   try {
-    claim = JSON.parse(r.stdout) as Claim;
+    claim = JSON.parse(text) as Claim;
   } catch {
     return null;
   }
@@ -687,27 +740,95 @@ export function readClaim(host: Host, now = new Date()): Claim | null {
   return claim;
 }
 
-/** Who this session is, for the lock: whatever identifies the machine and the user running it. */
-export const whoAmI = (): string => process.env.OPENDASH_VM_WHO ?? `${process.env.USER ?? 'someone'}@${process.env.HOSTNAME ?? hostname()}`;
+/** Who is currently using the VM, or null when nobody is. A stale claim counts as nobody. */
+export const readClaim = (host: Host, now = new Date()): Claim | null => parseClaim(readLock(host), now);
+
+/**
+ * Who this session is, for the lock: the user, the machine, and the checkout it runs in. One machine
+ * runs several sessions at once, a worktree each, and the user and the machine alone made them all
+ * the same owner, so each walked past the others' claims. The checkout rather than the process,
+ * because a session claims in one command, works in the next and releases from a third
+ * (`bun run vm claim && bun run dev`, then `bun run vm release`), and those have to be one owner.
+ * OPENDASH_VM_WHO overrides it.
+ */
+export function whoAmI(env: Record<string, string | undefined> = process.env, checkout = repoRoot): string {
+  if (env.OPENDASH_VM_WHO) return env.OPENDASH_VM_WHO;
+  const home = env.HOME;
+  const where = home && (checkout === home || checkout.startsWith(`${home}/`)) ? `~${checkout.slice(home.length)}` : checkout;
+  return `${env.USER ?? 'someone'}@${env.HOSTNAME ?? hostname()}:${where}`;
+}
 
 function hostname(): string {
   const r = spawnSync('hostname', { encoding: 'utf8' });
   return (r.stdout ?? 'unknown').trim();
 }
 
+/** What `swapLock` exits with when the lock is no longer the one that was read. */
+const LOCK_MOVED = 3;
+
+/**
+ * Replaces the lock with `next`, or deletes it when `next` is null, but only if it still reads
+ * `expected`: a compare-and-swap, done on the host under `flock`, so two sessions that both read the
+ * lock free cannot both write it. The one that comes second finds the first one's claim where it
+ * expected nothing, and exits LOCK_MOVED without touching it.
+ */
+function swapLock(host: Host, expected: string, next: string | null): RunResult {
+  const b64 = (s: string) => shq(Buffer.from(s, 'utf8').toString('base64'));
+  const write =
+    next === null
+      ? `rm -f ${shq(LOCK_PATH)}`
+      : `printf '%s\\n' "$(printf %s ${b64(next)} | base64 -d)" > ${shq(`${LOCK_PATH}.new`)} && mv -f ${shq(`${LOCK_PATH}.new`)} ${shq(LOCK_PATH)}`;
+  return onHost(
+    host,
+    [
+      `mkdir -p ${WINVM_DIR}/shared`,
+      `exec 9>>${shq(`${LOCK_PATH}.guard`)}`,
+      `flock -w 30 9 || { echo 'could not take the guard on the VM lock in 30s' >&2; exit 1; }`,
+      `[ "$(cat ${shq(LOCK_PATH)} 2>/dev/null)" = "$(printf %s ${b64(expected)} | base64 -d)" ] || exit ${LOCK_MOVED}`,
+      write,
+    ].join('\n'),
+    60_000,
+  );
+}
+
+const claimedBy = (held: Claim): string => `the VM is claimed by ${held.who} since ${held.since}${held.note ? ` (${held.note})` : ''}`;
+
+/** What a refused swap says: who took the lock, when anybody fresh holds it now. */
+function lockMoved(host: Host, now: Date, what: string): RunResult {
+  const held = readClaim(host, now);
+  return { ok: false, code: 1, stdout: '', stderr: held ? claimedBy(held) : `the VM lock changed while it was being ${what}; run it again` };
+}
+
 /**
  * Takes the lock, unless somebody else holds a fresh one. Re-claiming your own is allowed, so a
- * command that claims can be run twice without a release in between.
+ * command that claims can be run twice without a release in between. Two claims racing leave one
+ * owner: the write lands only on the lock that was read.
  */
 export function claim(host: Host, note = '', now = new Date()): RunResult {
-  const held = readClaim(host, now);
+  const lock = readLock(host);
+  const held = parseClaim(lock, now);
   const me = whoAmI();
-  if (held && held.who !== me) {
-    return { ok: false, code: 1, stdout: '', stderr: `the VM is claimed by ${held.who} since ${held.since}${held.note ? ` (${held.note})` : ''}` };
+  if (held && held.who !== me) return { ok: false, code: 1, stdout: '', stderr: claimedBy(held) };
+  const swapped = swapLock(host, lock, JSON.stringify({ who: me, since: now.toISOString(), note } satisfies Claim));
+  if (swapped.code === LOCK_MOVED) return lockMoved(host, now, 'claimed');
+  return swapped.ok ? { ...swapped, stdout: `claimed by ${me}` } : swapped;
+}
+
+/**
+ * Runs `body` holding the VM: takes the claim unless this session already holds it, and gives back
+ * only a claim it took, so a step run inside a longer claim (`bun run vm claim && ... && this`)
+ * leaves that claim as it was. Refused, without running `body`, while another session holds it.
+ */
+export function withClaim(host: Host, note: string, body: () => RunResult): RunResult {
+  const held = readClaim(host);
+  if (held && held.who === whoAmI()) return body();
+  const claimed = claim(host, note);
+  if (!claimed.ok) return claimed;
+  try {
+    return body();
+  } finally {
+    release(host);
   }
-  const body = JSON.stringify({ who: me, since: now.toISOString(), note } satisfies Claim);
-  const write = onHost(host, `mkdir -p ${WINVM_DIR}/shared && cat > ${shq(LOCK_PATH)} <<'LOCK'\n${body}\nLOCK`, 60_000);
-  return write.ok ? { ...write, stdout: `claimed by ${me}` } : write;
 }
 
 /**
@@ -728,13 +849,19 @@ export function claimLost(held: Claim | null, since: string, me = whoAmI(), now 
   return 'the claim this run took is gone, so nothing was stopping a second session from driving the guest while this one was working';
 }
 
-/** Gives the lock back. Releasing a lock somebody else holds is refused rather than silent. */
+/**
+ * Gives the lock back. Releasing a lock somebody else holds is refused rather than silent, and so is
+ * one somebody took between the read and the delete. Any command run from the same checkout can
+ * release, which is what lets a fresh `bun run vm release` clean up after a script that claimed.
+ */
 export function release(host: Host, now = new Date()): RunResult {
-  const held = readClaim(host, now);
+  const lock = readLock(host);
+  const held = parseClaim(lock, now);
   const me = whoAmI();
   if (held && held.who !== me) return { ok: false, code: 1, stdout: '', stderr: `the VM is claimed by ${held.who}, not by you` };
-  const r = onHost(host, `rm -f ${shq(LOCK_PATH)}`, 60_000);
-  return r.ok ? { ...r, stdout: 'released' } : r;
+  const swapped = swapLock(host, lock, null);
+  if (swapped.code === LOCK_MOVED) return lockMoved(host, now, 'released');
+  return swapped.ok ? { ...swapped, stdout: 'released' } : swapped;
 }
 
 // --------------------------------------------------------------------------------- the CLI

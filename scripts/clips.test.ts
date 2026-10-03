@@ -4,8 +4,11 @@
  * counts as frozen.
  */
 import { describe, expect, test } from 'bun:test';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { LIST_ORDER } from './dev.ts';
-import { CLIP_PACKAGES, clipSlug, fpsFor, frozen, measuredFps, mp4Args, parseArgs, posterArgs, webmArgs, type EncodeInput } from './clips.ts';
+import { CLIP_PACKAGES, clipSlug, encode, fileReader, fpsFor, frozen, gifArgs, measuredFps, mp4Args, parseArgs, posterArgs, RECORD_FILE, webmArgs, type EncodeInput, type ReadAt } from './clips.ts';
 import { parseRecordReport } from './gui.ts';
 
 describe('the arguments', () => {
@@ -87,19 +90,86 @@ describe('the ffmpeg commands', () => {
     expect(args).toEqual(expect.arrayContaining(['-ss', '1', '-frames:v', '1']));
     expect(args).not.toContain('-t');
   });
+
+  // The GIF once filtered the shared list by value, dropping `-r` and every all-digit token except
+  // the ones equal to the seconds or the preroll. A rate equal to either survived without its `-r`,
+  // and ffmpeg took the stray number for an output file: "Unable to choose an output format for '15'".
+  const gifFilter = 'fps=12,scale=640:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=128:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3';
+  const expectedGif = (i: EncodeInput, out: string): string[] => [
+    '-y', '-f', 'rawvideo', '-pix_fmt', 'bgra', '-video_size', `${i.width}x${i.height}`, '-framerate', i.inputFps.toFixed(3), '-i', i.raw,
+    '-ss', String(i.preroll), '-t', String(i.seconds), '-an', '-vf', gifFilter, '-loop', '0', out,
+  ];
+
+  for (const [what, i] of [
+    ['a rate of its own', input],
+    ['a rate equal to the seconds', { ...input, outputFps: 15, seconds: 15 }],
+    ['a rate equal to the preroll', { ...input, outputFps: 2, preroll: 2 }],
+  ] as const) {
+    test(`the GIF has one filter, no -r and no stray number, with ${what}`, () => {
+      const args = gifArgs(i, '/x/out.gif');
+      expect(args).toEqual(expectedGif(i, '/x/out.gif'));
+      expect(args.filter((a) => a === '-vf')).toHaveLength(1);
+      expect(args).not.toContain('-r');
+    });
+  }
 });
 
 describe('a frozen recording', () => {
   const w = 2, h = 2, bytes = w * h * 4;
+  const inMemory = (raw: Uint8Array): ReadAt => (offset, length) => raw.subarray(offset, offset + length);
+
   test('is one whose first and last kept frames are the same picture', () => {
     const still = new Uint8Array(bytes * 3).fill(7);
-    expect(frozen(still, w, h, 3, 1)).toBe(true);
+    expect(frozen(inMemory(still), w, h, 3, 1)).toBe(true);
     const moving = new Uint8Array(bytes * 3).fill(7);
     moving[bytes * 2] = 9;
-    expect(frozen(moving, w, h, 3, 1)).toBe(false);
+    expect(frozen(inMemory(moving), w, h, 3, 1)).toBe(false);
   });
 
   test('too short to tell is not frozen', () => {
-    expect(frozen(new Uint8Array(bytes), w, h, 1, 0)).toBe(false);
+    expect(frozen(inMemory(new Uint8Array(bytes)), w, h, 1, 0)).toBe(false);
+  });
+
+  test('a file shorter than the frames it claims is not frozen', () => {
+    expect(frozen(inMemory(new Uint8Array(bytes * 2).fill(7)), w, h, 3, 1)).toBe(false);
+  });
+
+  // A raw recording is hundreds of megabytes, about 870 at 1080p, and encode once read all of it
+  // to compare two frames.
+  test('encode reads the two frames it compares and nothing else of the recording', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'clips-'));
+    try {
+      const width = 4, height = 3, frameBytes = width * height * 4, frames = 50;
+      writeFileSync(path.join(dir, 'frames.raw'), new Uint8Array(frameBytes * frames).fill(3));
+      writeFileSync(path.join(dir, RECORD_FILE), JSON.stringify({ slug: 'x', fps: 10, seconds: 4, preroll: 1, recording: { width, height, frames, measuredFps: 10 } }));
+      const reads: { file: string; offset: number; length: number }[] = [];
+      const counting = (file: string): ReadAt => {
+        const read = fileReader(file);
+        return (offset, length) => {
+          reads.push({ file: path.basename(file), offset, length });
+          return read(offset, length);
+        };
+      };
+      // Every frame alike, so encode stops at the check and never reaches ffmpeg.
+      expect(encode(dir, { gif: false }, counting)).toMatchObject({ ok: false, why: expect.stringMatching(/nothing moved/) });
+      expect(reads).toEqual([
+        { file: 'frames.raw', offset: 10 * frameBytes, length: frameBytes },
+        { file: 'frames.raw', offset: 49 * frameBytes, length: frameBytes },
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('the file reader reads at an offset and stops where the file ends', () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'clips-'));
+    try {
+      const file = path.join(dir, 'f');
+      writeFileSync(file, new Uint8Array([0, 1, 2, 3, 4, 5]));
+      expect([...fileReader(file)(2, 3)]).toEqual([2, 3, 4]);
+      expect([...fileReader(file)(4, 10)]).toEqual([4, 5]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
