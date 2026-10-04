@@ -613,7 +613,7 @@ namespace OpenDashPlugin.Tests
                 "foreach (var target in targets) { var id = target.Id;",
                 ".Where(other => other != null && string.Equals(Settings.BarDevice(other.Namespace), id, StringComparison.Ordinal)).Select(other => other.Name);",
                 "var chosen = string.Equals(id, device, StringComparison.Ordinal);",
-                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; showDevices(); updateFooter();");
+                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name); if (wiring != fanatec) { fanatec = wiring; showHardware(); showShape(); } showDevices(); refresh();");
             Assert.DoesNotContain("target.Name;", Squash(sheet).Replace("target==null?null:target.Name", string.Empty));
         }
 
@@ -1742,8 +1742,10 @@ namespace OpenDashPlugin.Tests
                 "var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;",
                 // A device passed over is a row that cannot be picked.
                 "Ui.RadioRow(passed, PanelLeds.NotReachable, false, null, false)",
-                // The tile it opens on, the eyebrow only where SimHub has the wheel, and the press's label.
-                "var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);",
+                // The tile it opens on and follows, from the device, the eyebrow only where SimHub has the
+                // wheel, and the press's label.
+                "var fanatec = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, preferred == null ? null : preferred.Name);",
+                "var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name);",
                 "found ? PanelLeds.FoundInSimHub : null",
                 "Ui.Button(PanelLeds.AddPress(targets.Count > 0), PanelButtonKind.Primary, PanelButtonSize.Large)",
                 // The Add sheet's eyebrow, shapes, opening shape, device prose and footer, each
@@ -2012,6 +2014,14 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelLeds.FoundFanatec(null));
             Assert.True(PanelLeds.StartsOnFanatec(true, true));
             Assert.False(PanelLeds.StartsOnFanatec(true, false));
+            // The device picked decides the wiring (#683): a Fanatec wheel through FanaBridge or SimHub's own
+            // device takes the Fanatec tile, any other device takes Something else, and the one tile there is
+            // where the build has no plain shape.
+            Assert.True(PanelLeds.WiringFollowsDevice(true, true, "Fanatec ClubSport Formula V2.5"));
+            Assert.False(PanelLeds.WiringFollowsDevice(true, true, "Arduino RGB LEDs"));
+            Assert.False(PanelLeds.WiringFollowsDevice(true, true, null));
+            Assert.False(PanelLeds.WiringFollowsDevice(true, false, "Fanatec ClubSport Formula V2.5"));
+            Assert.True(PanelLeds.WiringFollowsDevice(false, true, "Arduino RGB LEDs"));
             Assert.False(PanelLeds.StartsOnFanatec(false, true));
         }
 

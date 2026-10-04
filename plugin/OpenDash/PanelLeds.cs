@@ -1003,6 +1003,17 @@ namespace OpenDashPlugin
             return !hasPlainShapes || StartsOnFanatec(offersFanatec, found);
         }
 
+        /// <summary>
+        /// The wiring the SimHub device picked decides: the Fanatec wheel's where the device's name says it is
+        /// one and the build carries that profile, else Something else, since the Fanatec wiring is the order
+        /// SimHub's Fanatec device presents and means nothing on another device (#683). The sheet opens on it
+        /// from the device it prefers and follows every pick, so nobody who has picked the wheel is asked.
+        /// </summary>
+        public static bool WiringFollowsDevice(bool hasPlainShapes, bool offersFanatec, string deviceName)
+        {
+            return SheetStartsOnFanatec(hasPlainShapes, offersFanatec, FoundFanatec(new[] { deviceName }));
+        }
+
         /// <summary>The ends the sheet opens on: three where the build has them, the artboard's 3 · 9 · 3, else
         /// the fewest it has, and the Fanatec wheel's where it has no plain shape.</summary>
         public static int StartSide(int[] sides)

@@ -37,6 +37,38 @@ namespace OpenDashPlugin.Tests
             Assert.Null(LedDeviceSurvey.Reason(Wheel()));
         }
 
+        /// <summary>#683: a device a plugin registers as a type of its own, reached through the settings
+        /// document every device must produce, is offered, and the line says how it was reached.</summary>
+        [Fact]
+        public void A_device_whose_settings_document_holds_a_profile_list_is_offered_through_it()
+        {
+            var seen = new LedDeviceSeen
+            {
+                Name = "Fanatec ClubSport Formula V2.5",
+                Id = "device:f4a7103f-67eb-4890-ad5d-081ea20af228",
+                Kind = "FanaBridge.Adapters.FanatecWheelDeviceInstance (FanaBridge)",
+                Instances = new List<string> { "FanatecWheelDeviceInstance" },
+                DocumentLeds = true,
+                LedCount = 15,
+                Profiles = 1,
+                UseBuiltInProfiles = false,
+            };
+            Assert.Equal(LedDeviceVerdict.Offered, LedDeviceSurvey.Judge(seen));
+            Assert.Null(LedDeviceSurvey.Reason(seen));
+            var line = LedDeviceSurvey.LogLine(seen);
+            Assert.StartsWith("LED device offered: \"Fanatec ClubSport Formula V2.5\".", line);
+            Assert.Contains("LED profiles reached through its settings document", line);
+            Assert.Contains("15 LEDs", line);
+            Assert.Contains("1 saved profiles", line);
+            Assert.True(LedDeviceSurvey.ShowsLeds(seen));
+            Assert.Empty(LedDeviceSurvey.Declined(new[] { seen }));
+            // The same device whose document has no list is cause one still, and the reason says both.
+            seen.DocumentLeds = false;
+            Assert.Equal(LedDeviceVerdict.NotLedModule, LedDeviceSurvey.Judge(seen));
+            Assert.Contains("and its settings document holds no LED profile list", LedDeviceSurvey.Reason(seen));
+            Assert.DoesNotContain("settings document", LedDeviceSurvey.LogLine(seen).Split(new[] { ". id " }, System.StringSplitOptions.None)[1]);
+        }
+
         /// <summary>Cause one of #437: a device a plugin registers as a type of its own.</summary>
         [Fact]
         public void A_device_with_no_LED_module_is_declined_and_says_it_is_not_one()

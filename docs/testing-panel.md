@@ -124,7 +124,8 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-16 | Every strip Soon rows: Idle sweep #485, Engine start animation #743, Car data for AC, ACC and LMU #479 | | Hover | greyed | V |
 | LD-17 | Car Data | network | Download (Update once a copy is held) | off the UI thread; "Downloading…" then the status line; attribution; log | J; V |
 | LD-18 | Rename / Remove | | Remove Dash brow | asks once (Remove it); strip gone; profile uninstalled | U; J |
-| AL-01 | Hardware tiles | | Fanatec wheel / Something else | Shape step flips; Found in SimHub only with a Fanatec target (never on the VM) | U PanelLedsTests; V; N badge |
+| AL-01 | Hardware tiles | | Fanatec wheel / Something else | Shape step flips; Found in SimHub only with a Fanatec target, which the VM has once FanaBridge's Formula V2.5 is added (#683) | U PanelLedsTests; V; N badge |
+| AL-01b | Device decides the wiring | FanaBridge wheel added | Pick the Fanatec wheel, then the Arduino, under SimHub device | Hardware flips to Fanatec wheel and the shape to its fixed 3 · 9 · 3, then back to Something else; a tile picked by hand holds until the next device pick (#683) | U PanelLedsTests; V |
 | AL-02 | LEDs at each end + LEDs in the centre | Something else | 2 / 11 | preview + BarShapeNote; shape id exists in the census | U; V |
 | AL-03 | SimHub device radios | | Observe | declined disabled with "No LEDs OpenDash can reach"; VM empty state | U; V |
 | AL-04 | Name | | Observe | "Wheel rim" / "Strip" | U; V |
