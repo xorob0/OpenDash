@@ -434,6 +434,13 @@ namespace OpenDashPlugin
             return bar == null ? Contract.DefaultLedSpotterWhole : bar.SpotterWhole;
         }
 
+        /// <summary>Whether one bar's aid lamps read the slip estimate; the default for a bar that has gone.</summary>
+        public bool BarInferSlip(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar == null ? Contract.DefaultLedInferSlip : bar.InferSlip;
+        }
+
         /// <summary>
         /// One bar's own brightness, or null when it follows the rig's -- which is also what a bar that
         /// has gone reads. What <c>&lt;ns&gt;LedBrightness</c> publishes: the profile falls back to

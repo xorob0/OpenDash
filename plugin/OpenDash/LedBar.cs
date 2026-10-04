@@ -58,6 +58,11 @@ namespace OpenDashPlugin
         /// Per bar, because a brow above a monitor has no ends to speak of and a rim does.</summary>
         public bool SpotterWhole { get; set; } = Contract.DefaultLedSpotterWhole;
 
+        /// <summary>Whether this bar's traction control and ABS lamps also light on the plugin's estimate of
+        /// wheelspin and lock-up (<see cref="Contract.LedInferSlip"/>). On by default, and a bar saved before
+        /// the switch existed loads with it on.</summary>
+        public bool InferSlip { get; set; } = Contract.DefaultLedInferSlip;
+
         /// <summary>
         /// Whether the bar is wired from the far end, so its profile is the shape's reversed twin.
         /// </summary>
@@ -351,6 +356,7 @@ namespace OpenDashPlugin
                 RpmStyle = RpmStyle,
                 FlagAnimation = FlagAnimation,
                 SpotterWhole = SpotterWhole,
+                InferSlip = InferSlip,
                 Device = Device,
                 Reversed = Reversed,
                 Fanatec = Fanatec,

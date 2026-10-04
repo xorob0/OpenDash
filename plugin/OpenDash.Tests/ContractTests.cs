@@ -118,7 +118,9 @@ namespace OpenDashPlugin.Tests
             // thing on the rig (#791): whether a flag shows in the pit lane, where each of a face's four
             // zones sits in the order its driver chose, which is thirty-two names over the eight faces,
             // and a strip's own brightness and its fifteen switches, one per thing it can draw.
-            Assert.Equal(399, names.Count);
+            // And 399 before a strip's aid lamps could read the plugin's slip estimate: the strip's
+            // switch, and the three the plugin computes because SimHub publishes none of them.
+            Assert.Equal(403, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -521,9 +523,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(
                 new[] { "LedCentre", "LedRpmStyle", "LedFlagAnimation", "LedMirrorFit", "LedMirrorReady" },
                 Contract.LedPropertyNames().Take(5));
-            // The strips' group ends with its switches, the last of them the right indicator, and the
-            // full-strip spotter sits where it was appended, immediately after the last mirror run. #791.
-            Assert.Equal("LedEffectTurnRight", Contract.PropertyNames().Last());
+            // The strips' group ends with the slip estimate, after the switch that lets a strip read it
+            // and after the effect switches before that, and the full-strip spotter sits where it was
+            // appended, immediately after the last mirror run. #791.
+            Assert.Equal(Contract.TcInferred, Contract.PropertyNames().Last());
             var leds = Contract.LedPropertyNames().ToList();
             var lastRun = leds.IndexOf(Contract.LedMirrorRun(Contract.MirrorRunLengths.Last()));
             Assert.Equal(Contract.LedSpotterWhole, leds[lastRun + 1]);
@@ -599,7 +602,10 @@ namespace OpenDashPlugin.Tests
                 "LedEffectSpotterRight", "LedEffectPitLane", "LedEffectPitLimiter", "LedEffectPitSpeeding",
                 "LedEffectTurnLeft", "LedEffectTurnRight",
             });
+            // And the switch that lets a strip's aid lamps read the slip estimate, then the estimate.
+            expected.AddRange(new[] { "LedInferSlip", "WheelSpin", "WheelLock", "TCInferred" });
             Assert.Equal(expected, Contract.LedPropertyNames());
+            Assert.True(Contract.DefaultLedInferSlip);
             foreach (var name in expected) Assert.Contains(name, Contract.LightsPropertyNames());
             // On: movement is what a flag is read by at the edge of vision, and off is the driver
             // asking for a rim that holds rather than blinks.
@@ -813,7 +819,8 @@ namespace OpenDashPlugin.Tests
         {
             // The names a strip profile reads its switches through are exactly the contract's list, in
             // its order, so a switch added to one and not the other fails here. #370, #791.
-            var switches = Contract.LedPropertyNames().SkipWhile(n => n != Contract.LedBrightness).Skip(1).ToList();
+            var switches = Contract.LedPropertyNames().SkipWhile(n => n != Contract.LedBrightness).Skip(1)
+                .TakeWhile(n => n != Contract.LedInferSlip).ToList();
             Assert.Equal(15, switches.Count);
             Assert.Equal(Contract.LedEffectSettings(), switches);
             // Every flag row is one switch, whatever the row: a driver turns flags off on a strip, not

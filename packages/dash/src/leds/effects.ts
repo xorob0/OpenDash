@@ -33,7 +33,7 @@
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS, FLAG_TAKEOVER_MS } from '../components/flagStrip.ts';
-import { setting } from '../contract.ts';
+import { propertyName, setting, WHEEL_LOCK, WHEEL_SPIN } from '../contract.ts';
 import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
 import { tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -123,6 +123,14 @@ const g = (name: string): Expr => isnull(game(name), num(0));
 const t = (name: string): Expr => isnull(raw(name), num(0));
 /** `X = 1`, the shape SimHub's own flag and status properties take. */
 const on = (name: string): Expr => eq(g(name), num(1));
+
+/**
+ * One of the plugin's slip estimates, while this strip lets its aid lamps read them: false without
+ * the plugin, where the estimate is null, and false with the strip's `LedInferSlip` off. The estimate
+ * is the car's and rig-wide; the switch is the strip's, rewritten to its namespace when the profile is
+ * installed for it.
+ */
+const inferred = (name: string): Expr => and(eq(setting.ledInferSlip(), 'true'), eq(isnull(prop(propertyName(name)), 'false'), 'true'));
 
 /** Speed in the unit the user picked, and the pit lane limit in the same one. */
 const speedLocal = (): Expr => isnull(game('SpeedLocal'), num(0));
@@ -391,22 +399,29 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     // was on wherever the dial sat, and since iRacing fills the dial and not the intervention the
     // result there was a lamp lit from the green flag to the flag: a lamp that is always on carries
     // no information, and one that means "the dial is at four" is not what the driver looks at when
-    // a wheel spins. Dark on iRacing is the honest reading, and BEST_EFFORT says so.
-    when: gt(g('TCActive'), num(0)),
+    // a wheel spins. iRacing does not say when its traction control acts, so there the lamp lights on
+    // the plugin's estimate of wheelspin instead, while the strip's LedInferSlip is on: a wheel
+    // spinning under throttle is the moment the system is cutting in on a car that has it, and the
+    // moment the driver wants to know about on a car that does not. BEST_EFFORT says what the sim
+    // reports and what is estimated.
+    when: or(gt(g('TCActive'), num(0)), inferred(WHEEL_SPIN)),
     color: ds.purpose.light.tc,
-    source: 'DataCorePlugin.GameData.TCActive',
+    source: 'DataCorePlugin.GameData.TCActive, or OpenDash.WheelSpin while OpenDash.LedInferSlip is on',
   },
   {
     id: 'abs',
     label: 'ABS active',
     role: 'aid',
-    when: gt(g('ABSActive'), num(0)),
+    // The sim's own intervention, which iRacing reports as BrakeABSactive on a car with ABS, or the
+    // plugin's estimate of a locked wheel while the strip's LedInferSlip is on: on a car without ABS
+    // that is the lock the ABS would have caught, and the lamp the driver looks at for it.
+    when: or(gt(g('ABSActive'), num(0)), inferred(WHEEL_LOCK)),
     // Orange here and blue on traction control, which is the way round the race cars' manuals put the
     // pair: their ABS and lockup lamps are amber or orange, and their TC is blue. UN R121 makes the
     // road car's ABS tell-tale amber too, and its ESC one as well, so the blue is the race cars' alone.
     // Orange rather than the caution amber, because an RGB LED draws that amber as the yellow flag.
     color: ds.purpose.light.abs,
-    source: 'DataCorePlugin.GameData.ABSActive',
+    source: 'DataCorePlugin.GameData.ABSActive, or OpenDash.WheelLock while OpenDash.LedInferSlip is on',
   },
   {
     id: 'lowFuel',
@@ -585,7 +600,7 @@ export const BEST_EFFORT: readonly { effect: string; property: string; reason: s
   {
     effect: 'TC intervening',
     property: 'DataCorePlugin.GameData.TCActive',
-    reason: 'IRacingManager.GD_TCActive() is [NotAvailable] and returns 0, so on iRacing the lamp is dark. It used to read TCLevel as well and was therefore lit there from the green flag onwards, which is a light that reports the dial rather than the intervention.',
+    reason: 'IRacingManager.GD_TCActive() is [NotAvailable] and returns 0, so on iRacing nothing reports the intervention. The lamp lights there on the plugin\'s estimate of wheelspin (OpenDash.WheelSpin) while the strip\'s LedInferSlip is on, and is dark with it off or without the plugin. It used to read TCLevel as well and was therefore lit there from the green flag onwards, which is a light that reports the dial rather than the intervention.',
   },
   {
     effect: 'Turn indicators',
