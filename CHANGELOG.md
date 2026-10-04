@@ -17,6 +17,44 @@ Until then a release also carried one `.simhubdash` per package, including the `
 device shape and a `manifest.json` listing everything published. The notes of those releases say so
 where they describe them.
 
+## 0.3.0-rc.9 (2026-10-04)
+
+The candidate that reaches a Fanatec wheel. One change, taken from a rig: a wheel added to SimHub
+through FanaBridge was in SimHub's Devices view and absent from the Add LEDs sheet's device list,
+and the only trace was a line in SimHub's log. The sheet lists it now, a strip added to it lands
+in the wheel's own profile list, and picking the wheel answers the Hardware question by itself.
+
+**A FanaBridge wheel is a device a strip can be installed on.** FanaBridge registers a wheel as a
+device of its own kind, which holds SimHub's LED profiles where nothing by type can reach them.
+OpenDash now reads them the way SimHub itself saves and restores any device, through the settings
+document every device answers with, so the wheel appears under SimHub device as any other LED
+device does, and "Add and install" writes the profile into the wheel's list in SimHub. Every wheel
+FanaBridge registers is the same kind of device, so the same goes for all of them. Nothing is keyed on
+FanaBridge itself: any plugin's device that keeps its LED profiles in its settings is reached the
+same way. SimHub's log says when a device was reached that way, and a device it could not reach
+still says why. Seen on the test VM with FanaBridge 0.7.0 and a ClubSport Formula V2.5 added; a
+wheelbase has yet to confirm that the rim lights from the installed profile.
+
+**The device picked decides the wiring.** The sheet used to ask first whether the strip is a
+Fanatec wheel, and a driver who had already picked the wheel under SimHub device was answering
+twice. Picking a device whose name says Fanatec now puts Hardware on the Fanatec wheel and fixes the
+shape to its 3 · 9 · 3, and picking any other device puts it back on Something else, since that
+wiring is the order SimHub's Fanatec device presents and means nothing elsewhere. The tiles stay,
+so the answer can still be changed by hand. (#683)
+
+### Fixed
+
+- **A wheel added through FanaBridge is listed on the Add LEDs sheet** and takes a strip's profile
+  into its own list in SimHub. See above. (#683, the cause-finding half of #437)
+
+### Changed
+
+- **Picking a Fanatec wheel as the SimHub device selects the Fanatec wiring**, and any other device
+  the plain one, so the Hardware step is answered by the device rather than asked. See above. (#683)
+- **SimHub's log names the devices OpenDash reached through their settings document**, and the
+  line for a device it did not reach says the document had no LED profile list either, so the next
+  report tells the two apart.
+
 ## 0.3.0-rc.8 (2026-10-03)
 
 The candidate laid out like the rig. The settings panel is rebuilt from four tabs grouped by the
