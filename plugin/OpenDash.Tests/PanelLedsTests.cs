@@ -381,8 +381,6 @@ namespace OpenDashPlugin.Tests
                 "carTablesButton.ToolTip = PanelLights.CarTablesButtonTooltip(service.CarCount);",
                 "carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;",
                 // The Add sheet's choices each change what the press adds.
-                "() => pickHardware(true)",
-                "() => pickHardware(false)",
                 "device = id;",
                 "side = int.Parse(value, CultureInfo.InvariantCulture);",
                 "centre = centres[i];",
@@ -613,7 +611,7 @@ namespace OpenDashPlugin.Tests
                 "foreach (var target in targets) { var id = target.Id;",
                 ".Where(other => other != null && string.Equals(Settings.BarDevice(other.Namespace), id, StringComparison.Ordinal)).Select(other => other.Name);",
                 "var chosen = string.Equals(id, device, StringComparison.Ordinal);",
-                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name); if (wiring != fanatec) { fanatec = wiring; showHardware(); showShape(); } showDevices(); refresh();");
+                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name); if (wiring != fanatec) { fanatec = wiring; showShape(); } showDevices(); refresh();");
             Assert.DoesNotContain("target.Name;", Squash(sheet).Replace("target==null?null:target.Name", string.Empty));
         }
 
@@ -660,9 +658,9 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The Add LEDs sheet's call sites, each with the words and the gate it draws by: the Fanatec tile only
-        /// where the build embeds its profile, the name box on the hardware's own name until the driver
-        /// types, the shape step's fixed shape for the wheel, and every step's label.
+        /// The Add LEDs sheet's call sites, each with the words and the gate it draws by: the name box on the
+        /// hardware's own name until the driver types, the shape step's fixed shape for the wheel, and every
+        /// step's label.
         /// </summary>
         [Fact]
         public void The_Add_sheet_draws_each_step_by_its_own_gate_and_words()
@@ -671,10 +669,6 @@ namespace OpenDashPlugin.Tests
             var sheet = Body(leds, "private void ShowAddLedBar()", "private static FrameworkElement LedsSheetRow(");
             // The pin PanelLedBarFormTests holds by its own anchors, held here where the gate and the default stand.
             Holds(sheet, "ShowAddLedBar",
-                "if (offersFanatec) { var tile = LedsHardwareTile(PanelLights.BarFanatecTitle, found ? PanelLeds.FoundInSimHub : null, PanelLeds.ShapeFrame(PanelLights.FanatecSide, PanelLights.FanatecCentre), PanelLeds.FanatecShape, null, fanatec, () => pickHardware(true));",
-                "if (sides.Length > 0) { var tile = LedsHardwareTile(PanelLeds.SomethingElse, null, PanelLeds.AnyStripFrame(), PanelLeds.SomethingElseNote, null, !fanatec, () => pickHardware(false));",
-                "var grid = Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray());",
-                "hardwareHost.Child = PanelLeds.ShowsOtherWheelNote(offersFanatec) ? Ui.VStack(12, grid, LedsNote(PanelLeds.OtherWheelNote)) : (UIElement)grid;",
                 "if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec)); updateFooter();",
                 "Action showShape = () => { if (fanatec) { var numerals = Ui.Text(PanelLeds.FanatecShape, 18, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data); var fixedLabel = Ui.Eyebrow(PanelLeds.Fixed);",
                 "fixedDock.Children.Add(Ui.VStack(4, numerals, Ui.Prose(PanelLeds.SetByTheWheel, PanelKit.CardMetaSize)));",
@@ -685,10 +679,9 @@ namespace OpenDashPlugin.Tests
                 "LedsSheetRow(PanelLights.BarEndsTitle, ends),",
                 "if (passedOver.Count > 0) list.Children.Add(Ui.Prose(PanelLeds.PassedOverNote));",
                 "ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLightRows.NoProfiles), null); return;",
-                "Ui.Step(1, PanelLeds.HardwareStep, hardwareHost, true), Ui.Step(2, PanelLeds.ShapeStep, shapeHost), Ui.Step(3, PanelLights.BarDeviceTitle, deviceHost), Ui.Step(4, PanelLights.BarNameTitle, name));",
+                "Ui.Step(1, PanelLights.BarDeviceTitle, deviceHost, true), Ui.Step(2, PanelLeds.ShapeStep, shapeHost), Ui.Step(3, PanelLights.BarNameTitle, name));",
                 "ShowSheet(PanelLights.AddBar, body, Ui.VStack(14, footerNote, SheetFooter(null, cancel, add)));");
             Assert.Equal(2, Occurrences(leds, "DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec))"));
-            Assert.Equal(1, Occurrences(Squash(sheet), "if(offersFanatec)"));
             // The Rename and Remove sheets' words.
             var rename = Body(leds, "private void ShowRenameLedBar(", "private void RenameLedBar(");
             Assert.Contains("ShowSheet(\"Rename \" + bar.Name,", rename);
@@ -782,8 +775,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("StretchDirection = StretchDirection.DownOnly, Child = preview", Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl("));
             Assert.Contains("Ui.CardGrid(PanelLeds.CardMinWidth, PanelLeds.CardGap, PanelLeds.CardColumns, cards.ToArray())", leds);
             Assert.Contains("Ui.CardGrid(PanelLeds.EffectTileMinWidth, PanelLeds.EffectTileGap, PanelLeds.EffectColumns, tiles.ToArray())", leds);
-            Assert.Contains("Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray())", leds);
-            Assert.Equal(3, Occurrences(leds, "Ui.CardGrid("));
+            Assert.Equal(2, Occurrences(leds, "Ui.CardGrid("));
         }
 
         /// <summary>The edges the rules' own summaries promise: a chip the emulation does not know, the
@@ -1435,12 +1427,7 @@ namespace OpenDashPlugin.Tests
             double Group(int n) => n * style.Led + (n - 1) * style.Gap;
             var fanatec = Group(PanelLights.FanatecSide) * 2 + Group(PanelLights.FanatecCentre) + 2 * style.GroupGap + 2 * style.PadX;
             Assert.Equal(171, fanatec);
-            Assert.True(PanelLeds.HardwareTileMinWidth >= fanatec + 2 * (PanelKit.ChoiceTilePadding + PanelMetrics.BorderWeight));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            var tile = leds.Substring(leds.IndexOf("private static Button LedsHardwareTile(", StringComparison.Ordinal));
-            tile = tile.Substring(0, tile.IndexOf("Ui.ChoiceTile(", StringComparison.Ordinal));
-            Assert.Contains("StretchDirection = StretchDirection.DownOnly", tile);
-            Assert.Contains("Child = Ui.Strip(frame, StripStyle.Card),", tile);
             var shape = leds.Substring(leds.IndexOf("Action showPicture = () =>", StringComparison.Ordinal));
             shape = shape.Substring(0, shape.IndexOf("note.Text = ", StringComparison.Ordinal));
             Assert.Contains("StretchDirection = StretchDirection.DownOnly", shape);
@@ -1490,7 +1477,7 @@ namespace OpenDashPlugin.Tests
                 Assert.Contains("LedsSoonRow(" + soon + ",", leds);
             }
             var row = leds.Substring(leds.IndexOf("private static FrameworkElement LedsSheetRow(", StringComparison.Ordinal));
-            row = row.Substring(0, row.IndexOf("private static Button LedsHardwareTile(", StringComparison.Ordinal));
+            row = row.Substring(0, row.IndexOf("private string DefaultBarName(", StringComparison.Ordinal));
             Assert.Contains("text.TextWrapping = TextWrapping.Wrap;", row);
         }
 
@@ -1499,16 +1486,10 @@ namespace OpenDashPlugin.Tests
         public void The_sheet_takes_the_artboards_words_and_voice_mds_name_for_its_button()
         {
             Assert.Equal("Add an LED strip", PanelLights.AddBar);
-            Assert.Equal("Hardware", PanelLeds.HardwareStep);
             Assert.Equal("Shape", PanelLeds.ShapeStep);
             Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
             Assert.Equal("Name", PanelLights.BarNameTitle);
             Assert.Equal("Fanatec wheel", PanelLights.BarFanatecTitle);
-            Assert.Equal("Something else", PanelLeds.SomethingElse);
-            Assert.Equal("Any RGB strip", PanelLeds.SomethingElseNote);
-            Assert.Equal("Found in SimHub", PanelLeds.FoundInSimHub);
-            // No promise about the project: the artboard's "More wheels to come" is not the panel's.
-            Assert.Equal("For any other wheel, use Something else.", PanelLeds.OtherWheelNote);
             Assert.Equal("Set by the wheel", PanelLeds.SetByTheWheel);
             Assert.Equal("Fixed", PanelLeds.Fixed);
             Assert.Equal("3 · 9 · 3", PanelLeds.FanatecShape);
@@ -1597,19 +1578,14 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("PanelLeds.NameToAdd(name.Text, DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec)), TakenBarNames())", leds);
         }
 
-        /// <summary>The sheet's rules: whether it has anything to offer, which tile and shape it opens on, the note
-        /// beside the Fanatec tile and the device step's empty state.</summary>
+        /// <summary>The sheet's rules: whether it has anything to offer, which shape it opens on and the device
+        /// step's empty state.</summary>
         [Fact]
         public void The_sheet_opens_where_the_build_and_SimHub_say()
         {
             Assert.False(PanelLeds.SheetHasShapes(0, false));
             Assert.True(PanelLeds.SheetHasShapes(0, true));
             Assert.True(PanelLeds.SheetHasShapes(3, false));
-            // The Fanatec tile wherever the build has no plain shape, since it is then the only tile.
-            Assert.True(PanelLeds.SheetStartsOnFanatec(false, true, false));
-            Assert.True(PanelLeds.SheetStartsOnFanatec(true, true, true));
-            Assert.False(PanelLeds.SheetStartsOnFanatec(true, true, false));
-            Assert.False(PanelLeds.SheetStartsOnFanatec(true, false, true));
             // 3 · 9 · 3 where the build has it, else the fewest, and the Fanatec wheel's with no plain shape.
             Assert.Equal(3, PanelLeds.StartSide(new[] { 0, 1, 2, 3, 4 }));
             Assert.Equal(0, PanelLeds.StartSide(new[] { 0, 4 }));
@@ -1619,8 +1595,6 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(9, PanelLeds.KeptCentre(new[] { 4, 9, 12 }, 25));
             Assert.Equal(10, PanelLeds.KeptCentre(new[] { 10, 11 }, 25));
             Assert.Equal(PanelLights.FanatecCentre, PanelLeds.KeptCentre(new int[0], 9));
-            Assert.True(PanelLeds.ShowsOtherWheelNote(true));
-            Assert.False(PanelLeds.ShowsOtherWheelNote(false));
             // A device passed over is a disabled row saying so, so the prose says only what no row can.
             Assert.True(PanelLeds.ShowsNoDevices(0, 0));
             Assert.False(PanelLeds.ShowsNoDevices(0, 1));
@@ -1742,15 +1716,12 @@ namespace OpenDashPlugin.Tests
                 "var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;",
                 // A device passed over is a row that cannot be picked.
                 "Ui.RadioRow(passed, PanelLeds.NotReachable, false, null, false)",
-                // The tile it opens on and follows, from the device, the eyebrow only where SimHub has the
-                // wheel, and the press's label.
+                // The wiring it opens on and follows, from the device, and the press's label.
                 "var fanatec = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, preferred == null ? null : preferred.Name);",
                 "var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name);",
-                "found ? PanelLeds.FoundInSimHub : null",
                 "Ui.Button(PanelLeds.AddPress(targets.Count > 0), PanelButtonKind.Primary, PanelButtonSize.Large)",
                 // The Add sheet's eyebrow, shapes, opening shape, device prose and footer, each
                 // from the rule PanelLeds pins.
-                "var found = PanelLeds.FoundFanatec(targets.Select(t => t.Name));",
                 "var sides = PanelLights.BarSides(census);",
                 "var offersFanatec = PanelLights.OffersFanatec(census);",
                 "if (!PanelLeds.SheetHasShapes(sides.Length, offersFanatec))",
@@ -1760,10 +1731,7 @@ namespace OpenDashPlugin.Tests
                 "if (PanelLeds.ShowsNoDevices(targets.Count, passedOver.Count)) list.Children.Add(Ui.Prose(PanelLights.NoDevices));",
                 "var said = PanelLeds.InstallsOn(adds, target == null ? null : target.Name);",
                 "footerNote.Visibility = said == null ? Visibility.Collapsed : Visibility.Visible;",
-                "hardwareHost.Child = PanelLeds.ShowsOtherWheelNote(offersFanatec)",
                 "Ui.RadioRow(target.Name, PanelLeds.DeviceMeta(target.Connected, onIt), chosen,",
-                // The sheet's note: the ringed i.
-                "Ui.Icon(PanelIcons.Info, Theme.TextSecondary, PanelIcons.Box)",
                 // Which strip the page shows, which card is marked, and the chip a strip opens on.
                 "var shown = PanelLeds.ShownStrip(bars.Select(bar => bar.Namespace).ToList(), Selected(PanelPage.Leds));",
                 "ReferenceEquals(bar, current),",
@@ -1846,10 +1814,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(6, PanelLeds.EffectTileGap);
             Assert.Equal(3, PanelLeds.EffectColumns);
             Assert.Equal(220, PanelLeds.EffectTileMinWidth);
-            Assert.Equal(200, PanelLeds.HardwareTileMinWidth);
-            Assert.Equal(8, PanelLeds.HardwareTileGap);
             Assert.Equal(22, PanelLeds.PreviewGroupGap);
-            Assert.Equal(10, PanelLeds.FoundInSimHubSize);
         }
 
         [Fact]
@@ -1876,22 +1841,6 @@ namespace OpenDashPlugin.Tests
             Assert.Single(bare);
             Assert.DoesNotContain(Theme.FlagYellow, bare[0]);
             Assert.Contains(Theme.ShiftStage2, bare[0]);
-        }
-
-        /// <summary>The Something else tile draws twelve LEDs in the border's grey, as AddLeds.dc.html does: a strip at
-        /// rest is the raised surface, one step above the tile's ground, and all but vanished beside the Fanatec tile.</summary>
-        [Fact]
-        public void The_something_else_tile_draws_twelve_grey_leds()
-        {
-            var frame = PanelLeds.AnyStripFrame();
-            Assert.Single(frame);
-            Assert.Equal(12, frame[0].Length);
-            Assert.All(frame[0], c => Assert.Equal(Theme.Border, c));
-            Assert.Equal("#33383F", Theme.Border);
-            Assert.NotEqual(StripStyle.Card.UnlitHex, Theme.Border);
-            var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.Contains("LedsHardwareTile(PanelLeds.SomethingElse,null,PanelLeds.AnyStripFrame(),", Squash(leds));
-            Assert.DoesNotContain("PanelEmulation.StripFrame(0,12,PanelEmulation.Idle)", Squash(leds));
         }
 
         /// <summary>A device row names the rig's strips already on it, and whether SimHub is talking to it.</summary>
@@ -2007,22 +1956,20 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_Fanatec_tile_is_found_by_the_device_name_and_opened_on_only_where_it_is_found()
+        public void The_device_picked_decides_the_wiring_by_its_name()
         {
             Assert.True(PanelLeds.FoundFanatec(new[] { "Arduino RGB LEDs", "Fanatec CSL Elite" }));
             Assert.False(PanelLeds.FoundFanatec(new[] { "Arduino RGB LEDs" }));
             Assert.False(PanelLeds.FoundFanatec(null));
-            Assert.True(PanelLeds.StartsOnFanatec(true, true));
-            Assert.False(PanelLeds.StartsOnFanatec(true, false));
-            // The device picked decides the wiring (#683): a Fanatec wheel through FanaBridge or SimHub's own
-            // device takes the Fanatec tile, any other device takes Something else, and the one tile there is
-            // where the build has no plain shape.
+            // The device picked decides the wiring (#683, #686): a Fanatec wheel through FanaBridge or SimHub's
+            // own device takes the Fanatec 3 · 9 · 3, any other device the plain strip, and the Fanatec wheel's
+            // wherever the build has no plain shape, since it is then the only one.
             Assert.True(PanelLeds.WiringFollowsDevice(true, true, "Fanatec ClubSport Formula V2.5"));
             Assert.False(PanelLeds.WiringFollowsDevice(true, true, "Arduino RGB LEDs"));
             Assert.False(PanelLeds.WiringFollowsDevice(true, true, null));
             Assert.False(PanelLeds.WiringFollowsDevice(true, false, "Fanatec ClubSport Formula V2.5"));
             Assert.True(PanelLeds.WiringFollowsDevice(false, true, "Arduino RGB LEDs"));
-            Assert.False(PanelLeds.StartsOnFanatec(false, true));
+            Assert.True(PanelLeds.WiringFollowsDevice(false, false, null));
         }
 
         // --- After a press ------------------------------------------------------------------------------------

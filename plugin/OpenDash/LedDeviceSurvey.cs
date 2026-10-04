@@ -11,12 +11,13 @@
 // read is judged as unreadable rather than dropped, and the names of the devices that were not offered
 // and show some sign of LEDs are said beside the picker.
 //
-// **A device that is not an LED module can still be offered, through its settings document** (#683). A
+// **A device that is not an LED module can still carry one, on its settings page** (#683, #686). A
 // FanaBridge wheel is a `DeviceInstance` of the plugin's own type holding SimHub's `LedModuleSettings` in
-// private fields, so no walk by type reaches its profile list; but every device must answer `GetSettings`
-// with the document SimHub saves for it, and an LED module's document carries its telemetry LED profile
-// list under `leds`. `LedTargets` reads that document for a device with no LED module and reports here
-// whether it holds that list, which is the one fact that turns "not an LED module" into an offer.
+// private fields, so no walk by type reaches its profile list; but every device must answer
+// `GetSettingsControls()` with its page's tabs, and an LED module's tab is SimHub's own LED editor, whose
+// `Settings` is the live module. `LedTargets` reads that tab for a device with no LED module and reports
+// here whether it carried one, after which the device is judged exactly as a module is: its driver and its
+// profile list are the live ones, so the same three verdicts apply.
 //
 // Pure, and compiled into OpenDash.Tests: `LedTargets` reads SimHub's types into a `LedDeviceSeen` and
 // this decides what to make of it, so the verdicts and the lines they produce are pinned without SimHub.
@@ -35,12 +36,12 @@ namespace OpenDashPlugin
     /// through.</summary>
     public enum LedDeviceVerdict
     {
-        /// <summary>An LED module with a telemetry LED driver and a profile list, or a device whose settings
-        /// document carries one (#683): a target.</summary>
+        /// <summary>An LED module with a telemetry LED driver and a profile list, met under the device or on its
+        /// settings page (#686): a target.</summary>
         Offered,
 
         /// <summary>Nothing under the device is an LED module SimHub's `GetDevices&lt;LedModuleDevice&gt;`
-        /// returns, which is cause one of #437, and its settings document holds no LED profile list either.</summary>
+        /// returns, which is cause one of #437, and its settings page carries no LED editor either.</summary>
         NotLedModule,
 
         /// <summary>An LED module whose telemetry LED driver is null, which is cause two of #437.</summary>
@@ -83,10 +84,10 @@ namespace OpenDashPlugin
         /// <summary>Whether that driver carries settings, which is where the profile list lives.</summary>
         public bool LedsSettings { get; set; }
 
-        /// <summary>Whether the device's settings document, the one SimHub saves for it and every device must
-        /// produce, holds a telemetry LED profile list under `leds`. Read only for a device with no LED module,
-        /// and what offers a plugin's own device type (#683).</summary>
-        public bool DocumentLeds { get; set; }
+        /// <summary>Whether the device's settings page, which every device must produce, carries SimHub's LED
+        /// editor and so a live LED module. Read only for a device with no LED module, and what lets a plugin's
+        /// own device type be judged as one (#686). The driver and settings facts below are then that module's.</summary>
+        public bool EditorModule { get; set; }
 
         /// <summary>The module's own LED count, as its descriptor gives it.</summary>
         public int? LedCount { get; set; }
@@ -121,8 +122,7 @@ namespace OpenDashPlugin
         public static LedDeviceVerdict Judge(LedDeviceSeen seen)
         {
             if (seen != null && seen.Unreadable != null) return LedDeviceVerdict.Unreadable;
-            if (seen == null) return LedDeviceVerdict.NotLedModule;
-            if (!seen.LedModule) return seen.DocumentLeds ? LedDeviceVerdict.Offered : LedDeviceVerdict.NotLedModule;
+            if (seen == null || (!seen.LedModule && !seen.EditorModule)) return LedDeviceVerdict.NotLedModule;
             if (!seen.LedsDriver) return LedDeviceVerdict.NoLedsDriver;
             if (!seen.LedsSettings) return LedDeviceVerdict.NoLedsSettings;
             return LedDeviceVerdict.Offered;
@@ -134,7 +134,7 @@ namespace OpenDashPlugin
             switch (Judge(seen))
             {
                 case LedDeviceVerdict.NotLedModule:
-                    return "it is not an LED module, so SimHub's GetDevices<LedModuleDevice>() does not return it, and its settings document holds no LED profile list";
+                    return "it is not an LED module, so SimHub's GetDevices<LedModuleDevice>() does not return it, and its settings page carries no LED editor";
                 case LedDeviceVerdict.NoLedsDriver:
                     return "its LED module has no telemetry LED driver (LedsDriver is null)";
                 case LedDeviceVerdict.NoLedsSettings:
@@ -167,8 +167,8 @@ namespace OpenDashPlugin
             {
                 parts.Add("instances " + string.Join(", ", seen.Instances));
             }
-            if (seen.DocumentLeds && !seen.LedModule) parts.Add("LED profiles reached through its settings document");
-            if (seen.LedModule || seen.DocumentLeds)
+            if (seen.EditorModule && !seen.LedModule) parts.Add("LED module reached through its settings page");
+            if (seen.LedModule || seen.EditorModule)
             {
                 if (seen.LedCount.HasValue) parts.Add(seen.LedCount.Value.ToString(CultureInfo.InvariantCulture) + " LEDs");
                 if (seen.Profiles.HasValue) parts.Add(seen.Profiles.Value.ToString(CultureInfo.InvariantCulture) + " saved profiles");
@@ -209,7 +209,7 @@ namespace OpenDashPlugin
         {
             if (seen == null) return false;
             return seen.LedModule
-                || seen.DocumentLeds
+                || seen.EditorModule
                 || seen.Unreadable != null
                 || (seen.ForeignDrivers != null && seen.ForeignDrivers.Count > 0);
         }
