@@ -17,6 +17,30 @@ Until then a release also carried one `.simhubdash` per package, including the `
 device shape and a `manifest.json` listing everything published. The notes of those releases say so
 where they describe them.
 
+## 0.3.0-rc.11 (2026-10-04)
+
+The candidate for a wheel set to "Individual profile only". rc.10 put a strip's profile in a
+FanaBridge wheel's own list, and a rig then reported that the wheel's page still did not show it. A
+wheel with individual LEDs has an "Individual leds profiles" choice on its page, and under
+"Individual profile only" SimHub hides the Telemetry LEDs list, which is where the profile went, and
+does not light it either.
+
+**On such a wheel the profile also goes into its Individual leds list.** This happens when that list
+covers the same LEDs as the strip, as it does on a ClubSport Formula V2.5, so the same profile lights
+the same lamps. Where it covers more, on a wheel with button LEDs, the install tells you to set
+Individual leds profiles to Disabled or Combined instead. A profile installed before this candidate
+is not moved: reinstall the strip, or remove it and add it again. (#690)
+
+**SimHub's log names the setting.** Each LED device's line in OpenDash's survey now says which
+Individual leds profiles choice the device is set to and how many LEDs it covers, so a report shows
+it without being asked. (#690)
+
+### Fixed
+
+- **A strip on a wheel set to "Individual profile only" is listed and lit**, where the wheel's
+  individual LEDs are the strip's LEDs, and the install says which switch to change where they are
+  not. Removing the strip takes it out of both lists. (#690)
+
 ## 0.3.0-rc.10 (2026-10-04)
 
 The candidate that puts the strip in the wheel's own list. rc.9 offered a FanaBridge wheel on the
