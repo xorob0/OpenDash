@@ -1331,9 +1331,10 @@ namespace OpenDashPlugin
             var side = PanelLeds.StartSide(sides);
             var centres = PanelLights.BarCentres(census, side);
             var centre = PanelLeds.KeptCentre(centres, 9);
-            // The one question the two numbers cannot answer: how the wheel is wired. Chosen, it decides them,
-            // and side and centre keep what the driver chose so that Something else gives that back.
-            var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);
+            // The one question the two numbers cannot answer: how the wheel is wired. The device picked answers
+            // it, the tile shows the answer and can still change it, and side and centre keep what the driver
+            // chose so that Something else gives that back.
+            var fanatec = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, preferred == null ? null : preferred.Name);
 
             var name = Ui.Input(string.Empty);
             var typed = false;
@@ -1506,8 +1507,16 @@ namespace OpenDashPlugin
                     {
                         var focused = deviceHost.IsKeyboardFocusWithin;
                         device = id;
+                        // A Fanatec wheel picked here is the Hardware question answered.
+                        var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name);
+                        if (wiring != fanatec)
+                        {
+                            fanatec = wiring;
+                            showHardware();
+                            showShape();
+                        }
                         showDevices();
-                        updateFooter();
+                        refresh();
                         if (focused) LedsFocusLater(() => chosenDevice);
                     });
                     radio.Margin = new Thickness(0, 0, 0, 4);
