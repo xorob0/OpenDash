@@ -10,6 +10,7 @@ using Xunit;
 
 namespace OpenDashPlugin.Tests
 {
+    [Collection(UpdateServiceWriters.Name)]
     public class UpdateServiceTests : IDisposable
     {
         /// <summary>A second dashboard, so that a plan can carry two items and a failure can be put on the later one.</summary>
@@ -799,6 +800,41 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A run is the service's from the press to its outcome, download included, so every panel SimHub builds reads
+        /// the same answer: a second Download is turned away rather than starting a second run, and the run reads as
+        /// over by the time its ending is called, so a page redrawn from it offers its presses again (#606).
+        /// </summary>
+        [Fact]
+        public void A_run_is_Applying_from_the_press_to_its_outcome_and_a_second_is_turned_away()
+        {
+            var (service, fetcher, installer) = HeldRun();
+            Assert.False(service.Applying);
+            var applyingAtFinish = true;
+            var finished = new System.Threading.ManualResetEventSlim();
+            var secondRan = false;
+
+            Assert.True(service.ApplyInBackground(installer, service.LastReleases[0], false, null, null, o =>
+            {
+                applyingAtFinish = service.Applying;
+                finished.Set();
+            }));
+
+            // Downloading: nothing written yet, so not Busy, and Applying all the same.
+            Assert.True(service.Applying);
+            Assert.True(fetcher.Waiting.Wait(TimeSpan.FromSeconds(5)));
+            Assert.True(service.Applying);
+            Assert.False(UpdateService.Busy);
+            Assert.False(service.ApplyInBackground(installer, service.LastReleases[0], false, null, null, o => secondRan = true));
+
+            fetcher.Gate.Set();
+            Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
+            Assert.False(applyingAtFinish);
+            Assert.False(service.Applying);
+            Assert.False(secondRan);
+            Assert.True(service.ApplyingFraction > 0);
+        }
+
+        /// <summary>
         /// SimHub closing stops a download rather than waiting for it, and the run writes nothing afterwards.
         /// </summary>
         [Fact]
@@ -976,8 +1012,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// A press on the panel that writes DashTemplates runs off the interface thread and is counted as writing from
-        /// the moment it is handed over until it has finished, so a SimHub closing meanwhile waits for it and #606 can
-        /// refuse a second writer on Busy; it says it has finished only once it no longer counts (#611).
+        /// the moment it is handed over until it has finished, so a SimHub closing meanwhile waits for it and the panel
+        /// refuses a second writer on Busy (#606); it says it has finished only once it no longer counts (#611).
         /// </summary>
         [Fact]
         public void A_panel_write_runs_off_the_caller_s_thread_and_counts_as_writing_until_it_is_done()

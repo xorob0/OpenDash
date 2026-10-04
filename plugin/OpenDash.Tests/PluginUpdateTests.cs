@@ -247,5 +247,145 @@ namespace OpenDashPlugin.Tests
             foreach (var token in meant) rest = rest.Replace(token, "");
             Assert.DoesNotContain("%", rest);
         }
+
+        /// <summary>The version this checkout builds, which the test assembly carries exactly as
+        /// OpenDash.dll does: both read it from VERSION through Directory.Build.props.</summary>
+        private static string BuiltVersion()
+        {
+            return File.ReadAllText(Path.Combine(RepoPaths.Root(), "VERSION")).Trim();
+        }
+
+        /// <summary>Stages a real assembly, this one, where <see cref="PluginUpdate.Stage"/> leaves it,
+        /// with the reopen request and the script an update would have left beside it.</summary>
+        private void StageARealAssembly()
+        {
+            Directory.CreateDirectory(FlagBoxProfile.FolderPath(root));
+            File.Copy(typeof(PluginUpdateTests).Assembly.Location, PluginUpdate.StagedPath(root), true);
+            Assert.True(PluginUpdate.AskToReopen(root, true));
+            Assert.True(PluginUpdate.Arm(root));
+        }
+
+        private void AssertNothingIsLeftToSwap()
+        {
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.False(File.Exists(PluginUpdate.StagedPath(root)), "the staged plugin is still there");
+            Assert.False(File.Exists(PluginUpdate.ReopenPath(root)), "the reopen request is still there");
+            Assert.False(File.Exists(PluginUpdate.ScriptPath(root)), "the swap script is still there");
+            Assert.False(File.Exists(PluginUpdate.FailedSwapsPath(root)), "the failed-swap count is still there");
+        }
+
+        /// <summary>The version is read out of the staged file itself, pre-release and all, without
+        /// loading it: the assembly version would call 0.3.0-rc.6 and 0.3.0-rc.7 both 0.3.0.0.</summary>
+        [Fact]
+        public void The_staged_version_is_the_informational_version_of_the_staged_file()
+        {
+            Assert.Null(PluginUpdate.StagedVersion(root));
+            StageARealAssembly();
+            Assert.Equal(BuiltVersion(), PluginUpdate.StagedVersion(root));
+            // What Stage writes from a zip that carries no real assembly has no version to read.
+            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            Assert.Null(PluginUpdate.StagedVersion(root));
+        }
+
+        /// <summary>
+        /// A staged plugin at or below the one running is cleared at the start rather than armed.
+        /// </summary>
+        /// <remarks>
+        /// The driver who staged 0.5.0 and then installed 0.6.0 by hand: arming it would put 0.5.0 back
+        /// over 0.6.0 at the next close (#598). The same version is cleared too, a swap for its twin being
+        /// a swap for nothing that still leaves the panel promising a restart.
+        /// </remarks>
+        [Fact]
+        public void A_staged_version_at_or_below_the_running_one_is_cleared_rather_than_armed()
+        {
+            foreach (var running in new[] { BuiltVersion(), "999.0.0" })
+            {
+                StageARealAssembly();
+                Assert.Equal(StagedPluginVerdict.NotNewer, PluginUpdate.Review(root, running));
+                AssertNothingIsLeftToSwap();
+                // And Resume, which is what Init calls, arms nothing on top.
+                StageARealAssembly();
+                Assert.False(PluginUpdate.Resume(root, running));
+                AssertNothingIsLeftToSwap();
+            }
+        }
+
+        [Fact]
+        public void A_newer_staged_version_is_still_armed()
+        {
+            StageARealAssembly();
+            Assert.Equal(StagedPluginVerdict.Arm, PluginUpdate.Review(root, "0.0.1"));
+            Assert.True(PluginUpdate.Pending(root));
+            Assert.True(File.Exists(PluginUpdate.ReopenPath(root)), "the driver's request to reopen was dropped");
+            Assert.Equal(1, PluginUpdate.FailedSwaps(root));
+        }
+
+        /// <summary>
+        /// A swap that keeps failing is given up on, so the panel cannot say "Restart SimHub to finish
+        /// updating" for ever.
+        /// </summary>
+        [Fact]
+        public void A_staged_plugin_still_waiting_after_three_starts_is_given_up_on()
+        {
+            StageARealAssembly();
+            for (var start = 1; start < PluginUpdate.MaxFailedSwaps; start++)
+            {
+                Assert.Equal(StagedPluginVerdict.Arm, PluginUpdate.Review(root, "0.0.1"));
+                Assert.Equal(start, PluginUpdate.FailedSwaps(root));
+            }
+            Assert.Equal(StagedPluginVerdict.GiveUp, PluginUpdate.Review(root, "0.0.1"));
+            AssertNothingIsLeftToSwap();
+        }
+
+        /// <summary>A new staging is a new assembly with no failed swaps behind it.</summary>
+        [Fact]
+        public void Staging_again_starts_the_count_again()
+        {
+            StageARealAssembly();
+            Assert.Equal(StagedPluginVerdict.Arm, PluginUpdate.Review(root, "0.0.1"));
+            Assert.Equal(StagedPluginVerdict.Arm, PluginUpdate.Review(root, "0.0.1"));
+            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            Assert.Equal(0, PluginUpdate.FailedSwaps(root));
+        }
+
+        /// <summary>A staged file with no version to read cannot be told apart from a downgrade, and is
+        /// cleared rather than swapped in on trust.</summary>
+        [Fact]
+        public void A_staged_file_without_a_version_is_cleared()
+        {
+            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            Assert.True(PluginUpdate.Arm(root));
+            Assert.Equal(StagedPluginVerdict.Unreadable, PluginUpdate.Review(root, "0.0.1"));
+            AssertNothingIsLeftToSwap();
+        }
+
+        /// <summary>A start with nothing staged does nothing but tidy the count a swap that worked left.</summary>
+        [Fact]
+        public void Nothing_staged_reviews_to_nothing()
+        {
+            Assert.Null(PluginUpdate.Review(root, "0.3.0"));
+            Directory.CreateDirectory(FlagBoxProfile.FolderPath(root));
+            File.WriteAllText(PluginUpdate.FailedSwapsPath(root), "2");
+            Assert.Null(PluginUpdate.Review(root, "0.3.0"));
+            Assert.False(File.Exists(PluginUpdate.FailedSwapsPath(root)));
+            Assert.False(File.Exists(PluginUpdate.ScriptPath(root)));
+        }
+
+        [Theory]
+        [InlineData(null, "0.3.0", 1, StagedPluginVerdict.Unreadable)]
+        [InlineData("", "0.3.0", 1, StagedPluginVerdict.Unreadable)]
+        [InlineData("0.3.0", "0.3.0", 1, StagedPluginVerdict.NotNewer)]
+        [InlineData("0.5.0", "0.6.0", 1, StagedPluginVerdict.NotNewer)]
+        [InlineData("0.3.0-rc.6", "0.3.0-rc.7", 1, StagedPluginVerdict.NotNewer)]
+        [InlineData("0.3.0-rc.7", "0.3.0", 1, StagedPluginVerdict.NotNewer)]
+        // Older is older however often it has failed: the log calls it stale rather than a failure.
+        [InlineData("0.5.0", "0.6.0", 9, StagedPluginVerdict.NotNewer)]
+        [InlineData("0.3.0-rc.7", "0.3.0-rc.6", 1, StagedPluginVerdict.Arm)]
+        [InlineData("0.3.0", "0.3.0-rc.7", 2, StagedPluginVerdict.Arm)]
+        [InlineData("0.6.0", "0.5.0", 3, StagedPluginVerdict.GiveUp)]
+        public void Only_a_newer_plugin_is_armed_and_only_so_many_times(string staged, string running, int failedSwaps, StagedPluginVerdict expected)
+        {
+            Assert.Equal(expected, PluginUpdate.Judge(staged, running, failedSwaps));
+        }
     }
 }

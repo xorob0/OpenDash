@@ -1292,8 +1292,8 @@ namespace OpenDashPlugin
         // --- The Add LEDs sheet ---------------------------------------------------------------------------------
 
         /// <summary>
-        /// Adding a strip, in four steps: which hardware, its shape, the SimHub device its profile goes to, and
-        /// its name. The press adds the strip and installs its profile.
+        /// Adding a strip, in three steps: the SimHub device its profile goes to, its shape, and its name. The
+        /// press adds the strip and installs its profile.
         /// </summary>
         /// <remarks>
         /// The shapes are read out of the assembly rather than listed here, exactly as the Updates page's
@@ -1302,8 +1302,10 @@ namespace OpenDashPlugin
         ///
         /// <para>The two numbers cannot say how a wheel is wired, so a Fanatec owner who added a strip by its
         /// counts got the plain 3/9/3, which lights only some of the wheel's LEDs and starts the bar from the
-        /// middle of the rim. The Fanatec tile is that question, asked first because it decides the other two
-        /// (#436), and offered only where the build embedded its profile.</para>
+        /// middle of the rim (#436). The device answers that question, which is why it is asked first: a
+        /// Fanatec wheel picked here fixes the shape to the Fanatec 3 · 9 · 3, any other device offers the
+        /// plain shape, and the sheet opens on a Fanatec wheel when the rig has one, so nobody is asked what
+        /// their device already says (#686). The Fanatec wiring is offered only where the build embedded it.</para>
         /// </remarks>
         private void ShowAddLedBar()
         {
@@ -1324,26 +1326,23 @@ namespace OpenDashPlugin
             // into a list the hardware does not read, which is exactly what a rig reported.
             var targets = ledDevices.Targets;
             var notOffered = ledDevices.Declined;
-            var found = PanelLeds.FoundFanatec(targets.Select(t => t.Name));
             var preferred = LedTargets.Preferred(targets);
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
 
             var side = PanelLeds.StartSide(sides);
             var centres = PanelLights.BarCentres(census, side);
             var centre = PanelLeds.KeptCentre(centres, 9);
-            // The one question the two numbers cannot answer: how the wheel is wired. Chosen, it decides them,
-            // and side and centre keep what the driver chose so that Something else gives that back.
-            var fanatec = PanelLeds.SheetStartsOnFanatec(sides.Length > 0, offersFanatec, found);
+            // The one question the two numbers cannot answer: how the wheel is wired. The device picked answers
+            // it, and side and centre keep what the driver chose so that another device gives that back.
+            var fanatec = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, preferred == null ? null : preferred.Name);
 
             var name = Ui.Input(string.Empty);
             var typed = false;
             var footerNote = Ui.Prose(string.Empty, PanelKit.CardMetaSize);
             // Borders rather than ContentControls, which WPF makes tab stops: a host is only where a step's
             // controls go, and an invisible stop before each step is a Tab press that shows nothing.
-            var hardwareHost = new Border();
             var shapeHost = new Border();
             var deviceHost = new Border();
-            UIElement chosenTile = null;
             UIElement chosenDevice = null;
 
             Action updateFooter = () =>
@@ -1368,8 +1367,8 @@ namespace OpenDashPlugin
             };
 
             // Each picker is drawn once and keeps keyboard focus: a change of ends swaps only what is under the
-            // ends bar, a change of centre only the picture and the note, and a tile or a device picked hands
-            // focus to the one drawn in its place.
+            // ends bar, a change of centre only the picture and the note, and a device picked hands focus to
+            // the one drawn in its place.
             Action showShape = () =>
             {
                 if (fanatec)
@@ -1450,42 +1449,6 @@ namespace OpenDashPlugin
                     note);
             };
 
-            Action showHardware = null;
-            Action<bool> pickHardware = wheel =>
-            {
-                var focused = hardwareHost.IsKeyboardFocusWithin;
-                fanatec = wheel;
-                showHardware();
-                showShape();
-                refresh();
-                if (focused) LedsFocusLater(() => chosenTile);
-            };
-            showHardware = () =>
-            {
-                var tiles = new List<UIElement>();
-                chosenTile = null;
-                if (offersFanatec)
-                {
-                    var tile = LedsHardwareTile(PanelLights.BarFanatecTitle, found ? PanelLeds.FoundInSimHub : null,
-                        PanelLeds.ShapeFrame(PanelLights.FanatecSide, PanelLights.FanatecCentre),
-                        PanelLeds.FanatecShape, null, fanatec, () => pickHardware(true));
-                    if (fanatec) chosenTile = tile;
-                    tiles.Add(tile);
-                }
-                if (sides.Length > 0)
-                {
-                    var tile = LedsHardwareTile(PanelLeds.SomethingElse, null,
-                        PanelLeds.AnyStripFrame(),
-                        PanelLeds.SomethingElseNote, null, !fanatec, () => pickHardware(false));
-                    if (!fanatec) chosenTile = tile;
-                    tiles.Add(tile);
-                }
-                var grid = Ui.CardGrid(PanelLeds.HardwareTileMinWidth, PanelLeds.HardwareTileGap, 2, tiles.ToArray());
-                hardwareHost.Child = PanelLeds.ShowsOtherWheelNote(offersFanatec)
-                    ? Ui.VStack(12, grid, LedsNote(PanelLeds.OtherWheelNote))
-                    : (UIElement)grid;
-            };
-
             Action showDevices = null;
             showDevices = () =>
             {
@@ -1506,8 +1469,15 @@ namespace OpenDashPlugin
                     {
                         var focused = deviceHost.IsKeyboardFocusWithin;
                         device = id;
+                        // A Fanatec wheel picked here is the wiring answered, and the shape step follows.
+                        var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name);
+                        if (wiring != fanatec)
+                        {
+                            fanatec = wiring;
+                            showShape();
+                        }
                         showDevices();
-                        updateFooter();
+                        refresh();
                         if (focused) LedsFocusLater(() => chosenDevice);
                     });
                     radio.Margin = new Thickness(0, 0, 0, 4);
@@ -1524,7 +1494,6 @@ namespace OpenDashPlugin
                 deviceHost.Child = list;
             };
 
-            showHardware();
             showShape();
             showDevices();
             refresh();
@@ -1536,10 +1505,9 @@ namespace OpenDashPlugin
             cancel.Click += (sender, args) => CloseSheet();
 
             var body = Ui.VStack(0,
-                Ui.Step(1, PanelLeds.HardwareStep, hardwareHost, true),
+                Ui.Step(1, PanelLights.BarDeviceTitle, deviceHost, true),
                 Ui.Step(2, PanelLeds.ShapeStep, shapeHost),
-                Ui.Step(3, PanelLights.BarDeviceTitle, deviceHost),
-                Ui.Step(4, PanelLights.BarNameTitle, name));
+                Ui.Step(3, PanelLights.BarNameTitle, name));
             ShowSheet(PanelLights.AddBar, body, Ui.VStack(14, footerNote, SheetFooter(null, cancel, add)));
         }
 
@@ -1567,63 +1535,6 @@ namespace OpenDashPlugin
             dock.Children.Add(control);
             dock.Children.Add(words);
             return dock;
-        }
-
-        /// <summary>A hardware tile, AddLeds' .hw: its name with an eyebrow on the right, a picture of it and a
-        /// line under it.</summary>
-        private static Button LedsHardwareTile(string title, string eyebrow, IList<string[]> frame, string note, string tooltip, bool selected, Action pick)
-        {
-            var head = new DockPanel { LastChildFill = true };
-            if (eyebrow != null)
-            {
-                // The artboard's 10 px, a size below the kit's eyebrow, so the name beside it keeps some room.
-                var found = Ui.Tracked(eyebrow, PanelLeds.FoundInSimHubSize, FontWeights.SemiBold, Theme.StatusUpToDate, Theme.TrackingLabel);
-                found.VerticalAlignment = VerticalAlignment.Center;
-                found.Margin = new Thickness(8, 0, 0, 0);
-                DockPanel.SetDock(found, Dock.Right);
-                head.Children.Add(found);
-            }
-            // Trimmed rather than cut where a narrow sheet leaves the name less room than it needs; the tile's
-            // accessible name is the whole of it.
-            var name = Ui.Text(title, PanelKit.LightCardNameSize, FontWeights.SemiBold, Theme.TextPrimary);
-            name.TextTrimming = TextTrimming.CharacterEllipsis;
-            name.ToolTip = title;
-            head.Children.Add(name);
-            // The picture shrinks to the tile rather than being cut at its edge, as a strip's card does.
-            var picture = new Viewbox
-            {
-                Stretch = Stretch.Uniform,
-                StretchDirection = StretchDirection.DownOnly,
-                HorizontalAlignment = HorizontalAlignment.Left,
-                Child = Ui.Strip(frame, StripStyle.Card),
-            };
-            var tile = Ui.ChoiceTile(Ui.VStack(10, head, picture, Ui.Prose(note, PanelKit.CardMetaSize)), selected, pick);
-            if (tooltip != null) tile.ToolTip = tooltip;
-            AutomationProperties.SetName(tile, title);
-            return tile;
-        }
-
-        /// <summary>The sheet's note under the tiles: the ringed i and one line, inside a dashed rule.</summary>
-        private static FrameworkElement LedsNote(string text)
-        {
-            var icon = Ui.Icon(PanelIcons.Info, Theme.TextSecondary, PanelIcons.Box);
-            icon.VerticalAlignment = VerticalAlignment.Center;
-            var line = Ui.Prose(text, PanelKit.CardMetaSize);
-            line.VerticalAlignment = VerticalAlignment.Center;
-            var dashes = new DoubleCollection { 3, 3 };
-            dashes.Freeze();
-            var rule = new Rectangle
-            {
-                Stroke = Ui.Brush(Theme.Border),
-                StrokeThickness = PanelMetrics.BorderWeight,
-                StrokeDashArray = dashes,
-                RadiusX = Theme.Radius,
-                RadiusY = Theme.Radius,
-            };
-            var grid = new Grid();
-            grid.Children.Add(rule);
-            grid.Children.Add(new Border { Padding = new Thickness(12, 10, 12, 10), Child = Ui.HStack(10, icon, line) });
-            return grid;
         }
 
         /// <summary>What the name box opens on: "Wheel rim" for the Fanatec wheel and "Strip" for anything else,

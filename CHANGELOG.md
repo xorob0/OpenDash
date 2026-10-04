@@ -17,6 +17,353 @@ Until then a release also carried one `.simhubdash` per package, including the `
 device shape and a `manifest.json` listing everything published. The notes of those releases say so
 where they describe them.
 
+## 0.3.0-rc.11 (2026-10-04)
+
+The candidate for a wheel set to "Individual profile only". rc.10 put a strip's profile in a
+FanaBridge wheel's own list, and a rig then reported that the wheel's page still did not show it. A
+wheel with individual LEDs has an "Individual leds profiles" choice on its page, and under
+"Individual profile only" SimHub hides the Telemetry LEDs list, which is where the profile went, and
+does not light it either.
+
+**On such a wheel the profile also goes into its Individual leds list.** This happens when that list
+covers the same LEDs as the strip, as it does on a ClubSport Formula V2.5, so the same profile lights
+the same lamps. Where it covers more, on a wheel with button LEDs, the install tells you to set
+Individual leds profiles to Disabled or Combined instead. A profile installed before this candidate
+is not moved: reinstall the strip, or remove it and add it again. (#690)
+
+**SimHub's log names the setting.** Each LED device's line in OpenDash's survey now says which
+Individual leds profiles choice the device is set to and how many LEDs it covers, so a report shows
+it without being asked. (#690)
+
+### Fixed
+
+- **A strip on a wheel set to "Individual profile only" is listed and lit**, where the wheel's
+  individual LEDs are the strip's LEDs, and the install says which switch to change where they are
+  not. Removing the strip takes it out of both lists. (#690)
+
+## 0.3.0-rc.10 (2026-10-04)
+
+The candidate that puts the strip in the wheel's own list. rc.9 offered a FanaBridge wheel on the
+Add LEDs sheet, and a rig then reported that the profile it installed was missing from the wheel's
+list in SimHub. The cause was the way the profile was written, and this candidate writes it the way
+SimHub does for a wheel it registers itself.
+
+**A plugin's device is handled as the LED module its settings page carries.** rc.9 reached such a
+device through the settings document every device answers, which meant composing a document and
+handing it back, so that the plugin rebuilt its driver from it underneath SimHub's own editor. Every
+device answers with the tabs of its settings page, however, and the LED tab of that page holds the
+live LED module, the very object the editor is bound to. The profile now goes into that live list
+and the Devices plugin saves it, which is the path every other device already takes. Nothing is
+keyed on a plugin's type name, so any plugin's device that carries an LED editor on its page is
+reached the same way. (#686)
+
+**The Add LEDs sheet asks for the SimHub device first.** A new strip now opens on a Fanatec wheel
+where the rig has one, then on the one LED device there is, and the Arduino only when it is that
+one, and the device picked fixes the shape instead of the Hardware question being asked beforehand.
+(#686)
+
+### Fixed
+
+- **A strip installed on a wheel added through FanaBridge lands in the wheel's own profile list.**
+  See above. (#686, following #683)
+
+### Changed
+
+- **The Add LEDs sheet opens on a Fanatec wheel when there is one**, and the device decides the
+  shape rather than the Hardware step asking it. (#686)
+
+## 0.3.0-rc.9 (2026-10-04)
+
+The candidate that reaches a Fanatec wheel. One change, taken from a rig: a wheel added to SimHub
+through FanaBridge was in SimHub's Devices view and absent from the Add LEDs sheet's device list,
+and the only trace was a line in SimHub's log. The sheet lists it now, a strip added to it lands
+in the wheel's own profile list, and picking the wheel answers the Hardware question by itself.
+
+**A FanaBridge wheel is a device a strip can be installed on.** FanaBridge registers a wheel as a
+device of its own kind, which holds SimHub's LED profiles where nothing by type can reach them.
+OpenDash now reads them the way SimHub itself saves and restores any device, through the settings
+document every device answers with, so the wheel appears under SimHub device as any other LED
+device does, and "Add and install" writes the profile into the wheel's list in SimHub. Every wheel
+FanaBridge registers is the same kind of device, so the same goes for all of them. Nothing is keyed on
+FanaBridge itself: any plugin's device that keeps its LED profiles in its settings is reached the
+same way. SimHub's log says when a device was reached that way, and a device it could not reach
+still says why. Seen on the test VM with FanaBridge 0.7.0 and a ClubSport Formula V2.5 added; a
+wheelbase has yet to confirm that the rim lights from the installed profile.
+
+**The device picked decides the wiring.** The sheet used to ask first whether the strip is a
+Fanatec wheel, and a driver who had already picked the wheel under SimHub device was answering
+twice. Picking a device whose name says Fanatec now puts Hardware on the Fanatec wheel and fixes the
+shape to its 3 · 9 · 3, and picking any other device puts it back on Something else, since that
+wiring is the order SimHub's Fanatec device presents and means nothing elsewhere. The tiles stay,
+so the answer can still be changed by hand. (#683)
+
+### Fixed
+
+- **A wheel added through FanaBridge is listed on the Add LEDs sheet** and takes a strip's profile
+  into its own list in SimHub. See above. (#683, the cause-finding half of #437)
+
+### Changed
+
+- **Picking a Fanatec wheel as the SimHub device selects the Fanatec wiring**, and any other device
+  the plain one, so the Hardware step is answered by the device rather than asked. See above. (#683)
+- **SimHub's log names the devices OpenDash reached through their settings document**, and the
+  line for a device it did not reach says the document had no LED profile list either, so the next
+  report tells the two apart.
+
+## 0.3.0-rc.8 (2026-10-03)
+
+The candidate laid out like the rig. The settings panel is rebuilt from four tabs grouped by the
+kind of setting into a sidebar of pages, one per thing on the rig, and its Rig page draws every
+screen, strip and matrix as a tile in the shape of the rig itself. It is also the first release that
+carries the plugin alone, and most of the week went into the paths the plugin takes into SimHub: an
+update can no longer downgrade the plugin or hold SimHub's close on a download, a screen or a strip
+added mid-session takes its settings at once, and a folder, a face or a profile written over
+something the driver edited keeps a copy of it. On the screens, every flag is called one thing
+everywhere, position and session best count in the driver's own class, and the labels stop shouting.
+
+**The panel is a sidebar of pages, one per thing on the rig.** Home says what needs fixing, in the
+driver's terms and with the steps to take in SimHub, what each device shows right now, brightness
+and night mode. Rig lays every screen, strip and matrix out as a tile dragged into the shape of the
+rig, and eighteen Preview chips paint a flag, a car alongside, the pit lane, a warning or the revs
+on every tile at once. Screens configures a face on a picture of itself: click a zone, tick and
+order its pages, set its class filter and the fields of its bar, with the live preview beside it.
+LEDs and Matrix hold one card per strip and per panel, with the Add sheet, the effects and the
+family switches where the device is. Shortcuts gathers every wheel button binding in one list,
+zones, glances, paging, night mode and brightness, and says when two share a key. Settings holds
+what is the same on every screen, and Updates holds the update card, a table of everything OpenDash
+has written into SimHub, Reinstall everything, Put mine back, a support report for the clipboard and
+the log. A search box above the pages finds any row by its label and opens its page on it, and a
+greyed row reads Soon and names its ticket on hover. The panel fills whatever width SimHub gives it,
+and under 1000 px the sidebar folds to an icon rail. The rows that are new in this release carry a
+New tag, which comes off at the next cut.
+
+**Every flag is called one thing everywhere, and no name says FLAG.** Band D, its corner blocks and
+the pit wall's band write RED, BLACK, YELLOW, BLUE and GREEN where they wrote RED FLAG and the rest,
+and the blue flag's detail reads `BLUE · P4 GT3`, on the corner blocks too wherever it fits.
+iRacing's whole-track caution had three names, SAFETY CAR on the band, SAFETY on the full-screen
+block and "Full-course caution" in the catalogue; it is the full course yellow on every surface,
+written as FULL COURSE YELLOW wherever that stays legible and FCY on the three portrait screens, and
+the 8x8 flag box writes SC in unlit pixels on a blinking yellow rather than two halves waved in
+turn, which is a double yellow iRacing never raises. The debris flag is yellow under red stripes on
+the band, the block and the LED lamp, where it was a plain yellow wherever no name was written, and
+the meatball is an orange disc on black with no name, where it was a band of the caution amber. The
+furled black says BLACK, like the black flag.
+
+**The catalogue of alerts is one list of twenty.** The fifteen flags, and the five car alerts
+iRacing publishes, ranked among them: ignition off and engine off out of the pit lane, an incident
+with its count against the limit, push to pass and the headlight flash. Every band draws all twenty,
+and a car alert fires only while somebody is in the car, so a driver standing in the garage is not
+told that the engine is off.
+
+**Position counts in your own class by default, and so does the session best.** In a multiclass race
+a driver second in class read `P16`, because every surface counted the whole field unless the rig
+had been told otherwise, and `Session best` handed a GT3 driver an LMP2 time. Both follow the class
+now: the bar's position cells agree with the session module, the pit wall and the companion header,
+the session best and the purple on the sectors and the leaderboard are measured against the player's
+class, and the leaderboard, relative and opponents pages list the class alone. A rig that already
+has a settings file keeps what it said, which was Overall unless it was changed, since a saved value
+counts as a choice; choose Class under Position on the Settings page to get the new reading.
+
+**Labels in sentence case, units in their symbol's case.** `Fuel left`, `Best lap`, `km/h`, `kPa`,
+`°C`, so a sim reporting kilopascals no longer reads `KPA`, a symbol that does not exist. Capitals
+stay where the word is a name in capitals on its own account: the flags, RPM, ABS, TC, DRS, PIT and
+the class chips, which stand out again now that nothing else shouts. A driver name on a list row
+stays in capitals, because Barlow's dotted i welds shut below two device pixels.
+
+**The release carries the plugin, and nothing else.** rc.7's preamble said so, and rc.7 still
+published its twenty-two `.simhubdash` files and sixty-three `.ledsprofile` files beside the zip;
+this is the first release that does not. The update path was adjusted for it: a release that carries
+no packages counts the dashboards as coming with the plugin, says so, and finishes on the restart. A
+plugin from rc.3 to rc.7 words that update wrongly, see Known.
+
+### Added
+
+- **The settings panel rebuilt as pages.** See above.
+- **A delta against the last lap**, a third reference beside the session best and the all-time best,
+  read from iRacing's own live comparison, and **a precision setting** that draws the live delta to
+  hundredths or thousandths on card 3, the delta page, Lap times, the lap pop-up and the pit wall's
+  Lap delta panel. Lap times' caption follows the reference, `Delta to last lap`, where `Delta to
+  your best` was false.
+- **A clock format**, `14:32` or `2:32 PM`, chosen once for the rig and followed by the wall clock
+  and the sim's time of day on every surface that draws either. Every box a clock sits in holds the
+  longer form, so band D's corner and the groups left of the pit wall header's clocks move a few
+  pixels.
+- **The companion's quick glance is back.** Hold a button for a module, release it to go back to the
+  one you were on. SimHub never tells the plugin which module you tapped to, so the companion itself
+  remembers it: the way back is the dashboard's own, and on the free edition it takes a tenth of a
+  second.
+- **An LED strip can say it is a Fanatec.** Adding one asks, and gives a Fanatec wheel the `3/9/3
+  Fanatec` profile written for its wiring, where it always got the plain `3-9-3` and lit the wrong
+  lamps.
+- **Flags in the pit lane** is a switch on the Settings page. Turned off, the flags leave every
+  surface while the car is in the lane, and the car alerts stay.
+- **Fifteen effect switches on every strip**, a brightness per strip that is never brighter than
+  night mode, a reversed twin for every strip shape, and three rig-wide actions a wheel button can
+  take: night mode, brightness up and brightness down. Each face's zones gain a Previous beside
+  their Next.
+- **The idle screen says, in its corner, when a newer release exists**: `UPDATE TO 0.4.0 IN SIMHUB`,
+  in the small label grey, bottom-right on a rectangle and on the lowest line a round face holds.
+  The check now runs when SimHub starts rather than when the panel is first opened, since a mark
+  that appears only once somebody opens the panel reaches only drivers who already know. A package
+  running without the plugin draws nothing.
+- **An untimed session's clock reads `∞`** where it read `-:--:--` beside `LAP 14 / 30`, on all six
+  surfaces that draw one; `-:--:--` is kept for no session at all.
+- **TC and ABS on a sim without iRacing's knobs.** The bar's settings strip and the pit wall's
+  settings row hid both on an Assetto Corsa car that has them; they show whenever SimHub reports a
+  level, as the companion's car settings page already did.
+- **SimHub's new-plugin prompt describes OpenDash** where it printed `PluginDescription_OpenDash`,
+  and the install guide names the prompt's two switches as SimHub draws them, the second deciding
+  whether OpenDash reaches the left menu at all.
+- **A support report**, copied to the clipboard from the Updates page, with the log beside it.
+
+### Changed
+
+- **A list page declares its rows and spends the rest of its box on type, then space.** Zone B of
+  the 850 x 480 face drew nine to eleven rows of 28 px with the name at 13 px, the smallest size in
+  the design on the one column that says who; it draws the relative as seven rows and the
+  leaderboard as eight, both with a 15 px name over 24 px numerals, and every list body fills its
+  box. The pit wall's boards are the exception, since their question is who is in the race, and
+  still list every car they hold. A row short of width gives up its name and then its position,
+  never its gap.
+- **The opponents page draws its name as the relative does**, at 15 px and ten characters, so a 600
+  px zone no longer cuts `LIAM BYRNE` to `LIAM BY…`, and its gap grows with the box: the ahead block
+  reads from the top of the zone and the behind block down to its bottom.
+- **Lap history draws its lap number as an index**, one step down from the time, and fills its zone
+  with its laps rather than leaving a third of it empty. The catalogue's fuel target header is
+  refused, because no property carries a per-lap fuel figure for it to sit over.
+- **A page on a face grows to the canvas's ×2.2** rather than stopping at ×1.35, so the speedo, the
+  fuel, the energy and the car settings pages fill their zones, and a tall face promotes the lead
+  value of lap times, session and stint a size.
+- **The fuel page sheds in the order it draws**, which is the reading a driver makes before a stop:
+  the level, the time, the margin, the laps left, what to add, then the consumptions.
+- **A driver name on a list is drawn in capitals at the sizes a list draws it**, and a truncated
+  name loses the space it was cut at, so the ellipsis follows the last letter.
+- **The full-screen chequered flag is a board of whole checks**, three across the shorter side,
+  where every block but one ended on part of a square and the portrait companion drew one square and
+  a strip.
+- **A face written into a running SimHub says "Restart SimHub to see it"**, and only then, where
+  Reinstall said "Close and reopen the dashboard", which is false: SimHub 9.12.6 cannot draw a font
+  copied into `DashFonts` after it has first read that folder. A face changed under its name now
+  reaches a rig that has the old one, and the face it replaces goes to `DashFonts\_Backups`. This is
+  also where rc.7's open question was answered: the wordmark's Light draws on the rig once the face
+  is in place before SimHub reads the folder, which the plugin's first start now guarantees.
+- **A companion registers no action of its own**, so SimHub's Controls and events lose two dead
+  rows; its paging is NextScreen and PreviousScreen on the device, and the pane says so.
+- **The Rig page asks you to remove dashboards only while the rig holds a screen the migration
+  made** and nobody has kept, where a rig of five screens added by hand was told to remove
+  dashboards it had just asked for.
+- **The panel names the version the rig runs**, the oldest dashboard among its screens, where a rig
+  without the 1920 x 480 face read "You have an unknown version".
+- **An LED device OpenDash passes over is logged with its reason**, and a strip's device row names a
+  wheel that has LEDs OpenDash cannot reach, where both were silent. This does not fix the
+  FanaBridge wheels, see Known.
+
+### Fixed
+
+- **The session best flashed** on joining a session that already had one, and through the first
+  timed lap: a lap time with no value drew nothing at all, which hit every lap-time and sector
+  field, and the session best was read from the frame SimHub was still building. It comes from the
+  published properties now, and in class mode from a value the plugin copies out of the finished
+  frame.
+- **The bar drew a week into six cells.** iRacing's `168:00:00` for a lap-limited race lost its last
+  glyph as `RACE 168:00:0` on every face in every lap race; it reads `∞`.
+- **A screen added from the panel read every default until SimHub restarted**, whatever the panel
+  said, because its properties and actions were attached only at startup, and so did an LED strip's
+  centre, rev style, flag animation, spotter, brightness and effects. Both are attached when the
+  screen or the strip is saved, and the add lines no longer ask for a restart.
+- **A second screen of a size was left on its old dashboard by an update**, and listed in Dash
+  Studio with an empty thumbnail, because its folder had a writer of its own with no update path and
+  its sidecars kept the package's name. Every folder on the rig now goes through the same install,
+  the same hold-back of an edited folder and the same kept copy.
+- **An update renamed a stock folder in case** on a rig migrated across the rename, from `openDash
+  850x480` to `OpenDash 850x480`, after which SimHub did not reopen the dashboard at the next
+  restart. The package's spelling is the one truth, and the settings are corrected at the first
+  start.
+- **A screen named with a trailing dot was written into another screen's folder.** Windows drops the
+  dot from a path, so `OpenDash Rim.` landed in `OpenDash Rim`. A folder never ends in a dot or a
+  space now, and one an older plugin spelled with one is respelled as Windows wrote it.
+- **An edited flag box profile was rewritten at every start.** The settings remember what OpenDash
+  last wrote, and a file that no longer matches it is yours, with one log line saying how to get
+  OpenDash's copy back.
+- **A staged plugin could downgrade a plugin installed after it**, and a swap that kept failing left
+  "Restart SimHub to finish updating" up for ever. A start arms a staged plugin only when it is
+  newer than the one running; the third start that still finds it gives up, logs why, and offers the
+  update again.
+- **Closing SimHub waited up to twenty seconds on a download**, and the screens' names and the yes
+  to replacing edited dashboards were recorded on a thread a closing SimHub never runs. The close
+  stops the download, and the run records both itself.
+- **A press that writes dashboards during an update wrote over what the update had just installed.**
+  Add, Duplicate, Rename, Resize, Reinstall, Remove, Install it again, Download, Reinstall
+  everything and Put mine back are refused with a line while an update runs or another write is
+  still going, and change nothing.
+- **A plugin that downloaded but could not be staged let the update go on** to install the
+  dashboards and report a success. It stops before anything is written, as a failed download already
+  did.
+- **"Put mine back" kept the copy it had just put back**, so the card stayed and every later press
+  said you had edited the dashboard since. The copy is spent, what it replaces is kept as the
+  ordinary backup, and two copies kept within a second no longer overwrite each other.
+- **"Replace anyway" outlived its question.** A yes given to Update could be spent by Reinstall, or
+  by a freshly drawn Update after the panel was rebuilt, with no question shown. A second press is a
+  yes only while its own question is still on the line and names the same dashboards.
+- **A folder outside the rig was named in "You have edited 2 dashboards"** before a reinstall or an
+  update, counted among the dashboards that follow the plugin, and then left alone. Only the rig's
+  own folders are asked about and counted.
+- **A lighting profile whose install failed lost its old copy in SimHub.** The old copy goes back
+  where it stood, and the log counts each replaced profile once rather than twice.
+- **The strip rows said Not installed beside a rig with strips in SimHub**, because they asked for
+  the embedded profile's id where a strip is installed under its bar's own. A row reads Installed
+  when a bar of its shape is on any device, Outdated when an older build wrote it, and offers
+  Update.
+- **A start module chosen in the panel froze the companion** until SimHub restarted. A forced module
+  carries its own end.
+- **The caret came back in the wrong box** when widening the panel across the alert table's
+  threshold rebuilt the page; it goes back to the box you were in.
+- **A strip row without an Update button ended its pill twenty pixels short** of the screen rows'.
+
+### Development
+
+- **One command changes the version.** `bun run version 0.3.0-rc.8` writes `VERSION` and the
+  changelog heading together and refuses a number the plugin would not install over the current one;
+  `--check` runs on every pull request, with `--base` so that a branch cannot set the number back.
+- **CI's plugin job is the release's**: the LED profiles are gzipped by one shared script, the
+  hand-rolled zip fallback is gone, the emulator and the trace recorder are built and self-checked,
+  packaging twice gives the same zip to the byte, the site is typechecked by `bun run check`, and
+  every run keeps a JUnit report.
+- **The dev loop looks before it clicks.** `openDashboard` reads the pixels under SimHub's
+  track-layout offer and the row it is about to press, names a SimHub that exited, and aims at
+  SimHub's client area; Ctrl-C on `dev`, `shots`, `record` or `modules` puts the VM back; a bare
+  `bun run record` records only the traced scenarios; every capture says which run took it; and the
+  affected-packages comment counts the LED profiles.
+- **The seven traces are re-recorded on the VM**, with the last lap's delta and the class position,
+  so no header asserts a hand-typed column any more.
+- **Three more facts about SimHub are written down** in the format notes, each verified by
+  decompiling 9.12.6 or on the VM: a dashboard variable that reads its own name keeps state across
+  frames, which is how the quick glance comes back; SimHub cannot load a font after its first read
+  of `DashFonts`; and every sidecar is read as the `.djson`'s own path with a suffix, so a renamed
+  dashboard has to carry them all.
+- **The round faces convert to zones before 1.0**, not after, and the card path retires with them
+  (#487).
+
+### Known
+
+- **Updating from rc.7 through the panel words the update wrongly.** A plugin from rc.3 to rc.7
+  looks for one `.simhubdash` per installed folder among the release's files and, finding none, says
+  the dashboards were already up to date and that some are not in this release. Both are false: the
+  dashboards come inside the plugin, and the restart SimHub asks for finishes the update. A yes to
+  replacing edited dashboards given to that plugin is spent on a run that replaces nothing, so an
+  edited dashboard is held back on that restart, as the installer always holds one back, and
+  Reinstall everything on the Updates page is the way to replace it. A plugin older than rc.3 has to
+  be updated by hand from the zip.
+- **The panel still asks for a SimHub restart after adding a screen**, although SimHub lists a new
+  dashboard folder in the same session (#664).
+- **A strip cannot be added to a wheel made with FanaBridge** (#437). The log now says which device
+  was passed over and why, and the install guide says what a report needs.
+- **A Fanatec wheel's LED order was never confirmed on one** (#434).
+- **The spotter's bar can erase part of the SC on the flag box** while a car is alongside under the
+  caution, which is likeliest on a double-file restart. The picture still differs from a plain
+  yellow, and whether the spotter should yield is an open question.
+- **Every greyed row on the panel is a ticket**, named in its hover.
+
 ## 0.3.0-rc.7 (2026-09-27)
 
 The candidate that has something to say when there is nothing to instrument. A dashboard is

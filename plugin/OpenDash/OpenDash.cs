@@ -278,8 +278,10 @@ namespace OpenDashPlugin
                 PackageExtractor.RemoveOrphanedStaging(Installer.SimHubRoot, new SimHubInstallLog());
                 // And arm the plugin swap again if one is still waiting: the waiter armed when the
                 // assembly was staged gives up after a while, and a session that reaches here with a
-                // staged assembly is a session where the last swap did not happen. Inert otherwise.
-                PluginUpdate.Launch(Installer.SimHubRoot, new SimHubInstallLog());
+                // staged assembly is a session where the last swap did not happen. Only a newer one, and
+                // not for ever: an older one is cleared rather than put back over this plugin (#598).
+                // Inert otherwise.
+                PluginUpdate.Resume(Installer.SimHubRoot, Version, new SimHubInstallLog());
                 // The rig decides what is written, and the installer reads it for itself (DashboardInstaller.Rig).
                 // Before ADR 0017 this wrote every package the plugin embeds on every start, so a user who owned
                 // one screen found fourteen dashboards in SimHub's list; now a screen exists because somebody
@@ -642,9 +644,10 @@ namespace OpenDashPlugin
         /// SimHub that closes before the posted save runs saves in End, which waits for the part of the run that
         /// writes and so finds the consent and the screens' names already recorded.
         /// </remarks>
-        public void ApplyUpdate(ReleaseInfo release, bool replaceEdited, Action<double> progress, Action<UpdateOutcome> applied)
+        /// <returns>False, with nothing started, when an update is already running (UpdateService.Applying).</returns>
+        public bool ApplyUpdate(ReleaseInfo release, bool replaceEdited, Action<double> progress, Action<UpdateOutcome> applied)
         {
-            Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
+            return Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
             {
                 OnInterfaceThread(SaveSettings);
                 applied?.Invoke(outcome);

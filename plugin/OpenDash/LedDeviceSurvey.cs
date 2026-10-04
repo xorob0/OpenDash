@@ -11,6 +11,22 @@
 // read is judged as unreadable rather than dropped, and the names of the devices that were not offered
 // and show some sign of LEDs are said beside the picker.
 //
+// **A device that is not an LED module can still carry one, on its settings page** (#683, #686). A
+// FanaBridge wheel is a `DeviceInstance` of the plugin's own type holding SimHub's `LedModuleSettings` in
+// private fields, so no walk by type reaches its profile list; but every device must answer
+// `GetSettingsControls()` with its page's tabs, and an LED module's tab is SimHub's own LED editor, whose
+// `Settings` is the live module. `LedTargets` reads that tab for a device with no LED module and reports
+// here whether it carried one, after which the device is judged exactly as a module is: its driver and its
+// profile list are the live ones, so the same three verdicts apply.
+//
+// **A module set to "Individual profile only" hides the list a strip's profile goes into** (#690). A module
+// with an individual-LEDs driver -- and FanaBridge gives every wheel one -- offers a choice on its page:
+// Disabled, Combined, or Individual profile only (`IndividualLEDsMode.Exclusive`). Under the last, SimHub
+// leaves the Telemetry LEDs list off the page and draws nothing from it, so a profile installed there is in
+// the module, saved, and invisible. The mode and the individual LED count are read here and logged; where
+// the two counts are equal the profile goes into the individual list as well, since the LEDs are the same
+// LEDs in the same order, and where they differ the install says which switch hides it.
+//
 // Pure, and compiled into OpenDash.Tests: `LedTargets` reads SimHub's types into a `LedDeviceSeen` and
 // this decides what to make of it, so the verdicts and the lines they produce are pinned without SimHub.
 // Nothing here widens what is offered. Whether a strip profile installed into a module's other drivers
@@ -28,11 +44,12 @@ namespace OpenDashPlugin
     /// through.</summary>
     public enum LedDeviceVerdict
     {
-        /// <summary>An LED module with a telemetry LED driver and a profile list: a target.</summary>
+        /// <summary>An LED module with a telemetry LED driver and a profile list, met under the device or on its
+        /// settings page (#686): a target.</summary>
         Offered,
 
         /// <summary>Nothing under the device is an LED module SimHub's `GetDevices&lt;LedModuleDevice&gt;`
-        /// returns, which is cause one of #437.</summary>
+        /// returns, which is cause one of #437, and its settings page carries no LED editor either.</summary>
         NotLedModule,
 
         /// <summary>An LED module whose telemetry LED driver is null, which is cause two of #437.</summary>
@@ -75,6 +92,11 @@ namespace OpenDashPlugin
         /// <summary>Whether that driver carries settings, which is where the profile list lives.</summary>
         public bool LedsSettings { get; set; }
 
+        /// <summary>Whether the device's settings page, which every device must produce, carries SimHub's LED
+        /// editor and so a live LED module. Read only for a device with no LED module, and what lets a plugin's
+        /// own device type be judged as one (#686). The driver and settings facts below are then that module's.</summary>
+        public bool EditorModule { get; set; }
+
         /// <summary>The module's own LED count, as its descriptor gives it.</summary>
         public int? LedCount { get; set; }
 
@@ -82,6 +104,17 @@ namespace OpenDashPlugin
         /// "encoders", "individual LEDs", "matrix". Not offered; logged so that a module whose LEDs sit
         /// in one of them is recognisable from its log line.</summary>
         public IList<string> OtherDrivers { get; set; } = new List<string>();
+
+        /// <summary>The module's "Individual leds profiles" choice as SimHub's `IndividualLEDsMode` names it:
+        /// "Disabled", "Combined" or "Exclusive" (the page's "Individual profile only"). Null when the module
+        /// has no individual-LEDs driver, so the page offers no such choice (#690).</summary>
+        public string IndividualLeds { get; set; }
+
+        /// <summary>How many LEDs the module's individual-LEDs driver addresses, when it says.</summary>
+        public int? IndividualLedCount { get; set; }
+
+        /// <summary>Whether the individual-LEDs driver carries settings, and so a profile list.</summary>
+        public bool IndividualLedsSettings { get; set; }
 
         /// <summary>How many profiles the driver's saved list holds, when there is one.</summary>
         public int? Profiles { get; set; }
@@ -108,10 +141,48 @@ namespace OpenDashPlugin
         public static LedDeviceVerdict Judge(LedDeviceSeen seen)
         {
             if (seen != null && seen.Unreadable != null) return LedDeviceVerdict.Unreadable;
-            if (seen == null || !seen.LedModule) return LedDeviceVerdict.NotLedModule;
+            if (seen == null || (!seen.LedModule && !seen.EditorModule)) return LedDeviceVerdict.NotLedModule;
             if (!seen.LedsDriver) return LedDeviceVerdict.NoLedsDriver;
             if (!seen.LedsSettings) return LedDeviceVerdict.NoLedsSettings;
             return LedDeviceVerdict.Offered;
+        }
+
+        /// <summary>SimHub's name for the mode its page calls "Individual profile only".</summary>
+        public const string IndividualOnlyMode = "Exclusive";
+
+        /// <summary>Whether the module is set to "Individual profile only", which leaves the Telemetry LEDs list
+        /// off its page and draws nothing from it (#690).</summary>
+        public static bool IsIndividualOnly(LedDeviceSeen seen)
+        {
+            return seen != null && string.Equals(seen.IndividualLeds, IndividualOnlyMode, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Whether a strip's profile goes into the module's individual list as well as its telemetry one:
+        /// only under "Individual profile only", where the telemetry list is neither shown nor drawn, and only
+        /// when both drivers address the same number of LEDs.
+        /// </summary>
+        /// <remarks>
+        /// Equal counts are what make one profile right for both lists. FanaBridge numbers a wheel's
+        /// individual LEDs from its rev and flag LEDs onward, so on a wheel without button LEDs the two lists
+        /// address the same lamps in the same order (15 and 15 on a ClubSport Formula V2.5). Where the counts
+        /// differ the individual list holds LEDs the strip knows nothing about, and the install says which
+        /// switch to change instead of guessing at a layout. Under Combined the individual list is drawn on
+        /// top of the telemetry one, so installing into both would draw the strip twice; it is left alone.
+        /// </remarks>
+        public static bool InstallsIntoIndividual(LedDeviceSeen seen)
+        {
+            return IsIndividualOnly(seen)
+                && seen.IndividualLedsSettings
+                && seen.LedCount.HasValue && seen.LedCount.Value > 0
+                && seen.IndividualLedCount == seen.LedCount;
+        }
+
+        /// <summary>The page's own words for a mode, so the log reads like the switch the driver sees.</summary>
+        public static string IndividualLedsLabel(string mode)
+        {
+            if (string.Equals(mode, IndividualOnlyMode, StringComparison.Ordinal)) return "Individual profile only";
+            return string.IsNullOrWhiteSpace(mode) ? "unknown" : mode.Trim();
         }
 
         /// <summary>Why a device was not offered, in a contributor's words, for the log. Null when it was.</summary>
@@ -120,7 +191,7 @@ namespace OpenDashPlugin
             switch (Judge(seen))
             {
                 case LedDeviceVerdict.NotLedModule:
-                    return "it is not an LED module, so SimHub's GetDevices<LedModuleDevice>() does not return it";
+                    return "it is not an LED module, so SimHub's GetDevices<LedModuleDevice>() does not return it, and its settings page carries no LED editor";
                 case LedDeviceVerdict.NoLedsDriver:
                     return "its LED module has no telemetry LED driver (LedsDriver is null)";
                 case LedDeviceVerdict.NoLedsSettings:
@@ -153,7 +224,8 @@ namespace OpenDashPlugin
             {
                 parts.Add("instances " + string.Join(", ", seen.Instances));
             }
-            if (seen.LedModule)
+            if (seen.EditorModule && !seen.LedModule) parts.Add("LED module reached through its settings page");
+            if (seen.LedModule || seen.EditorModule)
             {
                 if (seen.LedCount.HasValue) parts.Add(seen.LedCount.Value.ToString(CultureInfo.InvariantCulture) + " LEDs");
                 if (seen.Profiles.HasValue) parts.Add(seen.Profiles.Value.ToString(CultureInfo.InvariantCulture) + " saved profiles");
@@ -167,6 +239,7 @@ namespace OpenDashPlugin
                 {
                     parts.Add("other drivers: " + string.Join(", ", seen.OtherDrivers));
                 }
+                if (seen.IndividualLeds != null) parts.Add(IndividualLedsPart(seen));
             }
             if (seen.ForeignDrivers != null && seen.ForeignDrivers.Count > 0)
             {
@@ -178,6 +251,16 @@ namespace OpenDashPlugin
                 ? "LED device offered: \"" + Or(seen.Name, "unnamed") + "\""
                 : "LED device not offered: \"" + Or(seen.Name, "unnamed") + "\", because " + reason;
             return head + ". " + string.Join("; ", parts) + ".";
+        }
+
+        /// <summary>The survey line's account of the module's "Individual leds profiles" choice (#690).</summary>
+        private static string IndividualLedsPart(LedDeviceSeen seen)
+        {
+            var part = "individual leds profiles " + IndividualLedsLabel(seen.IndividualLeds);
+            if (seen.IndividualLedCount.HasValue) part += " over " + seen.IndividualLedCount.Value.ToString(CultureInfo.InvariantCulture) + " LEDs";
+            if (InstallsIntoIndividual(seen)) return part + ", so a strip's profile goes into that list as well";
+            if (IsIndividualOnly(seen)) return part + ", which hides and does not draw the Telemetry LEDs list a strip's profile goes into";
+            return part;
         }
 
         /// <summary>
@@ -194,6 +277,7 @@ namespace OpenDashPlugin
         {
             if (seen == null) return false;
             return seen.LedModule
+                || seen.EditorModule
                 || seen.Unreadable != null
                 || (seen.ForeignDrivers != null && seen.ForeignDrivers.Count > 0);
         }

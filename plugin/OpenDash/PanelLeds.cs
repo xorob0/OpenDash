@@ -885,33 +885,12 @@ namespace OpenDashPlugin
 
         // --- The Add LEDs sheet --------------------------------------------------------------------------------
 
-        public const string HardwareStep = "Hardware";
-
-        /// <summary>The hardware tiles, two to a row 8 apart, as the sheet lays them, and never narrower than the
-        /// Fanatec tile's 3 · 9 · 3 at the card's 9 px LEDs (171) inside the tile's 12 of padding and its border:
-        /// a grid that laid two tiles narrower cut the picture at its right edge.</summary>
-        public const double HardwareTileMinWidth = 200;
-        public const double HardwareTileGap = 8;
-
         public const string ShapeStep = "Shape";
-
-        /// <summary>The tile for every strip that is not a Fanatec wheel, and the line under it.</summary>
-        public const string SomethingElse = "Something else";
-        public const string SomethingElseNote = "Any RGB strip";
-
-        /// <summary>The eyebrow on the Fanatec tile when SimHub has a device of that name.</summary>
-        public const string FoundInSimHub = "Found in SimHub";
-
-        /// <summary>The artboard's size for that eyebrow, a point below the kit's.</summary>
-        public const double FoundInSimHubSize = 10;
-
-        /// <summary>The note under the tiles. The artboard promises more wheels; the panel promises nothing.</summary>
-        public const string OtherWheelNote = "For any other wheel, use Something else.";
 
         public const string SetByTheWheel = "Set by the wheel";
         public const string Fixed = "Fixed";
 
-        /// <summary>The shape the Fanatec tile and the fixed shape row show.</summary>
+        /// <summary>The shape the fixed shape row shows for a Fanatec wheel.</summary>
         public static readonly string FanatecShape = ShapeDots(PanelLights.FanatecShapeId);
 
         /// <summary>The label of a count of ends in the segmented choice: None for a bare run.</summary>
@@ -939,17 +918,6 @@ namespace OpenDashPlugin
             return new[] { left, middle, right };
         }
 
-        /// <summary>The LEDs the Something else tile draws: twelve, in the border's grey, as AddLeds.dc.html draws
-        /// them. Not a strip at rest, whose unlit LEDs are the raised surface one step above the tile's ground and
-        /// all but vanish there beside the lit Fanatec tile.</summary>
-        public static string[][] AnyStripFrame()
-        {
-            return new[] { Enumerable.Repeat(Theme.Border, AnyStripLeds).ToArray() };
-        }
-
-        /// <summary>How many LEDs the Something else tile draws.</summary>
-        private const int AnyStripLeds = 12;
-
         /// <summary>What a device row in the sheet says at its right: the rig's strips already on it, so a
         /// driver sees a device is taken before installing a second profile into its list, and whether SimHub
         /// is talking to it.</summary>
@@ -974,18 +942,11 @@ namespace OpenDashPlugin
         /// <summary>The most characters of a strip's name a device row in the sheet spells out.</summary>
         public const int DeviceMetaNameChars = 14;
 
-        /// <summary>Whether SimHub has a device whose name says it is a Fanatec wheel, which is what the tile's
-        /// eyebrow claims and all it can: nothing detects the wheel's LEDs themselves.</summary>
+        /// <summary>Whether a device's name says it is a Fanatec wheel, FanaBridge's or SimHub's own, which is all
+        /// that can be told of it: nothing detects the wheel's LEDs themselves.</summary>
         public static bool FoundFanatec(IEnumerable<string> deviceNames)
         {
             return deviceNames != null && deviceNames.Any(name => name != null && name.IndexOf("Fanatec", StringComparison.OrdinalIgnoreCase) >= 0);
-        }
-
-        /// <summary>Which tile the sheet opens on: the Fanatec wheel where this build carries its profile and
-        /// SimHub has one, else Something else.</summary>
-        public static bool StartsOnFanatec(bool offered, bool found)
-        {
-            return offered && found;
         }
 
         /// <summary>Whether the sheet has a shape to offer at all: a plain shape or the Fanatec wheel. Where it
@@ -996,11 +957,16 @@ namespace OpenDashPlugin
             return plainSides > 0 || offersFanatec;
         }
 
-        /// <summary>The tile the sheet opens on, the build's plain shapes counted: the Fanatec wheel wherever the
-        /// build has no plain shape, since then it is the only tile.</summary>
-        public static bool SheetStartsOnFanatec(bool hasPlainShapes, bool offersFanatec, bool found)
+        /// <summary>
+        /// The wiring the SimHub device picked decides: the Fanatec wheel's where the device's name says it is
+        /// one and the build carries that profile, else the plain strip, since the Fanatec wiring is the order
+        /// SimHub's Fanatec device presents and means nothing on another device (#683, #686). The sheet opens
+        /// on it from the device it prefers and follows every pick, so nobody is asked what their device says;
+        /// and the Fanatec wheel's wherever the build has no plain shape, since it is then the only one.
+        /// </summary>
+        public static bool WiringFollowsDevice(bool hasPlainShapes, bool offersFanatec, string deviceName)
         {
-            return !hasPlainShapes || StartsOnFanatec(offersFanatec, found);
+            return !hasPlainShapes || (offersFanatec && FoundFanatec(new[] { deviceName }));
         }
 
         /// <summary>The ends the sheet opens on: three where the build has them, the artboard's 3 · 9 · 3, else
@@ -1018,13 +984,6 @@ namespace OpenDashPlugin
             if (centres == null || centres.Length == 0) return PanelLights.FanatecCentre;
             if (centres.Contains(chosen)) return chosen;
             return centres.Contains(9) ? 9 : centres[0];
-        }
-
-        /// <summary>The note under the tiles goes with the Fanatec tile: without it there is only Something else,
-        /// and no other wheel to point away from.</summary>
-        public static bool ShowsOtherWheelNote(bool offersFanatec)
-        {
-            return offersFanatec;
         }
 
         /// <summary>Whether the device step says <see cref="PanelLights.NoDevices"/>: only with nothing offered

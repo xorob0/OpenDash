@@ -53,8 +53,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Whether Reinstall everything or Put mine back is writing on its own thread (#611). Held outside the build,
-        /// as <see cref="applying"/> is, so a rebuild meanwhile draws the presses the run holds off disabled and
-        /// Reinstall everything's bar where it had got to.
+        /// as the update's run is (UpdateService.Applying), so a rebuild meanwhile draws the presses the run holds off
+        /// disabled and Reinstall everything's bar where it had got to.
         /// </summary>
         private bool updatesWriting;
 
@@ -64,8 +64,9 @@ namespace OpenDashPlugin
         /// <summary>Whether the write is Reinstall everything's, which draws a bar; Put mine back's draws none.</summary>
         private bool updatesWritingReinstall;
 
-        /// <summary>Whether a run this page started holds its presses off (PanelUpdates.RunHolds).</summary>
-        private bool UpdatesHeld => PanelUpdates.RunHolds(applying, updatesWriting);
+        /// <summary>Whether a run holds this page's presses off (PanelUpdates.RunHolds): an update, whichever panel
+        /// started it, or a write this page started.</summary>
+        private bool UpdatesHeld => PanelUpdates.RunHolds(Updates.Applying, updatesWriting);
 
         /// <summary>The presses a download holds off besides Reinstall everything and Check now: Put mine
         /// back and the light rows' Update, drawn after the run started or before it (ShowRun).</summary>
@@ -84,10 +85,6 @@ namespace OpenDashPlugin
         /// Held apart from the build's controls, so a rebuild in place (a resize, the return to the panel)
         /// keeps the press; only leaving the page drops it.</summary>
         private bool applyWaiting;
-
-        /// <summary>The run that is downloading, held outside the build so a rebuild in place draws it again
-        /// rather than an offer with live buttons: the fraction it last reported.</summary>
-        private double applyingFraction;
 
         /// <summary>Whether this visit to the page has read the installer's folders from the disk.</summary>
         private bool updatesRead;
