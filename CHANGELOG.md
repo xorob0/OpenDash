@@ -17,6 +17,72 @@ Until then a release also carried one `.simhubdash` per package, including the `
 device shape and a `manifest.json` listing everything published. The notes of those releases say so
 where they describe them.
 
+## 0.3.0-rc.12 (2026-10-04)
+
+The candidate that gives each colour on a strip one meaning. On an RGB LED, ABS, a car alongside,
+the temperature warning and the yellow flag all came out as the same yellow, and the strip said
+everything twice, once on each side. This candidate gives every warning a colour of its own, splits
+the sides by pedal, lets you change any colour, and lights the TC and ABS lamps on iRacing, which
+does not report either.
+
+**A strip installed before this candidate keeps its old colours and layout** until you press Update
+on its header on the LEDs page, or Reinstall everything on the Updates page. OpenDash never rewrites
+a profile in SimHub until you press one of those.
+
+**One colour, one meaning.** ABS is orange and traction control blue, as on race cars, and DRS is
+green. Push to pass blinks green while it is being spent, where it used to stay lit for the whole
+race. Oil pressure is red at 4 Hz, the temperature warning a steady red, and low fuel orange at
+2 Hz. The spotter is purple, which no car uses on its side lights. The full course yellow is the
+flag yellow at 4 Hz, the red flag is red at 2 Hz, and the meatball is orange. (#794)
+
+**ABS on the left, the throttle's aids on the right.** Flags still show on both sides. The spotter
+and the indicators light their own end, as before, and now so do the aids: ABS on the brake's side,
+and traction control, DRS and push to pass on the other. From four LEDs a side, the engine's
+warnings are on the left and the fuel on the right. Strips with one or two LEDs a side are
+unchanged. (#794)
+
+**The serious flags take the whole side.** The red flag lights every side LED for as long as it is
+out. The black flags, the meatball, the full course yellow and the waved yellow do so for their
+first moments, then settle on one LED. The blue, white, green, debris and chequered flags keep one
+LED. A flag only borrows LEDs: a car alongside and an engine warning keep theirs, and ABS and TC
+give theirs up. (#794)
+
+**Every colour can be changed.** The LEDs page has a Colours section under Effects, with one row
+for each thing the strip shows. Each row offers the default, then red, orange, yellow, green, blue,
+purple and white, the colours an LED keeps apart at a glance. A pick installs the strip again.
+(#794)
+
+**The TC and ABS lamps light on iRacing.** iRacing reports neither, so the plugin now estimates
+wheelspin and lock-up from speed against RPM, with throttle and brake, the way SimHub's ShakeIt
+does. The TC lamp lights on a spin and the ABS lamp on a lock, on any sim that does not report them
+itself. Each strip has an "Infer wheel spin and wheel lock" switch under This strip, on by default.
+The threshold is a first guess and wants a rig to confirm it. (#697)
+
+**Fanatec compatibility mode is a switch.** It used to be a shape, available for the 3/9/3 alone.
+It is now a switch on the Add LEDs sheet and under This strip, and works for any strip with equal
+ends: the build carries the Fanatec wiring of 36 shapes. Picking a device whose name contains
+Fanatec turns it on. Any other device leaves it as you set it. Turning it on turns Reverse direction
+off, because the Fanatec order has no far end. A strip saved as the Fanatec 3/9/3 loads with the
+switch on and keeps its profile. (#695)
+
+### Fixed
+
+- **The plugin's Update works on a SimHub folder with an accent or a % in its name**, such as
+  `C:\Games\José\SimHub`. The script that puts the new plugin in place could not find the folder
+  and gave up at every close. (#601)
+- **The debris flag is no longer dropped** when it shares an LED with the full course yellow.
+  (#570)
+- **A yellow flag shows on a strip with two LEDs a side** while low fuel or another car warning is
+  lit. It moves to the outer LED, where it used to stay hidden. (#794)
+
+### Changed
+
+- **The strip's colours and layout**, as above. (#794)
+- **The TC and ABS lamps also light on an estimated wheelspin or lock-up**, behind a switch on each
+  strip. (#697)
+- **Fanatec compatibility mode is a switch rather than a shape**, offered on every strip with equal
+  ends. (#695)
+
 ## 0.3.0-rc.11 (2026-10-04)
 
 The candidate for a wheel set to "Individual profile only". rc.10 put a strip's profile in a
