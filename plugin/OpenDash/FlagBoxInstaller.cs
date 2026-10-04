@@ -198,7 +198,8 @@ namespace OpenDashPlugin
         /// the panel makes does not walk SimHub's devices again to find the one it already has (#611).</summary>
         public static IList<FlagBoxPlan> Install(IEnumerable<string> embeddedJsons, string device, IEnumerable<LedTarget> targets)
         {
-            var parsed = (embeddedJsons ?? Enumerable.Empty<string>()).Select(Parse).ToList();
+            var jsons = (embeddedJsons ?? Enumerable.Empty<string>()).ToList();
+            var parsed = jsons.Select(Parse).ToList();
 
             var target = LedTargets.Find(device, targets);
             var settings = target?.Settings;
@@ -212,7 +213,7 @@ namespace OpenDashPlugin
                     .ToList();
             }
 
-            return ProfileInstall.Install(
+            var results = ProfileInstall.Install(
                 settings.Profiles,
                 settings.AvailableProfiles,
                 parsed.Cast<object>().ToList(),
@@ -221,6 +222,53 @@ namespace OpenDashPlugin
                 "RGB LED",
                 FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles),
                 target.Name);
+            if (target.IndividualOnly) InstallIndividual(jsons, target, results);
+            return results;
+        }
+
+        /// <summary>
+        /// The second half of an install on a device set to "Individual profile only", which leaves the list
+        /// just installed into off its page and draws nothing from it (#690).
+        /// </summary>
+        /// <remarks>
+        /// Where the individual list addresses the same LEDs, every member installed above goes into it too,
+        /// as a copy of its own: a profile carries a back-reference to the one list that holds it, so the
+        /// object already added cannot be shared. Where it does not, or that second install fails, the member
+        /// carries the note that names the switch, since it is installed and nobody can see it.
+        /// </remarks>
+        private static void InstallIndividual(IList<string> jsons, LedTarget target, IList<FlagBoxPlan> results)
+        {
+            var individual = target.Individual;
+            var installed = Enumerable.Range(0, results.Count)
+                .Where(i => results[i] != null && results[i].State == FlagBoxInstallState.UpToDate)
+                .ToList();
+            if (installed.Count == 0) return;
+
+            if (!target.InstallsIntoIndividual || individual == null)
+            {
+                Log.Info(target.Name + " is set to Individual profile only, which hides and does not draw its Telemetry LEDs list,"
+                    + " and its individual LEDs are not the strip's LEDs, so the profile was not put there: "
+                    + FlagBoxInstallPlan.IndividualOnlyNote);
+                foreach (var i in installed) results[i].Note = results[i].Note ?? FlagBoxInstallPlan.IndividualOnlyNote;
+                return;
+            }
+
+            var copies = installed.Select(i => Parse(jsons[i])).ToList();
+            var mirrored = ProfileInstall.Install(
+                individual.Profiles,
+                individual.AvailableProfiles,
+                copies.Cast<object>().ToList(),
+                index => AddToSaved(individual, copies[index]),
+                target.Save,
+                "individual LED",
+                false,
+                target.Name);
+            for (var k = 0; k < installed.Count; k++)
+            {
+                if (mirrored[k] != null && mirrored[k].State == FlagBoxInstallState.UpToDate) continue;
+                var i = installed[k];
+                results[i].Note = results[i].Note ?? FlagBoxInstallPlan.IndividualOnlyNote;
+            }
         }
 
         /// <summary>Adds to the list SimHub saves. See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
@@ -246,7 +294,17 @@ namespace OpenDashPlugin
             var target = LedTargets.Find(device);
             var settings = target?.Settings;
             if (settings == null) return false;
-            return ProfileInstall.Uninstall(settings.Profiles, settings.AvailableProfiles, profileId, target.Save, "RGB LED");
+            var gone = ProfileInstall.Uninstall(settings.Profiles, settings.AvailableProfiles, profileId, target.Save, "RGB LED");
+            return UninstallIndividual(target, profileId) || gone;
+        }
+
+        /// <summary>Takes our copy out of the device's individual list as well, whatever its mode is now: a copy
+        /// installed under "Individual profile only" stays there after the mode is changed back (#690).</summary>
+        private static bool UninstallIndividual(LedTarget target, Guid profileId)
+        {
+            var individual = target.Individual;
+            if (individual == null) return false;
+            return ProfileInstall.Uninstall(individual.Profiles, individual.AvailableProfiles, profileId, target.Save, "individual LED");
         }
 
         /// <summary>
@@ -269,6 +327,7 @@ namespace OpenDashPlugin
             foreach (var target in targets ?? Enumerable.Empty<LedTarget>())
             {
                 if (ProfileInstall.Uninstall(target.Settings.Profiles, target.Settings.AvailableProfiles, profileId, target.Save, "RGB LED")) gone = true;
+                if (UninstallIndividual(target, profileId)) gone = true;
             }
             return gone;
         }

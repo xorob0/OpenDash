@@ -217,5 +217,89 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("type unknown", line);
             Assert.Contains("null", LedDeviceSurvey.LogLine(null));
         }
+
+        /// <summary>A FanaBridge wheel as the rig reported it for #690: reached through its settings page, 15
+        /// telemetry LEDs and an individual-LEDs driver over the same 15.</summary>
+        private static LedDeviceSeen FanaBridgeWheel(string mode)
+        {
+            return new LedDeviceSeen
+            {
+                Name = "Fanatec ClubSport Formula V2.5",
+                Id = "device:d6be8e96-0674-423a-97b5-67234bb81724",
+                Kind = "FanaBridge.Adapters.FanatecWheelDeviceInstance (FanaBridge)",
+                Instances = new List<string> { "FanatecWheelDeviceInstance" },
+                EditorModule = true,
+                LedsDriver = true,
+                LedsSettings = true,
+                LedCount = 15,
+                Profiles = 2,
+                HasBuiltInProfiles = false,
+                OtherDrivers = new List<string> { "individual LEDs" },
+                IndividualLeds = mode,
+                IndividualLedCount = 15,
+                IndividualLedsSettings = true,
+            };
+        }
+
+        /// <summary>#690: the line names the "Individual leds profiles" choice in the page's own words, and
+        /// says what that choice does to the list a strip's profile goes into.</summary>
+        [Fact]
+        public void The_line_names_the_individual_leds_mode_in_the_pages_words()
+        {
+            var disabled = LedDeviceSurvey.LogLine(FanaBridgeWheel("Disabled"));
+            Assert.Contains("individual leds profiles Disabled over 15 LEDs.", disabled);
+
+            var combined = LedDeviceSurvey.LogLine(FanaBridgeWheel("Combined"));
+            Assert.Contains("individual leds profiles Combined over 15 LEDs.", combined);
+
+            var exclusive = LedDeviceSurvey.LogLine(FanaBridgeWheel("Exclusive"));
+            Assert.Contains("individual leds profiles Individual profile only over 15 LEDs, so a strip's profile goes into that list as well", exclusive);
+
+            var unequal = FanaBridgeWheel("Exclusive");
+            unequal.IndividualLedCount = 27;
+            Assert.Contains("Individual profile only over 27 LEDs, which hides and does not draw the Telemetry LEDs list", LedDeviceSurvey.LogLine(unequal));
+        }
+
+        /// <summary>A module with no individual-LEDs driver has no such choice on its page, and its line says
+        /// nothing about one.</summary>
+        [Fact]
+        public void A_module_without_individual_leds_says_nothing_of_the_mode()
+        {
+            Assert.DoesNotContain("individual leds profiles", LedDeviceSurvey.LogLine(Wheel()));
+            Assert.False(LedDeviceSurvey.IsIndividualOnly(Wheel()));
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(Wheel()));
+        }
+
+        /// <summary>#690: the profile goes into the individual list as well only under "Individual profile
+        /// only", where the telemetry list is neither shown nor drawn, and only over the same LEDs. Combined
+        /// draws the individual list on top of the telemetry one, so a second copy there would draw twice.</summary>
+        [Fact]
+        public void The_individual_list_takes_the_profile_only_when_it_alone_is_drawn_over_the_same_leds()
+        {
+            Assert.True(LedDeviceSurvey.InstallsIntoIndividual(FanaBridgeWheel("Exclusive")));
+            Assert.True(LedDeviceSurvey.IsIndividualOnly(FanaBridgeWheel("Exclusive")));
+
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(FanaBridgeWheel("Disabled")));
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(FanaBridgeWheel("Combined")));
+            Assert.False(LedDeviceSurvey.IsIndividualOnly(FanaBridgeWheel("Combined")));
+
+            var buttons = FanaBridgeWheel("Exclusive");
+            buttons.IndividualLedCount = 27;
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(buttons));
+            Assert.True(LedDeviceSurvey.IsIndividualOnly(buttons));
+
+            var noList = FanaBridgeWheel("Exclusive");
+            noList.IndividualLedsSettings = false;
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(noList));
+
+            var unknown = FanaBridgeWheel("Exclusive");
+            unknown.IndividualLedCount = null;
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(unknown));
+
+            var empty = FanaBridgeWheel("Exclusive");
+            empty.LedCount = 0;
+            empty.IndividualLedCount = 0;
+            Assert.False(LedDeviceSurvey.InstallsIntoIndividual(empty));
+        }
     }
 }

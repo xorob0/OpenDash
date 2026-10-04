@@ -48,6 +48,13 @@
 // is a WPF control, built on the interface thread the walk runs on and kept per device instance, since the
 // panel walks on every redraw. Nothing here is keyed on a plugin's type name.
 //
+// **A module set to "Individual profile only" carries its individual list on the target too** (#690). SimHub
+// then leaves the Telemetry LEDs list off the device's page and draws nothing from it, so the profile also
+// goes into the individual-LEDs driver's list where LedDeviceSurvey.InstallsIntoIndividual says the two
+// address the same LEDs, and the install says which switch hides it where they do not. The individual list
+// is on the target whatever the mode, so that removing a bar takes our copy out of it even after the mode
+// has been changed back.
+//
 // Needs SimHub types, so it is NOT compiled into OpenDash.Tests. The id vocabulary a settings file holds
 // is on LedBar, which is, and is pinned there.
 using System;
@@ -84,6 +91,18 @@ namespace OpenDashPlugin
 
         /// <summary>Everything SimHub does to put this device's profiles on disk.</summary>
         internal Action Save { get; set; }
+
+        /// <summary>The module's individual-LEDs profile list, or null when it has none (#690). Swept on every
+        /// removal; installed into only when <see cref="InstallsIntoIndividual"/>.</summary>
+        internal LedsSettings Individual { get; set; }
+
+        /// <summary>Whether the device is set to "Individual profile only", so its Telemetry LEDs list -- the one
+        /// <see cref="Settings"/> is -- is neither on its page nor drawn.</summary>
+        public bool IndividualOnly { get; internal set; }
+
+        /// <summary>Whether a profile goes into <see cref="Individual"/> as well; see
+        /// <see cref="LedDeviceSurvey.InstallsIntoIndividual"/>.</summary>
+        public bool InstallsIntoIndividual { get; internal set; }
     }
 
     public static class LedTargets
@@ -315,6 +334,12 @@ namespace OpenDashPlugin
                 if (settings.EncodersDriver != null) seen.OtherDrivers.Add("encoders");
                 if (settings.RawDriver != null) seen.OtherDrivers.Add("individual LEDs");
                 if (settings.MatrixDriver != null) seen.OtherDrivers.Add("matrix");
+                if (settings.RawDriver != null)
+                {
+                    seen.IndividualLeds = settings.IndividualLEDsMode.ToString();
+                    seen.IndividualLedCount = settings.RawLedCount;
+                    seen.IndividualLedsSettings = settings.RawDriver.Settings != null;
+                }
             }
             if (leds != null)
             {
@@ -327,6 +352,7 @@ namespace OpenDashPlugin
             var owner = module == null ? root : module.RootInstance ?? module;
             var captured = module;
             var capturedDriver = driver;
+            var individual = settings.RawDriver == null ? null : settings.RawDriver.Settings;
             return new Surveyed
             {
                 Seen = seen,
@@ -337,6 +363,9 @@ namespace OpenDashPlugin
                     Connected = module == null ? root.IsConnected : module.IsConnected,
                     Settings = leds,
                     Save = module == null ? (Action)(() => SaveDriver(capturedDriver)) : () => SaveDevice(captured),
+                    Individual = individual,
+                    IndividualOnly = LedDeviceSurvey.IsIndividualOnly(seen),
+                    InstallsIntoIndividual = LedDeviceSurvey.InstallsIntoIndividual(seen),
                 },
             };
         }
