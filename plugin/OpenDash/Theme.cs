@@ -48,6 +48,18 @@ namespace OpenDashPlugin
         public const string ShiftUnlit = "#33383F"; // purpose.shift.unlit
         public const string FuelLow = "#FF2D46"; // purpose.fuel.low
 
+        // The strips' own defaults (#694), which the panel's strip preview draws with: one meaning each, and
+        // none of them the flag yellow.
+        public const string LightAbs = "#FF6A00"; // purpose.light.abs
+        public const string LightTc = "#2E7BFF"; // purpose.light.tc
+        public const string LightDrs = "#00D96A"; // purpose.light.drs
+        public const string LightPushToPass = "#00D96A"; // purpose.light.p2p
+        public const string LightOilPressure = "#FF2D46"; // purpose.light.oilPressure
+        public const string LightTemperature = "#FF2D46"; // purpose.light.temperature
+        public const string LightLowFuel = "#FF6A00"; // purpose.light.lowFuel
+        public const string LightSpotter = "#B14BFF"; // purpose.light.spotter
+        public const string LightMeatball = "#FF6A00"; // purpose.light.meatball
+
         // The panel's own second shades: the border of a fix box, the ink of a destructive press, and the
         // tag a new control carries for one release.
         public const string CautionDeep = "#A87600"; // color.caution.secondary

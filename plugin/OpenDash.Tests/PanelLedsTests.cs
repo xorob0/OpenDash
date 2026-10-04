@@ -1041,14 +1041,14 @@ namespace OpenDashPlugin.Tests
             {
                 var frame = PanelLeds.PreviewFrame(chip, 0, 15, on, false, null);
                 Assert.Single(frame);
-                Assert.All(frame[0], c => Assert.Equal(Theme.Caution, c));
+                Assert.All(frame[0], c => Assert.Equal(Theme.LightSpotter, c));
             }
             // Spotter left off: Car left is the strip as it was, Both still lights for the right.
             var leftOff = PanelLeds.OptionsFor(false, new[] { "spotter.left" });
             Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarLeft, leftOff), PanelLeds.PreviewFrame(PanelEmulation.CarLeft, 0, 15, leftOff, false, null));
             Assert.Contains(PanelLeds.PreviewFrame(PanelEmulation.CarLeft, 0, 15, leftOff, false, null)[0], c => c == null);
-            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.CarRight, 0, 15, leftOff, false, null)[0], c => Assert.Equal(Theme.Caution, c));
-            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.CarBoth, 0, 15, leftOff, false, null)[0], c => Assert.Equal(Theme.Caution, c));
+            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.CarRight, 0, 15, leftOff, false, null)[0], c => Assert.Equal(Theme.LightSpotter, c));
+            Assert.All(PanelLeds.PreviewFrame(PanelEmulation.CarBoth, 0, 15, leftOff, false, null)[0], c => Assert.Equal(Theme.LightSpotter, c));
             var bothOff = PanelLeds.OptionsFor(false, new[] { "spotter.left", "spotter.right" });
             Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarBoth, bothOff), PanelLeds.PreviewFrame(PanelEmulation.CarBoth, 0, 15, bothOff, false, null));
             // With ends the emulation's own rule stands: the end on the car's side.

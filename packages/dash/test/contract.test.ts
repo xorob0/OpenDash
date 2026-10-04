@@ -444,7 +444,7 @@ describe('settings', () => {
       { id: 'lowFuel', setting: 'LedEffectLowFuel' },
       { id: 'temperature', setting: 'LedEffectTemperature' },
       { id: 'oilPressure', setting: 'LedEffectOilPressure' },
-      ...['black', 'caution', 'yellow', 'debris', 'blue', 'white', 'green', 'chequered'].map((flag) => ({ id: `flag.${flag}`, setting: 'LedEffectFlags' })),
+      ...['black', 'caution', 'yellow', 'debris', 'blue', 'white', 'green', 'chequered', 'red', 'meatball'].map((flag) => ({ id: `flag.${flag}`, setting: 'LedEffectFlags' })),
       { id: 'spotter.left', setting: 'LedEffectSpotterLeft' },
       { id: 'spotter.right', setting: 'LedEffectSpotterRight' },
       { id: 'pit.lane', setting: 'LedEffectPitLane' },

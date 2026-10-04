@@ -11,7 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { ALL_EFFECTS, FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
 import { lampsForSide, lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -144,21 +144,64 @@ describe('the lamps of a side', () => {
 });
 
 describe('what a driver can tell one condition from another by', () => {
-  /** All a lamp has to say it with: a hue and a rhythm, a steady light being a rhythm of its own. */
-  const appearance = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? `${String(e.blinkDelayMs)} ms` : 'steady'}`;
+  /**
+   * What an LED shows of a colour at a glance: a hue family, white, or dark.
+   *
+   * Hex equality was the rule, and it let the caution amber `#FFB300` sit beside the flag yellow
+   * `#FFD400` as two colours, which on an RGB LED they are not: ABS, the spotter and the temperature
+   * warning all read as a yellow flag (#694). The families are the hues an LED keeps apart in
+   * peripheral vision; a colour belongs to the nearest one, so amber is yellow and only an orange a
+   * third of the way to red is orange.
+   */
+  const family = (hex: string): string => {
+    const [r, g, b] = [1, 3, 5].map((i) => Number.parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    if (max < 0.15) return 'dark';
+    if ((max - min) / max < 0.25) return 'white';
+    const d = max - min;
+    const hue = (max === r ? 60 * (((g - b) / d + 6) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4)) % 360;
+    const centres: Record<string, number> = { red: 355, orange: 25, yellow: 52, green: 140, cyan: 190, blue: 220, purple: 275 };
+    const apart = (a: number, c: number): number => Math.min(Math.abs(a - c), 360 - Math.abs(a - c));
+    return Object.entries(centres).reduce((best, [name, c]) => (apart(hue, c) < apart(hue, centres[best]!) ? name : best), 'red');
+  };
+
+  /**
+   * All a lamp has to say it with: the hue families it shows and a rhythm, a steady light being a
+   * rhythm of its own. The two phases of a blink are a set, because a glance does not see phase.
+   */
+  const appearance = (e: LedEffect): string =>
+    e.blinkWhen ? `${[family(e.color), family(e.blinkColor ?? BLINK_OFF)].sort().join('/')} ${String(e.blinkDelayMs)} ms` : `${family(e.color)} steady`;
+
+  test('an LED is told a hue family rather than a hex: the caution amber is the flag yellow, and the orange is not', () => {
+    expect(family(ds.color.caution.primary)).toBe(family(ds.purpose.flag.yellow));
+    expect(family(ds.purpose.light.abs)).toBe('orange');
+    expect(family(ds.purpose.light.spotter)).toBe('purple');
+    expect(family(ds.purpose.flag.red)).toBe('red');
+    expect(family(ds.purpose.flag.white)).toBe('white');
+    expect(family(BLINK_OFF)).toBe('dark');
+  });
+
+  test('nothing beside a flag on a strip is drawn in the flag yellow', () => {
+    // The yellow is the one colour a driver reads as a flag before reading anything else, so it is
+    // the flags' alone: a car alongside, an aid and a car warning are each another family.
+    const yellow = family(ds.purpose.flag.yellow);
+    for (const e of ALL_EFFECTS().filter((x) => x.role !== 'race')) {
+      expect({ id: e.id, family: family(e.color), blink: e.blinkColor === undefined ? undefined : family(e.blinkColor) }).not.toMatchObject({ family: yellow });
+    }
+  });
 
   test('no two conditions on one lamp share a hue and a rate, at any side count', () => {
     // One LED drawn the same way by two conditions is one light with two meanings, and the driver
     // reads whichever of them they learned first. The scope is the lamp rather than the strip: the
-    // same amber may be a car alongside on the side lamp and ABS on the aid lamp, because those are
-    // never the same LED and nothing can put both on one.
+    // same orange may be ABS on the aid lamp and the meatball on the race lamp, because those are
+    // never the same LED on a side long enough to carry the aids.
     //
-    // The black flag and the chequered flag are the single pair that breaks the rule. Both resolve
-    // to #F5F7FA and neither blinks, and separating them means moving purpose.flag.black or
-    // purpose.flag.chequer in design/tokens.json, which is the author's file. The pair is named
-    // here rather than the rule being skipped, so that every other clash still fails and so that
-    // the exception falls away of its own accord the day the token moves.
-    const known = ['flag.black flag.checkered'];
+    // The white flag and the chequer are the single pair that breaks the rule: both are white
+    // against dark at 2 Hz, in antiphase, which is a distinction in the file and not at a glance.
+    // The chequer pattern across a side's LEDs is what separates them, and is its own ticket; the
+    // pair is named here rather than the rule being skipped, so that every other clash still fails.
+    const known = ['flag.chequered flag.white'];
     for (const count of [1, 2, 3, 4, 5]) {
       for (const lamp of lampsForSide(count)) {
         const seen = new Map<string, string>();
@@ -172,7 +215,7 @@ describe('what a driver can tell one condition from another by', () => {
     }
   });
 
-  test('ABS intervening: one amber LED at each end of a 4/14/4, steady, with the ladder untouched', () => {
+  test('ABS intervening: one orange LED at each end of a 4/14/4, steady, with the ladder untouched', () => {
     const placed = placedOf(profileFor(shapeById('4-14-4')!).containers);
     const abs = placed.filter((p) => p.description === 'ABS active');
     expect(abs.map((p) => p.start).sort((a, b) => a - b)).toEqual([4, 19]);
@@ -180,7 +223,7 @@ describe('what a driver can tell one condition from another by', () => {
       const c = p.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
       expect({ start: p.start, count: p.count, color: c.color, blink: c.blinkFormula }).toMatchObject({
         count: 1,
-        color: ds.color.caution.primary,
+        color: ds.purpose.light.abs,
         blink: undefined,
       });
     }
@@ -195,7 +238,7 @@ describe('what a driver can tell one condition from another by', () => {
     const top = oil[0]!.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
     expect({ count: oil[0]!.count, color: top.color, delay: top.blinkDelayMs }).toMatchObject({
       count: 1,
-      color: ds.color.danger.primary,
+      color: ds.purpose.light.oilPressure,
       delay: FAST_BLINK_MS,
     });
     // Rank 1 answers to nobody, so its condition is written bare...

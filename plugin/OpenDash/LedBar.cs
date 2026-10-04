@@ -83,7 +83,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// The effects this bar does not draw, by effect id; everything else it draws. A switch is stored
         /// under the first id its setting answers for (<see cref="Contract.LedEffectPrimaryId"/>), so the
-        /// eight flag rows are one entry. Null or empty is every effect on.
+        /// ten flag rows are one entry. Null or empty is every effect on.
         /// </summary>
         public List<string> EffectsOff { get; set; }
 

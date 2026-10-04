@@ -263,8 +263,8 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
  * than darkness, because here the second colour is the fact being reported.
  *
  * And answerable to the same switch as that lamp, `LedEffectLowFuel`: a driver who turns "Low fuel"
- * off on a strip is asking for the strip to stop saying so, and the centre saying it in the same red
- * is the same signal. The switch takes the blink and nothing else; the bar still shows the level,
+ * off on a strip is asking for the strip to stop saying so, and the centre saying it in the lamp's own
+ * orange is the same signal. The switch takes the blink and nothing else; the bar still shows the level,
  * which is what a fuel centre was chosen for. #503.
  */
 const fuelBar = (count: number): leds.LedContainer[] => {
@@ -278,7 +278,7 @@ const fuelBar = (count: number): leds.LedContainer[] => {
     color: ds.purpose.fuel.nominal,
     enabledFormula: { expression: stepLit(percent, k, count) },
     blinkFormula: { expression: and(low, stepLit(percent, k, count)) },
-    blinkColor: ds.purpose.fuel.low,
+    blinkColor: ds.purpose.light.lowFuel,
     blinkDelayMs: SLOW_BLINK_MS,
   }));
 };

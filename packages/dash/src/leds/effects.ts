@@ -174,23 +174,23 @@ const engineRunning = (): Expr => gt(g('Rpms'), num(0));
  * same rule `drawnFlags()` applies to a condition with no glyph.
  *
  * On the rates: the black family is the fast tier because it is addressed to this car, the debris
- * flag takes it for the urgency of something on the road, and everything else is the flag band's
+ * flag takes it for the urgency of something on the road, the full course yellow takes it to be told
+ * from the yellow in one corner, and everything else is the flag band's
  * own 2 Hz, so a yellow on the face and a yellow on the strip flash together. On the colours: where a
  * row names a second lit colour it is because the second colour is itself the fact, and where it
  * does not, the off phase is {@link BLINK_OFF}.
  *
- * Two rows the canvas draws are missing, and both are blocked on a token rather than on this file:
+ * Every row is drawn in the flag's own colour, which is the one convention on a strip that is
+ * universal (the FIA's flags, and every wheel and dash on the market). What a lamp beside it draws is
+ * kept off those colours where the two can share an LED: the car warnings are red and orange, the
+ * spotter purple, and nothing outside this table is the flag yellow (#694).
  *
- *  - **Red, and the start gantry that draws in red held.** `purpose.fuel.low` resolves to
- *    `color.danger.primary`, the same `#FF2D46` as `purpose.flag.red`, and the low-fuel lamp blinks
- *    at the same 2 Hz a red flag would. On a two-LED side the flags share their lamp with the car
- *    warnings, so the two would be one light with two meanings. The canvas asks for amber on low
- *    fuel; until that token moves, a red flag is no more visible on a strip than it was before.
- *  - **The meatball in `purpose.flag.orange`.** That token resolves to `color.caution.primary`,
- *    which is the temperature warning's amber at the same fast rate and on the same shared lamp.
- *    The meatball is therefore folded into the black row, which is the family it belongs to and is
- *    at least the right instruction, rather than drawn as a light the driver already knows as a
- *    temperature warning.
+ * The red flag is a row now. It was held back while low fuel was oil pressure's red at the flag's own
+ * rate on the lamp the two share on a side of one or two LEDs; low fuel is orange and the temperature
+ * warning red and steady, so the red flag at 2 Hz is a light nothing else on that LED is. The meatball
+ * is a row of its own for the same reason: it used to be folded into the black row because its token
+ * was the temperature warning's amber, and it is the orange of the flag's disc, at the black family's
+ * fast rate.
  */
 interface FlagRow {
   /** Stable id, suffixed onto `flag.`; the catalogue id of the condition the row is named for. */
@@ -206,26 +206,23 @@ interface FlagRow {
 }
 
 export const FLAG_ROWS: readonly FlagRow[] = [
-  // The disqualification and the furled black are the black flag's own family and draw as it does;
-  // the meatball is here for the reason the header gives rather than because it draws the same way.
+  // The session is stopped. 2 Hz, which is FIA 3504's rate for the red panel; oil pressure is the
+  // same red at 4 Hz and the temperature warning the same red held, so the three are three rhythms.
+  { id: 'red', label: 'Red flag', conditions: ['red'], color: ds.purpose.flag.red, blinkDelayMs: SLOW_BLINK_MS },
+  // The disqualification and the furled black are the black flag's own family and draw as it does.
   {
     id: 'black',
     label: 'Black flag',
-    conditions: ['disqualify', 'black', 'furled', 'meatball'],
+    conditions: ['disqualify', 'black', 'furled'],
     color: ds.purpose.flag.black,
     blinkDelayMs: FAST_BLINK_MS,
   },
-  // The whole track rather than this corner, said by alternating the flag yellow with the caution
-  // amber. The amber is the steady half on purpose: the caution and the plain yellow are on one
-  // lamp at the same 2 Hz, so the colour they are read by at the instant of a glance has to differ.
-  {
-    id: 'caution',
-    label: 'Full course yellow',
-    conditions: ['caution'],
-    color: ds.color.caution.primary,
-    blinkColor: ds.purpose.flag.yellow,
-    blinkDelayMs: SLOW_BLINK_MS,
-  },
+  // A black flag with an orange disc: the disc's orange, at the black family's rate.
+  { id: 'meatball', label: 'Meatball flag', conditions: ['meatball'], color: ds.purpose.light.meatball, blinkDelayMs: FAST_BLINK_MS },
+  // The whole track rather than this corner: the flag yellow at the fast rate, where the yellow in
+  // one corner is the slow one. It used to alternate the yellow with the caution amber, and an RGB
+  // LED draws those two as one colour, so what reached the driver was a yellow that did not blink.
+  { id: 'caution', label: 'Full course yellow', conditions: ['caution'], color: ds.purpose.flag.yellow, blinkDelayMs: FAST_BLINK_MS },
   { id: 'yellow', label: 'Yellow flag', conditions: ['yellowWaving', 'yellow'], color: ds.purpose.flag.yellow, blinkDelayMs: SLOW_BLINK_MS },
   // The flag's two colours, its yellow and its stripes' red, alternating at the fast rate, which is
   // what the band's stripes are on a lamp. The yellow alone at that rate was all a lamp had to say
@@ -311,21 +308,22 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     id: 'p2p',
     label: 'Push to pass',
     role: 'aid',
-    // Blue while one is in hand and green while one is being spent — the same available-then-active
-    // pair DRS draws, which is what lets the two share the second aid lamp of a five-LED side.
-    when: gt(isnull(prop('DataCorePlugin.GameRawData.Telemetry.PlayerP2P_Count'), num(0)), num(0)),
-    color: ds.color.info.primary,
+    // While one is being spent, and not while one is in hand. "In hand" was lit from the green flag
+    // to the flag on a car that starts with a dozen, which is the lamp the TC row below stopped being
+    // for the same reason; and its blue was the traction control's, steady, on the one aid lamp the
+    // two share. Green at the slow rate, so that it is not DRS available (held) or open (fast).
+    when: eq(isnull(prop('DataCorePlugin.GameData.PushToPassActive'), num(0)), num(1)),
+    color: ds.purpose.light.p2p,
     blinkWhen: eq(isnull(prop('DataCorePlugin.GameData.PushToPassActive'), num(0)), num(1)),
-    blinkColor: ds.color.good.primary,
-    blinkDelayMs: FAST_BLINK_MS,
-    source: 'DataCorePlugin.GameData.PushToPassActive, GameRawData.Telemetry.PlayerP2P_Count',
+    blinkDelayMs: SLOW_BLINK_MS,
+    source: 'DataCorePlugin.GameData.PushToPassActive',
   },
   {
     id: 'drs',
     label: 'DRS',
     role: 'aid',
     when: or(on('DRSAvailable'), on('DRSEnabled')),
-    color: ds.color.good.primary,
+    color: ds.purpose.light.drs,
     // Available is a steady light and open is a flashing one, which is how a driver tells them apart.
     blinkWhen: on('DRSEnabled'),
     blinkDelayMs: FAST_BLINK_MS,
@@ -342,7 +340,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     // no information, and one that means "the dial is at four" is not what the driver looks at when
     // a wheel spins. Dark on iRacing is the honest reading, and BEST_EFFORT says so.
     when: gt(g('TCActive'), num(0)),
-    color: ds.color.info.primary,
+    color: ds.purpose.light.tc,
     source: 'DataCorePlugin.GameData.TCActive',
   },
   {
@@ -350,10 +348,11 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     label: 'ABS active',
     role: 'aid',
     when: gt(g('ABSActive'), num(0)),
-    // Amber here and blue on traction control, which is the way round UN R121 and the car manuals
-    // put the pair. The build drew them reversed, and a driver who has read either one anywhere else
-    // reads the reversal as the other system.
-    color: ds.color.caution.primary,
+    // Orange here and blue on traction control, which is the way round the race cars' manuals put the
+    // pair: their ABS and lockup lamps are amber or orange, and their TC is blue. UN R121 makes the
+    // road car's ABS tell-tale amber too, and its ESC one as well, so the blue is the race cars' alone.
+    // Orange rather than the caution amber, because an RGB LED draws that amber as the yellow flag.
+    color: ds.purpose.light.abs,
     source: 'DataCorePlugin.GameData.ABSActive',
   },
   {
@@ -361,7 +360,9 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     label: 'Low fuel',
     role: 'car',
     when: lowFuel(),
-    color: ds.purpose.fuel.low,
+    // Orange: the fuel reserve is amber in ISO 2575, an indicator's amber, which is orange on an LED.
+    // It was oil pressure's red at the red flag's rate, on the lamp the three share at two LEDs a side.
+    color: ds.purpose.light.lowFuel,
     blinkWhen: lowFuel(),
     blinkDelayMs: SLOW_BLINK_MS,
     source: 'DataCorePlugin.Computed.Fuel_RemainingLaps against OpenDash.LightsLowFuelLaps',
@@ -375,10 +376,11 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     // NO_PROPERTY, which is a claim the review corrected rather than a property that arrived.
     // docs/research/simhub-led-sources.md still carries the old claim in two places and wants the
     // same correction; it is not this file's to make.
+    // Red, as ISO 2575 draws an engine over temperature, and held where oil pressure flashes and the
+    // red flag pulses, so that the three reds sharing a lamp at one or two LEDs a side are three
+    // rhythms. It used to be the caution amber, which on an LED is the yellow flag.
     when: or(engineWarning(1), engineWarning(64)),
-    color: ds.color.caution.primary,
-    blinkWhen: or(engineWarning(1), engineWarning(64)),
-    blinkDelayMs: FAST_BLINK_MS,
+    color: ds.purpose.light.temperature,
     source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bits 1 (WaterTempWarning) and 64 (OilTempWarning)',
   },
   {
@@ -388,7 +390,7 @@ export const SIDE_EFFECTS: readonly LedEffect[] = [
     // Gated on the engine turning, because the bit is as true of an engine that is merely stopped as
     // of one that is failing, and the lamp otherwise greets the driver in every garage.
     when: and(engineWarning(4), engineRunning()),
-    color: ds.color.danger.primary,
+    color: ds.purpose.light.oilPressure,
     blinkWhen: and(engineWarning(4), engineRunning()),
     blinkDelayMs: FAST_BLINK_MS,
     source: 'DataCorePlugin.GameRawData.Telemetry.EngineWarnings bit 4 (OilPressureWarning), gated on GameData.Rpms',
@@ -408,6 +410,10 @@ function engineWarning(bit: number): Expr {
 /**
  * The spotters, each on the side the car is actually on, and steady.
  *
+ * Purple, which no car's side cluster uses (DNR's spotter is pink and iFlag's purple, for the same
+ * reason). It was the caution amber, and on the outermost LED, beside the race lamp, an LED draws
+ * that amber as the yellow flag: a car alongside read as a yellow, and a yellow as a car alongside.
+ *
  * They used to blink red when a car was alongside on both sides at once. With one lamp to a side,
  * two lit side lamps already *are* the both-sides signal, and a blink on top of it says the same
  * thing a second time in a rhythm the car lamp is using for something else. It is in
@@ -420,7 +426,7 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
     role: 'side',
     side: 'left',
     when: gt(g('SpotterCarLeft'), num(0)),
-    color: ds.color.caution.primary,
+    color: ds.purpose.light.spotter,
     source: 'DataCorePlugin.GameData.SpotterCarLeft',
   },
   {
@@ -429,7 +435,7 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
     role: 'side',
     side: 'right',
     when: gt(g('SpotterCarRight'), num(0)),
-    color: ds.color.caution.primary,
+    color: ds.purpose.light.spotter,
     source: 'DataCorePlugin.GameData.SpotterCarRight',
   },
 ];
@@ -659,7 +665,9 @@ export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] 
   // A light that can never come on loses to one that can, whatever their ranks: the green flag and
   // the left turn indicator are the same green at the same rate, and on iRacing the indicator is a
   // hard zero. Rank decides everything else, `carries` being highest first.
-  const appearanceOf = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? String(e.blinkDelayMs) : 'steady'}`;
+  // The second colour is part of the appearance: the debris flag and the full course yellow are the
+  // same yellow at the same rate, and its stripes' red in the off phase is what tells them apart (#570).
+  const appearanceOf = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? `${String(e.blinkDelayMs)} ${e.blinkColor ?? BLINK_OFF}` : 'steady'}`;
   const ordered = [...carried.filter((e) => !e.bestEffort), ...carried.filter((e) => e.bestEffort)];
   const won = new Map<string, LedEffect>();
   for (const effect of ordered) {

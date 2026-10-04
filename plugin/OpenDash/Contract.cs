@@ -696,6 +696,8 @@ namespace OpenDashPlugin
             new KeyValuePair<string, string>("flag.white", "LedEffectFlags"),
             new KeyValuePair<string, string>("flag.green", "LedEffectFlags"),
             new KeyValuePair<string, string>("flag.chequered", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.red", "LedEffectFlags"),
+            new KeyValuePair<string, string>("flag.meatball", "LedEffectFlags"),
             new KeyValuePair<string, string>("spotter.left", "LedEffectSpotterLeft"),
             new KeyValuePair<string, string>("spotter.right", "LedEffectSpotterRight"),
             new KeyValuePair<string, string>("pit.lane", "LedEffectPitLane"),

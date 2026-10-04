@@ -278,16 +278,16 @@ namespace OpenDashPlugin
                 new EmulationScenario(Chequer, "Chequered", Theme.FlagChequer, FlagsGroup),
                 new EmulationScenario(Red, "Red", Theme.FlagRed, FlagsGroup)),
             new EmulationGroup(SpotterGroup,
-                new EmulationScenario(CarLeft, "Car left", Theme.Caution, SpotterGroup),
-                new EmulationScenario(CarRight, "Car right", Theme.Caution, SpotterGroup),
-                new EmulationScenario(CarBoth, "Both sides", Theme.Caution, SpotterGroup)),
+                new EmulationScenario(CarLeft, "Car left", Theme.LightSpotter, SpotterGroup),
+                new EmulationScenario(CarRight, "Car right", Theme.LightSpotter, SpotterGroup),
+                new EmulationScenario(CarBoth, "Both sides", Theme.LightSpotter, SpotterGroup)),
             new EmulationGroup(PitLaneGroup,
                 new EmulationScenario(Limiter, "Pit limiter", Theme.PitLimiter, PitLaneGroup),
                 new EmulationScenario(Speeding, "Speeding", Theme.Danger, PitLaneGroup)),
             new EmulationGroup(WarningsGroup,
-                new EmulationScenario(LowFuel, "Low fuel", Theme.FlagYellow, WarningsGroup),
-                new EmulationScenario(Oil, "Oil temperature", Theme.Caution, WarningsGroup),
-                new EmulationScenario(Water, "Water temperature", Theme.Caution, WarningsGroup)),
+                new EmulationScenario(LowFuel, "Low fuel", Theme.LightLowFuel, WarningsGroup),
+                new EmulationScenario(Oil, "Oil temperature", Theme.LightTemperature, WarningsGroup),
+                new EmulationScenario(Water, "Water temperature", Theme.LightTemperature, WarningsGroup)),
             new EmulationGroup(RevsGroup,
                 new EmulationScenario(Idle, "Idle", Theme.SurfaceRaised, RevsGroup),
                 new EmulationScenario(Mid, "Mid revs", Theme.ShiftStage1, RevsGroup),
@@ -393,7 +393,7 @@ namespace OpenDashPlugin
         /// so a car alongside takes the whole run (rpmStrip.ts gives the side role the run where a shape has
         /// none). Low fuel and the temperature warning light each side's car lamp, the LED lampsForSide gives
         /// the car's own warnings (the one LED of a one-LED side, the inner of two, the third from the
-        /// outside of three or more), in the fuel's low colour or the caution amber; a bare run has no car
+        /// outside of three or more), in the low-fuel orange or the temperature red; a bare run has no car
         /// lamp and shows neither. The full-strip spotter lights every LED of the strip, the ends and the
         /// centre, for a side that is switched on, as rpmStrip.ts's spotterWhole does; the artboard lights only
         /// the centre's half on the car's side. A centre whose Centre display is not the revs
@@ -421,7 +421,7 @@ namespace OpenDashPlugin
             {
                 var lightLeft = scenarioId != CarRight && options.Draws("spotter.left");
                 var lightRight = scenarioId != CarLeft && options.Draws("spotter.right");
-                if (lightLeft || lightRight) Fill(middle, Theme.Caution);
+                if (lightLeft || lightRight) Fill(middle, Theme.LightSpotter);
             }
             else if (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth)
             {
@@ -431,14 +431,14 @@ namespace OpenDashPlugin
                 {
                     // Every LED of the strip, the ends and the centre, as rpmStrip.ts's spotterWhole draws a
                     // side that is switched on over the whole run.
-                    Fill(left, Theme.Caution);
-                    Fill(middle, Theme.Caution);
-                    Fill(right, Theme.Caution);
+                    Fill(left, Theme.LightSpotter);
+                    Fill(middle, Theme.LightSpotter);
+                    Fill(right, Theme.LightSpotter);
                 }
                 else
                 {
-                    if (lightLeft) Fill(left, Theme.Caution);
-                    if (lightRight) Fill(right, Theme.Caution);
+                    if (lightLeft) Fill(left, Theme.LightSpotter);
+                    if (lightRight) Fill(right, Theme.LightSpotter);
                 }
             }
             else if (scenarioId == Limiter && draws)
@@ -455,7 +455,7 @@ namespace OpenDashPlugin
             else if ((scenarioId == LowFuel || scenarioId == Oil || scenarioId == Water) && draws && ends > 0)
             {
                 var lamp = CarLamp(ends);
-                var colour = scenarioId == LowFuel ? Theme.FuelLow : Theme.Caution;
+                var colour = scenarioId == LowFuel ? Theme.LightLowFuel : Theme.LightTemperature;
                 left[lamp] = colour;
                 right[ends - 1 - lamp] = colour;
             }
@@ -488,7 +488,7 @@ namespace OpenDashPlugin
             var leds = new string[Math.Max(0, count)];
             var shows = Contract.NormaliseLedCentre(options.Centre);
             if (shows == "throttleBrake" && leds.Length % 2 == 1) leds[leds.Length / 2] = Theme.TextPrimary;
-            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = Theme.FuelLow;
+            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = Theme.LightLowFuel;
             return leds;
         }
 

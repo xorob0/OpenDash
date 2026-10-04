@@ -79,16 +79,16 @@ namespace OpenDashPlugin.Tests
             Assert.All(flag[0], led => Assert.Equal(Theme.FlagBlue, led));
             foreach (var car in new[] { PanelEmulation.CarLeft, PanelEmulation.CarRight, PanelEmulation.CarBoth })
             {
-                Assert.All(PanelEmulation.StripFrame(0, 15, car)[0], led => Assert.Equal(Theme.Caution, led));
+                Assert.All(PanelEmulation.StripFrame(0, 15, car)[0], led => Assert.Equal(Theme.LightSpotter, led));
             }
             var leftOff = new StripOptions();
             leftOff.EffectsOff.Add("spotter.left");
             Assert.Equal(PanelEmulation.Revs(15, PanelEmulation.CarLeft), PanelEmulation.StripFrame(0, 15, PanelEmulation.CarLeft, leftOff)[0]);
-            Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarBoth, leftOff)[0], led => Assert.Equal(Theme.Caution, led));
+            Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarBoth, leftOff)[0], led => Assert.Equal(Theme.LightSpotter, led));
         }
 
         /// <summary>Low fuel and the temperature warning light each side's car lamp, as lamps.ts places it, in
-        /// the fuel's low colour or the caution amber, only when the strip draws the effect; a bare run has no car
+        /// the low-fuel orange or the temperature red, only when the strip draws the effect; a bare run has no car
         /// lamp (#523).</summary>
         [Fact]
         public void Low_fuel_and_a_hot_engine_light_the_car_lamp_of_each_side()
@@ -99,17 +99,17 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, PanelEmulation.CarLamp(4));
             Assert.Equal(2, PanelEmulation.CarLamp(5));
             var fuel = PanelEmulation.StripFrame(3, 9, PanelEmulation.LowFuel);
-            Assert.Equal(new[] { null, null, Theme.FuelLow }, fuel[0]);
-            Assert.Equal(new[] { Theme.FuelLow, null, null }, fuel[2]);
+            Assert.Equal(new[] { null, null, Theme.LightLowFuel }, fuel[0]);
+            Assert.Equal(new[] { Theme.LightLowFuel, null, null }, fuel[2]);
             Assert.Equal(PanelEmulation.Revs(9, PanelEmulation.LowFuel), fuel[1]);
             foreach (var hot in new[] { PanelEmulation.Oil, PanelEmulation.Water })
             {
                 var two = PanelEmulation.StripFrame(2, 9, hot);
-                Assert.Equal(new[] { null, Theme.Caution }, two[0]);
-                Assert.Equal(new[] { Theme.Caution, null }, two[2]);
+                Assert.Equal(new[] { null, Theme.LightTemperature }, two[0]);
+                Assert.Equal(new[] { Theme.LightTemperature, null }, two[2]);
                 var one = PanelEmulation.StripFrame(1, 9, hot);
-                Assert.Equal(new[] { Theme.Caution }, one[0]);
-                Assert.Equal(new[] { Theme.Caution }, one[2]);
+                Assert.Equal(new[] { Theme.LightTemperature }, one[0]);
+                Assert.Equal(new[] { Theme.LightTemperature }, one[2]);
             }
             Assert.Equal(PanelEmulation.Revs(15, PanelEmulation.LowFuel), PanelEmulation.StripFrame(0, 15, PanelEmulation.LowFuel)[0]);
             var off = new StripOptions();
@@ -146,8 +146,8 @@ namespace OpenDashPlugin.Tests
                 Assert.Null(PanelEmulation.StripFrame(3, 9, PanelEmulation.Limiter, options)[1][1]);
                 // The full-strip spotter paints over the stand-in as over the revs: the whole centre.
                 var whole = new StripOptions { Centre = centre, SpotterWhole = true };
-                Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, whole)[1], led => Assert.Equal(Theme.Caution, led));
-                Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarRight, options)[0], led => Assert.Equal(Theme.Caution, led));
+                Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, whole)[1], led => Assert.Equal(Theme.LightSpotter, led));
+                Assert.All(PanelEmulation.StripFrame(0, 15, PanelEmulation.CarRight, options)[0], led => Assert.Equal(Theme.LightSpotter, led));
             }
             // The brake bar at rest is dark; the throttle and brake bar keeps its standing mark on an odd run;
             // the fuel gauge shows its last LED low only under Low fuel, and only where the strip draws it.
@@ -155,7 +155,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { null, null, null, null, Theme.TextPrimary, null, null, null, null }, PanelEmulation.Centre(9, PanelEmulation.Mid, new StripOptions { Centre = "throttleBrake" }));
             Assert.All(PanelEmulation.Centre(8, PanelEmulation.Mid, new StripOptions { Centre = "throttleBrake" }), led => Assert.Null(led));
             Assert.All(PanelEmulation.Centre(9, PanelEmulation.Mid, new StripOptions { Centre = "fuel" }), led => Assert.Null(led));
-            Assert.Equal(Theme.FuelLow, PanelEmulation.Centre(9, PanelEmulation.LowFuel, new StripOptions { Centre = "fuel" })[0]);
+            Assert.Equal(Theme.LightLowFuel, PanelEmulation.Centre(9, PanelEmulation.LowFuel, new StripOptions { Centre = "fuel" })[0]);
             var noFuel = new StripOptions { Centre = "fuel" };
             noFuel.EffectsOff.Add("lowFuel");
             Assert.All(PanelEmulation.Centre(9, PanelEmulation.LowFuel, noFuel), led => Assert.Null(led));
@@ -165,13 +165,13 @@ namespace OpenDashPlugin.Tests
         public void A_car_alongside_lights_its_own_end()
         {
             var left = PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft);
-            Assert.All(left[0], led => Assert.Equal(Theme.Caution, led));
+            Assert.All(left[0], led => Assert.Equal(Theme.LightSpotter, led));
             Assert.All(left[2], led => Assert.Null(led));
             var right = PanelEmulation.StripFrame(3, 9, PanelEmulation.CarRight);
             Assert.All(right[0], led => Assert.Null(led));
-            Assert.All(right[2], led => Assert.Equal(Theme.Caution, led));
+            Assert.All(right[2], led => Assert.Equal(Theme.LightSpotter, led));
             var both = PanelEmulation.StripFrame(3, 9, PanelEmulation.CarBoth);
-            Assert.All(both[0].Concat(both[2]), led => Assert.Equal(Theme.Caution, led));
+            Assert.All(both[0].Concat(both[2]), led => Assert.Equal(Theme.LightSpotter, led));
         }
 
         /// <summary>The full-strip spotter lights every LED of the strip, the ends and the centre, for whichever side
@@ -185,7 +185,7 @@ namespace OpenDashPlugin.Tests
             {
                 var frame = PanelEmulation.StripFrame(3, 9, id, whole);
                 Assert.Equal(15, frame.Sum(group => group.Length));
-                Assert.All(frame.SelectMany(group => group), led => Assert.Equal(Theme.Caution, led));
+                Assert.All(frame.SelectMany(group => group), led => Assert.Equal(Theme.LightSpotter, led));
             }
 
             var leftOff = new StripOptions { SpotterWhole = true };
@@ -193,7 +193,7 @@ namespace OpenDashPlugin.Tests
             var dark = PanelEmulation.StripFrame(3, 9, PanelEmulation.CarLeft, leftOff);
             Assert.All(dark[0].Concat(dark[2]), led => Assert.Null(led));
             Assert.Equal(PanelEmulation.Centre(9, PanelEmulation.CarLeft, leftOff), dark[1]);
-            Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarBoth, leftOff).SelectMany(group => group), led => Assert.Equal(Theme.Caution, led));
+            Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.CarBoth, leftOff).SelectMany(group => group), led => Assert.Equal(Theme.LightSpotter, led));
 
             var rpmStrip = RepoPaths.StripComments(System.IO.File.ReadAllText(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "src", "leds", "rpmStrip.ts")));
             var spotterWhole = rpmStrip.Substring(rpmStrip.IndexOf("const spotterWhole =", StringComparison.Ordinal));
