@@ -17,6 +17,37 @@ Until then a release also carried one `.simhubdash` per package, including the `
 device shape and a `manifest.json` listing everything published. The notes of those releases say so
 where they describe them.
 
+## 0.3.0-rc.10 (2026-10-04)
+
+The candidate that puts the strip in the wheel's own list. rc.9 offered a FanaBridge wheel on the
+Add LEDs sheet, and a rig then reported that the profile it installed was missing from the wheel's
+list in SimHub. The cause was the way the profile was written, and this candidate writes it the way
+SimHub does for a wheel it registers itself.
+
+**A plugin's device is handled as the LED module its settings page carries.** rc.9 reached such a
+device through the settings document every device answers, which meant composing a document and
+handing it back, so that the plugin rebuilt its driver from it underneath SimHub's own editor. Every
+device answers with the tabs of its settings page, however, and the LED tab of that page holds the
+live LED module, the very object the editor is bound to. The profile now goes into that live list
+and the Devices plugin saves it, which is the path every other device already takes. Nothing is
+keyed on a plugin's type name, so any plugin's device that carries an LED editor on its page is
+reached the same way. (#686)
+
+**The Add LEDs sheet asks for the SimHub device first.** A new strip now opens on a Fanatec wheel
+where the rig has one, then on the one LED device there is, and the Arduino only when it is that
+one, and the device picked fixes the shape instead of the Hardware question being asked beforehand.
+(#686)
+
+### Fixed
+
+- **A strip installed on a wheel added through FanaBridge lands in the wheel's own profile list.**
+  See above. (#686, following #683)
+
+### Changed
+
+- **The Add LEDs sheet opens on a Fanatec wheel when there is one**, and the device decides the
+  shape rather than the Hardware step asking it. (#686)
+
 ## 0.3.0-rc.9 (2026-10-04)
 
 The candidate that reaches a Fanatec wheel. One change, taken from a rig: a wheel added to SimHub
