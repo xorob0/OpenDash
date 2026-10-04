@@ -239,13 +239,11 @@ namespace OpenDashPlugin
         /// <summary>A kind tile's name at 15 SemiBold over its note.</summary>
         public const double KindTitleSize = 15;
 
-        /// <summary>A size tile: the screen's outline in a 44 px band (<see cref="TileShape"/> fits it), its
-        /// size at 14 in the display family, and the design's name for it at 11.</summary>
+        /// <summary>A size tile: the screen's outline in a 44 px band (<see cref="TileShape"/> fits it) over its
+        /// size at 14 in the display family.</summary>
         public const double SizeBand = 44;
 
         public const double SizeLabelSize = 14;
-
-        public const double SizeHintSize = 11;
 
         // --- The sheet's three steps and its foot -----------------------------------------------------
 
@@ -313,16 +311,6 @@ namespace OpenDashPlugin
 
         /// <summary>What the sheet says in a build carrying no dashboard at all.</summary>
         public const string NothingToAdd = "This build ships no dashboards.";
-
-        /// <summary>The name the design gives a package, under its size on a tile ("Rim", "Nano"); null where
-        /// it gives none, and none for a pair asked as an orientation or a round screen, whose tiles already
-        /// say what they are.</summary>
-        public static string SizeHint(ScreenType type, PackageEntry entry)
-        {
-            if (entry == null || Question(type) == SizeQuestion.Orientation) return null;
-            if (string.Equals(entry.Kind, Contract.KindSlots, StringComparison.Ordinal)) return null;
-            return PackageCatalogue.NameFor(entry.Folder);
-        }
 
         /// <summary>The outline a size tile draws inside its 44 px band: AddScreen.dc.html's own formula, a
         /// wide screen squeezed and a tall one stretched so both read as their shape at a glance, and a
