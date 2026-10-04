@@ -41,6 +41,14 @@
   fill: var(--purpose-pitLimiter);
 }
 
+.attention {
+  fill: var(--color-attention-primary);
+}
+
+.proximity {
+  fill: var(--purpose-light-spotter);
+}
+
 .caption {
   font-size: var(--size-label);
   font-weight: 500;

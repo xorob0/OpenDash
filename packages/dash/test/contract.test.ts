@@ -90,6 +90,7 @@ import {
   UPDATE_VERSION_MAX_LENGTH,
 } from '../src/contract.ts';
 import { CARDS } from '../src/cards/index.ts';
+import { ALL_EFFECTS, LED_COLOURS } from '../src/leds/effects.ts';
 
 describe('card catalogue', () => {
   test('has 13 entries numbered 0..12 in order with unique ids', () => {
@@ -444,7 +445,7 @@ describe('settings', () => {
       { id: 'lowFuel', setting: 'LedEffectLowFuel' },
       { id: 'temperature', setting: 'LedEffectTemperature' },
       { id: 'oilPressure', setting: 'LedEffectOilPressure' },
-      ...['black', 'caution', 'yellow', 'debris', 'blue', 'white', 'green', 'chequered'].map((flag) => ({ id: `flag.${flag}`, setting: 'LedEffectFlags' })),
+      ...['black', 'caution', 'yellow', 'debris', 'blue', 'white', 'green', 'chequered', 'red', 'meatball'].map((flag) => ({ id: `flag.${flag}`, setting: 'LedEffectFlags' })),
       { id: 'spotter.left', setting: 'LedEffectSpotterLeft' },
       { id: 'spotter.right', setting: 'LedEffectSpotterRight' },
       { id: 'pit.lane', setting: 'LedEffectPitLane' },
@@ -925,5 +926,25 @@ describe('the second screens', () => {
     expect(secondScreen.zonePage('tower', 'Wide')).toBe('isnull([OpenDash.PitWallTowerWide], 5)');
     expect(secondScreen.pitWallPageIs(1)).toBe('(isnull([OpenDash.PitWallPage], 0)) = (1)');
     expect(secondScreen.webViewUrl()).toBe("isnull([OpenDash.WebViewUrl], '')");
+  });
+});
+
+describe('a strip’s own colours (#694)', () => {
+  test('Contract.cs lists every colour LED_COLOURS does: its key, its name, its default and the containers that draw it', () => {
+    const source = pluginSource('Contract.cs');
+    const declared = [...source.matchAll(/new LedColour\(([^)]*)\)/g)].map((m) => JSON.parse(`[${m[1]!}]`) as string[]);
+    const all = ALL_EFFECTS();
+    const expected = LED_COLOURS().map((c) => [c.key, c.label, c.color, ...c.ids.map((id) => all.find((e) => e.id === id)!.label)]);
+    expect(declared).toEqual(expected);
+  });
+
+  test('every effect a strip draws has a colour a driver can change, once', () => {
+    const ids = LED_COLOURS().flatMap((c) => c.ids);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect([...ids].sort()).toEqual(ALL_EFFECTS().map((e) => e.id).sort());
+    // A label is how the plugin finds an effect's containers, so no label may begin another's with the
+    // ", " a suffix is written with: the plugin would recolour the wrong effect.
+    const labels = ALL_EFFECTS().map((e) => e.label);
+    for (const a of labels) for (const b of labels) if (a !== b) expect({ a, b, prefix: b.startsWith(`${a}, `) }).toMatchObject({ prefix: false });
   });
 });

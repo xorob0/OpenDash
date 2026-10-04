@@ -206,22 +206,35 @@ export function stripShapes(all: readonly StripShape[], legacy: readonly StripSh
 }
 
 /**
- * One lamp of a side: the LED it owns, counted from the outside in, and the roles it draws.
+ * One lamp of a side: the LED it owns, counted from the outside in, the roles it draws, and where it
+ * takes only some of a role, which conditions of it.
  *
  * A side is not a block that lights as one. It is an ordered set of single LEDs, the outermost
  * carrying what is happening beside the car, then race control, then the car's own warnings, then
- * the aids, and sharing rather than moving on a side too short for four. The site draws a strip
+ * the aids, and sharing rather than moving on a side too short for four. The two ends are not the
+ * same: the aids are split by pedal, ABS on the left and traction control on the right, and at four
+ * a side the engine warnings are on the left and the fuel on the right (#694). The site draws a strip
  * that way because that is what the profile does.
  */
 export interface SiteLamp {
   role: LampRole;
   label: string;
   carries: LampRole[];
+  only?: Partial<Record<LampRole, string[]>>;
 }
 
-/** The lamps of a side of 0 to 5 LEDs, outermost first, indexed by the side's length. */
-export const lampTable = (): SiteLamp[][] =>
-  [0, 1, 2, 3, 4, 5].map((n) => lampsForSide(n).map((l) => ({ role: l.role, label: l.label, carries: [...l.carries] })));
+/** The lamps of each end of a side of 0 to 5 LEDs, outermost first, indexed by the side's length. */
+export const lampTable = (): { left: SiteLamp[]; right: SiteLamp[] }[] =>
+  [0, 1, 2, 3, 4, 5].map((n) => {
+    const of = (side: 'left' | 'right'): SiteLamp[] =>
+      lampsForSide(n, side).map((l) => ({
+        role: l.role,
+        label: l.label,
+        carries: [...l.carries],
+        ...(l.only ? { only: Object.fromEntries(Object.entries(l.only).map(([role, ids]) => [role, [...(ids ?? [])]])) } : {}),
+      }));
+    return { left: of('left'), right: of('right') };
+  });
 
 /** A rectangle of a face, in the face's own pixels. */
 export interface SiteRect {
@@ -343,7 +356,7 @@ export const FLAGS: SiteFlag[] = ${json(flags(FLAG_CATALOGUE))};
 export const STRIP_SHAPES: SiteStripShape[] = ${json(stripShapes(BASE_SHAPES, LEGACY_SHAPES))};
 
 /** The lamps of a side of 0 to 5 LEDs, outermost first, indexed by the side's length. */
-export const LAMPS: SiteLamp[][] = ${json(lampTable())};
+export const LAMPS: { left: SiteLamp[]; right: SiteLamp[] }[] = ${json(lampTable())};
 
 /** The LED profile files the build wrote. Empty when the repository has not been built. */
 export const LED_PROFILES: string[] = ${json(manifest?.ledProfiles ?? [])};

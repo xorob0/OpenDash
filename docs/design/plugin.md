@@ -335,8 +335,13 @@ migration; OpenDash has no store, since a setting is a SimHub property.
   spotter left and right, pit lane, pit limiter, speeding in the pit lane, low fuel, and the turn
   signals. The profile installed for such a strip reads all nine.
 - **A car alongside lights a bare strip.** With Car left, Car right or Both sides chosen, the preview
-  fills the run in the caution ink for each side switched on, as the installed profile does. The
+  fills the run in the spotter's purple for each side switched on, as the installed profile does. The
   artboard draws nothing.
+- **Colours, under Effects (#694).** A row for each colour the strip draws: its default first, then
+  red, orange, yellow, green, blue, purple and white, which are the hues an LED keeps apart at a glance.
+  A pick is written into the strip's profile and installs it again, as Reverse direction does, because
+  SimHub binds no colour on an LED container that blinks; the line after it says so where the install
+  could not run. The artboard has no such section.
 - **The Full-strip spotter lights the whole strip**, the ends and the centre, for a car on a side that
   is switched on, because the installed profile does (`rpmStrip.ts` draws it over the whole run). The
   artboard lights only the centre's half on the car's side.

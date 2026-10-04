@@ -113,6 +113,7 @@ namespace OpenDashPlugin
         public const string AnchorReverse = "leds.reverse";
         public const string AnchorFanatec = "leds.fanatec";
         public const string AnchorEffects = "leds.effects";
+        public const string AnchorColours = "leds.colours";
         public const string AnchorFlagAnimation = "leds.flag-animation";
         public const string AnchorSpotter = "leds.spotter";
         public const string AnchorEveryStrip = "leds.every-strip";
@@ -468,15 +469,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>What a strip is set to that changes its picture: the full-strip spotter, the effects it has
-        /// switched off, and its Centre display, whose stand-in PanelEmulation.StripFrame draws where the
+        /// switched off, its own colours (#694), and its Centre display, whose stand-in PanelEmulation.StripFrame draws where the
         /// centre does not show the revs.</summary>
-        public static StripOptions OptionsFor(bool spotterWhole, IEnumerable<string> effectsOff, string centre = null)
+        public static StripOptions OptionsFor(bool spotterWhole, IEnumerable<string> effectsOff, string centre = null, IDictionary<string, string> colours = null)
         {
             return new StripOptions
             {
                 SpotterWhole = spotterWhole,
                 EffectsOff = new HashSet<string>((effectsOff ?? Enumerable.Empty<string>()).Where(id => id != null), StringComparer.Ordinal),
                 Centre = centre,
+                Colours = colours == null ? null : new Dictionary<string, string>(colours, StringComparer.Ordinal),
             };
         }
 
@@ -757,6 +759,108 @@ namespace OpenDashPlugin
 
         /// <summary>The greyed "Each LED in turn" row's press (#434).</summary>
         public const string EachLedStart = "Start";
+
+        // --- Colours (#694) -----------------------------------------------------------------------------------
+
+        public const string ColoursTitle = "Colours";
+        public const string ColoursCaption = "This strip only";
+
+        /// <summary>One colour a row offers: its name, which is what a screen reader and the line after a press say,
+        /// and its hex.</summary>
+        public sealed class ColourChoice
+        {
+            public ColourChoice(string name, string hex)
+            {
+                Name = name;
+                Hex = hex;
+            }
+
+            public string Name { get; private set; }
+
+            public string Hex { get; private set; }
+        }
+
+        /// <summary>
+        /// What a colour row offers beside the default: the hues an LED keeps apart at a glance, and no more. An
+        /// RGB LED draws an amber and a yellow as one colour, so a finer picker would offer choices the strip cannot
+        /// show; each of these is a token the strip already draws with.
+        /// </summary>
+        public static readonly IReadOnlyList<ColourChoice> ColourPalette = new[]
+        {
+            new ColourChoice("red", Theme.FlagRed),
+            new ColourChoice("orange", Theme.LightAbs),
+            new ColourChoice("yellow", Theme.FlagYellow),
+            new ColourChoice("green", Theme.FlagGreen),
+            new ColourChoice("blue", Theme.FlagBlue),
+            new ColourChoice("purple", Theme.LightSpotter),
+            new ColourChoice("white", Theme.FlagWhite),
+        };
+
+        /// <summary>The name the default choice has: it is a colour of its own, not the hue it happens to be.</summary>
+        public const string DefaultColourName = "Default";
+
+        /// <summary>
+        /// A row's choices: the default first, in its own colour, then every hue of the palette that is not the
+        /// default's, so that exactly one choice is the colour the strip draws.
+        /// </summary>
+        public static IList<ColourChoice> ColourChoicesFor(LedColour colour)
+        {
+            var choices = new List<ColourChoice> { new ColourChoice(DefaultColourName, colour.DefaultHex) };
+            choices.AddRange(ColourPalette.Where(c => !string.Equals(c.Hex, colour.DefaultHex, StringComparison.OrdinalIgnoreCase)));
+            return choices;
+        }
+
+        /// <summary>The choice a strip drawing <paramref name="hex"/> has pressed: the default where it is the
+        /// default, else the palette's hue, else none (a colour written by hand that the palette does not hold).</summary>
+        public static ColourChoice PressedChoice(LedColour colour, string hex)
+        {
+            return ColourChoicesFor(colour).FirstOrDefault(c => string.Equals(c.Hex, hex, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>The effect ids a colour paints: the two sides for the spotter and the turn signals, else the
+        /// one effect the key names.</summary>
+        public static IList<string> ColourEffectIds(string key)
+        {
+            if (key == "spotter") return new[] { "spotter.left", "spotter.right" };
+            if (key == "turn") return new[] { "turn.left", "turn.right" };
+            return new[] { key };
+        }
+
+        /// <summary>
+        /// The colours a shape offers: those of the effects it draws, which are the effects its switches govern
+        /// (<see cref="EffectsFor(int, int)"/>), in Contract.LedColours order. A colour for something the strip can
+        /// never show is not offered, as a switch for it is not.
+        /// </summary>
+        public static IList<LedColour> ColoursFor(string shapeId)
+        {
+            var settings = new HashSet<string>(EffectsFor(shapeId).Select(e => e.Setting), StringComparer.Ordinal);
+            return Contract.LedColours
+                .Where(colour => ColourEffectIds(colour.Key).Any(id => Contract.IsLedEffect(id) && settings.Contains(Contract.LedEffectSetting(id))))
+                .ToList();
+        }
+
+        /// <summary>What a strip draws a colour in, as the line after a press says it: "in blue", or "in its
+        /// default colour again".</summary>
+        public static string ColourSaid(string name, LedColour colour, ColourChoice choice)
+        {
+            var how = choice == null || choice.Name == DefaultColourName ? "in its default colour again" : "in " + choice.Name;
+            return name + " draws " + colour.Label + " " + how + ".";
+        }
+
+        /// <summary>The line after a press that installed the strip again: SimHub's copy replaced, or a fresh one
+        /// still to select where SimHub held none.</summary>
+        public static string ColourSaid(string name, LedColour colour, ColourChoice choice, bool wasInSimHub, string device, string note = null)
+        {
+            return Steps(ColourSaid(name, colour, choice), note, wasInSimHub ? null : SelectIt(name, device));
+        }
+
+        /// <summary>A colour saved whose install failed: the install takes the old copy out of every device first,
+        /// so the line says what the strip is set to, as a failed Reverse does.</summary>
+        public static string ColourNotInstalled(string name, LedColour colour, ColourChoice choice)
+        {
+            var said = ColourSaid(name, colour, choice);
+            return said.Substring(0, said.Length - 1) + ", but its profile could not be installed again. See SimHub's log.";
+        }
 
         // --- Effects -----------------------------------------------------------------------------------------
 
@@ -1330,6 +1434,7 @@ namespace OpenDashPlugin
                 new PanelSearch.Entry(ReverseTitle, PanelPage.Leds, AnchorReverse, "reversed", "far end", "wiring"),
                 new PanelSearch.Entry(PanelLights.BarFanatecSwitch, PanelPage.Leds, AnchorFanatec, "fanatec", "wheel", "wiring", "compatibility"),
                 new PanelSearch.Entry(EffectsTitle, PanelPage.Leds, AnchorEffects, "effect", "this strip only"),
+                new PanelSearch.Entry(ColoursTitle, PanelPage.Leds, AnchorColours, "colour", "color", "LED colours", "abs colour", "flag colour"),
                 new PanelSearch.Entry(FlagAnimationTitle, PanelPage.Leds, AnchorFlagAnimation, "flags"),
                 new PanelSearch.Entry(SpotterTitle, PanelPage.Leds, AnchorSpotter, "car alongside"),
                 new PanelSearch.Entry(EveryStripTitle, PanelPage.Leds, AnchorEveryStrip, "strip"),

@@ -66,6 +66,18 @@ namespace OpenDashPlugin
         /// reads as the revs, the default. Only the revs centre draws the rev ladder.</summary>
         public string Centre { get; set; }
 
+        /// <summary>The strip's own colours by Contract.LedColours key (LedBar.Colours); a key it leaves out is drawn
+        /// in its default (#694).</summary>
+        public IDictionary<string, string> Colours { get; set; }
+
+        /// <summary>The colour the strip draws <paramref name="key"/> in: its own, or <paramref name="fallback"/>.</summary>
+        public string Colour(string key, string fallback)
+        {
+            string own;
+            if (Colours == null || key == null || !Colours.TryGetValue(key, out own)) return fallback;
+            return Contract.NormaliseLedHex(own) ?? fallback;
+        }
+
         /// <summary>Whether the centre carries the rev ladder: its Centre display is the revs.</summary>
         public bool CentreShowsRevs
         {
@@ -278,16 +290,16 @@ namespace OpenDashPlugin
                 new EmulationScenario(Chequer, "Chequered", Theme.FlagChequer, FlagsGroup),
                 new EmulationScenario(Red, "Red", Theme.FlagRed, FlagsGroup)),
             new EmulationGroup(SpotterGroup,
-                new EmulationScenario(CarLeft, "Car left", Theme.Caution, SpotterGroup),
-                new EmulationScenario(CarRight, "Car right", Theme.Caution, SpotterGroup),
-                new EmulationScenario(CarBoth, "Both sides", Theme.Caution, SpotterGroup)),
+                new EmulationScenario(CarLeft, "Car left", Theme.LightSpotter, SpotterGroup),
+                new EmulationScenario(CarRight, "Car right", Theme.LightSpotter, SpotterGroup),
+                new EmulationScenario(CarBoth, "Both sides", Theme.LightSpotter, SpotterGroup)),
             new EmulationGroup(PitLaneGroup,
                 new EmulationScenario(Limiter, "Pit limiter", Theme.PitLimiter, PitLaneGroup),
                 new EmulationScenario(Speeding, "Speeding", Theme.Danger, PitLaneGroup)),
             new EmulationGroup(WarningsGroup,
-                new EmulationScenario(LowFuel, "Low fuel", Theme.FlagYellow, WarningsGroup),
-                new EmulationScenario(Oil, "Oil temperature", Theme.Caution, WarningsGroup),
-                new EmulationScenario(Water, "Water temperature", Theme.Caution, WarningsGroup)),
+                new EmulationScenario(LowFuel, "Low fuel", Theme.LightLowFuel, WarningsGroup),
+                new EmulationScenario(Oil, "Oil temperature", Theme.LightTemperature, WarningsGroup),
+                new EmulationScenario(Water, "Water temperature", Theme.LightTemperature, WarningsGroup)),
             new EmulationGroup(RevsGroup,
                 new EmulationScenario(Idle, "Idle", Theme.SurfaceRaised, RevsGroup),
                 new EmulationScenario(Mid, "Mid revs", Theme.ShiftStage1, RevsGroup),
@@ -307,6 +319,23 @@ namespace OpenDashPlugin
         public static bool IsFlag(string id)
         {
             return id == Green || id == Yellow || id == Blue || id == White || id == Black || id == Chequer || id == Red;
+        }
+
+        /// <summary>The Contract.LedColours key a scenario's flag is drawn under, or null for a scenario that is
+        /// not a flag.</summary>
+        public static string ColourKey(string id)
+        {
+            switch (id)
+            {
+                case Green: return "flag.green";
+                case Yellow: return "flag.yellow";
+                case Blue: return "flag.blue";
+                case White: return "flag.white";
+                case Black: return "flag.black";
+                case Chequer: return "flag.chequered";
+                case Red: return "flag.red";
+                default: return null;
+            }
         }
 
         /// <summary>The colour a flag lights an LED in. Black and the chequer light in the panel's white,
@@ -382,7 +411,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Rig.dc.html's rules: a flag fills the ends, a car alongside lights its own side's end (both ends
+        /// Rig.dc.html's rules: a flag fills the ends (the red, the black and the yellow; the others light their
+        /// race lamp, as the generator draws them since #694), a car alongside lights its own side's end (both ends
         /// for both), the limiter alternates every LED, speeding reddens the ends, and the centre carries the revs. A bare run
         /// carries flags and the pit lane across itself, which is what the generator draws there
         /// (rpmStrip.ts); the artboard's brow leaves the flag off and is wrong about it. An effect the strip
@@ -393,7 +423,7 @@ namespace OpenDashPlugin
         /// so a car alongside takes the whole run (rpmStrip.ts gives the side role the run where a shape has
         /// none). Low fuel and the temperature warning light each side's car lamp, the LED lampsForSide gives
         /// the car's own warnings (the one LED of a one-LED side, the inner of two, the third from the
-        /// outside of three or more), in the fuel's low colour or the caution amber; a bare run has no car
+        /// outside of three or more), in the low-fuel orange or the temperature red; a bare run has no car
         /// lamp and shows neither. The full-strip spotter lights every LED of the strip, the ends and the
         /// centre, for a side that is switched on, as rpmStrip.ts's spotterWhole does; the artboard lights only
         /// the centre's half on the car's side. A centre whose Centre display is not the revs
@@ -413,15 +443,21 @@ namespace OpenDashPlugin
 
             if (IsFlag(scenarioId) && draws)
             {
-                var colour = FlagColour(scenarioId);
-                if (ends > 0) { Fill(left, colour); Fill(right, colour); }
-                else Fill(middle, colour);
+                var colour = options.Colour(ColourKey(scenarioId), FlagColour(scenarioId));
+                if (ends == 0) Fill(middle, colour);
+                else if (Spreads(scenarioId)) { Fill(left, colour); Fill(right, colour); }
+                else
+                {
+                    var lamp = RaceLamp(ends);
+                    left[lamp] = colour;
+                    right[ends - 1 - lamp] = colour;
+                }
             }
             else if (ends == 0 && (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth))
             {
                 var lightLeft = scenarioId != CarRight && options.Draws("spotter.left");
                 var lightRight = scenarioId != CarLeft && options.Draws("spotter.right");
-                if (lightLeft || lightRight) Fill(middle, Theme.Caution);
+                if (lightLeft || lightRight) Fill(middle, options.Colour("spotter", Theme.LightSpotter));
             }
             else if (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth)
             {
@@ -431,33 +467,39 @@ namespace OpenDashPlugin
                 {
                     // Every LED of the strip, the ends and the centre, as rpmStrip.ts's spotterWhole draws a
                     // side that is switched on over the whole run.
-                    Fill(left, Theme.Caution);
-                    Fill(middle, Theme.Caution);
-                    Fill(right, Theme.Caution);
+                    var spotter = options.Colour("spotter", Theme.LightSpotter);
+                    Fill(left, spotter);
+                    Fill(middle, spotter);
+                    Fill(right, spotter);
                 }
                 else
                 {
-                    if (lightLeft) Fill(left, Theme.Caution);
-                    if (lightRight) Fill(right, Theme.Caution);
+                    if (lightLeft) Fill(left, options.Colour("spotter", Theme.LightSpotter));
+                    if (lightRight) Fill(right, options.Colour("spotter", Theme.LightSpotter));
                 }
             }
             else if (scenarioId == Limiter && draws)
             {
-                Alternate(left, Theme.PitLimiter);
-                Alternate(right, Theme.PitLimiter);
-                Alternate(middle, Theme.PitLimiter);
+                var limiter = options.Colour("pit.limiter", Theme.PitLimiter);
+                Alternate(left, limiter);
+                Alternate(right, limiter);
+                Alternate(middle, limiter);
             }
             else if (scenarioId == Speeding && draws)
             {
-                if (ends > 0) { Fill(left, Theme.Danger); Fill(right, Theme.Danger); }
-                else Fill(middle, Theme.Danger);
+                var speeding = options.Colour("pit.speeding", Theme.Danger);
+                if (ends > 0) { Fill(left, speeding); Fill(right, speeding); }
+                else Fill(middle, speeding);
             }
             else if ((scenarioId == LowFuel || scenarioId == Oil || scenarioId == Water) && draws && ends > 0)
             {
                 var lamp = CarLamp(ends);
-                var colour = scenarioId == LowFuel ? Theme.FuelLow : Theme.Caution;
-                left[lamp] = colour;
-                right[ends - 1 - lamp] = colour;
+                var fuel = scenarioId == LowFuel;
+                var colour = fuel ? options.Colour("lowFuel", Theme.LightLowFuel) : options.Colour("temperature", Theme.LightTemperature);
+                // From four LEDs a side the car lamp is split, as lampsForSide splits it (#694): the engine's
+                // warnings on the left, the fuel on the right. Below four both ends carry all three.
+                if (!SplitsCarLamp(ends) || !fuel) left[lamp] = colour;
+                if (!SplitsCarLamp(ends) || fuel) right[ends - 1 - lamp] = colour;
             }
 
             return ends > 0 ? new[] { left, middle, right } : new[] { middle };
@@ -471,6 +513,33 @@ namespace OpenDashPlugin
         public static int CarLamp(int ends)
         {
             return Math.Max(0, Math.Min(ends - 1, 2));
+        }
+
+        /// <summary>
+        /// Which LED of an end, counted from the outside, is the race lamp, which carries the flags: the one LED
+        /// of a one-LED side, and the second from the outside of every longer side (lampsForSide in lamps.ts).
+        /// </summary>
+        public static int RaceLamp(int ends)
+        {
+            return Math.Max(0, Math.Min(ends - 1, 1));
+        }
+
+        /// <summary>
+        /// Whether a flag takes every LED of both ends rather than its race lamp, as flagSpreads in effects.ts
+        /// spreads it (#694): the red flag for as long as it is out, and the black and the waved yellow while
+        /// they are new, which is the moment a chip shows. The blue, the white, the green and the chequer keep
+        /// their one LED a side.
+        /// </summary>
+        public static bool Spreads(string scenarioId)
+        {
+            return scenarioId == Red || scenarioId == Black || scenarioId == Yellow;
+        }
+
+        /// <summary>Whether a side of <paramref name="ends"/> LEDs has a car lamp at each end for different
+        /// warnings, the engine's on the left and the fuel on the right: lampsForSide's split from four LEDs.</summary>
+        public static bool SplitsCarLamp(int ends)
+        {
+            return ends >= 4;
         }
 
         /// <summary>
@@ -488,7 +557,7 @@ namespace OpenDashPlugin
             var leds = new string[Math.Max(0, count)];
             var shows = Contract.NormaliseLedCentre(options.Centre);
             if (shows == "throttleBrake" && leds.Length % 2 == 1) leds[leds.Length / 2] = Theme.TextPrimary;
-            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = Theme.FuelLow;
+            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = options.Colour("lowFuel", Theme.LightLowFuel);
             return leds;
         }
 

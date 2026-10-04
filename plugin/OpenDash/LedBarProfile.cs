@@ -8,6 +8,10 @@
 // dashboards, for the same reason -- what SimHub reads back has to be what the build wrote, less exactly
 // the two fields and the names BarSettings lists.
 //
+// Since #694 the rewrite also carries the bar's own colours. SimHub binds no colour on an LED container that
+// blinks, so a colour cannot be a property the profile reads the way a switch is; it is written into the
+// containers that draw it instead, found by their descriptions, and choosing one installs the bar again.
+//
 // The id the rewrite gives a bar is also how the bar is found again in SimHub, so the census of what
 // SimHub holds for the rig's bars (Plan) lives here beside it rather than beside the embedded profile.
 //
@@ -150,7 +154,77 @@ namespace OpenDashPlugin
                     "[" + Contract.Prefix + "." + setting + "]",
                     "[" + Contract.Prefix + "." + Property(bar.Namespace, setting) + "]");
             }
+            return Recolour(json, bar);
+        }
+
+        /// <summary>
+        /// The profile with the bar's own colours in place of the defaults: every container an effect draws in,
+        /// found by its description, has the default replaced wherever it is the lit colour (#694).
+        /// </summary>
+        /// <remarks>
+        /// A container is described by its effect's label, or by that label and a suffix the generator adds for
+        /// the same drawing in another form (", held", ", spread", ", spread, held"); a group named for an effect
+        /// carries no colour of its own, and its children are described again. So a description opens a window
+        /// that runs to the next description or the next ContainerType, which is the one container's own fields,
+        /// and only a Color or BlinkingColor equal to the default inside it is replaced: the debris flag's
+        /// stripes and every off phase stay what they were. A bar with no colours of its own gives back exactly
+        /// what it was given.
+        /// </remarks>
+        public static string Recolour(string json, LedBar bar)
+        {
+            if (json == null || bar == null || bar.Colours == null || bar.Colours.Count == 0) return json;
+            foreach (var colour in Contract.LedColours)
+            {
+                if (!bar.HasOwnColour(colour.Key)) continue;
+                var hex = bar.ColourOf(colour.Key);
+                foreach (var label in colour.Effects) json = RecolourContainers(json, label, colour.DefaultHex, hex);
+            }
             return json;
+        }
+
+        private const string DescriptionKey = "\"Description\": \"";
+        private const string ContainerTypeKey = "\"ContainerType\"";
+
+        private static string RecolourContainers(string json, string label, string from, string to)
+        {
+            var opening = DescriptionKey + label;
+            var text = new StringBuilder(json.Length);
+            var at = 0;
+            while (true)
+            {
+                var found = json.IndexOf(opening, at, StringComparison.Ordinal);
+                if (found < 0) break;
+                var after = found + opening.Length;
+                // The label itself, or the label and a suffix, and never a label that merely starts the same way.
+                var mine = after < json.Length && (json[after] == '"' || string.CompareOrdinal(json, after, ", ", 0, 2) == 0);
+                if (!mine)
+                {
+                    text.Append(json, at, after - at);
+                    at = after;
+                    continue;
+                }
+                var end = NextOf(json, after, DescriptionKey, ContainerTypeKey);
+                text.Append(json, at, after - at);
+                var fields = json.Substring(after, end - after)
+                    .Replace("\"Color\": \"" + from + "\"", "\"Color\": \"" + to + "\"")
+                    .Replace("\"BlinkingColor\": \"" + from + "\"", "\"BlinkingColor\": \"" + to + "\"");
+                text.Append(fields);
+                at = end;
+            }
+            text.Append(json, at, json.Length - at);
+            return text.ToString();
+        }
+
+        /// <summary>Where the first of <paramref name="keys"/> after <paramref name="from"/> starts, or the end.</summary>
+        private static int NextOf(string json, int from, params string[] keys)
+        {
+            var next = json.Length;
+            foreach (var key in keys)
+            {
+                var at = json.IndexOf(key, from, StringComparison.Ordinal);
+                if (at >= 0 && at < next) next = at;
+            }
+            return next;
         }
 
         /// <summary>Replaces one top-level string field's value, leaving everything around it untouched.</summary>
