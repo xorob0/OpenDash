@@ -34,19 +34,19 @@
 // judged by LedDeviceSurvey, which is pure and tested, and what was seen of it is written to SimHub's log
 // with the reason (#437). The one use of reflection in this file is there, and only to be logged.
 //
-// **A device that is not an LED module is reached through its settings document** (#683). A FanaBridge
+// **A device that is not an LED module is reached through its settings page** (#683, #686). A FanaBridge
 // wheel is a `DeviceInstance` of the plugin's own type that holds SimHub's `LedModuleSettings` in private
 // fields, so the walk above never meets a `LedModuleDevice` and reflection over the public surface finds
-// nothing. What every device must do, LED module or not, is answer `GetSettings(false, false)` with the
-// document SimHub saves under `PluginsData\Common\Devices\<id>\settings.json` and accept it back through
-// `SetSettings`, and an LED module's document carries its telemetry LED profile list as `leds`, the
-// serialised `LedsSettings` (`LedModuleDevice.GetSettings` and FanaBridge's `GetSettings` both write it,
-// since both call `LedModuleSettings.GetSettings`, decompiled 9.12.6). So a device with no LED module whose
-// document holds `leds.Profiles` is offered: its list is `leds.ToObject<LedsSettings>()`, the conversion
-// SimHub's own `LedModuleSettings.SetSettings` makes of that token, and a save writes
-// `JObject.FromObject(list)` back as `leds`, which is what `RGBLedsDriver.GetSettingsJToken` produces,
-// hands the document to `SetSettings` and asks the Devices plugin to save. That is SimHub's own import
-// path, so the module rebuilds its driver from the new list; nothing here is keyed on a plugin's type name.
+// nothing. What every device must do, LED module or not, is answer `GetSettingsControls()` with the tabs
+// of its page, and an LED module's tab is SimHub's own `LedbuttonsModule`, whose public `Settings` is the
+// live `LedModuleSettings`: the same object `LedModuleDevice.ledModuleSettings` holds, with the same live
+// `LedsDriver.Settings` the editor binds to. So such a device is handled as a module: the profile goes into
+// that live list and the Devices plugin saves it, exactly as for a wheel SimHub registers itself. #684 went
+// through the settings document instead, `GetSettings` and `SetSettings`, which made the plugin rebuild its
+// driver from a document OpenDash composed, under SimHub's editor; a rig reported the profile missing from
+// the wheel's list after that, and the live module is the path every other device already takes. The tab
+// is a WPF control, built on the interface thread the walk runs on and kept per device instance, since the
+// panel walks on every redraw. Nothing here is keyed on a plugin's type name.
 //
 // Needs SimHub types, so it is NOT compiled into OpenDash.Tests. The id vocabulary a settings file holds
 // is on LedBar, which is, and is pinned there.
@@ -54,11 +54,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Newtonsoft.Json.Linq;
+using System.Runtime.CompilerServices;
+using System.Windows;
 using SimHub.Plugins;
 using SimHub.Plugins.Devices;
 using SimHub.Plugins.OutputPlugins.Dash;
 using SimHub.Plugins.OutputPlugins.GraphicalDash.LedModules;
+using SimHub.Plugins.OutputPlugins.GraphicalDash.UI;
 using LedsSettings = SimHub.Plugins.DataPlugins.RGBDriver.Settings.LedsSettings;
 using RGBLedsDriver = SimHub.Plugins.DataPlugins.RGBDriver.RGBLedsDriver;
 
@@ -137,14 +139,16 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What a new bar opens on: the one LED device there is, and the Arduino only when it is that one.
+        /// What a new bar opens on: a Fanatec wheel where the rig has one, else the one LED device there is,
+        /// and the Arduino only when it is that one.
         /// </summary>
         /// <remarks>
         /// A rig with a wheel and nothing else should not have to find a drop-down to say so, and a rig
-        /// with an Arduino and nothing else should not either. With more than one, the first *device* wins
-        /// over the Arduino: somebody who has wired a strip to an Arduino has done that deliberately and
-        /// will look, whereas a wheel is where LEDs are unless you know otherwise. The panel shows the
-        /// choice either way.
+        /// with an Arduino and nothing else should not either. With more than one, a Fanatec wheel wins,
+        /// since the device decides the strip's wiring and a driver with one wants its profile without a
+        /// choice (#686); then the first *device* wins over the Arduino: somebody who has wired a strip to
+        /// an Arduino has done that deliberately and will look, whereas a wheel is where LEDs are unless you
+        /// know otherwise. The panel shows the choice either way.
         /// </remarks>
         public static LedTarget Preferred()
         {
@@ -156,7 +160,8 @@ namespace OpenDashPlugin
         public static LedTarget Preferred(IList<LedTarget> targets)
         {
             if (targets == null || targets.Count == 0) return null;
-            var device = targets.FirstOrDefault(t => !string.Equals(t.Id, LedBar.ArduinoDevice, StringComparison.Ordinal));
+            var fanatec = targets.FirstOrDefault(t => t != null && PanelLeds.FoundFanatec(new[] { t.Name }));
+            var device = fanatec ?? targets.FirstOrDefault(t => !string.Equals(t.Id, LedBar.ArduinoDevice, StringComparison.Ordinal));
             return device ?? targets[0];
         }
 
@@ -278,6 +283,8 @@ namespace OpenDashPlugin
                 && m.ledModuleSettings.LedsDriver != null
                 && m.ledModuleSettings.LedsDriver.Settings != null);
             var module = usable ?? modules.FirstOrDefault();
+            // A device with no LED module may still carry one on its settings page (#686).
+            var fromEditor = module == null ? EditorModule(root) : null;
 
             var seen = new LedDeviceSeen
             {
@@ -287,15 +294,16 @@ namespace OpenDashPlugin
                 Kind = KindOf(root),
                 Instances = instances.Select(i => i.GetType().Name).ToList(),
                 LedModule = module != null,
+                EditorModule = fromEditor != null,
             };
 
-            if (module == null)
+            if (module == null && fromEditor == null)
             {
                 seen.ForeignDrivers = ForeignDrivers(instances);
-                return new Surveyed { Seen = seen, Target = FromDocument(root, seen) };
+                return new Surveyed { Seen = seen };
             }
 
-            var settings = module.ledModuleSettings;
+            var settings = module != null ? module.ledModuleSettings : fromEditor;
             var driver = settings == null ? null : settings.LedsDriver;
             var leds = driver == null ? null : driver.Settings;
             seen.LedsDriver = driver != null;
@@ -316,8 +324,9 @@ namespace OpenDashPlugin
             }
             if (LedDeviceSurvey.Judge(seen) != LedDeviceVerdict.Offered) return new Surveyed { Seen = seen };
 
-            var owner = module.RootInstance ?? module;
+            var owner = module == null ? root : module.RootInstance ?? module;
             var captured = module;
+            var capturedDriver = driver;
             return new Surveyed
             {
                 Seen = seen,
@@ -325,72 +334,61 @@ namespace OpenDashPlugin
                 {
                     Id = LedBar.DeviceId(owner.InstanceId),
                     Name = NameOf(owner, settings),
-                    Connected = module.IsConnected,
+                    Connected = module == null ? root.IsConnected : module.IsConnected,
                     Settings = leds,
-                    Save = () => SaveDevice(captured),
+                    Save = module == null ? (Action)(() => SaveDriver(capturedDriver)) : () => SaveDevice(captured),
                 },
             };
         }
 
-        /// <summary>The key an LED module's settings document keeps its telemetry LED profile list under.</summary>
-        private const string LedsChannel = "leds";
+        /// <summary>The LED module a device's settings page carries, once per device instance, or null.</summary>
+        private static readonly ConditionalWeakTable<DeviceInstance, LedModuleSettings> EditorModules = new ConditionalWeakTable<DeviceInstance, LedModuleSettings>();
 
         /// <summary>
-        /// The target a device with no LED module gives through its settings document, or null when the
-        /// document has no LED profile list. See the head of this file (#683).
+        /// The live LED module of a device that is not an LED module, read off its settings page: the first tab
+        /// `GetSettingsControls()` yields that is SimHub's LED editor, whose `Settings` is the module. See the
+        /// head of this file (#686).
         /// </summary>
         /// <remarks>
-        /// What was seen of the document goes on <paramref name="seen"/> whether or not it offers: the
-        /// verdict is <see cref="LedDeviceSurvey"/>'s, so that a document without the list is still logged
-        /// as "not an LED module" and a document with it is logged as reached this way.
+        /// Built once per instance and kept: the tabs are WPF controls, and the panel walks the devices on
+        /// every redraw. The enumeration stops at the first LED editor, since a plugin's later tabs can be
+        /// anything. Only on the interface thread, which is where every walk runs; anywhere else the device
+        /// is declined rather than a control built off the thread that owns it.
         /// </remarks>
-        private static LedTarget FromDocument(DeviceInstance root, LedDeviceSeen seen)
+        private static LedModuleSettings EditorModule(DeviceInstance root)
         {
-            JObject document;
+            LedModuleSettings cached;
+            if (EditorModules.TryGetValue(root, out cached)) return cached;
+            var application = Application.Current;
+            if (application == null || !application.Dispatcher.CheckAccess()) return null;
+            LedModuleSettings found = null;
             try
             {
-                document = root.GetSettings(false, false) as JObject;
+                foreach (var tab in root.GetSettingsControls() ?? Enumerable.Empty<DeviceSettingControl>())
+                {
+                    var editor = tab == null ? null : tab.Control as LedbuttonsModule;
+                    if (editor == null || editor.Settings == null) continue;
+                    found = editor.Settings;
+                    break;
+                }
             }
             catch (Exception e)
             {
-                // Its own catch rather than the survey's: a device that answers everything but this is
-                // still what the verdict says it is, with what was seen of it, and not unreadable.
-                Log.Warn("The settings document of \"" + seen.Name + "\" could not be read for its LEDs: " + e.Message);
+                string name = null;
+                try { name = root.MainDisplayName; } catch (Exception) { }
+                Log.Warn("The settings page of \"" + (name ?? "a device") + "\" could not be read for its LEDs: " + e.Message);
                 return null;
             }
-            var leds = document == null ? null : document[LedsChannel] as JObject;
-            var profiles = leds == null ? null : leds["Profiles"] as JArray;
-            if (profiles == null) return null;
-
-            seen.DocumentLeds = true;
-            seen.Profiles = profiles.Count;
-            seen.UseBuiltInProfiles = (bool?)leds["UseBuiltInProfiles"];
-            var module = document["ledModuleSettings"] as JObject;
-            seen.LedCount = module == null ? null : (int?)module["Ledcount"];
-
-            var settings = leds.ToObject<LedsSettings>();
-            if (settings == null) return null;
-            if (LedDeviceSurvey.Judge(seen) != LedDeviceVerdict.Offered) return null;
-            return new LedTarget
-            {
-                Id = LedBar.DeviceId(root.InstanceId),
-                Name = NameOf(root, module == null ? null : (string)module["DeviceName"]),
-                Connected = root.IsConnected,
-                Settings = settings,
-                Save = () => SaveDocument(root, settings),
-            };
+            if (found != null) EditorModules.Add(root, found);
+            return found;
         }
 
-        /// <summary>
-        /// Puts a profile list back into a device through its settings document: the document as the device
-        /// holds it now, with only `leds` replaced, so a brightness moved since the walk is kept.
-        /// </summary>
-        private static void SaveDocument(DeviceInstance root, LedsSettings settings)
+        /// <summary>The save for a module reached through its settings page: the driver's own, which writes a
+        /// file only for a module built with one, and the Devices plugin's, which is what writes a plugin's
+        /// device to its own `settings.json` through that device's `GetSettings`.</summary>
+        private static void SaveDriver(RGBLedsDriver driver)
         {
-            var document = root.GetSettings(false, false) as JObject;
-            if (document == null) throw new InvalidOperationException("the device no longer answers with a settings document");
-            document[LedsChannel] = JObject.FromObject(settings);
-            root.SetSettings(document, false);
+            if (driver != null) driver.SaveSettings();
             var manager = PluginManager.GetInstance();
             var devices = manager == null ? null : manager.GetPlugin<DevicesPlugin>();
             if (devices != null) devices.SaveSettings();
@@ -465,14 +463,8 @@ namespace OpenDashPlugin
         /// user renamed reads as they named it, and one they did not reads as its model.</summary>
         private static string NameOf(DeviceInstance root, LedModuleSettings settings)
         {
-            return NameOf(root, settings == null ? null : settings.DeviceName);
-        }
-
-        /// <summary><see cref="NameOf(DeviceInstance, LedModuleSettings)"/> with the model read off a settings
-        /// document's `ledModuleSettings.DeviceName`, for a device reached that way.</summary>
-        private static string NameOf(DeviceInstance root, string model)
-        {
             var given = root == null ? null : root.MainDisplayName;
+            var model = settings == null ? null : settings.DeviceName;
             if (string.IsNullOrWhiteSpace(given)) return string.IsNullOrWhiteSpace(model) ? "A device" : model;
             if (string.IsNullOrWhiteSpace(model) || string.Equals(given.Trim(), model.Trim(), StringComparison.OrdinalIgnoreCase)) return given;
             return given + " (" + model + ")";
