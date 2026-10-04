@@ -26,6 +26,7 @@ import {
   effectContainer,
   effectContainers,
   flagEffects,
+  flagSpreads,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
 import { ignitionIsOn } from '../src/leds/gates.ts';
@@ -415,7 +416,8 @@ describe('the effect catalogue', () => {
       expect({ id: flag.id, lit: held!.color === flag.color || held!.color === flag.blinkColor }).toMatchObject({ lit: true });
     }
     // ...and on every shape, so there is no device that draws a flag it cannot hold.
-    const labels = new Set(flagEffects().map((e) => e.label));
+    // A flag spread over a side's other LEDs is held the same way as on its own lamp (#694).
+    const labels = new Set([...flagEffects(), ...flagSpreads('true')].map((e) => e.label));
     for (const shape of ALL_SHAPES) {
       const profile = rpmStripProfile(shape, stableGuid(`t/held/${shape.id}`));
       // The lit containers alone: on a shape with no lamps a flag is also the name of the group that

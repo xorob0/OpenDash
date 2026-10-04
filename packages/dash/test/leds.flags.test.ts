@@ -14,7 +14,8 @@ import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, BARE_RUN_LENGTHS, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { BLINK_OFF, FAST_BLINK_MS, FLAG_ROWS, SLOW_BLINK_MS, SPOTTER_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import { BLINK_OFF, FAST_BLINK_MS, FLAG_ROWS, SLOW_BLINK_MS, SPOTTER_EFFECTS, flagEffects, flagSpreads } from '../src/leds/effects.ts';
+import { FLAG_TAKEOVER_MS } from '../src/components/flagStrip.ts';
 import { FLAG_CATALOGUE, flagBit, type FlagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { drawnFlags } from '../src/leds/profile.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
@@ -312,5 +313,69 @@ describe('what one flag looks like beside another', () => {
       // was its own hex.
       expect({ id, blinks: e.blinkWhen !== undefined }).toMatchObject({ blinks: true });
     }
+  });
+});
+
+describe('how far a flag reaches (#694)', () => {
+  const spreadOf = (id: string) => flagSpreads(undefined).find((e) => e.id === `flag.${id}.spread`);
+  const customStatusAt = (shape: StripShape, label: string): Placed[] =>
+    placedOf(profileFor(shape).containers).filter((p) => p.description === label && p.container.kind === 'customStatus');
+  const four = ALL_SHAPES.find((s) => s.id === '4-14-4')!;
+
+  test('the red flag takes every LED of both sides for as long as it is out, and never the centre', () => {
+    const red = spreadOf('red')!;
+    // Out is enough: no window on it.
+    expect(red.when).not.toContain('changed(');
+    const at = customStatusAt(four, 'Red flag, spread').map((p) => p.start).sort((a, b) => a - b);
+    // Every side LED but the race lamp's, which draws the red flag itself.
+    expect(at).toEqual([1, 3, 4, 19, 20, 22]);
+    for (const shape of ALL_SHAPES.filter((s) => s.left > 1)) {
+      for (const p of customStatusAt(shape, 'Red flag, spread')) {
+        const onASide = p.start <= shape.left || p.start > shape.left + shape.centre;
+        expect({ shape: shape.id, start: p.start, onASide }).toMatchObject({ onASide: true });
+      }
+    }
+  });
+
+  test('the black family, the meatball, the full course yellow and the waved yellow spread only while they are new', () => {
+    for (const id of ['black', 'meatball', 'caution', 'yellow']) {
+      const spread = spreadOf(id)!;
+      expect({ id, window: spread.when.includes(`changed(${String(FLAG_TAKEOVER_MS)}, `) }).toMatchObject({ window: true });
+    }
+    // The standing yellow does not: only the waved one is the danger in front of the car now.
+    expect(spreadOf('yellow')!.when).toContain('IsyellowWaving');
+    // Everything else keeps its one LED, the blue above all, which comes out every lap in multiclass.
+    for (const id of ['debris', 'blue', 'white', 'green', 'chequered']) expect({ id, spreads: spreadOf(id) }).toMatchObject({ spreads: undefined });
+  });
+
+  test('a flag borrows an idle LED and takes none: the spotter and the car warnings keep theirs, the aids give theirs up', () => {
+    const groups = placedOf(profileFor(four).containers).filter((p) => p.description.endsWith(' lamp'));
+    const child = (lampLabel: string, label: string): Extract<leds.LedContainer, { kind: 'customStatus' }> =>
+      leds.childrenOf(groups.find((g) => g.description === lampLabel)!.container).find((c) => c.description === label)! as Extract<
+        leds.LedContainer,
+        { kind: 'customStatus' }
+      >;
+    const spotter = SPOTTER_EFFECTS.find((e) => e.id === 'spotter.left')!;
+    // Guarded by the spotter on the outermost LED...
+    expect(child('left side lamp', 'Red flag, spread').enabledFormula.expression).toContain('SpotterCarLeft');
+    // ...and by oil pressure on the engine's LED...
+    expect(child('left engine lamp', 'Red flag, spread').enabledFormula.expression).toContain('EngineWarnings');
+    // ...while ABS is guarded by the flag on the brake's LED.
+    expect(child('left brake aid lamp', 'ABS active').enabledFormula.expression).toContain('Isred');
+    expect(spotter.label).toBe('Car alongside, left');
+  });
+
+  test('on a side of two every flag also takes the outer LED while a car warning holds the inner one', () => {
+    const two = ALL_SHAPES.find((s) => s.id === '2-10-2')!;
+    // The blue flag spreads nowhere else, so its spread here is the overflow alone...
+    const blue = customStatusAt(two, 'Blue flag, spread');
+    expect(blue.map((p) => p.start).sort((a, b) => a - b)).toEqual([1, stripLength(two)]);
+    const when = (blue[0]!.container as Extract<leds.LedContainer, { kind: 'customStatus' }>).enabledFormula.expression;
+    expect(when).toContain('LightsLowFuelLaps');
+    expect(when).toContain('SpotterCarLeft');
+    // ...and on a side of three, where the flag has an LED of its own, it has none.
+    expect(customStatusAt(ALL_SHAPES.find((s) => s.id === '3-9-3')!, 'Blue flag, spread')).toEqual([]);
+    // A side of one has the flag on its only LED and nothing to borrow.
+    expect(customStatusAt(ALL_SHAPES.find((s) => s.id === '1-10-1')!, 'Red flag, spread')).toEqual([]);
   });
 });

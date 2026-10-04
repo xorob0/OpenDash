@@ -306,7 +306,9 @@ const centreFunctions = (count: number): leds.LedContainer[] => [
  * Every condition that is not the pit family lands on one lamp of one LED, which `lamps.ts`
  * allocates and which is the whole of the ranking: two live conditions on one lamp are resolved by
  * the lamp's own order rather than by which of them happens to sit later in the catalogue, and two
- * conditions on different lamps no longer contend at all.
+ * conditions on different lamps no longer contend at all. The one exception is a flag that spreads
+ * (#694): it is a condition on every lamp of a side that lends it the LED, ranked there under what is
+ * beside the car and what the car says about itself, so it borrows an LED and never takes one.
  *
  * The lamps are emitted innermost first, so the side lamp — the outermost, and the only thing a
  * side can say that the centre cannot — is written last on each side and nothing composed above it

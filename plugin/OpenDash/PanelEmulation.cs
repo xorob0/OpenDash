@@ -382,7 +382,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// <para>
-        /// Rig.dc.html's rules: a flag fills the ends, a car alongside lights its own side's end (both ends
+        /// Rig.dc.html's rules: a flag fills the ends (the red, the black and the yellow; the others light their
+        /// race lamp, as the generator draws them since #694), a car alongside lights its own side's end (both ends
         /// for both), the limiter alternates every LED, speeding reddens the ends, and the centre carries the revs. A bare run
         /// carries flags and the pit lane across itself, which is what the generator draws there
         /// (rpmStrip.ts); the artboard's brow leaves the flag off and is wrong about it. An effect the strip
@@ -414,8 +415,14 @@ namespace OpenDashPlugin
             if (IsFlag(scenarioId) && draws)
             {
                 var colour = FlagColour(scenarioId);
-                if (ends > 0) { Fill(left, colour); Fill(right, colour); }
-                else Fill(middle, colour);
+                if (ends == 0) Fill(middle, colour);
+                else if (Spreads(scenarioId)) { Fill(left, colour); Fill(right, colour); }
+                else
+                {
+                    var lamp = RaceLamp(ends);
+                    left[lamp] = colour;
+                    right[ends - 1 - lamp] = colour;
+                }
             }
             else if (ends == 0 && (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth))
             {
@@ -474,6 +481,26 @@ namespace OpenDashPlugin
         public static int CarLamp(int ends)
         {
             return Math.Max(0, Math.Min(ends - 1, 2));
+        }
+
+        /// <summary>
+        /// Which LED of an end, counted from the outside, is the race lamp, which carries the flags: the one LED
+        /// of a one-LED side, and the second from the outside of every longer side (lampsForSide in lamps.ts).
+        /// </summary>
+        public static int RaceLamp(int ends)
+        {
+            return Math.Max(0, Math.Min(ends - 1, 1));
+        }
+
+        /// <summary>
+        /// Whether a flag takes every LED of both ends rather than its race lamp, as flagSpreads in effects.ts
+        /// spreads it (#694): the red flag for as long as it is out, and the black and the waved yellow while
+        /// they are new, which is the moment a chip shows. The blue, the white, the green and the chequer keep
+        /// their one LED a side.
+        /// </summary>
+        public static bool Spreads(string scenarioId)
+        {
+            return scenarioId == Red || scenarioId == Black || scenarioId == Yellow;
         }
 
         /// <summary>Whether a side of <paramref name="ends"/> LEDs has a car lamp at each end for different

@@ -32,14 +32,14 @@
  */
 import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { FLAG_BLINK_MS } from '../components/flagStrip.ts';
+import { FLAG_BLINK_MS, FLAG_TAKEOVER_MS } from '../components/flagStrip.ts';
 import { setting } from '../contract.ts';
 import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
 import { tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { type EffectRole, type Lamp } from './lamps.ts';
+import { type EffectRole, type Lamp, type LampRole } from './lamps.ts';
 
-const { add, and, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
+const { add, and, changed, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
 
 export interface LedEffect {
   id: string;
@@ -203,12 +203,18 @@ interface FlagRow {
   /** The other half of the alternation, where the second colour is itself a fact. */
   blinkColor?: string;
   blinkDelayMs: number;
+  /**
+   * Whether the flag takes the rest of a side's LEDs as well as its own, and for how long: for as long
+   * as it is out, or only while it is new. `conditions` narrows it to some of the row's conditions,
+   * which is how the waved yellow spreads and the standing one does not. See {@link flagSpreads}.
+   */
+  spread?: { while: 'out' | 'new'; conditions?: readonly string[] };
 }
 
 export const FLAG_ROWS: readonly FlagRow[] = [
   // The session is stopped. 2 Hz, which is FIA 3504's rate for the red panel; oil pressure is the
   // same red at 4 Hz and the temperature warning the same red held, so the three are three rhythms.
-  { id: 'red', label: 'Red flag', conditions: ['red'], color: ds.purpose.flag.red, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'red', label: 'Red flag', conditions: ['red'], color: ds.purpose.flag.red, blinkDelayMs: SLOW_BLINK_MS, spread: { while: 'out' } },
   // The disqualification and the furled black are the black flag's own family and draw as it does.
   {
     id: 'black',
@@ -216,14 +222,24 @@ export const FLAG_ROWS: readonly FlagRow[] = [
     conditions: ['disqualify', 'black', 'furled'],
     color: ds.purpose.flag.black,
     blinkDelayMs: FAST_BLINK_MS,
+    spread: { while: 'new' },
   },
   // A black flag with an orange disc: the disc's orange, at the black family's rate.
-  { id: 'meatball', label: 'Meatball flag', conditions: ['meatball'], color: ds.purpose.light.meatball, blinkDelayMs: FAST_BLINK_MS },
+  { id: 'meatball', label: 'Meatball flag', conditions: ['meatball'], color: ds.purpose.light.meatball, blinkDelayMs: FAST_BLINK_MS, spread: { while: 'new' } },
   // The whole track rather than this corner: the flag yellow at the fast rate, where the yellow in
   // one corner is the slow one. It used to alternate the yellow with the caution amber, and an RGB
   // LED draws those two as one colour, so what reached the driver was a yellow that did not blink.
-  { id: 'caution', label: 'Full course yellow', conditions: ['caution'], color: ds.purpose.flag.yellow, blinkDelayMs: FAST_BLINK_MS },
-  { id: 'yellow', label: 'Yellow flag', conditions: ['yellowWaving', 'yellow'], color: ds.purpose.flag.yellow, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'caution', label: 'Full course yellow', conditions: ['caution'], color: ds.purpose.flag.yellow, blinkDelayMs: FAST_BLINK_MS, spread: { while: 'new' } },
+  // The waved yellow spreads while it is new and the standing one does not: a yellow being waved is
+  // the danger being in front of the car now.
+  {
+    id: 'yellow',
+    label: 'Yellow flag',
+    conditions: ['yellowWaving', 'yellow'],
+    color: ds.purpose.flag.yellow,
+    blinkDelayMs: SLOW_BLINK_MS,
+    spread: { while: 'new', conditions: ['yellowWaving'] },
+  },
   // The flag's two colours, its yellow and its stripes' red, alternating at the fast rate, which is
   // what the band's stripes are on a lamp. The yellow alone at that rate was all a lamp had to say
   // "and there is something on the road" with, and a glance at it caught the yellow flag. The red is
@@ -288,6 +304,43 @@ export const flagEffects = (): LedEffect[] =>
       blinkDelayMs: row.blinkDelayMs,
       source: mine.flatMap((c) => c.bits).map((bit) => `DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Is${bit}`).join(', '),
     };
+  }).reverse();
+
+/**
+ * How a flag takes more than its one LED (#694).
+ *
+ * A flag lives on the race lamp, one LED a side, and most of them stay there: a blue flag in a
+ * multiclass race comes out every lap, and a blue that took the whole cluster every time would teach
+ * the driver to ignore a big light. So size is kept for what concerns this car most. The red flag
+ * takes every LED of both sides for as long as it is out, because the session is stopped and nothing
+ * else on the strip matters; the black family, the meatball, the full course yellow and the waved
+ * yellow take them while they are new, for the face band's own takeover window, and then settle on
+ * their lamp. "New" is `changed()` of the row's own condition, SimHub's window rather than a clock of
+ * ours, keyed by the text of the expression so that both ends of the strip share it (ADR 0009).
+ *
+ * The spread **borrows the LEDs that are idle and takes none**. It is ranked under the side and car
+ * roles and over the aids on every lamp it lands on (`lampConditions`), so a car alongside and an
+ * engine warning keep their LED under a red flag, and an ABS light gives its LED up to one.
+ *
+ * On a side of two there is a second reason to borrow. Its inner LED carries the car's warnings over
+ * the flags, so a yellow thrown while low fuel was blinking was not shown at all; there every flag
+ * also takes the outer LED while a car warning holds the inner one, under the spotter as always.
+ */
+export const flagSpreads = (overflow: Expr | undefined): LedEffect[] =>
+  FLAG_ROWS.flatMap((row) => {
+    const flag = flagEffects().find((e) => e.id === `flag.${row.id}`)!;
+    const spread = row.spread;
+    const raised = (id: string): Expr => conditionRaised(flagCondition(id), safeBitSet);
+    const spreads =
+      spread === undefined
+        ? undefined
+        : spread.while === 'out'
+          ? 'true'
+          : and(changed(num(FLAG_TAKEOVER_MS), flag.when), ...(spread.conditions ? [or(...spread.conditions.map(raised))] : []));
+    const terms = [spreads, overflow].filter((t): t is Expr => t !== undefined);
+    if (terms.length === 0) return [];
+    const when = and(flag.when, terms.length === 1 ? terms[0]! : or(...terms));
+    return [{ ...flag, id: `${flag.id}.spread`, label: `${flag.label}, spread`, when, blinkWhen: when }];
   }).reverse();
 
 /**
@@ -649,11 +702,19 @@ export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS,
  * lamps a side and ahead of every flag at two.
  */
 export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] => {
-  const carried = lamp.carries.flatMap((role) =>
+  const ofRole = (role: LampRole): LedEffect[] =>
     ALL_EFFECTS()
       .filter((e) => e.role === role && (e.side === undefined || e.side === side) && (lamp.only?.[role] === undefined || lamp.only[role]!.includes(e.id)))
-      .reverse(),
-  );
+      .reverse();
+  // A flag borrowing this LED ranks under what is beside the car and what the car says about itself,
+  // and over the aids, which give their LED up to it (#694). On the outer LED of a side of two, every
+  // flag also borrows it while a car warning holds the inner one.
+  const overflow = lamp.borrows === 'overflow' ? or(...ALL_EFFECTS().filter((e) => e.role === 'car').map((e) => e.when)) : undefined;
+  // Highest rank first, as everything here is: flagSpreads is in composition order, lowest first.
+  const spreads = lamp.borrows === undefined ? [] : flagSpreads(overflow).map(gated).reverse();
+  const own = lamp.carries.filter((role) => role !== 'aid').flatMap(ofRole);
+  const aids = lamp.carries.includes('aid') ? ofRole('aid') : [];
+  const carried = [...own, ...spreads, ...aids];
   // An effect drawn exactly as something already on this lamp is dropped, highest rank keeping the
   // appearance. One LED drawn the same way by two conditions is one light with two meanings, and the
   // driver reads whichever of them they learned first; the rule used to be a test over the shapes
@@ -668,7 +729,9 @@ export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] 
   // The second colour is part of the appearance: the debris flag and the full course yellow are the
   // same yellow at the same rate, and its stripes' red in the off phase is what tells them apart (#570).
   const appearanceOf = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? `${String(e.blinkDelayMs)} ${e.blinkColor ?? BLINK_OFF}` : 'steady'}`;
-  const ordered = [...carried.filter((e) => !e.bestEffort), ...carried.filter((e) => e.bestEffort)];
+  // A borrowed flag never wins against a condition the lamp is its own: it is there on loan.
+  const mine = carried.filter((e) => !spreads.includes(e));
+  const ordered = [...mine.filter((e) => !e.bestEffort), ...mine.filter((e) => e.bestEffort), ...spreads];
   const won = new Map<string, LedEffect>();
   for (const effect of ordered) {
     if (!won.has(appearanceOf(effect))) won.set(appearanceOf(effect), effect);

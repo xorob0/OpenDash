@@ -67,6 +67,23 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelEmulation.Revs(9, PanelEmulation.Yellow), frame[1]);
             // Black lights white: a black LED is an unlit one.
             Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.Black)[0], led => Assert.Equal(Theme.FlagBlack, led));
+            Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.Red)[2], led => Assert.Equal(Theme.FlagRed, led));
+        }
+
+        /// <summary>The blue, the white, the green and the chequer keep their one LED a side, the race lamp, as
+        /// the generator draws them; only the flags flagSpreads spreads fill the ends (#694).</summary>
+        [Fact]
+        public void A_flag_that_does_not_spread_lights_its_race_lamp_alone()
+        {
+            Assert.Equal(1, PanelEmulation.RaceLamp(4));
+            Assert.Equal(1, PanelEmulation.RaceLamp(2));
+            Assert.Equal(0, PanelEmulation.RaceLamp(1));
+            var blue = PanelEmulation.StripFrame(4, 14, PanelEmulation.Blue);
+            Assert.Equal(new[] { null, Theme.FlagBlue, null, null }, blue[0]);
+            Assert.Equal(new[] { null, null, Theme.FlagBlue, null }, blue[2]);
+            Assert.Equal(new[] { Theme.FlagGreen }, PanelEmulation.StripFrame(1, 9, PanelEmulation.Green)[0]);
+            foreach (var id in new[] { PanelEmulation.Red, PanelEmulation.Black, PanelEmulation.Yellow }) Assert.True(PanelEmulation.Spreads(id), id);
+            foreach (var id in new[] { PanelEmulation.Blue, PanelEmulation.White, PanelEmulation.Green, PanelEmulation.Chequer }) Assert.False(PanelEmulation.Spreads(id), id);
         }
 
         /// <summary>A bare run has no lamps, so rpmStrip.ts gives a flag and a car alongside the whole run (#523),

@@ -47,6 +47,12 @@ export interface Lamp {
   carries: readonly LampRole[];
   /** Where a lamp takes only part of a role, the effect ids it takes of that role. */
   only?: Partial<Record<LampRole, readonly string[]>>;
+  /**
+   * Whether a flag may borrow this LED: `spread` for the flags that take a whole side, and `overflow`
+   * for those and, besides, any flag the car lamp beside it is holding out. A lamp that carries the
+   * race role has the flag already and borrows nothing. `flagSpreads` in `effects.ts` says which.
+   */
+  borrows?: 'spread' | 'overflow';
 }
 
 const lamp = (role: LampRole, label: string, carries: readonly LampRole[], only?: Partial<Record<LampRole, readonly string[]>>): Lamp => ({
@@ -54,9 +60,13 @@ const lamp = (role: LampRole, label: string, carries: readonly LampRole[], only?
   label,
   carries,
   ...(only ? { only } : {}),
+  // Every lamp that does not have the flag already may lend its LED to one (#694).
+  ...(carries.includes('race') ? {} : { borrows: 'spread' as const }),
 });
 
 const SIDE = lamp('side', 'side', ['side']);
+/** The outer LED of a side of two, which a flag also takes while a car warning holds the inner one. */
+const SIDE_OF_TWO: Lamp = { ...SIDE, borrows: 'overflow' };
 const RACE = lamp('race', 'race', ['race']);
 
 /** The aid of the brake pedal, which is the left one: ABS. */
@@ -103,7 +113,7 @@ export const lampsForSide = (count: number, side: Side): readonly Lamp[] =>
     : count === 1
       ? [lamp('side', 'side, flag and car', ['side', 'race', 'car'])]
       : count === 2
-        ? [SIDE, lamp('car', 'car and flag', ['car', 'race'])]
+        ? [SIDE_OF_TWO, lamp('car', 'car and flag', ['car', 'race'])]
         : count === 3
           ? [SIDE, RACE, lamp('car', side === 'left' ? 'car and brake aid' : 'car and throttle aid', ['car', 'aid'], { aid: aidsOf(side) })]
           : count === 4 || side === 'left'

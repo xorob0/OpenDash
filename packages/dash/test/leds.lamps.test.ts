@@ -11,7 +11,7 @@ import { describe, expect, test } from 'bun:test';
 import { stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
+import { ALL_EFFECTS, BLINK_OFF, FAST_BLINK_MS, effectContainers, flagSpreads, lampConditions, PIT_EFFECTS, SIDE_EFFECTS, SPOTTER_EFFECTS, TURN_EFFECTS, flagEffects, type LedEffect } from '../src/leds/effects.ts';
 import { lampsForSide, lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -119,7 +119,10 @@ describe('the lamps of a side', () => {
       ['right', ['tc', 'drs', 'p2p']],
     ] as const) {
       const ids = lampConditions(lampsForSide(3, side)[2]!, side).map((e) => e.id);
-      expect({ side, ids }).toEqual({ side, ids: [...car, ...aid] });
+      // A flag spreading over the side borrows this LED between the two: under the car's own warnings,
+      // over the aids (#694).
+      const spread = flagSpreads(undefined).map((e) => e.id).reverse();
+      expect({ side, ids }).toEqual({ side, ids: [...car, ...spread, ...aid] });
       // The rank is the order the list is in, highest first, so the last car warning still outranks
       // the first aid.
       expect(Math.max(...car.map((id) => ids.indexOf(id)))).toBeLessThan(Math.min(...aid.map((id) => ids.indexOf(id))));
@@ -160,8 +163,9 @@ describe('the lamps of a side', () => {
     const ranked = lampConditions(lamp, 'left');
     const group = placedOf(profileFor(shapeById('4-14-4')!).containers).find((p) => p.description === 'left engine lamp')!;
     const children = leds.childrenOf(group.container);
-    // Lowest rank first, so SimHub's merge leaves the highest on top...
-    expect(children.map((c) => c.description)).toEqual([...ranked].reverse().map((e) => e.label));
+    // Lowest rank first, so SimHub's merge leaves the highest on top; a flag borrowing the LED is a
+    // moving container and a held one, side by side...
+    expect(children.map((c) => c.description)).toEqual([...ranked].reverse().flatMap((e) => effectContainers(e, 1, 1).map((c) => c.description)));
     // ...and each also says so, which is the half a reader can check.
     for (const [i, effect] of ranked.entries()) {
       const child = children.find((c) => c.description === effect.label)! as Extract<leds.LedContainer, { kind: 'customStatus' }>;
@@ -230,7 +234,7 @@ describe('what a driver can tell one condition from another by', () => {
     // against dark at 2 Hz, in antiphase, which is a distinction in the file and not at a glance.
     // The chequer pattern across a side's LEDs is what separates them, and is its own ticket; the
     // pair is named here rather than the rule being skipped, so that every other clash still fails.
-    const known = ['flag.chequered flag.white'];
+    const known = ['flag.chequered flag.white', 'flag.chequered.spread flag.white.spread'];
     for (const count of [1, 2, 3, 4, 5]) {
       for (const [side, lamp] of (['left', 'right'] as const).flatMap((side) => lampsForSide(count, side).map((l) => [side, l] as const))) {
         const seen = new Map<string, string>();
