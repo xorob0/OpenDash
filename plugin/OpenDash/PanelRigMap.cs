@@ -1133,6 +1133,8 @@ namespace OpenDashPlugin
                     if (off != null) options.EffectsOff.Add(off);
                 }
             }
+            // The strip's own colours, so the Rig page draws a flag in the colour the strip lights it in (#694).
+            if (bar.Colours != null) options.Colours = new Dictionary<string, string>(bar.Colours, StringComparer.Ordinal);
             return options;
         }
 

@@ -775,6 +775,70 @@ namespace OpenDashPlugin
         public const bool DefaultLedEffect = true;
 
         /// <summary>
+        /// Every colour a strip can be given, in the order the panel lists them: the flags, then the rest (#694).
+        /// </summary>
+        /// <remarks>
+        /// LED_COLOURS in packages/dash/src/leds/effects.ts, line for line, and contract.test.ts reads this literal
+        /// and holds the two to each other: the key, the panel's name, the default, and the descriptions of the
+        /// containers that draw it, which are the effects' labels. A strip's own colour is not a property the
+        /// profile reads: LedBarProfile.For writes it into the profile the strip installs, finding the containers
+        /// by those descriptions.
+        /// </remarks>
+        public static readonly IReadOnlyList<LedColour> LedColours = new[]
+        {
+            new LedColour("flag.red", "Red flag", "#FF2D46", "Red flag"),
+            new LedColour("flag.black", "Black flag", "#F5F7FA", "Black flag"),
+            new LedColour("flag.meatball", "Meatball flag", "#FF6A00", "Meatball flag"),
+            new LedColour("flag.caution", "Full course yellow", "#FFD400", "Full course yellow"),
+            new LedColour("flag.yellow", "Yellow flag", "#FFD400", "Yellow flag"),
+            new LedColour("flag.debris", "Debris flag", "#FFD400", "Debris flag"),
+            new LedColour("flag.blue", "Blue flag", "#2E7BFF", "Blue flag"),
+            new LedColour("flag.white", "White flag", "#FFFFFF", "White flag"),
+            new LedColour("flag.green", "Green flag", "#00D96A", "Green flag"),
+            new LedColour("flag.chequered", "Chequered flag", "#F5F7FA", "Chequered flag"),
+            new LedColour("spotter", "Spotter", "#B14BFF", "Car alongside, left", "Car alongside, right"),
+            new LedColour("turn", "Turn signals", "#00D96A", "Indicating left", "Indicating right"),
+            new LedColour("pit.lane", "Pit lane", "#FFFFFF", "In the pit lane"),
+            new LedColour("pit.limiter", "Pit limiter", "#FFFFFF", "Pit limiter on"),
+            new LedColour("pit.speeding", "Speeding in the pit lane", "#FF2D46", "Speeding in the pit lane"),
+            new LedColour("oilPressure", "Oil pressure", "#FF2D46", "Oil pressure warning"),
+            new LedColour("temperature", "Temperature", "#FF2D46", "Water or oil temperature warning"),
+            new LedColour("lowFuel", "Low fuel", "#FF6A00", "Low fuel"),
+            new LedColour("abs", "ABS", "#FF6A00", "ABS active"),
+            new LedColour("tc", "TC", "#2E7BFF", "Traction control"),
+            new LedColour("drs", "DRS", "#00D96A", "DRS"),
+            new LedColour("p2p", "Push to pass", "#00D96A", "Push to pass"),
+        };
+
+        /// <summary>The colour setting stored under <paramref name="key"/>, or null.</summary>
+        public static LedColour FindLedColour(string key)
+        {
+            if (key == null) return null;
+            for (var i = 0; i < LedColours.Count; i++)
+            {
+                if (string.Equals(LedColours[i].Key, key, StringComparison.Ordinal)) return LedColours[i];
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// A colour as a strip stores it: "#RRGGBB", upper case, or null for anything that is not one. "#AARRGGBB"
+        /// is not taken, because an LED has no alpha a driver could choose and a transparent one would leave the
+        /// rev ladder showing through a warning.
+        /// </summary>
+        public static string NormaliseLedHex(string hex)
+        {
+            if (hex == null) return null;
+            var trimmed = hex.Trim();
+            if (trimmed.Length != 7 || trimmed[0] != '#') return null;
+            for (var i = 1; i < 7; i++)
+            {
+                if (!Uri.IsHexDigit(trimmed[i])) return null;
+            }
+            return trimmed.ToUpperInvariant();
+        }
+
+        /// <summary>
         /// The run lengths a mirrored bar is published for: every centre length a strip shape uses.
         /// </summary>
         /// <remarks>
@@ -2339,5 +2403,28 @@ namespace OpenDashPlugin
             if (parsed.Scheme != Uri.UriSchemeHttp && parsed.Scheme != Uri.UriSchemeHttps) return DefaultWebViewUrl;
             return trimmed;
         }
+    }
+
+    /// <summary>One colour a strip can be given: what it is stored under, what the panel calls it, its default,
+    /// and the descriptions of the profile containers that draw it.</summary>
+    public sealed class LedColour
+    {
+        public LedColour(string key, string label, string defaultHex, params string[] effects)
+        {
+            Key = key;
+            Label = label;
+            DefaultHex = defaultHex;
+            Effects = effects ?? new string[0];
+        }
+
+        public string Key { get; private set; }
+
+        public string Label { get; private set; }
+
+        /// <summary>"#RRGGBB", as the profile writes it.</summary>
+        public string DefaultHex { get; private set; }
+
+        /// <summary>The labels of the effects it paints, which are their containers' descriptions.</summary>
+        public IReadOnlyList<string> Effects { get; private set; }
     }
 }

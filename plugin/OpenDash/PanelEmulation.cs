@@ -66,6 +66,18 @@ namespace OpenDashPlugin
         /// reads as the revs, the default. Only the revs centre draws the rev ladder.</summary>
         public string Centre { get; set; }
 
+        /// <summary>The strip's own colours by Contract.LedColours key (LedBar.Colours); a key it leaves out is drawn
+        /// in its default (#694).</summary>
+        public IDictionary<string, string> Colours { get; set; }
+
+        /// <summary>The colour the strip draws <paramref name="key"/> in: its own, or <paramref name="fallback"/>.</summary>
+        public string Colour(string key, string fallback)
+        {
+            string own;
+            if (Colours == null || key == null || !Colours.TryGetValue(key, out own)) return fallback;
+            return Contract.NormaliseLedHex(own) ?? fallback;
+        }
+
         /// <summary>Whether the centre carries the rev ladder: its Centre display is the revs.</summary>
         public bool CentreShowsRevs
         {
@@ -309,6 +321,23 @@ namespace OpenDashPlugin
             return id == Green || id == Yellow || id == Blue || id == White || id == Black || id == Chequer || id == Red;
         }
 
+        /// <summary>The Contract.LedColours key a scenario's flag is drawn under, or null for a scenario that is
+        /// not a flag.</summary>
+        public static string ColourKey(string id)
+        {
+            switch (id)
+            {
+                case Green: return "flag.green";
+                case Yellow: return "flag.yellow";
+                case Blue: return "flag.blue";
+                case White: return "flag.white";
+                case Black: return "flag.black";
+                case Chequer: return "flag.chequered";
+                case Red: return "flag.red";
+                default: return null;
+            }
+        }
+
         /// <summary>The colour a flag lights an LED in. Black and the chequer light in the panel's white,
         /// since a black LED is an unlit one.</summary>
         public static string FlagColour(string id)
@@ -414,7 +443,7 @@ namespace OpenDashPlugin
 
             if (IsFlag(scenarioId) && draws)
             {
-                var colour = FlagColour(scenarioId);
+                var colour = options.Colour(ColourKey(scenarioId), FlagColour(scenarioId));
                 if (ends == 0) Fill(middle, colour);
                 else if (Spreads(scenarioId)) { Fill(left, colour); Fill(right, colour); }
                 else
@@ -428,7 +457,7 @@ namespace OpenDashPlugin
             {
                 var lightLeft = scenarioId != CarRight && options.Draws("spotter.left");
                 var lightRight = scenarioId != CarLeft && options.Draws("spotter.right");
-                if (lightLeft || lightRight) Fill(middle, Theme.LightSpotter);
+                if (lightLeft || lightRight) Fill(middle, options.Colour("spotter", Theme.LightSpotter));
             }
             else if (scenarioId == CarLeft || scenarioId == CarRight || scenarioId == CarBoth)
             {
@@ -438,32 +467,35 @@ namespace OpenDashPlugin
                 {
                     // Every LED of the strip, the ends and the centre, as rpmStrip.ts's spotterWhole draws a
                     // side that is switched on over the whole run.
-                    Fill(left, Theme.LightSpotter);
-                    Fill(middle, Theme.LightSpotter);
-                    Fill(right, Theme.LightSpotter);
+                    var spotter = options.Colour("spotter", Theme.LightSpotter);
+                    Fill(left, spotter);
+                    Fill(middle, spotter);
+                    Fill(right, spotter);
                 }
                 else
                 {
-                    if (lightLeft) Fill(left, Theme.LightSpotter);
-                    if (lightRight) Fill(right, Theme.LightSpotter);
+                    if (lightLeft) Fill(left, options.Colour("spotter", Theme.LightSpotter));
+                    if (lightRight) Fill(right, options.Colour("spotter", Theme.LightSpotter));
                 }
             }
             else if (scenarioId == Limiter && draws)
             {
-                Alternate(left, Theme.PitLimiter);
-                Alternate(right, Theme.PitLimiter);
-                Alternate(middle, Theme.PitLimiter);
+                var limiter = options.Colour("pit.limiter", Theme.PitLimiter);
+                Alternate(left, limiter);
+                Alternate(right, limiter);
+                Alternate(middle, limiter);
             }
             else if (scenarioId == Speeding && draws)
             {
-                if (ends > 0) { Fill(left, Theme.Danger); Fill(right, Theme.Danger); }
-                else Fill(middle, Theme.Danger);
+                var speeding = options.Colour("pit.speeding", Theme.Danger);
+                if (ends > 0) { Fill(left, speeding); Fill(right, speeding); }
+                else Fill(middle, speeding);
             }
             else if ((scenarioId == LowFuel || scenarioId == Oil || scenarioId == Water) && draws && ends > 0)
             {
                 var lamp = CarLamp(ends);
                 var fuel = scenarioId == LowFuel;
-                var colour = fuel ? Theme.LightLowFuel : Theme.LightTemperature;
+                var colour = fuel ? options.Colour("lowFuel", Theme.LightLowFuel) : options.Colour("temperature", Theme.LightTemperature);
                 // From four LEDs a side the car lamp is split, as lampsForSide splits it (#694): the engine's
                 // warnings on the left, the fuel on the right. Below four both ends carry all three.
                 if (!SplitsCarLamp(ends) || !fuel) left[lamp] = colour;
@@ -525,7 +557,7 @@ namespace OpenDashPlugin
             var leds = new string[Math.Max(0, count)];
             var shows = Contract.NormaliseLedCentre(options.Centre);
             if (shows == "throttleBrake" && leds.Length % 2 == 1) leds[leds.Length / 2] = Theme.TextPrimary;
-            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = Theme.LightLowFuel;
+            if (shows == "fuel" && scenarioId == LowFuel && options.Draws("lowFuel") && leds.Length > 0) leds[0] = options.Colour("lowFuel", Theme.LightLowFuel);
             return leds;
         }
 

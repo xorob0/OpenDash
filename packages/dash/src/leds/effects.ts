@@ -792,3 +792,54 @@ export const effectContainers = (effect: LedEffect, startPosition: number, ledCo
   const held: LedEffect = { ...effect, label: `${effect.label}, held`, when: and(effect.when, not(flagsMove())), color: heldColor(effect), blinkWhen: undefined };
   return [effectContainer(moving, startPosition, ledCount, above), effectContainer(held, startPosition, ledCount, above)];
 };
+
+/**
+ * What a strip's colour setting names: one colour a driver can change, the effects it paints, and the
+ * colour it has until they do (#694).
+ *
+ * The defaults are the catalogue's own, so they are the tokens. A strip's own choice is not a property
+ * the profile reads at runtime: SimHub binds no colour on an LED container that blinks, so the plugin
+ * writes the strip's colours into the profile it installs for the strip, the way it writes the strip's
+ * namespace (`LedBarProfile.For`), and installs it again when one changes. It finds an effect's
+ * containers by their description, which is the effect's label or that label with a suffix (`, held`,
+ * `, spread`), and replaces the default where it is the lit colour. `Contract.LedColours` in the plugin
+ * is this table, and `contract.test.ts` holds the two to each other.
+ *
+ * A setting is one per thing a driver would name: the two spotters are one colour, as are the two turn
+ * signals, and each flag is its own. A flag's second colour (the debris flag's stripes) is not offered:
+ * it is what tells that flag from another, not a colour anybody asked for.
+ */
+export interface LedColour {
+  /** What the plugin stores it under. */
+  key: string;
+  /** What the panel calls it. */
+  label: string;
+  /** The effects it paints. */
+  ids: readonly string[];
+  /** The lit colour those effects have by default. */
+  color: string;
+}
+
+/** Every colour a strip can be given, in the order the panel lists them: the flags, then the rest. */
+export const LED_COLOURS = (): LedColour[] => {
+  const rows: { key: string; label: string; ids: string[] }[] = [
+    ...FLAG_ROWS.map((row) => ({ key: `flag.${row.id}`, label: row.label, ids: [`flag.${row.id}`] })),
+    { key: 'spotter', label: 'Spotter', ids: ['spotter.left', 'spotter.right'] },
+    { key: 'turn', label: 'Turn signals', ids: ['turn.left', 'turn.right'] },
+    { key: 'pit.lane', label: 'Pit lane', ids: ['pit.lane'] },
+    { key: 'pit.limiter', label: 'Pit limiter', ids: ['pit.limiter'] },
+    { key: 'pit.speeding', label: 'Speeding in the pit lane', ids: ['pit.speeding'] },
+    { key: 'oilPressure', label: 'Oil pressure', ids: ['oilPressure'] },
+    { key: 'temperature', label: 'Temperature', ids: ['temperature'] },
+    { key: 'lowFuel', label: 'Low fuel', ids: ['lowFuel'] },
+    { key: 'abs', label: 'ABS', ids: ['abs'] },
+    { key: 'tc', label: 'TC', ids: ['tc'] },
+    { key: 'drs', label: 'DRS', ids: ['drs'] },
+    { key: 'p2p', label: 'Push to pass', ids: ['p2p'] },
+  ];
+  const all = ALL_EFFECTS();
+  return rows.map((row) => {
+    const effect = all.find((e) => e.id === row.ids[0])!;
+    return { ...row, color: heldColor(effect) };
+  });
+};

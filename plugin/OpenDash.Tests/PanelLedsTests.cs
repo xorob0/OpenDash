@@ -60,6 +60,7 @@ namespace OpenDashPlugin.Tests
                 "AnchorBrightness = leds.brightness",
                 "AnchorCarTables = leds.car-tables",
                 "AnchorCentre = leds.centre",
+                "AnchorColours = leds.colours",
                 "AnchorDevice = leds.device",
                 "AnchorEffects = leds.effects",
                 "AnchorEveryStrip = leds.every-strip",
@@ -92,6 +93,7 @@ namespace OpenDashPlugin.Tests
                 { PanelLeds.BrightnessTitle, PanelLeds.AnchorBrightness },
                 { PanelLeds.ReverseTitle, PanelLeds.AnchorReverse },
                 { PanelLeds.EffectsTitle, PanelLeds.AnchorEffects },
+                { PanelLeds.ColoursTitle, PanelLeds.AnchorColours },
                 { PanelLeds.FlagAnimationTitle, PanelLeds.AnchorFlagAnimation },
                 { PanelLeds.SpotterTitle, PanelLeds.AnchorSpotter },
                 { PanelLeds.EveryStripTitle, PanelLeds.AnchorEveryStrip },
@@ -114,6 +116,9 @@ namespace OpenDashPlugin.Tests
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "your LED strips"));
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "true size"));
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "fill the strip"));
+            // Either spelling finds a strip's colours (#694).
+            Assert.Contains(PanelSearch.Find(PanelLeds.Search, "color"), hit => hit.Entry.Route.Anchor == PanelLeds.AnchorColours);
+            Assert.Contains(PanelSearch.Find(PanelLeds.Search, "colour"), hit => hit.Entry.Route.Anchor == PanelLeds.AnchorColours);
             // And the artboard's words, where the build keeps voice.md's.
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "add leds"));
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "use the car's own rev lights"));
@@ -426,6 +431,14 @@ namespace OpenDashPlugin.Tests
                 ("private void AddLedBar(", null, "var note = ok ? plan.Note : null;"),
                 ("private void AddLedBar(", null, "var line = ok ? PanelLights.BarAdded(bar.Name, target.Name, note) : PanelLights.BarAddFailed(bar.Name);"),
                 ("private void AddLedBar(", null, "Say(line, ok && note == null);"),
+                // A colour is written into the profile, so a pick installs it again, as Reverse does (#694).
+                ("private void PickLedColour(", "private void ShowAddLedBar(", "if (!Settings.SetBarColour(ns, colour.Key, hex)) return;"),
+                ("private void PickLedColour(", "private void ShowAddLedBar(", "var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);"),
+                ("private void PickLedColour(", "private void ShowAddLedBar(",
+                    "var line = ok ? PanelLeds.ColourSaid(bar.Name, colour, choice, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ColourNotInstalled(bar.Name, colour, choice);"),
+                ("private void PickLedColour(", "private void ShowAddLedBar(",
+                    "Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ColourSaid(bar.Name, colour, choice), blocked)));"),
+                ("private void PickLedColour(", "private void ShowAddLedBar(", "Say(line, ok && plan.Note == null);"),
             })
             {
                 Assert.True(Body(leds, method, next).Contains(said), method + " no longer carries: " + said);
@@ -433,13 +446,14 @@ namespace OpenDashPlugin.Tests
             // A new strip is saved and then selected, so the page opens on it.
             var add = Body(leds, "private void AddLedBar(", null);
             Assert.InRange(add.IndexOf("Save();", StringComparison.Ordinal), 0, add.IndexOf("Select(PanelPage.Leds, bar.Namespace);", StringComparison.Ordinal));
-            // Install, Reverse, Rename and Add each install through the guard, once.
-            Assert.Equal(4, Occurrences(leds, "LedsReinstall(bar, targets)"));
+            // Install, Reverse, Rename, a colour and Add each install through the guard, once.
+            Assert.Equal(5, Occurrences(leds, "LedsReinstall(bar, targets)"));
             foreach (var (method, next) in new[]
             {
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
                 ("private void ReverseLedBar(", "private void ShowRenameLedBar("),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar("),
+                ("private void PickLedColour(", "private void ShowAddLedBar("),
                 ("private void AddLedBar(", null),
             })
             {
@@ -477,6 +491,7 @@ namespace OpenDashPlugin.Tests
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
                 ("private void ReverseLedBar(", "private void ShowRenameLedBar("),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar("),
+                ("private void PickLedColour(", "private void ShowAddLedBar("),
                 ("private void AddLedBar(", null),
             })
             {
@@ -526,7 +541,16 @@ namespace OpenDashPlugin.Tests
                 + "parts.Add(Ui.Anchor(preview, PanelLeds.AnchorPreview));"
                 + "parts.Add(LedsColumns(LedsRevLights(bar, redrawPreview), LedsThisStrip(bar, targets, declined, redrawPreview)));"
                 + "parts.Add(Ui.Anchor(LedsEffects(bar, redrawPreview), PanelLeds.AnchorEffects));"
+                + "parts.Add(Ui.Anchor(LedsColours(bar), PanelLeds.AnchorColours));"
                 + "return LedsBlock(Ui.VStack(18, parts.ToArray()));");
+            Holds(Body(leds, "private FrameworkElement LedsColours(", "private FrameworkElement LedsEveryStripSection("), "LedsColours",
+                "var caption = Ui.Prose(PanelLeds.ColoursCaption);",
+                "var title = Ui.HStack(0, Ui.Heading(PanelLeds.ColoursTitle), tag);",
+                "foreach (var colour in PanelLeds.ColoursFor(bar.Shape))",
+                "var pressed = PanelLeds.PressedChoice(colour, current);",
+                "foreach (var choice in PanelLeds.ColourChoicesFor(colour))",
+                "var row = LedsRow(colour.Label, Ui.HStack(0, swatches.ToArray()));",
+                "return Ui.VStack(0, head, Ui.Rows(rows.ToArray()));");
             Holds(Body(leds, "private FrameworkElement LedsCards(", "private FrameworkElement LedsStripSection("), "LedsCards",
                 "var card = Ui.StripCard(bar.Name, PanelLeds.ShapeDots(bar.Shape), fitted, PanelLeds.StateText(profile, selected), PanelLeds.StateHex(profile, selected), ReferenceEquals(bar, current),",
                 "if (bars.Count > 0) return grid; return Ui.VStack(12, Ui.Prose(PanelLeds.NoStrips, Theme.SizeBody), grid);");
@@ -1024,7 +1048,7 @@ namespace OpenDashPlugin.Tests
             Assert.All(PanelLeds.PreviewFrame(PanelEmulation.Yellow, 3, 9, fuel, false, null)[1], c => Assert.Null(c));
             Assert.Equal(PanelEmulation.StripFrame(0, 15, PanelEmulation.Yellow, fuel), PanelLeds.PreviewFrame(PanelEmulation.Yellow, 0, 15, fuel, false, null));
             var leds = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
-            Assert.Contains("return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff, Settings.BarCentre(bar.Namespace));", leds);
+            Assert.Contains("return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff, Settings.BarCentre(bar.Namespace), bar.Colours);", leds);
             Assert.DoesNotContain("CentreShowsRevs", leds);
         }
 
@@ -1779,9 +1803,9 @@ namespace OpenDashPlugin.Tests
             // The rename's two guards: the press waits for a name, and a blank one that reached it renames nothing.
             Assert.Equal(2, Occurrences(leds, "save.IsEnabled = PanelLeds.CanRename(name.Text);"));
             Assert.DoesNotContain("PanelLeds.Effects)", leds);
-            // NEW on Brightness, Reverse direction and the Effects heading, for one release: taking them off at the
-            // next cut moves this count, deliberately.
-            Assert.Equal(3, Occurrences(leds, "Ui.NewTag()"));
+            // NEW on Brightness, Reverse direction and the Effects and Colours headings, for one release: taking them
+            // off at the next cut moves this count, deliberately.
+            Assert.Equal(4, Occurrences(leds, "Ui.NewTag()"));
             Assert.Contains("LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag())", leds);
             Assert.Contains("LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag())", leds);
         }
@@ -1796,7 +1820,7 @@ namespace OpenDashPlugin.Tests
                 .Where(field => field.IsLiteral && field.Name.StartsWith("Anchor", StringComparison.Ordinal))
                 .Select(field => field.Name)
                 .ToList();
-            Assert.Equal(15, anchors.Count);
+            Assert.Equal(16, anchors.Count);
             foreach (var name in anchors)
             {
                 Assert.True(leds.Contains(", PanelLeds." + name + ")"), "no Ui.Anchor(..., PanelLeds." + name + ") on the page");
