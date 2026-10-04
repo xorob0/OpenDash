@@ -13,7 +13,8 @@
 // #791: a strip in the driver's eyeline and a brow above the monitor are not comfortable at one level, so
 // a bar may carry its own and falls back to the rig's when it does not -- and night mode still wins over a
 // bar turned up for daylight. What a bar owns is what its LEDs do with all that: how bright, which way
-// round it is wired, and which of the things it can draw it draws.
+// round it is wired, whether it is wired in a Fanatec wheel's order, and which of the things it can draw it
+// draws.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -38,9 +39,9 @@ namespace OpenDashPlugin
         public string Name { get; set; }
 
         /// <summary>
-        /// The generator's id for the plain shape: "3-9-3", "0-18-0", "3-9-3-fanatec". Never a
-        /// `-reversed` twin once Normalise has run: which end the strip is wired from is
-        /// <see cref="Reversed"/>, and the profile it installs is <see cref="ProfileShapeId"/>.
+        /// The generator's id for the plain shape: "3-9-3", "0-18-0". Never a `-reversed` or `-fanatec`
+        /// twin once Normalise has run: how the strip is wired is <see cref="Reversed"/> and
+        /// <see cref="Fanatec"/>, and the profile it installs is <see cref="ProfileShapeId"/>.
         /// </summary>
         public string Shape { get; set; }
 
@@ -63,10 +64,24 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A wiring and not a shape: a 4/14/4 wired from either end is the same strip, and the LEDs page
         /// says so with one switch rather than two rows. The generator writes a `-reversed` twin of every
-        /// plain shape, and <see cref="ProfileShapeId"/> is which of the two a bar installs. A shape with
-        /// a wiring of its own -- the Fanatec one -- has no twin and cannot be reversed. #791.
+        /// plain shape, and <see cref="ProfileShapeId"/> is which of the two a bar installs. A bar in the
+        /// Fanatec wiring cannot be reversed: that order is the device's own. #791.
         /// </remarks>
         public bool Reversed { get; set; }
+
+        /// <summary>
+        /// Whether the bar is a Fanatec wheel's LEDs in the order SimHub's Fanatec device presents them, so
+        /// its profile is the shape's `-fanatec` twin: the panel's Fanatec compatibility mode.
+        /// </summary>
+        /// <remarks>
+        /// A wiring and not a shape, as <see cref="Reversed"/> is. The device presents a rim's rev LEDs first
+        /// and its flag LEDs after, so the plain profile on a Fanatec wheel lights only some of its LEDs and
+        /// starts the bar from the middle of the rim (#436). The generator writes the Fanatec twin of every
+        /// plain A/B/A with ends; the Add LEDs sheet ticks this for a device whose name says Fanatec and
+        /// leaves it to the driver otherwise, and the strip's own settings turn it on and off. A bar written
+        /// before the switch carried the wiring in its shape, `3-9-3-fanatec`, which Normalise reads off.
+        /// </remarks>
+        public bool Fanatec { get; set; }
 
         /// <summary>The bar's own brightness in percent, or null to follow the rig's.</summary>
         public int? Brightness { get; set; }
@@ -87,10 +102,36 @@ namespace OpenDashPlugin
         /// </summary>
         public List<string> EffectsOff { get; set; }
 
-        /// <summary>Whether this bar's shape has a reversed twin: a plain shape of the grid, not one
-        /// already carrying a wiring suffix, and not a pre-grid `brow-N`, which the generator never
-        /// wrote a twin of (a bare run's twin is `0-N-0-reversed`).</summary>
+        /// <summary>Whether this bar's shape has a reversed twin it may install: a plain shape of the grid,
+        /// not one already carrying a wiring suffix, and not a pre-grid `brow-N`, which the generator never
+        /// wrote a twin of (a bare run's twin is `0-N-0-reversed`); and not while the bar is in the Fanatec
+        /// wiring, whose order is the device's and has no far end.</summary>
         public bool SupportsReversal
+        {
+            get { return PlainShape && !(Fanatec && SupportsFanatec); }
+        }
+
+        /// <summary>
+        /// Whether this bar's shape can be in the Fanatec wiring: a plain A/B/A with ends, the shapes the
+        /// generator writes a `-fanatec` twin of. A bare run has no flag LEDs for the order to move.
+        /// </summary>
+        /// <remarks>
+        /// Read off the id alone, so the bar can say it without the build. The one geometry this admits that
+        /// the generator gives no twin is the GridSim 3/10/3, whose extra runs are no Fanatec device's; the
+        /// panel offers the switch only where the build embedded the twin (PanelLights.HasFanatecTwin).
+        /// </remarks>
+        public bool SupportsFanatec
+        {
+            get
+            {
+                if (!PlainShape) return false;
+                var shape = LightShape.Parse(Shape);
+                return shape != null && shape.Placement == PanelLightRows.Wheel && shape.Left > 0 && shape.Left == shape.Right;
+            }
+        }
+
+        /// <summary>A shape id with no wiring suffix of its own and not a pre-grid `brow-N`.</summary>
+        private bool PlainShape
         {
             get
             {
@@ -102,13 +143,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The shape id of the profile this bar installs: the reversed twin while <see cref="Reversed"/>
-        /// is on and the shape has one, the shape itself otherwise. What the embedded profile is looked
-        /// up by.
+        /// The shape id of the profile this bar installs: the Fanatec twin while <see cref="Fanatec"/> is on
+        /// and the shape has one, else the reversed twin while <see cref="Reversed"/> is on and the shape has
+        /// one, else the shape itself. What the embedded profile is looked up by.
         /// </summary>
         public string ProfileShapeId
         {
-            get { return Reversed && SupportsReversal ? Shape + "-" + PanelLightRows.ReversedSuffix : Shape; }
+            get
+            {
+                if (Fanatec && SupportsFanatec) return Shape + "-" + PanelLightRows.FanatecSuffix;
+                return Reversed && SupportsReversal ? Shape + "-" + PanelLightRows.ReversedSuffix : Shape;
+            }
         }
 
         /// <summary>Whether this bar draws an effect. An id no switch answers for is drawn.</summary>
@@ -196,6 +241,15 @@ namespace OpenDashPlugin
                 Shape = Shape.Substring(0, Shape.Length - reversedSuffix.Length);
                 Reversed = true;
             }
+            // And the Fanatec wiring, which a bar written before the switch carried in its shape: `3-9-3-fanatec`
+            // is the 3/9/3 with the switch on, and installs the same profile it always did.
+            var fanatecSuffix = "-" + PanelLightRows.FanatecSuffix;
+            if (Shape != null && Shape.EndsWith(fanatecSuffix, StringComparison.Ordinal) && Shape.Length > fanatecSuffix.Length)
+            {
+                Shape = Shape.Substring(0, Shape.Length - fanatecSuffix.Length);
+                Fanatec = true;
+            }
+            if (!SupportsFanatec) Fanatec = false;
             if (!SupportsReversal) Reversed = false;
             if (string.IsNullOrWhiteSpace(Name)) Name = Shape ?? "Strip";
             if (string.IsNullOrWhiteSpace(Namespace)) Namespace = "Led" + Contract.Slug(Name);
@@ -232,6 +286,7 @@ namespace OpenDashPlugin
                 SpotterWhole = SpotterWhole,
                 Device = Device,
                 Reversed = Reversed,
+                Fanatec = Fanatec,
                 Brightness = Brightness,
                 LayoutX = LayoutX,
                 LayoutY = LayoutY,

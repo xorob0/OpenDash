@@ -197,12 +197,12 @@ namespace OpenDashPlugin
             return all + ", as " + PanelLeds.ShapeDots(BarShapeId(side, centre)) + ".";
         }
 
-        /// <summary>The same line for the form as it stands, the tile included: the Fanatec wheel's shape is
-        /// its own whatever the controls held before, and the profile is the Fanatec one.</summary>
+        /// <summary>The same line for the form as it stands: the shape, said to be in the Fanatec wiring while the
+        /// sheet's Fanatec compatibility mode is on.</summary>
         public static string BarShapeNote(int side, int centre, bool fanatec)
         {
-            if (!fanatec) return BarShapeNote(side, centre);
-            var plain = BarShapeNote(FanatecSide, FanatecCentre);
+            var plain = BarShapeNote(side, centre);
+            if (!fanatec || side <= 0) return plain;
             return plain.Substring(0, plain.Length - 1) + " Fanatec.";
         }
 
@@ -212,38 +212,51 @@ namespace OpenDashPlugin
             return side + "-" + centre + "-" + side;
         }
 
-        /// <summary>The hardware tile that decides the shape when it is chosen.</summary>
+        /// <summary>What the header's chip calls a strip in the Fanatec wiring.</summary>
         public const string BarFanatecTitle = "Fanatec wheel";
 
+        /// <summary>The switch on the Add LEDs sheet and in the strip's own settings that puts it in the Fanatec
+        /// wiring (LedBar.Fanatec).</summary>
+        public const string BarFanatecSwitch = "Fanatec compatibility mode";
+
         /// <summary>
-        /// Why a Fanatec wheel is not simply a 3/9/3. Not drawn: it explains how SimHub presents the LEDs,
-        /// which voice.md keeps off the panel, and the tile already says Fanatec wheel and 3 · 9 · 3. Kept, with
-        /// PanelLedBarFormTests' pin, as the reason the tile exists.
+        /// The line under the switch: what it is for, in the words a driver looks for. Their device's name is
+        /// what ticks it, so the line is for the driver whose Fanatec wheel SimHub lists under another name.
         /// </summary>
         /// <remarks>
-        /// The plain 3/9/3 on a Fanatec wheel lights only some of its LEDs and starts the bar from the
+        /// The plain profile on a Fanatec wheel lights only some of its LEDs and starts the bar from the
         /// middle of the rim, which is a failure a driver cannot debug, so the line says the one fact that
-        /// tells them this switch is theirs. It is the order SimHub's own Fanatec device presents, nine
-        /// RevLEDs and then six FlagLEDs (0.3.0-rc.3), and nothing to do with the maker's software.
+        /// tells them this switch is theirs. It is the order SimHub's own Fanatec device presents, the rev
+        /// LEDs and then the flag LEDs (0.3.0-rc.3), and nothing to do with the maker's software.
         /// </remarks>
-        public const string BarFanatecCaption = "SimHub hands a Fanatec wheel's LEDs over in an order of their own.";
+        public const string BarFanatecCaption = "For a Fanatec wheel's LEDs, which SimHub hands over in an order of their own.";
 
-        /// <summary>The ends and the centre a Fanatec wheel has, which the switch shows and locks.</summary>
+        /// <summary>The ends and the centre of the Fanatec wheels there are today, which the sheet opens on when it
+        /// opens in the Fanatec wiring.</summary>
         public const int FanatecSide = 3;
 
         public const int FanatecCentre = 9;
 
-        /// <summary>The id `fanatec(3, 9, 3)` in packages/dash/src/leds/strip.ts spells, which is the shape
-        /// the switch adds a bar as.</summary>
-        public static readonly string FanatecShapeId = BarShapeId(FanatecSide, FanatecCentre) + "-" + PanelLightRows.FanatecSuffix;
+        /// <summary>The id `fanatec(3, 9, 3)` in packages/dash/src/leds/strip.ts spells, the row the order was
+        /// measured on.</summary>
+        public static readonly string FanatecShapeId = BarShapeId(FanatecSide, FanatecCentre, true);
 
         /// <summary>
-        /// The id the add form hands to AddLedBar: the two numbers, or the Fanatec profile when the switch
-        /// is on, whatever the two numbers held.
+        /// The id the add form hands to AddLedBar: the two numbers, with the Fanatec suffix while the sheet's
+        /// Fanatec compatibility mode is on, which AddLedBar reads back as the bar's switch.
         /// </summary>
         public static string BarShapeId(int side, int centre, bool fanatec)
         {
-            return fanatec ? FanatecShapeId : BarShapeId(side, centre);
+            var plain = BarShapeId(side, centre);
+            return fanatec ? plain + "-" + PanelLightRows.FanatecSuffix : plain;
+        }
+
+        /// <summary>Whether the build embedded the Fanatec wiring of a plain shape, which is where the switch is
+        /// offered: never on a shape whose Fanatec profile does not exist.</summary>
+        public static bool HasFanatecTwin(IEnumerable<string> census, string shapeId)
+        {
+            return census != null && !string.IsNullOrEmpty(shapeId)
+                && census.Contains(shapeId + "-" + PanelLightRows.FanatecSuffix, StringComparer.Ordinal);
         }
 
         /// <summary>
@@ -259,39 +272,56 @@ namespace OpenDashPlugin
         /// </remarks>
         public static int[] BarSides(IEnumerable<string> census)
         {
-            return Counted(census).Select(shape => shape.Left).Distinct().OrderBy(n => n).ToArray();
+            return BarSides(census, false);
+        }
+
+        /// <summary>The ends the add form offers in a wiring: every plain shape's, or, in the Fanatec wiring, those of
+        /// the plain shapes whose Fanatec twin the build embedded.</summary>
+        public static int[] BarSides(IEnumerable<string> census, bool fanatec)
+        {
+            return Counted(census, fanatec).Select(shape => shape.Left).Distinct().OrderBy(n => n).ToArray();
         }
 
         /// <summary>The centres the add form offers beside a choice of ends, over the plain shapes alone.</summary>
         public static int[] BarCentres(IEnumerable<string> census, int side)
         {
-            return Counted(census).Where(shape => shape.Left == side).Select(shape => shape.Centre).Distinct().OrderBy(n => n).ToArray();
+            return BarCentres(census, side, false);
+        }
+
+        /// <summary>The centres beside a choice of ends in a wiring, as <see cref="BarSides(IEnumerable{string}, bool)"/>.</summary>
+        public static int[] BarCentres(IEnumerable<string> census, int side, bool fanatec)
+        {
+            return Counted(census, fanatec).Where(shape => shape.Left == side).Select(shape => shape.Centre).Distinct().OrderBy(n => n).ToArray();
         }
 
         /// <summary>
-        /// Whether the add form draws the Fanatec switch: only when the build embedded the profile it
-        /// selects, so that it never offers a shape whose profile does not exist.
+        /// Whether the add form draws the Fanatec compatibility switch: only when the build embedded a Fanatec
+        /// profile at all, so that it never offers a wiring no profile exists for.
         /// </summary>
         /// <remarks>
-        /// One switch and not a wiring drop-down (#436). Every plain shape has a far-end twin now, and
-        /// that is not a wiring to pick here: a bar is reversed by its own switch (LedBar.Reversed), which
-        /// installs the twin in place of the plain profile (#791). The Fanatec wiring is not a reversal --
-        /// it is the order SimHub's Fanatec LED device presents a wheel's runs in, which reverses nothing
-        /// -- so it stays a tile of its own on the Add LEDs sheet. The reversed 4/14/4 keeps a row of its own on the
-        /// Updates page only because it is named for a device, as the plain 4/14/4 is.
+        /// A switch and not a wiring drop-down (#436). Every plain shape has a far-end twin, and that is not
+        /// a wiring to pick here: a bar is reversed by its own switch (LedBar.Reversed), which installs the
+        /// twin in place of the plain profile (#791). The Fanatec wiring is not a reversal -- it is the order
+        /// SimHub's Fanatec LED device presents a wheel's runs in, which reverses nothing -- and it is a
+        /// switch of its own (LedBar.Fanatec), on the sheet and in the strip's settings. The reversed 4/14/4
+        /// keeps a row of its own on the Updates page only because it is named for a device, as the plain
+        /// 4/14/4 is.
         /// </remarks>
         public static bool OffersFanatec(IEnumerable<string> census)
         {
-            return census != null && census.Contains(FanatecShapeId, StringComparer.Ordinal);
+            return BarSides(census, true).Length > 0;
         }
 
-        /// <summary>The ids the two numbers are asked over: an A/B/A geometry in the plain wiring.</summary>
-        private static IEnumerable<LightShape> Counted(IEnumerable<string> census)
+        /// <summary>The ids the two numbers are asked over: an A/B/A geometry in the plain wiring, and in the
+        /// Fanatec wiring only one whose Fanatec twin the census carries.</summary>
+        private static IEnumerable<LightShape> Counted(IEnumerable<string> census, bool fanatec)
         {
             if (census == null) return Enumerable.Empty<LightShape>();
-            return census
+            var ids = new HashSet<string>(census.Where(id => id != null), StringComparer.Ordinal);
+            return ids
                 .Select(LightShape.Parse)
-                .Where(shape => shape != null && shape.Wiring == null && shape.Left == shape.Right);
+                .Where(shape => shape != null && shape.Wiring == null && shape.Left == shape.Right)
+                .Where(shape => !fanatec || ids.Contains(shape.Id + "-" + PanelLightRows.FanatecSuffix));
         }
 
         /// <summary>

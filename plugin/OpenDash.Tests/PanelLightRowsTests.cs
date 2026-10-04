@@ -93,6 +93,28 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_fanatec_twin_shares_its_siblings_row_after_the_reversed_one()
+        {
+            // The Fanatec wiring is a switch on a bar as reversal is, so the generator's Fanatec twin of a
+            // plain shape rides in its sibling's row too; the measured 3/9/3 keeps the row it is named in.
+            var built = new List<LightProfile>
+            {
+                new LightProfile("3-9-3", "OpenDash 3/9/3"),
+                new LightProfile("3-9-3-reversed", "OpenDash 3/9/3 reversed"),
+                new LightProfile("3-9-3-fanatec", "OpenDash 3/9/3 Fanatec"),
+                new LightProfile("4-8-4-fanatec", "OpenDash 4/8/4 Fanatec"),
+                new LightProfile("4-8-4", "OpenDash 4/8/4"),
+                new LightProfile("4-8-4-reversed", "OpenDash 4/8/4 reversed"),
+            };
+            var rows = PanelLightRows.Rows(built);
+            Assert.Equal(new[] { "3-9-3-fanatec" }, rows.Single(r => r.Name == "OpenDash 3/9/3 Fanatec").ShapeIds);
+            Assert.Equal(new[] { "3-9-3", "3-9-3-reversed" }, rows.Single(r => r.ShapeIds.Contains("3-9-3")).ShapeIds);
+            Assert.Equal(new[] { "4-8-4", "4-8-4-reversed", "4-8-4-fanatec" }, rows.Single(r => r.ShapeIds.Contains("4-8-4")).ShapeIds);
+            Assert.Equal(built.Count, rows.SelectMany(r => r.ShapeIds).Count());
+            Assert.Equal("4/8/4 Fanatec", PanelLightRows.ShapeLabel("4-8-4-fanatec"));
+        }
+
+        [Fact]
         public void A_reversed_twin_shares_its_siblings_row_and_is_not_counted_as_a_length()
         {
             // The generator writes a reversed twin of every plain shape since #791, and reversal is a
@@ -439,7 +461,7 @@ namespace OpenDashPlugin.Tests
         {
             // The whole census end to end, off the files the plugin actually embeds: the file name gives
             // the shape id and the profile's own Name gives the row its title, as FlagBoxProfile reads them
-            // out of the assembly. No page draws these rows; the test holds the build's 121 profiles.
+            // out of the assembly. No page draws these rows; the test holds the build's 157 profiles.
             var built = BuiltProfiles();
             if (built == null)
             {
@@ -469,15 +491,23 @@ namespace OpenDashPlugin.Tests
             // Sixty-two: five sides of nine centres and thirteen longer bare runs, less the one the
             // legacy list already spells, plus the five that shipped before the grid. And since #791 a
             // reversed twin of every plain shape but the 4/14/4, which had one: fifty-nine more, riding
-            // in their siblings' rows, for 121. On CI Resources/ holds this commit's own dash build, so
-            // all fifty-nine are required there: LedBar.SupportsReversal offers the switch on every plain
-            // shape, and a package without the twins would leave ProfileShapeId naming a profile nothing
-            // embeds. Only a stale build/ in a local checkout, from before the twins, may carry none.
+            // in their siblings' rows, for 121. And since the Fanatec switch the Fanatec wiring of every
+            // plain shape with equal ends and no extra runs but the 3/9/3, which had one: thirty-six more,
+            // for 157. On CI Resources/ holds this commit's own dash build, so every twin is required
+            // there: LedBar.SupportsReversal offers the switch on every plain shape, and a package without
+            // the twins would leave ProfileShapeId naming a profile nothing embeds. Only a stale build/ in
+            // a local checkout, from before the twins, may carry fewer.
             var members = rows.SelectMany(r => r.ShapeIds).ToList();
             var twins = members.Count(id => id.EndsWith("-reversed", StringComparison.Ordinal) && id != "4-14-4-reversed");
+            var fanatecs = members.Count(id => id.EndsWith("-fanatec", StringComparison.Ordinal) && id != "3-9-3-fanatec");
             if (OnCI) Assert.True(twins == 59, twins + " reversed twins; CI builds the dash from this commit and needs all 59");
             else Assert.True(twins == 0 || twins == 59, twins + " reversed twins");
-            Assert.Equal(62 + twins, members.Count);
+            if (OnCI) Assert.True(fanatecs == 36, fanatecs + " Fanatec twins; CI builds the dash from this commit and needs all 36");
+            else Assert.True(fanatecs == 0 || fanatecs == 36, fanatecs + " Fanatec twins");
+            Assert.Equal(62 + twins + fanatecs, members.Count);
+            // A Fanatec twin rides in its sibling's row, as a reversed one does, after it.
+            var fourEightFour = rows.Single(r => r.ShapeIds.Contains("4-8-4")).ShapeIds.ToList();
+            if (fanatecs > 0) Assert.Equal(fourEightFour.IndexOf("4-8-4") + 2, fourEightFour.IndexOf("4-8-4-fanatec"));
             // The flag box is not one of them: it is its own row and its own driver, and handing a strip
             // to the matrix driver is the hazard FlagBoxProfile exists to prevent.
             Assert.DoesNotContain(rows, r => r.Name == FlagBoxProfile.ProfileName);

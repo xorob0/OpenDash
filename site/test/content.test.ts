@@ -46,11 +46,11 @@ describe('the strip shapes', () => {
     for (const s of shapes.filter((x) => !x.legacy)) expect(s.left).toBe(s.right);
   });
 
-  test.if(manifest !== null)('each one has a profile in the manifest, as does its far-end twin, and the flag box makes a hundred and twenty-two', () => {
+  test.if(manifest !== null)('each one has a profile in the manifest, as does its far-end twin, and the flag box makes a hundred and fifty-eight', () => {
     const profiles = new Set(manifest!.ledProfiles ?? []);
     for (const s of ALL_SHAPES) expect(profiles.has(`OpenDash ${s.id}.ledsprofile`)).toBe(true);
     for (const s of shapes) expect(profiles.has(`OpenDash ${s.id.replace(/-reversed$/, '')}-reversed.ledsprofile`) || s.id.endsWith('-fanatec')).toBe(true);
-    expect(profiles.size).toBe(122);
+    expect(profiles.size).toBe(158);
   });
 });
 

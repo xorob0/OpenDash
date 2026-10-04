@@ -282,7 +282,7 @@ namespace OpenDashPlugin
             title.Margin = new Thickness(0, 0, 12, 0);
             // The hardware trims before the shape's numerals are cut, where a very narrow column leaves the chip less
             // than it needs.
-            var lead = Ui.Text(PanelLeds.HardwareLead(bar.Shape), 13, FontWeights.Medium, Theme.TextPrimary);
+            var lead = Ui.Text(PanelLeds.HardwareLead(bar.ProfileShapeId), 13, FontWeights.Medium, Theme.TextPrimary);
             lead.VerticalAlignment = VerticalAlignment.Center;
             lead.TextTrimming = TextTrimming.CharacterEllipsis;
             var numerals = Ui.Text(PanelLeds.ShapeDots(bar.Shape), 14, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
@@ -300,7 +300,7 @@ namespace OpenDashPlugin
                 VerticalAlignment = VerticalAlignment.Center,
                 Child = inChip,
             };
-            chip.ToolTip = PanelLeds.HardwareLead(bar.Shape) + PanelLeds.ShapeDots(bar.Shape);
+            chip.ToolTip = PanelLeds.HardwareLead(bar.ProfileShapeId) + PanelLeds.ShapeDots(bar.Shape);
             var name = new WrapPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
             name.Children.Add(title);
             name.Children.Add(chip);
@@ -690,8 +690,8 @@ namespace OpenDashPlugin
                     Ui.Anchor(LedsRow(PanelLeds.CentreDisplayTitle, centre), PanelLeds.AnchorCentre)));
         }
 
-        /// <summary>This strip: the SimHub device its profile is in, a brightness of its own, its direction, and
-        /// the greyed test of each LED.</summary>
+        /// <summary>This strip: the SimHub device its profile is in, a brightness of its own, its direction, its
+        /// Fanatec compatibility mode, and the greyed test of each LED.</summary>
         private FrameworkElement LedsThisStrip(LedBar bar, IList<LedTarget> targets, IList<string> declined, Action redrawPreview)
         {
             var ns = bar.Namespace;
@@ -759,13 +759,21 @@ namespace OpenDashPlugin
             });
             rows.Add(Ui.Anchor(LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag()), PanelLeds.AnchorBrightness));
 
-            // Only a shape that has a twin wired from the far end: a Fanatec wheel's wiring is its own.
+            // Only a shape that has a twin wired from the far end, and not while the strip is in the Fanatec wiring,
+            // whose order is the device's own.
             if (bar.SupportsReversal)
             {
                 // The press redraws the page and then says a line at its top; the shell hands focus back to the switch
                 // without scrolling the line away (RestoreFocus gives way to Say).
                 var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));
                 rows.Add(Ui.Anchor(LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag()), PanelLeds.AnchorReverse));
+            }
+            // Only where the build embedded the shape's Fanatec wiring, or the strip is in it already and has to be
+            // able to come out of it.
+            if (bar.SupportsFanatec && (Settings.BarFanatec(ns) || PanelLights.HasFanatecTwin(EmbeddedShapeIds(), bar.Shape)))
+            {
+                var fanatec = Ui.Switch(Settings.BarFanatec(ns), on => FanatecLedBar(ns, on));
+                rows.Add(Ui.Anchor(LedsRow(PanelLights.BarFanatecSwitch, fanatec, PanelLights.BarFanatecCaption, Ui.NewTag()), PanelLeds.AnchorFanatec));
             }
             rows.Add(LedsSoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));
 
@@ -1195,6 +1203,34 @@ namespace OpenDashPlugin
             Say(line, ok && plan.Note == null);
         }
 
+        /// <summary>
+        /// Turns the strip's Fanatec compatibility mode on or off, which installs the other wiring of its profile
+        /// where the page can install it; where it cannot, the wiring is saved and the line says what is left to do.
+        /// As <see cref="ReverseLedBar"/>, whose twin it is.
+        /// </summary>
+        private void FanatecLedBar(string ns, bool fanatec)
+        {
+            var bar = Settings.LedBarByNamespace(ns);
+            if (bar == null || !Settings.SetBarFanatec(ns, fanatec)) return;
+            Save();
+            var facts = StripFacts(ns);
+            var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);
+            var targets = ledDevices.Targets;
+            var declined = ledDevices.Declined;
+            var blocked = LedsProfileBlocked(bar, targets, declined);
+            var plan = blocked == null ? LedsReinstall(bar, targets) : null;
+            Redraw();
+            if (plan == null)
+            {
+                Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.FanatecSaid(bar.Name, fanatec), blocked)));
+                return;
+            }
+            var ok = plan.State == FlagBoxInstallState.UpToDate;
+            var target = LedsTargetOf(targets, bar.Device);
+            var line = ok ? PanelLeds.FanatecSaid(bar.Name, fanatec, held, target == null ? null : target.Name, plan.Note) : PanelLeds.FanatecNotInstalled(bar.Name, fanatec);
+            Say(line, ok && plan.Note == null);
+        }
+
         private void ShowRenameLedBar(string ns)
         {
             var bar = Settings.LedBarByNamespace(ns);
@@ -1302,10 +1338,12 @@ namespace OpenDashPlugin
         ///
         /// <para>The two numbers cannot say how a wheel is wired, so a Fanatec owner who added a strip by its
         /// counts got the plain 3/9/3, which lights only some of the wheel's LEDs and starts the bar from the
-        /// middle of the rim (#436). The device answers that question, which is why it is asked first: a
-        /// Fanatec wheel picked here fixes the shape to the Fanatec 3 · 9 · 3, any other device offers the
-        /// plain shape, and the sheet opens on a Fanatec wheel when the rig has one, so nobody is asked what
-        /// their device already says (#686). The Fanatec wiring is offered only where the build embedded it.</para>
+        /// middle of the rim (#436). The shape step's Fanatec compatibility mode answers that question, and the
+        /// device mostly answers it for the driver, which is why the device is asked first: a device whose name
+        /// says Fanatec ticks it, any other leaves it as the driver set it, and the sheet opens on a Fanatec
+        /// wheel when the rig has one (#686). With it on, the two numbers offer only the shapes whose Fanatec
+        /// wiring the build embedded, so a Fanatec rim of another shape than today's 3/9/3 is one the driver can
+        /// count and add. The strip's own settings turn it on and off afterwards.</para>
         /// </remarks>
         private void ShowAddLedBar()
         {
@@ -1313,9 +1351,8 @@ namespace OpenDashPlugin
             // Two numbers rather than a list of sixty-three. A driver knows how many LEDs their strip
             // has and how they are grouped, which is exactly A and B; a drop-down asked them to find
             // "3/9/3" among every other geometry and to know that is what their wheel is called.
-            var sides = PanelLights.BarSides(census);
             var offersFanatec = PanelLights.OffersFanatec(census);
-            if (!PanelLeds.SheetHasShapes(sides.Length, offersFanatec))
+            if (!PanelLeds.SheetHasShapes(PanelLights.BarSides(census).Length, offersFanatec))
             {
                 ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLightRows.NoProfiles), null);
                 return;
@@ -1329,12 +1366,15 @@ namespace OpenDashPlugin
             var preferred = LedTargets.Preferred(targets);
             var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;
 
+            // The one question the two numbers cannot answer: how the wheel is wired. The device picked answers it
+            // where its name says Fanatec, and the driver otherwise; the ends and centres follow, keeping what the
+            // driver chose wherever the other wiring offers it.
+            var fanatec = PanelLeds.FanatecAfterPick(offersFanatec, preferred == null ? null : preferred.Name, false, false);
+            var fanatecSetByDriver = false;
+            var sides = PanelLights.BarSides(census, fanatec);
             var side = PanelLeds.StartSide(sides);
-            var centres = PanelLights.BarCentres(census, side);
+            var centres = PanelLights.BarCentres(census, side, fanatec);
             var centre = PanelLeds.KeptCentre(centres, 9);
-            // The one question the two numbers cannot answer: how the wheel is wired. The device picked answers
-            // it, and side and centre keep what the driver chose so that another device gives that back.
-            var fanatec = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, preferred == null ? null : preferred.Name);
 
             var name = Ui.Input(string.Empty);
             var typed = false;
@@ -1368,26 +1408,34 @@ namespace OpenDashPlugin
 
             // Each picker is drawn once and keeps keyboard focus: a change of ends swaps only what is under the
             // ends bar, a change of centre only the picture and the note, and a device picked hands focus to
-            // the one drawn in its place.
-            Action showShape = () =>
+            // the one drawn in its place. The Fanatec switch changes which ends are offered, so it draws the
+            // whole step again and hands focus back to the switch drawn in its place.
+            UIElement fanatecSwitch = null;
+            Action showShape = null;
+            Action<bool> setFanatec = on =>
             {
-                if (fanatec)
+                fanatec = on;
+                sides = PanelLights.BarSides(census, fanatec);
+                side = PanelLeds.KeptSide(sides, side);
+                centres = PanelLights.BarCentres(census, side, fanatec);
+                centre = PanelLeds.KeptCentre(centres, centre);
+                showShape();
+                refresh();
+            };
+            showShape = () =>
+            {
+                var steps = new List<UIElement>();
+                fanatecSwitch = null;
+                if (offersFanatec)
                 {
-                    var numerals = Ui.Text(PanelLeds.FanatecShape, 18, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
-                    var fixedLabel = Ui.Eyebrow(PanelLeds.Fixed);
-                    fixedLabel.VerticalAlignment = VerticalAlignment.Center;
-                    var fixedDock = new DockPanel { LastChildFill = true };
-                    DockPanel.SetDock(fixedLabel, Dock.Right);
-                    fixedDock.Children.Add(fixedLabel);
-                    fixedDock.Children.Add(Ui.VStack(4, numerals, Ui.Prose(PanelLeds.SetByTheWheel, PanelKit.CardMetaSize)));
-                    shapeHost.Child = new Border
+                    var toggle = Ui.Switch(fanatec, on =>
                     {
-                        Background = Ui.Brush(Theme.SurfaceZone),
-                        CornerRadius = new CornerRadius(Theme.Radius),
-                        Padding = new Thickness(14, 12, 14, 12),
-                        Child = fixedDock,
-                    };
-                    return;
+                        fanatecSetByDriver = true;
+                        setFanatec(on);
+                        LedsFocusLater(() => fanatecSwitch);
+                    });
+                    fanatecSwitch = toggle;
+                    steps.Add(LedsSheetRow(PanelLights.BarFanatecSwitch, toggle, PanelLights.BarFanatecCaption));
                 }
 
                 var centreRow = new Border();
@@ -1433,7 +1481,7 @@ namespace OpenDashPlugin
                 ends.Changed += value =>
                 {
                     side = int.Parse(value, CultureInfo.InvariantCulture);
-                    centres = PanelLights.BarCentres(census, side);
+                    centres = PanelLights.BarCentres(census, side, fanatec);
                     // A side of none reaches twenty-five and a side of four stops at twelve, so the choice
                     // of centre follows the choice of ends rather than offering lengths nothing is built for.
                     centre = PanelLeds.KeptCentre(centres, centre);
@@ -1442,11 +1490,11 @@ namespace OpenDashPlugin
                 };
                 showCentre();
                 var well = new Border { Background = Ui.Brush(Theme.SurfaceInset), CornerRadius = new CornerRadius(Theme.Radius), Child = picture };
-                shapeHost.Child = Ui.VStack(12,
-                    LedsSheetRow(PanelLights.BarEndsTitle, ends),
-                    centreRow,
-                    well,
-                    note);
+                steps.Add(LedsSheetRow(PanelLights.BarEndsTitle, ends));
+                steps.Add(centreRow);
+                steps.Add(well);
+                steps.Add(note);
+                shapeHost.Child = Ui.VStack(12, steps.ToArray());
             };
 
             Action showDevices = null;
@@ -1469,13 +1517,9 @@ namespace OpenDashPlugin
                     {
                         var focused = deviceHost.IsKeyboardFocusWithin;
                         device = id;
-                        // A Fanatec wheel picked here is the wiring answered, and the shape step follows.
-                        var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name);
-                        if (wiring != fanatec)
-                        {
-                            fanatec = wiring;
-                            showShape();
-                        }
+                        // A Fanatec wheel picked here ticks the Fanatec compatibility mode, and the shape step follows.
+                        var wiring = PanelLeds.FanatecAfterPick(offersFanatec, target.Name, fanatec, fanatecSetByDriver);
+                        if (wiring != fanatec) setFanatec(wiring);
                         showDevices();
                         refresh();
                         if (focused) LedsFocusLater(() => chosenDevice);

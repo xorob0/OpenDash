@@ -3,7 +3,7 @@
  * lighting profile from another.
  *
  * SimHub gives its RGB strips and its 8x8 matrix the same `.ledsprofile` extension, so a build drops
- * a hundred and twenty-two files of two different kinds into one folder and the plugin embeds them side by side. Its
+ * a hundred and fifty-eight files of two different kinds into one folder and the plugin embeds them side by side. Its
  * only discriminator is the file name: `FlagBoxProfile.SelectResource` takes the name it is looking
  * for and accepts nothing else, so a shape collects its own profile and the matrix driver is never
  * handed a ten-LED strip. That defence is only as good as the names being distinct, and the names
@@ -23,22 +23,28 @@ describe('the profile file names', () => {
   test('are the grid, less what a legacy shape already spells, plus the legacy shapes, plus a far-end twin of each plain one', () => {
     // The count is the product of the two ranges, and what is pinned first is that arithmetic: every
     // side against every centre, the long bare runs after them, and the shapes that shipped before the
-    // grid and fall outside it. The total of 121 is then pinned as well, on purpose, as the #791
-    // count: it is the number of strip profiles in the DLL (the flag box is the hundred and
-    // twenty-second), so widening a range fails here and says so.
+    // grid and fall outside it. The total of 157 is then pinned as well, on purpose: it is the number
+    // of strip profiles in the DLL (the flag box is the hundred and fifty-eighth), so widening a range
+    // fails here and says so.
     expect(GRID_SHAPES.length).toBe(SIDE_LENGTHS.length * CENTRE_LENGTHS.length + BARE_RUN_LENGTHS.length);
     const spelled = new Set(LEGACY_SHAPES.map((shape) => shape.id));
     const shapes = [...GRID_SHAPES.filter((shape) => !spelled.has(shape.id)), ...LEGACY_SHAPES];
-    // And since #791 every plain one of those twice, once wired from each end; the Fanatec wiring is
-    // the one shape that is neither plain nor a reversal, so it has no twin. The spelled 4/14/4
-    // reversed is the twin of its plain sibling, and no second one is made.
+    // And since #791 every plain one of those twice, once wired from each end; the spelled Fanatec
+    // 3/9/3 is neither plain nor a reversal, so it has no twin. The spelled 4/14/4 reversed is the twin
+    // of its plain sibling, and no second one is made.
     const plain = shapes.filter((shape) => !shape.id.endsWith('-reversed') && !shape.id.endsWith('-fanatec'));
     expect(shapes.filter((shape) => shape.id.endsWith('-fanatec'))).toHaveLength(1);
-    expect(ALL_SHAPES.length).toBe(2 * plain.length + 1);
-    expect(ALL_SHAPES.length).toBe(121);
-    // The twins come after every shape that was there before them, so no id moves.
+    // And the Fanatec wiring of every plain one with equal ends and no extra runs, the 3/9/3 being
+    // spelled already: the grid's four sides by nine centres, the 4/14/4 and the 5/10/5, less the
+    // 3/9/3 and the GridSim 3/10/3.
+    const fanatecs = plain.filter((shape) => shape.left > 0 && shape.left === shape.right && shape.extraRuns === undefined && shape.id !== '3-9-3');
+    expect(fanatecs).toHaveLength(36);
+    expect(ALL_SHAPES.length).toBe(2 * plain.length + 1 + fanatecs.length);
+    expect(ALL_SHAPES.length).toBe(157);
+    // The twins come after every shape that was there before them, the far-end ones first, so no id moves.
     expect(ALL_SHAPES.slice(0, shapes.length).map((shape) => shape.id)).toEqual(shapes.map((shape) => shape.id));
-    expect(ALL_SHAPES.slice(shapes.length).every((shape) => shape.id.endsWith('-reversed'))).toBe(true);
+    expect(ALL_SHAPES.slice(shapes.length, 2 * plain.length + 1).every((shape) => shape.id.endsWith('-reversed'))).toBe(true);
+    expect(ALL_SHAPES.slice(2 * plain.length + 1).map((shape) => shape.id)).toEqual(fanatecs.map((shape) => `${shape.id}-fanatec`));
     // And the ranges themselves, which are the whole of what a driver picks between.
     expect(SIDE_LENGTHS).toEqual([0, 1, 2, 3, 4]);
     expect(CENTRE_LENGTHS[0]).toBe(4);

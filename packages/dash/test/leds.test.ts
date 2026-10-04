@@ -7,7 +7,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
 import { MIRROR_COLOR_WIDTH, MIRROR_RUN_LENGTHS, PROPERTY_PREFIX, declaredProperties, flagBox, LED_CENTRES, LED_EFFECTS, LED_RPM_STYLES, RETIRED_LED_CENTRE, ledEffectSettingName, ledMirrorRunName, ledProperties, propertyName, setting, type LedCentre } from '../src/contract.ts';
-import { ALL_SHAPES, GRID_SHAPES, LEGACY_SHAPES, centreStart, deviceLength, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
+import { ALL_SHAPES, GRID_SHAPES, LEGACY_SHAPES, centreStart, deviceLength, fanatecPositions, reversedPositions, rightStart, shapeById, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripFileName, rpmStripProfile, rpmStripProfileName } from '../src/leds/rpmStrip.ts';
 import { bandOf, ladderColors, ladderOrder, overRev, OVER_REV_COLOR } from '../src/leds/ladder.ts';
 import { canMirror, carCentre, mirrorRun } from '../src/leds/mirror.ts';
@@ -121,19 +121,44 @@ describe('the strip shapes', () => {
     expect(leds.containerTypeOf(profileFor('3-9-3').containers[0]!)).toBe('Groups.GameRunningGroup');
   });
 
+  test('the Fanatec order is the same rule on every geometry, so a 4/8/4 rim has one', () => {
+    // The device presents the rev LEDs first and the flag LEDs after, right-hand end inwards then the
+    // left: on a 4/8/4 that is physical 1-8 for the centre, 9-12 for the right end, 13-16 for the left.
+    expect(shapeById('4-8-4-fanatec')!.positions).toEqual([13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8, 12, 11, 10, 9]);
+    expect(shapeById('1-6-1-fanatec')!.positions).toEqual([8, 1, 2, 3, 4, 5, 6, 7]);
+    expect(leds.containerTypeOf(profileFor('4-8-4-fanatec').containers[0]!)).toBe('Groups.RemapGroup');
+    // A bare run has no flag LEDs to move, and the GridSim 3/10/3's extra runs are no Fanatec device's.
+    expect(shapeById('0-15-0-fanatec')).toBeUndefined();
+    expect(shapeById('3-10-3-fanatec')).toBeUndefined();
+    // The measured 3/9/3 keeps its row, its caption, and is not made twice.
+    expect(ALL_SHAPES.filter((s) => s.id === '3-9-3-fanatec')).toHaveLength(1);
+  });
+
   test('only the Fanatec wiring and the far-end twins are remapped, and each covers every LED of the device', () => {
     // The gate is the shape's own list, so a remap cannot arrive on a strip wired in order: the cost
     // of one there is every lamp in the wrong place, which is the one fault a driver cannot debug.
-    // Since #791 that is the Fanatec wiring and the far-end twin of every plain shape, and nothing
-    // else: the set is pinned exactly, so a twin that loses its list fails here as a new remap would.
+    // Since #791 that is the far-end twin of every plain shape, and since the Fanatec switch the Fanatec
+    // wiring of every plain shape with ends, and nothing else: the set is pinned exactly, so a twin
+    // that loses its list fails here as a new remap would.
     const twins = ALL_SHAPES.filter((s) => s.id.endsWith('-reversed')).map((s) => s.id);
-    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual(['3-9-3-fanatec', ...twins].sort());
+    const fanatecs = ALL_SHAPES.filter((s) => s.id.endsWith('-fanatec')).map((s) => s.id);
+    expect(ALL_SHAPES.filter((s) => s.positions).map((s) => s.id).sort()).toEqual([...fanatecs, ...twins].sort());
     expect(twins).toContain('4-14-4-reversed');
     // Every plain shape has exactly one twin, with its geometry, and the twin reads the main run from
     // the other end: its first stripLength positions are stripLength..1. That is what a strip of the
     // main run's length fed from the far end has, whether or not the device carries extra runs.
     const plain = ALL_SHAPES.filter((s) => !s.positions);
     expect(plain.length).toBe(twins.length);
+    // Every plain A/B/A with ends and no extra runs has its Fanatec wiring, in the order the measured
+    // 3/9/3 has: the centre on the first physical LEDs, then the right-hand end inwards, then the left.
+    const sided = plain.filter((s) => s.left > 0 && s.left === s.right && s.extraRuns === undefined);
+    expect(sided.length).toBe(fanatecs.length);
+    for (const s of sided) {
+      const twin = shapeById(`${s.id}-fanatec`);
+      expect({ id: s.id, twin: twin !== undefined }).toMatchObject({ twin: true });
+      expect({ id: s.id, geometry: [twin!.left, twin!.centre, twin!.right] }).toEqual({ id: s.id, geometry: [s.left, s.centre, s.right] });
+      expect({ id: s.id, positions: twin!.positions }).toEqual({ id: s.id, positions: fanatecPositions(s) });
+    }
     for (const s of plain) {
       const twin = shapeById(`${s.id}-reversed`);
       expect({ id: s.id, twin: twin !== undefined }).toMatchObject({ twin: true });

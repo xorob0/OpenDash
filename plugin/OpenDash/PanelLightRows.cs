@@ -5,7 +5,7 @@
 // NO PAGE DRAWS THE CENSUS ROWS NOW. The Install tab's Lights section drew them; the Updates page that
 // replaced it draws one row per strip on the rig (PanelUpdates.StripRow, SettingsControl.Updates.Lights.cs).
 // Rows, Label and NamedShapes stay because PanelLightRowsTests holds the embedded build to the generator
-// through them: the 121 profiles, the reversed twins, and the device captions against strip.ts. RowPlan and
+// through them: the 157 profiles, the reversed and Fanatec twins, and the device captions against strip.ts. RowPlan and
 // OutdatedBars, which grouped the rig's strips by them for the Install tab's Update, went with their last
 // caller (#792). Pure: no WPF types.
 //
@@ -221,10 +221,11 @@ namespace OpenDashPlugin
         /// as one row apiece. A shape the build did not embed has no row at all, which is the honest answer:
         /// a row for a profile that is not there could only offer a press that does nothing.
         ///
-        /// A reversed twin shares its plain sibling's row (#791). Reversal is a switch on a bar now rather
-        /// than a shape to pick, so the twin is the same strip wired from the other end: its row installs
-        /// it with the sibling, and a caption counts lengths, not wirings. The 4/14/4's twin is the one
-        /// exception and keeps the row it has always had, because it is named for a device of its own.
+        /// A reversed twin shares its plain sibling's row (#791), and so does a Fanatec one. Each is a switch
+        /// on a bar now rather than a shape to pick, so the twin is the same strip wired another way: its row
+        /// installs it with the sibling, and a caption counts lengths, not wirings. The 4/14/4's reversed twin
+        /// and the 3/9/3's Fanatec one keep the rows they have always had, because each is named for a device
+        /// of its own.
         /// </remarks>
         public static IList<LightRowPlan> Rows(IEnumerable<LightProfile> profiles)
         {
@@ -232,17 +233,20 @@ namespace OpenDashPlugin
                 .Where(p => p != null && !string.IsNullOrEmpty(p.ShapeId))
                 .ToList();
 
-            // Plain id to twin id, for every twin whose sibling this build carries and that has no row of
+            // Plain id to twin ids, for every twin whose sibling this build carries and that has no row of
             // its own; those twins then ride along behind their sibling wherever it lands.
             var ids = new HashSet<string>(census.Select(p => p.ShapeId), StringComparer.Ordinal);
             var namedIds = new HashSet<string>(NamedShapes.Select(n => n.Key), StringComparer.Ordinal);
-            var twinOf = new Dictionary<string, string>(StringComparer.Ordinal);
+            var twinOf = new Dictionary<string, IList<string>>(StringComparer.Ordinal);
             foreach (var id in ids)
             {
-                var twin = id + "-" + ReversedSuffix;
-                if (ids.Contains(twin) && !namedIds.Contains(twin)) twinOf[id] = twin;
+                var twins = WiringSuffixes
+                    .Select(suffix => id + "-" + suffix)
+                    .Where(twin => ids.Contains(twin) && !namedIds.Contains(twin))
+                    .ToList();
+                if (twins.Count > 0) twinOf[id] = twins;
             }
-            var folded = new HashSet<string>(twinOf.Values, StringComparer.Ordinal);
+            var folded = new HashSet<string>(twinOf.Values.SelectMany(twins => twins), StringComparer.Ordinal);
 
             var rows = new List<LightRowPlan>();
             var taken = new HashSet<string>(StringComparer.Ordinal);
@@ -280,11 +284,11 @@ namespace OpenDashPlugin
             return rows;
         }
 
-        /// <summary>An id followed by its folded twin, when it has one.</summary>
-        private static IReadOnlyList<string> WithTwin(string id, IDictionary<string, string> twinOf)
+        /// <summary>An id followed by its folded twins, when it has any: the reversed one, then the Fanatec one.</summary>
+        private static IReadOnlyList<string> WithTwin(string id, IDictionary<string, IList<string>> twinOf)
         {
-            string twin;
-            return twinOf.TryGetValue(id, out twin) ? new[] { id, twin } : new[] { id };
+            IList<string> twins;
+            return twinOf.TryGetValue(id, out twins) ? new[] { id }.Concat(twins).ToList() : new List<string> { id };
         }
 
         /// <summary>What a row of one side length is called: a side of none is a bare run, which is what a
@@ -297,7 +301,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A group of lengths, named by its two ends: "OpenDash brow 9 … 25".</summary>
-        private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many, IDictionary<string, string> twinOf)
+        private static LightRowPlan Range(IList<KeyValuePair<LightProfile, LightShape>> group, string one, string many, IDictionary<string, IList<string>> twinOf)
         {
             var labels = group.Select(Label).ToList();
             var name = labels.Count == 1
