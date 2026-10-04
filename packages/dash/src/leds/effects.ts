@@ -651,7 +651,7 @@ export const ALL_EFFECTS = (): LedEffect[] => [...SIDE_EFFECTS, ...TURN_EFFECTS,
 export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] => {
   const carried = lamp.carries.flatMap((role) =>
     ALL_EFFECTS()
-      .filter((e) => e.role === role && (e.side === undefined || e.side === side) && (lamp.only === undefined || lamp.only.includes(e.id)))
+      .filter((e) => e.role === role && (e.side === undefined || e.side === side) && (lamp.only?.[role] === undefined || lamp.only[role]!.includes(e.id)))
       .reverse(),
   );
   // An effect drawn exactly as something already on this lamp is dropped, highest rank keeping the

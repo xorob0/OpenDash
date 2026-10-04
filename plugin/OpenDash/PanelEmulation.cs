@@ -455,9 +455,12 @@ namespace OpenDashPlugin
             else if ((scenarioId == LowFuel || scenarioId == Oil || scenarioId == Water) && draws && ends > 0)
             {
                 var lamp = CarLamp(ends);
-                var colour = scenarioId == LowFuel ? Theme.LightLowFuel : Theme.LightTemperature;
-                left[lamp] = colour;
-                right[ends - 1 - lamp] = colour;
+                var fuel = scenarioId == LowFuel;
+                var colour = fuel ? Theme.LightLowFuel : Theme.LightTemperature;
+                // From four LEDs a side the car lamp is split, as lampsForSide splits it (#694): the engine's
+                // warnings on the left, the fuel on the right. Below four both ends carry all three.
+                if (!SplitsCarLamp(ends) || !fuel) left[lamp] = colour;
+                if (!SplitsCarLamp(ends) || fuel) right[ends - 1 - lamp] = colour;
             }
 
             return ends > 0 ? new[] { left, middle, right } : new[] { middle };
@@ -471,6 +474,13 @@ namespace OpenDashPlugin
         public static int CarLamp(int ends)
         {
             return Math.Max(0, Math.Min(ends - 1, 2));
+        }
+
+        /// <summary>Whether a side of <paramref name="ends"/> LEDs has a car lamp at each end for different
+        /// warnings, the engine's on the left and the fuel on the right: lampsForSide's split from four LEDs.</summary>
+        public static bool SplitsCarLamp(int ends)
+        {
+            return ends >= 4;
         }
 
         /// <summary>

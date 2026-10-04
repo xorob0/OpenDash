@@ -61,17 +61,22 @@ const clears = (c: leds.LedContainer): boolean => c.kind === 'conditionalGroup' 
 
 describe('the lamps of a side', () => {
   test('a side is an ordered set of lamps, outermost first, one owner role each', () => {
-    const roles = (count: number): string[] => lampsForSide(count).map((l) => l.role);
+    const roles = (count: number, side: 'left' | 'right' = 'right'): string[] => lampsForSide(count, side).map((l) => l.role);
     expect(roles(5)).toEqual(['side', 'race', 'car', 'aid', 'aid']);
+    // The left of a five has nothing for a fifth LED: its aid is ABS alone, and DRS and push to pass
+    // are the throttle's, on the right.
+    expect(roles(5, 'left')).toEqual(['side', 'race', 'car', 'aid']);
     expect(roles(4)).toEqual(['side', 'race', 'car', 'aid']);
     expect(roles(3)).toEqual(['side', 'race', 'car']);
     expect(roles(2)).toEqual(['side', 'car']);
     expect(roles(0)).toEqual([]);
     // Below four a role shares rather than moves: the lamp keeps its owner and carries the rest
     // beneath it, so a lamp is in the same place on a wheel of three as on a wheel of five.
-    expect(lampsForSide(5).map((l) => l.label)).toEqual(['side', 'race', 'car', 'aid', 'second aid']);
-    expect(lampsForSide(3)[2]).toMatchObject({ label: 'car and aid', carries: ['car', 'aid'] });
-    expect(lampsForSide(2)[1]).toMatchObject({ label: 'car and flag', carries: ['car', 'race'] });
+    expect(lampsForSide(5, 'right').map((l) => l.label)).toEqual(['side', 'race', 'fuel', 'throttle aid', 'second aid']);
+    expect(lampsForSide(4, 'left').map((l) => l.label)).toEqual(['side', 'race', 'engine', 'brake aid']);
+    expect(lampsForSide(3, 'left')[2]).toMatchObject({ label: 'car and brake aid', carries: ['car', 'aid'] });
+    expect(lampsForSide(3, 'right')[2]).toMatchObject({ label: 'car and throttle aid', carries: ['car', 'aid'] });
+    expect(lampsForSide(2, 'left')[1]).toMatchObject({ label: 'car and flag', carries: ['car', 'race'] });
   });
 
   test('no LED is claimed by two lamps, on any shape', () => {
@@ -86,35 +91,59 @@ describe('the lamps of a side', () => {
     }
   });
 
-  test('a role sits at the same distance from the outside at both ends: on 4/14/4 race is LED 2 and 21, aid is LED 4 and 19', () => {
+  test('a role sits at the same distance from the outside at both ends: on 4/14/4 race is LED 2 and 21, the aids LED 4 and 19', () => {
     const at = (id: string, label: string): number[] =>
       lampsOf(shapeById(id)!)
         .filter((p) => p.lamp.label === label)
         .map((p) => p.position)
         .sort((a, b) => a - b);
     expect(at('4-14-4', 'race')).toEqual([2, 21]);
-    expect(at('4-14-4', 'aid')).toEqual([4, 19]);
     expect(at('4-14-4', 'side')).toEqual([1, 22]);
-    expect(at('4-14-4', 'car')).toEqual([3, 20]);
-    // The five-lamp side reaches one further in; the three- and two-lamp sides stop short.
-    expect(at('5-10-5', 'second aid')).toEqual([5, 16]);
-    expect(at('3-9-3', 'car and aid')).toEqual([3, 13]);
+    // The car's own and the aids are the same distance in at both ends, and split by side: the
+    // engine and the brake on the left, the fuel and the throttle on the right.
+    expect(at('4-14-4', 'engine')).toEqual([3]);
+    expect(at('4-14-4', 'fuel')).toEqual([20]);
+    expect(at('4-14-4', 'brake aid')).toEqual([4]);
+    expect(at('4-14-4', 'throttle aid')).toEqual([19]);
+    // The five-lamp side reaches one further in on the right; the three- and two-lamp sides stop short.
+    expect(at('5-10-5', 'second aid')).toEqual([16]);
+    expect(at('3-9-3', 'car and brake aid')).toEqual([3]);
+    expect(at('3-9-3', 'car and throttle aid')).toEqual([13]);
     expect(at('2-10-2', 'car and flag')).toEqual([2, 13]);
   });
 
   test('a shared lamp ranks by role, not by catalogue position: every car warning ahead of every aid', () => {
-    const shared = lampsForSide(3)[2]!;
-    const ids = lampConditions(shared, 'left').map((e) => e.id);
     const car = ['oilPressure', 'temperature', 'lowFuel'];
-    const aid = ['abs', 'tc', 'drs', 'p2p'];
-    expect(ids).toEqual([...car, ...aid]);
-    // The rank is the order the list is in, highest first, so the last car warning still outranks
-    // the first aid.
-    expect(Math.max(...car.map((id) => ids.indexOf(id)))).toBeLessThan(Math.min(...aid.map((id) => ids.indexOf(id))));
+    for (const [side, aid] of [
+      ['left', ['abs']],
+      ['right', ['tc', 'drs', 'p2p']],
+    ] as const) {
+      const ids = lampConditions(lampsForSide(3, side)[2]!, side).map((e) => e.id);
+      expect({ side, ids }).toEqual({ side, ids: [...car, ...aid] });
+      // The rank is the order the list is in, highest first, so the last car warning still outranks
+      // the first aid.
+      expect(Math.max(...car.map((id) => ids.indexOf(id)))).toBeLessThan(Math.min(...aid.map((id) => ids.indexOf(id))));
+    }
+  });
+
+  test('the aids are split by pedal and the car warnings mirrored at three a side, and split by kind at four (#694)', () => {
+    const ids = (count: number, side: 'left' | 'right'): string[] =>
+      lampsForSide(count, side).flatMap((l) => lampConditions(l, side).filter((e) => e.role === 'car' || e.role === 'aid').map((e) => e.id));
+    // ABS is the brake's, so the left's; traction control, DRS and push to pass are the throttle's.
+    expect(ids(3, 'left')).toEqual(['oilPressure', 'temperature', 'lowFuel', 'abs']);
+    expect(ids(3, 'right')).toEqual(['oilPressure', 'temperature', 'lowFuel', 'tc', 'drs', 'p2p']);
+    // At four the car lamp splits too: the engine left, the fuel right, each on one LED of its own.
+    expect(ids(4, 'left')).toEqual(['oilPressure', 'temperature', 'abs']);
+    expect(ids(4, 'right')).toEqual(['lowFuel', 'tc', 'drs', 'p2p']);
+    // Every car warning and every aid is still somewhere on a strip of three or more.
+    for (const count of [3, 4, 5]) {
+      const all = new Set([...ids(count, 'left'), ...ids(count, 'right')]);
+      expect({ count, all: [...all].sort() }).toEqual({ count, all: ['abs', 'drs', 'lowFuel', 'oilPressure', 'p2p', 'tc', 'temperature'] });
+    }
   });
 
   test('at two lamps a side the aids are dropped altogether and the car warning outranks the flag', () => {
-    const shared = lampsForSide(2)[1]!;
+    const shared = lampsForSide(2, 'left')[1]!;
     const ids = lampConditions(shared, 'left').map((e) => e.id);
     expect(ids.slice(0, 3)).toEqual(['oilPressure', 'temperature', 'lowFuel']);
     expect(ids.slice(3)).toEqual(flagEffects().map((e) => e.id).reverse());
@@ -127,9 +156,9 @@ describe('the lamps of a side', () => {
   });
 
   test('within a lamp the lowest rank is written first and each is guarded by the ones above it', () => {
-    const lamp = lampsForSide(4)[2]!;
+    const lamp = lampsForSide(4, 'left')[2]!;
     const ranked = lampConditions(lamp, 'left');
-    const group = placedOf(profileFor(shapeById('4-14-4')!).containers).find((p) => p.description === 'left car lamp')!;
+    const group = placedOf(profileFor(shapeById('4-14-4')!).containers).find((p) => p.description === 'left engine lamp')!;
     const children = leds.childrenOf(group.container);
     // Lowest rank first, so SimHub's merge leaves the highest on top...
     expect(children.map((c) => c.description)).toEqual([...ranked].reverse().map((e) => e.label));
@@ -203,9 +232,9 @@ describe('what a driver can tell one condition from another by', () => {
     // pair is named here rather than the rule being skipped, so that every other clash still fails.
     const known = ['flag.chequered flag.white'];
     for (const count of [1, 2, 3, 4, 5]) {
-      for (const lamp of lampsForSide(count)) {
+      for (const [side, lamp] of (['left', 'right'] as const).flatMap((side) => lampsForSide(count, side).map((l) => [side, l] as const))) {
         const seen = new Map<string, string>();
-        for (const e of lampConditions(lamp, 'left')) {
+        for (const e of lampConditions(lamp, side)) {
           const clashed = seen.get(appearance(e));
           const pair = clashed === undefined ? undefined : [clashed, e.id].sort().join(' ');
           expect({ count, lamp: lamp.label, clash: pair !== undefined && known.includes(pair) ? undefined : pair }).toMatchObject({ clash: undefined });
@@ -215,10 +244,12 @@ describe('what a driver can tell one condition from another by', () => {
     }
   });
 
-  test('ABS intervening: one orange LED at each end of a 4/14/4, steady, with the ladder untouched', () => {
+  test('ABS intervening: one orange LED at the left end of a 4/14/4, steady, with the ladder untouched', () => {
     const placed = placedOf(profileFor(shapeById('4-14-4')!).containers);
     const abs = placed.filter((p) => p.description === 'ABS active');
-    expect(abs.map((p) => p.start).sort((a, b) => a - b)).toEqual([4, 19]);
+    // The brake's side, and only it: traction control is the right's (#694).
+    expect(abs.map((p) => p.start).sort((a, b) => a - b)).toEqual([4]);
+    expect(placed.filter((p) => p.description === 'Traction control').map((p) => p.start)).toEqual([19]);
     for (const p of abs) {
       const c = p.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
       expect({ start: p.start, count: p.count, color: c.color, blink: c.blinkFormula }).toMatchObject({
@@ -232,9 +263,11 @@ describe('what a driver can tell one condition from another by', () => {
   });
 
   test('oil pressure with low fuel: the car lamp is oil pressure and the two beneath it are guarded out', () => {
-    const placed = placedOf(profileFor(shapeById('4-14-4')!).containers);
+    // A 3/9/3, where the car's warnings share one lamp on each side; a 4/14/4 puts the fuel on a lamp
+    // of its own on the right, where nothing can guard it out.
+    const placed = placedOf(profileFor(shapeById('3-9-3')!).containers);
     const oil = placed.filter((p) => p.description === 'Oil pressure warning');
-    expect(oil.map((p) => p.start).sort((a, b) => a - b)).toEqual([3, 20]);
+    expect(oil.map((p) => p.start).sort((a, b) => a - b)).toEqual([3, 13]);
     const top = oil[0]!.container as Extract<leds.LedContainer, { kind: 'customStatus' }>;
     expect({ count: oil[0]!.count, color: top.color, delay: top.blinkDelayMs }).toMatchObject({
       count: 1,

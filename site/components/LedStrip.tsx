@@ -33,13 +33,15 @@ const rev = (i: number, n: number): Ink => (i / n < 0.5 ? 'good' : i / n < 0.8 ?
 
 /** What a lamp of a side shows: the first of its roles that has something to say. */
 function lampInk(frame: StripFrame, side: 'left' | 'right', index: number, count: number): Lit | null {
-  const lamp = LAMPS[Math.min(count, LAMPS.length - 1)]?.[index];
+  const lamp = LAMPS[Math.min(count, LAMPS.length - 1)]?.[side][index];
   if (!lamp) return null;
+  // A lamp narrowed to some of a role, as the aids are split by pedal, shows only those.
+  const takes = (role: 'car' | 'aid', id: string): boolean => lamp.only?.[role] === undefined || lamp.only[role]!.includes(id);
   for (const role of lamp.carries) {
-    if (role === 'side' && frame.spotter?.[side]) return { ink: 'caution' };
+    if (role === 'side' && frame.spotter?.[side]) return { ink: 'proximity' };
     if (role === 'race' && frame.race) return frame.race;
-    if (role === 'car' && frame.car) return frame.car;
-    if (role === 'aid' && frame.aid) return frame.aid;
+    if (role === 'car' && frame.car && takes('car', frame.car.id)) return frame.car;
+    if (role === 'aid' && frame.aid && takes('aid', frame.aid.id)) return frame.aid;
   }
   return null;
 }

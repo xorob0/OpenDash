@@ -1020,7 +1020,8 @@ describe('the effect switches (#370, #503)', () => {
     // Structural rather than evaluated: a lower row's guard is not() of the higher row's `when`, and
     // that `when` is the gated one, whose first term is the switch. So with the switch off the higher
     // row is not lit and the guard is true -- off means gone, not dark.
-    const placed = walk(profileFor('4-14-4').containers).filter((c): c is Extract<leds.LedContainer, { kind: 'customStatus' }> => c.kind === 'customStatus');
+    // A 3/9/3, where low fuel shares the car lamp with oil pressure on both sides.
+    const placed = walk(profileFor('3-9-3').containers).filter((c): c is Extract<leds.LedContainer, { kind: 'customStatus' }> => c.kind === 'customStatus');
     const oil = ALL_EFFECTS().find((e) => e.id === 'oilPressure')!;
     expect(oil.when.startsWith(`(${setting.ledEffectOn('oilPressure')}) and (`)).toBe(true);
     const lowFuel = placed.find((c) => c.description === 'Low fuel')!;

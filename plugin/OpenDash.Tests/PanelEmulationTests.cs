@@ -111,6 +111,13 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(new[] { Theme.LightTemperature }, one[0]);
                 Assert.Equal(new[] { Theme.LightTemperature }, one[2]);
             }
+            // From four a side the car lamp is split: the engine on the left, the fuel on the right (#694).
+            var four = PanelEmulation.StripFrame(4, 14, PanelEmulation.LowFuel);
+            Assert.Equal(new string[] { null, null, null, null }, four[0]);
+            Assert.Equal(new[] { null, Theme.LightLowFuel, null, null }, four[2]);
+            var hotFour = PanelEmulation.StripFrame(4, 14, PanelEmulation.Oil);
+            Assert.Equal(new[] { null, null, Theme.LightTemperature, null }, hotFour[0]);
+            Assert.Equal(new string[] { null, null, null, null }, hotFour[2]);
             Assert.Equal(PanelEmulation.Revs(15, PanelEmulation.LowFuel), PanelEmulation.StripFrame(0, 15, PanelEmulation.LowFuel)[0]);
             var off = new StripOptions();
             off.EffectsOff.Add("lowFuel");

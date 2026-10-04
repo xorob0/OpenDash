@@ -4,17 +4,24 @@
  * A side is not a block that lights as one. The profile gives it single LEDs, counted from the
  * outside in: the outermost carries what is happening beside the car, then race control, then the
  * car's own warnings, then the aids, and on a side too short for four a lamp carries more than one
- * role rather than moving. The pit family is the exception and takes the whole run, because it is
+ * role rather than moving. The aids are split by pedal, ABS on the left and traction control on the
+ * right, so a frame names which condition it is and the lamp decides whether it is its own. The pit
+ * family is the exception and takes the whole run, because it is
  * about where the car is rather than what it is doing. `LAMPS` in the generated content carries
  * that assignment, so the drawing follows the profile instead of guessing at it.
  */
 
 /** The ink a lamp takes, each one a token the dash itself draws with. */
-export type Ink = 'good' | 'caution' | 'danger' | 'info' | 'yellow' | 'white';
+export type Ink = 'good' | 'caution' | 'danger' | 'info' | 'yellow' | 'white' | 'attention' | 'proximity';
 
 export interface Lit {
   ink: Ink;
   blink?: boolean;
+}
+
+/** A car warning or an aid: which condition it is, since a lamp may take only some of its role. */
+export interface Condition extends Lit {
+  id: string;
 }
 
 export interface StripFrame {
@@ -30,9 +37,9 @@ export interface StripFrame {
   /** Race control: the flag lamp. */
   race?: Lit;
   /** The car's own: low fuel, oil, water. */
-  car?: Lit;
+  car?: Condition;
   /** An aid: ABS, traction control. */
-  aid?: Lit;
+  aid?: Condition;
 }
 
 export const FRAMES: Record<string, StripFrame> = {
@@ -41,8 +48,8 @@ export const FRAMES: Record<string, StripFrame> = {
   blue: { label: 'Blue flag', revs: 0.45, race: { ink: 'info' } },
   yellow: { label: 'Yellow flag', revs: 0.45, race: { ink: 'yellow', blink: true } },
   spotter: { label: 'A car on your left', revs: 0.62, spotter: { left: true } },
-  fuel: { label: 'Low fuel', revs: 0.5, car: { ink: 'danger', blink: true } },
-  abs: { label: 'ABS, under braking', revs: 0.18, aid: { ink: 'caution' } },
+  fuel: { label: 'Low fuel', revs: 0.5, car: { id: 'lowFuel', ink: 'attention', blink: true } },
+  abs: { label: 'ABS, under braking', revs: 0.18, aid: { id: 'abs', ink: 'attention' } },
   limiter: { label: 'Pit limiter', revs: 0, strip: { ink: 'white', blink: true } },
 };
 
@@ -67,8 +74,8 @@ export function scripted(t: number): StripFrame {
   if (at(4, 6.5)) return { ...over, race: { ink: 'info' }, label: 'Blue flag' };
   if (at(6.5, 9)) return { ...over, race: { ink: 'yellow', blink: true }, label: 'Yellow flag' };
   if (at(9, 11.5)) return { ...over, spotter: { left: true }, label: 'A car on your left' };
-  if (at(11.5, 13.5)) return { ...over, aid: { ink: 'caution' }, label: 'ABS, under braking' };
-  if (at(13.5, 15.5)) return { ...over, car: { ink: 'danger', blink: true }, label: 'Low fuel' };
+  if (at(11.5, 13.5)) return { ...over, aid: { id: 'abs', ink: 'attention' }, label: 'ABS, under braking' };
+  if (at(13.5, 15.5)) return { ...over, car: { id: 'lowFuel', ink: 'attention', blink: true }, label: 'Low fuel' };
   if (at(18, 21)) return { ...over, race: { ink: 'good' }, label: 'Green flag' };
   return over;
 }
