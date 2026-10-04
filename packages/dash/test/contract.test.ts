@@ -162,6 +162,12 @@ describe('settings', () => {
       'OpenDash.LedEffectPitSpeeding',
       'OpenDash.LedEffectTurnLeft',
       'OpenDash.LedEffectTurnRight',
+      // And the switch that lets a strip's aid lamps read the plugin's slip estimate, then the
+      // estimate, which the plugin computes because SimHub publishes none of it.
+      'OpenDash.LedInferSlip',
+      'OpenDash.WheelSpin',
+      'OpenDash.WheelLock',
+      'OpenDash.TCInferred',
     ]);
     // The lone 10 is RevBar, the blue flag detail, the two that decide how a driver is named, the
     // idle screen's two, the class best, the clock format, the delta's precision and whether a flag
@@ -213,8 +219,9 @@ describe('settings', () => {
     // could be drawn to thousandths as well as hundredths (#322). And 350 before the settings panel
     // was rebuilt around the rig (#503), which asked for whether a flag shows in the pit lane, a
     // position per zone so that a zone's pages can be put in any order, and a brightness and fifteen
-    // effect switches for a strip.
-    expect(props).toHaveLength(399);
+    // effect switches for a strip. And 399 before a strip's aid lamps could read the plugin's slip
+    // estimate: the strip's switch, and the three the plugin computes.
+    expect(props).toHaveLength(403);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');

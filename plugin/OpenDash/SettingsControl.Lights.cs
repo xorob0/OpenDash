@@ -838,6 +838,15 @@ namespace OpenDashPlugin
                     redrawPreview();
                 }), PanelLeds.SpotterCaption), PanelLeds.AnchorSpotter)));
             }
+            if (PanelLeds.HasInferSlip(bar.Shape))
+            {
+                rows.Add(Ui.SubRow(Ui.Anchor(LedsRow(PanelLeds.InferSlipTitle, Ui.Switch(Settings.BarInferSlip(ns), on =>
+                {
+                    var live = Settings.LedBarByNamespace(ns);
+                    if (live != null) live.InferSlip = on;
+                    Save();
+                }), PanelLeds.InferSlipCaption), PanelLeds.AnchorInferSlip)));
+            }
             var limiter = LedsRow(PanelSoon.PitLimiterLights.Title,
                 BuildSegmented(PanelLeds.PitLimiterLightsValues, PanelLeds.PitLimiterLightsLabels, PanelLeds.PitLimiterLightsValues[1], value => { }));
             rows.Add(Ui.SubRow(Ui.Soon(limiter, PanelSoon.PitLimiterLights)));

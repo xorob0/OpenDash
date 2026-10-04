@@ -18,6 +18,10 @@ On 2026-09-27 for [#353](https://github.com/xorob0/OpenDash/issues/353), on the 
 left open: **a screen takes the car's thresholds and keeps OpenDash's colours.** Part 3's rung 1 is
 no longer strips-only, and the Unresolved section below is answered rather than standing.
 
+On 2026-10-04, on part 2's "for nothing else yet": **the plugin also estimates wheelspin and
+lock-up**, because iRacing publishes neither and SimHub publishes its own estimate nowhere. The
+amendment of that date, at the foot of this record, gives the reasoning.
+
 ## Context
 
 [ADR 0014](0014-the-shift-model.md) made OpenDash mirror the car's shift *behaviour*: the four
@@ -339,3 +343,35 @@ user-initiated and still the only thing that fetches. The Matrix page's digit sw
 has it, and says nothing outside iRacing, since the plugin reads iRacing's data only. When nothing was
 ever downloaded it points at Every strip. A failed download beside a working copy keeps the count and
 age of that copy in the line.
+
+## Amended, 2026-10-04: the plugin estimates wheelspin and lock-up
+
+**What was missing.** On iRacing the strips' traction control lamp never lit, and neither did the ABS
+lamp on a car without ABS. iRacing publishes no wheel speeds and no traction-control flag, and SimHub's
+`GameData.TCActive` is a hard 0 there. SimHub does estimate slip, but only for ShakeIt. The decompiled
+9.12.6 assemblies show where:
+
+- `GameData.FeedbackData` carries per-wheel slip and is `[DoNotExpose]`, so it never becomes a
+  property.
+- Its `TCActive` is copied from `GameData.TCActive`, so it is the same 0.
+- ShakeIt's wheel slip effect falls back to an "RPM vs Speed" estimate for a sim without wheel speeds
+  (`WheelSlipEffect.GetRpmSpeedSlip`), and hands the result to a shaker.
+
+No profile and no screen can read any of it.
+
+**What the plugin does.** `SlipEstimate.cs` applies ShakeIt's rule as it is: the change in speed over
+RPM between two frames, ignored at rest, in neutral and for half a second after a gear change, and
+weighted by throttle for a spin or by brake for a lock. It publishes three booleans,
+`OpenDash.WheelSpin`, `OpenDash.WheelLock` and `OpenDash.TCInferred` (a spin while the TC dial is above
+zero). The lamp threshold and the 200 ms hold are OpenDash's own, a first guess for a rig to correct.
+
+**Why this passes part 2's test.** It is the derivation [ADR 0009](0009-does-the-plugin-compute.md)
+named: it needs the last frame, and no NCalc expression keeps one. The datum is not a SimHub property
+either. And a profile without the plugin is unchanged: the estimates read as null there, and each lamp
+lights on the sim's own report alone, as it did before.
+
+**What a strip does with it.** The traction control lamp lights on `TCActive` or on `WheelSpin`, and
+the ABS lamp on `ABSActive` or on `WheelLock`. Each strip has a switch, "Infer wheel spin and wheel lock"
+(`LedInferSlip`), on by default, which a driver turns off to have the lamps light only on what the sim
+reports. The estimate is the car's and rig-wide; the switch is the strip's.
+

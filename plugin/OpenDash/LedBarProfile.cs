@@ -31,8 +31,9 @@ namespace OpenDashPlugin
         /// The properties a bar owns, which are the ones a rewrite moves under its namespace.
         /// </summary>
         /// <remarks>
-        /// The four a strip always had, then its own brightness and its fifteen effect switches (#503):
-        /// twenty names, in the order the contract declares them.
+        /// The four a strip always had, then its own brightness and its fifteen effect switches (#503), then
+        /// whether its aid lamps read the slip estimate: twenty-one names, in the order the contract
+        /// declares them. The estimate itself is the car's and stays rig-wide.
         ///
         /// Everything else a strip profile reads stays rig-wide and is deliberately not here.
         /// `LightsBrightness` is the brightness a bar with none of its own falls back to, and
@@ -51,6 +52,7 @@ namespace OpenDashPlugin
                 Contract.LedBrightness,
             };
             names.AddRange(Contract.LedEffectSettings());
+            names.Add(Contract.LedInferSlip);
             return names.ToArray();
         }
 

@@ -51,8 +51,8 @@ Two related facts, both verified:
 | Brake, throttle | `GameData.Brake`, `GameData.Throttle` | 0..100 |
 | Fuel gauge | `GameData.FuelPercent` | 0..100 |
 | Low fuel | `GameData.CarSettings_FuelAlertActive` | What the native `Status.LowFuelRemainingLapsAlert` reads. SimHub computes it, so it works on iRacing |
-| ABS active | `GameData.ABSActive` | `(BrakeABSactive > 0)`. Real intervention, unlike TC |
-| TC | `GameData.TCLevel`, `GameData.TCActive` | Steady on the dial, blinking on the intervention — see best effort |
+| ABS active | `GameData.ABSActive`, `OpenDash.WheelLock` | `(BrakeABSactive > 0)`, a real intervention unlike TC, on a car with ABS. Otherwise the plugin's lock-up estimate, while the strip's `LedInferSlip` is on — see below |
+| TC | `GameData.TCActive`, `OpenDash.WheelSpin` | The intervention where a sim reports it. On iRacing, the plugin's wheelspin estimate, while the strip's `LedInferSlip` is on — see below |
 | DRS | `GameData.DRSAvailable`, `GameData.DRSEnabled` | Carry a stale `[NotAvailable]`, but the reader does fill them from `DRS_Status` |
 | Push to pass | `GameData.PushToPassActive`, `GameRawData.Telemetry.PlayerP2P_Count` | Injected per frame from `CarIdxP2P_*[playerCarIdx]` |
 | Headlight flash | `GameRawData.Telemetry.dcHeadlightFlash` | The only source. SimHub normalises nothing; absent entirely on a car without the control |
@@ -71,6 +71,31 @@ There is no speeding property at any layer. It is `IsInPitLane` **and** a `PitLi
 zero **and** a `SpeedLocal` above it by a margin. The margin is what stops the light strobing while
 the limiter settles. `PitLimiterSpeedMs` exists on `StatusDataBase` but carries `[DoNotExpose]`, so
 it is not a property.
+
+### Wheelspin and lock-up are estimated by the plugin, because SimHub keeps its estimate for ShakeIt
+
+Established on 2026-10-04 by decompiling `GameReaderCommon.dll` and `SimHub.Plugins.dll` 9.12.6.
+
+- iRacing publishes no wheel speeds and no traction-control flag. `GD_TCActive()` returns 0, and so
+  does every reader of it: `FeedbackData.TCActive` is copied from `GameData.TCActive` in
+  `GameManagerBase.PreParseDataBase`, and ShakeIt's TC Active effect reads `GameData.TCActive` again.
+- `StatusDataBase.FeedbackData` holds per-wheel `WheelSlip`, `WheelSpeed` and `WheelRPS`, and carries
+  `[DoNotExpose]`, so none of it is a property. That is SimHub's rule for `PitLimiterSpeedMs` above.
+- ShakeIt's wheel slip effect (`ShakeItV3.Effects.WheelSlipEffect.GetEffectValue`) picks a source by
+  what the sim provides: precalibrated slip, wheel RPS, direct slip, calibrated slip data, wheel
+  speeds, and last "RPM vs Speed" (`GetRpmSpeedSlip`, with a "legacy iRacing" variant behind a
+  switch). The last one is the rule `plugin/OpenDash/SlipEstimate.cs` applies.
+- That rule: nothing below 1 km/h or with the engine stopped on either frame, in neutral, or for 500
+  ms after `Gear` changes. Otherwise `|speed₀/rpm₀ − speed₁/rpm₁| × 4000`. Past 20 % brake it is a lock
+  weighted by `Offset(brake, 55, 90)`. Past 40 % throttle with the clutch under 5 % it is a spin
+  weighted by `Offset(throttle, 70, 100)`. `MathExtensions.Offset` is in none of the vendored
+  assemblies; it is taken to be the clamped 0-to-1 position, as its sibling `Map` is.
+- The plugin publishes `OpenDash.WheelSpin`, `OpenDash.WheelLock` and `OpenDash.TCInferred`. A strip's
+  TC and ABS lamps read the first two behind its `LedInferSlip` switch, which is on by default. ADR
+  0018's amendment of 2026-10-04 records why the plugin computes this.
+- Unverified on a rig: the threshold (0.2) and the hold (200 ms) are first guesses. The iRacing reader
+  itself is not among the vendored assemblies, so that iRacing takes the "RPM vs Speed" path is
+  inferred from ShakeIt's code rather than read from the reader.
 
 ### `EngineWarnings` is a bitfield, and two of its bits do not exist
 
@@ -91,7 +116,7 @@ asserts nothing.**
 
 | Effect | Property | What iRacing does |
 |---|---|---|
-| TC intervening | `GameData.TCActive` | `GD_TCActive()` is `[NotAvailable] return 0`. OpenDash's TC light is steady on `TCLevel` and blinks on `TCActive`, so on iRacing it is a steady light that never blinks |
+| TC intervening | `GameData.TCActive` | `GD_TCActive()` is `[NotAvailable] return 0`. The lamp lights there on the plugin's wheelspin estimate instead (above), and is dark without the plugin or with the strip's `LedInferSlip` off |
 | Turn indicators | `GameData.TurnIndicatorLeft` / `Right` | Both `[NotAvailable] return 0` — **hard zero, not null**, so `isnull()` cannot tell "off" from "not published" |
 | ERS charge, and KERS with it | `GameData.ERSPercent` | The reader overrides neither `GD_ERSMax` nor `GD_ERSStored`, so it is always 0. SimHub has no `KERS` member at all and normalises every hybrid store into this percentage |
 

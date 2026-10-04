@@ -345,6 +345,10 @@ migration; OpenDash has no store, since a setting is a SimHub property.
 - **The Full-strip spotter lights the whole strip**, the ends and the centre, for a car on a side that
   is switched on, because the installed profile does (`rpmStrip.ts` draws it over the whole run). The
   artboard lights only the centre's half on the car's side.
+- **Infer wheel spin and wheel lock is a row the artboard does not have.** It sits under This strip
+  after the Full-strip spotter, on every shape with a TC or an ABS lamp, and is on by default. With it
+  on, the TC lamp also lights on the plugin's wheelspin estimate and the ABS lamp on its lock-up
+  estimate (`PanelLeds.InferSlipTitle`; ADR 0018, amended 2026-10-04).
 - **The car line says nothing outside iRacing**, because the car data the plugin reads is iRacing's.
   When nothing was ever downloaded it says "Lovely Car Data is not downloaded yet. Download it under
   Every strip." (`PanelLeds.CarTablesMissing`).

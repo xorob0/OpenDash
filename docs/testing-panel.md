@@ -121,6 +121,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-12 | Each LED in turn #434 | | Hover | greyed | V |
 | LD-13 | Effects | Wheel rim / Dash brow | Observe; flip TC | 15 switches with ends, 9 on the brow (PanelLeds.EffectsFor); LedEffectTc property false; profile EnabledFormula reads it | U; V; J NCalc tester |
 | LD-14 | Flag animation / Full-strip spotter | | Flip | FlagAnimation, SpotterWhole; Full-strip hidden on the brow | J; V |
+| LD-14b | Infer wheel spin and wheel lock | Wheel rim / Dash brow | Flip off, then on; on the brow, observe | bar LedInferSlip false / true, on by default; no row on the brow (a bare run has no TC or ABS lamp); with it on and a wheel spun on iRacing, OpenDash.WheelSpin true and the TC lamp lit | U PanelLedsTests, SlipEstimateTests; J; N hardware |
 | LD-15 | Pit limiter lights #509 | | Hover | greyed | V |
 | LD-16 | Every strip Soon rows: Idle sweep #485, Engine start animation #300, Car data for AC, ACC and LMU #479 | | Hover | greyed | V |
 | LD-17 | Lovely Car Data | network | Download (Update once a copy is held) | off the UI thread; "Downloading…" then the status line; attribution; log | J; V |
