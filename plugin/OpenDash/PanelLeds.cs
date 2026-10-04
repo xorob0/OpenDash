@@ -111,6 +111,7 @@ namespace OpenDashPlugin
         public const string AnchorDevice = "leds.device";
         public const string AnchorBrightness = "leds.brightness";
         public const string AnchorReverse = "leds.reverse";
+        public const string AnchorFanatec = "leds.fanatec";
         public const string AnchorEffects = "leds.effects";
         public const string AnchorFlagAnimation = "leds.flag-animation";
         public const string AnchorSpotter = "leds.spotter";
@@ -172,7 +173,8 @@ namespace OpenDashPlugin
             return Digits(shape.Left) + Dot + Digits(shape.Centre) + Dot + Digits(shape.Right);
         }
 
-        /// <summary>The hardware a strip's shape was added as: the Fanatec wheel, or any other strip.</summary>
+        /// <summary>The hardware a strip's profile is for: the Fanatec wheel for a Fanatec wiring, or any other strip.
+        /// Read off the profile's id (LedBar.ProfileShapeId), which carries the wiring the bar's shape does not.</summary>
         public static string Hardware(string shapeId)
         {
             var shape = LightShape.Parse(shapeId);
@@ -887,12 +889,6 @@ namespace OpenDashPlugin
 
         public const string ShapeStep = "Shape";
 
-        public const string SetByTheWheel = "Set by the wheel";
-        public const string Fixed = "Fixed";
-
-        /// <summary>The shape the fixed shape row shows for a Fanatec wheel.</summary>
-        public static readonly string FanatecShape = ShapeDots(PanelLights.FanatecShapeId);
-
         /// <summary>The label of a count of ends in the segmented choice: None for a bare run.</summary>
         public static string EndsLabel(int ends)
         {
@@ -958,15 +954,30 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// The wiring the SimHub device picked decides: the Fanatec wheel's where the device's name says it is
-        /// one and the build carries that profile, else the plain strip, since the Fanatec wiring is the order
-        /// SimHub's Fanatec device presents and means nothing on another device (#683, #686). The sheet opens
-        /// on it from the device it prefers and follows every pick, so nobody is asked what their device says;
-        /// and the Fanatec wheel's wherever the build has no plain shape, since it is then the only one.
+        /// Whether the Add LEDs sheet's Fanatec compatibility mode is on after a device is picked, or as the sheet
+        /// opens on its preferred one.
         /// </summary>
-        public static bool WiringFollowsDevice(bool hasPlainShapes, bool offersFanatec, string deviceName)
+        /// <remarks>
+        /// A device whose name says Fanatec ticks it (#683, #686): the Fanatec wiring is the order SimHub's
+        /// Fanatec device presents, so nobody with one should be asked what their device already says. Any other
+        /// device leaves it to the driver: the switch stays as they set it, and off where they never touched it,
+        /// so a Fanatec wheel SimHub lists under another name is theirs to tick and a plain strip is never put in
+        /// a wiring it does not have. Off wherever the build embedded no Fanatec profile.
+        /// </remarks>
+        public static bool FanatecAfterPick(bool offersFanatec, string deviceName, bool current, bool setByDriver)
         {
-            return !hasPlainShapes || (offersFanatec && FoundFanatec(new[] { deviceName }));
+            if (!offersFanatec) return false;
+            if (FoundFanatec(new[] { deviceName })) return true;
+            return setByDriver && current;
+        }
+
+        /// <summary>The ends the sheet keeps when the ends on offer change, as the Fanatec switch changes them: the
+        /// ones chosen where they are still offered, else three, the Fanatec wheels' today, else the fewest.</summary>
+        public static int KeptSide(int[] sides, int chosen)
+        {
+            if (sides == null || sides.Length == 0) return chosen;
+            if (sides.Contains(chosen)) return chosen;
+            return StartSide(sides);
         }
 
         /// <summary>The ends the sheet opens on: three where the build has them, the artboard's 3 · 9 · 3, else
@@ -1160,6 +1171,25 @@ namespace OpenDashPlugin
             return takenOut == true || (takenOut == false && !heldInSimHub);
         }
 
+        /// <summary>The line after the Fanatec compatibility switch, as <see cref="ReverseSaid(string, bool)"/>.</summary>
+        public static string FanatecSaid(string name, bool fanatec)
+        {
+            return fanatec ? name + " is in Fanatec compatibility mode." : name + " is no longer in Fanatec compatibility mode.";
+        }
+
+        /// <summary>The line after the Fanatec switch installed the other wiring, as <see cref="ReverseSaid(string, bool, bool, string, string)"/>.</summary>
+        public static string FanatecSaid(string name, bool fanatec, bool wasInSimHub, string device, string note = null)
+        {
+            return Steps(FanatecSaid(name, fanatec), note, wasInSimHub ? null : SelectIt(name, device));
+        }
+
+        /// <summary>The Fanatec switch whose install failed, as <see cref="ReversedNotInstalled"/>: the wiring was saved first.</summary>
+        public static string FanatecNotInstalled(string name, bool fanatec)
+        {
+            var said = FanatecSaid(name, fanatec);
+            return said.Substring(0, said.Length - 1) + ", but its profile could not be installed again. See SimHub's log.";
+        }
+
         public static string ReverseSaid(string name, bool reversed)
         {
             return reversed ? "Reversed " + name + "." : name + " is no longer reversed.";
@@ -1234,6 +1264,7 @@ namespace OpenDashPlugin
             if (!PerStrip(anchor)) return true;
             if (bar == null) return false;
             if (anchor == AnchorReverse) return bar.SupportsReversal;
+            if (anchor == AnchorFanatec) return bar.SupportsFanatec;
             if (anchor == AnchorSpotter) return HasFullStripSpotter(bar.Shape);
             if (anchor == AnchorMirrorFit) return ShowsMirrorFit(bar.RpmStyle);
             if (anchor == AnchorEffects)
@@ -1297,6 +1328,7 @@ namespace OpenDashPlugin
                 new PanelSearch.Entry(PanelLights.BarDeviceTitle, PanelPage.Leds, AnchorDevice, "LED device", "arduino", "wheel"),
                 new PanelSearch.Entry(BrightnessTitle, PanelPage.Leds, AnchorBrightness, "strip brightness", "dim"),
                 new PanelSearch.Entry(ReverseTitle, PanelPage.Leds, AnchorReverse, "reversed", "far end", "wiring"),
+                new PanelSearch.Entry(PanelLights.BarFanatecSwitch, PanelPage.Leds, AnchorFanatec, "fanatec", "wheel", "wiring", "compatibility"),
                 new PanelSearch.Entry(EffectsTitle, PanelPage.Leds, AnchorEffects, "effect", "this strip only"),
                 new PanelSearch.Entry(FlagAnimationTitle, PanelPage.Leds, AnchorFlagAnimation, "flags"),
                 new PanelSearch.Entry(SpotterTitle, PanelPage.Leds, AnchorSpotter, "car alongside"),

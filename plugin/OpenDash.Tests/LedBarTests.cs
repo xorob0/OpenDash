@@ -417,6 +417,74 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Fanatec_compatibility_mode_is_a_switch_on_the_bar_as_reversal_is()
+        {
+            // A bar written before the switch carried the wiring in its shape: it loads as the plain 3/9/3 with
+            // the switch on, and installs the profile it always did, under the namespace it always had.
+            var settings = new OpenDashSettings
+            {
+                LedBars = new List<LedBar> { new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3-fanatec" } },
+            };
+            settings.Normalise();
+            var rim = settings.LedBarByNamespace("LedRim");
+            Assert.Equal("3-9-3", rim.Shape);
+            Assert.True(rim.Fanatec);
+            Assert.True(settings.BarFanatec("LedRim"));
+            Assert.Equal("3-9-3-fanatec", rim.ProfileShapeId);
+            Assert.Equal("LedRim", rim.Namespace);
+
+            // Off is the plain profile, on the Fanatec one, and a change is reported so the caller reinstalls.
+            Assert.True(settings.SetBarFanatec("LedRim", false));
+            Assert.Equal("3-9-3", rim.ProfileShapeId);
+            Assert.False(settings.SetBarFanatec("LedRim", false));
+            Assert.True(settings.SetBarFanatec("LedRim", true));
+            Assert.Equal("3-9-3-fanatec", rim.ProfileShapeId);
+            Assert.False(settings.SetBarFanatec("Gone", true));
+
+            // Not only the 3/9/3: any plain A/B/A with ends, as the generator writes them.
+            var future = settings.AddLedBar("4-8-4", "Future rim", LedBar.ArduinoDevice);
+            Assert.True(future.SupportsFanatec);
+            Assert.False(future.Fanatec);
+            Assert.True(settings.SetBarFanatec(future.Namespace, true));
+            Assert.Equal("4-8-4-fanatec", future.ProfileShapeId);
+            // Added in the Fanatec wiring, as the Add sheet hands it over, a bar arrives with the switch on.
+            var added = settings.AddLedBar("4-8-4-fanatec", "Added rim", LedBar.ArduinoDevice);
+            Assert.Equal("4-8-4", added.Shape);
+            Assert.True(added.Fanatec);
+            Assert.Equal("4-8-4-fanatec", added.ProfileShapeId);
+
+            // The order has no far end: the switch turns Reverse direction off, and Reverse is refused while it is on.
+            var strip = settings.AddLedBar("3-9-3", "Strip", LedBar.ArduinoDevice);
+            Assert.True(settings.SetBarReversed(strip.Namespace, true));
+            Assert.True(settings.SetBarFanatec(strip.Namespace, true));
+            Assert.False(strip.Reversed);
+            Assert.False(strip.SupportsReversal);
+            Assert.False(settings.SetBarReversed(strip.Namespace, true));
+            Assert.Equal("3-9-3-fanatec", strip.ProfileShapeId);
+            // Turning it off leaves the plain order, and Reverse is the driver's again.
+            Assert.True(settings.SetBarFanatec(strip.Namespace, false));
+            Assert.Equal("3-9-3", strip.ProfileShapeId);
+            Assert.True(strip.SupportsReversal);
+
+            // A bare run has no flag LEDs for the order to move, and a pre-grid brow has no twin at all.
+            var bare = settings.AddLedBar("0-15-0", "Brow", LedBar.ArduinoDevice);
+            Assert.False(bare.SupportsFanatec);
+            Assert.False(settings.SetBarFanatec(bare.Namespace, true));
+            Assert.Equal("0-15-0", bare.ProfileShapeId);
+            var brow = settings.AddLedBar("brow-15", "Old brow", LedBar.ArduinoDevice);
+            Assert.False(brow.SupportsFanatec);
+            // A file claiming it on a shape that has none is repaired.
+            bare.Fanatec = true;
+            settings.Normalise();
+            Assert.False(settings.LedBarByNamespace(bare.Namespace).Fanatec);
+
+            // The copy carries the switch.
+            var copy = rim.Copy();
+            Assert.True(copy.Fanatec);
+            Assert.Equal(rim.ProfileShapeId, copy.ProfileShapeId);
+        }
+
+        [Fact]
         public void A_bars_retired_rev_look_loads_as_left_to_right()
         {
             var settings = new OpenDashSettings
