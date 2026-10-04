@@ -470,6 +470,22 @@ namespace OpenDashPlugin
             bar.SetEffect(effectId, enabled);
         }
 
+        /// <summary>The colour one bar draws a colour setting in: its own or the default. Null for a bar that has
+        /// gone or a key no colour setting has.</summary>
+        public string BarColour(string ns, string key)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar == null ? null : bar.ColourOf(key);
+        }
+
+        /// <summary>Gives one bar a colour of its own for a colour setting, or the default back where
+        /// <paramref name="hex"/> is null; returns whether the bar's profile wants installing again (#794).</summary>
+        public bool SetBarColour(string ns, string key, string hex)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar != null && bar.SetColour(key, hex);
+        }
+
         /// <summary>Whether one bar is wired from the far end. False for a bar that has gone.</summary>
         public bool BarReversed(string ns)
         {

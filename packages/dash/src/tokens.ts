@@ -161,6 +161,18 @@ export const ds = {
       debrisStripe: hex('purpose.flag.debris.stripe'),
     },
     pitLimiter: hex('purpose.pitLimiter'),
+    // The strips' own defaults, one meaning each. A strip may override any of them per bar.
+    light: {
+      abs: hex('purpose.light.abs'),
+      tc: hex('purpose.light.tc'),
+      drs: hex('purpose.light.drs'),
+      p2p: hex('purpose.light.p2p'),
+      oilPressure: hex('purpose.light.oilPressure'),
+      temperature: hex('purpose.light.temperature'),
+      lowFuel: hex('purpose.light.lowFuel'),
+      spotter: hex('purpose.light.spotter'),
+      meatball: hex('purpose.light.meatball'),
+    },
     /**
      * A pop-up owns two colours of its own rather than borrowing `surface.zone` and `text.primary`
      * directly: the box is a thing that appears over the hero, and naming its fill and its rule

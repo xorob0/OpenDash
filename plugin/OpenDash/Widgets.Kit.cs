@@ -680,6 +680,40 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// One colour of a choice of colours, drawn as the colour itself: a square of it inside an outline, which
+        /// is the primary ink on the pressed one and the border elsewhere. Named by <paramref name="name"/>, since
+        /// a colour is not a word a screen reader can read off it, and saying whether it is the pressed one (#794).
+        /// </summary>
+        public static Button ColourSwatch(string name, string hex, bool pressed, Action click)
+        {
+            var swatch = new Border
+            {
+                Width = PanelKit.ColourSwatch,
+                Height = PanelKit.ColourSwatch,
+                CornerRadius = new CornerRadius(2),
+                Background = Brush(hex),
+            };
+            var button = new Button
+            {
+                Width = PanelKit.ColourSwatch + 2 * (PanelKit.ColourSwatchInset + PanelMetrics.BorderWeight),
+                Height = PanelKit.ColourSwatch + 2 * (PanelKit.ColourSwatchInset + PanelMetrics.BorderWeight),
+                Padding = new Thickness(PanelKit.ColourSwatchInset),
+                Background = System.Windows.Media.Brushes.Transparent,
+                BorderBrush = Brush(pressed ? Theme.TextPrimary : Theme.Border),
+                BorderThickness = new Thickness(PanelMetrics.BorderWeight),
+                Cursor = Cursors.Hand,
+                Content = swatch,
+                ToolTip = name,
+                Template = ButtonTemplate(System.Windows.Media.Brushes.Transparent, false),
+                FocusVisualStyle = FocusRing(),
+            };
+            AutomationName(button, name);
+            System.Windows.Automation.AutomationProperties.SetItemStatus(button, pressed ? "checked" : "unchecked");
+            if (click != null) button.Click += (sender, args) => click();
+            return button;
+        }
+
+        /// <summary>
         /// The binding chip: what a button is bound to, on the raised ground; a dashed "Not bound" when
         /// nothing is; and, when the bindings could not be read (<paramref name="bound"/> null), a plain
         /// outlined chip carrying <paramref name="text"/> and making no claim either way. A press goes

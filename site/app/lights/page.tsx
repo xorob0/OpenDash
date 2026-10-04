@@ -31,7 +31,7 @@ export default function Lights() {
       >
         <div className={styles.demo}>
           <LedStrip left={3} centre={9} right={3} live led={22} gap={8} />
-          <p className={`prose ${styles.aside}`}>A 3/9/3 strip, drawn by the site. Each side is three single lamps, counted from the outside in: a car alongside, then flags, then your car and the aids. The pit limiter takes the whole strip.</p>
+          <p className={`prose ${styles.aside}`}>A 3/9/3 strip, drawn by the site. Each side is three single lamps, counted from the outside in: a car alongside, then flags, then your car and the aids. ABS lights the left end and traction control the right. The pit limiter takes the whole strip.</p>
         </div>
         <div className={styles.columns}>
           <div className={styles.column}>

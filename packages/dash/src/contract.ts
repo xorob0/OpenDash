@@ -528,7 +528,7 @@ export const LED_BRIGHTNESS_SETTING = 'LedBrightness';
 /**
  * The switch for every effect a strip can draw, and the effect ids each one governs. #370, #791.
  *
- * One switch per thing a driver would name rather than one per container: the eight flag rows are
+ * One switch per thing a driver would name rather than one per container: the ten flag rows are
  * one switch, `LedEffectFlags`, because "no flags on my wheel" is a question a driver asks and "no
  * debris flag on my wheel" is not. Every id `ALL_EFFECTS()` in `leds/effects.ts` produces is listed,
  * which `leds.test.ts` holds; this file cannot import that one, which imports this.
@@ -555,7 +555,9 @@ const LED_EFFECT_SWITCHES: Readonly<Record<string, readonly string[]>> = {
   LedEffectLowFuel: ['lowFuel'],
   LedEffectTemperature: ['temperature'],
   LedEffectOilPressure: ['oilPressure'],
-  LedEffectFlags: ['flag.black', 'flag.caution', 'flag.yellow', 'flag.debris', 'flag.blue', 'flag.white', 'flag.green', 'flag.chequered'],
+  // `flag.black` stays first: it is the id the switch is stored under (`Contract.LedEffectPrimaryId`),
+  // so the red and meatball rows of #794 join at the end rather than where they rank.
+  LedEffectFlags: ['flag.black', 'flag.caution', 'flag.yellow', 'flag.debris', 'flag.blue', 'flag.white', 'flag.green', 'flag.chequered', 'flag.red', 'flag.meatball'],
   LedEffectSpotterLeft: ['spotter.left'],
   LedEffectSpotterRight: ['spotter.right'],
   LedEffectPitLane: ['pit.lane'],

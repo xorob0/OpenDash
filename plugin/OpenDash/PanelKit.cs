@@ -134,6 +134,11 @@ namespace OpenDashPlugin
         public const double ChipSwatch = 10;
         public const double ChipSwatchGap = 6;
 
+        /// <summary>A colour row's swatch (#794): 16 square, 3 in from its outline, 6 apart.</summary>
+        public const double ColourSwatch = 16;
+        public const double ColourSwatchInset = 3;
+        public const double ColourSwatchGap = 6;
+
         /// <summary>Screens' .chip, the binding chip on a zone or a glance: 26 high and 9 in.</summary>
         public const double BindingChipHeight = 26;
         public const double BindingChipPaddingX = 9;

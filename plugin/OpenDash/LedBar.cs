@@ -98,9 +98,20 @@ namespace OpenDashPlugin
         /// <summary>
         /// The effects this bar does not draw, by effect id; everything else it draws. A switch is stored
         /// under the first id its setting answers for (<see cref="Contract.LedEffectPrimaryId"/>), so the
-        /// eight flag rows are one entry. Null or empty is every effect on.
+        /// ten flag rows are one entry. Null or empty is every effect on.
         /// </summary>
         public List<string> EffectsOff { get; set; }
+
+        /// <summary>
+        /// The colours this bar draws in place of the defaults, by <see cref="Contract.LedColours"/> key, as
+        /// "#RRGGBB" (#794). A key it leaves out is drawn in its default, so null or empty is every default.
+        /// </summary>
+        /// <remarks>
+        /// Not a property the profile reads: SimHub binds no colour on an LED container that blinks, so the
+        /// colours are written into the profile the bar installs (<see cref="LedBarProfile.For"/>), and choosing
+        /// one installs it again.
+        /// </remarks>
+        public Dictionary<string, string> Colours { get; set; }
 
         /// <summary>Whether this bar's shape has a reversed twin it may install: a plain shape of the grid,
         /// not one already carrying a wiring suffix, and not a pre-grid `brow-N`, which the generator never
@@ -166,6 +177,48 @@ namespace OpenDashPlugin
                 if (Contract.IsLedEffect(off) && string.Equals(Contract.LedEffectSetting(off), setting, StringComparison.Ordinal)) return false;
             }
             return true;
+        }
+
+        /// <summary>The colour this bar draws <paramref name="key"/> in: its own, or the default. Null for a key
+        /// no colour setting has.</summary>
+        public string ColourOf(string key)
+        {
+            var colour = Contract.FindLedColour(key);
+            if (colour == null) return null;
+            string own;
+            if (Colours != null && Colours.TryGetValue(key, out own))
+            {
+                var hex = Contract.NormaliseLedHex(own);
+                if (hex != null) return hex;
+            }
+            return colour.DefaultHex;
+        }
+
+        /// <summary>Whether this bar draws <paramref name="key"/> in a colour of its own rather than the default.</summary>
+        public bool HasOwnColour(string key)
+        {
+            var colour = Contract.FindLedColour(key);
+            return colour != null && !string.Equals(ColourOf(key), colour.DefaultHex, StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// Gives <paramref name="key"/> a colour of this bar's own, or takes it back to the default where
+        /// <paramref name="hex"/> is null or is the default. Returns whether what the bar draws changed, which is
+        /// whether its profile wants installing again. A key no colour setting has, or a colour that is not one,
+        /// changes nothing.
+        /// </summary>
+        public bool SetColour(string key, string hex)
+        {
+            var colour = Contract.FindLedColour(key);
+            if (colour == null) return false;
+            var normal = hex == null ? null : Contract.NormaliseLedHex(hex);
+            if (hex != null && normal == null) return false;
+            var before = ColourOf(key);
+            var colours = Colours ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            if (normal == null || string.Equals(normal, colour.DefaultHex, StringComparison.Ordinal)) colours.Remove(key);
+            else colours[key] = normal;
+            Colours = colours;
+            return !string.Equals(before, ColourOf(key), StringComparison.Ordinal);
         }
 
         /// <summary>Turns one effect's switch on or off; for a flag row, every flag row's.</summary>
@@ -271,6 +324,20 @@ namespace OpenDashPlugin
                 }
             }
             EffectsOff = off;
+            // Only keys a colour setting has, in a colour that is one and is not the default: a hand-edited
+            // file cannot reach a profile with a colour SimHub cannot read.
+            var colours = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (Colours != null)
+            {
+                foreach (var pair in Colours)
+                {
+                    var colour = Contract.FindLedColour(pair.Key);
+                    var hex = Contract.NormaliseLedHex(pair.Value);
+                    if (colour == null || hex == null || string.Equals(hex, colour.DefaultHex, StringComparison.Ordinal)) continue;
+                    colours[pair.Key] = hex;
+                }
+            }
+            Colours = colours;
         }
 
         public LedBar Copy()
@@ -291,6 +358,7 @@ namespace OpenDashPlugin
                 LayoutX = LayoutX,
                 LayoutY = LayoutY,
                 EffectsOff = EffectsOff == null ? null : new List<string>(EffectsOff),
+                Colours = Colours == null ? null : new Dictionary<string, string>(Colours, StringComparer.Ordinal),
             };
         }
     }

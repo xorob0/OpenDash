@@ -121,7 +121,7 @@ namespace OpenDashPlugin
         /// <summary>What a strip is set to that changes its picture.</summary>
         private StripOptions LedsOptions(LedBar bar)
         {
-            return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff, Settings.BarCentre(bar.Namespace));
+            return PanelLeds.OptionsFor(Settings.BarSpotterWhole(bar.Namespace), bar.EffectsOff, Settings.BarCentre(bar.Namespace), bar.Colours);
         }
 
         // --- The cards ----------------------------------------------------------------------------------------
@@ -208,6 +208,7 @@ namespace OpenDashPlugin
             parts.Add(Ui.Anchor(preview, PanelLeds.AnchorPreview));
             parts.Add(LedsColumns(LedsRevLights(bar, redrawPreview), LedsThisStrip(bar, targets, declined, redrawPreview)));
             parts.Add(Ui.Anchor(LedsEffects(bar, redrawPreview), PanelLeds.AnchorEffects));
+            parts.Add(Ui.Anchor(LedsColours(bar), PanelLeds.AnchorColours));
             return LedsBlock(Ui.VStack(18, parts.ToArray()));
         }
 
@@ -868,6 +869,49 @@ namespace OpenDashPlugin
             };
         }
 
+        // --- Colours (#794) -------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// A row for each colour the strip's shape draws, with the default and the palette's hues to pick from
+        /// (#794). A colour is written into the strip's profile rather than read by it, so a pick installs the
+        /// profile again, as Reverse direction does.
+        /// </summary>
+        private FrameworkElement LedsColours(LedBar bar)
+        {
+            var ns = bar.Namespace;
+            var caption = Ui.Prose(PanelLeds.ColoursCaption);
+            caption.VerticalAlignment = VerticalAlignment.Bottom;
+            caption.Margin = new Thickness(12, 0, 0, 2);
+            var head = new DockPanel { LastChildFill = true, Margin = new Thickness(0, 0, 0, 4) };
+            DockPanel.SetDock(caption, Dock.Right);
+            head.Children.Add(caption);
+            var tag = Ui.NewTag();
+            tag.Margin = new Thickness(8, 0, 0, 0);
+            tag.VerticalAlignment = VerticalAlignment.Center;
+            var title = Ui.HStack(0, Ui.Heading(PanelLeds.ColoursTitle), tag);
+            title.HorizontalAlignment = HorizontalAlignment.Left;
+            head.Children.Add(title);
+
+            var rows = new List<UIElement>();
+            foreach (var colour in PanelLeds.ColoursFor(bar.Shape))
+            {
+                var current = Settings.BarColour(ns, colour.Key);
+                var pressed = PanelLeds.PressedChoice(colour, current);
+                var swatches = new List<UIElement>();
+                foreach (var choice in PanelLeds.ColourChoicesFor(colour))
+                {
+                    var picked = choice;
+                    var swatch = Ui.ColourSwatch(colour.Label + ", " + choice.Name, choice.Hex, pressed != null && pressed.Name == choice.Name, () => PickLedColour(ns, colour, picked));
+                    swatch.Margin = new Thickness(0, 0, PanelKit.ColourSwatchGap, 0);
+                    swatches.Add(swatch);
+                }
+                var row = LedsRow(colour.Label, Ui.HStack(0, swatches.ToArray()));
+                if (rows.Count == 0) row.BorderThickness = new Thickness(0);
+                rows.Add(row);
+            }
+            return Ui.VStack(0, head, Ui.Rows(rows.ToArray()));
+        }
+
         // --- Every strip ----------------------------------------------------------------------------------------
 
         private FrameworkElement LedsEveryStripSection()
@@ -1323,6 +1367,33 @@ namespace OpenDashPlugin
             Select(PanelPage.Leds, null);
             Redraw();
             Say(PanelLeds.Removed(name, held, takenOut), PanelLeds.RemovedCleanly(held, takenOut));
+        }
+
+        /// <summary>Gives the strip a colour of its own, or its default back, and installs its profile again where
+        /// the page can; where it cannot, the colour is saved and the line says what is left to do.</summary>
+        private void PickLedColour(string ns, LedColour colour, PanelLeds.ColourChoice choice)
+        {
+            var bar = Settings.LedBarByNamespace(ns);
+            if (bar == null) return;
+            var hex = choice.Name == PanelLeds.DefaultColourName ? null : choice.Hex;
+            if (!Settings.SetBarColour(ns, colour.Key, hex)) return;
+            Save();
+            var facts = StripFacts(ns);
+            var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);
+            var targets = ledDevices.Targets;
+            var declined = ledDevices.Declined;
+            var blocked = LedsProfileBlocked(bar, targets, declined);
+            var plan = blocked == null ? LedsReinstall(bar, targets) : null;
+            Redraw();
+            if (plan == null)
+            {
+                Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ColourSaid(bar.Name, colour, choice), blocked)));
+                return;
+            }
+            var ok = plan.State == FlagBoxInstallState.UpToDate;
+            var target = LedsTargetOf(targets, bar.Device);
+            var line = ok ? PanelLeds.ColourSaid(bar.Name, colour, choice, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ColourNotInstalled(bar.Name, colour, choice);
+            Say(line, ok && plan.Note == null);
         }
 
         // --- The Add LEDs sheet ---------------------------------------------------------------------------------

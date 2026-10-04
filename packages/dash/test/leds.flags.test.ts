@@ -14,7 +14,8 @@ import { describe, expect, test } from 'bun:test';
 import { ncalc, stableGuid, leds } from '../src/generator.ts';
 import { ALL_SHAPES, BARE_RUN_LENGTHS, stripLength, type StripShape } from '../src/leds/strip.ts';
 import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
-import { BLINK_OFF, FAST_BLINK_MS, FLAG_ROWS, SLOW_BLINK_MS, SPOTTER_EFFECTS, flagEffects } from '../src/leds/effects.ts';
+import { BLINK_OFF, FAST_BLINK_MS, FLAG_ROWS, SLOW_BLINK_MS, SPOTTER_EFFECTS, flagEffects, flagSpreads } from '../src/leds/effects.ts';
+import { FLAG_TAKEOVER_MS } from '../src/components/flagStrip.ts';
 import { FLAG_CATALOGUE, flagBit, type FlagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { drawnFlags } from '../src/leds/profile.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
@@ -71,22 +72,18 @@ const shown = (raised: readonly SessionFlagBit[]): string | undefined => {
 const rowOf = new Map<string, string>(FLAG_ROWS.flatMap((row) => row.conditions.map((id) => [id, `flag.${row.id}`] as const)));
 
 /**
- * The three conditions the strip does not draw, and the token that blocks each.
- *
- * A red flag and the start gantry both draw in `purpose.flag.red`, which resolves to the same
- * `#FF2D46` as `purpose.fuel.low`; the low-fuel lamp blinks at the 2 Hz a red flag would, and on a
- * two-LED side the flags share their lamp with the car warnings, so the two would be one light with
- * two meanings. The canvas asks for amber on low fuel, and `design/tokens.json` is the author's
- * file. This list is pinned rather than the gap being left silent, so that the day the token moves
- * the three rows are added here rather than discovered missing in a race.
+ * The two conditions the strip does not draw: the start gantry, whose ready and set the box draws in
+ * outlined green. On a lamp they would be the green flag held, and a start sequence across the side
+ * LEDs is its own ticket. The red flag was here until #794 moved low fuel off its red; it is a row
+ * now. This list is pinned rather than the gap being left silent.
  */
-const UNDRAWN: readonly string[] = ['red', 'startSet', 'startReady'];
+const UNDRAWN: readonly string[] = ['startSet', 'startReady'];
 
 /** The conditions the strip draws, highest rank first. */
 const drawnOnStrip = (): FlagCondition[] => FLAG_CATALOGUE.filter((c) => !UNDRAWN.includes(c.id));
 
 describe('the catalogue reaches the strip', () => {
-  test('the rows are the catalogue in its own order, minus the three a token blocks', () => {
+  test('the rows are the catalogue in its own order, minus the start gantry', () => {
     const covered = flagEffects()
       .slice()
       .reverse()
@@ -96,7 +93,7 @@ describe('the catalogue reaches the strip', () => {
     // property of the list rather than an intention.
     expect(covered).toEqual(drawnOnStrip().map((c) => c.id));
     expect(FLAG_CATALOGUE.filter((c) => !covered.includes(c.id)).map((c) => c.id)).toEqual([...UNDRAWN]);
-    // The box draws all fifteen, so the three are a gap against it rather than a shared refusal.
+    // The box draws all fifteen, so the two are a gap against it rather than a shared refusal.
     expect(drawnFlags(false).map((c) => c.id)).toEqual(FLAG_CATALOGUE.map((c) => c.id));
   });
 
@@ -148,8 +145,8 @@ describe('which flag is out', () => {
       const stripPick = drawnOnStrip().find((c) => c.bits.some((b) => raised.includes(b)));
       const at = raised.join(' ') || 'nothing raised';
       expect({ at, shown: shown(raised) }).toMatchObject({ shown: stripPick === undefined ? undefined : rowOf.get(stripPick.id) });
-      // ...and the two only ever differ by one of the three the token blocks.
-      if (boxPick !== undefined && boxPick !== stripPick) expect({ at, skipped: boxPick.id }).toMatchObject({ skipped: expect.stringMatching(/^(red|startSet|startReady)$/) });
+      // ...and the two only ever differ by the start gantry.
+      if (boxPick !== undefined && boxPick !== stripPick) expect({ at, skipped: boxPick.id }).toMatchObject({ skipped: expect.stringMatching(/^(startSet|startReady)$/) });
     }
   });
 
@@ -158,7 +155,11 @@ describe('which flag is out', () => {
     // the caution and the waved yellow in with the plain one.
     expect(shown(['disqualify'])).toBe('flag.black');
     expect(shown(['furled'])).toBe('flag.black');
-    expect(shown(['repair'])).toBe('flag.black');
+    // The meatball is a row of its own since #794, in the orange of its disc.
+    expect(shown(['repair'])).toBe('flag.meatball');
+    // The red flag reaches the lamp since #794, and outranks everything: the session is stopped.
+    expect(shown(['red'])).toBe('flag.red');
+    expect(shown(['red', 'black'])).toBe('flag.red');
     expect(shown(['caution'])).toBe('flag.caution');
     expect(shown(['yellowWaving'])).toBe('flag.yellow');
     expect(shown(['debris'])).toBe('flag.debris');
@@ -243,15 +244,20 @@ describe('where a flag is drawn', () => {
 describe('what one flag looks like beside another', () => {
   const effect = (id: string) => flagEffects().find((e) => e.id === id)!;
 
-  test('the black family takes the fast tier and every other flag the flag band rate of 2 Hz', () => {
+  test('the black family and the whole-track yellow take the fast tier and every other flag the flag band rate of 2 Hz', () => {
     // Fast is what is addressed to this car: the black, the disqualification, the furled black and
-    // the meatball all say come in, and the debris takes it for the same urgency on the road.
-    expect({ black: effect('flag.black').blinkDelayMs, debris: effect('flag.debris').blinkDelayMs }).toEqual({ black: FAST_BLINK_MS, debris: FAST_BLINK_MS });
-    for (const id of ['flag.chequered', 'flag.caution', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']) {
+    // the meatball all say come in, and the debris takes it for the same urgency on the road. The full
+    // course yellow takes it to be told from the yellow in one corner, which is the same yellow.
+    for (const id of ['flag.black', 'flag.meatball', 'flag.debris', 'flag.caution']) {
+      expect({ id, delay: effect(id).blinkDelayMs }).toMatchObject({ delay: FAST_BLINK_MS });
+    }
+    // The red flag is FIA 3504's 2 Hz, which is also what tells it from oil pressure's 4 Hz red.
+    for (const id of ['flag.red', 'flag.chequered', 'flag.yellow', 'flag.blue', 'flag.white', 'flag.green']) {
       expect({ id, delay: effect(id).blinkDelayMs }).toMatchObject({ delay: SLOW_BLINK_MS });
     }
-    // The four conditions of the black family are on the one row that carries the fast tier.
-    for (const id of ['black', 'disqualify', 'furled', 'meatball']) expect({ id, row: rowOf.get(id) }).toMatchObject({ row: 'flag.black' });
+    for (const id of ['black', 'disqualify', 'furled']) expect({ id, row: rowOf.get(id) }).toMatchObject({ row: 'flag.black' });
+    // The meatball has a row of its own, in the orange of its disc rather than the black's white.
+    expect({ row: rowOf.get('meatball'), color: effect('flag.meatball').color }).toEqual({ row: 'flag.meatball', color: ds.purpose.light.meatball });
   });
 
   test('the black and the chequer exchange their two colours, which is what antiphase is in this format', () => {
@@ -266,13 +272,16 @@ describe('what one flag looks like beside another', () => {
     expect(chequer.blinkDelayMs).toBe(SLOW_BLINK_MS);
   });
 
-  test('the full course yellow alternates two lit colours, to say the whole track rather than this corner', () => {
+  test('the full course yellow is the flag yellow at the fast rate, to say the whole track rather than this corner', () => {
+    // It alternated the yellow with the caution amber, and an RGB LED draws the two as one colour, so
+    // the lamp a driver saw was a yellow that did not blink. The rate is what an LED can show.
     const caution = effect('flag.caution');
-    expect(new Set([caution.color, caution.blinkColor])).toEqual(new Set([ds.color.caution.primary, ds.purpose.flag.yellow]));
-    // The amber is the steady half: the caution and the plain yellow share a lamp and a rate, so the
-    // colour they are read by at the instant of a glance is all that separates them.
-    expect(caution.color).toBe(ds.color.caution.primary);
-    expect(effect('flag.yellow').color).toBe(ds.purpose.flag.yellow);
+    expect({ color: caution.color, blink: caution.blinkColor ?? BLINK_OFF, delay: caution.blinkDelayMs }).toEqual({
+      color: ds.purpose.flag.yellow,
+      blink: BLINK_OFF,
+      delay: FAST_BLINK_MS,
+    });
+    expect({ color: effect('flag.yellow').color, delay: effect('flag.yellow').blinkDelayMs }).toEqual({ color: ds.purpose.flag.yellow, delay: SLOW_BLINK_MS });
   });
 
   test('the debris flag alternates its yellow with its stripes’ red, so the lamp is never the yellow flag', () => {
@@ -294,6 +303,7 @@ describe('what one flag looks like beside another', () => {
       'flag.blue': ds.purpose.flag.blue,
       'flag.white': ds.purpose.flag.white,
       'flag.green': ds.purpose.flag.green,
+      'flag.red': ds.purpose.flag.red,
     };
     for (const [id, color] of Object.entries(drawn)) {
       const e = effect(id);
@@ -303,5 +313,69 @@ describe('what one flag looks like beside another', () => {
       // was its own hex.
       expect({ id, blinks: e.blinkWhen !== undefined }).toMatchObject({ blinks: true });
     }
+  });
+});
+
+describe('how far a flag reaches (#794)', () => {
+  const spreadOf = (id: string) => flagSpreads(undefined).find((e) => e.id === `flag.${id}.spread`);
+  const customStatusAt = (shape: StripShape, label: string): Placed[] =>
+    placedOf(profileFor(shape).containers).filter((p) => p.description === label && p.container.kind === 'customStatus');
+  const four = ALL_SHAPES.find((s) => s.id === '4-14-4')!;
+
+  test('the red flag takes every LED of both sides for as long as it is out, and never the centre', () => {
+    const red = spreadOf('red')!;
+    // Out is enough: no window on it.
+    expect(red.when).not.toContain('changed(');
+    const at = customStatusAt(four, 'Red flag, spread').map((p) => p.start).sort((a, b) => a - b);
+    // Every side LED but the race lamp's, which draws the red flag itself.
+    expect(at).toEqual([1, 3, 4, 19, 20, 22]);
+    for (const shape of ALL_SHAPES.filter((s) => s.left > 1)) {
+      for (const p of customStatusAt(shape, 'Red flag, spread')) {
+        const onASide = p.start <= shape.left || p.start > shape.left + shape.centre;
+        expect({ shape: shape.id, start: p.start, onASide }).toMatchObject({ onASide: true });
+      }
+    }
+  });
+
+  test('the black family, the meatball, the full course yellow and the waved yellow spread only while they are new', () => {
+    for (const id of ['black', 'meatball', 'caution', 'yellow']) {
+      const spread = spreadOf(id)!;
+      expect({ id, window: spread.when.includes(`changed(${String(FLAG_TAKEOVER_MS)}, `) }).toMatchObject({ window: true });
+    }
+    // The standing yellow does not: only the waved one is the danger in front of the car now.
+    expect(spreadOf('yellow')!.when).toContain('IsyellowWaving');
+    // Everything else keeps its one LED, the blue above all, which comes out every lap in multiclass.
+    for (const id of ['debris', 'blue', 'white', 'green', 'chequered']) expect({ id, spreads: spreadOf(id) }).toMatchObject({ spreads: undefined });
+  });
+
+  test('a flag borrows an idle LED and takes none: the spotter and the car warnings keep theirs, the aids give theirs up', () => {
+    const groups = placedOf(profileFor(four).containers).filter((p) => p.description.endsWith(' lamp'));
+    const child = (lampLabel: string, label: string): Extract<leds.LedContainer, { kind: 'customStatus' }> =>
+      leds.childrenOf(groups.find((g) => g.description === lampLabel)!.container).find((c) => c.description === label)! as Extract<
+        leds.LedContainer,
+        { kind: 'customStatus' }
+      >;
+    const spotter = SPOTTER_EFFECTS.find((e) => e.id === 'spotter.left')!;
+    // Guarded by the spotter on the outermost LED...
+    expect(child('left side lamp', 'Red flag, spread').enabledFormula.expression).toContain('SpotterCarLeft');
+    // ...and by oil pressure on the engine's LED...
+    expect(child('left engine lamp', 'Red flag, spread').enabledFormula.expression).toContain('EngineWarnings');
+    // ...while ABS is guarded by the flag on the brake's LED.
+    expect(child('left brake aid lamp', 'ABS active').enabledFormula.expression).toContain('Isred');
+    expect(spotter.label).toBe('Car alongside, left');
+  });
+
+  test('on a side of two every flag also takes the outer LED while a car warning holds the inner one', () => {
+    const two = ALL_SHAPES.find((s) => s.id === '2-10-2')!;
+    // The blue flag spreads nowhere else, so its spread here is the overflow alone...
+    const blue = customStatusAt(two, 'Blue flag, spread');
+    expect(blue.map((p) => p.start).sort((a, b) => a - b)).toEqual([1, stripLength(two)]);
+    const when = (blue[0]!.container as Extract<leds.LedContainer, { kind: 'customStatus' }>).enabledFormula.expression;
+    expect(when).toContain('LightsLowFuelLaps');
+    expect(when).toContain('SpotterCarLeft');
+    // ...and on a side of three, where the flag has an LED of its own, it has none.
+    expect(customStatusAt(ALL_SHAPES.find((s) => s.id === '3-9-3')!, 'Blue flag, spread')).toEqual([]);
+    // A side of one has the flag on its only LED and nothing to borrow.
+    expect(customStatusAt(ALL_SHAPES.find((s) => s.id === '1-10-1')!, 'Red flag, spread')).toEqual([]);
   });
 });

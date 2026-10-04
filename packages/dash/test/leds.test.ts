@@ -26,6 +26,7 @@ import {
   effectContainer,
   effectContainers,
   flagEffects,
+  flagSpreads,
 } from '../src/leds/effects.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
 import { ignitionIsOn } from '../src/leds/gates.ts';
@@ -398,7 +399,9 @@ describe('the effect catalogue', () => {
       'flag.debris',
       'flag.yellow',
       'flag.caution',
+      'flag.meatball',
       'flag.black',
+      'flag.red',
     ]);
     const yellow = flagEffects().find((e) => e.id === 'flag.yellow')!;
     expect(yellow.when).toContain('SessionFlagsDetails.Isyellow');
@@ -438,7 +441,8 @@ describe('the effect catalogue', () => {
       expect({ id: flag.id, lit: held!.color === flag.color || held!.color === flag.blinkColor }).toMatchObject({ lit: true });
     }
     // ...and on every shape, so there is no device that draws a flag it cannot hold.
-    const labels = new Set(flagEffects().map((e) => e.label));
+    // A flag spread over a side's other LEDs is held the same way as on its own lamp (#794).
+    const labels = new Set([...flagEffects(), ...flagSpreads('true')].map((e) => e.label));
     for (const shape of ALL_SHAPES) {
       const profile = rpmStripProfile(shape, stableGuid(`t/held/${shape.id}`));
       // The lit containers alone: on a shape with no lamps a flag is also the name of the group that
@@ -533,28 +537,31 @@ describe('the effect catalogue', () => {
     }
   });
 
-  test('the aid lamp draws the pair the way UN R121 and the manuals do: ABS amber, traction control blue', () => {
+  test('the aid lamp draws the pair the way the race cars do: ABS orange, traction control blue', () => {
     const by = (id: string): (typeof SIDE_EFFECTS)[number] => SIDE_EFFECTS.find((e) => e.id === id)!;
     // The build drew the two the other way round, and the reversal is the point of this test: a
     // driver who has read either lamp on a road car or in any other sim reads the swap as the other
-    // system intervening. Both are steady, because an intervention is a state and not an event.
-    expect({ abs: by('abs').color, tc: by('tc').color }).toEqual({ abs: ds.color.caution.primary, tc: ds.color.info.primary });
+    // system intervening. Both are steady, because an intervention is a state and not an event. ABS
+    // is orange rather than the caution amber because an LED draws that amber as the yellow flag.
+    expect({ abs: by('abs').color, tc: by('tc').color }).toEqual({ abs: ds.purpose.light.abs, tc: ds.purpose.light.tc });
+    expect(ds.purpose.light.abs).not.toBe(ds.color.caution.primary);
     expect({ abs: by('abs').blinkWhen, tc: by('tc').blinkWhen }).toMatchObject({ abs: undefined, tc: undefined });
   });
 
   test('a condition with two states draws the second in a second colour, and one with one state in darkness', () => {
     const drs = SIDE_EFFECTS.find((e) => e.id === 'drs')!;
     const p2p = SIDE_EFFECTS.find((e) => e.id === 'p2p')!;
-    // Push to pass carries two facts: blue while one is in hand, green while one is being spent.
-    // Both were white before, which made the lamp one colour and the blink invisible on top of it.
+    // Push to pass is lit only while one is being spent, at the slow rate. Having one in hand was a
+    // blue lit all race, and the same steady blue as traction control on the lamp the two share.
     expect({ color: p2p.color, blinkColor: p2p.blinkColor, delay: p2p.blinkDelayMs }).toMatchObject({
-      color: ds.color.info.primary,
-      blinkColor: ds.color.good.primary,
-      delay: FAST_BLINK_MS,
+      color: ds.purpose.light.p2p,
+      blinkColor: undefined,
+      delay: SLOW_BLINK_MS,
     });
+    expect(p2p.when).not.toContain('PlayerP2P_Count');
     // DRS carries one fact in two rhythms, so its off phase is darkness rather than a second hue.
     expect({ color: drs.color, blinkColor: drs.blinkColor, delay: drs.blinkDelayMs }).toMatchObject({
-      color: ds.color.good.primary,
+      color: ds.purpose.light.drs,
       blinkColor: undefined,
       delay: FAST_BLINK_MS,
     });
@@ -573,15 +580,16 @@ describe('the effect catalogue', () => {
     }
   });
 
-  test('the car lamp reads both temperature bits in amber, and oil pressure in red only while the engine turns', () => {
+  test('the car lamp reads both temperature bits in red held, and oil pressure in red flashing only while the engine turns', () => {
     const temperature = SIDE_EFFECTS.find((e) => e.id === 'temperature')!;
-    expect({ color: temperature.color, delay: temperature.blinkDelayMs }).toMatchObject({ color: ds.color.caution.primary, delay: FAST_BLINK_MS });
+    // Held, where oil pressure flashes fast and the red flag pulses slow: three reds, three rhythms.
+    expect({ color: temperature.color, blink: temperature.blinkWhen }).toMatchObject({ color: ds.purpose.light.temperature, blink: undefined });
     // Bit 1 is water and 0x0040 is oil; one lamp takes both, because a single LED cannot say which
     // fluid it is and the driver's answer to either is to lift and watch the gauge.
     expect(temperature.when).toContain('EngineWarnings');
     expect(temperature.when).toContain('(64)');
     const oil = SIDE_EFFECTS.find((e) => e.id === 'oilPressure')!;
-    expect({ color: oil.color, delay: oil.blinkDelayMs }).toMatchObject({ color: ds.color.danger.primary, delay: FAST_BLINK_MS });
+    expect({ color: oil.color, delay: oil.blinkDelayMs }).toMatchObject({ color: ds.purpose.light.oilPressure, delay: FAST_BLINK_MS });
     // A stopped engine sets the bit as readily as a failing one, so the lamp would otherwise be red
     // in every garage and on every grid.
     expect(oil.when).toContain('Rpms');
@@ -761,6 +769,7 @@ describe('every generated profile', () => {
       ...Object.values(ds.purpose.flag),
       ...Object.values(ds.purpose.fuel),
       ...Object.values(ds.purpose.alert),
+      ...Object.values(ds.purpose.light),
       ds.purpose.pitLimiter,
       ds.color.good.primary,
       ds.color.caution.primary,
@@ -1038,7 +1047,8 @@ describe('the effect switches (#370, #791)', () => {
     // Structural rather than evaluated: a lower row's guard is not() of the higher row's `when`, and
     // that `when` is the gated one, whose first term is the switch. So with the switch off the higher
     // row is not lit and the guard is true -- off means gone, not dark.
-    const placed = walk(profileFor('4-14-4').containers).filter((c): c is Extract<leds.LedContainer, { kind: 'customStatus' }> => c.kind === 'customStatus');
+    // A 3/9/3, where low fuel shares the car lamp with oil pressure on both sides.
+    const placed = walk(profileFor('3-9-3').containers).filter((c): c is Extract<leds.LedContainer, { kind: 'customStatus' }> => c.kind === 'customStatus');
     const oil = ALL_EFFECTS().find((e) => e.id === 'oilPressure')!;
     expect(oil.when.startsWith(`(${setting.ledEffectOn('oilPressure')}) and (`)).toBe(true);
     const lowFuel = placed.find((c) => c.description === 'Low fuel')!;

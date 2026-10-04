@@ -15,8 +15,17 @@
  * rather than shadowed so that a missing aid is a statement about a two-LED side rather than an
  * accident of ranking.
  *
- * Nothing here knows what a condition is, only which role owns it; the catalogue in `effects.ts`
- * carries the conditions and `rpmStrip.ts` turns a lamp into a container.
+ * **What concerns the whole car is mirrored; what is local is not** (#794). The flags and, on a side
+ * of three, the car's own warnings light both ends, because a stopped session or a failing engine is
+ * not about one side. The spotter and the indicators light the end they are about, and so do the
+ * aids, split by pedal: ABS on the left, which is the brake's side, and traction control, DRS and
+ * push to pass on the right, the throttle's. A side of four or more splits the car's warnings the same
+ * way, the engine on the left and the fuel on the right. Mirroring every lamp spent half the LEDs of a
+ * 3/n/3 saying everything twice, which is why ABS, traction control, the temperature and the fuel used
+ * to queue for one LED.
+ *
+ * Nothing here knows what a condition is beyond the few ids a lamp is narrowed to; the catalogue in
+ * `effects.ts` carries the conditions and `rpmStrip.ts` turns a lamp into a container.
  */
 import { rightStart, type StripShape } from './strip.ts';
 
@@ -26,6 +35,9 @@ export type LampRole = 'side' | 'race' | 'car' | 'aid';
 /** Where a condition lands: on the lamp of one role, or on the whole strip. */
 export type EffectRole = LampRole | 'strip';
 
+/** Which end of the strip a side is. */
+export type Side = 'left' | 'right';
+
 export interface Lamp {
   /** The role that owns it, and whose conditions rank first on it. */
   role: LampRole;
@@ -33,27 +45,48 @@ export interface Lamp {
   label: string;
   /** Every role it draws, highest rank first. A lamp of its own role carries only that. */
   carries: readonly LampRole[];
-  /** Where a lamp takes only part of a role, the effect ids it takes. */
-  only?: readonly string[];
+  /** Where a lamp takes only part of a role, the effect ids it takes of that role. */
+  only?: Partial<Record<LampRole, readonly string[]>>;
+  /**
+   * Whether a flag may borrow this LED: `spread` for the flags that take a whole side, and `overflow`
+   * for those and, besides, any flag the car lamp beside it is holding out. A lamp that carries the
+   * race role has the flag already and borrows nothing. `flagSpreads` in `effects.ts` says which.
+   */
+  borrows?: 'spread' | 'overflow';
 }
 
-const lamp = (role: LampRole, label: string, carries: readonly LampRole[], only?: readonly string[]): Lamp => ({
+const lamp = (role: LampRole, label: string, carries: readonly LampRole[], only?: Partial<Record<LampRole, readonly string[]>>): Lamp => ({
   role,
   label,
   carries,
   ...(only ? { only } : {}),
+  // Every lamp that does not have the flag already may lend its LED to one (#794).
+  ...(carries.includes('race') ? {} : { borrows: 'spread' as const }),
 });
 
 const SIDE = lamp('side', 'side', ['side']);
+/** The outer LED of a side of two, which a flag also takes while a car warning holds the inner one. */
+const SIDE_OF_TWO: Lamp = { ...SIDE, borrows: 'overflow' };
 const RACE = lamp('race', 'race', ['race']);
-const CAR = lamp('car', 'car', ['car']);
-const AID = lamp('aid', 'aid', ['aid']);
+
+/** The aid of the brake pedal, which is the left one: ABS. */
+export const BRAKE_AIDS: readonly string[] = ['abs'];
+/** The aids of the throttle pedal, the right one: traction control, DRS and push to pass. */
+export const THROTTLE_AIDS: readonly string[] = ['tc', 'drs', 'p2p'];
+/** The car warnings about the engine, on the left of a side long enough to split them. */
+export const ENGINE_WARNINGS: readonly string[] = ['oilPressure', 'temperature'];
+/** The car warning about the fuel, on the right. */
+export const FUEL_WARNINGS: readonly string[] = ['lowFuel'];
+
+const aidsOf = (side: Side): readonly string[] => (side === 'left' ? BRAKE_AIDS : THROTTLE_AIDS);
+const aidLamp = (side: Side): Lamp => lamp('aid', side === 'left' ? 'brake aid' : 'throttle aid', ['aid'], { aid: aidsOf(side) });
+const carLamp = (side: Side): Lamp =>
+  side === 'left' ? lamp('car', 'engine', ['car'], { car: ENGINE_WARNINGS }) : lamp('car', 'fuel', ['car'], { car: FUEL_WARNINGS });
 
 /**
- * The second aid lamp of a five-LED side, which the canvas gives to DRS and push to pass. It is a
- * second view of the aid list rather than a split of it: with five lamps a side there is room for
- * two aids at once, and restricting the outer one would hide a push to pass behind an ABS light
- * while a lamp beside it sat dark.
+ * The second aid lamp of a five-LED side, which the canvas gives to DRS and push to pass, on the right,
+ * where they are. It is a second view of the throttle's aids rather than a split of them: restricting
+ * the first would hide a push to pass behind traction control while a lamp beside it sat dark.
  */
 const SECOND_AID_IDS: readonly string[] = ['drs', 'p2p'];
 
@@ -65,26 +98,31 @@ const SECOND_AID_IDS: readonly string[] = ['drs', 'p2p'];
  * run, so adding one LED to each end *lost the flags altogether* — a driver who bought a wheel with
  * one lamp a side would have seen a car alongside and never a yellow. Sharing is the rule everywhere
  * below four lamps and this is simply where it ends up: side, then race, then the car's own, with
- * the aids dropped as they are at two. A side longer than five keeps the five-lamp assignment and
- * leaves the rest to the brake gradient, because no shape has one and inventing a sixth role for a
- * strip nobody owns would be a lamp with no meaning attached.
+ * the aids dropped as they are at two.
+ *
+ * At three the car's warnings are on both inner LEDs and the aids beneath them split by pedal, so a
+ * warning lights both ends and an aid one. At four and five the car lamp splits too, the engine left
+ * and the fuel right. A five-LED side keeps a second aid lamp on the right for DRS and push to pass;
+ * its left has nothing a fifth LED would add, and stays dark rather than repeating a lamp. A side
+ * longer than five keeps the five-lamp assignment and leaves the rest dark, because no shape has one
+ * and inventing a sixth role for a strip nobody owns would be a lamp with no meaning attached.
  */
-export const lampsForSide = (count: number): readonly Lamp[] =>
+export const lampsForSide = (count: number, side: Side): readonly Lamp[] =>
   count <= 0
     ? []
     : count === 1
       ? [lamp('side', 'side, flag and car', ['side', 'race', 'car'])]
       : count === 2
-        ? [SIDE, lamp('car', 'car and flag', ['car', 'race'])]
+        ? [SIDE_OF_TWO, lamp('car', 'car and flag', ['car', 'race'])]
         : count === 3
-          ? [SIDE, RACE, lamp('car', 'car and aid', ['car', 'aid'])]
-          : count === 4
-            ? [SIDE, RACE, CAR, AID]
-            : [SIDE, RACE, CAR, AID, lamp('aid', 'second aid', ['aid'], SECOND_AID_IDS)];
+          ? [SIDE, RACE, lamp('car', side === 'left' ? 'car and brake aid' : 'car and throttle aid', ['car', 'aid'], { aid: aidsOf(side) })]
+          : count === 4 || side === 'left'
+            ? [SIDE, RACE, carLamp(side), aidLamp(side)]
+            : [SIDE, RACE, carLamp(side), aidLamp(side), lamp('aid', 'second aid', ['aid'], { aid: SECOND_AID_IDS })];
 
 /** One lamp of one side of one shape, with the LED it owns. */
 export interface PlacedLamp {
-  side: 'left' | 'right';
+  side: Side;
   lamp: Lamp;
   /** How far in from the outside it sits: 0 is the outermost. */
   index: number;
@@ -100,6 +138,6 @@ export interface PlacedLamp {
  * the race lamp LED 2 and LED 21 on a 4/14/4 rather than LED 2 and LED 20.
  */
 export const lampsOf = (shape: StripShape): readonly PlacedLamp[] => [
-  ...lampsForSide(shape.left).map((l, index) => ({ side: 'left' as const, lamp: l, index, position: 1 + index })),
-  ...lampsForSide(shape.right).map((l, index) => ({ side: 'right' as const, lamp: l, index, position: rightStart(shape) + shape.right - 1 - index })),
+  ...lampsForSide(shape.left, 'left').map((l, index) => ({ side: 'left' as const, lamp: l, index, position: 1 + index })),
+  ...lampsForSide(shape.right, 'right').map((l, index) => ({ side: 'right' as const, lamp: l, index, position: rightStart(shape) + shape.right - 1 - index })),
 ];
