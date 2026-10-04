@@ -34,12 +34,27 @@
 // judged by LedDeviceSurvey, which is pure and tested, and what was seen of it is written to SimHub's log
 // with the reason (#437). The one use of reflection in this file is there, and only to be logged.
 //
+// **A device that is not an LED module is reached through its settings document** (#683). A FanaBridge
+// wheel is a `DeviceInstance` of the plugin's own type that holds SimHub's `LedModuleSettings` in private
+// fields, so the walk above never meets a `LedModuleDevice` and reflection over the public surface finds
+// nothing. What every device must do, LED module or not, is answer `GetSettings(false, false)` with the
+// document SimHub saves under `PluginsData\Common\Devices\<id>\settings.json` and accept it back through
+// `SetSettings`, and an LED module's document carries its telemetry LED profile list as `leds`, the
+// serialised `LedsSettings` (`LedModuleDevice.GetSettings` and FanaBridge's `GetSettings` both write it,
+// since both call `LedModuleSettings.GetSettings`, decompiled 9.12.6). So a device with no LED module whose
+// document holds `leds.Profiles` is offered: its list is `leds.ToObject<LedsSettings>()`, the conversion
+// SimHub's own `LedModuleSettings.SetSettings` makes of that token, and a save writes
+// `JObject.FromObject(list)` back as `leds`, which is what `RGBLedsDriver.GetSettingsJToken` produces,
+// hands the document to `SetSettings` and asks the Devices plugin to save. That is SimHub's own import
+// path, so the module rebuilds its driver from the new list; nothing here is keyed on a plugin's type name.
+//
 // Needs SimHub types, so it is NOT compiled into OpenDash.Tests. The id vocabulary a settings file holds
 // is on LedBar, which is, and is pinned there.
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Newtonsoft.Json.Linq;
 using SimHub.Plugins;
 using SimHub.Plugins.Devices;
 using SimHub.Plugins.OutputPlugins.Dash;
@@ -277,7 +292,7 @@ namespace OpenDashPlugin
             if (module == null)
             {
                 seen.ForeignDrivers = ForeignDrivers(instances);
-                return new Surveyed { Seen = seen };
+                return new Surveyed { Seen = seen, Target = FromDocument(root, seen) };
             }
 
             var settings = module.ledModuleSettings;
@@ -315,6 +330,70 @@ namespace OpenDashPlugin
                     Save = () => SaveDevice(captured),
                 },
             };
+        }
+
+        /// <summary>The key an LED module's settings document keeps its telemetry LED profile list under.</summary>
+        private const string LedsChannel = "leds";
+
+        /// <summary>
+        /// The target a device with no LED module gives through its settings document, or null when the
+        /// document has no LED profile list. See the head of this file (#683).
+        /// </summary>
+        /// <remarks>
+        /// What was seen of the document goes on <paramref name="seen"/> whether or not it offers: the
+        /// verdict is <see cref="LedDeviceSurvey"/>'s, so that a document without the list is still logged
+        /// as "not an LED module" and a document with it is logged as reached this way.
+        /// </remarks>
+        private static LedTarget FromDocument(DeviceInstance root, LedDeviceSeen seen)
+        {
+            JObject document;
+            try
+            {
+                document = root.GetSettings(false, false) as JObject;
+            }
+            catch (Exception e)
+            {
+                // Its own catch rather than the survey's: a device that answers everything but this is
+                // still what the verdict says it is, with what was seen of it, and not unreadable.
+                Log.Warn("The settings document of \"" + seen.Name + "\" could not be read for its LEDs: " + e.Message);
+                return null;
+            }
+            var leds = document == null ? null : document[LedsChannel] as JObject;
+            var profiles = leds == null ? null : leds["Profiles"] as JArray;
+            if (profiles == null) return null;
+
+            seen.DocumentLeds = true;
+            seen.Profiles = profiles.Count;
+            seen.UseBuiltInProfiles = (bool?)leds["UseBuiltInProfiles"];
+            var module = document["ledModuleSettings"] as JObject;
+            seen.LedCount = module == null ? null : (int?)module["Ledcount"];
+
+            var settings = leds.ToObject<LedsSettings>();
+            if (settings == null) return null;
+            if (LedDeviceSurvey.Judge(seen) != LedDeviceVerdict.Offered) return null;
+            return new LedTarget
+            {
+                Id = LedBar.DeviceId(root.InstanceId),
+                Name = NameOf(root, module == null ? null : (string)module["DeviceName"]),
+                Connected = root.IsConnected,
+                Settings = settings,
+                Save = () => SaveDocument(root, settings),
+            };
+        }
+
+        /// <summary>
+        /// Puts a profile list back into a device through its settings document: the document as the device
+        /// holds it now, with only `leds` replaced, so a brightness moved since the walk is kept.
+        /// </summary>
+        private static void SaveDocument(DeviceInstance root, LedsSettings settings)
+        {
+            var document = root.GetSettings(false, false) as JObject;
+            if (document == null) throw new InvalidOperationException("the device no longer answers with a settings document");
+            document[LedsChannel] = JObject.FromObject(settings);
+            root.SetSettings(document, false);
+            var manager = PluginManager.GetInstance();
+            var devices = manager == null ? null : manager.GetPlugin<DevicesPlugin>();
+            if (devices != null) devices.SaveSettings();
         }
 
         /// <summary>The device's type and the assembly it is from: SimHub's own, or a plugin's.</summary>
@@ -386,8 +465,14 @@ namespace OpenDashPlugin
         /// user renamed reads as they named it, and one they did not reads as its model.</summary>
         private static string NameOf(DeviceInstance root, LedModuleSettings settings)
         {
+            return NameOf(root, settings == null ? null : settings.DeviceName);
+        }
+
+        /// <summary><see cref="NameOf(DeviceInstance, LedModuleSettings)"/> with the model read off a settings
+        /// document's `ledModuleSettings.DeviceName`, for a device reached that way.</summary>
+        private static string NameOf(DeviceInstance root, string model)
+        {
             var given = root == null ? null : root.MainDisplayName;
-            var model = settings == null ? null : settings.DeviceName;
             if (string.IsNullOrWhiteSpace(given)) return string.IsNullOrWhiteSpace(model) ? "A device" : model;
             if (string.IsNullOrWhiteSpace(model) || string.Equals(given.Trim(), model.Trim(), StringComparison.OrdinalIgnoreCase)) return given;
             return given + " (" + model + ")";
