@@ -298,6 +298,9 @@ export const DEFAULTS = {
   LedMirrorFit: 'stretch' as LedMirrorFit,
   LedFlagAnimation: true,
   LedSpotterWhole: false,
+  // On, because without it iRacing lights neither aid lamp on any car without ABS nor on any car's
+  // traction control. LED_INFER_SLIP_SETTING says what it does.
+  LedInferSlip: true,
   // Nothing extra, because a blue flag is read by its colour and the band is the one place a
   // driver already knows to look; the class of the car behind is a thing to ask for rather than a
   // thing to be given while lifting.
@@ -399,6 +402,12 @@ export function ledProperties(): string[] {
     // halves of the contract pin it in order. The strip's own brightness, then its effect switches. #503.
     LED_BRIGHTNESS_SETTING,
     ...ledEffectSettingNames(),
+    // And the switch that lets the aid lamps read the slip estimate, then the estimate itself,
+    // computed rather than chosen: appended for the reason the switches were.
+    LED_INFER_SLIP_SETTING,
+    WHEEL_SPIN,
+    WHEEL_LOCK,
+    TC_INFERRED,
   ].map(propertyName);
 }
 
@@ -509,6 +518,39 @@ export const LED_MIRROR_FIT_SETTING = 'LedMirrorFit';
  * it is asking for "something is beside me" rather than "something is beside me on this side".
  */
 export const LED_SPOTTER_WHOLE_SETTING = 'LedSpotterWhole';
+
+/**
+ * Whether a strip's traction control lamp also lights on {@link WHEEL_SPIN} and its ABS lamp on
+ * {@link WHEEL_LOCK}, the plugin's estimates, where the sim does not say itself.
+ *
+ * On, because on iRacing the two lamps are otherwise dark on every car's traction control and on
+ * every car without ABS: SimHub's `TCActive` is a hard 0 there, and `ABSActive` reads iRacing's
+ * `BrakeABSactive`, which only a car with ABS sets. Off is for the driver who wants a lamp to light on
+ * what the sim reports and nothing else. A sim that reports either still lights the lamp with this
+ * off, and a strip used without the plugin reads the estimates as null and lights on the sim alone.
+ */
+export const LED_INFER_SLIP_SETTING = 'LedInferSlip';
+
+/**
+ * The driven wheels are spinning, as the plugin reads the engine against the road: a boolean, false
+ * with no game running, and null without the plugin.
+ *
+ * Computed rather than chosen, and computed by the plugin because SimHub computes it and publishes it
+ * nowhere: its wheel slip is `GameData.FeedbackData`, which is `[DoNotExpose]`, and its estimate for
+ * iRacing is made inside ShakeIt and handed to a shaker. The rule is ShakeIt's "RPM vs Speed", and
+ * `plugin/OpenDash/SlipEstimate.cs` spells it out. ADR 0018 says why the plugin may compute it.
+ */
+export const WHEEL_SPIN = 'WheelSpin';
+
+/** The wheels are locked under braking, by the same estimate as {@link WHEEL_SPIN}. */
+export const WHEEL_LOCK = 'WheelLock';
+
+/**
+ * A wheelspin on a car whose traction control is switched on: the moment the system would be cutting
+ * in. Inferred, because no sim OpenDash runs on publishes it; false on a car with the dial at 0. Nothing
+ * reads it yet; it is published for a screen that wants to say "TC" rather than "spin".
+ */
+export const TC_INFERRED = 'TCInferred';
 
 /**
  * A strip's own brightness, in percent, or nothing for "the same as the rig". #503.
@@ -681,6 +723,8 @@ export const setting = {
   ledFlagAnimation: (): Expr => isnull(prop(propertyName(LED_FLAG_ANIMATION_SETTING)), String(DEFAULTS.LedFlagAnimation)),
   /** `isnull([OpenDash.LedSpotterWhole], false)`: whether a car alongside takes the whole strip. */
   ledSpotterWhole: (): Expr => isnull(prop(propertyName(LED_SPOTTER_WHOLE_SETTING)), String(DEFAULTS.LedSpotterWhole)),
+  /** `isnull([OpenDash.LedInferSlip], true)`: whether the aid lamps read the slip estimate. */
+  ledInferSlip: (): Expr => isnull(prop(propertyName(LED_INFER_SLIP_SETTING)), String(DEFAULTS.LedInferSlip)),
   /**
    * `isnull([OpenDash.LedBrightness], isnull([OpenDash.LightsBrightness], 100))`: the strip's own
    * day brightness, or the rig's where the strip has none. #503.

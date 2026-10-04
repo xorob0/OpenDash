@@ -66,6 +66,7 @@ namespace OpenDashPlugin.Tests
                 "AnchorEveryStrip = leds.every-strip",
                 "AnchorFanatec = leds.fanatec",
                 "AnchorFlagAnimation = leds.flag-animation",
+                "AnchorInferSlip = leds.infer-slip",
                 "AnchorMirrorFit = leds.mirror-fit",
                 "AnchorPreview = leds.preview",
                 "AnchorRevLights = leds.rev-lights",
@@ -98,6 +99,7 @@ namespace OpenDashPlugin.Tests
                 { PanelLeds.ColoursTitle, PanelLeds.AnchorColours },
                 { PanelLeds.FlagAnimationTitle, PanelLeds.AnchorFlagAnimation },
                 { PanelLeds.SpotterTitle, PanelLeds.AnchorSpotter },
+                { PanelLeds.InferSlipTitle, PanelLeds.AnchorInferSlip },
                 { PanelLeds.EveryStripTitle, PanelLeds.AnchorEveryStrip },
                 { PanelLights.CarTablesTitle, PanelLeds.AnchorCarTables },
             };
@@ -123,6 +125,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains(PanelSearch.Find(PanelLeds.Search, "colour"), hit => hit.Entry.Route.Anchor == PanelLeds.AnchorColours);
             // And the artboard's words, where the build keeps voice.md's.
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "add leds"));
+            // The slip switch is found by what a driver calls the thing it lights for.
+            Assert.Contains(PanelSearch.Find(PanelLeds.Search, "wheelspin"), hit => hit.Entry.Route.Anchor == PanelLeds.AnchorInferSlip);
             Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "use the car's own rev lights"));
             // An effect is found by the words the rest of the panel uses for what it silences: Settings' and Rig's
             // oil and water temperature for Temperature, the generator's traction control for TC.
@@ -1418,6 +1422,17 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelLeds.HasFullStripSpotter("mystery"));
         }
 
+        [Fact]
+        public void Slip_inference_is_offered_only_where_the_shape_has_an_aid_lamp_for_it_to_light()
+        {
+            Assert.True(PanelLeds.HasInferSlip("3-9-3"));
+            Assert.True(PanelLeds.HasInferSlip("3-9-3-fanatec"));
+            // A bare run drops the aids, so the switch would govern nothing.
+            Assert.False(PanelLeds.HasInferSlip("0-15-0"));
+            Assert.True(PanelLeds.HasInferSlip("mystery"));
+            Assert.Equal("Infer wheel spin and wheel lock", PanelLeds.InferSlipTitle);
+        }
+
         /// <summary>
         /// An effect tile at its narrowest holds every label on one line beside its switch, each measured at the
         /// tile's 14 px from the bundled fonts' advances: the label, the 12 gap, the switch and the tile's 24 of
@@ -1843,7 +1858,7 @@ namespace OpenDashPlugin.Tests
                 .Where(field => field.IsLiteral && field.Name.StartsWith("Anchor", StringComparison.Ordinal))
                 .Select(field => field.Name)
                 .ToList();
-            Assert.Equal(17, anchors.Count);
+            Assert.Equal(18, anchors.Count);
             foreach (var name in anchors)
             {
                 Assert.True(leds.Contains(", PanelLeds." + name + ")"), "no Ui.Anchor(..., PanelLeds." + name + ") on the page");

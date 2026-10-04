@@ -7,6 +7,10 @@
 // expression that could hold an 85-car table and no NCalc clock to flash it with. DataUpdate below
 // is the whole of that: three values in, one frame of colours out.
 //
+// ADR 0018 was amended to let it compute one thing more: whether the wheels are spinning or locked,
+// which SimHub estimates for ShakeIt and publishes nowhere. SlipEstimate.cs is that, fed from the same
+// DataUpdate, and the strips' aid lamps read it.
+//
 // The one other value it reads is SimHub's own, not ours: the best lap of the player's class, which
 // SimHub works out every frame and never publishes. DataUpdate copies it out of the finished frame so
 // a dashboard need not look it up in the one being built; Contract.ClassBestLap says why.
@@ -82,7 +86,10 @@ namespace OpenDashPlugin
 
         private CarLightService carLights;
 
-        /// <summary>Monotonic milliseconds for the over-rev flash, which is the only thing OpenDash times.</summary>
+        /// <summary>Wheelspin and lock-up, estimated from the engine against the road; see SlipEstimate.cs.</summary>
+        private readonly SlipEstimate slip = new SlipEstimate();
+
+        /// <summary>Monotonic milliseconds for the over-rev flash and the slip lamps' hold.</summary>
         private readonly System.Diagnostics.Stopwatch clock = System.Diagnostics.Stopwatch.StartNew();
 
         /// <summary>The embedded profile as JSON, which the lights page installs into SimHub.</summary>
@@ -489,6 +496,12 @@ namespace OpenDashPlugin
             {
                 this.AttachDelegate(setting, () => Contract.DefaultLedEffect);
             }
+            this.AttachDelegate(Contract.LedInferSlip, () => Contract.DefaultLedInferSlip);
+            // The slip estimate, which DataUpdate fills: the car's, so rig-wide, and read by every strip
+            // whose own LedInferSlip is on. ADR 0018 says why the plugin computes it.
+            this.AttachDelegate(Contract.WheelSpin, () => slip.Spin);
+            this.AttachDelegate(Contract.WheelLock, () => slip.Lock);
+            this.AttachDelegate(Contract.TcInferred, () => slip.TcInferred);
             // One group per bar the rig holds, under that bar's own namespace, which is what lets two
             // strips be configured apart: the profile installed for a bar carries these names as
             // literals, rewritten from the rig-wide ones above by LedBarProfile. A bar added after this
@@ -518,6 +531,7 @@ namespace OpenDashPlugin
                 var effect = Contract.LedEffectPrimaryId(setting);
                 this.AttachDelegate(LedBarProfile.Property(ns, setting), () => Settings.BarEffectEnabled(ns, effect));
             }
+            this.AttachDelegate(LedBarProfile.Property(ns, Contract.LedInferSlip), () => Settings.BarInferSlip(ns));
         }
 
         /// <summary>
@@ -618,6 +632,21 @@ namespace OpenDashPlugin
                     on ? telemetry.Rpms : 0,
                     Settings.LedMirrorFit == Contract.LedMirrorFitExact ? MirrorFit.Exact : MirrorFit.Stretch,
                     on,
+                    clock.ElapsedMilliseconds);
+
+                // The slip estimate, every frame a car is on the road and whether or not a strip reads
+                // it: it compares this frame with the last one, so a gap in what it is shown would be read
+                // as the engine running away. A frame with no game, or with the game paused, resets it.
+                var driving = data != null && data.GameRunning && telemetry != null && !data.GamePaused;
+                slip.Update(
+                    driving,
+                    driving ? telemetry.SpeedKmh : 0,
+                    driving ? telemetry.Rpms : 0,
+                    driving ? telemetry.Gear : null,
+                    driving ? telemetry.Throttle : 0,
+                    driving ? telemetry.Brake : 0,
+                    driving ? telemetry.Clutch : 0,
+                    driving ? telemetry.TCLevel : 0,
                     clock.ElapsedMilliseconds);
             }
             catch (Exception)

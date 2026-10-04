@@ -270,13 +270,18 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_bar_owns_its_brightness_and_a_switch_per_effect()
         {
-            // The four it always had, then its own brightness and the fifteen switches, in the order the
-            // contract declares them. #503.
-            Assert.Equal(20, LedBarProfile.BarSettings.Length);
+            // The four it always had, then its own brightness and the fifteen switches, then whether its
+            // aid lamps read the slip estimate, in the order the contract declares them. #503.
+            Assert.Equal(21, LedBarProfile.BarSettings.Length);
             Assert.Equal(
                 new[] { Contract.LedCentre, Contract.LedRpmStyle, Contract.LedFlagAnimation, Contract.LedSpotterWhole, Contract.LedBrightness }
-                    .Concat(Contract.LedEffectSettings()),
+                    .Concat(Contract.LedEffectSettings())
+                    .Concat(new[] { Contract.LedInferSlip }),
                 LedBarProfile.BarSettings);
+            // The estimate is the car's, so it stays rig-wide and every bar reads the one the plugin fills.
+            Assert.DoesNotContain(Contract.WheelSpin, LedBarProfile.BarSettings);
+            Assert.DoesNotContain(Contract.WheelLock, LedBarProfile.BarSettings);
+            Assert.DoesNotContain(Contract.TcInferred, LedBarProfile.BarSettings);
             // Every one of them is the rig's too, so a strip nobody added reads the rig's answer.
             foreach (var setting in LedBarProfile.BarSettings) Assert.Contains(setting, Contract.LedPropertyNames());
             Assert.Equal(LedBarProfile.BarSettings.Select(s => "LedRim" + s), LedBarProfile.Properties("LedRim"));
@@ -290,6 +295,26 @@ namespace OpenDashPlugin.Tests
             var names = settings.DeclaredProperties().ToList();
             foreach (var setting in LedBarProfile.BarSettings) Assert.Contains("LedRim" + setting, names);
             Assert.Equal(names.Count, names.Distinct().Count());
+        }
+
+        [Fact]
+        public void A_bar_infers_slip_until_its_driver_says_not_and_keeps_the_answer()
+        {
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var bar = settings.AddLedBar("3-9-3", "Rim", LedBar.ArduinoDevice);
+            Assert.True(bar.InferSlip);
+            Assert.True(settings.BarInferSlip(bar.Namespace));
+
+            bar.InferSlip = false;
+            Assert.False(settings.BarInferSlip(bar.Namespace));
+            Assert.False(bar.Copy().InferSlip);
+            // A bar that has gone reads the default, as every other switch of a bar does.
+            Assert.True(settings.BarInferSlip("LedGone"));
+
+            // A bar saved before the switch existed has no field for it, and loads with it on.
+            var saved = Newtonsoft.Json.JsonConvert.DeserializeObject<LedBar>("{\"Namespace\":\"LedRim\",\"Shape\":\"3-9-3\"}");
+            Assert.True(saved.InferSlip);
         }
 
         [Fact]

@@ -410,3 +410,7 @@ OpenDash.LedEffectPitLimiter
 OpenDash.LedEffectPitSpeeding
 OpenDash.LedEffectTurnLeft
 OpenDash.LedEffectTurnRight
+OpenDash.LedInferSlip
+OpenDash.WheelSpin
+OpenDash.WheelLock
+OpenDash.TCInferred

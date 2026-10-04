@@ -116,6 +116,7 @@ namespace OpenDashPlugin
         public const string AnchorColours = "leds.colours";
         public const string AnchorFlagAnimation = "leds.flag-animation";
         public const string AnchorSpotter = "leds.spotter";
+        public const string AnchorInferSlip = "leds.infer-slip";
         public const string AnchorEveryStrip = "leds.every-strip";
         public const string AnchorCarTables = "leds.car-tables";
 
@@ -980,6 +981,20 @@ namespace OpenDashPlugin
         public const string SpotterTitle = "Full-strip spotter";
         public const string SpotterCaption = "Lights the whole strip for a car alongside, instead of just the end nearest it.";
 
+        /// <summary>The strip's switch for <see cref="Contract.LedInferSlip"/>, offered where the shape has a TC
+        /// or an ABS lamp for it to light.</summary>
+        public const string InferSlipTitle = "Infer wheel spin and wheel lock";
+        public const string InferSlipCaption = "Lights TC on wheelspin and ABS on a locked wheel, estimated from the engine and the speed, where the sim does not say.";
+
+        /// <summary>Whether a shape carries a traction control or an ABS lamp, which is all the switch governs.</summary>
+        public static bool HasInferSlip(string shapeId)
+        {
+            return EffectsFor(shapeId).Any(effect => effect.Setting == TcSetting || effect.Setting == AbsSetting);
+        }
+
+        private const string TcSetting = "LedEffectTc";
+        private const string AbsSetting = "LedEffectAbs";
+
         /// <summary>The greyed Pit limiter lights row's two values (#509).</summary>
         public static readonly string[] PitLimiterLightsValues = { "ends", "whole" };
         public static readonly string[] PitLimiterLightsLabels = { "Ends", "Whole strip" };
@@ -1370,6 +1385,7 @@ namespace OpenDashPlugin
             if (anchor == AnchorReverse) return bar.SupportsReversal;
             if (anchor == AnchorFanatec) return bar.SupportsFanatec;
             if (anchor == AnchorSpotter) return HasFullStripSpotter(bar.Shape);
+            if (anchor == AnchorInferSlip) return HasInferSlip(bar.Shape);
             if (anchor == AnchorMirrorFit) return ShowsMirrorFit(bar.RpmStyle);
             if (anchor == AnchorEffects)
             {
@@ -1437,6 +1453,7 @@ namespace OpenDashPlugin
                 new PanelSearch.Entry(ColoursTitle, PanelPage.Leds, AnchorColours, "colour", "color", "LED colours", "abs colour", "flag colour"),
                 new PanelSearch.Entry(FlagAnimationTitle, PanelPage.Leds, AnchorFlagAnimation, "flags"),
                 new PanelSearch.Entry(SpotterTitle, PanelPage.Leds, AnchorSpotter, "car alongside"),
+                new PanelSearch.Entry(InferSlipTitle, PanelPage.Leds, AnchorInferSlip, "wheelspin", "lock-up", "slip", "traction control", "abs"),
                 new PanelSearch.Entry(EveryStripTitle, PanelPage.Leds, AnchorEveryStrip, "strip"),
                 new PanelSearch.Entry(PanelLights.CarTablesTitle, PanelPage.Leds, AnchorCarTables, "car light tables", "car data", "download"),
             };

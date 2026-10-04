@@ -653,6 +653,41 @@ namespace OpenDashPlugin
         public const bool DefaultLedSpotterWhole = false;
 
         /// <summary>
+        /// Whether a strip's traction control lamp also lights on <see cref="WheelSpin"/> and its ABS lamp
+        /// on <see cref="WheelLock"/>, the plugin's estimates, where the sim does not say itself.
+        /// </summary>
+        /// <remarks>
+        /// On, because on iRacing the two lamps are otherwise dark on every car without ABS and on every
+        /// car's traction control: SimHub's TCActive is a hard 0 there, and so is ABSActive on a car with
+        /// no ABS. Off is for the driver who wants a lamp to light only on what the sim reports. A sim
+        /// that reports either still lights the lamp with this off. Mirrors setting.ledInferSlip() in
+        /// contract.ts.
+        /// </remarks>
+        public const string LedInferSlip = "LedInferSlip";
+
+        public const bool DefaultLedInferSlip = true;
+
+        /// <summary>
+        /// The driven wheels are spinning, as <see cref="SlipEstimate"/> reads the engine against the road:
+        /// true or false, and false whenever no game is running.
+        /// </summary>
+        /// <remarks>
+        /// Computed rather than chosen, because SimHub computes it and publishes it nowhere: its wheel slip
+        /// lives in GameData.FeedbackData, which is [DoNotExpose], and its estimate for iRacing is made
+        /// inside ShakeIt for a shaker. ADR 0018 says why the plugin may compute it.
+        /// </remarks>
+        public const string WheelSpin = "WheelSpin";
+
+        /// <summary>The wheels are locked under braking, as <see cref="SlipEstimate"/> reads it.</summary>
+        public const string WheelLock = "WheelLock";
+
+        /// <summary>
+        /// A wheelspin on a car whose traction control is on: the moment the system would be cutting in.
+        /// Inferred, because no sim OpenDash runs on publishes it, and false on a car with the dial at 0.
+        /// </summary>
+        public const string TcInferred = "TCInferred";
+
+        /// <summary>
         /// A strip's own brightness, in percent, or nothing when it follows the rig's. Mirrors
         /// setting.ledBrightness() in contract.ts, which falls back to LightsBrightness and then to 100.
         /// </summary>
@@ -2130,6 +2165,12 @@ namespace OpenDashPlugin
             // LedSpotterWhole was: both halves of the contract pin this list in order. #370, #503.
             yield return LedBrightness;
             foreach (var setting in LedEffectSettings()) yield return setting;
+            // And the switch that lets the aid lamps read the slip estimate, then the estimate itself,
+            // computed rather than chosen: appended for the reason the switches were.
+            yield return LedInferSlip;
+            yield return WheelSpin;
+            yield return WheelLock;
+            yield return TcInferred;
         }
 
         /// <summary>Clamps a brightness to 0..100. A profile reads this with isnull() and its default, so a
