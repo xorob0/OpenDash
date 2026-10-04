@@ -94,6 +94,12 @@ namespace OpenDashPlugin
         public const string BuiltInModeNote =
             "Turn off built-in profiles on your device, or OpenDash's profiles will not be listed.";
 
+        /// <summary>The sentence a row shows when the profile is installed but the device is set to "Individual
+        /// profile only", which leaves the Telemetry LEDs list off its page and draws nothing from it, and the
+        /// profile could not go into the individual list instead (#690).</summary>
+        public const string IndividualOnlyNote =
+            "Set Individual leds profiles to Disabled or Combined on your device, or OpenDash's profile will not be listed or lit.";
+
         /// <summary>Stamped into the profile's Author by the build; how we tell ours from the user's.</summary>
         public const string Author = "OpenDash";
 
