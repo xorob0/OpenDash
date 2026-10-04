@@ -64,6 +64,7 @@ namespace OpenDashPlugin.Tests
                 "AnchorDevice = leds.device",
                 "AnchorEffects = leds.effects",
                 "AnchorEveryStrip = leds.every-strip",
+                "AnchorFanatec = leds.fanatec",
                 "AnchorFlagAnimation = leds.flag-animation",
                 "AnchorMirrorFit = leds.mirror-fit",
                 "AnchorPreview = leds.preview",
@@ -92,6 +93,7 @@ namespace OpenDashPlugin.Tests
                 { PanelLights.BarDeviceTitle, PanelLeds.AnchorDevice },
                 { PanelLeds.BrightnessTitle, PanelLeds.AnchorBrightness },
                 { PanelLeds.ReverseTitle, PanelLeds.AnchorReverse },
+                { PanelLights.BarFanatecSwitch, PanelLeds.AnchorFanatec },
                 { PanelLeds.EffectsTitle, PanelLeds.AnchorEffects },
                 { PanelLeds.ColoursTitle, PanelLeds.AnchorColours },
                 { PanelLeds.FlagAnimationTitle, PanelLeds.AnchorFlagAnimation },
@@ -411,13 +413,20 @@ namespace OpenDashPlugin.Tests
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar(",
                     "Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name)));"),
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar(", "var ok = plan.State == FlagBoxInstallState.UpToDate;"),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar(", "var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);"),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar(",
+                ("private void ReverseLedBar(", "private void FanatecLedBar(", "var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);"),
+                ("private void ReverseLedBar(", "private void FanatecLedBar(",
                     "var line = ok ? PanelLeds.ReverseSaid(bar.Name, reversed, held, target == null ? null : target.Name, plan.Note) : PanelLeds.ReversedNotInstalled(bar.Name, reversed);"),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar(",
+                ("private void ReverseLedBar(", "private void FanatecLedBar(",
                     "Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), blocked)));"),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar(", "Say(line, ok && plan.Note == null);"),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar(", "var ok = plan.State == FlagBoxInstallState.UpToDate;"),
+                ("private void ReverseLedBar(", "private void FanatecLedBar(", "Say(line, ok && plan.Note == null);"),
+                ("private void ReverseLedBar(", "private void FanatecLedBar(", "var ok = plan.State == FlagBoxInstallState.UpToDate;"),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar(", "if (bar == null || !Settings.SetBarFanatec(ns, fanatec)) return;"),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar(", "var held = PanelLeds.HeldInSimHub(facts == null ? null : facts.Profile);"),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar(",
+                    "var line = ok ? PanelLeds.FanatecSaid(bar.Name, fanatec, held, target == null ? null : target.Name, plan.Note) : PanelLeds.FanatecNotInstalled(bar.Name, fanatec);"),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar(",
+                    "Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.FanatecSaid(bar.Name, fanatec), blocked)));"),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar(", "Say(line, ok && plan.Note == null);"),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar(", "var inSimHub = PanelLeds.RenameReinstalls(facts == null ? null : facts.Profile);"),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar(", "ok = plan != null && plan.State == FlagBoxInstallState.UpToDate;"),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar(", "Say(ok ? PanelLeds.Renamed(bar.Name, inSimHub) : PanelLeds.RenameNotInSimHub(bar.Name), ok);"),
@@ -446,12 +455,13 @@ namespace OpenDashPlugin.Tests
             // A new strip is saved and then selected, so the page opens on it.
             var add = Body(leds, "private void AddLedBar(", null);
             Assert.InRange(add.IndexOf("Save();", StringComparison.Ordinal), 0, add.IndexOf("Select(PanelPage.Leds, bar.Namespace);", StringComparison.Ordinal));
-            // Install, Reverse, Rename, a colour and Add each install through the guard, once.
-            Assert.Equal(5, Occurrences(leds, "LedsReinstall(bar, targets)"));
+            // Install, Reverse, Fanatec, Rename, a colour and Add each install through the guard, once.
+            Assert.Equal(6, Occurrences(leds, "LedsReinstall(bar, targets)"));
             foreach (var (method, next) in new[]
             {
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar("),
+                ("private void ReverseLedBar(", "private void FanatecLedBar("),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar("),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar("),
                 ("private void PickLedColour(", "private void ShowAddLedBar("),
                 ("private void AddLedBar(", null),
@@ -489,7 +499,8 @@ namespace OpenDashPlugin.Tests
             foreach (var (method, next) in new[]
             {
                 ("private void InstallLedBarProfile(", "private void ReverseLedBar("),
-                ("private void ReverseLedBar(", "private void ShowRenameLedBar("),
+                ("private void ReverseLedBar(", "private void FanatecLedBar("),
+                ("private void FanatecLedBar(", "private void ShowRenameLedBar("),
                 ("private void RenameLedBar(", "private void ShowRemoveLedBar("),
                 ("private void PickLedColour(", "private void ShowAddLedBar("),
                 ("private void AddLedBar(", null),
@@ -556,9 +567,10 @@ namespace OpenDashPlugin.Tests
                 "if (bars.Count > 0) return grid; return Ui.VStack(12, Ui.Prose(PanelLeds.NoStrips, Theme.SizeBody), grid);");
             Holds(Body(leds, "private FrameworkElement LedsHeader(", "private static string LedsProfileBlocked("), "LedsHeader",
                 "var title = Ui.SubHeading(bar.Name);",
-                "var lead = Ui.Text(PanelLeds.HardwareLead(bar.Shape), 13, FontWeights.Medium, Theme.TextPrimary);",
+                // The hardware is read off the profile's id, which carries the Fanatec wiring the shape does not.
+                "var lead = Ui.Text(PanelLeds.HardwareLead(bar.ProfileShapeId), 13, FontWeights.Medium, Theme.TextPrimary);",
                 "var numerals = Ui.Text(PanelLeds.ShapeDots(bar.Shape), 14, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);",
-                "chip.ToolTip = PanelLeds.HardwareLead(bar.Shape) + PanelLeds.ShapeDots(bar.Shape);",
+                "chip.ToolTip = PanelLeds.HardwareLead(bar.ProfileShapeId) + PanelLeds.ShapeDots(bar.Shape);",
                 "if (blocked == null) return row; return Ui.VStack(6, row, LedsCaptionLine(blocked));");
             Holds(Body(leds, "private FrameworkElement BuildLedBarActions(", "private void InstallLedBarProfile("), "BuildLedBarActions",
                 "if (state != null) { var hex = PanelLeds.StateHex(profile, selected);",
@@ -574,6 +586,8 @@ namespace OpenDashPlugin.Tests
                 "var rows = new List<UIElement> { Ui.Anchor(deviceRow, PanelLeds.AnchorDevice) };",
                 "rows.Add(Ui.Anchor(LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag()), PanelLeds.AnchorBrightness));",
                 "rows.Add(Ui.Anchor(LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag()), PanelLeds.AnchorReverse));",
+                "if (bar.SupportsFanatec && (Settings.BarFanatec(ns) || PanelLights.HasFanatecTwin(EmbeddedShapeIds(), bar.Shape))) {",
+                "rows.Add(Ui.Anchor(LedsRow(PanelLights.BarFanatecSwitch, fanatec, PanelLights.BarFanatecCaption, Ui.NewTag()), PanelLeds.AnchorFanatec));",
                 "Ui.Anchor(LedsHeading(PanelLeds.ThisStripTitle), PanelLeds.AnchorThisStrip), Ui.Rows(rows.ToArray())");
             Holds(Body(leds, "private FrameworkElement LedsEffects(", "private static Border LedsEffectTile("), "LedsEffects",
                 "var caption = Ui.Prose(PanelLeds.EffectsCaption);",
@@ -628,14 +642,18 @@ namespace OpenDashPlugin.Tests
                 "var live = Settings.LedBarByNamespace(ns); if (live != null) live.Centre = Contract.LedCentres[i]; Save(); redrawPreview(); drawCentre(); LedsFocusLater(() => LedsFirstControl(centre.Child));");
             Holds(Body(leds, "private FrameworkElement LedsThisStrip(", "private FrameworkElement LedsEffects("), "LedsThisStrip",
                 "var value = PanelLeds.BrightnessValue(i); Settings.SetBarBrightness(ns, value); Save(); redrawPreview(); drawBrightness(true);",
-                "var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));");
+                "var reverse = Ui.Switch(Settings.BarReversed(ns), on => ReverseLedBar(ns, on));",
+                "var fanatec = Ui.Switch(Settings.BarFanatec(ns), on => FanatecLedBar(ns, on));");
             // The Add sheet's device radios hand AddLedBar the device's id, never its name.
             var sheet = Body(leds, "private void ShowAddLedBar()", "private static FrameworkElement LedsSheetRow(");
             Holds(sheet, "ShowAddLedBar",
                 "foreach (var target in targets) { var id = target.Id;",
                 ".Where(other => other != null && string.Equals(Settings.BarDevice(other.Namespace), id, StringComparison.Ordinal)).Select(other => other.Name);",
                 "var chosen = string.Equals(id, device, StringComparison.Ordinal);",
-                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name); if (wiring != fanatec) { fanatec = wiring; showShape(); } showDevices(); refresh();");
+                "{ var focused = deviceHost.IsKeyboardFocusWithin; device = id; var wiring = PanelLeds.FanatecAfterPick(offersFanatec, target.Name, fanatec, fanatecSetByDriver); if (wiring != fanatec) setFanatec(wiring); showDevices(); refresh();",
+                // The sheet's own Fanatec switch is the driver's say, which a device not named Fanatec then keeps.
+                "var toggle = Ui.Switch(fanatec, on => { fanatecSetByDriver = true; setFanatec(on); LedsFocusLater(() => fanatecSwitch); });",
+                "fanatec = on; sides = PanelLights.BarSides(census, fanatec); side = PanelLeds.KeptSide(sides, side); centres = PanelLights.BarCentres(census, side, fanatec); centre = PanelLeds.KeptCentre(centres, centre); showShape(); refresh();");
             Assert.DoesNotContain("target.Name;", Squash(sheet).Replace("target==null?null:target.Name", string.Empty));
         }
 
@@ -657,10 +675,14 @@ namespace OpenDashPlugin.Tests
             Holds(Body(leds, "private void InstallLedBarProfile(", "private void ReverseLedBar("), "InstallLedBarProfile",
                 "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
                 "if (plan == null) { Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name))); return; }");
-            Holds(Body(leds, "private void ReverseLedBar(", "private void ShowRenameLedBar("), "ReverseLedBar",
+            Holds(Body(leds, "private void ReverseLedBar(", "private void FanatecLedBar("), "ReverseLedBar",
                 "if (bar == null || !Settings.SetBarReversed(ns, reversed)) return; Save();",
                 "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
                 "if (plan == null) { Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.ReverseSaid(bar.Name, reversed), blocked))); return; }");
+            Holds(Body(leds, "private void FanatecLedBar(", "private void ShowRenameLedBar("), "FanatecLedBar",
+                "if (bar == null || !Settings.SetBarFanatec(ns, fanatec)) return; Save();",
+                "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
+                "if (plan == null) { Say(PanelMessage.Caution(PanelLeds.WithReason(PanelLeds.FanatecSaid(bar.Name, fanatec), blocked))); return; }");
             Holds(Body(leds, "private void RenameLedBar(", "private void ShowRemoveLedBar("), "RenameLedBar",
                 "var targets = inSimHub ? ledDevices.Targets : null; var declined = inSimHub ? ledDevices.Declined : null; var blocked = inSimHub ? LedsProfileBlocked(bar, targets, declined) : null;",
                 "if (inSimHub && blocked == null) { var plan = LedsReinstall(bar, targets);",
@@ -683,8 +705,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>
         /// The Add LEDs sheet's call sites, each with the words and the gate it draws by: the name box on the
-        /// hardware's own name until the driver types, the shape step's fixed shape for the wheel, and every
-        /// step's label.
+        /// hardware's own name until the driver types, the shape step's Fanatec switch where the build has a
+        /// Fanatec profile, and every step's label.
         /// </summary>
         [Fact]
         public void The_Add_sheet_draws_each_step_by_its_own_gate_and_words()
@@ -694,13 +716,14 @@ namespace OpenDashPlugin.Tests
             // The pin PanelLedBarFormTests holds by its own anchors, held here where the gate and the default stand.
             Holds(sheet, "ShowAddLedBar",
                 "if (!typed) name.Text = DefaultBarName(PanelLights.BarShapeId(side, centre, fanatec)); updateFooter();",
-                "Action showShape = () => { if (fanatec) { var numerals = Ui.Text(PanelLeds.FanatecShape, 18, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data); var fixedLabel = Ui.Eyebrow(PanelLeds.Fixed);",
-                "fixedDock.Children.Add(Ui.VStack(4, numerals, Ui.Prose(PanelLeds.SetByTheWheel, PanelKit.CardMetaSize)));",
+                "var fanatec = PanelLeds.FanatecAfterPick(offersFanatec, preferred == null ? null : preferred.Name, false, false); var fanatecSetByDriver = false; var sides = PanelLights.BarSides(census, fanatec);",
+                "if (offersFanatec) {",
+                "steps.Add(LedsSheetRow(PanelLights.BarFanatecSwitch, toggle, PanelLights.BarFanatecCaption));",
+                "steps.Add(LedsSheetRow(PanelLights.BarEndsTitle, ends)); steps.Add(centreRow); steps.Add(well); steps.Add(note); shapeHost.Child = Ui.VStack(12, steps.ToArray());",
                 "note.Text = PanelLights.BarShapeNote(side, centre, fanatec);",
                 "sides.Select(n => new Segmented.Option(n.ToString(CultureInfo.InvariantCulture), PanelLeds.EndsLabel(n), minWidth: PanelKit.SegmentMinWidth))",
-                "side = int.Parse(value, CultureInfo.InvariantCulture); centres = PanelLights.BarCentres(census, side); centre = PanelLeds.KeptCentre(centres, centre); showCentre(); refresh();",
+                "side = int.Parse(value, CultureInfo.InvariantCulture); centres = PanelLights.BarCentres(census, side, fanatec); centre = PanelLeds.KeptCentre(centres, centre); showCentre(); refresh();",
                 "centreRow.Child = LedsSheetRow(PanelLights.BarCentreTitle, middle);",
-                "LedsSheetRow(PanelLights.BarEndsTitle, ends),",
                 "if (passedOver.Count > 0) list.Children.Add(Ui.Prose(PanelLeds.PassedOverNote));",
                 "ShowSheet(PanelLights.AddBar, Ui.Prose(PanelLightRows.NoProfiles), null); return;",
                 "Ui.Step(1, PanelLights.BarDeviceTitle, deviceHost, true), Ui.Step(2, PanelLeds.ShapeStep, shapeHost), Ui.Step(3, PanelLights.BarNameTitle, name));",
@@ -1514,9 +1537,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("SimHub device", PanelLights.BarDeviceTitle);
             Assert.Equal("Name", PanelLights.BarNameTitle);
             Assert.Equal("Fanatec wheel", PanelLights.BarFanatecTitle);
-            Assert.Equal("Set by the wheel", PanelLeds.SetByTheWheel);
-            Assert.Equal("Fixed", PanelLeds.Fixed);
-            Assert.Equal("3 · 9 · 3", PanelLeds.FanatecShape);
+            Assert.Equal("Fanatec compatibility mode", PanelLights.BarFanatecSwitch);
             Assert.Equal("No LEDs OpenDash can reach", PanelLeds.NotReachable);
             // The one form every line on the page points at the log in.
             Assert.Equal("See SimHub's log.", PanelLeds.PassedOverNote);
@@ -1740,15 +1761,16 @@ namespace OpenDashPlugin.Tests
                 "var device = preferred == null ? LedBar.ArduinoDevice : preferred.Id;",
                 // A device passed over is a row that cannot be picked.
                 "Ui.RadioRow(passed, PanelLeds.NotReachable, false, null, false)",
-                // The wiring it opens on and follows, from the device, and the press's label.
-                "var fanatec = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, preferred == null ? null : preferred.Name);",
-                "var wiring = PanelLeds.WiringFollowsDevice(sides.Length > 0, offersFanatec, target.Name);",
+                // The wiring it opens on and follows, from the device's name and the driver's own say, and the press's label.
+                "var fanatec = PanelLeds.FanatecAfterPick(offersFanatec, preferred == null ? null : preferred.Name, false, false);",
+                "var wiring = PanelLeds.FanatecAfterPick(offersFanatec, target.Name, fanatec, fanatecSetByDriver);",
                 "Ui.Button(PanelLeds.AddPress(targets.Count > 0), PanelButtonKind.Primary, PanelButtonSize.Large)",
                 // The Add sheet's eyebrow, shapes, opening shape, device prose and footer, each
                 // from the rule PanelLeds pins.
-                "var sides = PanelLights.BarSides(census);",
                 "var offersFanatec = PanelLights.OffersFanatec(census);",
-                "if (!PanelLeds.SheetHasShapes(sides.Length, offersFanatec))",
+                "if (!PanelLeds.SheetHasShapes(PanelLights.BarSides(census).Length, offersFanatec))",
+                "var sides = PanelLights.BarSides(census, fanatec);",
+                "side = PanelLeds.KeptSide(sides, side);",
                 "var side = PanelLeds.StartSide(sides);",
                 "var centre = PanelLeds.KeptCentre(centres, 9);",
                 "centre = PanelLeds.KeptCentre(centres, centre);",
@@ -1803,11 +1825,12 @@ namespace OpenDashPlugin.Tests
             // The rename's two guards: the press waits for a name, and a blank one that reached it renames nothing.
             Assert.Equal(2, Occurrences(leds, "save.IsEnabled = PanelLeds.CanRename(name.Text);"));
             Assert.DoesNotContain("PanelLeds.Effects)", leds);
-            // NEW on Brightness, Reverse direction and the Effects and Colours headings, for one release: taking them
-            // off at the next cut moves this count, deliberately.
-            Assert.Equal(4, Occurrences(leds, "Ui.NewTag()"));
+            // NEW on Brightness, Reverse direction, Fanatec compatibility mode and the Effects and Colours headings,
+            // for one release: taking them off at the next cut moves this count, deliberately.
+            Assert.Equal(5, Occurrences(leds, "Ui.NewTag()"));
             Assert.Contains("LedsRow(PanelLeds.BrightnessTitle, brightness, null, Ui.NewTag())", leds);
             Assert.Contains("LedsRow(PanelLeds.ReverseTitle, reverse, null, Ui.NewTag())", leds);
+            Assert.Contains("LedsRow(PanelLights.BarFanatecSwitch, fanatec, PanelLights.BarFanatecCaption, Ui.NewTag())", leds);
         }
 
         /// <summary>Every anchor the page model names is one the page attaches to a row, so search, Home's fix rows
@@ -1820,7 +1843,7 @@ namespace OpenDashPlugin.Tests
                 .Where(field => field.IsLiteral && field.Name.StartsWith("Anchor", StringComparison.Ordinal))
                 .Select(field => field.Name)
                 .ToList();
-            Assert.Equal(16, anchors.Count);
+            Assert.Equal(17, anchors.Count);
             foreach (var name in anchors)
             {
                 Assert.True(leds.Contains(", PanelLeds." + name + ")"), "no Ui.Anchor(..., PanelLeds." + name + ") on the page");
@@ -1980,20 +2003,63 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void The_device_picked_decides_the_wiring_by_its_name()
+        public void A_device_named_Fanatec_ticks_the_compatibility_mode_and_any_other_leaves_it_to_the_driver()
         {
             Assert.True(PanelLeds.FoundFanatec(new[] { "Arduino RGB LEDs", "Fanatec CSL Elite" }));
+            Assert.True(PanelLeds.FoundFanatec(new[] { "FANATEC Podium" }));
             Assert.False(PanelLeds.FoundFanatec(new[] { "Arduino RGB LEDs" }));
             Assert.False(PanelLeds.FoundFanatec(null));
-            // The device picked decides the wiring (#683, #686): a Fanatec wheel through FanaBridge or SimHub's
-            // own device takes the Fanatec 3 · 9 · 3, any other device the plain strip, and the Fanatec wheel's
-            // wherever the build has no plain shape, since it is then the only one.
-            Assert.True(PanelLeds.WiringFollowsDevice(true, true, "Fanatec ClubSport Formula V2.5"));
-            Assert.False(PanelLeds.WiringFollowsDevice(true, true, "Arduino RGB LEDs"));
-            Assert.False(PanelLeds.WiringFollowsDevice(true, true, null));
-            Assert.False(PanelLeds.WiringFollowsDevice(true, false, "Fanatec ClubSport Formula V2.5"));
-            Assert.True(PanelLeds.WiringFollowsDevice(false, true, "Arduino RGB LEDs"));
-            Assert.True(PanelLeds.WiringFollowsDevice(false, false, null));
+            // A Fanatec wheel through FanaBridge or SimHub's own device ticks it whatever it was (#683, #686).
+            Assert.True(PanelLeds.FanatecAfterPick(true, "Fanatec ClubSport Formula V2.5", false, false));
+            Assert.True(PanelLeds.FanatecAfterPick(true, "Fanatec ClubSport Formula V2.5", false, true));
+            // Any other device leaves it as the driver set it, and off where they never touched it, so the
+            // switch ticked by a Fanatec device goes off again when the driver picks the Arduino instead.
+            Assert.False(PanelLeds.FanatecAfterPick(true, "Arduino RGB LEDs", true, false));
+            Assert.False(PanelLeds.FanatecAfterPick(true, null, false, false));
+            Assert.True(PanelLeds.FanatecAfterPick(true, "Arduino RGB LEDs", true, true));
+            Assert.False(PanelLeds.FanatecAfterPick(true, "Arduino RGB LEDs", false, true));
+            // Never where the build embedded no Fanatec profile.
+            Assert.False(PanelLeds.FanatecAfterPick(false, "Fanatec ClubSport Formula V2.5", true, true));
+        }
+
+        [Fact]
+        public void The_ends_follow_the_wiring_and_keep_what_the_driver_chose_where_they_can()
+        {
+            Assert.Equal(3, PanelLeds.KeptSide(new[] { 1, 2, 3, 4 }, 3));
+            Assert.Equal(4, PanelLeds.KeptSide(new[] { 1, 2, 3, 4 }, 4));
+            // A bare run has no Fanatec wiring, so the switch moves the ends to the Fanatec wheels' three.
+            Assert.Equal(3, PanelLeds.KeptSide(new[] { 1, 2, 3, 4 }, 0));
+            Assert.Equal(1, PanelLeds.KeptSide(new[] { 1, 2 }, 0));
+            Assert.Equal(0, PanelLeds.KeptSide(new int[0], 0));
+        }
+
+        [Fact]
+        public void The_Fanatec_switch_is_drawn_on_a_strip_with_ends_and_takes_the_Reverse_row_while_on()
+        {
+            var plain = new LedBar { Namespace = "LedRim", Name = "Rim", Shape = "3-9-3" };
+            var on = new LedBar { Namespace = "LedOn", Name = "On", Shape = "4-8-4", Fanatec = true };
+            var bare = new LedBar { Namespace = "LedBrow", Name = "Brow", Shape = "0-15-0" };
+            Assert.True(PanelLeds.StripDraws(PanelLeds.AnchorFanatec, PanelLights.BarFanatecSwitch, plain));
+            Assert.True(PanelLeds.StripDraws(PanelLeds.AnchorFanatec, PanelLights.BarFanatecSwitch, on));
+            Assert.False(PanelLeds.StripDraws(PanelLeds.AnchorFanatec, PanelLights.BarFanatecSwitch, bare));
+            Assert.True(PanelLeds.StripDraws(PanelLeds.AnchorReverse, PanelLeds.ReverseTitle, plain));
+            Assert.False(PanelLeds.StripDraws(PanelLeds.AnchorReverse, PanelLeds.ReverseTitle, on));
+            Assert.Same(plain, PanelLeds.StripFor(PanelLeds.AnchorFanatec, PanelLights.BarFanatecSwitch, new[] { bare, plain }, bare));
+            Assert.NotEmpty(PanelSearch.Find(PanelLeds.Search, "fanatec"));
+            // The header's chip names the hardware from the profile the strip installs, not its shape.
+            Assert.Equal("Fanatec wheel · ", PanelLeds.HardwareLead(on.ProfileShapeId));
+            Assert.Equal("Strip · ", PanelLeds.HardwareLead(plain.ProfileShapeId));
+        }
+
+        [Fact]
+        public void The_Fanatec_switch_says_what_it_did_as_Reverse_does()
+        {
+            Assert.Equal("Rim is in Fanatec compatibility mode.", PanelLeds.FanatecSaid("Rim", true));
+            Assert.Equal("Rim is no longer in Fanatec compatibility mode.", PanelLeds.FanatecSaid("Rim", false));
+            Assert.Equal(
+                "Rim is in Fanatec compatibility mode, but its profile could not be installed again. See SimHub's log.",
+                PanelLeds.FanatecNotInstalled("Rim", true));
+            Assert.Equal(PanelLeds.FanatecSaid("Rim", true), PanelLeds.FanatecSaid("Rim", true, true, "Fanatec"));
         }
 
         // --- After a press ------------------------------------------------------------------------------------

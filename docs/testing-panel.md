@@ -117,6 +117,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-09 | SimHub device | | Open | states: none ("No SimHub device has LEDs. …") / one ("Goes to <device>.") / gone ("Device not in SimHub") / not connected | U LedDeviceSurveyTests; V; N populated list |
 | LD-10 | Brightness | | 60% | bar LedBrightness property; default label "Same as rig · N%" | J; U |
 | LD-11 | Reverse direction | | Flip | ProfileShapeId -reversed; profile reinstalled; NCalc tester on the remap | J; N hardware |
+| LD-11b | Fanatec compatibility mode | Wheel rim; then Dash brow | Flip off, then on; on the brow, observe | Fanatec false / true; ProfileShapeId 3-9-3 / 3-9-3-fanatec; profile reinstalled; header chip "Strip ·" / "Fanatec wheel ·"; Reverse direction hidden while on; no row on the brow (a bare run has no Fanatec wiring) | U LedBarTests, PanelLedsTests; J; N hardware |
 | LD-12 | Each LED in turn #434 | | Hover | greyed | V |
 | LD-13 | Effects | Wheel rim / Dash brow | Observe; flip TC | 15 switches with ends, 9 on the brow (PanelLeds.EffectsFor); LedEffectTc property false; profile EnabledFormula reads it | U; V; J NCalc tester |
 | LD-14 | Flag animation / Full-strip spotter | | Flip | FlagAnimation, SpotterWhole; Full-strip hidden on the brow | J; V |
@@ -124,7 +125,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-16 | Every strip Soon rows: Idle sweep #485, Engine start animation #300, Car data for AC, ACC and LMU #479 | | Hover | greyed | V |
 | LD-17 | Lovely Car Data | network | Download (Update once a copy is held) | off the UI thread; "Downloading…" then the status line; attribution; log | J; V |
 | LD-18 | Rename / Remove | | Remove Dash brow | asks once (Remove it); strip gone; profile uninstalled | U; J |
-| AL-01 | SimHub device decides the wiring | FanaBridge wheel added | Open; pick the Arduino, then the wheel again, under SimHub device | No Hardware step: the sheet opens on the Fanatec wheel with the shape fixed to 3 · 9 · 3 "Set by the wheel"; the Arduino gives the ends and centre pickers; the wheel fixes them again (#686) | U PanelLedsTests; V |
+| AL-01 | A Fanatec device ticks Fanatec compatibility mode | FanaBridge wheel added | Open; pick the Arduino, then the wheel again, under SimHub device; then flip the switch on with the Arduino picked, and pick another device not named Fanatec | No Hardware step: the sheet opens on the Fanatec wheel with Fanatec compatibility mode on at 3 · 9 · 3, the ends offering 1 to 5 and no None; the Arduino turns it off and offers None again; the wheel turns it on; once flipped on by hand it stays on across a device not named Fanatec; name "Wheel rim" while on (#686) | U PanelLedsTests; V |
 | AL-01b | Strip lands in the wheel's own list | FanaBridge wheel added, its page opened once | Add and install on the wheel, then Devices, the wheel, Telemetry LEDs | the new profile is in the list without a restart, and the log reads "LED module reached through its settings page" (#686) | V |
 | AL-02 | LEDs at each end + LEDs in the centre | Something else | 2 / 11 | preview + BarShapeNote; shape id exists in the census | U; V |
 | AL-03 | SimHub device radios | | Observe | declined disabled with "No LEDs OpenDash can reach"; VM empty state | U; V |
