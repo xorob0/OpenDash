@@ -852,8 +852,7 @@ namespace OpenDashPlugin
             return Ui.VStack(0, head, note);
         }
 
-        /// <summary>A size tile: the screen's outline in a 44 px band, its size in the display family and the
-        /// name the design gives it, if any.</summary>
+        /// <summary>A size tile: the screen's outline in a 44 px band over its size in the display family.</summary>
         private static FrameworkElement BuildSizeTile(ScreenType type, PackageEntry entry, int index, bool selected)
         {
             var shape = PanelAddScreen.TileShape(entry.Width, entry.Height);
@@ -873,16 +872,7 @@ namespace OpenDashPlugin
             var label = Ui.Text(PanelAddScreen.SizeLabel(type, entry, index), PanelAddScreen.SizeLabelSize, FontWeights.SemiBold, Theme.TextPrimary, PanelFonts.Data);
             label.HorizontalAlignment = HorizontalAlignment.Center;
             label.Margin = new Thickness(0, 6, 0, 0);
-            var stack = Ui.VStack(0, band, label);
-            var hint = PanelAddScreen.SizeHint(type, entry);
-            if (!string.IsNullOrEmpty(hint))
-            {
-                var words = Ui.Text(hint, PanelAddScreen.SizeHintSize, FontWeights.Normal, Theme.TextSecondary);
-                words.HorizontalAlignment = HorizontalAlignment.Center;
-                words.Margin = new Thickness(0, 4, 0, 0);
-                stack.Children.Add(words);
-            }
-            return stack;
+            return Ui.VStack(0, band, label);
         }
 
         /// <summary>A line in a dashed outline, 10 by 12 in: the Add sheet's greyed "Your displays".</summary>

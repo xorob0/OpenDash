@@ -148,10 +148,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("This build ships no dashboards.", PanelAddScreen.NothingToAdd);
         }
 
-        /// <summary>A size tile is the screen's outline, its size and the name the design gives it: a wide
-        /// face squeezed, a tall one stretched, a round one a circle, and none larger than its band.</summary>
+        /// <summary>A size tile is the screen's outline and its size: a wide face squeezed, a tall one
+        /// stretched, a round one a circle, and none larger than its band.</summary>
         [Fact]
-        public void A_size_tile_draws_the_screens_shape_and_its_name()
+        public void A_size_tile_draws_the_screens_shape_and_its_size()
         {
             Assert.Equal(new double[] { 64, 20 }, PanelAddScreen.TileShape(1920, 480));
             Assert.Equal(new double[] { 64, 30 }, PanelAddScreen.TileShape(1280, 480));
@@ -169,23 +169,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(8, PanelAddScreen.TileGap);
             Assert.Equal(15, PanelAddScreen.KindTitleSize);
             Assert.Equal(14, PanelAddScreen.SizeLabelSize);
-            Assert.Equal(11, PanelAddScreen.SizeHintSize);
             foreach (var entry in Catalogue())
             {
                 var shape = PanelAddScreen.TileShape(entry.Width, entry.Height);
                 Assert.InRange(shape[0], 12, 96);
                 Assert.InRange(shape[1], 12, 40);
             }
-            var types = PanelAddScreen.Types(Catalogue());
-            var faces = types.First(t => t.Kind == Contract.KindFace);
-            Assert.Equal("Main DDU", PanelAddScreen.SizeHint(faces, faces.Entries.First(e => e.Folder == "OpenDash")));
-            Assert.Equal("Rim", PanelAddScreen.SizeHint(faces, faces.Entries.First(e => e.Folder == "OpenDash 850x480")));
-            Assert.Null(PanelAddScreen.SizeHint(faces, faces.Entries.First(e => e.Folder == "OpenDash 1280x720")));
-            // A way round, and a round screen, already say what they are.
-            var pitWall = types.First(t => t.Kind == Contract.KindPitWall);
-            Assert.Null(PanelAddScreen.SizeHint(pitWall, pitWall.Entries[0]));
-            var round = types.First(t => t.Kind == Contract.KindSlots);
-            Assert.Null(PanelAddScreen.SizeHint(round, round.Entries.First(e => e.Folder == "OpenDash 480 round")));
         }
 
         /// <summary>The census is what the build carries, so a build with no pit wall offers none.</summary>
