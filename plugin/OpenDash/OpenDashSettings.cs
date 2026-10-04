@@ -494,6 +494,33 @@ namespace OpenDashPlugin
             return !string.Equals(before, bar.ProfileShapeId, StringComparison.Ordinal);
         }
 
+        /// <summary>Whether one bar is in the Fanatec wiring. False for a bar that has gone.</summary>
+        public bool BarFanatec(string ns)
+        {
+            var bar = LedBarByNamespace(ns);
+            return bar != null && bar.Fanatec && bar.SupportsFanatec;
+        }
+
+        /// <summary>
+        /// Turns a bar's Fanatec compatibility mode on or off, and says whether that changed the profile it
+        /// installs.
+        /// </summary>
+        /// <remarks>
+        /// True means the bar's profile is now the other wiring and has to be installed again for SimHub to
+        /// draw the change, which the caller does. The Fanatec order has no far end, so turning it on turns
+        /// Reverse direction off; turning it off leaves the strip in the plain order. A shape with no Fanatec
+        /// wiring, a bare run, is refused and nothing changes.
+        /// </remarks>
+        public bool SetBarFanatec(string ns, bool fanatec)
+        {
+            var bar = LedBarByNamespace(ns);
+            if (bar == null || !bar.SupportsFanatec) return false;
+            var before = bar.ProfileShapeId;
+            bar.Fanatec = fanatec;
+            if (fanatec) bar.Reversed = false;
+            return !string.Equals(before, bar.ProfileShapeId, StringComparison.Ordinal);
+        }
+
         /// <summary>
         /// Adds a bar of a shape, with the rig's own settings as its starting point.
         /// </summary>
@@ -524,9 +551,11 @@ namespace OpenDashPlugin
                 FlagAnimation = LedFlagAnimation,
                 Device = device,
                 // As bright as the rig, drawing everything, wired the plain way: the three a driver
-                // changes on the LEDs page once they have seen the strip lit. A reversed shape id still
-                // arrives reversed, which Normalise reads off the id.
+                // changes on the LEDs page once they have seen the strip lit. A reversed or Fanatec shape id
+                // still arrives in that wiring, which Normalise reads off the id: the Add LEDs sheet hands its
+                // Fanatec compatibility mode over as `<shape>-fanatec`.
                 Reversed = false,
+                Fanatec = false,
                 Brightness = null,
                 EffectsOff = new List<string>(),
             };
