@@ -192,6 +192,28 @@ performed:
 Until those three are done, every "seen on the VM" line on the `iflag` tickets is an aspiration,
 and this section exists so that it is a recorded one.
 
+## What the checks cost
+
+The theme conformance harness, `packages/dash/test/conformance.test.ts` (#200), builds every face
+of every theme the run selects and holds it to three properties: nothing clips, nothing escapes its
+frame, nothing disappears. It runs inside `bun run check` like any other test, and a theme added to
+`THEMES` is checked without a line written for it. A plain run checks the default and the themes
+the branch touches against `origin/main`, a file under `packages/dash/src/themes/<id>/` touching
+that theme and a file directly under `themes/` touching every theme; a checkout that has no
+`origin/main` to compare against checks every theme rather than guessing. The full matrix is
+`OPENDASH_THEME_MATRIX=full bun test packages/dash/test/conformance.test.ts`, and the run prints
+which themes it checked and why.
+
+Measured on 2026-10-06 on an Apple Silicon laptop, one theme at one size costs about 35 ms in the
+process: some 18 ms to build the face, 4 for the clipping check, 1 for the frame check and 12 for
+the fields, the 1920 x 480 face being the dearest at about 60 ms. The file itself takes 0.43 s of
+wall clock with the default alone at its eight sizes and 0.51 s with the test theme's two sizes
+added, the rest being Bun starting and importing the modules. A theme with colours of its own is
+checked in a process started for it, since a process draws one theme's colours, and that process
+costs about 0.45 s more for eight sizes. Sixty-five themes at eight sizes would thus be some 18 s
+of checks and 30 s of processes, which is why the pull request run checks only what it touched and
+the full matrix is meant for a schedule or a tag.
+
 ## What to know before changing any of this
 
 **A command over SSH lands in session 0**, which has no desktop, so anything with a window has to
