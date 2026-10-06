@@ -8,12 +8,13 @@
  * it. A page is also held to its place, since the zone setting the plugin writes is the page's index.
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { FACE_SIZES, FACE_ZONE_LETTERS, pagesForZone, type FaceZone } from '../src/contract.ts';
+import { FACE_SIZES, pagesForZone, type FaceZone } from '../src/contract.ts';
 import type { Dashboard, WidgetItem } from '../src/generator.ts';
 import { checkRegions, type Regions } from '../src/themes/anatomy.ts';
 import { buildThemeFace, buildThemeFaces, type ThemeFace } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEMES } from '../src/themes/index.ts';
 import { FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR, ZONE_FACES, buildZoneFace, zoneRegions } from '../src/zones/index.ts';
+import { catalogueChanges } from './conformance.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme } from './fixtures/gearLeftTheme.ts';
 import greenTheme from './fixtures/greenTheme.json';
 
@@ -25,41 +26,6 @@ beforeAll(() => {
 afterAll(() => {
   delete THEMES[GEAR_LEFT_THEME_ID];
 });
-
-interface CatalogueChange {
-  screen: string;
-  zone: FaceZone;
-  /** Pages of the contract's catalogue the zone's dashboard does not carry. */
-  removed: string[];
-  /** Pages it carries, but not at the index the contract gives them. */
-  moved: string[];
-  /** Pages it carries that the contract's catalogue does not have. */
-  added: string[];
-}
-
-/** What each zone of each arrangement of a face carries, against the contract's catalogue for that zone. */
-function catalogueChanges({ built }: { built: { main: Dashboard; zones: Dashboard[] } }): CatalogueChange[] {
-  const byFile = new Map(built.zones.map((d) => [`${d.name}.djson`, d]));
-  return built.main.screens
-    .filter((screen) => screen.name === FACE_SCREEN_NAME || screen.name === FACE_SCREEN_NAME_NO_REV_BAR)
-    .flatMap((screen) =>
-      FACE_ZONE_LETTERS.map((zone) => {
-        const widget = screen.items.find((i): i is WidgetItem => i.kind === 'widget' && i.name === `zone${zone}`);
-        if (!widget) throw new Error(`${screen.name} has no widget for zone ${zone}`);
-        const dashboard = byFile.get(widget.fileName);
-        if (!dashboard) throw new Error(`${screen.name} zone ${zone} points at ${widget.fileName}, which the face does not carry`);
-        const carried = dashboard.screens.map((s) => s.name);
-        const contract = pagesForZone(zone).map((p) => p.id);
-        return {
-          screen: screen.name,
-          zone,
-          removed: contract.filter((id) => !carried.includes(id)),
-          moved: contract.filter((id, i) => carried.includes(id) && carried.indexOf(id) !== i),
-          added: carried.filter((id) => !contract.includes(id)),
-        };
-      }),
-    );
-}
 
 /** The pages a theme has added, by zone, which is what the test names; and nothing removed or moved, which it refuses. */
 function expectWholeCatalogue(face: ThemeFace, added: Partial<Record<FaceZone, string[]>> = {}): void {

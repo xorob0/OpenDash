@@ -23,6 +23,13 @@ export interface ThemeFace {
 const named = (size: Size): string => `${size.width}x${size.height}`;
 
 /**
+ * Whether this process draws the theme in its own colours: it is the process's theme, or its
+ * overlay is the process's, as a test theme with an empty one is in a default process.
+ */
+export const drawsInThisProcess = (themeId: string): boolean =>
+  themeId === THEME_ID || JSON.stringify(THEMES[themeId]?.overlay) === JSON.stringify(THEMES[THEME_ID]!.overlay);
+
+/**
  * The theme, refusing one whose colours are not this process's.
  *
  * A theme's colours are fixed when `ds` is built, once per process, whereas its anatomy is read
@@ -33,7 +40,7 @@ const named = (size: Size): string => `${size.width}x${size.height}`;
 function themeFor(themeId: string): Theme {
   const theme = THEMES[themeId];
   if (!theme) throw new Error(`${JSON.stringify(themeId)} is not a theme; expected one of ${Object.keys(THEMES).join(', ')}`);
-  if (themeId !== THEME_ID && JSON.stringify(theme.overlay) !== JSON.stringify(THEMES[THEME_ID]!.overlay)) {
+  if (!drawsInThisProcess(themeId)) {
     throw new Error(`the ${themeId} theme has colours of its own and this process draws ${THEME_ID}'s; start it with ${THEME_ENV}=${themeId}`);
   }
   return theme;
