@@ -17,10 +17,9 @@
  * rather than added, since design/tokens.json is the author's and is never written from code.
  */
 import { describe, expect, test } from 'bun:test';
-import tokensJson from '../../../design/tokens.json';
 import { composePackages } from '../src/build.ts';
 import { buildDashboardObject, fractionalIntFields, TRANSPARENT, type JsonValue } from '../src/generator.ts';
-import { ds } from '../src/tokens.ts';
+import { ds, TOKEN_TREE } from '../src/tokens.ts';
 import { itemsOf } from '../src/walk.ts';
 
 const PACKAGES = composePackages({ version: '0.0.0-test', log: () => {} }, true);
@@ -32,7 +31,10 @@ const RADIUS_KEY = /^Radius(?:TopLeft|TopRight|BottomLeft|BottomRight)$/;
 
 const isObject = (v: JsonValue): v is { [k: string]: JsonValue } => v !== null && typeof v === 'object' && !Array.isArray(v);
 
-/** Every `#RRGGBB` the token file defines. An alias is collected at the token it points at. */
+/**
+ * Every `#RRGGBB` the token file defines under the theme this process builds, so that a themed
+ * build is held to its own colours. An alias is collected at the token it points at.
+ */
 const tokenColours = (): Set<string> => {
   const out = new Set<string>();
   const walk = (node: unknown): void => {
@@ -40,7 +42,7 @@ const tokenColours = (): Set<string> => {
       if (/^#[0-9A-Fa-f]{6}$/.test(node)) out.add(node.toUpperCase());
     } else if (node !== null && typeof node === 'object') Object.values(node).forEach(walk);
   };
-  walk(tokensJson);
+  walk(TOKEN_TREE);
   return out;
 };
 
