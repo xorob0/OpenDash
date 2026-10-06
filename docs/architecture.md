@@ -12,6 +12,12 @@
 > that path: `packages/dash/src/zones/` is the other one, and `design/zones.md` describes it.
 >
 > The second screens are already on the zone model and their half of this document is current.
+>
+> The five parts of a zone face are the default theme's anatomy rather than a fixed shape: a theme
+> declares, under `packages/dash/src/themes/<id>/`, a function from a face size to named regions,
+> each with a role and a rectangle, and `zones/face.ts` draws whatever regions it is given. The
+> default theme returns the rectangles of `zones/faces/*.ts` unchanged, and `buildThemeFaces` in
+> `themes/faces.ts` builds a theme's faces at every size it claims.
 
 ## The pipeline
 
