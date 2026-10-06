@@ -762,6 +762,45 @@ namespace OpenDashPlugin.Tests
             Assert.Single(Contract.FaceSizes.Where(f => f.BarFieldsPerEnd == 1));
         }
 
+        /// <summary>The theme catalogue, read back from THEME_CATALOGUE in contract.ts: the build makes what
+        /// it lists and the plugin reads what it carries by it, so neither half may move alone (#202).</summary>
+        [Fact]
+        public void Themes_agree_with_contract_ts_when_present()
+        {
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return; // the dash package is built separately; nothing to compare yet
+            var source = File.ReadAllText(path);
+
+            Assert.Contains("DEFAULT_THEME_ID = '" + Contract.DefaultThemeId + "'", source);
+            var block = Regex.Match(source, @"THEME_CATALOGUE[^=]*=\s*\[(?<items>.*?)\r?\n\];", RegexOptions.Singleline);
+            Assert.True(block.Success, "THEME_CATALOGUE not found in contract.ts");
+            var rows = Regex.Matches(
+                block.Groups["items"].Value,
+                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\])\s*\}");
+            Assert.Equal(Contract.Themes.Count, rows.Count);
+            Assert.True(Contract.Themes[0].IsDefault);
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var theme = Contract.Themes[i];
+                Assert.Equal(theme.Id, rows[i].Groups["id"].Value);
+                Assert.Equal(theme.Name, rows[i].Groups["name"].Value);
+                Assert.Equal(theme.Cars, Quoted(rows[i].Groups["cars"].Value));
+                Assert.Equal(theme.IracingCarPaths, Quoted(rows[i].Groups["paths"].Value));
+                var sizes = rows[i].Groups["sizes"].Value;
+                var expected = sizes == "FACE_SIZES"
+                    ? Contract.FaceSizes.Select(f => f.Width + "x" + f.Height)
+                    : Regex.Matches(sizes, @"faceSizeAt\((\d+),\s*(\d+)\)").Cast<Match>().Select(m => m.Groups[1].Value + "x" + m.Groups[2].Value);
+                Assert.Equal(expected, theme.Sizes.Select(f => f.Width + "x" + f.Height));
+            }
+            Assert.Equal(Contract.Themes.Count, Contract.Themes.Select(t => t.Id).Distinct().Count());
+            Assert.Equal("OpenDash Porsche 1280x480", Contract.Themes.Single(t => t.Id == "porsche").FolderAt(1280, 480));
+        }
+
+        private static string[] Quoted(string items)
+        {
+            return Regex.Matches(items, "'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
+        }
+
         [Fact]
         public void Every_action_names_the_face_it_moves()
         {

@@ -1,9 +1,11 @@
 /**
- * The themes the build knows, by id. A theme is a build-time variant: the process is started for
+ * The code of every theme, by id; what the build makes of each is the catalogue's, `THEME_CATALOGUE`
+ * in `contract.ts`. A theme is a build-time variant: the process is started for
  * one theme, `tokens.ts` resolves its overlay before `ds` is built, and every package that process
  * composes is drawn in it. There is no switching inside a process, because forty-odd modules bind
  * colours from `ds` at import time; a build of several themes is one process per theme.
  */
+import { DEFAULT_THEME_ID } from '../contract.ts';
 import type { Overlay } from '../tokens.ts';
 import type { Anatomy } from './anatomy.ts';
 import { defaultAnatomy } from './default/anatomy.ts';
@@ -12,7 +14,7 @@ import defaultOverlay from './default/overlay.json';
 /** The environment variable naming the theme a process builds. Unset or empty is the default theme. */
 export const THEME_ENV = 'OPENDASH_THEME';
 
-export const DEFAULT_THEME_ID = 'default';
+export { DEFAULT_THEME_ID };
 
 export interface Theme {
   /** What the theme changes in design/tokens.json. See `applyOverlay` for how it is read. */
