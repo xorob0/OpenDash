@@ -289,6 +289,13 @@ inputs, and a package built from a user's own tokens is #132. A setting that onl
 text is, as the delta's precision does (#322), is not refused, because every length it can produce
 was budgeted for when the box was cut; ADR 0011 records that condition.
 
+The refusal is of a user's personalisation at runtime, and a **shipped car theme** falls outside it.
+A car theme is decided in a pull request, resolved into its own packages when they are built and
+measured by the same fit tests as every other package, so it is a build-time variant rather than
+personalisation, and [ADR 0015](decisions/0015-car-themes.md) is the record that decides what one may
+change and what it may never remove. A theme pull request consequently no longer falls under this
+line, although it falls under the trade dress line below.
+
 The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
 apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
 says so when a choice collides rather than quietly shipping it.
@@ -368,6 +375,7 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Page navigation | #59, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
 | Network update checks | #80, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
 | Theming and colour customisation | #124, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
+| Theming, as a shipped car theme | #193, [ADR 0015](decisions/0015-car-themes.md) | A car theme is a build-time variant, one package per size per theme, which may change the palette, the type, the chrome and the anatomy and may never remove a page or drop a field; it is not the personalisation the narrower line refuses |
 | Idle or pit screens | #113, #383 | Every package carries an idle screen, which is what SimHub shows between sessions. No page is drawn for the pit lane yet; the limiter banner and the stop alerts on the face stand in its place until #383 lands |
 
 One of the nine still stands and ADR 0011 left a narrower line behind the one it moved. The pit half
@@ -376,7 +384,7 @@ carries until that lands. Each is restated above with the record that would have
 
 | Still refused | What would have to happen first |
 |---|---|
-| Personalisation that changes the layout | #132: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
+| Personalisation that changes the layout | #132: a package built from the user's own tokens. Nothing at runtime re-measures a text box. A shipped car theme is a build-time variant and is not under this line ([ADR 0015](decisions/0015-car-themes.md)) |
 | Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that

@@ -66,7 +66,9 @@ and the pit wall at once.
 
 - `design/tokens.json` is the only place a colour, a font size or a spacing value is defined.
   `packages/dash/src/tokens.ts` reads it and exposes the typed `ds` object. Do not write hex
-  values anywhere else; a test fails if the brand cyan reaches the dash face.
+  values anywhere else; a test fails if the brand cyan reaches the dash face. The one other place
+  a colour may be written is a car theme's token overlay, which overlays this file rather than
+  editing it ([ADR 0015](docs/decisions/0015-car-themes.md)).
 - `packages/dash/src/elements` are the atoms (label, numeral, rule, segment, band). They know
   the font metrics and turn a canvas line box into a SimHub text box.
 - `packages/dash/src/components` are readouts, grids, the rev bar, the flag strip, the pit

@@ -22,6 +22,8 @@ the thing that is wrong when the two disagree.
 | 0012 | [Update checks, and what leaves the user's machine](0012-update-checks.md) | OpenDash asks GitHub what the newest release is, sends nothing about the user, and never installs without being told |
 | 0013 | [OpenDash lights hardware, and the flag box is where it starts](0013-lighting-hardware.md) | An 8x8 matrix profile is build output like a package; amended so the plugin installs it from a press on the device's own page, and never selects it |
 | 0014 | [The shift model is the car's own](0014-the-shift-model.md) | iRacing publishes the car's shift-light RPMs and SimHub ignores them; one definition drives the bar, the arc, the flag box and the strip. Amends 0004 |
+| 0015 | [What a car theme is](0015-car-themes.md) | A build-time variant, one package per size per theme, with no theme property; it may change the palette, the type, the chrome and the anatomy and never remove a page or drop a field. Moves the layout line in scope.md for a shipped theme, adds a row to 0011, narrows 0006 |
+| 0016 | [How themed packages reach the user](0016-themed-package-distribution.md) | Embedded in the plugin like the defaults and written only when picked on the Add sheet, so nothing is fetched; download on demand under 0012 once the DLL would pass 25 MB |
 | 0017 | [A screen is an instance](0017-a-screen-is-an-instance.md) | A rig is any number of named screens in any mix of sizes; the namespace is allocated once and the installer rewrites it into the copy. Amends 0003 and narrows 0011 |
 | 0018 | [The car's own lights, from a table OpenDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and OpenDash never ships; the style is now a switch per strip. Amends 0014, reopens 0009, extends 0012 |
 | 0020 | [The panel draws what it configures](0020-the-panel-draws-what-it-configures.md) | The Screens page hosts SimHub's own renderer, one screen at a time, so the preview is the dashboard rather than a picture of one; the Rig page draws schematics only. Amends 0003, leaves 0001 standing, owes 0008 no fidelity check |
@@ -35,16 +37,15 @@ collide.
 It happened again on 2026-09-13, and worse: four tickets, two numbers. #193 and #276 both
 claimed 0013, and #197 and #281 both claimed 0014, all four opened within an afternoon of
 each other. The two lighting records keep the numbers, because they were the pair actually being
-written when the collision was found; the two Car themes records move to 0015 and 0016. Any ticket
-body still naming the old number is amended rather than rewritten, which is why a reader may find
-"ADR 0014" in #197 and #198 meaning the record now numbered 0016.
+written when the collision was found; the two Car themes records move to 0015 and 0016, and both
+have since been written under those numbers. Any ticket body still naming the old number is amended
+rather than rewritten, which is why a reader may find "ADR 0014" in #197 and #198 meaning the record
+now numbered 0016.
 
 | | | |
 |---|---|---|
 | 0007 | The second screens, written down after the fact | #118 |
 | 0010 | Where alert priority is decided | #107 |
-| 0015 | What a car theme is, and the scope line it has to move | #193 |
-| 0016 | How several hundred themed packages reach the user | #197 |
 | 0019 | A renderer in the browser, and what it owes | #395 |
 
 And once more on 2026-09-16, between two branches rather than two tickets: this record and "A
