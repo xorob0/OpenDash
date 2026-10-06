@@ -12,6 +12,7 @@
  */
 import type { Hex, Rect } from '../generator.ts';
 import type { FaceZone } from '../contract.ts';
+import { optionalRegionRect, regionRect, zoneRect, type Region, type Regions } from '../themes/anatomy.ts';
 
 export interface ZoneRects {
   /** The recessed well the shift lights sit in. Full width, never moves. */
@@ -60,6 +61,7 @@ export interface ZoneLayout {
   width: number;
   height: number;
   background: Hex;
+  /** The house face's rectangles, which the default theme hands back as its regions; see `zoneRegions`. */
   zones: ZoneRects;
   /**
    * The gap between two of the fifteen rev segments: 8 at 1920, 6 at 1280, 4 at 850 and below.
@@ -83,12 +85,45 @@ export interface ZoneLayout {
   bar?: BarScale;
 }
 
-/** The rect a zone occupies. */
-export function rectOf(layout: ZoneLayout, zone: FaceZone): Rect {
-  if (zone === 'A') return layout.zones.zoneA;
-  if (zone === 'B') return layout.zones.zoneB;
-  if (zone === 'C') return layout.zones.zoneC;
-  return layout.zones.band;
+/** The rect a zone occupies on the house face. */
+export const rectOf = (layout: ZoneLayout, zone: FaceZone): Rect => zoneRect(zoneRegions(layout), zone);
+
+/**
+ * The house face's rectangles as regions, which is the whole of the default theme's anatomy.
+ *
+ * The hero is zone A and the flag's body is the three zones together, which is what the face drew
+ * before a theme could say otherwise.
+ */
+export const zoneRegions = (layout: ZoneLayout): Regions => [
+  ...rectsAsRegions(layout.zones),
+  { role: 'hero', rect: layout.zones.zoneA },
+  { role: 'flagBody', rect: bodyRect(layout) },
+];
+
+const rectsAsRegions = (z: ZoneRects): Region[] => [
+  { role: 'revBarWell', rect: z.revBarWell },
+  { role: 'revBar', rect: z.revBar },
+  ...(z.bar ? [{ role: 'bar', rect: z.bar } as const] : []),
+  { role: 'zone', zone: 'B', rect: z.zoneB },
+  { role: 'zone', zone: 'A', rect: z.zoneA },
+  { role: 'zone', zone: 'C', rect: z.zoneC },
+  { role: 'band', rect: z.band },
+  { role: 'pitAlert', rect: z.pitLimiter },
+];
+
+/** Regions back into the house face's fields, for the arrangement the house face derives rather than draws. */
+function rectsOf(regions: Regions): ZoneRects {
+  const bar = optionalRegionRect(regions, 'bar');
+  return {
+    revBarWell: regionRect(regions, 'revBarWell'),
+    revBar: regionRect(regions, 'revBar'),
+    ...(bar ? { bar } : {}),
+    zoneB: zoneRect(regions, 'B'),
+    zoneA: zoneRect(regions, 'A'),
+    zoneC: zoneRect(regions, 'C'),
+    band: regionRect(regions, 'band'),
+    pitLimiter: regionRect(regions, 'pitAlert'),
+  };
 }
 
 /** `1920 x 480, zones`: what the metadata says a package is. */
@@ -128,10 +163,12 @@ export const zoneLayoutDescription = (width: number, height: number): string => 
  * The first thing under the well is the bar where there is one, and the top of the body where there
  * is not, which is the nano.
  */
-export const revBarReclaim = (zones: ZoneRects): number => (zones.bar?.top ?? bodyTop(zones)) - zones.revBarWell.top;
+export const revBarReclaim = (zones: ZoneRects): number => reclaimOf(rectsAsRegions(zones));
+
+const reclaimOf = (regions: Regions): number => (optionalRegionRect(regions, 'bar')?.top ?? bodyTop(regions)) - regionRect(regions, 'revBarWell').top;
 
 /** The top of the body: the highest of the three zones, which is all three of them in landscape. */
-export const bodyTop = (zones: ZoneRects): number => Math.min(zones.zoneA.top, zones.zoneB.top, zones.zoneC.top);
+const bodyTop = (regions: Regions): number => Math.min(...(['A', 'B', 'C'] as const).map((zone) => zoneRect(regions, zone).top));
 
 /**
  * The body as one rectangle: zones B, A and C together, the seams between them included, full width.
@@ -146,7 +183,7 @@ export const bodyTop = (zones: ZoneRects): number => Math.min(zones.zoneA.top, z
  */
 export function bodyRect(layout: ZoneLayout): Rect {
   const z = layout.zones;
-  const top = bodyTop(z);
+  const top = Math.min(z.zoneA.top, z.zoneB.top, z.zoneC.top);
   const bottom = Math.max(z.zoneA.top + z.zoneA.height, z.zoneB.top + z.zoneB.height, z.zoneC.top + z.zoneC.height);
   return { left: 0, top, width: layout.width, height: bottom - top };
 }
@@ -155,31 +192,34 @@ export function bodyRect(layout: ZoneLayout): Rect {
 const liftedBy = (r: Rect, by: number): Rect => ({ ...r, top: r.top - by });
 
 /**
- * The same rectangles with the rev bar's room given back.
+ * The same regions with the rev bar's room given back.
  *
- * One rule: the bar rises to where the well began, the zones that start the body rise with it and
- * grow by what they gained, and everything else stays exactly where the artboard put it. Band D
+ * One rule: the bar rises to where the well began, the regions that start the body rise with it
+ * and grow by what they gained, and everything else stays exactly where the anatomy put it. Band D
  * does not move, because it is measured from the bottom edge and the bottom edge has not changed;
- * the limiter moves with zone A, because it is drawn over zone A and nowhere else.
+ * the pit alert moves with the zone it is drawn over, which is the zone holding its top left corner.
+ * The hero and the flag's body are body regions like the zones, so they grow when they start it.
  *
  * In landscape B, A and C all start the body, so all three grow. In portrait only zone A does, and
  * B and C keep both their rectangles and their zone dashboards -- which is why a portrait package
  * gains one zone dashboard and a landscape one gains two.
  */
-export function zonesWithoutRevBar(zones: ZoneRects): ZoneRects {
-  const reclaim = revBarReclaim(zones);
-  const top = bodyTop(zones);
+export function regionsWithoutRevBar(regions: Regions): Regions {
+  const reclaim = reclaimOf(regions);
+  const top = bodyTop(regions);
   const grown = (r: Rect): Rect => (r.top === top ? { ...r, top: r.top - reclaim, height: r.height + reclaim } : r);
-  const zoneA = grown(zones.zoneA);
-  return {
-    ...zones,
-    ...(zones.bar ? { bar: liftedBy(zones.bar, reclaim) } : {}),
-    zoneA,
-    zoneB: grown(zones.zoneB),
-    zoneC: grown(zones.zoneC),
-    pitLimiter: liftedBy(zones.pitLimiter, zones.zoneA.top - zoneA.top),
-  };
+  const pitAlert = regionRect(regions, 'pitAlert');
+  const under = regions.find((r) => r.role === 'zone' && contains(r.rect, pitAlert.left, pitAlert.top));
+  const pitAlertLift = under && under.rect.top === top ? reclaim : 0;
+  return regions.map((region): Region => {
+    if (region.role === 'bar') return { ...region, rect: liftedBy(region.rect, reclaim) };
+    if (region.role === 'zone' || region.role === 'hero' || region.role === 'flagBody') return { ...region, rect: grown(region.rect) };
+    if (region.role === 'pitAlert') return { ...region, rect: liftedBy(region.rect, pitAlertLift) };
+    return region;
+  });
 }
 
+const contains = (r: Rect, x: number, y: number): boolean => x >= r.left && x < r.left + r.width && y >= r.top && y < r.top + r.height;
+
 /** The layout as it is drawn with the rev bar off. The face builds both and shows one. */
-export const layoutWithoutRevBar = (layout: ZoneLayout): ZoneLayout => ({ ...layout, zones: zonesWithoutRevBar(layout.zones) });
+export const layoutWithoutRevBar = (layout: ZoneLayout): ZoneLayout => ({ ...layout, zones: rectsOf(regionsWithoutRevBar(zoneRegions(layout))) });

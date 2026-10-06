@@ -5,6 +5,8 @@
  * colours from `ds` at import time; a build of several themes is one process per theme.
  */
 import type { Overlay } from '../tokens.ts';
+import type { Anatomy } from './anatomy.ts';
+import { defaultAnatomy } from './default/anatomy.ts';
 import defaultOverlay from './default/overlay.json';
 
 /** The environment variable naming the theme a process builds. Unset or empty is the default theme. */
@@ -15,11 +17,13 @@ export const DEFAULT_THEME_ID = 'default';
 export interface Theme {
   /** What the theme changes in design/tokens.json. See `applyOverlay` for how it is read. */
   readonly overlay: Overlay;
+  /** Where the theme puts each part of a face, at every size it draws. See `themes/anatomy.ts`. */
+  readonly anatomy: Anatomy;
 }
 
 export const THEMES: Record<string, Theme> = {
-  /** The look `main` has always built: an overlay that changes nothing. */
-  [DEFAULT_THEME_ID]: { overlay: defaultOverlay },
+  /** The look `main` has always built: an overlay that changes nothing, over the zone anatomy. */
+  [DEFAULT_THEME_ID]: { overlay: defaultOverlay, anatomy: defaultAnatomy },
 };
 
 /** The theme {@link THEME_ENV} names, refusing one that is not registered rather than falling back. */
