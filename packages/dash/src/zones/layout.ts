@@ -61,6 +61,7 @@ export interface ZoneLayout {
   width: number;
   height: number;
   background: Hex;
+  /** The house face's rectangles, which the default theme hands back as its regions; see `zoneRegions`. */
   zones: ZoneRects;
   /**
    * The gap between two of the fifteen rev segments: 8 at 1920, 6 at 1280, 4 at 850 and below.

@@ -9,8 +9,9 @@
  * Twice, because `OpenDash.RevBar` `off` is not a hidden rev bar but a differently arranged screen:
  * the two arrangements are built here and SimHub shows whichever the setting enables. #189.
  *
- * What this file does *not* do is decide any geometry. Every rectangle comes from the layout, which
- * read it off an artboard; see `docs/design/zones.md`.
+ * What this file does *not* do is decide any geometry. Every rectangle comes from the regions a
+ * theme's anatomy declares, which under the default theme are the layout's own, read off an
+ * artboard; see `docs/design/zones.md`.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';

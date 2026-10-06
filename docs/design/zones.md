@@ -20,7 +20,18 @@ being deeper rather than by being more crowded.
 
 ## 1. The anatomy
 
-The same five parts on every rectangular face. Only their sizes change.
+The anatomy below is the default theme's output rather than the shape every face must have. What a
+theme declares is a function from a face size to a set of named regions, each of which carries a
+role and a rectangle (`packages/dash/src/themes/anatomy.ts`), and the roles are the parts the face
+knows how to fill: the rev bar and its well, the bar, zones B, A and C, band D, the rectangle the
+pit alerts are drawn in, the hero the pop-ups, the change notifications and the lap review are
+centred on, and the body a full-screen flag takes. The default theme returns the rectangles of
+`packages/dash/src/zones/faces/*.ts` as they are, so the tables of this section remain its data,
+whereas another theme may move a region or go without the bar while every zone keeps its whole
+catalogue (ADR 0015).
+
+Under the default theme, the same five parts are on every rectangular face, and only their sizes
+change.
 
 | | |
 |---|---|
@@ -137,7 +148,7 @@ already carries LEDs across its top (#189). Hiding the segments alone leaves the
 nothing, so the face has a second arrangement, and its rectangles are the only ones in this document
 that no artboard gives. §10 records what the canvas owes.
 
-The rule, in `zonesWithoutRevBar`:
+The rule, in `regionsWithoutRevBar`, which is a function of the regions and therefore applies to a theme's as it does to the default's:
 
 - What is given back is **the well and the gap under it**. The one to four pixels above the well are
   not: that is the top margin of the face, and giving it back would put the bar's labels' line box a
@@ -146,7 +157,8 @@ The rule, in `zonesWithoutRevBar`:
   the same amount, so they keep their bottom edge. In portrait only zone A starts the body, so B and
   C keep both their rectangles and their zone dashboards.
 - Band D does not move: it is measured from the bottom edge and the bottom edge has not changed. The
-  pit limiter moves with zone A, because that is what it is drawn over.
+  pit limiter moves with zone A, because that is what it is drawn over; under a theme, it moves with
+  whichever zone holds its top left corner.
 - The rules rise with the parts they separate, since they are read off the rects. The nano is the
   one face where the body then starts on row 1, leaving no row above it for a rule to sit in, so
   that arrangement draws the rule above band D and none above its body.
