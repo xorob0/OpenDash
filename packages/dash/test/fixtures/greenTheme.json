@@ -1,3 +1,7 @@
 {
-  "palette.green.200": "#12AB34"
+  "palette": {
+    "green": {
+      "200": { "value": "#12AB34" }
+    }
+  }
 }

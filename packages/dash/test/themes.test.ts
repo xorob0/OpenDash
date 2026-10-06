@@ -29,9 +29,21 @@ const colourTokenPaths = (tree: Tree): string[] => {
   return out;
 };
 
+/** An overlay in the shape of tokens.json, from dotted paths, so that a test reads as the paths it writes. */
+const overlayOf = (tokens: Record<string, string | number>): Overlay => {
+  const out: Tree = {};
+  for (const [at, value] of Object.entries(tokens)) {
+    const segments = at.split('.');
+    let node = out;
+    for (const segment of segments.slice(0, -1)) node = (node[segment] ??= {}) as Tree;
+    node[segments.at(-1)!] = { value };
+  }
+  return out;
+};
+
 describe('an overlay', () => {
   test('wins over the base at the same path, and its aliases resolve against the merged tree', () => {
-    const merged = applyOverlay(BASE_TREE, { 'palette.green.200': NEW_GREEN, 'purpose.delta.slower': '{color.good.primary}' });
+    const merged = applyOverlay(BASE_TREE, overlayOf({ 'palette.green.200': NEW_GREEN, 'purpose.delta.slower': '{color.good.primary}' }), 'test');
     expect(resolveTokenIn(merged, 'palette.green.200')).toBe(NEW_GREEN);
     // Reached through the base's own alias, color.good.primary -> palette.green.200.
     expect(resolveTokenIn(merged, 'purpose.delta.faster')).toBe(NEW_GREEN);
@@ -41,17 +53,35 @@ describe('an overlay', () => {
   });
 
   test('leaves the base it was applied to untouched', () => {
-    applyOverlay(BASE_TREE, { 'palette.green.200': NEW_GREEN });
+    applyOverlay(BASE_TREE, overlayOf({ 'palette.green.200': NEW_GREEN }), 'test');
     expect(resolveTokenIn(BASE_TREE, 'palette.green.200')).toBe(OLD_GREEN);
   });
 
-  test('refuses a token the base does not define, a group, a layer that is not a colour, and an alias to nothing', () => {
-    expect(() => applyOverlay(BASE_TREE, { 'palette.green.250': NEW_GREEN })).toThrow(/does not define/);
-    expect(() => applyOverlay(BASE_TREE, { 'palette.gren.200': NEW_GREEN })).toThrow(/does not define/);
-    expect(() => applyOverlay(BASE_TREE, { 'color.good': NEW_GREEN })).toThrow(/group/);
-    expect(() => applyOverlay(BASE_TREE, { 'space.3': 14 })).toThrow(/palette, color, purpose only/);
-    expect(() => applyOverlay(BASE_TREE, { 'purpose.delta.slower': '{color.nope.primary}' })).toThrow(/nothing at color.nope.primary/);
-    expect(() => applyOverlay(BASE_TREE, { 'palette.green.200': '{color.good.primary}' })).toThrow(/alias cycle/);
+  test("adds colours of its own under palette.<theme id>, and the base's tokens can be pointed at them", () => {
+    const merged = applyOverlay(BASE_TREE, overlayOf({ 'palette.car.grey.300': '#3A3A3A', 'color.surface.zone': '{palette.car.grey.300}' }), 'car');
+    expect(resolveTokenIn(merged, 'palette.car.grey.300')).toBe('#3A3A3A');
+    expect(resolveTokenIn(merged, 'color.surface.zone')).toBe('#3A3A3A');
+    expect(resolveTokenIn(merged, 'purpose.block.fill.value')).toBe('#3A3A3A');
+    expect(tokenNodeIn(BASE_TREE, 'palette.car')).toBeUndefined();
+  });
+
+  test('refuses an addition anywhere but its own group, and a group of its own the base already has', () => {
+    // The same token under another theme's name is an override of a path the base does not have.
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'palette.car.grey.300': '#3A3A3A' }), 'other')).toThrow(/overrides palette.car.grey.300, which tokens.json does not define/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'color.car.primary': '#3A3A3A' }), 'car')).toThrow(/overrides color.car.primary/);
+    // A theme called green would own palette.green, which is the base's.
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'palette.green.900': '#3A3A3A' }), 'green')).toThrow(/adds under palette.green, which tokens.json already defines/);
+  });
+
+  test('refuses a token the base does not define, a group, a layer that is not a colour, a bare value and an alias to nothing, naming the path', () => {
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'palette.green.250': NEW_GREEN }), 'test')).toThrow(/overrides palette.green.250, which tokens.json does not define/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'palette.gren.200': NEW_GREEN }), 'test')).toThrow(/overrides palette.gren.200/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'color.good': NEW_GREEN }), 'test')).toThrow(/overrides color.good, which tokens.json does not define as a token/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'space.3': 14 }), 'test')).toThrow(/palette, color, purpose only, not space.3/);
+    expect(() => applyOverlay(BASE_TREE, { palette: { green: { 200: NEW_GREEN } } }, 'test')).toThrow(/writes palette.green.200 bare/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'purpose.delta.slower': '{color.nope.primary}' }), 'test')).toThrow(/purpose.delta.slower does not resolve: tokens: nothing at color.nope.primary/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'palette.test.ink': '{palette.test.nope}' }), 'test')).toThrow(/palette.test.ink does not resolve/);
+    expect(() => applyOverlay(BASE_TREE, overlayOf({ 'palette.green.200': '{color.good.primary}' }), 'test')).toThrow(/alias cycle/);
   });
 });
 
@@ -67,7 +97,7 @@ describe('the theme a process builds', () => {
 
   test('the default overlay changes nothing', () => {
     expect(THEMES[DEFAULT_THEME_ID]!.overlay).toEqual({});
-    expect(applyOverlay(BASE_TREE, THEMES[DEFAULT_THEME_ID]!.overlay)).toEqual(BASE_TREE);
+    expect(applyOverlay(BASE_TREE, THEMES[DEFAULT_THEME_ID]!.overlay, DEFAULT_THEME_ID)).toEqual(BASE_TREE);
   });
 
   /**
@@ -84,7 +114,7 @@ describe('the theme a process builds', () => {
 
 describe('a theme that redefines one palette entry', () => {
   const overlay: Overlay = greenTheme;
-  const themed = applyOverlay(BASE_TREE, overlay);
+  const themed = applyOverlay(BASE_TREE, overlay, 'test-green');
 
   test('changes every reading that aliases it and nothing else', () => {
     const changed: string[] = [];
@@ -121,9 +151,9 @@ describe('a theme that redefines one palette entry', () => {
 });
 
 describe('every registered theme', () => {
-  for (const [id, theme] of Object.entries({ ...THEMES, green: { overlay: greenTheme as Overlay } })) {
+  for (const [id, theme] of Object.entries({ ...THEMES, 'test-green': { overlay: greenTheme as Overlay } })) {
     test(`${id}: no colour the face reads is the brand cyan`, () => {
-      const tree = applyOverlay(BASE_TREE, theme.overlay);
+      const tree = applyOverlay(BASE_TREE, theme.overlay, id);
       const brand = new Set([
         ...['100', '200', '300'].map((shade) => resolveTokenIn(BASE_TREE, `palette.cyan.${shade}`)),
         ...['primary', 'secondary', 'tint'].map((shade) => resolveTokenIn(tree, `color.brand.${shade}`)),

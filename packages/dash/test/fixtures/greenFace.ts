@@ -6,8 +6,8 @@
 import { THEME_ENV, THEMES } from '../../src/themes/index.ts';
 import greenTheme from './greenTheme.json';
 
-THEMES.green = { overlay: greenTheme };
-process.env[THEME_ENV] = 'green';
+THEMES['test-green'] = { overlay: greenTheme };
+process.env[THEME_ENV] = 'test-green';
 const { faceDjson } = await import('./faceDjson.ts');
 const { LARGE_FACE } = await import('../../src/zones/index.ts');
 process.stdout.write(JSON.stringify(faceDjson([LARGE_FACE])));
