@@ -175,6 +175,7 @@ the project is written against.
 | Spacing, padding, radii as *layout*, positions (#131) | **Build input** | Every one of them was consumed by a layout decision in TypeScript |
 | `font.cell`, the advances, the character budgets | **Build-time only** | Not a setting at any layer: they are how the boxes were measured, and a user changing one changes nothing but the truth of the measurement |
 | A package built from the user's own tokens (#132) | **Build input, and the home of that bucket** | CI builds it; nothing runs on the user's machine |
+| A car theme (#193, added 2026-10-06) | **Out of scope: a build-time variant** | A shipped theme is its own package per size, decided in a pull request and measured like any other, and nothing about it is a user's setting; [ADR 0015](0015-car-themes.md) is its record and answers this one's rejection of variant packages |
 | Regenerating a package locally | **Not possible** | It means porting the generator to C# or shipping a JavaScript runtime. [ADR 0003](0003-plugin-settings-through-properties.md) rejected it and it stays rejected |
 
 ### Why geometry does not become a runtime setting, even though it binds
