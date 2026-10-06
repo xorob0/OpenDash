@@ -1,24 +1,32 @@
 /**
- * design/tokens.json in code. Resolves `{a.b.c}` aliases recursively and exposes `ds`, the typed
- * subset the dash face needs. Every tokens.json path `ds` reads is recorded in DS_TOKEN_PATHS so
- * a test can prove each one exists and every colour is `#RRGGBB`. Nothing here reads
- * `color.brand.*`: the brand colour never appears on the face.
+ * design/tokens.json in code, under the theme this process builds. Resolves `{a.b.c}` aliases
+ * recursively and exposes `ds`, the typed subset the dash face needs. Every tokens.json path `ds`
+ * reads is recorded in DS_TOKEN_PATHS so a test can prove each one exists and every colour is
+ * `#RRGGBB`. Nothing here reads `color.brand.*`: the brand colour never appears on the face.
  */
 import tokensJson from '../../../design/tokens.json';
 import type { Hex } from './generator.ts';
+import { selectedThemeId, THEMES } from './themes/index.ts';
 
-type Tree = Record<string, unknown>;
-const tree = tokensJson as unknown as Tree;
+export type Tree = Record<string, unknown>;
+/** What a theme writes over tokens.json, in the file's own shape: groups, and tokens as `{ "value": ... }`. */
+export type Overlay = Readonly<Record<string, unknown>>;
+
 const ALIAS = /^\{([A-Za-z0-9_.$-]+)\}$/;
 const HEX6 = /^#[0-9A-F]{6}$/;
+/** The colour layers. A size, a spacing or a font is the anatomy's to change, not an overlay's. */
+const OVERLAY_LAYERS: readonly string[] = ['palette', 'color', 'purpose'];
 
 const isObject = (v: unknown): v is Tree => v !== null && typeof v === 'object';
 
 /** SimHub's transparent colour. Not a token: it is the absence of one. */
 export const TRANSPARENT: Hex = '#00FFFFFF';
 
-/** The raw node at a dotted path, or undefined when the path does not exist. */
-export function tokenNode(path: string): unknown {
+/** design/tokens.json as written, which every theme starts from. */
+export const BASE_TREE = tokensJson as unknown as Tree;
+
+/** The raw node at a dotted path of a tree, or undefined when the path does not exist. */
+export function tokenNodeIn(tree: Tree, path: string): unknown {
   let node: unknown = tree;
   for (const segment of path.split('.')) {
     if (!isObject(node) || !(segment in node)) return undefined;
@@ -27,19 +35,85 @@ export function tokenNode(path: string): unknown {
   return node;
 }
 
-/** The leaf value at a path, following `{alias}` strings until a literal is reached. */
-export function resolveToken(path: string, trail: string[] = []): string | number | boolean {
+/** The leaf value at a path of a tree, following `{alias}` strings within that tree until a literal is reached. */
+export function resolveTokenIn(tree: Tree, path: string, trail: string[] = []): string | number | boolean {
   if (trail.includes(path)) throw new Error(`tokens: alias cycle ${[...trail, path].join(' -> ')}`);
-  const node = tokenNode(path);
+  const node = tokenNodeIn(tree, path);
   if (node === undefined) throw new Error(`tokens: nothing at ${path}`);
   const value = isObject(node) && 'value' in node ? node.value : node;
   if (typeof value === 'string') {
     const alias = ALIAS.exec(value);
-    return alias ? resolveToken(alias[1] ?? '', [...trail, path]) : value;
+    return alias ? resolveTokenIn(tree, alias[1] ?? '', [...trail, path]) : value;
   }
   if (typeof value === 'number' || typeof value === 'boolean') return value;
   throw new Error(`tokens: ${path} is a group, not a token`);
 }
+
+/** Every token of an overlay, by dotted path, with the node that writes it. */
+function overlayTokens(overlay: Overlay): [string, Tree][] {
+  const out: [string, Tree][] = [];
+  const walk = (node: unknown, at: string): void => {
+    if (!isObject(node)) throw new Error(`tokens: the overlay writes ${at} bare; a token is written { "value": ... }, as in tokens.json`);
+    if ('value' in node) out.push([at, node]);
+    else for (const [key, child] of Object.entries(node)) walk(child, at === '' ? key : `${at}.${key}`);
+  };
+  walk(overlay, '');
+  return out;
+}
+
+/**
+ * The base with a theme's overlay written over it. The overlay is shaped like tokens.json, and the
+ * order is stated once, here: at a path both define the overlay wins, and every alias, the base's
+ * and the overlay's alike, is resolved afterwards against the merged tree, which is what lets one
+ * `palette` entry reach every token aliasing it.
+ *
+ * An overlay overrides tokens the base already has, in a colour layer, and adds tokens of its own
+ * only under `palette.<theme id>`, a group the base may not define, which is where a car's own greys
+ * go. Anything else throws with the path in the message, an override of a token the base does not
+ * have and an alias to a path the merged tree does not have included, so that a misspelt path fails
+ * the build rather than being silently ignored.
+ */
+export function applyOverlay(base: Tree, overlay: Overlay, themeId: string): Tree {
+  const merged = structuredClone(base);
+  const owned = `palette.${themeId}`;
+  const tokens = overlayTokens(overlay);
+  if (tokens.some(([path]) => path.startsWith(`${owned}.`)) && tokenNodeIn(base, owned) !== undefined) {
+    throw new Error(`tokens: theme ${themeId} adds under ${owned}, which tokens.json already defines`);
+  }
+  for (const [path, token] of tokens) {
+    const dot = path.lastIndexOf('.');
+    if (path.startsWith(`${owned}.`)) {
+      let parent = merged;
+      for (const segment of path.slice(0, dot).split('.')) parent = (parent[segment] ??= {}) as Tree;
+      parent[path.slice(dot + 1)] = structuredClone(token);
+      continue;
+    }
+    if (!OVERLAY_LAYERS.includes(path.split('.')[0] ?? '')) throw new Error(`tokens: an overlay writes ${OVERLAY_LAYERS.join(', ')} only, not ${path}`);
+    const node = tokenNodeIn(merged, path);
+    if (!isObject(node) || !('value' in node)) throw new Error(`tokens: the overlay overrides ${path}, which tokens.json does not define as a token`);
+    node.value = token.value;
+  }
+  for (const [path] of tokens) {
+    try {
+      resolveTokenIn(merged, path);
+    } catch (e) {
+      throw new Error(`tokens: the overlay's ${path} does not resolve: ${(e as Error).message}`);
+    }
+  }
+  return merged;
+}
+
+/** The theme this process builds, read once, because forty-odd modules bind `ds` at import time. */
+export const THEME_ID = selectedThemeId();
+
+/** design/tokens.json under the overlay of {@link THEME_ID}: the tree everything below reads. */
+export const TOKEN_TREE = applyOverlay(BASE_TREE, THEMES[THEME_ID]!.overlay, THEME_ID);
+
+/** The raw node at a dotted path, or undefined when the path does not exist. */
+export const tokenNode = (path: string): unknown => tokenNodeIn(TOKEN_TREE, path);
+
+/** The leaf value at a path, following `{alias}` strings until a literal is reached. */
+export const resolveToken = (path: string): string | number | boolean => resolveTokenIn(TOKEN_TREE, path);
 
 export function tokenExists(path: string): boolean {
   try {
