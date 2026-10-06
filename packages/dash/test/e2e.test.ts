@@ -28,7 +28,7 @@ import {
   type BuildResult,
 } from '../src/build.ts';
 import { chequerCount } from '../src/components/flagRing.ts';
-import { CARD_CATALOGUE, defaultCardForSlot } from '../src/contract.ts';
+import { CARD_CATALOGUE, DEFAULT_THEME_ID, defaultCardForSlot, THEME_CATALOGUE, themedFolder } from '../src/contract.ts';
 import { buildPackage, FACE_FONT_FILES } from '../src/dashboard.ts';
 import { assetBox, imageOf, VENDORED_IMAGES_DIR, WHEEL_CHANGE_TICK } from '../src/design/assets.ts';
 import { fontsForPanel, needsRename, renameFamily, renamedFileName } from '../src/design/fontFiles.ts';
@@ -100,8 +100,8 @@ beforeAll(() => {
   // The faces and the second screens are built into separate directories so each block can assert
   // on exactly what its own build wrote.
   widget = build({ out: join(root, 'widget'), screens: [], stripShapes: [], log: (line) => log.push(line) });
-  inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], zoneFaces: [], stripShapes: [], log: () => {} });
-  second = build({ out: join(root, 'second'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
+  inline = build({ out: join(root, 'inline'), strategy: 'inline', screens: [], themes: [], stripShapes: [], log: () => {} });
+  second = build({ out: join(root, 'second'), layouts: [], themes: [], stripShapes: [], log: () => {} });
 }, BUILD_HOOK_TIMEOUT);
 afterAll(() => {
   rmSync(root, { recursive: true, force: true });
@@ -540,7 +540,7 @@ describe('reproducibility', () => {
    * two builds into two directories, compared byte for byte, in either order.
    */
   const again = build({ out: join(root, 'again'), screens: [], stripShapes: [], log: () => {} });
-  const againSecond = build({ out: join(root, 'againSecond'), layouts: [], zoneFaces: [], stripShapes: [], log: () => {} });
+  const againSecond = build({ out: join(root, 'againSecond'), layouts: [], themes: [], stripShapes: [], log: () => {} });
 
   test('two builds produce byte-identical packages', () => {
     expect(again.packages).toHaveLength(widget.packages.length);
@@ -559,7 +559,7 @@ describe('LED profiles on disk', () => {
   // A build of lights with no packages is legitimate: they are outputs in their own right.
   let lit: BuildResult;
   beforeAll(() => {
-    lit = build({ out: join(root, 'leds'), layouts: [], zoneFaces: [], screens: [], log: () => {} });
+    lit = build({ out: join(root, 'leds'), layouts: [], themes: [], screens: [], log: () => {} });
   }, BUILD_HOOK_TIMEOUT);
 
   test('writes one .ledsprofile per strip shape, and nothing that looks like a package', () => {
@@ -800,12 +800,12 @@ describe('validation gate', () => {
 describe('command line', () => {
   const env = {};
   test('defaults to <repo>/build and the widget strategy', () => {
-    expect(parseArgs([], env)).toEqual({ out: DEFAULT_OUT_DIR, strategy: 'widget', help: false });
+    expect(parseArgs([], env)).toEqual({ out: DEFAULT_OUT_DIR, strategy: 'widget', themes: [], allThemes: false, help: false });
     expect(DEFAULT_OUT_DIR.endsWith('/build')).toBe(true);
   });
 
   test('--out resolves against the working directory, --strategy selects the strategy', () => {
-    expect(parseArgs(['--out', 'dist', '--strategy', 'inline'], env, '/work')).toEqual({ out: '/work/dist', strategy: 'inline', help: false });
+    expect(parseArgs(['--out', 'dist', '--strategy', 'inline'], env, '/work')).toEqual({ out: '/work/dist', strategy: 'inline', themes: [], allThemes: false, help: false });
     expect(parseArgs(['--out=dist/x', '--strategy=widget'], env, '/work').out).toBe('/work/dist/x');
     expect(parseArgs(['-o', '/abs', '-s', 'INLINE'], env)).toMatchObject({ out: '/abs', strategy: 'inline' });
     expect(parseArgs(['--help'], env).help).toBe(true);
@@ -974,6 +974,11 @@ describe('what a released plugin embeds', () => {
     for (const layout of rounds) expect([layout.folder, excludedBy(exclusion, layout.folder)]).toEqual([layout.folder, false]);
     for (const folder of ZONE_FOLDERS) expect([folder, excludedBy(exclusion, folder)]).toEqual([folder, false]);
     for (const screen of SCREEN_PACKAGES) expect([screen.folder, excludedBy(exclusion, screen.folder)]).toEqual([screen.folder, false]);
+    // A themed package is embedded like the default ones and written only when it is picked (ADR
+    // 0016), so the exclusion must not reach one at any size its theme claims.
+    const themed = THEME_CATALOGUE.filter((t) => t.id !== DEFAULT_THEME_ID).flatMap((t) => t.sizes.map((size) => themedFolder(t, size)));
+    expect(themed.length).toBeGreaterThan(0);
+    for (const folder of themed) expect([folder, excludedBy(exclusion, folder)]).toEqual([folder, false]);
   });
 
   test('the packaging script copies everything and leaves the choice to the csproj', () => {
@@ -982,6 +987,8 @@ describe('what a released plugin embeds', () => {
     // release, which is the shape of the bug this replaced.
     const script = readFileSync(join(import.meta.dir, '..', '..', '..', 'scripts', 'package.sh'), 'utf8');
     expect(script).toContain('cp build/*.simhubdash plugin/OpenDash/Resources/');
+    // Built with every theme, or the plugin it packages carries none of them.
+    expect(script).toMatch(/^bun run build --all-themes$/m);
     // The glyph sheet as well: the csproj embeds it only where it exists, so a plugin packaged
     // without it builds, ships and draws the flag box previews bare, and nothing else goes red.
     expect(script).toContain('cp build/flag-box-glyphs.json plugin/OpenDash/Resources/');

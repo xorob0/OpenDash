@@ -10,6 +10,7 @@
 import type { Rect } from '../../src/generator.ts';
 import type { Theme } from '../../src/themes/index.ts';
 import { zoneRegions } from '../../src/zones/layout.ts';
+import greenTheme from './greenTheme.json';
 
 export const GEAR_LEFT_THEME_ID = 'test-gear-left';
 
@@ -33,3 +34,8 @@ export const gearLeftTheme: Theme = {
     },
   },
 };
+
+/** The same theme in greenTheme.json's colours, which can only be built in a process of its own. */
+export const GREEN_GEAR_LEFT_THEME_ID = 'test-green-gear-left';
+
+export const greenGearLeftTheme: Theme = { ...gearLeftTheme, overlay: greenTheme };
