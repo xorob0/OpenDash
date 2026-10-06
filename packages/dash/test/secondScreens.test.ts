@@ -52,6 +52,7 @@ import type { Density } from '../src/second/density.ts';
 import type { Rect, Size } from '../src/design/geometry.ts';
 import { itemsOf, propertiesIn, walkItems } from '../src/walk.ts';
 import { bindingExpression, cellOverruns, drawableGlyphs, drawableLiterals } from './monoGlyphs.ts';
+import { insideBox } from './conformance.ts';
 import { drawingOf } from './moduleItems.ts';
 import { ROOT_SCREEN, evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
@@ -749,22 +750,6 @@ export function moduleBoxes(): { name: string; frame: Rect; density: Density }[]
     }
   }
   return boxes;
-}
-
-/**
- * Whether a drawn item stays in the box it was given.
- *
- * A text box is a WPF line box and it is taller than its ink at both ends. `textBox` puts its top a
- * tenth of the font size above the line it is given, so the baseline lands where the layout asked
- * for it, and the box runs about a fifth of the size below that baseline. Both tails are
- * transparent, so both are slack -- and granting it only at the bottom is why these boxes were once
- * quietly written 16 px taller than the real ones instead of being derived.
- */
-function insideBox(item: Exclude<Item, { kind: 'layer' }>, frame: Rect): boolean {
-  const r = item.rect;
-  const below = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 1;
-  const above = item.kind === 'text' ? Math.ceil(0.1 * item.fontSize) + 2 : 1;
-  return r.left >= frame.left - 1 && r.top >= frame.top - above && r.left + r.width <= frame.left + frame.width + 1 && r.top + r.height <= frame.top + frame.height + below;
 }
 
 describe('every module fits the box it is given', () => {
