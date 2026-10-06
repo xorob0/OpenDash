@@ -66,7 +66,9 @@ and the pit wall at once.
 
 - `design/tokens.json` is the only place a colour, a font size or a spacing value is defined.
   `packages/dash/src/tokens.ts` reads it and exposes the typed `ds` object. Do not write hex
-  values anywhere else; a test fails if the brand cyan reaches the dash face.
+  values anywhere else; a test fails if the brand cyan reaches the dash face. The one other place
+  a colour may be written is a car theme's token overlay, which overlays this file rather than
+  editing it ([ADR 0015](docs/decisions/0015-car-themes.md)).
 - `packages/dash/src/elements` are the atoms (label, numeral, rule, segment, band). They know
   the font metrics and turn a canvas line box into a SimHub text box.
 - `packages/dash/src/components` are readouts, grids, the rev bar, the flag strip, the pit
@@ -172,6 +174,23 @@ of every face read off those artboards rather than rounded.
 A rectangular face declares the rects of its five parts and nothing else. What each zone shows is
 the plugin's business, and the pages themselves are written once and answer to whatever box they
 are given.
+
+## Writing a car theme
+
+A theme is a module under `packages/dash/src/themes/<id>/`, holding its anatomy and its token
+overlay, and [ADR 0015](docs/decisions/0015-car-themes.md) says what it may change and that it may
+never remove a page or drop a field. Prior to drawing anything, read the trade dress section of
+[docs/scope.md](docs/scope.md), beside the paragraph on copying a visual design, because the
+reference for a theme is nearly always an iRacing manual and the line between what may be taken
+from it and what may not is the one a reviewer will hold you to. In short, a theme takes the
+arrangement, the register and the colour logic of the car's display, and it may draw the elements a
+driver identifies the cluster by in the car's way, so that the face is recognisable beside the
+manual's render. It never takes a word mark, a logo or crest, a manufacturer's typeface, a badge
+drawn as artwork, or any image from a manual or a photograph, traced or not, and where the car
+shows a crest the theme leaves the place empty for an image the user supplies. Its faces are OFL or
+MIT, since they ship in `_SHFonts/`, and it is named after the display family as a driver says it,
+`Porsche` for the 992-era display, which is the name in its package folder, in SimHub's list, in
+the panel and in its ticket's title.
 
 ## Cutting a release
 

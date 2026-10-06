@@ -289,6 +289,13 @@ inputs, and a package built from a user's own tokens is #764. A setting that onl
 text is, as the delta's precision does (#322), is not refused, because every length it can produce
 was budgeted for when the box was cut; ADR 0011 records that condition.
 
+The refusal is of a user's personalisation at runtime, and a **shipped car theme** falls outside it.
+A car theme is decided in a pull request, resolved into its own packages when they are built and
+measured by the same fit tests as every other package, so it is a build-time variant rather than
+personalisation, and [ADR 0015](decisions/0015-car-themes.md) is the record that decides what one may
+change and what it may never remove. A theme pull request consequently no longer falls under this
+line, although it falls under the trade dress line below.
+
 The one line the product holds underneath all of it is unchanged: two states a driver cannot tell
 apart is a bug whoever chose the colours. A user may choose any colours they like, and OpenDash
 says so when a choice collides rather than quietly shipping it.
@@ -324,6 +331,44 @@ be switched off, and switching it off means nothing is fetched at all.
 
 **Copying a visual design.** OpenDash's design is independently derived, and every screenshot in
 OpenDash material is its own.
+
+**A manufacturer's trade dress.** A car theme ([ADR 0015](decisions/0015-car-themes.md)) is drawn
+from a real car's instrument cluster, and the reference for it is usually an iRacing user manual,
+which is iRacing's copyright and carries photographs and renders of a manufacturer's unit. What a
+theme may take from it, and what it may not, is settled here once, so that a contributor can decide
+for any element without asking.
+
+A theme may take the arrangement, meaning which values sit together and in what order; the
+register, meaning whether the face is dense or sparse, boxed or open, warm or cold; and the
+colour logic, meaning which state is drawn in which colour. These are facts about how a driver
+reads the car, the manuals describe them in prose, and reproducing them is what makes a theme feel
+like the car. Moreover, as was decided on 2026-10-06 for the Porsche
+([#205](https://github.com/xorob0/OpenDash/issues/205)), a theme may draw the elements by which a
+driver identifies the cluster the car's way, so that a driver who puts the face beside the manual's
+render recognises the car: setting boxes outlined each in its own colour and named by what they are,
+and the car's own shift light colours drawn on the screen. That is an exception to the house rule that
+colour means state, and it is confined to the theme that needs it; the colours of such boxes remain
+the user's to change. One could think that a cluster's exact palette is a design rather than a fact,
+and is therefore closer to the trade dress than anything else. It is taken nonetheless where it is how
+a driver reads or finds something, and it is not taken where it is the manufacturer's brand rather
+than the car's display, which is why Porsche's corporate red appears nowhere on the Porsche face.
+
+A theme may never take a manufacturer's word mark, its logo or crest, a typeface licensed
+to the manufacturer, a badge drawn as artwork, or any image from a manual or a photograph,
+whether traced, cropped or redrawn from it. A manual is a reference to read and cite and never an
+asset to extract. Where the car draws a crest on its display, the theme reserves that place and leaves
+it empty, and the user may fill it with an image of their own from the panel, as the idle screen's
+image already is a setting ([ADR 0011](decisions/0011-personalisation.md)). Every face a theme draws
+is under the OFL or MIT, for a reason that has nothing to do with trade dress: it is redistributed
+inside `_SHFonts/` in every package, so a manufacturer's corporate face is unavailable whatever this
+paragraph said, and a theme reaches its register with the faces OpenDash may legally ship.
+
+A theme is named after the display family as a driver says it, as a nominative reference to the
+product and in OpenDash's own type, never styled as the manufacturer presents it. The Porsche theme is
+`Porsche`, because the 992-era display it draws is shared by four cars; where a marque has several
+unrelated displays, the model name distinguishes them. That name is the one that appears in the
+package folder (`OpenDash Porsche 1280x480`, [ADR 0016](decisions/0016-themed-package-distribution.md)),
+in SimHub's dashboard list, in the plugin's panel and in the title of the theme's ticket.
 
 **Sims other than iRacing, as a supported claim.** They may work, and they are welcome to, but
 nothing is advertised as supported before somebody has driven it and the bindings have been
@@ -367,6 +412,7 @@ and each reversal is recorded here so that a reader of the old document is not m
 | Page navigation | #59, [ADR 0006](decisions/0006-the-zone-face.md) | The companion pages through its modules with a wheel button, and every zone of the face now cycles its own catalogue the same way |
 | Network update checks | #80, [ADR 0012](decisions/0012-update-checks.md) | The plugin may ask GitHub what the newest release is. Nothing about the user is sent, it can be switched off, and nothing is ever installed without being asked for |
 | Theming and colour customisation | #124, [ADR 0011](decisions/0011-personalisation.md) | Colour, frames and the idle screen are settings read through bindings; the typeface, the sizes and the spacings stay build inputs, and a narrower line took this one's place |
+| Theming, as a shipped car theme | #193, [ADR 0015](decisions/0015-car-themes.md) | A car theme is a build-time variant, one package per size per theme, which may change the palette, the type, the chrome and the anatomy and may never remove a page or drop a field; it is not the personalisation the narrower line refuses |
 | Idle or pit screens | #763, #383 | Every package carries an idle screen, which is what SimHub shows between sessions. No page is drawn for the pit lane yet; the limiter banner and the stop alerts on the face stand in its place until #383 lands |
 
 One of the nine still stands and ADR 0011 left a narrower line behind the one it moved. The pit half
@@ -375,7 +421,7 @@ carries until that lands. Each is restated above with the record that would have
 
 | Still refused | What would have to happen first |
 |---|---|
-| Personalisation that changes the layout | #764: a package built from the user's own tokens. Nothing at runtime re-measures a text box |
+| Personalisation that changes the layout | #764: a package built from the user's own tokens. Nothing at runtime re-measures a text box. A shipped car theme is a build-time variant and is not under this line ([ADR 0015](decisions/0015-car-themes.md)) |
 | Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
