@@ -75,7 +75,15 @@ default implementation of that function rather than the shape of every face
 ([#196](https://github.com/xorob0/OpenDash/issues/196)). A theme may thus move where a page is drawn,
 which page a zone opens on, and which regions a transient state takes over, as the Porsche's limiter
 takes zones B, A and C together; it may add a page of its own to a catalogue, as the Porsche's row of
-boxes, tyres and bias is one more page of band D's.
+boxes, tyres and bias is one more page of band D's. An added page goes at the end of the catalogue,
+since a zone's setting is the index of its page and a page moved from its index would open another
+driver's zone on a page they did not choose; the conformance test of #196 therefore refuses a page
+removed or moved and lets an added one through by name only.
+
+A theme does not get a page that selects itself. The Hyundai TCR cluster was raised as the case for
+one, and the answer, decided on 2026-10-06, is that an automatic page selector is out of scope for
+v2.0: the contract has no such page, adding one would be a contract change under ADR 0003 rather than
+an anatomy, and the Hyundai themes take the wheel button like every other.
 
 ### What a theme may never do
 
