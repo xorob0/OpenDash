@@ -201,12 +201,14 @@ themes the branch touches against `origin/main`, by the very rule the conformanc
 them by (`packages/dash/src/themes/touched.ts`, which `packages/dash/test/conformance.ts` calls): a
 file under `packages/dash/src/themes/<id>/` touches that theme, a file directly under `themes/`
 touches every theme, and a checkout with no `origin/main` to compare against takes every theme
-rather than guessing. That is what a pull request builds, so that the packages CI builds are the
-faces it checked, and the build prints which themes it took and why before anything else. `bun run
-build --theme <id>`, which may be repeated, adds one theme by name. `bun run build --all-themes`
-builds every theme in `THEME_CATALOGUE` in `packages/dash/src/contract.ts`, and it is what `bun run
-package` and a release run, since the plugin embeds every themed package and writes one only when
-somebody picks it (ADR 0016). What the build makes is read from the catalogue rather than from the directories under `themes/`: each theme
+rather than guessing. That is the build for a local run of a branch, and the build prints which
+themes it took and why before anything else. `bun run build --theme <id>`, which may be repeated,
+adds one theme by name. `bun run build --all-themes` builds every theme in `THEME_CATALOGUE` in
+`packages/dash/src/contract.ts`, and it is what `bun run package`, a release and CI run, since the
+plugin embeds every themed package and writes one only when somebody picks it (ADR 0016), and the
+plugin tests hold the embedded packages to the whole catalogue: a push to `main` or a branch that
+touches only the plugin touches no theme, so a CI build of the touched themes alone would leave the
+Porsche out and fail that test. What the build makes is read from the catalogue rather than from the directories under `themes/`: each theme
 at each size its entry claims, so that a size the entry claims and the anatomy does not draw fails
 the build and names both lists. A theme the catalogue holds before its code exists, as the Porsche
 does until #205, is refused by `--theme` and skipped by `--all-themes`, and the build says which in
