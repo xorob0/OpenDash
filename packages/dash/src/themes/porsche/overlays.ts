@@ -34,7 +34,7 @@ import { gearSizeIn } from '../../zones/zoneAPages.ts';
 import { regionRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
 import { panelOf } from './body.ts';
-import { hazard } from './pictograms.ts';
+import { picture } from './pictograms.ts';
 import { BORDER, BOX_PAD, centredY, lowFuelAlarm, RADIUS, runWidth } from './register.ts';
 
 const { add, fmt, game, gt, iff, isnull, lt, num, raw, str, concat } = ncalc;
@@ -101,7 +101,8 @@ function lowFuel(frame: Rect): Item {
   const words = top + ALARM.triangle.height + ALARM.gap;
   const children: Item[] = [
     band('lowFuel.box', frame, ds.color.danger.primary, { radius: RADIUS }),
-    ...hazard('lowFuel.triangle', triangle, { on: str('true'), colour: ink }),
+    // The alarm's own triangle is drawn in the ground's ink on the red, which is the hazard's third file.
+    picture('lowFuel.triangle', 'hazard', 'ink', triangle),
     label('lowFuel.word', 'ALARM', frame.left, words, frame.width, { size: ALARM.word, color: ink, hAlign: 'center' }),
     label('lowFuel.reading', 'Fuel level 8.6', frame.left, words + ALARM.word + ALARM.gap, frame.width, {
       size: ALARM.reading,

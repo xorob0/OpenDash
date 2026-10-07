@@ -8,6 +8,8 @@ import type { ThemeDrawing } from '../drawing.ts';
 import { porscheBody } from './body.ts';
 import { porscheDots } from './dots.ts';
 import { PORSCHE_FOOT } from './foot.ts';
+import { porscheBandPage } from './bandPages.ts';
+import { porscheModuleGround, porscheModules } from './modules.ts';
 import { porscheChangeNotifications, porscheTakeovers } from './overlays.ts';
 import { carColour } from './register.ts';
 import { porscheStrip } from './strip.ts';
@@ -27,4 +29,8 @@ export const porscheDrawing: ThemeDrawing = {
   // The car shows one gear, with no neighbour ghosted beside it.
   gearGhosts: false,
   bandPages: [PORSCHE_FOOT],
+  // Every module, band page and the foot in the one register of the car's panels.
+  modules: porscheModules,
+  moduleGround: porscheModuleGround,
+  bandPage: porscheBandPage,
 };

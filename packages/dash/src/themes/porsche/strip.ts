@@ -18,7 +18,7 @@ import { currentLap, GRIP_WIDEST, rpm, sessionType, speed, trackGrip } from '../
 import { ds } from '../../tokens.ts';
 import { regionRect, zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
-import { headlight } from './pictograms.ts';
+import { pictogram } from './pictograms.ts';
 import { BORDER, BOX_PAD, carColour, centredY, namedCell, RADIUS, runWidth } from './register.ts';
 
 const { and, changed, eq, fmt, iff, isIn, isNull, not, num, raw, str, ucase } = ncalc;
@@ -69,7 +69,7 @@ export function porscheStrip(ctx: FaceContext): Item[] {
   // The headlight, lit for as long as the band's own alert holds a flash of the lights: iRacing
   // publishes the flash control and no headlight state, so a flash is all that can light it.
   const flash = raw('dcHeadlightFlash');
-  items.push(...headlight('strip.headlight', rect(174, strip.top + 14, 50, 32), { on: and(not(isNull(flash)), changed(num(ds.indicator.alert.durationMs), flash)), colour: ds.color.text.primary }));
+  items.push(...pictogram('strip.headlight', 'headlight', rect(174, strip.top + 14, 50, 32), { on: and(not(isNull(flash)), changed(num(ds.indicator.alert.durationMs), flash)), state: 'lit' }));
 
   // `Lap` on a grey cell over zone C, its number on a dark one.
   const lapCell = rect(right.left - 4 + 34, strip.top + 8, 178, 46);

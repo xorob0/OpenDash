@@ -3,6 +3,7 @@
     "porsche": {
       "panel": { "value": "#4A4E53", "description": "The car's container grey: the readings panels, the lap pill and the brake bias cell." },
       "tile": { "value": "#16181B", "description": "Behind the speed and the gear, and the small value cells inside a grey cell." },
+      "inset": { "value": "#0F1113", "description": "The dark value boxes inside a grey panel, which every reading of a module and of band D sits in." },
       "edge": { "value": "{palette.grey.100}", "description": "The light border of the speed box and the gear tile." },
       "divider": { "value": "#6B7079", "description": "The lines inside the tyre box's grid." },
       "badge": { "value": "{palette.grey.200}", "description": "The outline of the place the car's crest would take, which stays empty." },

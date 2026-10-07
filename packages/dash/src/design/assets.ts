@@ -115,8 +115,34 @@ export const RANK_DOWN: DashAsset = { name: 'rank-down', file: 'rank-down.png', 
 export const TREND_UP: DashAsset = { name: 'trend-up', file: 'trend-up.png', source: 'OpenDash' };
 export const TREND_DOWN: DashAsset = { name: 'trend-down', file: 'trend-down.png', source: 'OpenDash' };
 
+/**
+ * The Porsche theme's pictograms (#205), the ISO 2575 symbols its display shows: the low beam in the
+ * top strip, and down the telltale column the position lamps, the brake system warning, the general
+ * warning triangle and the tyre pressure warning. They are the theme's own geometry, written as
+ * `images/porsche/<name>.svg` with the ink left as `INK`, and each state is that source with the ink
+ * filled in and rendered at four times the drawn size with `rsvg-convert`, since an image carries no
+ * tint and SimHub's format has no vector item to draw them with instead.
+ *
+ * `dim` is rendered from `palette.porsche.panel`, `lit` from `color.text.primary` for the headlight
+ * and `color.danger.primary` for the warnings, and the hazard's `ink` from `color.surface.base`, which
+ * is how the fuel alarm draws it on its red. A move of any of those tokens means these are rendered
+ * again. Only the Porsche's package draws them, so only it carries them.
+ */
+const porschePictogram = (name: string, state: 'dim' | 'lit' | 'ink'): DashAsset => ({ name: `porsche-${name}-${state}`, file: `porsche/porsche-${name}-${state}.png`, source: 'OpenDash' });
+export const PORSCHE_PICTOGRAMS: readonly DashAsset[] = [
+  porschePictogram('headlight', 'dim'),
+  porschePictogram('headlight', 'lit'),
+  porschePictogram('lights', 'dim'),
+  porschePictogram('warning', 'dim'),
+  porschePictogram('warning', 'lit'),
+  porschePictogram('hazard', 'dim'),
+  porschePictogram('hazard', 'lit'),
+  porschePictogram('hazard', 'ink'),
+  porschePictogram('tyre', 'dim'),
+];
+
 /** Every asset a package may carry. */
-export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK, RANK_UP, RANK_DOWN, TREND_UP, TREND_DOWN];
+export const ASSETS: readonly DashAsset[] = [WHEEL_CHANGE_TICK, RANK_UP, RANK_DOWN, TREND_UP, TREND_DOWN, ...PORSCHE_PICTOGRAMS];
 
 /** The asset an image item's `image` names, or undefined when nothing here claims it. */
 export const assetNamed = (name: string): DashAsset | undefined => ASSETS.find((asset) => asset.name === name);

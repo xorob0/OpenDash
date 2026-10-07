@@ -17,8 +17,12 @@
  * Kept apart from `themes/index.ts`, and registered in `themes/drawings.ts` rather than in `THEMES`,
  * because a drawing reads `ds` and the registry is read before `ds` exists.
  */
+import type { Expr } from '../bind.ts';
 import type { FaceSize, FaceZone } from '../contract.ts';
 import type { Hex, Item, Rect } from '../generator.ts';
+import type { ModuleContext } from '../modules/module.ts';
+import type { FieldSpec } from '../second/field.ts';
+import type { StackRow } from '../second/layout.ts';
 import type { ZoneLayout } from '../zones/layout.ts';
 import type { Regions } from './anatomy.ts';
 
@@ -38,6 +42,25 @@ export interface ThemeBandPage {
   name: string;
   /** The page drawn in the band's frame, every item named under `prefix`. */
   items(frame: Rect, prefix: string): Item[];
+}
+
+/**
+ * How a theme lays out and dresses the fields of a module inside the module's own rectangle, where the
+ * house's register is not the car's. The modules keep their fields, their bindings, their `widest`
+ * declarations and their shedding order; only the layout and the chrome around each field change.
+ *
+ * It is read per process rather than handed down through every module, because a theme is chosen for
+ * the whole process exactly as `ds` is, and a module is a function of a rectangle that should not have
+ * to know which theme is drawing it. `themes/moduleRegister.ts` is where the process finds it.
+ */
+export interface ModuleRegister {
+  /**
+   * A rank of fields, which the page has already cut to what it keeps at its shape, as a stack row.
+   * `order` is the page's shedding order, most important first, which the row's `shed` must honour.
+   */
+  fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, order: readonly string[]): StackRow;
+  /** A row that is not a rank of fields, a gauge, a bar or a drawing, dressed the theme's way. */
+  blockRow(row: StackRow, frame: Rect): StackRow;
 }
 
 export interface ThemeDrawing {
@@ -62,4 +85,13 @@ export interface ThemeDrawing {
   bandCorners?: boolean;
   /** Pages added to band D's catalogue, after the contract's own. */
   bandPages?: readonly ThemeBandPage[];
+  /** How the modules of zones B and C lay their fields out; see {@link ModuleRegister}. */
+  modules?: ModuleRegister;
+  /** What a module page is drawn on inside its zone, under the module's own items: its body, by page. */
+  moduleGround?(page: string, body: Rect, prefix: string): Item[];
+  /**
+   * One of band D's own pages drawn the theme's way, every field the house page draws at this frame
+   * drawn under the same id. `classOnly` is the zone's class filter, which the relative page reads.
+   */
+  bandPage?(page: string, frame: Rect, prefix: string, classOnly?: Expr): Item[];
 }

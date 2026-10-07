@@ -33,6 +33,7 @@ import { fixedRow, type StackRow } from '../second/layout.ts';
 import type { Density } from '../second/density.ts';
 import { columnsAt, promotesLead, shapeOf, type Shape } from '../second/shape.ts';
 import { archetypeFor, keepsAt, keepsPart, keptAt, keptIds, type Archetype } from './shedding.ts';
+import { moduleRegister } from '../themes/moduleRegister.ts';
 
 export interface ModuleContext {
   /** The box the module draws into, padding already removed. */
@@ -248,6 +249,8 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
   const lineGap = asked ?? Math.round(densityOf(ctx.density).gapY / 2);
   const kept = keptAt(specs, ctx.page, drawnAt(ctx));
   if (kept.length === 0) return fixedRow(0, () => []);
+  const register = moduleRegister();
+  if (register) return register.fieldsRow(kept, ctx, keepsAt(ctx.page, drawnAt(ctx)) ?? kept.map((spec) => spec.id ?? spec.name));
   const shapeColumns = columnsAt(shape);
   const columnCount = columns ?? shapeColumns;
   // A zone narrow enough for one column centres what is in it; a wider one draws from its left

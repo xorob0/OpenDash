@@ -8,8 +8,12 @@
  * every process imports every drawing and only a theme's own process has its colours.
  */
 import type { ThemeDrawing } from './drawing.ts';
+import { defineModuleRegister } from './moduleRegister.ts';
 import { porscheDrawing } from './porsche/drawing.ts';
 
 export const THEME_DRAWINGS: Readonly<Record<string, ThemeDrawing>> = {
   porsche: porscheDrawing,
 };
+
+// The modules read their theme's register out of a slot rather than from here; see moduleRegister.ts.
+for (const [id, drawing] of Object.entries(THEME_DRAWINGS)) if (drawing.modules) defineModuleRegister(id, drawing.modules);

@@ -30,7 +30,7 @@ import { ds } from '../../tokens.ts';
 import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
-import { hazard, lights, tyre, warning } from './pictograms.ts';
+import { pictogram } from './pictograms.ts';
 import { BORDER, carColour, lowFuelAlarm, RADIUS, settingBox } from './register.ts';
 
 const { add, div, fmt, gt, iff, isnull, lt, mod, mul, num, raw, truncate, and, or } = ncalc;
@@ -94,10 +94,10 @@ function telltaleColumn(top: number, height: number): Item[] {
   const box = (i: number): Rect => rect(TELLTALES.left, Math.round(columnTop + i * pitch), TELLTALES.width, TELLTALES.size);
   const engine = or(engineWarning(ENGINE_WARNING_BITS.waterTemperature), engineWarning(ENGINE_WARNING_BITS.oilPressure));
   return [
-    ...lights('telltales.lights', box(0)),
-    ...warning('telltales.warning', box(1), { on: engine, colour: ds.color.danger.primary }),
-    ...hazard('telltales.hazard', box(2), { on: lowFuelAlarm(), colour: ds.color.danger.primary }),
-    ...tyre('telltales.tyre', box(3)),
+    ...pictogram('telltales.lights', 'lights', box(0)),
+    ...pictogram('telltales.warning', 'warning', box(1), { on: engine, state: 'lit' }),
+    ...pictogram('telltales.hazard', 'hazard', box(2), { on: lowFuelAlarm(), state: 'lit' }),
+    ...pictogram('telltales.tyre', 'tyre', box(3)),
   ];
 }
 

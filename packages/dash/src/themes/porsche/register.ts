@@ -30,7 +30,7 @@ export const LABEL_SIZE = 23;
 export const BOX_PAD = 14;
 
 /** A colour this theme adds under `palette.porsche`, refused unless it resolves to `#RRGGBB`. */
-export function carColour(name: 'panel' | 'tile' | 'edge' | 'divider' | 'badge' | 'compound'): Hex {
+export function carColour(name: 'panel' | 'tile' | 'inset' | 'edge' | 'divider' | 'badge' | 'compound'): Hex {
   const value = resolveToken(`palette.porsche.${name}`);
   if (typeof value !== 'string' || !/^#[0-9A-F]{6}$/.test(value)) throw new Error(`porsche: palette.porsche.${name} is not a #RRGGBB colour (${String(value)})`);
   return value as Hex;

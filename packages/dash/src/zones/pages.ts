@@ -11,7 +11,7 @@
  * for would scale its type with it, and zone A's four pages are not zone B's twenty-one, so the two
  * cannot share a file even at the same size.
  */
-import type { Dashboard, DashboardMetadata, Hex, Item, Rect, Screen, WidgetItem } from '../generator.ts';
+import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
 import {
   FACE_ZONE_LETTERS,
   pagesForZone,
@@ -58,15 +58,16 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
  * sized to is too much to spend saying so. What zone A does instead is #154.
  */
-export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false, ground: Hex = groundOf(zones[0]), gearGhosts = true): Screen {
+export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false, drawing: ThemeDrawing = {}): Screen {
   const frame = rect(0, 0, size.width, size.height);
   const zone = zones[0];
+  const ground = drawing.zoneGround?.(zone) ?? groundOf(zone);
 
   let items: Item[];
 
   if (zone === 'A') {
     // No header: see the comment on zoneAPages.
-    items = zoneAPage(page.id, frame, `${page.id}.`, gearGhosts);
+    items = zoneAPage(page.id, frame, `${page.id}.`, drawing.gearGhosts ?? true);
   } else if (zone === 'D') {
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
@@ -76,7 +77,12 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // nobody: on a page of three gaps "my class only" is the car ahead in class rather than a
     // shorter list, which is the whole of #210.
     items = [
-      ...withBandSessionNotice(page, frame, corners, bandPageItems(page.id, frame, `${page.id}.`, corners, zoneClassOnlyOnPage(face, zones, page.number))),
+      ...withBandSessionNotice(
+        page,
+        frame,
+        corners,
+        (drawing.bandPage ?? ((id, at, prefix, classOnly) => bandPageItems(id, at, prefix, corners, classOnly)))(page.id, frame, `${page.id}.`, zoneClassOnlyOnPage(face, zones, page.number)),
+      ),
       ...(corners ? bandCorners(frame, `${page.id}.corner.`) : []),
     ];
   } else {
@@ -97,6 +103,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     );
     items = [
       ...chrome,
+      ...(drawing.moduleGround?.(page.id, body, `${page.id}.`) ?? []),
       ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
     ];
   }
@@ -153,7 +160,7 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
   const frame = rect(0, 0, size.width, size.height);
   const added = zone === 'D' ? (drawing.bandPages ?? []) : [];
   const screens = [
-    ...pages.map((page) => zonePageScreen(face, zones, page, size, corners, ground, drawing.gearGhosts ?? true)),
+    ...pages.map((page) => zonePageScreen(face, zones, page, size, corners, drawing)),
     ...added.map((page) => pageScreen(page.id, [...page.items(frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])], ground)),
   ];
   return pagedDashboard({

@@ -360,7 +360,7 @@ const relativePosition = (idx: string): string => positionLabelled(idx);
  *
  * The middle field is untouched under any filter: a driver is in his own class by construction.
  */
-const relativeFields = (classOnly?: Expr): readonly BandField[] => [
+export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
   {
     id: 'ahead',
     label: 'P3',
