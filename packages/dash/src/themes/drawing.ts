@@ -85,8 +85,6 @@ export interface ThemeDrawing {
   changeNotifications?(ctx: FaceContext): Item[];
   /** What a zone's pages are drawn on, in place of the house's base surface and band D's well. */
   zoneGround?(zone: FaceZone): Hex;
-  /** Whether the face draws the zone letters, B and C in their headers and D at the band's left; the house does. */
-  zoneLetters?: boolean;
   /** The size a module zone's header, its title and its counter, is set at, in place of the house face's. */
   zoneHeaderSize?: number;
   /**

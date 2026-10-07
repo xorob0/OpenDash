@@ -13,7 +13,6 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
 import {
-  FACE_ZONE_LETTERS,
   pagesForZone,
   zone as zoneSetting,
   zoneClassOnlyOnPage,
@@ -53,10 +52,9 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
 /**
  * One screen of a zone dashboard.
  *
- * Zones B, C and D carry a permanent header -- the zone letter, then the page name -- because the
- * canvas says outright that there is no row of page dots and that the letter and the name are what
- * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
- * sized to is too much to spend saying so. What zone A does instead is #154.
+ * Zones B and C carry a permanent header with the page name, because the canvas says outright that
+ * there is no row of page dots and that the name is what says which page is showing. Zone A carries
+ * none: it is the gear, and 22 px of the column it is sized to is too much to spend saying so. What zone A does instead is #154.
  */
 export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false, drawing: ThemeDrawing = {}): Screen {
   const frame = rect(0, 0, size.width, size.height);
@@ -90,14 +88,12 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // its own items after itself: the track page draws `track.title` and so did the header.
     const density = densityForBox(size);
     const metrics = zoneFrameMetrics(density, 'face');
-    // Neither the letter nor the counter is in the title. Zones B and C are the same rectangle on
-    // most faces, so they share one dashboard file; a letter baked in here would draw B in both of
-    // them, which is exactly what the first capture of the 1920 face showed, and a counter baked in
-    // here would count the catalogue rather than the cycle the zone's own mask leaves. The face
-    // draws both, and the frame keeps the room.
+    // The counter is not in the title. Zones B and C are the same rectangle on most faces, so they
+    // share one dashboard file, and a counter baked in here would count the catalogue rather than
+    // the cycle the zone's own mask leaves. The face draws it, and the frame keeps the room.
     const { items: chrome, body } = zoneFrame(
       `${page.id}.zone`,
-      { frame, title: page.name, counter: { kind: 'reserved', widest: widestCounter(zone, metrics.size) }, indent: zoneLetterWidth(metrics.size) },
+      { frame, title: page.name, counter: { kind: 'reserved', widest: widestCounter(zone, metrics.size) } },
       density,
       'face',
     );
@@ -140,9 +136,9 @@ export const BAND_PAGES_NEEDING_SESSION: readonly string[] = ['fuel', 'stint', '
  * directly: what that file is about is which fields a band draws and where, and it should not have
  * to walk a layer to ask.
  *
- * The notice sits in the room the page had rather than across the band, so it clears the zone letter
- * at one end and the corner blocks at both. It keeps the page's name, unlike a module's in a zone,
- * because a band draws no header to say it for it. Drawn at `zone` density, whose label size is the
+ * The notice sits in the room the page had rather than across the band, so it clears the corner
+ * blocks at both ends. It keeps the page's name, unlike a module's in a zone, because a band draws no
+ * header to say it for it. Drawn at `zone` density, whose label size is the
  * `ds.size.label` the band's own labels are set in.
  */
 function withBandSessionNotice(page: FaceZonePageMeta, frame: Rect, corners: boolean, items: Item[]): Item[] {
@@ -240,12 +236,3 @@ export function widestCounter(zone: FaceZone, size: number): string {
   }
   return widest;
 }
-
-/**
- * The room a zone's header keeps for its letter, which the face draws.
- *
- * The widest of A to D rather than the letter's own width, so that one shared dashboard indents the
- * same whichever zone it is serving. The gap after it is the canvas's double space, and nothing
- * more: the artboard's header is a baseline row with `gap: 8px` between the letter and the name.
- */
-export const zoneLetterWidth = (size: number): number => Math.max(...FACE_ZONE_LETTERS.map((l) => Math.ceil(measureText('BarlowMedium', l, size)))) + 2 + ds.space[2];

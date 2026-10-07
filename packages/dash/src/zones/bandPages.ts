@@ -471,9 +471,9 @@ const INLINE_PAGES: Record<string, InlinePage> = { [RELATIVE_PAGE]: { word: 'Rel
  * between a label and its value and between a value and its unit -- are the constants below.
  */
 export interface BandMetrics {
-  /** Side padding, inside which the zone letter and the corner blocks sit. */
+  /** Side padding, inside which the letter's room and the corner blocks sit. */
   padX: number;
-  /** Gap between the zone letter and the row beside it. */
+  /** Gap between the letter's room and the row beside it. */
   letterGap: number;
   /** Gap between the fields of a page's rank. */
   fieldGap: number;
@@ -738,7 +738,7 @@ export function bandPageItems(id: string, frame: Rect, prefix: string, corners =
 }
 
 /**
- * The room a page has: what the side padding, the zone letter and the corner blocks leave.
+ * The room a page has: what the side padding, the letter's room and the corner blocks leave.
  *
  * Centring in the whole band put the last field of D6 Sectors six pixels into the DRS lamp at 1280,
  * where a page and a corner block drew over each other and only a photograph would have shown it.
@@ -831,13 +831,13 @@ interface BlockGeometry {
 }
 
 /**
- * The room the zone letter takes at the left end, its gap included.
+ * The room band D's letter took at the left end, its gap included, which is kept now that no face
+ * draws the letter (#708).
  *
- * The letter is drawn by the face rather than by the band -- a band dashboard is one file serving
- * one rectangle and knows no letter -- but the room is reserved here, because the corner block and
- * the rank are what would otherwise be drawn over it. Measured at `ds.size.label`, which is the
- * size the face draws it at: a room measured against one size and filled at another is the mistake
- * this file exists to avoid.
+ * Kept because the rank, the corner block and the shedding are read off artboards that still lay the
+ * band out around a `D`: giving the room to the page moves the rank and the left corner inboard and
+ * lets the 850 x 480 fuel page keep the last lap and the 600 x 686 band all twelve telltales, which is a
+ * redraw of the band and the canvas's to make rather than a consequence of dropping a label.
  */
 const letterRoom = (frame: Rect): number => {
   const m = bandMetrics(frame);
@@ -942,12 +942,9 @@ const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, dens
  * clock and the availability of DRS for the rest of the caution.
  *
  * Whole is `bandCornerWidths`, which is the block's two fields plus `padX` plus `letterRoom`, so the
- * left block covers band D's letter as well: `zones/face.ts` draws the `D` at `padX` and pushes the
- * two flag groups after it. That is the cheaper of the two prices on offer. The letter is twelve
- * pixels, it says which zone the band is and it never changes, whereas starting the block at
- * `padX + letterRoom` to clear it would hold the flag 44 px inboard of the band's left edge on these
- * four faces while it is hard against the edge on the other four, which is two drawings of one thing.
- * zones.md §6 and §10 record it, and `flagBand.test.ts` holds the face to it either way.
+ * block runs to the band's own edge, as the side padding does on the four faces without corners, and
+ * a settled flag is one drawing on all eight. zones.md §6 records it, and `flagBand.test.ts` holds
+ * the face to it.
  *
  * On a face that draws no corners -- 850 x 480, 800 x 480, 800 x 286 and 600 x 686 -- there is none
  * to take, and the flag keeps the side padding instead: `padX` at each end, which is the only room in

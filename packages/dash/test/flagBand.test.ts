@@ -270,9 +270,9 @@ describe('the waved yellow flash', () => {
  * room the page is actually given.
  *
  * What it does take, besides a corner block's two fields, is the band's side padding and the room the
- * zone letter stands in, both being inside the width `bandCornerWidths` reserves: band D has no `D`
- * while a flag is settled on a face with corner blocks, and keeps it on a face without. That is
- * recorded in zones.md §6 and §10 and measured below, so it cannot change without being noticed.
+ * zone letter stood in before #708, both being inside the width `bandCornerWidths` reserves. No face
+ * draws the letter any more, so there is nothing for a settled flag to cover or to leave showing, and
+ * that is measured below so that a letter cannot come back under the flag without being noticed.
  */
 const cornerLayers = (face: ZoneLayout): Map<string, LayerItem> =>
   new Map(
@@ -319,18 +319,13 @@ describe('the flag settles into the blocks at the ends of the band', () => {
       expect({ left: blocks.left.width, right: blocks.right.width }).toEqual(widths);
     });
 
-    test(`${face.folder} ${face.bandCorners ? "covers band D's letter, a corner's width including it" : "leaves band D's letter showing, the padding stopping short of it"}`, () => {
-      // A corner's width is the block's two fields plus the band's padding plus the room the letter
-      // stands in, so taking a corner whole takes the letter with it. The face draws the `D` at
-      // `padX` and pushes the flag groups after it, which is the order that decides this. It is
-      // recorded in zones.md §6 and §10 rather than worked around: the letter is twelve pixels that
-      // never change, whereas a flag held inboard of the band's edge on four faces and hard against
-      // it on the other four would be two drawings of one thing. Measured here so that a change of
-      // mind has to be a change of this line.
+    test(`${face.folder} has no band D letter for a settled flag to cover or to leave showing`, () => {
+      // Before #708 the face drew a `D` at `padX` and pushed the flag groups after it, so a corner
+      // taken whole covered the letter and the side padding stopped short of it. The letter is gone
+      // from every face, and the left block still starts at the band's own edge either way.
       const letter = [...walkItems(faceItems(face))].find((i): i is TextItem => i.kind === 'text' && i.name === 'zoneD.letter');
-      if (!letter) throw new Error('band D has a letter');
-      const covered = letter.rect.left < blocks.left.left + blocks.left.width;
-      expect({ face: face.folder, covered }).toEqual({ face: face.folder, covered: face.bandCorners });
+      expect({ face: face.folder, letter }).toEqual({ face: face.folder, letter: undefined });
+      expect({ face: face.folder, left: blocks.left.left }).toEqual({ face: face.folder, left: band.left });
     });
 
     test(`${face.folder} draws every condition in both blocks, in the shape and colour it draws on the whole band`, () => {
