@@ -202,7 +202,7 @@ export const SPEEDING_ALLOWANCE_MS = 0.3;
 export const NO_PIT_LIMIT_MS = 999;
 const speedMs = (): Expr => ncalc.div(ncalc.isnull(game('SpeedKmh'), num(0)), num(3.6));
 const pitLimitMs = (): Expr => ncalc.isnull(game('PitLimiterSpeedMs'), num(NO_PIT_LIMIT_MS));
-const speeding = (): Expr => and(inLane(), gt(speedMs(), ncalc.add(pitLimitMs(), num(SPEEDING_ALLOWANCE_MS))));
+export const speeding = (): Expr => and(inLane(), gt(speedMs(), ncalc.add(pitLimitMs(), num(SPEEDING_ALLOWANCE_MS))));
 
 /** One state the box can show: a condition, a picture, and whether it blinks. */
 export interface BoxState {

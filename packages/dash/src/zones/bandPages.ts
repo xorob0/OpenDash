@@ -871,7 +871,7 @@ const leftCornerFields = (): BandField[] => [
 ];
 
 /** The three lamps in the right corner. A lamp is a word, lit or dim; it never disappears. */
-const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
+export const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
   { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
   { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
   // The spotter is caution amber and not the flag's yellow, which every sheet that lights it draws:
