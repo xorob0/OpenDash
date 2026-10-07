@@ -89,6 +89,32 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(InstallStatus.UpToDate, installer.Packages.Single(p => p.FolderName == SmallFolder).Status);
         }
 
+        /// <summary>
+        /// The installer with no rig to ask writes every package it carries but a themed one.
+        /// </summary>
+        /// <remarks>
+        /// A themed package is embedded like the default ones and written only when somebody picks it
+        /// (ADR 0016). The run with no rig is the one that writes everything, which is the update path
+        /// and every caller not taught about the rig, so it is where carrying a theme would otherwise put
+        /// it in every user's dashboard list.
+        /// </remarks>
+        [Fact]
+        public void With_no_rig_a_themed_package_is_carried_and_not_written()
+        {
+            const string themedFolder = "OpenDash Porsche 1280x480";
+            var packages = TwoPackages().Add("OpenDashPlugin.Resources." + themedFolder + ".simhubdash", SyntheticPackage.Zip(themedFolder, "0.2.0"));
+            var installer = Installer(packages);
+            installer.EnsureInstalled(force: true);
+
+            Assert.True(Directory.Exists(PackageExtractor.InstalledFolder(root, SmallFolder)));
+            Assert.True(Directory.Exists(PackageExtractor.InstalledFolder(root, "OpenDash")));
+            Assert.False(Directory.Exists(PackageExtractor.InstalledFolder(root, themedFolder)));
+            var themed = installer.Packages.Single(p => p.FolderName == themedFolder);
+            Assert.True(themed.OutsideRig);
+            Assert.Equal(InstallStatus.NotInstalled, themed.Status);
+            Assert.Equal(InstallStatus.UpToDate, installer.Status);
+        }
+
         /// <summary>A screen the rig does want and has not got still turns the pill, which is the whole
         /// reason the pill exists.</summary>
         [Fact]

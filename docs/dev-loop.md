@@ -192,12 +192,55 @@ performed:
 Until those three are done, every "seen on the VM" line on the `iflag` tickets is an aspiration,
 and this section exists so that it is a recorded one.
 
+## What a build builds, and what the themes cost
+
+`bun run build` with no arguments builds what it built before themes existed: the default theme at
+every face size, the card faces, the second screens and the LED profiles, byte for byte. A theme is
+built only when it is asked for, with `bun run build --theme <id>`, which may be repeated and always
+builds the default beside it, or with `bun run build --all-themes`, which builds every theme in
+`THEME_CATALOGUE` in `packages/dash/src/contract.ts` and is what `bun run package` runs, since the
+plugin embeds every themed package and writes one only when somebody picks it (ADR 0016). What the
+build makes is read from the catalogue rather than from the directories under `themes/`: each theme
+at each size its entry claims, so that a size the entry claims and the anatomy does not draw fails
+the build and names both lists. A theme the catalogue holds before its code exists, as the Porsche
+does until #205, is refused by `--theme` and skipped by `--all-themes`, and the build says which in
+both cases. The first line a build prints names the themes it builds and how many sizes each, which
+is what a job log shows for the question of what a pull request built.
+
+A themed package is `OpenDash <Theme> <W>x<H>`, always with its size, and reads the stock namespace
+of its size like the default package of that size. Its item identifiers are hashed from paths that
+begin with that folder, and two themes cannot share a folder, so they cannot share an identifier
+either; `themeCatalogue.test.ts` asserts it, together with identifiers that do not move between two
+builds. A theme drawn in the default's colours is composed in the build's own process. A theme with
+colours of its own is composed in a process started for it, `packages/dash/src/buildTheme.ts` with
+`OPENDASH_THEME` naming it, which hands its packages back as JSON, so that everything is still
+validated before anything is written.
+
+Measured on 2026-10-06 on an Apple Silicon laptop, the default build takes 7.0 s of wall clock, which
+is what `main` took before the catalogue (7.15 s on the same machine). One themed package composed,
+validated, written and zipped in the build's own process costs about 0.15 s, measured with the test
+theme of #196 at 1280 x 480 beside the default package of that size. A theme with colours of its
+own costs about 0.1 s for its process and then 0.19 s per size, measured with the same theme in the
+colours of `greenTheme.json` at one and two sizes. The catalogue as it stands therefore costs nothing
+beyond the default build until #205 lands, and about 0.3 s once the Porsche is drawn at its one size.
+A theme at all eight face sizes would cost some 1.6 s, so that ten of them would add some 16 s to the
+7 s of the default build; that is the point at which a pull request building only the themes it
+touches, as the conformance harness already checks only them, becomes worth its logic, and not
+before.
+
+The plugin is the stricter limit. `OpenDash.dll` in Release, built by `bun run package`, is
+9,818,112 bytes with the fourteen default packages, and 11,188,224 bytes with three themed test
+packages embedded beside them, which is some 457 KB a package without its gallery thumbnail and
+about 500 KB with one. ADR 0016 keeps embedding while the DLL is under 25 MB, which leaves room for
+some thirty themed packages: four themes at eight sizes, or the Porsche and a good many themes that
+claim the sizes their car's display actually has.
+
 ## What the checks cost
 
 The theme conformance harness, `packages/dash/test/conformance.test.ts` (#200), builds every face
 of every theme the run selects and holds it to three properties: nothing clips, nothing escapes its
 frame, nothing disappears. It runs inside `bun run check` like any other test, and a theme added to
-`THEMES` is checked without a line written for it. A plain run checks the default and the themes
+the catalogue is checked without a line written for it, once its code exists. A plain run checks the default and the themes
 the branch touches against `origin/main`, a file under `packages/dash/src/themes/<id>/` touching
 that theme and a file directly under `themes/` touching every theme; a checkout that has no
 `origin/main` to compare against checks every theme rather than guessing. The full matrix is
