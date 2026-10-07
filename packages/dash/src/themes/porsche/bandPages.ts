@@ -1,7 +1,8 @@
 /**
  * Band D's own pages in the car's register, so that the foot reads as the same display as the
- * Porsche row beside them: every field the house page draws, each a grey cell with its label at the
- * left and its value right-aligned in a dark inset, as the car draws `Brake Bias`. The cells are laid
+ * Porsche row beside them: every field the house page draws, each as the car draws `Brake Bias`, a
+ * container that is a grey border and nothing else, a grey title cell at its left as tall as the
+ * container holds, and the value bare on the black ground to its right. The cells are laid
  * across the foot from the band's left padding past its letter to its right padding, in a second line
  * where the first is full, and the lines are centred on the band's height.
  *
@@ -24,13 +25,13 @@ import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
 import { unit } from '../../elements/unit.ts';
-import { ds } from '../../tokens.ts';
+import { ds, TRANSPARENT } from '../../tokens.ts';
 import { BAND_PAGES, bandPageItems, bandPageRoom, relativeFields, type BandField } from '../../zones/bandPages.ts';
 import { TELLTALE_PAGE } from '../../zones/telltales.ts';
-import { carColour, centredY, INSET_RADIUS, RADIUS } from './register.ts';
+import { carColour, centredY, CONTAINER_BORDER, INSET_RADIUS, RADIUS } from './register.ts';
 
-/** The cell `Brake Bias` is drawn in on the foot: 50 tall, a 42 inset, 14 of padding, 23 px labels and 30 px values. */
-const CELL = { height: 50, inset: 42, pad: 14, label: 23, value: 30, unit: 15, unitGap: 5, rowGap: 6, between: 10, gap: 14 };
+/** The container `Brake Bias` is drawn in on the foot: 50 tall, 14 of padding, 23 px labels and 30 px values. */
+const CELL = { height: 50, pad: 14, label: 23, value: 30, unit: 15, unitGap: 5, rowGap: 6, between: 10, gap: 14 };
 
 /** The value's box: its cells, or its measured advances where it is a word. */
 function valueWidth(f: BandField): number {
@@ -44,29 +45,29 @@ const unitWidth = (f: BandField): number =>
 
 const labelWidth = (f: BandField): number => Math.ceil(measureText('BarlowMedium', f.labelWidest ?? f.label, CELL.label)) + boxSlack(CELL.label);
 
-/** How wide a field's cell is: the label, the inset round its value and its unit. */
+/** How wide a field's container is: its title cell, and its value and unit with their padding. */
 function cellWidth(f: BandField): number {
   const inner = valueWidth(f) + (f.after === undefined ? 0 : CELL.unitGap + unitWidth(f));
-  return CELL.pad + labelWidth(f) + CELL.pad + (inner + 2 * CELL.pad) + 4;
+  return 2 * CONTAINER_BORDER + labelWidth(f) + 2 * CELL.pad + inner + 2 * CELL.pad;
 }
 
 function cell(f: BandField, prefix: string, at: Rect): Item {
   const name = `${prefix}${f.id}`;
   const units = f.after === undefined ? 0 : CELL.unitGap + unitWidth(f);
-  const insetWidth = valueWidth(f) + units + 2 * CELL.pad;
-  const inset = rect(at.left + at.width - 4 - insetWidth, at.top + (at.height - CELL.inset) / 2, insetWidth, CELL.inset);
-  const valueRight = inset.left + inset.width - CELL.pad - units;
-  const valueTop = centredY(inset, CELL.value);
+  const title = rect(at.left + CONTAINER_BORDER, at.top + CONTAINER_BORDER, labelWidth(f) + 2 * CELL.pad, at.height - 2 * CONTAINER_BORDER);
+  const valueRight = at.left + at.width - CONTAINER_BORDER - CELL.pad - units;
+  const valueTop = centredY(at, CELL.value);
   const one = f.widest === undefined ? monoWidth(cells('SemiBold', CELL.value), f.chars) + boxSlack(CELL.value) : valueWidth(f);
   const readings = [{ sample: f.sample, bind: f.bind }, ...(f.row ?? [])];
   const children: Item[] = [
-    band(`${name}.cell`, at, carColour('panel'), { radius: RADIUS }),
-    label(`${name}.label`, f.label, at.left + CELL.pad, centredY(at, CELL.label), labelWidth(f), {
+    band(`${name}.cell`, at, TRANSPARENT, { border: { color: carColour('panel'), width: CONTAINER_BORDER }, radius: RADIUS }),
+    band(`${name}.title`, title, carColour('panel'), { radius: INSET_RADIUS }),
+    label(`${name}.label`, f.label, title.left, centredY(title, CELL.label), title.width, {
       size: CELL.label,
       color: f.labelColor ?? ds.color.text.label,
+      hAlign: 'center',
       ...(f.labelBind ? { bind: f.labelBind, widest: f.labelWidest } : {}),
     }),
-    band(`${name}.inset`, inset, carColour('inset'), { radius: INSET_RADIUS }),
     ...readings.map((reading, i) => {
       const left = valueRight - (readings.length - i) * one - (readings.length - 1 - i) * CELL.between;
       const id = i === 0 ? `${name}.value` : `${name}.row${i}`;

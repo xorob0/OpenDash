@@ -11,6 +11,7 @@
 import type { Hex, Item, Rect } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { measureText } from '../../design/advances.ts';
+import { rect } from '../../design/geometry.ts';
 import { boxSlack } from '../../design/metrics.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
@@ -72,15 +73,20 @@ export function settingBox(name: string, frame: Rect, colour: Hex, title: string
   return withMoreBindings({ kind: 'layer', name, children }, { Visible: present });
 }
 
+/** The border of a container, which is all a container has: 2 px of the panel grey. */
+export const CONTAINER_BORDER = 2;
+
 /**
- * A grey cell with a name in it and a dark value cell at its right, as the car draws `Lap` and
- * `Brake Bias`: the name 23 px, the value centred in its cell.
+ * A container with a name and a value, as the car draws `Lap` and `Brake Bias`: the container is a
+ * grey border and nothing else, the name is in a grey title cell at its left, as tall as the container
+ * holds with no padding, and the value is bare on the black ground in `valueCell`, centred.
  */
 export function namedCell(name: string, frame: Rect, title: string, valueCell: Rect, valueSize: number, reading: Reading): Item[] {
+  const titleCell = rect(frame.left + CONTAINER_BORDER, frame.top + CONTAINER_BORDER, valueCell.left - frame.left - 2 * CONTAINER_BORDER, frame.height - 2 * CONTAINER_BORDER);
   return [
-    band(`${name}.cell`, frame, carColour('panel'), { radius: RADIUS }),
-    label(`${name}.name`, title, frame.left + BOX_PAD, centredY(frame, LABEL_SIZE), runWidth(title, LABEL_SIZE), { size: LABEL_SIZE, color: ds.color.text.primary }),
-    band(`${name}.inset`, valueCell, carColour('tile'), { radius: INSET_RADIUS }),
+    band(`${name}.cell`, frame, TRANSPARENT, { border: { color: carColour('panel'), width: CONTAINER_BORDER }, radius: RADIUS }),
+    band(`${name}.title`, titleCell, carColour('panel'), { radius: INSET_RADIUS }),
+    label(`${name}.name`, title, titleCell.left, centredY(titleCell, LABEL_SIZE), titleCell.width, { size: LABEL_SIZE, color: ds.color.text.primary, hAlign: 'center' }),
     label(`${name}.value`, reading.sample, valueCell.left, centredY(valueCell, valueSize), valueCell.width, {
       size: valueSize,
       color: ds.color.text.primary,
