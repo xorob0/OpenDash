@@ -120,7 +120,7 @@ export function faceItems(
   const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
     items.push(zoneWidget(`zone${zone}`, face, zone, zoneRect(regions, zone)));
-    items.push(...zoneHeaderParts(face, zone, zoneRect(regions, zone)));
+    items.push(...zoneHeaderParts(face, zone, zoneRect(regions, zone), drawing));
   }
 
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
@@ -256,16 +256,18 @@ function houseChrome(layout: ZoneLayout, band_: Rect, body: readonly { zone: 'A'
  * open the band with a D in the same ink as the zone letters, and its pages count nothing, being
  * eight fields across a strip rather than a cycle a driver pages through deliberately.
  */
-function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect): Item[] {
+function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect, drawing: ThemeDrawing): Item[] {
+  const letters = drawing.zoneLetters ?? true;
   if (zone === 'A') return [];
-  if (zone === 'D') return [bandLetter(r)];
+  if (zone === 'D') return letters ? [bandLetter(r)] : [];
   const density = densityForBox({ width: r.width, height: r.height });
-  const metrics = zoneFrameMetrics(density, 'face');
+  const house = zoneFrameMetrics(density, 'face');
+  const metrics = drawing.zoneHeaderSize === undefined ? house : { ...house, size: drawing.zoneHeaderSize };
   const size = metrics.size;
   const y = zoneTitleY(r, metrics);
   const counter = { kind: 'reserved', widest: widestCounter(zone, size) } as const;
   return [
-    label(`zone${zone}.letter`, zone, r.left + metrics.padX, y, zoneLetterWidth(size), { size }),
+    ...(letters ? [label(`zone${zone}.letter`, zone, r.left + metrics.padX, y, zoneLetterWidth(size), { size })] : []),
     label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, metrics), y, zoneCounterWidth(counter, metrics), {
       size,
       hAlign: 'right',

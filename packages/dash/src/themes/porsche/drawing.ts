@@ -9,7 +9,7 @@ import { porscheBody } from './body.ts';
 import { porscheDots } from './dots.ts';
 import { PORSCHE_FOOT } from './foot.ts';
 import { porscheBandPage } from './bandPages.ts';
-import { porscheModuleGround, porscheModules } from './modules.ts';
+import { porscheModuleHeader, porscheModules, ZONE_TYPE } from './modules.ts';
 import { porscheChangeNotifications, porscheTakeovers } from './overlays.ts';
 import { carColour } from './register.ts';
 import { porscheStrip } from './strip.ts';
@@ -20,9 +20,9 @@ export const porscheDrawing: ThemeDrawing = {
   chrome: porscheBody,
   takeovers: porscheTakeovers,
   changeNotifications: porscheChangeNotifications,
-  // The readings are drawn on the panel's grey and the gear on its tile, as the car draws them. The
-  // foot sits on the ground with nothing behind it, where the house recesses its band into a well.
-  zoneGround: (zone) => (zone === 'A' ? carColour('tile') : zone === 'D' ? ds.color.surface.base : carColour('panel')),
+  // The readings stand on the black ground inside the zone's grey outline and the gear on its tile, as
+  // the car draws them, and the foot sits on the ground where the house recesses its band into a well.
+  zoneGround: (zone) => (zone === 'A' ? carColour('tile') : ds.color.surface.base),
   // The car's foot fills the band from end to end, so the band keeps no corner blocks, as the house
   // face does at 850 and 800 wide; the strip and the telltale column carry what they held.
   bandCorners: false,
@@ -31,6 +31,9 @@ export const porscheDrawing: ThemeDrawing = {
   bandPages: [PORSCHE_FOOT],
   // Every module, band page and the foot in the one register of the car's panels.
   modules: porscheModules,
-  moduleGround: porscheModuleGround,
+  moduleHeader: porscheModuleHeader,
+  // The car titles its boxes and draws no zone letter; its titles are set at the zone's label size.
+  zoneLetters: false,
+  zoneHeaderSize: ZONE_TYPE.label,
   bandPage: porscheBandPage,
 };

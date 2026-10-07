@@ -1,5 +1,5 @@
 /**
- * What the car draws around its three body regions: the grey panels zones B and C are inset in, the
+ * What the car draws around its three body regions: the grey outlines zones B and C are inset in, the
  * outlined tile behind the gear, the column of coloured setting boxes down the left edge and the
  * column of telltale pictograms down the right. The zones themselves are the house's widgets cycling
  * the house's pages, drawn on the panel's grey and the tile's black by `zoneGround`.
@@ -26,7 +26,7 @@ import { withMoreBindings, type Expr } from '../../bind.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { hasSetting, trackedValue } from '../../second/tracked.ts';
-import { ds } from '../../tokens.ts';
+import { ds, TRANSPARENT } from '../../tokens.ts';
 import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
@@ -104,9 +104,9 @@ function telltaleColumn(top: number, height: number): Item[] {
 export function porscheBody(ctx: FaceContext): Item[] {
   const tile = tileOf(ctx);
   return [
-    band('body.panelB', panelOf(ctx, 'B'), carColour('panel'), { radius: RADIUS }),
+    band('body.panelB', panelOf(ctx, 'B'), TRANSPARENT, { border: { color: carColour('panel'), width: BORDER }, radius: RADIUS }),
     band('body.tileA', tile, carColour('tile'), { border: { color: carColour('edge'), width: BORDER }, radius: RADIUS }),
-    band('body.panelC', panelOf(ctx, 'C'), carColour('panel'), { radius: RADIUS }),
+    band('body.panelC', panelOf(ctx, 'C'), TRANSPARENT, { border: { color: carColour('panel'), width: BORDER }, radius: RADIUS }),
     ...settingsColumn(tile.top, tile.height),
     ...telltaleColumn(tile.top, tile.height),
   ];

@@ -102,8 +102,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
       'face',
     );
     items = [
-      ...chrome,
-      ...(drawing.moduleGround?.(page.id, body, `${page.id}.`) ?? []),
+      ...(drawing.moduleHeader ? drawing.moduleHeader(page, frame, body) : chrome),
       ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
     ];
   }

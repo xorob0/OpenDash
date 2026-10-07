@@ -82,6 +82,12 @@ export interface ThemeDrawing {
   changeNotifications?(ctx: FaceContext): Item[];
   /** What a zone's pages are drawn on, in place of the house's base surface and band D's well. */
   zoneGround?(zone: FaceZone): Hex;
+  /** Whether the face draws the zone letters, B and C in their headers and D at the band's left; the house does. */
+  zoneLetters?: boolean;
+  /** The size a module zone's header, its title and its counter, is set at, in place of the house face's. */
+  zoneHeaderSize?: number;
+  /** A module page's header drawn the theme's way, in place of the house's title line: the page, the zone's frame and the body under it. */
+  moduleHeader?(page: { id: string; name: string }, frame: Rect, body: Rect): Item[];
   /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */
@@ -90,8 +96,6 @@ export interface ThemeDrawing {
   bandPages?: readonly ThemeBandPage[];
   /** How the modules of zones B and C lay their fields out; see {@link ModuleRegister}. */
   modules?: ModuleRegister;
-  /** What a module page is drawn on inside its zone, under the module's own items: its body, by page. */
-  moduleGround?(page: string, body: Rect, prefix: string): Item[];
   /**
    * One of band D's own pages drawn the theme's way, every field the house page draws at this frame
    * drawn under the same id. `classOnly` is the zone's class filter, which the relative page reads.
