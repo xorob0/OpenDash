@@ -16,7 +16,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
 import { pageFile, packageFile, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
-import { readBuildManifest, SUPERSEDED, type Manifest } from '../scripts/content.ts';
+import { onSite, readBuildManifest, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const shots = path.resolve(import.meta.dir, '..', 'public', 'shots');
@@ -86,7 +86,7 @@ describe('every page is photographed', () => {
 });
 
 describe('every package is photographed', () => {
-  const packages = manifest ? manifest.packages.filter((p) => !SUPERSEDED.test(p.folder)) : [];
+  const packages = manifest ? manifest.packages.filter(onSite) : [];
 
   test.if(manifest === null)('skipped: build/manifest.json is absent, run bun run build at the repository root', () => {
     expect(manifest).toBeNull();
