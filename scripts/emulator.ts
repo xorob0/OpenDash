@@ -64,6 +64,9 @@ export const UNTRACED_SCENARIOS: readonly string[] = [
   // recording — a trace of either would let a state nothing else reaches be replayed headlessly.
   'nosession',
   'untimed',
+  // cars changes the player's car for SimHub's per-car playlists (#199), whose switch is a device's and is
+  // watched on the VM; a twenty-second trace would hold no car change at all.
+  'cars',
 ];
 
 /** Every scenario a run may name. */
