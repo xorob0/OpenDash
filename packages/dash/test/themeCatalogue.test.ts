@@ -17,6 +17,8 @@ import { serializeDashboard } from '../src/generator.ts';
 import { THEMES } from '../src/themes/index.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme, GREEN_GEAR_LEFT_THEME_ID, greenGearLeftTheme } from './fixtures/gearLeftTheme.ts';
 import greenTheme from './fixtures/greenTheme.json';
+import { touchedThemes } from '../src/themes/touched.ts';
+import { themesToCheck } from './conformance.ts';
 
 const THEMES_DIR = path.join(import.meta.dir, '..', 'src', 'themes');
 const at = (width: number, height: number): FaceSize => FACE_SIZES.find((f) => f.width === width && f.height === height)!;
@@ -100,6 +102,20 @@ describe('what the build is asked to build', () => {
     for (const theme of THEME_CATALOGUE.filter((t) => !Object.hasOwn(THEMES, t.id))) {
       expect(lines).toContain(`skipped the ${theme.id} theme: it is in the catalogue and has no code under packages/dash/src/themes/${theme.id}/ yet`);
     }
+  });
+
+  test('--touched-themes adds the themes the branch touches, by the harness rule, and says why', () => {
+    const lines: string[] = [];
+    const args = parseArgs(['--touched-themes'], {});
+    expect(args.touchedThemes).toBe(true);
+    const second = THEME_CATALOGUE[1]!;
+    const picked = themesToBuild(args, (line) => lines.push(line), () => ({ ids: [DEFAULT_THEME_ID, second.id], why: 'the reason' }));
+    expect(picked.map((t) => t.id)).toEqual([DEFAULT_THEME_ID, second.id]);
+    expect(lines).toEqual([`touched themes: ${DEFAULT_THEME_ID}, ${second.id}; the reason`]);
+    const untouched = themesToBuild(args, () => {}, () => ({ ids: [DEFAULT_THEME_ID], why: 'none' }));
+    expect(untouched.map((t) => t.id)).toEqual([DEFAULT_THEME_ID]);
+    // The selection the build takes by default is the harness's own.
+    expect(themesToCheck({}).ids).toEqual(touchedThemes().ids);
   });
 
   test('--theme names a catalogued theme, and an unknown one is refused before anything is built', () => {

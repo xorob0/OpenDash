@@ -195,17 +195,22 @@ and this section exists so that it is a recorded one.
 ## What a build builds, and what the themes cost
 
 `bun run build` with no arguments builds what it built before themes existed: the default theme at
-every face size, the card faces, the second screens and the LED profiles, byte for byte. A theme is
-built only when it is asked for, with `bun run build --theme <id>`, which may be repeated and always
-builds the default beside it, or with `bun run build --all-themes`, which builds every theme in
-`THEME_CATALOGUE` in `packages/dash/src/contract.ts` and is what `bun run package` runs, since the
-plugin embeds every themed package and writes one only when somebody picks it (ADR 0016). What the
-build makes is read from the catalogue rather than from the directories under `themes/`: each theme
+every face size, the card faces, the second screens and the LED profiles, byte for byte. Every
+build makes the default, and three flags add themes to it. `bun run build --touched-themes` adds the
+themes the branch touches against `origin/main`, by the very rule the conformance harness checks
+them by (`packages/dash/src/themes/touched.ts`, which `packages/dash/test/conformance.ts` calls): a
+file under `packages/dash/src/themes/<id>/` touches that theme, a file directly under `themes/`
+touches every theme, and a checkout with no `origin/main` to compare against takes every theme
+rather than guessing. That is what a pull request builds, so that the packages CI builds are the
+faces it checked, and the build prints which themes it took and why before anything else. `bun run
+build --theme <id>`, which may be repeated, adds one theme by name. `bun run build --all-themes`
+builds every theme in `THEME_CATALOGUE` in `packages/dash/src/contract.ts`, and it is what `bun run
+package` and a release run, since the plugin embeds every themed package and writes one only when
+somebody picks it (ADR 0016). What the build makes is read from the catalogue rather than from the directories under `themes/`: each theme
 at each size its entry claims, so that a size the entry claims and the anatomy does not draw fails
 the build and names both lists. A theme the catalogue holds before its code exists, as the Porsche
 does until #205, is refused by `--theme` and skipped by `--all-themes`, and the build says which in
-both cases. The first line a build prints names the themes it builds and how many sizes each, which
-is what a job log shows for the question of what a pull request built.
+both cases. The line `themes:` then names the themes it builds and how many sizes each.
 
 A themed package is `OpenDash <Theme> <W>x<H>`, always with its size, and reads the stock namespace
 of its size like the default package of that size. Its item identifiers are hashed from paths that
@@ -223,10 +228,9 @@ theme of #196 at 1280 x 480 beside the default package of that size. A theme wit
 own costs about 0.1 s for its process and then 0.19 s per size, measured with the same theme in the
 colours of `greenTheme.json` at one and two sizes. The catalogue as it stands therefore costs nothing
 beyond the default build until #205 lands, and about 0.3 s once the Porsche is drawn at its one size.
-A theme at all eight face sizes would cost some 1.6 s, so that ten of them would add some 16 s to the
-7 s of the default build; that is the point at which a pull request building only the themes it
-touches, as the conformance harness already checks only them, becomes worth its logic, and not
-before.
+A theme at all eight face sizes would cost some 1.6 s, so that the whole catalogue with ten of them
+would add some 16 s to the 7 s of the default build; a pull request pays only for the themes it
+touches, and the tag pays for all of them.
 
 The plugin is the stricter limit. `OpenDash.dll` in Release, built by `bun run package`, is
 9,818,112 bytes with the fourteen default packages, and 11,188,224 bytes with three themed test

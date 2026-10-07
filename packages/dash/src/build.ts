@@ -1,5 +1,5 @@
 /**
- * The build: `bun run build [--out <dir>] [--strategy widget|inline] [--theme <id>] [--all-themes]`.
+ * The build: `bun run build [--out <dir>] [--strategy widget|inline] [--theme <id>] [--touched-themes] [--all-themes]`.
  *
  * For every layout in src/layouts, every size the theme catalogue claims for each theme it is asked
  * for (the default alone unless told otherwise) and every second screen, it composes the package, validates it against the settings
@@ -28,6 +28,7 @@ import {
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
 import { buildThemeFace, drawsInThisProcess } from './themes/faces.ts';
 import { THEME_ENV, THEMES } from './themes/index.ts';
+import { TOUCHED_BASE, touchedThemes, type Selection } from './themes/touched.ts';
 import { ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
 import { assetNamed, imageOf } from './design/assets.ts';
@@ -104,10 +105,11 @@ export const STRATEGIES: readonly SlotStrategy[] = ['widget', 'inline'];
 export const THEME_PROCESS = path.join(import.meta.dir, 'buildTheme.ts');
 
 export const USAGE = [
-  'usage: bun run build [--out <dir>] [--strategy widget|inline] [--theme <id>] [--all-themes]',
+  'usage: bun run build [--out <dir>] [--strategy widget|inline] [--theme <id>] [--touched-themes] [--all-themes]',
   '  --out <dir>         output directory; default <repo>/build',
   `  --strategy <name>   how slots show cards: widget (default) or inline; ${STRATEGY_ENV} is the fallback`,
   '  --theme <id>        build this theme as well as the default; may be given more than once',
+  `  --touched-themes    build the themes the branch touches against ${TOUCHED_BASE} as well, as CI does`,
   '  --all-themes        build every theme in the catalogue, as `bun run package` and a release do',
   '  --help              print this text',
 ].join('\n');
@@ -129,6 +131,8 @@ export interface BuildArgs {
   strategy: SlotStrategy;
   /** The themes asked for by name, beside the default, which is always built. */
   themes: string[];
+  /** The themes the branch touches, by the rule the conformance harness checks them by. */
+  touchedThemes: boolean;
   allThemes: boolean;
   help: boolean;
 }
@@ -142,7 +146,7 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
   if (envStrategy !== undefined && envStrategy !== '' && parseStrategy(envStrategy) === undefined) {
     throw new BuildError(`${STRATEGY_ENV}=${JSON.stringify(envStrategy)} is not a strategy; expected ${STRATEGIES.join(' or ')}`);
   }
-  const args: BuildArgs = { out: DEFAULT_OUT_DIR, strategy: parseStrategy(envStrategy) ?? DEFAULT_STRATEGY, themes: [], allThemes: false, help: false };
+  const args: BuildArgs = { out: DEFAULT_OUT_DIR, strategy: parseStrategy(envStrategy) ?? DEFAULT_STRATEGY, themes: [], touchedThemes: false, allThemes: false, help: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? '';
     const eq = arg.startsWith('--') ? arg.indexOf('=') : -1;
@@ -173,6 +177,9 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
         if (!args.themes.includes(id)) args.themes.push(id);
         break;
       }
+      case '--touched-themes':
+        args.touchedThemes = true;
+        break;
       case '--all-themes':
         args.allThemes = true;
         break;
@@ -469,13 +476,20 @@ export function composeTheme(request: ThemeRequest, themeProcess: string = THEME
 }
 
 /**
- * The themes a command line asks for: the default always, then every other theme `--all-themes` or
+ * The themes a command line asks for: the default always, then every other theme `--all-themes`,
+ * `--touched-themes` (which says why it took those, so that a job log answers what it built) or
  * `--theme` names, in catalogue order. A theme with no code yet is skipped, and said to be, when it
  * is swept in by `--all-themes`; named by `--theme`, it is kept, so that {@link composeTheme} refuses it.
  */
-export function themesToBuild(args: Pick<BuildArgs, 'themes' | 'allThemes'>, log: (line: string) => void = (line) => console.log(line)): ThemeEntry[] {
+export function themesToBuild(
+  args: Pick<BuildArgs, 'themes' | 'allThemes' | 'touchedThemes'>,
+  log: (line: string) => void = (line) => console.log(line),
+  touched: () => Selection = touchedThemes,
+): ThemeEntry[] {
+  const selection = args.touchedThemes && !args.allThemes ? touched() : undefined;
+  if (selection) log(`touched themes: ${selection.ids.join(', ')}; ${selection.why}`);
   return THEME_CATALOGUE.filter((theme) => {
-    if (theme.id === DEFAULT_THEME_ID || args.themes.includes(theme.id)) return true;
+    if (theme.id === DEFAULT_THEME_ID || args.themes.includes(theme.id) || selection?.ids.includes(theme.id)) return true;
     if (!args.allThemes) return false;
     if (Object.hasOwn(THEMES, theme.id)) return true;
     log(`skipped the ${theme.id} theme: it is in the catalogue and has no code under packages/dash/src/themes/${theme.id}/ yet`);

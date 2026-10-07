@@ -52,7 +52,7 @@ jobs:
         run: bun test
 
       - name: Build dashboard packages
-        run: bun run build
+        run: bun run build --all-themes
 
       # What the plugin job embeds, and only that. The font licence is not here because it does not
       # need to be: every .simhubdash carries its own OFL.txt beside its faces, and

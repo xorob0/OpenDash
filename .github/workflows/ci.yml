@@ -78,7 +78,12 @@ jobs:
           if-no-files-found: warn
 
       - name: Build dashboard packages
-        run: bun run build
+        # The checkout is depth 1, so main's tip is fetched for the touched-theme rule to diff against;
+        # without it the build falls back to every theme, which is the safe side.
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+          bun run build --touched-themes
 
       - name: Upload dashboard packages
         uses: actions/upload-artifact@v4

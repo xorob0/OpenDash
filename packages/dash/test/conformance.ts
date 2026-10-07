@@ -9,8 +9,7 @@
  * of the rectangles a theme hands its modules rather than of the house faces', and disappearing is
  * the catalogue check of `anatomy.test.ts` carried down to the fields of each page.
  */
-import { spawnSync } from 'node:child_process';
-import { FACE_ZONE_LETTERS, pagesForZone, THEME_CATALOGUE, type FaceZone } from '../src/contract.ts';
+import { FACE_ZONE_LETTERS, pagesForZone, type FaceZone } from '../src/contract.ts';
 import { measureText } from '../src/design/advances.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
@@ -21,7 +20,7 @@ import { densityForBox } from '../src/second/density.ts';
 import { zoneFrame } from '../src/second/header.ts';
 import { shapeOf } from '../src/second/shape.ts';
 import type { ThemeFace } from '../src/themes/faces.ts';
-import { DEFAULT_THEME_ID, THEMES } from '../src/themes/index.ts';
+import { themesWithCode, touchedThemes, type Selection } from '../src/themes/touched.ts';
 import { walkItems } from '../src/walk.ts';
 import { BAND_PAGES, bandPageItems } from '../src/zones/bandPages.ts';
 import { FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR } from '../src/zones/index.ts';
@@ -30,48 +29,14 @@ import { cellOverruns, faceOf } from './monoGlyphs.ts';
 /** Set to `full` to check every theme the build knows, whatever the branch touched. */
 export const MATRIX_ENV = 'OPENDASH_THEME_MATRIX';
 
-/** What a branch is compared against to find the themes it touched. */
-const BASE = 'origin/main';
-
-const THEMES_DIR = 'packages/dash/src/themes/';
-
-/** The themes a run checks, and why those, which the run prints so that a log says which one it was. */
-export interface Selection {
-  ids: string[];
-  why: string;
-}
-
 /**
- * The themes this run checks: every theme with {@link MATRIX_ENV} set to `full`, and otherwise the
- * default and the themes the branch touched.
- *
- * A theme is touched when a file under its own directory differs from {@link BASE}, untracked files
- * included. A file of the machinery itself, directly under `themes/`, touches every theme, and so
- * does a base that cannot be read: a shallow checkout has no `origin/main`, and a run that cannot
- * tell what changed checks everything rather than guessing. A change outside `themes/`, to a module
- * say, touches no theme here, which is what the full matrix is for.
- *
- * The themes are the catalogue's, `THEME_CATALOGUE` in `contract.ts`, less those with no code yet,
- * which the build refuses to build and which there is therefore nothing here to check.
+ * The themes this run checks: every theme with code with {@link MATRIX_ENV} set to `full`, and
+ * otherwise the default and the themes the branch touched, by the rule `bun run build
+ * --touched-themes` uses too (`src/themes/touched.ts`), so that CI builds the faces it checked.
  */
 export function themesToCheck(env: Record<string, string | undefined> = process.env): Selection {
-  const all = THEME_CATALOGUE.map((theme) => theme.id).filter((id) => Object.hasOwn(THEMES, id));
-  if (env[MATRIX_ENV] === 'full') return { ids: all, why: `${MATRIX_ENV}=full` };
-  const git = (args: string[]): string[] | undefined => {
-    const run = spawnSync('git', args, { cwd: import.meta.dir, encoding: 'utf8' });
-    return run.status === 0 ? run.stdout.split('\n').filter(Boolean) : undefined;
-  };
-  const changed = git(['diff', '--name-only', BASE, '--', `:/${THEMES_DIR}`]);
-  const added = git(['ls-files', '--others', '--exclude-standard', '--full-name', '--', `:/${THEMES_DIR}`]);
-  if (changed === undefined || added === undefined) return { ids: all, why: `${BASE} cannot be read, so every theme` };
-  const touched = new Set<string>();
-  for (const file of [...changed, ...added]) {
-    const [first, ...rest] = file.slice(THEMES_DIR.length).split('/');
-    if (rest.length === 0) return { ids: all, why: `the branch changes ${file}, which every theme is built by` };
-    touched.add(first!);
-  }
-  const ids = all.filter((id) => id === DEFAULT_THEME_ID || touched.has(id));
-  return { ids, why: touched.size === 0 ? `the default alone: the branch touches no theme against ${BASE}` : `the default and the themes the branch touches against ${BASE}` };
+  if (env[MATRIX_ENV] === 'full') return { ids: themesWithCode(), why: `${MATRIX_ENV}=full` };
+  return touchedThemes();
 }
 
 const named = (face: ThemeFace): string => `${face.layout.width}x${face.layout.height}`;
