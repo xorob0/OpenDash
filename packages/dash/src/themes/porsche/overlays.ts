@@ -27,7 +27,6 @@ import { gearCells, monoWidth } from '../../design/metrics.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
-import { speeding } from '../../leds/states.ts';
 import { TRACKED_VALUES } from '../../second/tracked.ts';
 import { inTheCar, speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
@@ -37,10 +36,19 @@ import type { FaceContext } from '../drawing.ts';
 import { panelOf } from './body.ts';
 import { BORDER, BOX_PAD, centredY, RADIUS, runWidth } from './register.ts';
 
-const { and, fmt, game, iff, isNull, isnull, lt, not, num, raw, str, concat } = ncalc;
+const { add, and, fmt, game, gt, iff, isNull, isnull, lt, not, num, raw, str, concat } = ncalc;
 
 /** The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side. */
 const LIMITER = { padTop: 8, padX: 18, padBottom: 10, column: 300, label: 24, speed: 96, limit: { width: 230, height: 50, value: 40 } };
+
+/**
+ * The pit lane limit in the driver's own unit, which is the unit `SpeedLocal` is in, so the two are
+ * compared as they are drawn. An unpublished limit reads as one nothing reaches, so the body stays
+ * green rather than going red on a track whose limit the sim does not say.
+ */
+const pitLimit = (): string => isnull(game('PitLimiterSpeed'), num(999));
+/** A limiter holds the car a fraction over its figure, so one unit is let by before the body turns red. */
+const overTheLimit = (): string => gt(speed(), add(pitLimit(), num(1)));
 
 /** The tank the car calls low, in litres. */
 const LOW_FUEL_LITRES = 10;
@@ -51,7 +59,7 @@ const ALARM = { word: 34, reading: 26, gap: 6 };
 
 function limiterBody(frame: Rect): Item {
   const ink = ds.color.surface.base;
-  const fill = iff(speeding(), str(ds.color.danger.primary), str(ds.color.good.primary));
+  const fill = iff(overTheLimit(), str(ds.color.danger.primary), str(ds.color.good.primary));
   const left = frame.left + LIMITER.padX;
   const top = frame.top + LIMITER.padTop;
   const limit = rect(left, frame.top + frame.height - LIMITER.padBottom - LIMITER.limit.height, LIMITER.limit.width, LIMITER.limit.height);
@@ -70,7 +78,7 @@ function limiterBody(frame: Rect): Item {
       size: LIMITER.limit.value,
       color: ink,
       hAlign: 'right',
-      bind: fmt(isnull(game('PitLimiterSpeed'), num(0)), '0'),
+      bind: iff(lt(pitLimit(), num(999)), fmt(pitLimit(), '0'), str('--')),
       widest: '888',
     }),
     // The gear stays in the middle, in the face and weight zone A draws it, so that it reads as the
