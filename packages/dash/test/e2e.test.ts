@@ -800,12 +800,12 @@ describe('validation gate', () => {
 describe('command line', () => {
   const env = {};
   test('defaults to <repo>/build and the widget strategy', () => {
-    expect(parseArgs([], env)).toEqual({ out: DEFAULT_OUT_DIR, strategy: 'widget', themes: [], allThemes: false, help: false });
+    expect(parseArgs([], env)).toEqual({ out: DEFAULT_OUT_DIR, strategy: 'widget', themes: [], touchedThemes: false, allThemes: false, help: false });
     expect(DEFAULT_OUT_DIR.endsWith('/build')).toBe(true);
   });
 
   test('--out resolves against the working directory, --strategy selects the strategy', () => {
-    expect(parseArgs(['--out', 'dist', '--strategy', 'inline'], env, '/work')).toEqual({ out: '/work/dist', strategy: 'inline', themes: [], allThemes: false, help: false });
+    expect(parseArgs(['--out', 'dist', '--strategy', 'inline'], env, '/work')).toEqual({ out: '/work/dist', strategy: 'inline', themes: [], touchedThemes: false, allThemes: false, help: false });
     expect(parseArgs(['--out=dist/x', '--strategy=widget'], env, '/work').out).toBe('/work/dist/x');
     expect(parseArgs(['-o', '/abs', '-s', 'INLINE'], env)).toMatchObject({ out: '/abs', strategy: 'inline' });
     expect(parseArgs(['--help'], env).help).toBe(true);
