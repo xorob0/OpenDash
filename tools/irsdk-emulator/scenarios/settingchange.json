@@ -1,0 +1,11 @@
+{
+  // The green lap with ABS stepped between 2 and 5 every two seconds, so that a car setting has
+  // always just moved and the change notification is out whenever the dash is photographed. It is
+  // the capture of the Porsche theme's blue box in zone C (#205), which green's one step of TC at
+  // twenty seconds cannot give once `bun run shots` has waited two laps.
+  "extends": "green.json",
+  "name": "Green flag race lap, ABS stepped every two seconds",
+  "drivers": [
+    {"type": "toggle", "var": "dcABS", "on": 5, "off": 2, "period": 2}
+  ]
+}
