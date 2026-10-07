@@ -58,7 +58,7 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
  * sized to is too much to spend saying so. What zone A does instead is #154.
  */
-export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false, ground: Hex = groundOf(zones[0])): Screen {
+export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false, ground: Hex = groundOf(zones[0]), gearGhosts = true): Screen {
   const frame = rect(0, 0, size.width, size.height);
   const zone = zones[0];
 
@@ -66,7 +66,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
 
   if (zone === 'A') {
     // No header: see the comment on zoneAPages.
-    items = zoneAPage(page.id, frame, `${page.id}.`);
+    items = zoneAPage(page.id, frame, `${page.id}.`, gearGhosts);
   } else if (zone === 'D') {
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
@@ -153,7 +153,7 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
   const frame = rect(0, 0, size.width, size.height);
   const added = zone === 'D' ? (drawing.bandPages ?? []) : [];
   const screens = [
-    ...pages.map((page) => zonePageScreen(face, zones, page, size, corners, ground)),
+    ...pages.map((page) => zonePageScreen(face, zones, page, size, corners, ground, drawing.gearGhosts ?? true)),
     ...added.map((page) => pageScreen(page.id, [...page.items(frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])], ground)),
   ];
   return pagedDashboard({

@@ -14,7 +14,7 @@
  * house does not already draw, and the house's own low-fuel pop-up, which asks about laps rather
  * than litres, still takes the hero when its condition holds.
  *
- * The alarm's warning triangle is not drawn: like the telltales, it has no artwork in the repository.
+ * The alarm's warning triangle is the telltale column's hazard pictogram, drawn in the alarm's ink.
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
@@ -28,15 +28,16 @@ import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
 import { TRACKED_VALUES } from '../../second/tracked.ts';
-import { inTheCar, speed } from '../../second/values.ts';
+import { speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { gearSizeIn } from '../../zones/zoneAPages.ts';
 import { regionRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
 import { panelOf } from './body.ts';
-import { BORDER, BOX_PAD, centredY, RADIUS, runWidth } from './register.ts';
+import { hazard } from './pictograms.ts';
+import { BORDER, BOX_PAD, centredY, lowFuelAlarm, RADIUS, runWidth } from './register.ts';
 
-const { add, and, fmt, game, gt, iff, isNull, isnull, lt, not, num, raw, str, concat } = ncalc;
+const { add, fmt, game, gt, iff, isnull, lt, num, raw, str, concat } = ncalc;
 
 /** The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side. */
 const LIMITER = { padTop: 8, padX: 18, padBottom: 10, column: 300, label: 24, speed: 96, limit: { width: 230, height: 50, value: 40 } };
@@ -50,12 +51,10 @@ const pitLimit = (): string => isnull(game('PitLimiterSpeed'), num(999));
 /** A limiter holds the car a fraction over its figure, so one unit is let by before the body turns red. */
 const overTheLimit = (): string => gt(speed(), add(pitLimit(), num(1)));
 
-/** The tank the car calls low, in litres. */
-const LOW_FUEL_LITRES = 10;
 
 /** The change box's name and value, and the alarm's two lines, as the canvas sets them. */
 const NOTICE = { name: 32, value: 116, line: 36 };
-const ALARM = { word: 34, reading: 26, gap: 6 };
+const ALARM = { triangle: { width: 44, height: 40 }, word: 34, reading: 26, gap: 6 };
 
 function limiterBody(frame: Rect): Item {
   const ink = ds.color.surface.base;
@@ -97,11 +96,14 @@ function limiterBody(frame: Rect): Item {
 function lowFuel(frame: Rect): Item {
   const ink = ds.color.surface.base;
   const fuel = raw('FuelLevel');
-  const top = frame.top + (frame.height - (ALARM.word + ALARM.gap + ALARM.reading)) / 2;
+  const top = frame.top + (frame.height - (ALARM.triangle.height + ALARM.gap + ALARM.word + ALARM.gap + ALARM.reading)) / 2;
+  const triangle = rect(frame.left + (frame.width - ALARM.triangle.width) / 2, top, ALARM.triangle.width, ALARM.triangle.height);
+  const words = top + ALARM.triangle.height + ALARM.gap;
   const children: Item[] = [
     band('lowFuel.box', frame, ds.color.danger.primary, { radius: RADIUS }),
-    label('lowFuel.word', 'ALARM', frame.left, top, frame.width, { size: ALARM.word, color: ink, hAlign: 'center' }),
-    label('lowFuel.reading', 'Fuel level 8.6', frame.left, top + ALARM.word + ALARM.gap, frame.width, {
+    ...hazard('lowFuel.triangle', triangle, { on: str('true'), colour: ink }),
+    label('lowFuel.word', 'ALARM', frame.left, words, frame.width, { size: ALARM.word, color: ink, hAlign: 'center' }),
+    label('lowFuel.reading', 'Fuel level 8.6', frame.left, words + ALARM.word + ALARM.gap, frame.width, {
       size: ALARM.reading,
       color: ink,
       hAlign: 'center',
@@ -109,7 +111,7 @@ function lowFuel(frame: Rect): Item {
       widest: 'Fuel level 8.8',
     }),
   ];
-  return withMoreBindings({ kind: 'layer', name: 'lowFuel', children }, { Visible: and(inTheCar(), not(isNull(fuel)), lt(fuel, num(LOW_FUEL_LITRES))) });
+  return withMoreBindings({ kind: 'layer', name: 'lowFuel', children }, { Visible: lowFuelAlarm() });
 }
 
 export const porscheTakeovers = (ctx: FaceContext): Item[] => [limiterBody(regionRect(ctx.regions, 'flagBody')), lowFuel(panelOf(ctx, 'C'))];

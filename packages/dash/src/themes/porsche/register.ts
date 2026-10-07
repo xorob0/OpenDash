@@ -14,6 +14,8 @@ import { measureText } from '../../design/advances.ts';
 import { boxSlack } from '../../design/metrics.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
+import { ncalc } from '../../generator.ts';
+import { inTheCar } from '../../second/values.ts';
 import { ds, resolveToken, TRANSPARENT } from '../../tokens.ts';
 
 /** Every coloured box, the track state, the speed box and the gear tile. */
@@ -88,3 +90,12 @@ export function namedCell(name: string, frame: Rect, title: string, valueCell: R
     }),
   ];
 }
+
+/** The tank the car calls low, in litres, which iRacing publishes in litres whatever the display unit. */
+const LOW_FUEL_LITRES = 10;
+
+/** The car's fuel alarm: in the car, with `FuelLevel` published and under ten litres. */
+export const lowFuelAlarm = (): Expr => {
+  const fuel = ncalc.raw('FuelLevel');
+  return ncalc.and(inTheCar(), ncalc.not(ncalc.isNull(fuel)), ncalc.lt(fuel, ncalc.num(LOW_FUEL_LITRES)));
+};

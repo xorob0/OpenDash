@@ -3,13 +3,14 @@
  * and ABS boxes, the tyre box with its yellow tab, and `Brake Bias` on a grey cell.
  *
  * Laid at the ticket's rectangles, which are the face's, less the band's top: the band runs the
- * whole width from x 0, so the page's x are the face's. The one move is the badge, which the car
- * puts at x 14 and which goes to the far side of the band's letter here, because the face draws the
- * `D` at the band's left padding on every page.
+ * whole width from x 0, so the page's x are the face's.
  *
  * **The badge is a place and not a mark.** The car shows the Porsche crest, a registered trade mark
- * that cannot ship in an MIT package (#194), so the page draws the outline of the shield the crest
- * would sit in and nothing inside it.
+ * that cannot ship in an MIT package (#194), so the page draws the canvas's placeholder: a shield
+ * 54 by 62 at x 14, square at the top and round at the foot, outlined in the label grey with `your`
+ * over `badge` in it at 10 px. The canvas dashes the outline and a SimHub border has no dash, so it
+ * is solid; and it sits six pixels lower than the canvas's 404, because the face draws band D's `D`
+ * at the band's left padding on every page and the shield's top would cross its foot.
  *
  * The two TC boxes read the two traction dials a GT3 car exposes, `TC` and `TC cut` in the house's
  * list of watched settings, where the car shows the same value in both; each is hidden on a car
@@ -25,7 +26,6 @@ import { label } from '../../elements/label.ts';
 import { hasSetting, trackedValue } from '../../second/tracked.ts';
 import { brakeBias, CORNERS, tyrePressure, tyreTemperature, type Corner } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
-import { bandPageRoom } from '../../zones/bandPages.ts';
 import type { ThemeBandPage } from '../drawing.ts';
 import { BORDER, carColour, centredY, INSET_RADIUS, LABEL_SIZE, namedCell, RADIUS, runWidth, settingBox } from './register.ts';
 
@@ -34,8 +34,8 @@ const { fmt } = ncalc;
 /** The tyre box's figures: the tab, the corner temperatures and the pressures, from the ticket. */
 const TYRE = { tab: { height: 26, pad: 14 }, corner: { x: 8, y: 2 }, grid: { x: 52, top: 26, bottom: 6 }, pressure: 32 };
 
-/** The badge's shield: square at the top, rounded at the foot as the car's crest is. */
-const BADGE = { width: 54, height: 62, top: 74, gap: 16 };
+/** The badge's placeholder, from the canvas: x 14, 54 by 62, radii 5 and 27, its words 10 px on a 12 px line. */
+const BADGE = { left: 14, top: 80, width: 54, height: 62, word: 10, line: 12 };
 
 /** `Brake Bias`'s cell and the value inside it. */
 const BIAS_VALUE = { width: 120, size: 30 };
@@ -97,8 +97,8 @@ function tyreBox(prefix: string, box: Rect): Item[] {
 
 function footItems(frame: Rect, prefix: string): Item[] {
   const at = (left: number, top: number, width: number, height: number): Rect => rect(frame.left + left, frame.top + top, width, height);
-  const room = bandPageRoom(frame, false);
-  const badge = rect(room.left + BADGE.gap, frame.top + BADGE.top, BADGE.width, BADGE.height);
+  const badge = rect(frame.left + BADGE.left, frame.top + BADGE.top, BADGE.width, BADGE.height);
+  const words = badge.top + (badge.height - 2 * BADGE.line) / 2;
   const tc = settingReading('tc');
   const cut = settingReading('cut');
   const abs = settingReading('abs');
@@ -112,6 +112,9 @@ function footItems(frame: Rect, prefix: string): Item[] {
       backgroundColor: TRANSPARENT,
       border: { color: carColour('badge'), top: 1, bottom: 1, left: 1, right: 1, radius: { topLeft: INSET_RADIUS, topRight: INSET_RADIUS, bottomLeft: BADGE.width / 2, bottomRight: BADGE.width / 2 } },
     },
+    ...['your', 'badge'].map((word, i) =>
+      label(`${prefix}badge.${word}`, word, badge.left, words + i * BADGE.line + (BADGE.line - BADGE.word) / 2, badge.width, { size: BADGE.word, color: carColour('badge'), hAlign: 'center' }),
+    ),
     settingBox(`${prefix}tcLa`, at(160, 0, 151, 56), ds.color.danger.primary, 'TC-LA', tc.reading, hasSetting(tc.value)),
     settingBox(`${prefix}tcLo`, at(318, 0, 151, 56), ds.color.good.primary, 'TC-LO', cut.reading, hasSetting(cut.value)),
     settingBox(`${prefix}abs`, at(236, 66, 153, 56), ds.color.info.primary, 'ABS', abs.reading, hasSetting(abs.value)),

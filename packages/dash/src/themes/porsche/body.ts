@@ -1,36 +1,39 @@
 /**
  * What the car draws around its three body regions: the grey panels zones B and C are inset in, the
  * outlined tile behind the gear, the column of coloured setting boxes down the left edge and the
- * column of telltales down the right. The zones themselves are the house's widgets cycling the
- * house's pages, drawn on the panel's grey and the tile's black by `zoneGround`.
+ * column of telltale pictograms down the right. The zones themselves are the house's widgets cycling
+ * the house's pages, drawn on the panel's grey and the tile's black by `zoneGround`.
  *
- * **The settings column shows three boxes, not the car's four.** The car's MAP, AC, THR and FC1 are
- * the user's to choose on the panel in #205, and the contract has no per-zone setting that picks a
- * field, so the column is fixed for now and the choice is a follow-up. Of the settings openDash
- * reads, it carries the three the car puts in that column and the foot does not: the engine map, the
- * throttle map and the rear anti-roll bar, which the 1280 x 720 board lists among the column's eight.
- * AC and FC1 have no reading openDash can name, and a box bound to nothing would be a box that never
- * lights. Each box is hidden while the car does not publish its setting.
+ * **The settings column.** The car's MAP, AC, THR and FC1 are the user's to choose on the panel in
+ * #205, and the contract has no per-zone setting that picks a field, so the column's list is fixed
+ * for now and the choice is a follow-up. The list is the 992 GT3 R's row of the per-car table, in its
+ * order, less the two settings openDash has no reading for: MAP and THR from the column, then TC-LA
+ * and ABS from the foot, then the brake bias the 1280 x 720 board puts next in the column. The foot
+ * is a page the plugin cannot reach yet, which is the second reason its boxes belong here. As many
+ * as fit are drawn, stacked from the top at the column's fixed gap as the ticket's size rule says;
+ * a box whose setting the car does not publish is hidden, and the ones under it move up into its
+ * place, so that a car with two settings shows two boxes at the top and not two boxes with holes.
  *
- * **The telltale column carries band D's three corner lamps.** The car's pictograms have no artwork
- * in the repository, and the band at this size draws no corner blocks (`bandCorners` below), so DRS,
- * push to pass and the spotter move here, drawn as the band draws them: a word in a chip, dim until
- * lit. That keeps on the face what the corner blocks carried, the track state having moved into the
- * strip's teal box.
+ * **The telltale column** is the car's four pictograms, dim until lit: the lights, the warning, the
+ * hazard and the tyre. Two have a reading: the warning lights on the engine faults iRacing publishes
+ * as bits, which band D's car page lights its engine lamp on, and the hazard on the fuel alarm. The
+ * lights and the tyre have none, iRacing publishing neither a headlight state nor a tyre warning, and
+ * are drawn dim, as the band's telltales without a source are.
  */
 import type { Hex, Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
+import { withMoreBindings, type Expr } from '../../bind.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
-import { label } from '../../elements/label.ts';
 import { hasSetting, trackedValue } from '../../second/tracked.ts';
-import { ds, TRANSPARENT } from '../../tokens.ts';
-import { cornerLamps } from '../../zones/bandPages.ts';
+import { ds } from '../../tokens.ts';
+import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
-import { BORDER, carColour, centredY, RADIUS, settingBox } from './register.ts';
+import { hazard, lights, tyre, warning } from './pictograms.ts';
+import { BORDER, carColour, lowFuelAlarm, RADIUS, settingBox } from './register.ts';
 
-const { fmt, iff, str } = ncalc;
+const { add, div, fmt, gt, iff, isnull, lt, mod, mul, num, raw, truncate, and, or } = ncalc;
 
 /** A grey panel holds its zone four pixels in; the gear's tile holds it inside its three-pixel border. */
 const PANEL_PAD = 4;
@@ -38,14 +41,16 @@ const PANEL_PAD = 4;
 /** The settings column: 9 px from the edge, 146 wide, boxes 48 tall and 10 apart from the top of the body. */
 const COLUMN = { left: 9, width: 146, box: 48, gap: 10 };
 
-/** The telltale column, centred on x 1170 between the body and the edge, and how its chips are drawn. */
-const TELLTALES = { left: 1147, width: 46, chip: 32, inset: 8, size: 13 };
+/** The telltale column: 46 wide at x 1147, its pictograms 32 tall and inset 8 from the body's ends. */
+const TELLTALES = { left: 1147, width: 46, size: 32, inset: 8 };
 
-/** The three, in the colours the 1280 x 720 board gives them. */
+/** The column's list, in the order it fills, with the colours the car gives each. */
 const COLUMN_SETTINGS: readonly { id: string; title: string; colour: () => Hex }[] = [
   { id: 'map', title: 'MAP', colour: () => ds.color.good.primary },
   { id: 'slip', title: 'THR', colour: () => ds.color.caution.primary },
-  { id: 'diff', title: 'ARB R', colour: () => ds.color.info.primary },
+  { id: 'tc', title: 'TC-LA', colour: () => ds.color.danger.primary },
+  { id: 'abs', title: 'ABS', colour: () => ds.color.info.primary },
+  { id: 'bias', title: 'BIAS', colour: () => ds.color.danger.primary },
 ];
 
 const outset = (r: Rect, by: number): Rect => rect(r.left - by, r.top - by, r.width + 2 * by, r.height + 2 * by);
@@ -53,40 +58,56 @@ const outset = (r: Rect, by: number): Rect => rect(r.left - by, r.top - by, r.wi
 /** The panel a zone is inset in, which the takeovers and the change notification fill. */
 export const panelOf = (ctx: FaceContext, zone: 'B' | 'C'): Rect => outset(zoneRect(ctx.regions, zone), PANEL_PAD);
 
-export function porscheBody(ctx: FaceContext): Item[] {
+/** The tile behind the gear, its border three pixels outside zone A and its ends four. */
+const tileOf = (ctx: FaceContext): Rect => {
   const gear = zoneRect(ctx.regions, 'A');
-  const tile = rect(gear.left - BORDER, gear.top - PANEL_PAD, gear.width + 2 * BORDER, gear.height + 2 * PANEL_PAD);
-  const items: Item[] = [
+  return rect(gear.left - BORDER, gear.top - PANEL_PAD, gear.width + 2 * BORDER, gear.height + 2 * PANEL_PAD);
+};
+
+/** One of iRacing's `EngineWarnings` bits, read by dividing and taking the remainder, as the band's telltales read it. */
+const engineWarning = (bit: number): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(bit))), num(2)), num(0));
+
+/** Every item of a box moved down by `slots` places, the static `rect` being the box's place in the list. */
+const atSlot = (item: Item, slots: Expr, place: number, pitch: number): Item => {
+  if (item.kind === 'layer') return { ...item, children: item.children.map((child) => atSlot(child, slots, place, pitch)) };
+  return withMoreBindings(item, { Top: add(num(item.rect.top - place * pitch), mul(slots, num(pitch))) });
+};
+
+function settingsColumn(top: number, height: number): Item[] {
+  const pitch = COLUMN.box + COLUMN.gap;
+  const fits = Math.floor((height + COLUMN.gap) / pitch);
+  const settings = COLUMN_SETTINGS.map((setting) => ({ ...setting, value: trackedValue(setting.id) }));
+  const present = settings.map(({ value }) => iff(hasSetting(value), num(1), num(0)));
+  return settings.map((setting, place) => {
+    // How many of the boxes before this one are drawn, which is the slot this one takes.
+    const before = place === 0 ? num(0) : add(...present.slice(0, place));
+    const frame = rect(COLUMN.left, top + place * pitch, COLUMN.width, COLUMN.box);
+    const widest = setting.value.pattern === '0' ? '88' : '88.8';
+    const box = settingBox(`settings.${setting.id}`, frame, setting.colour(), setting.title, { sample: setting.value.sample, bind: fmt(setting.value.read, setting.value.pattern), widest });
+    return withMoreBindings(atSlot(box, before, place, pitch), { Visible: and(hasSetting(setting.value), lt(before, num(fits))) });
+  });
+}
+
+function telltaleColumn(top: number, height: number): Item[] {
+  const columnTop = top + TELLTALES.inset;
+  const pitch = (height - 2 * TELLTALES.inset - TELLTALES.size) / 3;
+  const box = (i: number): Rect => rect(TELLTALES.left, Math.round(columnTop + i * pitch), TELLTALES.width, TELLTALES.size);
+  const engine = or(engineWarning(ENGINE_WARNING_BITS.waterTemperature), engineWarning(ENGINE_WARNING_BITS.oilPressure));
+  return [
+    ...lights('telltales.lights', box(0)),
+    ...warning('telltales.warning', box(1), { on: engine, colour: ds.color.danger.primary }),
+    ...hazard('telltales.hazard', box(2), { on: lowFuelAlarm(), colour: ds.color.danger.primary }),
+    ...tyre('telltales.tyre', box(3)),
+  ];
+}
+
+export function porscheBody(ctx: FaceContext): Item[] {
+  const tile = tileOf(ctx);
+  return [
     band('body.panelB', panelOf(ctx, 'B'), carColour('panel'), { radius: RADIUS }),
     band('body.tileA', tile, carColour('tile'), { border: { color: carColour('edge'), width: BORDER }, radius: RADIUS }),
     band('body.panelC', panelOf(ctx, 'C'), carColour('panel'), { radius: RADIUS }),
+    ...settingsColumn(tile.top, tile.height),
+    ...telltaleColumn(tile.top, tile.height),
   ];
-
-  const top = tile.top;
-  const fits = Math.floor((tile.height + COLUMN.gap) / (COLUMN.box + COLUMN.gap));
-  COLUMN_SETTINGS.slice(0, fits).forEach((setting, i) => {
-    const value = trackedValue(setting.id);
-    const frame = rect(COLUMN.left, top + i * (COLUMN.box + COLUMN.gap), COLUMN.width, COLUMN.box);
-    items.push(settingBox(`settings.${setting.id}`, frame, setting.colour(), setting.title, { sample: value.sample, bind: fmt(value.read, value.pattern), widest: '88' }, hasSetting(value)));
-  });
-
-  // Spaced from the top of the column to its foot as the car spaces its pictograms.
-  const lamps = cornerLamps();
-  const columnTop = top + TELLTALES.inset;
-  const columnHeight = tile.height - 2 * TELLTALES.inset;
-  const pitch = (columnHeight - TELLTALES.chip) / Math.max(1, lamps.length - 1);
-  lamps.forEach((lamp, i) => {
-    const chip = rect(TELLTALES.left, Math.round(columnTop + i * pitch), TELLTALES.width, TELLTALES.chip);
-    const ink = iff(lamp.on, str(lamp.colour), str(carColour('panel')));
-    items.push(
-      band(`telltales.${lamp.id}.chip`, chip, TRANSPARENT, { border: { color: carColour('panel'), width: 2, colorBind: ink }, radius: RADIUS }),
-      label(`telltales.${lamp.id}`, lamp.text, chip.left, centredY(chip, TELLTALES.size), chip.width, {
-        size: TELLTALES.size,
-        hAlign: 'center',
-        color: carColour('panel'),
-        colorBind: ink,
-      }),
-    );
-  });
-  return items;
 }

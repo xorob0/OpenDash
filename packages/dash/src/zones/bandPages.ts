@@ -25,7 +25,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, monoWidth, textBox, type Chars } from '../design/metrics.ts';
+import { cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -786,7 +786,7 @@ function inlineMembers(fields: readonly BandField[], page: InlinePage, prefix: s
       // The position is set in the value's face at the value's size, so it is measured there and
       // not in the label's: a position is proportional rather than cellular, because "P" is wider
       // than any digit and a cell cut for digits would clip it.
-      const head = Math.ceil(measureText('BarlowCondensedSemiBold', field.labelWidest ?? field.label, valueFs)) + 2;
+      const head = Math.ceil(measureText(DATA_FACE.SemiBold, field.labelWidest ?? field.label, valueFs)) + 2;
       const value = valueWidthOf(field, valueFs);
       return {
         id: field.id,
@@ -871,7 +871,7 @@ const leftCornerFields = (): BandField[] => [
 ];
 
 /** The three lamps in the right corner. A lamp is a word, lit or dim; it never disappears. */
-export const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
+const cornerLamps = (): { id: string; text: string; on: string; colour: `#${string}` }[] => [
   { id: 'drs', text: 'DRS', on: eq(isnull(game('DRSAvailable'), num(0)), num(1)), colour: ds.purpose.flag.green },
   { id: 'p2p', text: 'P2P', on: eq(isnull(raw('PushToPass'), num(0)), num(1)), colour: ds.purpose.flag.blue },
   // The spotter is caution amber and not the flag's yellow, which every sheet that lights it draws:

@@ -24,5 +24,7 @@ export const porscheDrawing: ThemeDrawing = {
   // The car's foot fills the band from end to end, so the band keeps no corner blocks, as the house
   // face does at 850 and 800 wide; the strip and the telltale column carry what they held.
   bandCorners: false,
+  // The car shows one gear, with no neighbour ghosted beside it.
+  gearGhosts: false,
   bandPages: [PORSCHE_FOOT],
 };

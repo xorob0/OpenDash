@@ -56,6 +56,8 @@ export interface ThemeDrawing {
   changeNotifications?(ctx: FaceContext): Item[];
   /** What a zone's pages are drawn on, in place of the house's base surface and band D's well. */
   zoneGround?(zone: FaceZone): Hex;
+  /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
+  gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */
   bandCorners?: boolean;
   /** Pages added to band D's catalogue, after the contract's own. */
