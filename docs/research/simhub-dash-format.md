@@ -643,6 +643,65 @@ did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still d
 from the two gaps to the overall leader, for the reason its comment gives; the three names are here
 so that the next reader checks them rather than the belief.
 
+### Per-car playlists belong to a display device, and match the iRacing CarPath (2026-10-07, #199)
+
+SimHub switches a display's dashboard by car through a playlist that belongs to the display device and
+not to Dash Studio: the section "Dashboard playlists and car assignment" on the Dash page of a
+`DashMonitorDevice` (a monitor added as a device), a `BitmapDisplayDevice<T>` (the USB screens) or a
+`WebDashDevice`. A dashboard opened in a Dash Studio window has no playlist at all. The classes are in
+`SimHub.Plugins.OutputPlugins.GraphicalDash.DashPlaylist`, and what follows was read from the 9.12.6
+decompile of `plugin/lib/SimHub.Plugins.dll` and of the guest's `ICarsReader.dll` with ilspycmd
+9.1.0.7988 on 2026-10-06.
+
+**The key is `GameData.NewData.CarId`, compared with `==`**, ordinal and case-sensitive
+(`DashPlaylistManager.UpdateState`). On iRacing that is the player's `CarPath`, `porsche992rgt3`, since
+`IRacingManager.GD_CarId` returns the `CarPath` of the driver whose `CarIdx` is `PlayerCarIdx`;
+`CarScreenName` is `CarModel` and plays no part in the match. A car-path column in the theme
+catalogue (`iracingCarPaths` in `contract.ts`, `IracingCarPaths` in `Contract.cs`) is therefore the
+whole of what the plugin needs. Stability across iRacing updates was not measured; a car iRacing
+re-releases as a new model gets a new path, which is a new car for this purpose.
+
+**On disk** a device's playlist lives in its own file,
+`PluginsData\Common\Devices\<InstanceId>\settings.json`, under
+`DashPlaylistSettings.GamePlaylists.IRacing.CarDashes[]`, one entry being
+`{"Cars":[{"CarId":"porsche992rgt3","CarName":"…"}],"Items":[{"Id":"<guid>","DashboardSelection":"OpenDash Porsche 1280x480"}],"Id":"<guid>","IsActive":false}`.
+`DashboardSelection` is serialised as the dashboard's `Code`, which is the main `.djson`'s file name
+without its extension and so the folder's name. `DevicesPlugin` reads every device file once at
+startup and rewrites all of them from memory in `SaveSettings()`, which runs on a clean exit, so an
+edit to the file while SimHub runs is lost and the plugin works on the running objects instead.
+
+**Three behaviours matter to a writer.** The first entry naming a car wins, so an entry of ours
+placed before the driver's own for the same car hides theirs. A car with no entry keeps whatever the
+display was showing, unless the game playlist's `DefaultMainDash` is enabled with a selection
+("Load this dashboard when car model has no defined playlist") and `UseDefaultMainDashForUnkownCars`
+is true, both of which are the driver's settings. And an entry naming a dashboard SimHub does not list
+sets the display's dashboard to null when the car loads, which blanks it, so an entry must never
+outlive its folder or precede SimHub's listing of it.
+
+**What the plugin reaches** (`plugin/OpenDash/CarPlaylists.cs`), every member public and every one of
+them listed in `PanelCarPlaylist.Reached`, which `PanelCarPlaylistTests` holds to the assembly in
+`plugin/lib` and which the plugin looks up before it touches anything, logging the missing ones by name
+and writing nothing when one has gone:
+
+| | |
+|---|---|
+| `DevicesPlugin.DevicesPluginSettings.Devices`, `DeviceInstance.GetInstances()` | every device, composites flattened, as `LedTargets.cs` walks them |
+| `IBitmapDisplayDevice.GetDashboard()` | the dashboard a display shows |
+| `BitmapDisplayDevice<T>.Settings.DashPlaylistSettings` | a USB screen's playlist; public, read by name only because `T` is not known |
+| `DeviceInstance.GetSettingsControls()`, `DeviceSettingControl.Control`, then `DashMonitorDeviceSettingsControl.DashMonitorSettings.DashPlaylistSettings` or `WebDashDeviceSettingsControl.DashMonitorSettings.DashPlaylistSettings` | a monitor's and a web dash's, whose `Settings` are private: the first tab of the settings page holds the same live object, the route #686 takes for a wheel's LEDs |
+| `DashPlaylistSettings.CurrentGameCode`, `UpdateCurrentGame(string)`, `CurrentGamePlaylist` | the iRacing playlist, `GamePlaylists` being private; the game it pointed at before is put back at once |
+| `GameDashPlaylist.CarDashes`, `DefaultMainDash.Enabled`, `DefaultMainDash.Selection.Dashboard`, `UseDefaultMainDashForUnkownCars` | the entries, and whether a car without one falls back, read and never written |
+| `CarDash.Cars[].CarId`, `DashPlaylist.Id`, `DashPlaylist.Items[].Id`, `PlaylistItem.DashboardSelection.Dashboard` | an entry, read; the dashboard is the one thing written in place |
+| `GraphicalDashPlugin.GetSettings().Items[].Code` | the dashboards SimHub lists |
+| `DevicesPlugin.SaveSettings()` | every device file written now, so an entry outlives a SimHub that is killed |
+
+A new entry is built with Newtonsoft from the JSON shape above, as `DevicesPlugin` builds every entry it
+reads, because `DashPlaylist.Id`, `PlaylistItem.Id` and `CarSelection.CarId` have private setters marked
+`[JsonProperty]`. `DashPlaylistManager.ReapplyCarSettings()`, which would make a running display
+re-evaluate the car at once, is internal and is not called: a new entry takes effect at the next car
+change or the next start, and a themed screen is only bound once SimHub lists it, which is the next
+start in any case.
+
 ### Community precedent for source in git
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`
