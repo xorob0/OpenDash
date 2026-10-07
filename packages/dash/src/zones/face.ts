@@ -32,6 +32,7 @@ import { ds } from '../tokens.ts';
 import { bar } from './bar.ts';
 import { regionsWithoutRevBar, zoneRegions, type ZoneLayout } from './layout.ts';
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../themes/anatomy.ts';
+import type { FaceContext, ThemeDrawing } from '../themes/drawing.ts';
 import { label } from '../elements/label.ts';
 import { measureText } from '../design/advances.ts';
 import { densityForBox } from '../second/density.ts';
@@ -82,12 +83,18 @@ export const zonesOf = (layout: ZoneLayout, regions: Regions = zoneRegions(layou
  * says otherwise. Everything else, the background, the rev bar's gap and the bar's scale, is read
  * from `layout`.
  */
-export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true, regions = zoneRegions(layout) }: { revBar?: boolean; regions?: Regions } = {}): Item[] {
+export function faceItems(
+  layout: ZoneLayout,
+  { revBar: withRevBar = true, regions = zoneRegions(layout), drawing = {} }: { revBar?: boolean; regions?: Regions; drawing?: ThemeDrawing } = {},
+): Item[] {
   const items: Item[] = [];
   const band_ = regionRect(regions, 'band');
   const body = (['A', 'B', 'C'] as const).map((zone) => ({ zone, rect: zoneRect(regions, zone) }));
+  const ctx: FaceContext = { layout, face: sizeOf(layout), regions, withRevBar };
 
-  if (withRevBar) {
+  if (withRevBar && drawing.revBar) {
+    items.push(...drawing.revBar(ctx));
+  } else if (withRevBar) {
     const segments = regionRect(regions, 'revBar');
     // The well the rev bar has sat in since the first token file named it, and which was never drawn.
     items.push(band('well', regionRect(regions, 'revBarWell'), ds.purpose.block.well));
@@ -101,44 +108,14 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true, regio
   }
 
   const barRect = optionalRegionRect(regions, 'bar');
-  if (barRect && layout.bar) {
+  if (barRect && drawing.bar) {
+    items.push(...drawing.bar(ctx));
+  } else if (barRect && layout.bar) {
     items.push(band('bar.ground', barRect, ds.purpose.block.well));
     items.push(...bar(barRect, 'bar.', { fieldsPerEnd: layout.barFieldsPerEnd, face: sizeOf(layout), scale: layout.bar }));
   }
 
-  // Band D sits in the same well as the bar: the artboards draw both recessed against the body, and
-  // the two settled strips reading as one material is what makes the changeable middle read as the
-  // changeable part. Drawn here as well as by the band's own screens, so that the face is right on
-  // its own -- a face whose zone D widget has not resolved would otherwise show base colour where
-  // the drawing has a well.
-  items.push(band('band.ground', band_, ds.purpose.block.well));
-
-  const rowTops = [...new Set(body.map(({ rect: r }) => r.top))].sort((a, b) => a - b);
-
-  // One pixel between the zones, because a rule is the whole boundary where a block would be too
-  // much. That is the reason most of the face is bare. Drawn between two zones that start on the
-  // same row, named after the pair from left to right, so that a theme which puts the gear at an
-  // edge is ruled where its zones meet rather than where the house face's do.
-  for (const top of rowTops) {
-    const row = body.filter(({ rect: r }) => r.top === top).sort((a, b) => a.rect.left - b.rect.left);
-    for (const [left, right] of row.slice(1).map((next, i) => [row[i]!, next] as const)) {
-      const gapLeft = right.rect.left - 1;
-      if (gapLeft > left.rect.left) items.push(rule(`rule.${left.zone.toLowerCase()}${right.zone.toLowerCase()}`, gapLeft, left.rect.top, 1, left.rect.height));
-    }
-  }
-
-  // The same pixel across the face: the artboards leave an empty row above every row of the body
-  // and above band D, and draw the rule in it. Read off the rects rather than tabulated per face,
-  // so that the portrait face, which stacks its zones into four rows, and the arrangement that
-  // gives the rev bar's room back are both right without a second table.
-  const startingAt = (top: number): string => body.filter(({ rect: r }) => r.top === top).map(({ zone }) => zone).join('');
-  const across: [string, number][] = rowTops.map((top, i) => [i === 0 ? 'rule.body' : `rule.zone${startingAt(top)}`, top]);
-  across.push(['rule.band', band_.top]);
-  for (const [name, top] of across) {
-    // A rule is a boundary between two parts, and the top edge of the face is not one: the nano
-    // with its rev bar off starts its body on row 1, with only the face's margin above it.
-    if (top > 1) items.push(rule(name, 0, top - 1, layout.width, 1));
-  }
+  items.push(...(drawing.chrome ? drawing.chrome(ctx) : houseChrome(layout, band_, body)));
 
   const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
@@ -190,6 +167,7 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true, regio
   // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
   // stop under a red flag still has to know whether the limiter is on.
   items.push(...pitAlerts(regionRect(regions, 'pitAlert'), 'pitAlert'));
+  if (drawing.takeovers) items.push(...drawing.takeovers(ctx));
 
   // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
   // driver can give up for the three seconds a lap time is worth more than either. The box is
@@ -202,7 +180,7 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true, regio
   // And the smaller box of the same family, on the same rectangle: a car setting that has just
   // moved, for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up
   // inside the component, so a lap time at the line is never covered by a click of traction control.
-  items.push(...changeNotifications(hero, 'notice'));
+  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : changeNotifications(hero, 'notice')));
 
   // The largest of the family, last, and on the same rectangle again: the debrief of the lap just
   // finished, for the four seconds after the line.
@@ -219,6 +197,48 @@ export function faceItems(layout: ZoneLayout, { revBar: withRevBar = true, regio
   // the pop-ups already make on that face and is why the pit alerts are pushed before this.
   items.push(lapReview(lapReviewFrame(hero, layout.width), lapReviewOut(face), 'lapReview'));
 
+  return items;
+}
+
+/**
+ * The house face's own chrome: band D's well and the one-pixel rules between the parts, which is
+ * what a theme's `chrome` replaces.
+ */
+function houseChrome(layout: ZoneLayout, band_: Rect, body: readonly { zone: 'A' | 'B' | 'C'; rect: Rect }[]): Item[] {
+  const items: Item[] = [];
+  // Band D sits in the same well as the bar: the artboards draw both recessed against the body, and
+  // the two settled strips reading as one material is what makes the changeable middle read as the
+  // changeable part. Drawn here as well as by the band's own screens, so that the face is right on
+  // its own -- a face whose zone D widget has not resolved would otherwise show base colour where
+  // the drawing has a well.
+  items.push(band('band.ground', band_, ds.purpose.block.well));
+
+  const rowTops = [...new Set(body.map(({ rect: r }) => r.top))].sort((a, b) => a - b);
+
+  // One pixel between the zones, because a rule is the whole boundary where a block would be too
+  // much. That is the reason most of the face is bare. Drawn between two zones that start on the
+  // same row, named after the pair from left to right, so that a theme which puts the gear at an
+  // edge is ruled where its zones meet rather than where the house face's do.
+  for (const top of rowTops) {
+    const row = body.filter(({ rect: r }) => r.top === top).sort((a, b) => a.rect.left - b.rect.left);
+    for (const [left, right] of row.slice(1).map((next, i) => [row[i]!, next] as const)) {
+      const gapLeft = right.rect.left - 1;
+      if (gapLeft > left.rect.left) items.push(rule(`rule.${left.zone.toLowerCase()}${right.zone.toLowerCase()}`, gapLeft, left.rect.top, 1, left.rect.height));
+    }
+  }
+
+  // The same pixel across the face: the artboards leave an empty row above every row of the body
+  // and above band D, and draw the rule in it. Read off the rects rather than tabulated per face,
+  // so that the portrait face, which stacks its zones into four rows, and the arrangement that
+  // gives the rev bar's room back are both right without a second table.
+  const startingAt = (top: number): string => body.filter(({ rect: r }) => r.top === top).map(({ zone }) => zone).join('');
+  const across: [string, number][] = rowTops.map((top, i) => [i === 0 ? 'rule.body' : `rule.zone${startingAt(top)}`, top]);
+  across.push(['rule.band', band_.top]);
+  for (const [name, top] of across) {
+    // A rule is a boundary between two parts, and the top edge of the face is not one: the nano
+    // with its rev bar off starts its body on row 1, with only the face's margin above it.
+    if (top > 1) items.push(rule(name, 0, top - 1, layout.width, 1));
+  }
   return items;
 }
 
@@ -291,7 +311,7 @@ export interface BuiltFace {
  * The name follows the flag rather than being passed beside it, so a screen cannot end up named for
  * one arrangement and drawn as the other.
  */
-function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean): Screen {
+function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean, drawing: ThemeDrawing): Screen {
   return {
     name: withRevBar ? FACE_SCREEN_NAME : FACE_SCREEN_NAME_NO_REV_BAR,
     inGame: true,
@@ -300,15 +320,18 @@ function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean): 
     idle: false,
     pit: true,
     backgroundColor: layout.background,
-    items: faceItems(layout, { revBar: withRevBar, regions }),
+    items: faceItems(layout, { revBar: withRevBar, regions, drawing }),
     // This face's own answer, not the rig's: a wheel that carries LEDs across its top and a display
     // that does not are two screens on one rig, and the switch used to answer for both at once.
     enabledExpression: withRevBar ? not(zoneSetting.revBarIs(sizeOf(layout), 'off')) : zoneSetting.revBarIs(sizeOf(layout), 'off'),
   };
 }
 
-/** A zone face and the dashboards its zones cycle, in the regions a theme gives it or the house face's own. */
-export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions, regions: Regions = zoneRegions(layout)): BuiltFace {
+/**
+ * A zone face and the dashboards its zones cycle, in the regions a theme gives it or the house
+ * face's own, drawn the house's way except where a theme's drawing says otherwise.
+ */
+export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions, regions: Regions = zoneRegions(layout), drawing: ThemeDrawing = {}): BuiltFace {
   const metadata: DashboardMetadata = {
     title: layout.folder,
     author: opts.author,
@@ -325,10 +348,10 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions, region
     // One idle screen for the face and not one per arrangement: the rev bar's setting says how the
     // face is laid out while a game is running, and a rig at rest has no rev bar to arrange. It goes
     // last, so screen 0 is still the face SimHub previews and the tests reach for.
-    screens: [faceScreen(layout, regions, true), faceScreen(layout, off, false), idleScreen({ frame: rect(0, 0, layout.width, layout.height), background: layout.background })],
+    screens: [faceScreen(layout, regions, true, drawing), faceScreen(layout, off, false, drawing), idleScreen({ frame: rect(0, 0, layout.width, layout.height), background: layout.background })],
     metadata,
   };
   // Both arrangements' rectangles, deduplicated by zoneDashboardsFor: the zones the rev bar's room
   // does not reach keep the one dashboard they already had.
-  return { main, zones: zoneDashboardsFor(sizeOf(layout), [...zonesOf(layout, regions), ...zonesOf(layout, off)], metadata) };
+  return { main, zones: zoneDashboardsFor(sizeOf(layout), [...zonesOf(layout, regions), ...zonesOf(layout, off)], metadata, drawing) };
 }
