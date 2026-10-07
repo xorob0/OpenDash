@@ -22,6 +22,7 @@ import type { FaceSize, FaceZone } from '../contract.ts';
 import type { Hex, Item, Rect } from '../generator.ts';
 import type { ModuleContext } from '../modules/module.ts';
 import type { FieldSpec } from '../second/field.ts';
+import type { Density } from '../second/density.ts';
 import type { StackRow } from '../second/layout.ts';
 import type { ZoneLayout } from '../zones/layout.ts';
 import type { Regions } from './anatomy.ts';
@@ -59,8 +60,10 @@ export interface ModuleRegister {
    * `order` is the page's shedding order, most important first, which the row's `shed` must honour.
    */
   fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, order: readonly string[]): StackRow;
-  /** A row that is not a rank of fields, a gauge, a bar or a drawing, dressed the theme's way. */
-  blockRow(row: StackRow, frame: Rect): StackRow;
+  /** A page's rows laid out in its box, the ranks of fields and the gauges, bars and drawings between them. */
+  stack(frame: Rect, rows: readonly StackRow[], density: Density): Item[];
+  /** A page drawn whole, for one that lays its fields out itself rather than through `fieldsRow`; undefined keeps the page's own. */
+  page?(id: string, ctx: ModuleContext): Item[] | undefined;
 }
 
 export interface ThemeDrawing {

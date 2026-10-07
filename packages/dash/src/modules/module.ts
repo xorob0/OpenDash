@@ -194,7 +194,7 @@ export function defineModule(id: string, build: ModuleBuilder): Module {
   const meta = moduleMeta(id);
   // A module is always its own page, even when another page builds it inside itself: the pit wall's
   // track panel embeds the track module, and the table that applies to it is the track one.
-  const page: ModuleBuilder = (ctx) => build({ ...ctx, page: id });
+  const page: ModuleBuilder = (ctx) => moduleRegister()?.page?.(id, { ...ctx, page: id }) ?? build({ ...ctx, page: id });
   // A module that needs a session says so while there is none (#406). The catalogue's declaration
   // is what decides it, so a module added later answers the question by existing -- unless the
   // caller embedding it says it is drawing the notice itself, which is `notice: false`.

@@ -217,10 +217,10 @@ export function stack(frame: Rect, rows: readonly StackRow[], density: Density, 
   const step = gap ?? densityOf(density).gapY;
   // A row of no height is a rank the page shed entirely. It is dropped rather than drawn, so the
   // rows under it move up instead of sitting below a gap with nothing above it.
-  // A theme that dresses its rows does so to the ones that are not ranks of fields, which its own
-  // `fieldsRow` has already dressed and marked by declaring what they shed.
+  // A theme with a register of its own lays the page out its own way; see `ModuleRegister`.
   const register = moduleRegister();
-  const live = rows.filter((row) => row.height > 0).map((row) => (register && !row.fill && !row.shed ? register.blockRow(row, frame) : row));
+  if (register) return register.stack(frame, rows, density);
+  const live = rows.filter((row) => row.height > 0);
   const kept = rowsThatFit(filled(live, frame.height, step), frame.height, step, shedOrder);
   const total = stackHeight(kept, step);
   // The room a spread stack has is its box less its own tail at each end, the same reservation
