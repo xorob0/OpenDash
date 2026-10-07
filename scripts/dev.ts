@@ -56,6 +56,8 @@ export const LIST_ORDER = [
   'OpenDash Companion portrait',
   'OpenDash Pit wall',
   'OpenDash Pit wall portrait',
+  // A themed package, built by `--all-themes` and installed on the VM like any other (#205).
+  'OpenDash Porsche 1280x480',
 ] as const;
 
 export interface DevOptions {
@@ -158,7 +160,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
 
     step(3, steps, opts.noBuild ? 'skipping the build' : 'building the packages');
     if (!opts.noBuild) {
-      const built = Bun.spawnSync(['bun', 'run', 'build'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
+      const built = Bun.spawnSync(['bun', 'run', 'build', '--all-themes'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
       if (built.exitCode !== 0) {
         console.error(new TextDecoder().decode(built.stderr) || new TextDecoder().decode(built.stdout));
         return 1;
