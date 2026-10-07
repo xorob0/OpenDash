@@ -323,6 +323,69 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("OpenDash Rim 2", PackageCatalogue.UniqueFolder("Rim", new[] { "OpenDash Rim." }, "OpenDash 1280x480"));
         }
 
+        /// <summary>
+        /// A themed package is a face of its size and of its theme, named as ADR 0016 spells it.
+        /// </summary>
+        /// <remarks>
+        /// Read from the catalogue at the sizes each theme claims and at nothing looser, because a second
+        /// screen's folder is slugged from a name its owner typed, and "OpenDash Porsche 1920x480" names
+        /// no package while the Porsche claims 1280 x 480 alone.
+        /// </remarks>
+        [Fact]
+        public void A_themed_folder_is_a_face_of_its_theme_and_its_size()
+        {
+            const string porsche = "OpenDash Porsche 1280x480";
+            Assert.Equal("porsche", PackageCatalogue.ThemeOf(porsche).Id);
+            Assert.Equal("porsche", PackageCatalogue.ThemeOf("opendash porsche 1280X480").Id);
+            Assert.Equal(Contract.KindFace, PackageCatalogue.Classify(porsche, 1280, 480));
+            int width, height;
+            PackageCatalogue.SizeFromFolder(porsche, out width, out height);
+            Assert.Equal(1280, width);
+            Assert.Equal(480, height);
+
+            foreach (var folder in new[] { "OpenDash", "OpenDash 1280x480", "OpenDash Porsche", "OpenDash Porsche 1920x480", "OpenDash Companion", "OpenDash Rim", null, "" })
+            {
+                Assert.Null(PackageCatalogue.ThemeOf(folder));
+            }
+
+            // Every size of every theme in the catalogue, and the default at none.
+            foreach (var theme in Contract.Themes.Where(t => !t.IsDefault))
+            {
+                foreach (var size in theme.Sizes)
+                {
+                    var folder = theme.FolderAt(size.Width, size.Height);
+                    Assert.Same(theme, PackageCatalogue.ThemeOf(folder));
+                    Assert.Equal(Contract.KindFace, PackageCatalogue.Classify(folder, size.Width, size.Height));
+                }
+            }
+            Assert.Throws<InvalidOperationException>(() => Contract.Themes[0].FolderAt(1280, 480));
+        }
+
+        /// <summary>A theme's name is the one word of its folder this file does not choose, so a theme that
+        /// happened to be called something Classify reads as another kind is still a face.</summary>
+        [Fact]
+        public void A_theme_is_found_by_its_whole_folder_whatever_its_name_contains()
+        {
+            var companion = new Contract.ThemeEntry("companion-car", "Companion", new string[0], new string[0], new[] { Contract.FaceOf(850, 480).Value });
+            var themes = new[] { Contract.Themes[0], companion };
+            Assert.Same(companion, PackageCatalogue.ThemeOf("OpenDash Companion 850x480", themes));
+            Assert.Null(PackageCatalogue.ThemeOf("OpenDash Companion", themes));
+        }
+
+        [Fact]
+        public void The_catalogue_says_which_embedded_package_is_themed()
+        {
+            var packages = new MemoryPackageSource()
+                .Add("OpenDashPlugin.Resources.OpenDash 1280x480.simhubdash", SyntheticPackage.Zip("OpenDash 1280x480", "0.2.0"))
+                .Add("OpenDashPlugin.Resources.OpenDash Porsche 1280x480.simhubdash", SyntheticPackage.Zip("OpenDash Porsche 1280x480", "0.2.0"));
+            var entries = PackageCatalogue.From(packages);
+            var themed = entries.Single(e => e.Folder == "OpenDash Porsche 1280x480");
+            Assert.Equal("porsche", themed.Theme);
+            Assert.Equal(Contract.KindFace, themed.Kind);
+            Assert.Equal(1280, themed.Width);
+            Assert.Null(entries.Single(e => e.Folder == "OpenDash 1280x480").Theme);
+        }
+
         /// <summary>The packages a release would embed, from the folder the plugin embeds if it has been
         /// filled and from the dash build output otherwise, or null when neither holds any.</summary>
         private static IPackageSource TheBuiltPackages()

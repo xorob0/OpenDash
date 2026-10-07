@@ -1,13 +1,16 @@
 /**
- * Prints the `.djson` of the large face under greenTheme.json, a theme no build ships, for
+ * Prints the `.djson` of the large face under greenTheme.json, an overlay no build ships, for
  * themes.test.ts. It runs as its own process because a theme is chosen before `ds` exists, and the
- * theme is registered before the dynamic import because that import is what builds `ds`.
+ * overlay is put in place before the dynamic import because that import is what builds `ds`.
+ *
+ * The overlay is the default theme's here rather than a theme of its own, because what is asserted
+ * is that the default's packages, folders and identifiers included, change by the colour alone; a
+ * theme of its own would be built under its own folders (#202).
  */
-import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../../src/themes/index.ts';
+import { DEFAULT_THEME_ID, THEMES } from '../../src/themes/index.ts';
 import greenTheme from './greenTheme.json';
 
-THEMES['test-green'] = { ...THEMES[DEFAULT_THEME_ID]!, overlay: greenTheme };
-process.env[THEME_ENV] = 'test-green';
+THEMES[DEFAULT_THEME_ID] = { ...THEMES[DEFAULT_THEME_ID]!, overlay: greenTheme };
 const { faceDjson } = await import('./faceDjson.ts');
 const { LARGE_FACE } = await import('../../src/zones/index.ts');
 process.stdout.write(JSON.stringify(faceDjson([LARGE_FACE])));

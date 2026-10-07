@@ -32,6 +32,12 @@ namespace OpenDashPlugin
 
         public int Height { get; set; }
 
+        /// <summary>
+        /// The id of the theme the package is drawn in, from Contract.Themes, or null for every package the
+        /// default theme builds and for the second screens, which no theme draws.
+        /// </summary>
+        public string Theme { get; set; }
+
         /// <summary>"1280 × 480", as the panel writes a size.</summary>
         public string SizeLabel { get { return Width + " × " + Height; } }
 
@@ -172,6 +178,9 @@ namespace OpenDashPlugin
         public static string Classify(string folder, int width, int height)
         {
             var name = folder ?? string.Empty;
+            // First, because a theme's name is the one word of a folder this file does not choose: a themed
+            // package is always a face, whatever its name happens to contain.
+            if (ThemeOf(name) != null) return Contract.KindFace;
             if (name.IndexOf("Companion", StringComparison.OrdinalIgnoreCase) >= 0) return Contract.KindCompanion;
             if (name.IndexOf("Pit wall", StringComparison.OrdinalIgnoreCase) >= 0) return Contract.KindPitWall;
             if (name.StartsWith("OpenDash slots ", StringComparison.OrdinalIgnoreCase)) return Contract.KindSlots;
@@ -180,6 +189,34 @@ namespace OpenDashPlugin
                 if (size.Width == width && size.Height == height) return Contract.KindFace;
             }
             return Contract.KindSlots;
+        }
+
+        /// <summary>
+        /// The theme whose package a folder is, or null for a folder no theme in the catalogue names.
+        /// </summary>
+        /// <remarks>
+        /// Null for every folder the default theme builds, which keep the names they always had. A themed
+        /// folder is "OpenDash &lt;Theme&gt; &lt;W&gt;x&lt;H&gt;" at a size the theme claims, and nothing looser:
+        /// the folder of a second screen is slugged from a name its owner typed (UniqueFolder), and a
+        /// screen called "Porsche 1280x480" must not be read as a package the plugin carries.
+        /// </remarks>
+        public static Contract.ThemeEntry ThemeOf(string folder)
+        {
+            return ThemeOf(folder, Contract.Themes);
+        }
+
+        internal static Contract.ThemeEntry ThemeOf(string folder, IEnumerable<Contract.ThemeEntry> themes)
+        {
+            if (string.IsNullOrEmpty(folder)) return null;
+            foreach (var theme in themes)
+            {
+                if (theme.IsDefault) continue;
+                foreach (var size in theme.Sizes)
+                {
+                    if (string.Equals(theme.FolderAt(size.Width, size.Height), folder, StringComparison.OrdinalIgnoreCase)) return theme;
+                }
+            }
+            return null;
         }
 
         /// <summary>
@@ -278,6 +315,7 @@ namespace OpenDashPlugin
                         // "OpenDash 480 round" carry no size at all, and reading it off the name left
                         // their cards saying 0 x 0.
                         if (!SizeFromMetadata(zip, folder, out width, out height)) SizeFromFolder(folder, out width, out height);
+                        var theme = ThemeOf(folder);
                         entries.Add(new PackageEntry
                         {
                             Package = name,
@@ -285,6 +323,7 @@ namespace OpenDashPlugin
                             Width = width,
                             Height = height,
                             Kind = Classify(folder, width, height),
+                            Theme = theme == null ? null : theme.Id,
                         });
                     }
                 }

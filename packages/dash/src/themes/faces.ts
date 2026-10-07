@@ -46,14 +46,20 @@ function themeFor(themeId: string): Theme {
   return theme;
 }
 
-/** One face of a theme, refusing a size the theme does not claim and regions the face cannot draw. */
-export function buildThemeFace(themeId: string, size: Size, opts: FaceBuildOptions): ThemeFace {
+/**
+ * One face of a theme, refusing a size the theme does not claim and regions the face cannot draw.
+ *
+ * `folder` is the package's name, which titles the face; left out, it is the house face's, which is
+ * what the default theme keeps and what a test theme with no catalogue entry is drawn under.
+ */
+export function buildThemeFace(themeId: string, size: Size, opts: FaceBuildOptions, folder?: string): ThemeFace {
   const { anatomy } = themeFor(themeId);
   if (!anatomy.sizes.some((s) => s.width === size.width && s.height === size.height)) {
     throw new Error(`the ${themeId} theme does not draw ${named(size)}; it draws ${anatomy.sizes.map(named).join(', ')}`);
   }
-  const layout = ZONE_FACES.find((f) => f.width === size.width && f.height === size.height);
-  if (!layout) throw new Error(`the ${themeId} theme claims ${named(size)}, which is not a face that ships`);
+  const house = ZONE_FACES.find((f) => f.width === size.width && f.height === size.height);
+  if (!house) throw new Error(`the ${themeId} theme claims ${named(size)}, which is not a face that ships`);
+  const layout = folder === undefined ? house : { ...house, folder };
   const regions = anatomy.regions(layout);
   checkRegions(regions, size, `the ${themeId} theme at ${named(size)}`);
   return { layout, regions, built: buildZoneFace(layout, opts, regions) };

@@ -4,7 +4,9 @@
 # plugin zip. Output: build/*.simhubdash, build/manifest.json, build/OpenDash-plugin.zip.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-bun run build
+# Every theme in the catalogue, since a themed package is embedded like the default ones and written
+# only when somebody picks it (ADR 0016).
+bun run build --all-themes
 rm -rf plugin/OpenDash/Resources/*.simhubdash plugin/OpenDash/Resources/*.ledsprofile plugin/OpenDash/Resources/fonts plugin/OpenDash/Resources/flag-box-glyphs.json
 # Everything is copied and the csproj decides what is embedded, which is how CI works too: it hands
 # the whole dash artefact over. The card faces are excluded there, for the reason written there.

@@ -420,7 +420,9 @@ namespace OpenDashPlugin
         private List<Planned> Plan(IReadOnlyList<string> names)
         {
             var screens = Rig?.Invoke();
-            if (screens == null) return names.Select(name => new Planned { Package = name, Wanted = true }).ToList();
+            // With no rig to ask, everything is written except a themed package, which is written only
+            // when somebody picks it (ADR 0016): carrying a theme must never put it in every user's list.
+            if (screens == null) return names.Select(name => new Planned { Package = name, Wanted = PackageCatalogue.ThemeOf(FolderOf(name)) == null }).ToList();
 
             var planned = new List<Planned>();
             foreach (var screen in screens)

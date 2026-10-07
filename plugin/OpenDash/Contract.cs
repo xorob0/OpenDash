@@ -1065,6 +1065,73 @@ namespace OpenDashPlugin
             throw new ArgumentOutOfRangeException("prefix", prefix, "no face ships at that size");
         }
 
+        /// <summary>The theme every package that is not themed is drawn in, under the names it always had.</summary>
+        public const string DefaultThemeId = "default";
+
+        /// <summary>
+        /// One theme the build knows. Mirrors ThemeEntry in packages/dash/src/contract.ts.
+        /// </summary>
+        /// <remarks>
+        /// A theme is a build-time variant (ADR 0015): one package per size it claims, embedded like the
+        /// default ones and written only when it is picked (ADR 0016). Nothing here is a property and
+        /// nothing reads a theme at runtime; the plugin needs the catalogue to know which embedded package
+        /// is themed, to offer it, and to write the per-car playlist entry (#199).
+        /// </remarks>
+        public sealed class ThemeEntry
+        {
+            public ThemeEntry(string id, string name, string[] cars, string[] iracingCarPaths, IReadOnlyList<FaceSize> sizes)
+            {
+                Id = id;
+                Name = name;
+                Cars = cars;
+                IracingCarPaths = iracingCarPaths;
+                Sizes = sizes;
+            }
+
+            /// <summary>Lower case, and the name of its directory under packages/dash/src/themes/.</summary>
+            public string Id { get; }
+
+            /// <summary>The name a person reads, which is the one in the package folder, in SimHub's list and in the panel.</summary>
+            public string Name { get; }
+
+            /// <summary>The cars it is drawn for, as a driver says them.</summary>
+            public string[] Cars { get; }
+
+            /// <summary>The iRacing car paths of those cars that are known. How SimHub keys a car is #199's to find out.</summary>
+            public string[] IracingCarPaths { get; }
+
+            /// <summary>The sizes it claims. A size it leaves out keeps the default face there.</summary>
+            public IReadOnlyList<FaceSize> Sizes { get; }
+
+            public bool IsDefault { get { return string.Equals(Id, DefaultThemeId, StringComparison.Ordinal); } }
+
+            /// <summary>
+            /// The folder, and the main dashboard's name, of this theme's package at a size:
+            /// "OpenDash Porsche 1280x480". It carries the size at 1920 x 480 too, where the default is the
+            /// bare "OpenDash" (ADR 0016). The default theme keeps the folders its layouts name, so asking
+            /// it is a mistake.
+            /// </summary>
+            public string FolderAt(int width, int height)
+            {
+                if (IsDefault) throw new InvalidOperationException("the default theme keeps the folders its layouts name");
+                return "OpenDash " + Name + " " + width + "x" + height;
+            }
+        }
+
+        /// <summary>
+        /// Every theme, the default first. Mirrors THEME_CATALOGUE in packages/dash/src/contract.ts, which
+        /// ContractTests reads back and contract.test.ts reads this from, so the two cannot drift.
+        /// </summary>
+        /// <remarks>
+        /// The Porsche is catalogued before its code exists (#205), so for now no package of it is embedded;
+        /// what the plugin offers is what it carries, and the catalogue says what each carried package is.
+        /// </remarks>
+        public static readonly IReadOnlyList<ThemeEntry> Themes = new[]
+        {
+            new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes),
+            new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche992cup" }, new[] { FaceOf(1280, 480).Value }),
+        };
+
         /// <summary>Whether a prefix names a face that ships, for reading a settings file written by another version.</summary>
         public static bool IsKnownFacePrefix(string prefix)
         {

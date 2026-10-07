@@ -888,6 +888,71 @@ export const facePrefix = (face: FaceSize): string => `Face${face.width}x${face.
 export const faceForPrefix = (prefix: string): FaceSize | undefined =>
   FACE_SIZES.find((face) => facePrefix(face) === prefix);
 
+// --- The theme catalogue ----------------------------------------------------------------------
+//
+// A theme is a build-time variant (ADR 0015): one package per size it claims, resolved into literal
+// values exactly as the default look is. Nothing here is a property, and nothing a binding reads
+// names a theme; the catalogue is what the build walks and what the plugin offers, and it is
+// mirrored in Contract.cs for that reason alone.
+
+/** The theme every package that is not themed is drawn in: the house look, under its old names. */
+export const DEFAULT_THEME_ID = 'default';
+
+/** One theme the build knows, and what the plugin needs to offer it without reading its code. */
+export interface ThemeEntry {
+  /** Lower case, and the name of its directory under `packages/dash/src/themes/`. */
+  id: string;
+  /** The name a person reads, which is the one in the package folder, in SimHub's list and in the panel. */
+  name: string;
+  /** The cars it is drawn for, as a driver says them. */
+  cars: readonly string[];
+  /**
+   * The iRacing car paths of those cars that are known, which the per-car playlist (#199) will match
+   * on. How SimHub keys a car is that ticket's to find out, and its column is added beside this one
+   * when the answer exists.
+   */
+  iracingCarPaths: readonly string[];
+  /**
+   * The sizes it claims, each one of {@link FACE_SIZES}. A size it leaves out keeps the default face
+   * there, and a size it claims and its anatomy does not draw fails the build.
+   */
+  sizes: readonly FaceSize[];
+}
+
+/** The entry of {@link FACE_SIZES} at a size, so that a theme claims a face rather than a pair of numbers. */
+function faceSizeAt(width: number, height: number): FaceSize {
+  const face = FACE_SIZES.find((f) => f.width === width && f.height === height);
+  if (!face) throw new Error(`no face ships at ${width}x${height}`);
+  return face;
+}
+
+/**
+ * Every theme, the default first. One entry to a line, in the shape `ContractTests.cs` reads back.
+ *
+ * The Porsche is here before its code is (#205 draws it), and the build says so and builds nothing
+ * for it until `packages/dash/src/themes/porsche/` exists. The two Cup and legacy car paths that #205
+ * leaves to be read on the VM are left out rather than guessed.
+ */
+export const THEME_CATALOGUE: readonly ThemeEntry[] = [
+  { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES },
+  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: [faceSizeAt(1280, 480)] },
+];
+
+/** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */
+export const themeEntry = (id: string): ThemeEntry | undefined => THEME_CATALOGUE.find((theme) => theme.id === id);
+
+/**
+ * The folder, and the main dashboard's name, of a themed package: `OpenDash Porsche 1280x480`.
+ *
+ * It carries the size at 1920 x 480 too, where the default's package is the bare `OpenDash`, because
+ * that exception is history and a second theme there would otherwise have no name to take (ADR
+ * 0016). The default theme keeps the folders its layouts name, and asking this of it is a mistake.
+ */
+export function themedFolder(theme: ThemeEntry, size: { width: number; height: number }): string {
+  if (theme.id === DEFAULT_THEME_ID) throw new Error('the default theme keeps the folders its layouts name');
+  return `OpenDash ${theme.name} ${size.width}x${size.height}`;
+}
+
 /** The four zones of a rectangular face. Band D is a zone: it cycles a catalogue like the rest. */
 export const FACE_ZONE_LETTERS = ['A', 'B', 'C', 'D'] as const;
 export type FaceZone = (typeof FACE_ZONE_LETTERS)[number];

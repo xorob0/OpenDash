@@ -1,7 +1,8 @@
 /**
- * The build: `bun run build [--out <dir>] [--strategy widget|inline]`.
+ * The build: `bun run build [--out <dir>] [--strategy widget|inline] [--theme <id>] [--all-themes]`.
  *
- * For every layout in src/layouts it composes the package, validates it against the settings
+ * For every layout in src/layouts, every size the theme catalogue claims for each theme it is asked
+ * for (the default alone unless told otherwise) and every second screen, it composes the package, validates it against the settings
  * contract (every `[OpenDash.X]` read must be a declared property, and one this package's own
  * screen owns or every screen shares, plus the generator's own checks), writes `<out>/<folder>/` (the .djson files, their .metadata sidecars and _SHFonts/),
  * zips that folder into `<out>/<folder>.simhubdash` and records `{ folder, width, height,
@@ -11,9 +12,23 @@
  */
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { COMPANION_PREFIX, declaredProperties, facePrefix, foreignProperties, PIT_WALL_PREFIX, PROPERTY_PREFIX } from './contract.ts';
+import {
+  COMPANION_PREFIX,
+  DEFAULT_THEME_ID,
+  declaredProperties,
+  facePrefix,
+  foreignProperties,
+  PIT_WALL_PREFIX,
+  PROPERTY_PREFIX,
+  THEME_CATALOGUE,
+  themeEntry,
+  themedFolder,
+  type ThemeEntry,
+} from './contract.ts';
 import { buildPackage, DEFAULT_AUTHOR, DEFAULT_SIMHUB_VERSION } from './dashboard.ts';
-import { buildZoneFace, sizeOf, ZONE_FACES, type ZoneLayout } from './zones/index.ts';
+import { buildThemeFace, drawsInThisProcess } from './themes/faces.ts';
+import { THEME_ENV, THEMES } from './themes/index.ts';
+import { ZONE_FACES, type ZoneLayout } from './zones/index.ts';
 import { fontsForPackage } from './dashboard.ts';
 import { assetNamed, imageOf } from './design/assets.ts';
 import { fontsForPanel } from './design/fontFiles.ts';
@@ -81,10 +96,19 @@ export const STRATEGY_ENV = 'SLOT_STRATEGY';
 
 export const STRATEGIES: readonly SlotStrategy[] = ['widget', 'inline'];
 
+/**
+ * What a theme with colours of its own is composed in. Its colours are fixed when `ds` is built,
+ * once per process, so a build of several themes is one process per such theme; see
+ * {@link composeTheme}.
+ */
+export const THEME_PROCESS = path.join(import.meta.dir, 'buildTheme.ts');
+
 export const USAGE = [
-  'usage: bun run build [--out <dir>] [--strategy widget|inline]',
+  'usage: bun run build [--out <dir>] [--strategy widget|inline] [--theme <id>] [--all-themes]',
   '  --out <dir>         output directory; default <repo>/build',
   `  --strategy <name>   how slots show cards: widget (default) or inline; ${STRATEGY_ENV} is the fallback`,
+  '  --theme <id>        build this theme as well as the default; may be given more than once',
+  '  --all-themes        build every theme in the catalogue, as `bun run package` and a release do',
   '  --help              print this text',
 ].join('\n');
 
@@ -103,6 +127,9 @@ export interface BuildArgs {
   /** Absolute output directory. */
   out: string;
   strategy: SlotStrategy;
+  /** The themes asked for by name, beside the default, which is always built. */
+  themes: string[];
+  allThemes: boolean;
   help: boolean;
 }
 
@@ -115,7 +142,7 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
   if (envStrategy !== undefined && envStrategy !== '' && parseStrategy(envStrategy) === undefined) {
     throw new BuildError(`${STRATEGY_ENV}=${JSON.stringify(envStrategy)} is not a strategy; expected ${STRATEGIES.join(' or ')}`);
   }
-  const args: BuildArgs = { out: DEFAULT_OUT_DIR, strategy: parseStrategy(envStrategy) ?? DEFAULT_STRATEGY, help: false };
+  const args: BuildArgs = { out: DEFAULT_OUT_DIR, strategy: parseStrategy(envStrategy) ?? DEFAULT_STRATEGY, themes: [], allThemes: false, help: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? '';
     const eq = arg.startsWith('--') ? arg.indexOf('=') : -1;
@@ -140,6 +167,15 @@ export function parseArgs(argv: readonly string[], env: Record<string, string | 
         args.strategy = strategy;
         break;
       }
+      case '--theme': {
+        const id = value();
+        if (!themeEntry(id)) throw new BuildError(`unknown theme ${JSON.stringify(id)}; the catalogue holds ${THEME_CATALOGUE.map((t) => t.id).join(', ')}`);
+        if (!args.themes.includes(id)) args.themes.push(id);
+        break;
+      }
+      case '--all-themes':
+        args.allThemes = true;
+        break;
       case '--help':
       case '-h':
         args.help = true;
@@ -271,6 +307,12 @@ export interface ManifestEntry {
   /** Package folder and main dashboard name; may contain spaces ("OpenDash 850x480"). */
   folder: string;
   kind: PackageKind;
+  /**
+   * The theme a face is drawn in, by its catalogue id. Absent on everything the default theme builds,
+   * and on the card faces and the second screens, which no theme draws, so that the manifest of a
+   * build without themes is the one it was before they existed.
+   */
+  theme?: string;
   width: number;
   height: number;
   /**
@@ -307,8 +349,13 @@ export interface BuildOptions {
   simHubVersion?: string;
   /** Default: every layout in src/layouts. */
   layouts?: readonly Layout[];
-  /** Default: every zone face in src/zones. Pass an empty list to build the card faces alone. */
-  zoneFaces?: readonly ZoneLayout[];
+  /**
+   * The themes whose faces are built, each at the sizes its entry claims. Default: the default theme
+   * alone, at every size. Pass an empty list to build no zone face.
+   */
+  themes?: readonly ThemeEntry[];
+  /** Default: {@link THEME_PROCESS}. A test points it at a fixture that registers a theme first. */
+  themeProcess?: string;
   /** Default: every second screen in src/screens. Pass an empty list to build the faces alone. */
   screens?: readonly ScreenPackageDef[];
   /** Default: the flag box profile in src/leds. */
@@ -322,8 +369,10 @@ export interface BuildOptions {
 export interface ComposedPackage {
   /** The layout a card face was built from; absent for anything else. */
   layout?: Layout;
-  /** The layout a zone face was built from; absent for anything else. */
+  /** The layout a zone face was built from, under the package's folder; absent for anything else. */
   zoneFace?: ZoneLayout;
+  /** The theme a themed face is drawn in; absent for everything the default theme builds. */
+  theme?: string;
   /** The definition a second screen was built from; absent for a face. */
   screen?: ScreenPackageDef;
   kind: PackageKind;
@@ -365,6 +414,75 @@ const relative = (file: string): string => {
   return rel === '' ? '.' : rel.startsWith('..') ? file : rel;
 };
 
+/** One face of a theme as composed, which is also what a theme's own process hands back. */
+export interface ThemePackage {
+  width: number;
+  height: number;
+  pkg: DashPackage;
+  warnings: ValidationIssue[];
+}
+
+export interface ThemeRequest {
+  theme: ThemeEntry;
+  version: string;
+  simHubVersion: string;
+}
+
+const named = (size: { width: number; height: number }): string => `${size.width}x${size.height}`;
+
+/** A theme's faces at the sizes its entry claims, composed and validated in this process. */
+export function composeThemeHere({ theme, version, simHubVersion }: ThemeRequest): ThemePackage[] {
+  return theme.sizes.map((size) => {
+    const folder = theme.id === DEFAULT_THEME_ID ? undefined : themedFolder(theme, size);
+    const { layout, built } = buildThemeFace(theme.id, size, { version, simHubVersion, author: DEFAULT_AUTHOR }, folder);
+    const pkg: DashPackage = { folderName: layout.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+    packImages(pkg);
+    // The stock namespace of its size, for a themed face as for the default one: a theme changes the
+    // register and never the contract (ADR 0016).
+    return { width: size.width, height: size.height, pkg, warnings: validateOrThrow(pkg, facePrefix(size)) };
+  });
+}
+
+/**
+ * A theme's faces, refusing an entry the build cannot honour: a theme with no code, or a size the
+ * catalogue claims and the anatomy does not draw. Both are failures rather than skips, since a
+ * catalogue that claims a package the build does not make is a picker offering nothing.
+ *
+ * A theme drawn in this process's colours is composed here. One with colours of its own is composed
+ * in `themeProcess`, started with {@link THEME_ENV} naming it, and handed back as JSON, so that every
+ * package is still validated before anything is written and written by the one loop in `build()`.
+ */
+export function composeTheme(request: ThemeRequest, themeProcess: string = THEME_PROCESS): ThemePackage[] {
+  const { theme } = request;
+  const code = Object.hasOwn(THEMES, theme.id) ? THEMES[theme.id] : undefined;
+  if (!code) throw new BuildError(`the ${theme.id} theme is in the catalogue and has no code under packages/dash/src/themes/${theme.id}/ yet, so there is nothing to build`);
+  const undrawn = theme.sizes.filter((size) => !code.anatomy.sizes.some((s) => s.width === size.width && s.height === size.height));
+  if (undrawn.length > 0) {
+    throw new BuildError(
+      `the ${theme.id} theme claims ${undrawn.map(named).join(', ')} in the theme catalogue, and its anatomy does not draw ${undrawn.length === 1 ? 'it' : 'them'}; it draws ${code.anatomy.sizes.map(named).join(', ')}`,
+    );
+  }
+  if (drawsInThisProcess(theme.id)) return composeThemeHere(request);
+  const run = Bun.spawnSync([process.execPath, themeProcess, JSON.stringify(request)], { env: { ...process.env, [THEME_ENV]: theme.id }, stdout: 'pipe', stderr: 'pipe' });
+  if (run.exitCode !== 0) throw new BuildError(`the ${theme.id} theme could not be composed in a process of its own: ${run.stderr.toString().trim()}`);
+  return JSON.parse(run.stdout.toString()) as ThemePackage[];
+}
+
+/**
+ * The themes a command line asks for: the default always, then every other theme `--all-themes` or
+ * `--theme` names, in catalogue order. A theme with no code yet is skipped, and said to be, when it
+ * is swept in by `--all-themes`; named by `--theme`, it is kept, so that {@link composeTheme} refuses it.
+ */
+export function themesToBuild(args: Pick<BuildArgs, 'themes' | 'allThemes'>, log: (line: string) => void = (line) => console.log(line)): ThemeEntry[] {
+  return THEME_CATALOGUE.filter((theme) => {
+    if (theme.id === DEFAULT_THEME_ID || args.themes.includes(theme.id)) return true;
+    if (!args.allThemes) return false;
+    if (Object.hasOwn(THEMES, theme.id)) return true;
+    log(`skipped the ${theme.id} theme: it is in the catalogue and has no code under packages/dash/src/themes/${theme.id}/ yet`);
+    return false;
+  });
+}
+
 /**
  * Every package, composed and validated, with nothing written. This is the whole of the build that
  * is a pure function of the sources, which is what lets a test ask what the packages read without
@@ -375,13 +493,13 @@ export function composePackages(opts: BuildOptions = {}, allowEmpty = false): Co
   const simHubVersion = opts.simHubVersion ?? DEFAULT_SIMHUB_VERSION;
   const strategy = opts.strategy ?? DEFAULT_STRATEGY;
   const layouts = opts.layouts ?? LAYOUTS;
-  const zoneFaces = opts.zoneFaces ?? ZONE_FACES;
+  const themes = opts.themes ?? [themeEntry(DEFAULT_THEME_ID)!];
   const screens = opts.screens ?? SCREEN_PACKAGES;
   const log = opts.log ?? ((line: string): void => console.log(line));
   // Composing nothing is legitimate now that a build can be lights alone; the guard that catches
   // "you asked for nothing at all" lives in build(), which is the only place that can see the
   // profiles as well as the packages.
-  if (layouts.length === 0 && screens.length === 0 && zoneFaces.length === 0 && !allowEmpty) {
+  if (layouts.length === 0 && screens.length === 0 && themes.length === 0 && !allowEmpty) {
     throw new BuildError('there is no layout to build');
   }
 
@@ -399,14 +517,14 @@ export function composePackages(opts: BuildOptions = {}, allowEmpty = false): Co
     for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
     staged.push({ layout, kind: 'dash', pkg, warnings });
   }
-  for (const face of zoneFaces) {
-    claim(face.folder);
-    const built = buildZoneFace(face, { version, simHubVersion, author: DEFAULT_AUTHOR });
-    const pkg: DashPackage = { folderName: face.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
-    packImages(pkg);
-    const warnings = validateOrThrow(pkg, facePrefix(sizeOf(face)));
-    for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
-    staged.push({ zoneFace: face, kind: 'dash', pkg, warnings });
+  for (const theme of themes) {
+    for (const { width, height, pkg, warnings } of composeTheme({ theme, version, simHubVersion }, opts.themeProcess)) {
+      claim(pkg.folderName);
+      for (const w of warnings) log(`warning ${w.code} ${w.path}: ${w.message}`);
+      const house = ZONE_FACES.find((f) => f.width === width && f.height === height)!;
+      const themed = theme.id !== DEFAULT_THEME_ID;
+      staged.push({ zoneFace: themed ? { ...house, folder: pkg.folderName } : house, ...(themed ? { theme: theme.id } : {}), kind: 'dash', pkg, warnings });
+    }
   }
   for (const screen of screens) {
     claim(screen.folder);
@@ -459,7 +577,7 @@ export function build(opts: BuildOptions = {}): BuildResult {
   const packages: BuiltPackage[] = [];
   const stripProfiles: BuiltProfile[] = [];
   const manifest: Manifest = { schemaVersion: MANIFEST_SCHEMA_VERSION, version, simHubVersion, packages: [], ledProfiles: [] };
-  for (const { layout, zoneFace, screen, kind, pkg, warnings } of staged) {
+  for (const { layout, zoneFace, theme, screen, kind, pkg, warnings } of staged) {
     // Derived here rather than by each builder, so that a package cannot be assembled anywhere in
     // this file without the licences for what it carries.
     pkg.notices = noticesForPackage(pkg);
@@ -475,10 +593,11 @@ export function build(opts: BuildOptions = {}): BuildResult {
     for (const file of written.files) log(`wrote ${relative(file)}`);
     const zipped = zipPackage(out, pkg.folderName);
     log(`wrote ${relative(zipped.path)} (${zipped.entries.length} entries, ${zipped.bytes.byteLength} bytes)`);
-    packages.push({ layout, zoneFace, screen, kind, pkg, warnings, written, zipped });
+    packages.push({ layout, zoneFace, ...(theme ? { theme } : {}), screen, kind, pkg, warnings, written, zipped });
     manifest.packages.push({
       folder: pkg.folderName,
       kind,
+      ...(theme ? { theme } : {}),
       width: layout?.width ?? zoneFace?.width ?? screen?.width ?? 0,
       height: layout?.height ?? zoneFace?.height ?? screen?.height ?? 0,
       slots: layout ? layout.slots.length : 0,
@@ -616,7 +735,9 @@ export function main(argv: readonly string[] = process.argv.slice(2)): number {
     return 0;
   }
   try {
-    const result = build({ out: args.out, strategy: args.strategy });
+    const themes = themesToBuild(args);
+    console.log(`themes: ${themes.map((t) => `${t.id} at ${t.sizes.length} size${t.sizes.length === 1 ? '' : 's'}`).join(', ')}`);
+    const result = build({ out: args.out, strategy: args.strategy, themes });
     const n = result.packages.length;
     const p = result.manifest.ledProfiles.length;
     const warnings =

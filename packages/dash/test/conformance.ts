@@ -10,7 +10,7 @@
  * the catalogue check of `anatomy.test.ts` carried down to the fields of each page.
  */
 import { spawnSync } from 'node:child_process';
-import { FACE_ZONE_LETTERS, pagesForZone, type FaceZone } from '../src/contract.ts';
+import { FACE_ZONE_LETTERS, pagesForZone, THEME_CATALOGUE, type FaceZone } from '../src/contract.ts';
 import { measureText } from '../src/design/advances.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
 import { LINE_SPACING } from '../src/design/metrics.ts';
@@ -51,10 +51,11 @@ export interface Selection {
  * tell what changed checks everything rather than guessing. A change outside `themes/`, to a module
  * say, touches no theme here, which is what the full matrix is for.
  *
- * The registry is `THEMES`, and #202's catalogue replaces it here and nowhere else.
+ * The themes are the catalogue's, `THEME_CATALOGUE` in `contract.ts`, less those with no code yet,
+ * which the build refuses to build and which there is therefore nothing here to check.
  */
 export function themesToCheck(env: Record<string, string | undefined> = process.env): Selection {
-  const all = Object.keys(THEMES);
+  const all = THEME_CATALOGUE.map((theme) => theme.id).filter((id) => Object.hasOwn(THEMES, id));
   if (env[MATRIX_ENV] === 'full') return { ids: all, why: `${MATRIX_ENV}=full` };
   const git = (args: string[]): string[] | undefined => {
     const run = spawnSync('git', args, { cwd: import.meta.dir, encoding: 'utf8' });
