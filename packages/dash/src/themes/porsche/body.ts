@@ -35,8 +35,8 @@ import { BORDER, carColour, lowFuelAlarm, RADIUS, settingBox } from './register.
 
 const { add, div, fmt, gt, iff, isnull, lt, mod, mul, num, raw, truncate, and, or } = ncalc;
 
-/** A grey panel holds its zone four pixels in; the gear's tile holds it inside its three-pixel border. */
-const PANEL_PAD = 4;
+/** A zone fills the inside of its 3 px border, so its cells stand flush against it. */
+const PANEL_PAD = BORDER;
 
 /** The settings column: 9 px from the edge, 146 wide, boxes 48 tall and 10 apart from the top of the body. */
 const COLUMN = { left: 9, width: 146, box: 48, gap: 10 };

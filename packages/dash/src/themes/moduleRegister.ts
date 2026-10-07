@@ -18,5 +18,18 @@ export const defineModuleRegister = (themeId: string, register: ModuleRegister):
   registers.set(themeId, register);
 };
 
-/** The register of the theme this process draws, or undefined for one that keeps the house's. */
-export const moduleRegister = (): ModuleRegister | undefined => registers.get(THEME_ID);
+/** How many pages are being drawn in the house's layout at the moment; see {@link withHouseLayout}. */
+let houseDepth = 0;
+
+/** The register of the theme this process draws, or undefined for one that keeps the house's, or while a page is drawn in it. */
+export const moduleRegister = (): ModuleRegister | undefined => (houseDepth > 0 ? undefined : registers.get(THEME_ID));
+
+/** Draws a page in the house's own layout, the register standing aside until it returns. */
+export function withHouseLayout<T>(draw: () => T): T {
+  houseDepth++;
+  try {
+    return draw();
+  } finally {
+    houseDepth--;
+  }
+}

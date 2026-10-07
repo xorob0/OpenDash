@@ -62,8 +62,11 @@ export interface ModuleRegister {
   fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, order: readonly string[]): StackRow;
   /** A page's rows laid out in its box, the ranks of fields and the gauges, bars and drawings between them. */
   stack(frame: Rect, rows: readonly StackRow[], density: Density): Item[];
-  /** A page drawn whole, for one that lays its fields out itself rather than through `fieldsRow`; undefined keeps the page's own. */
-  page?(id: string, ctx: ModuleContext): Item[] | undefined;
+  /**
+   * The pages the register leaves to the house's own layout, which are the ones that list other cars
+   * in rows rather than label readings: drawn in the theme's type and ground, with no cells.
+   */
+  houseLayout?: ReadonlySet<string>;
 }
 
 export interface ThemeDrawing {
@@ -86,8 +89,11 @@ export interface ThemeDrawing {
   zoneLetters?: boolean;
   /** The size a module zone's header, its title and its counter, is set at, in place of the house face's. */
   zoneHeaderSize?: number;
-  /** A module page's header drawn the theme's way, in place of the house's title line: the page, the zone's frame and the body under it. */
-  moduleHeader?(page: { id: string; name: string }, frame: Rect, body: Rect): Item[];
+  /**
+   * A module page's frame drawn the theme's way, in place of the house's title line: what it draws,
+   * and the body the page is drawn in, given the zone's frame and the house's body under its header.
+   */
+  moduleFrame?(page: { id: string; name: string }, frame: Rect, body: Rect): { items: Item[]; body: Rect };
   /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */

@@ -9,7 +9,7 @@ import { porscheBody } from './body.ts';
 import { porscheDots } from './dots.ts';
 import { PORSCHE_FOOT } from './foot.ts';
 import { porscheBandPage } from './bandPages.ts';
-import { porscheModuleHeader, porscheModules, ZONE_TYPE } from './modules.ts';
+import { porscheModuleFrame, porscheModules, ZONE_TYPE } from './modules.ts';
 import { porscheChangeNotifications, porscheTakeovers } from './overlays.ts';
 import { carColour } from './register.ts';
 import { porscheStrip } from './strip.ts';
@@ -31,7 +31,7 @@ export const porscheDrawing: ThemeDrawing = {
   bandPages: [PORSCHE_FOOT],
   // Every module, band page and the foot in the one register of the car's panels.
   modules: porscheModules,
-  moduleHeader: porscheModuleHeader,
+  moduleFrame: porscheModuleFrame,
   // The car titles its boxes and draws no zone letter; its titles are set at the zone's label size.
   zoneLetters: false,
   zoneHeaderSize: ZONE_TYPE.label,

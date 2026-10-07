@@ -22,39 +22,38 @@
  * `fieldsRow`: `Ahead · P3` against the gap, the driver's name against the last lap or the number,
  * and the same for the car behind, from the same pieces in the same order.
  */
-import type { Item, Rect } from '../../generator.ts';
+import type { Item, Rect, RectangleItem } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
+import { withMoreBindings } from '../../bind.ts';
 import { measureText } from '../../design/advances.ts';
 import { rect } from '../../design/geometry.ts';
-import { boxSlack, MINUS } from '../../design/metrics.ts';
-import { band } from '../../elements/band.ts';
+import { boxSlack } from '../../design/metrics.ts';
 import { label } from '../../elements/label.ts';
-import { fld, pageKeeps, type ModuleContext } from '../../modules/module.ts';
-import { archetypeFor, keepsAt } from '../../modules/shedding.ts';
+import type { ModuleContext } from '../../modules/module.ts';
 import type { Density } from '../../second/density.ts';
 import { field, fieldWidth, scaleFields, type FieldSpec } from '../../second/field.ts';
 import { zoneCounterX, zoneFrameMetrics } from '../../second/header.ts';
 import type { StackRow } from '../../second/layout.ts';
-import { shapeOf } from '../../second/shape.ts';
-import { nameText } from '../../second/table.ts';
-import { CHARS, carLastLap, carNumber, carRelativeGap, listNeighbour, positionLabelled } from '../../second/values.ts';
 import { ds } from '../../tokens.ts';
 import type { ModuleRegister } from '../drawing.ts';
-import { carColour, INSET_RADIUS } from './register.ts';
+import { BORDER, carColour, RADIUS } from './register.ts';
 
-const { concat, str } = ncalc;
 
 /** The ticket's register: labels 23 px and values 32 px, the same in every zone. */
 export const ZONE_TYPE = { label: 23, value: 32 } as const;
 
 /**
- * A line is the value's line box and two pixels; a title row is the label's. Between two cells of a
- * column there are two pixels, the render's notch; the value stands 6 px from the zone's edge and at
- * least 6 px clear of its cell, and a cell keeps 8 px either side of its label.
+ * A line is the value's line box and two pixels; a title row is the label's. The cells stand flush
+ * against the zone's border and against each other, as solid grey blocks fitted into the outline; the
+ * value stands 6 px from the zone's edge and at least 6 px clear of its cell, 2 px under a title cell
+ * it stands beneath, and a cell keeps 8 px either side of its label.
  */
 const LINE = Math.ceil(1.2 * ZONE_TYPE.value) + 2;
 const TITLE = Math.ceil(1.2 * ZONE_TYPE.label) + 2;
-const CELL = { pad: 8, notch: 2, gap: 6, valuePad: 6 };
+const CELL = { pad: 8, gap: 6, valuePad: 6, under: 2 };
+
+/** The zone's header row: the house face's, 6 px of margin and a 22 px title line twice over, so the counter the face draws sits on its middle. */
+const HEADER = 34;
 
 /**
  * The short forms the car's narrow cells write a long label in, by the label the house writes. Each
@@ -93,11 +92,29 @@ const valueOf = (spec: FieldSpec): FieldSpec => scaleFields([{ ...spec, label: '
 
 const labelWidth = (spec: FieldSpec): number => Math.ceil(measureText('BarlowMedium', widestLabelOf(spec), ZONE_TYPE.label)) + boxSlack(ZONE_TYPE.label);
 
-/** A title cell: grey, rounded 5, no border, the label in white, centred unless it says otherwise. */
-function cell(name: string, box: Rect, text: string, opts: { bind?: string; widest?: string; visibleBind?: string; align?: 'left' | 'center' } = {}): Item[] {
+/** The corners of a cell that meet the container's own rounded corners, and so are rounded with them. */
+interface Corners {
+  topLeft?: boolean;
+  topRight?: boolean;
+  bottomLeft?: boolean;
+  bottomRight?: boolean;
+}
+
+/** The radius inside the container's 3 px border: its 7 less the border. */
+const INNER_RADIUS = RADIUS - BORDER;
+
+/** A grey block: square, but rounded where it meets the container's own rounded corner. */
+function blockOf(name: string, box: Rect, corners: Corners, visibleBind?: string): Item {
+  const r = (on?: boolean): number => (on ? INNER_RADIUS : 0);
+  const radius = { topLeft: r(corners.topLeft), topRight: r(corners.topRight), bottomLeft: r(corners.bottomLeft), bottomRight: r(corners.bottomRight) };
+  return withMoreBindings({ kind: 'rect', name, rect: box, backgroundColor: carColour('panel'), border: { radius } } satisfies RectangleItem, { Visible: visibleBind });
+}
+
+/** A title cell: a grey block, the label in white, centred unless it says otherwise. */
+function cell(name: string, box: Rect, text: string, opts: { bind?: string; widest?: string; visibleBind?: string; align?: 'left' | 'center'; corners?: Corners } = {}): Item[] {
   const inset = opts.align === 'left' ? CELL.pad : 0;
   return [
-    band(`${name}.cell`, box, carColour('panel'), { radius: INSET_RADIUS, visibleBind: opts.visibleBind }),
+    blockOf(`${name}.cell`, box, opts.corners ?? {}, opts.visibleBind),
     label(`${name}.label`, text, box.left + inset, box.top + (box.height - ZONE_TYPE.label) / 2, box.width - 2 * inset, {
       size: ZONE_TYPE.label,
       color: ds.color.text.primary,
@@ -109,8 +126,8 @@ function cell(name: string, box: Rect, text: string, opts: { bind?: string; wide
   ];
 }
 
-const titleOf = (spec: FieldSpec, box: Rect): Item[] =>
-  cell(spec.name, box, textOf(spec), { bind: shortBind(spec.labelBind), widest: spec.labelBind === undefined ? undefined : widestLabelOf(spec), visibleBind: spec.visibleBind });
+const titleOf = (spec: FieldSpec, box: Rect, corners: Corners = {}): Item[] =>
+  cell(spec.name, box, textOf(spec), { bind: shortBind(spec.labelBind), widest: spec.labelBind === undefined ? undefined : widestLabelOf(spec), visibleBind: spec.visibleBind, corners });
 
 /** The lines that fit `count` places, shed least important first in the page's order. */
 function linesThatFit(specs: readonly FieldSpec[], order: readonly string[], count: number): FieldSpec[] {
@@ -163,15 +180,15 @@ const sideBySide = (specs: readonly FieldSpec[], width: number, density: Density
   columnOf(specs) + CELL.gap + Math.max(...specs.map((spec) => valueExtent(spec, density))) + CELL.valuePad <= width;
 
 /** Lines filling `area`: a column of flush title cells at the left, the values bare at the right. */
-function lines(specs: readonly FieldSpec[], area: Rect, density: Density): Item[] {
+function lines(specs: readonly FieldSpec[], area: Rect, density: Density, atFoot: boolean): Item[] {
   const column = columnOf(specs);
   const row = area.height / specs.length;
   return specs.flatMap((spec, i) => {
     const top = Math.round(area.top + i * row);
-    const bottom = Math.round(area.top + (i + 1) * row);
-    const height = bottom - top - (i < specs.length - 1 ? CELL.notch : 0);
+    const height = Math.round(area.top + (i + 1) * row) - top;
+    const last = i === specs.length - 1;
     return [
-      ...(labelled(spec) ? titleOf(spec, rect(area.left, top, column, height)) : []),
+      ...(labelled(spec) ? titleOf(spec, rect(area.left, top, column, height), { bottomLeft: last && atFoot }) : []),
       ...bareValue(spec, rect(area.left + column + CELL.gap, top, area.width - column - CELL.gap, height), density, 'right'),
     ];
   });
@@ -182,7 +199,7 @@ function stacked(specs: readonly FieldSpec[], area: Rect, density: Density): Ite
   const block = area.height / specs.length;
   return specs.flatMap((spec, i) => {
     const top = Math.round(area.top + i * block);
-    return [...(labelled(spec) ? titleOf(spec, rect(area.left, top, area.width, TITLE)) : []), ...bareValue(spec, rect(area.left, top + TITLE + CELL.notch, area.width, Math.round(block) - TITLE - CELL.notch), density, 'center')];
+    return [...(labelled(spec) ? titleOf(spec, rect(area.left, top, area.width, TITLE)) : []), ...bareValue(spec, rect(area.left, top + TITLE + CELL.under, area.width, Math.round(block) - TITLE - CELL.under), density, 'center')];
   });
 }
 
@@ -191,7 +208,7 @@ function pair(specs: readonly FieldSpec[], area: Rect, density: Density): Item[]
   const half = (area.width - CELL.gap) / 2;
   return specs.flatMap((spec, i) => {
     const box = rect(Math.round(area.left + i * (half + CELL.gap)), area.top, Math.floor(half), area.height);
-    return [...(labelled(spec) ? titleOf(spec, rect(box.left, box.top, box.width, TITLE)) : []), ...bareValue(spec, rect(box.left, box.top + TITLE + CELL.notch, box.width, box.height - TITLE - CELL.notch), density, 'center')];
+    return [...(labelled(spec) ? titleOf(spec, rect(box.left, box.top, box.width, TITLE)) : []), ...bareValue(spec, rect(box.left, box.top + TITLE + CELL.under, box.width, box.height - TITLE - CELL.under), density, 'center')];
   });
 }
 
@@ -203,12 +220,12 @@ const alone = (spec: FieldSpec, area: Rect, density: Density): Item[] => (labell
  * do not but stand side by side as halves, and otherwise each a title cell over its value. In each,
  * as many as the height holds, shed in the page's order.
  */
-function readingsIn(specs: readonly FieldSpec[], order: readonly string[], area: Rect, density: Density): Item[] {
+function readingsIn(specs: readonly FieldSpec[], order: readonly string[], area: Rect, density: Density, atFoot: boolean): Item[] {
   if (specs.length === 0) return [];
   const halves = (two: readonly FieldSpec[]): boolean => two.every((spec) => (!labelled(spec) || labelWidth(spec) <= (area.width - CELL.gap) / 2) && valueExtent(spec, density) <= (area.width - CELL.gap) / 2);
   const across = linesThatFit(specs, order, Math.floor(area.height / LINE));
   if (across.length === 1) return alone(across[0]!, area, density);
-  if (sideBySide(across, area.width, density)) return lines(across, area, density);
+  if (sideBySide(across, area.width, density)) return lines(across, area, density, atFoot);
   const two = linesThatFit(specs, order, 2);
   if (two.length === 2 && halves(two) && area.height >= TITLE + LINE) return pair(two, area, density);
   const down = linesThatFit(specs, order, Math.floor(area.height / (TITLE + LINE)));
@@ -233,7 +250,7 @@ function carStack(frame: Rect, rows: readonly StackRow[], density: Density): Ite
   const kept = [...blocks];
   while (kept.length > 0 && frame.height - taken(kept) < (specs.length > 0 ? LINE : 0)) kept.pop();
   const room = specs.length > 0 ? frame.height - taken(kept) : 0;
-  const items = readingsIn(specs, order, rect(frame.left, frame.top, frame.width, room), density);
+  const items = readingsIn(specs, order, rect(frame.left, frame.top, frame.width, room), density, kept.length === 0);
   let y = specs.length > 0 ? frame.top + room + CELL.gap : frame.top + (frame.height - taken(kept) + CELL.gap) / 2;
   for (const row of kept) {
     items.push(...row.draw(Math.round(y) + row.height));
@@ -248,58 +265,42 @@ function readingsRow(specs: readonly FieldSpec[], _ctx: ModuleContext, order: re
   return row;
 }
 
-/** The two cars, a line each for the heading against the gap and for the name against the last lap or the number. */
-function opponents(ctx: ModuleContext): Item[] {
-  const order = keepsAt('opponents', archetypeFor('opponents', shapeOf(ctx.frame), ctx.frame)) ?? [];
-  // The name's cell is as wide as `Behind · P99`, the widest heading, and the name is cut to what it holds.
-  const nameRoom = Math.ceil(measureText('BarlowMedium', 'Behind · P99', ZONE_TYPE.label));
-  const chars = Math.max(4, Math.floor(nameRoom / measureText('BarlowMedium', 'M', ZONE_TYPE.label)));
-  const keeps = (id: string): boolean => pageKeeps(id, { ...ctx, page: 'opponents' });
-  const specs = (['ahead', 'behind'] as const).flatMap((side, i) => {
-    const idx = listNeighbour(i === 0 ? -1 : 1, ctx.classOnly);
-    const heading = i === 0 ? 'Ahead' : 'Behind';
-    const rows: FieldSpec[] = [];
-    if (keeps(`${side}.gap`)) {
-      rows.push(
-        fld(ctx, `${side}.gap`, `${heading} · P3`, { sample: i === 0 ? `${MINUS}1.342` : '+0.722', bind: carRelativeGap(idx), chars: CHARS.relativeGap, fs: ZONE_TYPE.value, color: i === 0 ? ds.purpose.delta.faster : ds.purpose.delta.slower }, {
-          labelBind: concat(str(`${heading} · `), positionLabelled(idx)),
-          labelWidest: 'Behind · P99',
-        }),
-      );
-    }
-    if (keeps(`${side}.name`)) {
-      const value = keeps(`${side}.lastLap`)
-        ? { sample: '1:43.234', bind: carLastLap(idx), chars: CHARS.lapTime, fs: ZONE_TYPE.value }
-        : { sample: '41', bind: carNumber(idx), chars: CHARS.carNumber, fs: ZONE_TYPE.value, color: ds.color.text.secondary };
-      rows.push(fld(ctx, `${side}.name`, 'Liam Byrne', value, { labelBind: nameText(idx, chars, ZONE_TYPE.label), labelWidest: 'Behind · P99' }));
-    }
-    return rows;
-  });
-  return readingsIn(specs, order.length > 0 ? order : specs.map(idOf), ctx.frame, ctx.density);
-}
+/**
+ * The pages that list other cars in rows rather than label readings, which keep the house's own row
+ * layout: in Barlow, on the black ground under their title cell, with the player's row marked and the
+ * gaps coloured as the house does, and no label cells.
+ */
+export const LIST_PAGES: ReadonlySet<string> = new Set(['leaderboard', 'relative', 'opponents', 'trackRivals', 'lapHistory']);
 
-export const porscheModules: ModuleRegister = {
-  fieldsRow: readingsRow,
-  stack: carStack,
-  page: (id, ctx) => (id === 'opponents' ? opponents(ctx) : undefined),
-};
+export const porscheModules: ModuleRegister = { fieldsRow: readingsRow, stack: carStack, houseLayout: LIST_PAGES };
+
+/** The pages that are one drawing, which keep the house's margins round it as the lists do: they have no cells to fit to the border. */
+const DRAWING_PAGES: ReadonlySet<string> = new Set(['inputs', 'radar', 'track', 'tyres', 'damage']);
 
 /**
- * A module page's header: a title cell across the zone's header row, grey and rounded with no border
- * of its own, as tall as the row, with the page's name centred in it at the zone's label size. The
- * face draws the counter at its right, inside the cell, so the name is centred between two margins
- * as wide as the counter's room. The house draws the zone letter before the title; the car does not.
+ * A module page's frame: its title cell across the top of the zone, flush against the border on
+ * three sides and rounded where it meets the border's corners, with the page's name centred in it at
+ * the zone's label size and the counter the face draws at its right; and the body under it. A page
+ * of readings takes the whole body, so that its cells stand flush against the border; a page that
+ * lists cars or is one drawing keeps the house's margins, since it has no cells and wants room round it.
  */
-export function porscheModuleHeader(page: { id: string; name: string }, frame: Rect, body: Rect): Item[] {
+export function porscheModuleFrame(page: { id: string; name: string }, frame: Rect, body: Rect): { items: Item[]; body: Rect } {
   const metrics = { ...zoneFrameMetrics('zone', 'face'), size: ZONE_TYPE.label };
-  const box = rect(frame.left + 2, frame.top + 2, frame.width - 4, body.top - frame.top - 4);
+  const box = rect(frame.left, frame.top, frame.width, HEADER);
   const counter = frame.left + frame.width - zoneCounterX(frame, { kind: 'reserved', widest: '21 / 21' }, metrics);
-  return [
-    band(`${page.id}.zone.cell`, box, carColour('panel'), { radius: INSET_RADIUS }),
+  const items: Item[] = [
+    blockOf(`${page.id}.zone.cell`, box, { topLeft: true, topRight: true }),
     label(`${page.id}.zone.title`, page.name, box.left + counter, frame.top + metrics.padTop + (metrics.title - ZONE_TYPE.label) / 2, box.width - 2 * counter, {
       size: ZONE_TYPE.label,
       color: ds.color.text.primary,
       hAlign: 'center',
     }),
   ];
+  const under = frame.top + HEADER;
+  return {
+    items,
+    body: LIST_PAGES.has(page.id) || DRAWING_PAGES.has(page.id)
+      ? rect(body.left, under + metrics.gap, body.width, frame.top + frame.height - metrics.padBottom - under - metrics.gap)
+      : rect(frame.left, under, frame.width, frame.top + frame.height - under),
+  };
 }

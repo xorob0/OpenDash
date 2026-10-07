@@ -101,13 +101,26 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
       density,
       'face',
     );
+    const themed = drawing.moduleFrame?.(page, frame, body);
+    const at = themed?.body ?? body;
     items = [
-      ...(drawing.moduleHeader ? drawing.moduleHeader(page, frame, body) : chrome),
-      ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
+      ...(themed ? themed.items : chrome),
+      ...pageBuilder(page.id)({ frame: at, density, prefix: `${page.id}.`, shape: shapeOf(at), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
     ];
   }
 
   return pageScreen(page.id, items, ground);
+}
+
+/**
+ * The body a module page is drawn in, in a zone dashboard of `size`: what the house's zone frame cuts
+ * under its header, or what a theme's `moduleFrame` gives the page instead. The conformance harness
+ * holds every page to it, so it is the one answer to where a page may draw.
+ */
+export function moduleBodyOf(page: { id: string; name: string }, size: Size, drawing: ThemeDrawing = {}): Rect {
+  const frame = rect(0, 0, size.width, size.height);
+  const { body } = zoneFrame('probe', { frame, title: page.name, counter: { kind: 'reserved', widest: '21 / 21' } }, densityForBox(size), 'face');
+  return drawing.moduleFrame?.(page, frame, body).body ?? body;
 }
 
 /**
