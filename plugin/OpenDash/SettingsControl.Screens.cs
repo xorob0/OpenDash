@@ -716,7 +716,9 @@ namespace OpenDashPlugin
             // The three answers, held here and read by whichever control last wrote one. The name is the only
             // one the driver types, so it is the only one that has to remember whether they have.
             var type = types[0];
-            PackageEntry entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
+            // The size picked, and the package Add writes, which is the size's own or a theme of it.
+            PackageEntry size = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
+            PackageEntry entry = size;
             var typed = false;
 
             var name = Ui.Input(string.Empty);
@@ -724,7 +726,7 @@ namespace OpenDashPlugin
             var note = Ui.Prose(string.Empty);
             var nextStep = Ui.Prose(string.Empty);
             // The foot names what Add will call the screen, which is not always what the box says.
-            Action refreshStep = () => nextStep.Text = PanelAddScreen.NextStep(PanelAddScreen.NameFor(name.Text, entry, Settings.RigScreens().Select(s => s.Name)));
+            Action refreshStep = () => nextStep.Text = PanelAddScreen.NextStep(PanelAddScreen.NameFor(name.Text, entry, Settings.RigScreens().Select(s => s.Name)), entry);
             name.TextChanged += (sender, args) =>
             {
                 // Only what the driver types counts as theirs: a default the sheet filled in is not.
@@ -734,6 +736,9 @@ namespace OpenDashPlugin
 
             var kindsHost = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
             var sizesHost = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            var themesHost = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
+            Border themeStep = null;
+            Border nameStep = null;
 
             Action fillName = () =>
             {
@@ -752,6 +757,37 @@ namespace OpenDashPlugin
             // A pick redraws the grid its tile sits in while that tile has the keyboard, so both grids are drawn
             // through ScreensRedraw and every tile carries a Uid: otherwise the focused tile leaves the tree,
             // WPF moves focus out of the panel, and Tab stops cycling in the sheet and Escape stops closing it.
+            // The theme question, drawn only for a size some theme is drawn at, the default look picked until the
+            // driver picks another; the name step after it is numbered for whichever steps are drawn.
+            Action drawThemes = null;
+            drawThemes = () =>
+            {
+                var themes = PanelAddScreen.Themes(catalogue, size);
+                var asked = PanelAddScreen.AsksTheme(themes);
+                if (themeStep != null) themeStep.Visibility = asked ? Visibility.Visible : Visibility.Collapsed;
+                var number = ScreensStepNumber(nameStep);
+                if (number != null) number.Text = PanelAddScreen.NameStepNumber(asked).ToString(CultureInfo.InvariantCulture);
+                ScreensRedraw(themesHost, () =>
+                {
+                    var tiles = new List<UIElement>();
+                    for (var i = 0; i < themes.Count; i++)
+                    {
+                        var option = themes[i];
+                        var label = Ui.Text(PanelAddScreen.ThemeName(option), PanelAddScreen.KindTitleSize, FontWeights.SemiBold, Theme.TextPrimary);
+                        label.TextTrimming = TextTrimming.CharacterEllipsis;
+                        var tile = Ui.ChoiceTile(label, ReferenceEquals(option, entry), () =>
+                        {
+                            entry = option;
+                            drawThemes();
+                            fillName();
+                            refreshNote();
+                        });
+                        tile.Uid = "screens.add.theme." + (option.Theme ?? Contract.DefaultThemeId);
+                        tiles.Add(tile);
+                    }
+                    return Ui.CardGrid(PanelAddScreen.KindTileLeast, PanelAddScreen.TileGap, PanelAddScreen.KindColumns, tiles.ToArray());
+                });
+            };
             Action drawSizes = null;
             drawSizes = () => ScreensRedraw(sizesHost, () =>
             {
@@ -760,10 +796,12 @@ namespace OpenDashPlugin
                 for (var i = 0; i < offered.Count; i++)
                 {
                     var option = offered[i];
-                    var tile = Ui.ChoiceTile(BuildSizeTile(type, option, i, ReferenceEquals(option, entry)), ReferenceEquals(option, entry), () =>
+                    var tile = Ui.ChoiceTile(BuildSizeTile(type, option, i, ReferenceEquals(option, size)), ReferenceEquals(option, size), () =>
                     {
-                        entry = option;
+                        size = option;
+                        entry = PanelAddScreen.ThemeKept(PanelAddScreen.Themes(catalogue, size), entry.Theme);
                         drawSizes();
+                        drawThemes();
                         fillName();
                         refreshNote();
                     }, centred: true);
@@ -782,10 +820,12 @@ namespace OpenDashPlugin
                     var tile = Ui.ChoiceTile(BuildKindTile(option.Label, option.Caption, null), ReferenceEquals(option, type), () =>
                     {
                         type = option;
-                        entry = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
+                        size = PanelAddScreen.Offered(type)[PanelAddScreen.PreferredIndex(type)];
+                        entry = PanelAddScreen.ThemeKept(PanelAddScreen.Themes(catalogue, size), entry.Theme);
                         if (sizeTitle != null) sizeTitle.Text = PanelAddScreen.SizeStepTitle(type);
                         drawKinds();
                         drawSizes();
+                        drawThemes();
                         fillName();
                         refreshNote();
                     });
@@ -817,12 +857,25 @@ namespace OpenDashPlugin
             // The step's title is the kit's text beside its number ring, and follows the kind: "Orientation"
             // over a way round, as the edit sheet asks the same question, "Size" otherwise.
             sizeTitle = ScreensStepTitle(sizeStep);
+            themeStep = Ui.Step(3, PanelAddScreen.ThemeStep, themesHost);
+            nameStep = Ui.Step(PanelAddScreen.NameStepNumber(false), PanelAddScreen.NameStep, Ui.VStack(8, name, note));
+            drawThemes();
             var body = Ui.VStack(0,
                 Ui.Step(1, PanelAddScreen.KindStep, kindsHost, first: true),
                 sizeStep,
-                Ui.Step(3, PanelAddScreen.NameStep, Ui.VStack(8, name, note)));
+                themeStep,
+                nameStep);
             var footer = Ui.VStack(14, Ui.Eyebrow(PanelAddScreen.NextStepsTitle), nextStep, SheetFooter(null, cancel, add));
             ScreensShowSheet(PanelAddScreen.SectionTitle, body, footer);
+        }
+
+        /// <summary>The number of a step Ui.Step drew: the text inside its ring.</summary>
+        private static TextBlock ScreensStepNumber(Border step)
+        {
+            var stack = step == null ? null : step.Child as Panel;
+            var head = stack == null || stack.Children.Count == 0 ? null : stack.Children[0] as Panel;
+            var ring = head == null || head.Children.Count == 0 ? null : head.Children[0] as Border;
+            return ring == null ? null : ring.Child as TextBlock;
         }
 
         /// <summary>The title of a step Ui.Step drew: the text beside its number ring.</summary>
@@ -940,7 +993,7 @@ namespace OpenDashPlugin
             // The size question is asked only where this build has another size to offer, which is the same
             // rule the add sheet follows; a kind that ships one package draws no row at all.
             var catalogue = PackageCatalogue.From(plugin.Installer.PackageSource, new SimHubInstallLog());
-            var type = PanelAddScreen.Types(catalogue).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
+            var type = PanelAddScreen.Types(catalogue, screen.Theme).FirstOrDefault(t => string.Equals(t.Kind, screen.Kind, StringComparison.Ordinal));
             var question = type == null ? SizeQuestion.None : PanelAddScreen.Question(type);
             FrameworkElement sizeRow = null;
             PackageEntry chosen = null;
@@ -1085,6 +1138,7 @@ namespace OpenDashPlugin
             }, result =>
             {
                 Save();
+                if (screen.Theme != null) plugin.SyncCarPlaylists();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
@@ -1100,6 +1154,7 @@ namespace OpenDashPlugin
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {
                 Save();
+                if (screen.Theme != null) plugin.SyncCarPlaylists();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
 
@@ -1107,7 +1162,7 @@ namespace OpenDashPlugin
                 // once, at startup, and assigning a dashboard to a display is in another part of SimHub entirely.
                 // The dashboard is listed under its title, which is the name the driver just chose.
                 if (!result.Ok) Log.Warn("Installing " + screen.Name + " failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Added(screen.Name, screen.Name) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Added(screen) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
             });
         }
 
@@ -1130,10 +1185,11 @@ namespace OpenDashPlugin
             WriteScreenThen(() => plugin.Installer.Write(copy), result =>
             {
                 Save();
+                if (copy.Theme != null) plugin.SyncCarPlaylists();
                 Select(PanelPage.Screens, copy.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Added(copy.Name, copy.Name) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Added(copy) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
             });
         }
 
@@ -1153,6 +1209,7 @@ namespace OpenDashPlugin
                 {
                     Settings.RemoveScreen(screen.Namespace);
                     Save();
+                    if (screen.Theme != null) plugin.SyncCarPlaylists();
                     Select(PanelPage.Screens, null);
                     Redraw();
                     if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed: " + result.Error);

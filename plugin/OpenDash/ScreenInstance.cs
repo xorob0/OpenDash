@@ -40,6 +40,17 @@ namespace OpenDashPlugin
         public string Package { get; set; }
 
         /// <summary>
+        /// The id of the theme the screen is drawn in (Contract.Themes), or null for the default look.
+        /// </summary>
+        /// <remarks>
+        /// Kept beside the package rather than read off it, because the package is the one thing that can go: a
+        /// themed screen whose package a later build no longer carries must keep its folder rather than be written
+        /// again from the default package of its size (ADR 0016), and only the screen can still say what it was.
+        /// It also decides which cars SimHub's per-car playlist switches to the screen (#199).
+        /// </remarks>
+        public string Theme { get; set; }
+
+        /// <summary>
         /// Whether the migration made this screen and the driver has neither kept it nor removed it since.
         /// </summary>
         /// <remarks>
@@ -620,6 +631,7 @@ namespace OpenDashPlugin
                 Height = Height,
                 Folder = Folder,
                 Package = Package,
+                Theme = Theme,
                 Unclaimed = Unclaimed,
                 LayoutX = LayoutX,
                 LayoutY = LayoutY,

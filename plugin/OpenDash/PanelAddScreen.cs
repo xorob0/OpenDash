@@ -176,9 +176,19 @@ namespace OpenDashPlugin
         /// </remarks>
         public static IReadOnlyList<ScreenType> Types(IEnumerable<PackageEntry> catalogue)
         {
+            return Types(catalogue, null);
+        }
+
+        /// <summary>
+        /// The kinds made by one theme's packages: the default look's for the Add sheet, which asks the theme after
+        /// the size, and a themed screen's own for its edit sheet, whose size row offers only the sizes its theme
+        /// is drawn at, so that a resize never quietly takes the theme away.
+        /// </summary>
+        public static IReadOnlyList<ScreenType> Types(IEnumerable<PackageEntry> catalogue, string theme)
+        {
             var types = new List<ScreenType>();
             if (catalogue == null) return types;
-            var entries = catalogue.Where(e => e != null).ToList();
+            var entries = catalogue.Where(e => e != null && string.Equals(e.Theme, theme, StringComparison.Ordinal)).ToList();
             foreach (var kind in new[] { Contract.KindFace, Contract.KindPitWall, Contract.KindCompanion, Contract.KindSlots })
             {
                 var of = entries.Where(e => string.Equals(e.Kind, kind, StringComparison.Ordinal)).ToList();
@@ -268,6 +278,16 @@ namespace OpenDashPlugin
         public static string NextStep(string name)
         {
             return "Restart SimHub, then assign \"" + (name ?? string.Empty).Trim() + "\" to this display in Dash Studio.";
+        }
+
+        /// <summary>
+        /// The foot's step for <paramref name="entry"/>: a themed screen is not assigned by hand, since the plugin
+        /// binds it to its cars on every display showing a face of its size once SimHub lists it (PanelCarPlaylist).
+        /// </summary>
+        public static string NextStep(string name, PackageEntry entry)
+        {
+            if (entry == null || entry.Theme == null) return NextStep(name);
+            return "Restart SimHub. A display showing a " + entry.SizeLabel + " face then switches to \"" + (name ?? string.Empty).Trim() + "\" in the cars it is drawn for.";
         }
 
         /// <summary>
@@ -431,12 +451,81 @@ namespace OpenDashPlugin
         public static string DefaultName(PackageEntry entry)
         {
             if (entry == null) return string.Empty;
+            // A themed screen is listed in SimHub under this name, beside the default face of its size, so the name
+            // says which of the two it is (ADR 0016).
+            if (entry.Theme != null) return ThemeName(entry) + " " + entry.SizeLabel;
             // NameFor and not DisplayName: DisplayName falls back to the folder, which is the right
             // answer on the Install tab -- SimHub's own list prints that word -- and the wrong one here,
             // where a folder is a path and a name is what the driver will read on the card.
             var named = PackageCatalogue.NameFor(entry.Folder);
             if (!string.IsNullOrEmpty(named)) return named;
             return entry.Width > 0 ? entry.SizeLabel : entry.Folder ?? string.Empty;
+        }
+
+        // --- The third question: the theme, asked only of a size that has one --------------------------------
+
+        public const string ThemeStep = "Theme";
+
+        /// <summary>The name step's number: third, or fourth where the sheet asks the theme.</summary>
+        public static int NameStepNumber(bool themeAsked)
+        {
+            return themeAsked ? 4 : 3;
+        }
+
+        /// <summary>
+        /// The packages a size can be drawn in, the default look first and then each theme the build carries at that
+        /// size, in the catalogue's order; one entry, the size's own, where no theme is drawn at it.
+        /// </summary>
+        /// <remarks>
+        /// From the packages the build carries rather than from the catalogue, as the kinds and the sizes are: a
+        /// theme the catalogue lists before its code exists has no package to write, and offering it would offer an
+        /// add that fails.
+        /// </remarks>
+        public static IReadOnlyList<PackageEntry> Themes(IEnumerable<PackageEntry> catalogue, PackageEntry entry)
+        {
+            if (entry == null) return new PackageEntry[0];
+            var themed = (catalogue ?? Enumerable.Empty<PackageEntry>())
+                .Where(e => e != null && e.Theme != null
+                    && string.Equals(e.Kind, entry.Kind, StringComparison.Ordinal)
+                    && e.Width == entry.Width && e.Height == entry.Height)
+                .OrderBy(e => ThemeRank(e.Theme))
+                .ToList();
+            var all = new List<PackageEntry> { entry };
+            all.AddRange(themed);
+            return all;
+        }
+
+        /// <summary>Whether the sheet asks the theme of a size: only where there is more than the default to pick.</summary>
+        public static bool AsksTheme(IReadOnlyList<PackageEntry> themes)
+        {
+            return themes != null && themes.Count > 1;
+        }
+
+        /// <summary>
+        /// The theme the sheet holds once a size is picked: the one the driver had picked, where the new size is drawn
+        /// in it too, and the default look otherwise.
+        /// </summary>
+        public static PackageEntry ThemeKept(IReadOnlyList<PackageEntry> themes, string picked)
+        {
+            if (themes == null || themes.Count == 0) return null;
+            return themes.FirstOrDefault(e => picked != null && string.Equals(e.Theme, picked, StringComparison.Ordinal)) ?? themes[0];
+        }
+
+        /// <summary>A theme tile's name: the theme's own, and the product's for the default look.</summary>
+        public static string ThemeName(PackageEntry entry)
+        {
+            var id = entry == null || entry.Theme == null ? Contract.DefaultThemeId : entry.Theme;
+            var theme = Contract.Themes.FirstOrDefault(t => string.Equals(t.Id, id, StringComparison.Ordinal));
+            return theme == null ? id : theme.Name;
+        }
+
+        private static int ThemeRank(string id)
+        {
+            for (var i = 0; i < Contract.Themes.Count; i++)
+            {
+                if (string.Equals(Contract.Themes[i].Id, id, StringComparison.Ordinal)) return i;
+            }
+            return Contract.Themes.Count;
         }
 
         /// <summary>
@@ -484,6 +573,14 @@ namespace OpenDashPlugin
         public static string Added(string name, string title)
         {
             return "Added " + name + ". Restart SimHub, then assign \"" + title + "\" to this display in Dash Studio.";
+        }
+
+        /// <summary><see cref="Added(string, string)"/> for a themed screen, whose remaining step is the restart alone.</summary>
+        public static string Added(ScreenInstance screen)
+        {
+            if (screen == null) return string.Empty;
+            if (screen.Theme == null) return Added(screen.Name, screen.Name);
+            return "Added " + screen.Name + ". Restart SimHub, and a display showing a " + screen.SizeLabel + " face switches to it in the cars it is drawn for.";
         }
 
         /// <summary>An add whose dashboard was not written: the screen is on the rig, and the reason is in
