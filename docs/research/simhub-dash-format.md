@@ -702,6 +702,15 @@ re-evaluate the car at once, is internal and is not called: a new entry takes ef
 change or the next start, and a themed screen is only bound once SimHub lists it, which is the next
 start in any case.
 
+**Verified on the VM on 2026-10-07**, on SimHub 9.12.6 with the Sim-Lab Dash SD43-LED (a
+`BitmapDisplayDevice`, not connected) and the emulator's `cars` scenario. The entries the plugin wrote
+appeared in the device's `settings.json` at once, in the shape above, and in SimHub's own "Per car
+playlists for IRacing" list; they survived a clean exit; the display's main dashboard followed the
+player's `CarPath` from the default face to the themed one and back, falling back to the driver's
+`DefaultMainDash` in the Ferrari; an entry the driver had made for `porsche992rgt3` was left as it was
+and only `porsche992cup` was written beside it; and removing the screen took out the plugin's entries
+and nothing else. The monitor and web dash routes were not exercised, since the VM has neither device.
+
 ### Community precedent for source in git
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`
