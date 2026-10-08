@@ -280,6 +280,9 @@ const READINGS = new WeakMap<StackRow, { specs: readonly FieldSpec[]; order: rea
  * A row that is not lines is kept while the lines still have one line of room, and dropped from the
  * tail after that, as the house's stack drops them.
  */
+/** The width of the zone whose page is being built, which {@link porscheModuleFrame} records. */
+let zoneWidth: number | undefined;
+
 /** The shares of the register's type a narrower zone tries, largest first. */
 const NARROW_TYPE = [1, 0.95, 0.9, 0.85, 0.8, 0.75];
 
@@ -309,9 +312,13 @@ function inType<T>(at: { label: number; value: number }, draw: () => T): T {
  * that a font follows the box it is drawn in, which lets the 850 and 800 wide faces and the portrait
  * face keep the reference's lines rather than stack each reading under its title. A page whose lines
  * stand at none of them is laid in the register's type, as on the reference.
+ *
+ * Narrow is the zone's width and not the stack's, since a page such as pit view lays its readings in
+ * part of the zone beside a drawing and is narrow on the reference too; the zone is the one
+ * {@link porscheModuleFrame} last framed, which the face does for each page just before building it.
  */
 function carStack(frame: Rect, rows: readonly StackRow[], density: Density): Item[] {
-  if (frame.width >= COLUMN_WIDTH) return fitted(frame, rows, density);
+  if ((zoneWidth ?? frame.width) >= COLUMN_WIDTH) return fitted(frame, rows, density);
   for (const k of NARROW_TYPE) {
     const at = { label: Math.round(ZONE_TYPE.label * k), value: Math.round(ZONE_TYPE.value * k) };
     if (inType(at, () => linesStand(frame, rows, density))) return inType(at, () => fitted(frame, rows, density));
@@ -385,6 +392,7 @@ export const porscheModules: ModuleRegister = { fieldsRow: readingsRow, stack: c
  * lists cars or is one drawing keeps the house's margins, since it has no cells and wants room round it.
  */
 export function porscheModuleFrame(page: { id: string; name: string }, frame: Rect, body: Rect): { items: Item[]; body: Rect } {
+  zoneWidth = frame.width;
   const metrics = { ...zoneFrameMetrics('zone', 'face'), size: ZONE_TYPE.label };
   const box = rect(frame.left, frame.top, frame.width, HEADER);
   const counter = frame.left + frame.width - zoneCounterX(frame, { kind: 'reserved', widest: '21 / 21' }, metrics);
