@@ -426,7 +426,7 @@ namespace OpenDashPlugin
         /// <summary>"4 of 21": the pages a zone cycles, of the pages it could.</summary>
         public static string ZoneCount(FaceSettings settings, string letter)
         {
-            var pages = FacePages.For(letter);
+            var pages = FacePages.For(letter, settings?.ThemeId());
             var on = 0;
             for (var i = 0; i < pages.Count; i++)
             {
@@ -458,7 +458,7 @@ namespace OpenDashPlugin
         /// zone opens on Relative.</summary>
         public static string OpensOnName(FaceSettings settings, string letter)
         {
-            return FacePages.NameOf(letter, FirstTicked(settings, letter));
+            return FacePages.NameOf(letter, FirstTicked(settings, letter), settings?.ThemeId());
         }
 
         /// <summary>Whether a face's picture draws its rev strip lit: its own rev bar, as ScreenRevBar reads it,
@@ -529,17 +529,18 @@ namespace OpenDashPlugin
         {
             var order = CycleFromStart(settings, letter);
             var ticked = order.Where(page => settings != null && settings.PageEnabled(letter, page)).ToList();
+            var theme = settings?.ThemeId();
             var rows = new List<ZoneRow>();
             for (var i = 0; i < ticked.Count; i++)
             {
                 var page = ticked[i];
-                rows.Add(new ZoneRow(page, FacePages.NameOf(letter, page), true, i == 0, IsNotInIracing(FacePages.IdOf(letter, page)), ticked.Count == 1));
+                rows.Add(new ZoneRow(page, FacePages.NameOf(letter, page, theme), true, i == 0, IsNotInIracing(FacePages.IdOf(letter, page, theme)), ticked.Count == 1));
             }
             if (!showAll) return rows;
             foreach (var page in order)
             {
                 if (ticked.Contains(page)) continue;
-                rows.Add(new ZoneRow(page, FacePages.NameOf(letter, page), false, false, IsNotInIracing(FacePages.IdOf(letter, page)), false));
+                rows.Add(new ZoneRow(page, FacePages.NameOf(letter, page, theme), false, false, IsNotInIracing(FacePages.IdOf(letter, page, theme)), false));
             }
             return rows;
         }
@@ -613,7 +614,7 @@ namespace OpenDashPlugin
         public static void SetEveryPage(FaceSettings settings, string letter, bool enabled)
         {
             if (settings == null) return;
-            var pages = FacePages.For(letter);
+            var pages = settings.Pages(letter);
             var keep = FirstTicked(settings, letter);
             for (var i = 0; i < pages.Count; i++)
             {
@@ -738,22 +739,23 @@ namespace OpenDashPlugin
             return Contract.FaceZoneLetters.Select(PanelFacePlan.ZoneLabel).ToArray();
         }
 
-        /// <summary>The pages of one of those zones, and nothing it does not carry.</summary>
-        public static string[] GlancePageLabels(int zoneIndex)
+        /// <summary>The pages of one of those zones, and nothing it does not carry, on a face of the theme
+        /// given: band D on a Porsche face lists the Porsche row after the house's eight.</summary>
+        public static string[] GlancePageLabels(int zoneIndex, string theme = null)
         {
-            return FacePages.For(Contract.FaceZoneLetters[zoneIndex]).Select(page => page.Name).ToArray();
+            return FacePages.For(Contract.FaceZoneLetters[zoneIndex], theme).Select(page => page.Name).ToArray();
         }
 
         /// <summary>
         /// The glance after its zone was changed: the same page where the new zone carries it -- zone A's
         /// Track and module 13 are one drawing -- and the new zone's first page otherwise.
         /// </summary>
-        public static int GlanceWithZone(int glance, int zoneIndex)
+        public static int GlanceWithZone(int glance, int zoneIndex, string theme = null)
         {
-            var current = Contract.NormaliseQuickGlance(glance);
+            var current = Contract.NormaliseQuickGlance(glance, theme);
             var from = Contract.FaceZoneLetters[Contract.QuickGlanceZone(current)];
-            var id = FacePages.IdOf(from, Contract.QuickGlancePage(current));
-            var pages = FacePages.For(Contract.FaceZoneLetters[zoneIndex]);
+            var id = FacePages.IdOf(from, Contract.QuickGlancePage(current), theme);
+            var pages = FacePages.For(Contract.FaceZoneLetters[zoneIndex], theme);
             var page = 0;
             for (var i = 0; i < pages.Count; i++)
             {

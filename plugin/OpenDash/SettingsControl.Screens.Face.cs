@@ -234,15 +234,15 @@ namespace OpenDashPlugin
         /// </remarks>
         private FrameworkElement BuildFaceGlance(ScreenInstance screen, Action redraw, double column)
         {
-            var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance);
+            var glance = screen.Face.NormalisedQuickGlance();
             var zoneIndex = Contract.QuickGlanceZone(glance);
             var zone = Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen =>
             {
-                screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen);
+                screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen, screen.Theme);
                 ScreensSave(screen, redraw);
             }, PanelScreens.GlanceZoneWidth);
             zone.Uid = "screens.glance.zone";
-            var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen =>
+            var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex, screen.Theme), Contract.QuickGlancePage(glance), chosen =>
             {
                 screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);
                 // The clash line under the aside counts the glance among what shows a page twice, so the

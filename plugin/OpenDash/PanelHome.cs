@@ -346,7 +346,7 @@ namespace OpenDashPlugin
                 var face = screen.Face ?? (settings == null ? null : settings.ScreenFace(screen.Namespace));
                 if (face == null) return string.Empty;
                 var size = screen.FaceSize ?? Contract.ReferenceFace;
-                return string.Join(Separator, PanelFacePlan.ZoneOrder(size).Select(letter => FacePages.NameOf(letter, face.Zone(letter))));
+                return string.Join(Separator, PanelFacePlan.ZoneOrder(size).Select(letter => face.PageName(letter, face.Zone(letter))));
             }
             if (screen.IsPitWall) return PitWallPortrait(screen) ? PortraitZones(screen) : PitWallPage(screen.PitWallPage);
             if (screen.IsCompanion) return ModulesLine(screen.Modules);

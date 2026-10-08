@@ -26,7 +26,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
+import { BAND_D_PAGES, defaultZoneMask, MODULE_CATALOGUE, pagesForZone, themeEntry, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
 import { GRID_SHAPES, shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
 import { fromShare, powershell, psq, resolveHost, simhubStart, simhubStop, sleep, toShare, withClaim, type Host, type RunResult } from './vm.ts';
 
@@ -42,7 +42,8 @@ const SHARE_UNC = '\\\\host.lan\\Data';
 
 /** A zone's page, by the id the catalogue gives it, so a table of names cannot drift into numbers. */
 const zoneA = (id: string): number => index(ZONE_A_PAGES, id, 'zone A');
-const band = (id: string): number => index(BAND_D_PAGES, id, 'band D');
+/** A band page, on a face of the theme given: a Porsche's band carries `porscheFoot` after the house's eight (#718). */
+const band = (id: string, theme?: string): number => index(pagesForZone('D', theme ? themeEntry(theme) : undefined), id, 'band D');
 const page = (id: string): number => index(MODULE_CATALOGUE.map((m) => ({ id: m.id, number: m.number - 1 })), id, 'the catalogue');
 
 function index(list: readonly { id: string; number: number }[], id: string, what: string): number {
@@ -78,6 +79,8 @@ export interface ManifestPackage {
   width: number;
   height: number;
   file: string;
+  /** The theme a face is drawn in, by its catalogue id; absent on everything the default theme builds. */
+  theme?: string;
 }
 
 /** Every mask bit set: the button cycles the whole catalogue, which is what a fresh screen does. */
@@ -91,9 +94,16 @@ export function catalogueMask(ids: readonly string[]): number {
 /** The resource name MSBuild gives an embedded package (OpenDash.csproj). */
 const packageResource = (pkg: ManifestPackage): string => `OpenDashPlugin.Resources.${pkg.file}`;
 
-/** One screen of the gallery rig, in the shape ScreenInstance serialises to. */
+/**
+ * One screen of the gallery rig, in the shape ScreenInstance serialises to.
+ *
+ * A themed package's screen carries its theme, which is what gives band D the theme's pages: on a
+ * Porsche, `porscheFoot` is band page 8 and the whole-catalogue mask is nine bits (#718).
+ */
 export function screenFor(pkg: ManifestPackage, zones: [string, string, string, string], name?: string, masks: readonly number[] = FULL_MASKS): Record<string, unknown> {
-  const pages = [zoneA(zones[0]), page(zones[1]), page(zones[2]), band(zones[3])];
+  const pages = [zoneA(zones[0]), page(zones[1]), page(zones[2]), band(zones[3], pkg.theme)];
+  const theme = pkg.theme ? themeEntry(pkg.theme) : undefined;
+  const bandMask = masks === FULL_MASKS ? defaultZoneMask('D', theme) : masks[3]!;
   return {
     Namespace: `Face${pkg.width}x${pkg.height}`,
     Name: name ?? pkg.folder,
@@ -102,11 +112,12 @@ export function screenFor(pkg: ManifestPackage, zones: [string, string, string, 
     Height: pkg.height,
     Folder: pkg.folder,
     Package: `OpenDashPlugin.Resources.${pkg.folder}.simhubdash`,
+    ...(pkg.theme ? { Theme: pkg.theme } : {}),
     Face: {
       // Starts as well as Zones: the plugin opens every zone on its start page, so a zone set
       // without one comes back to the default the moment SimHub restarts.
       Zones: pages,
-      Masks: [...masks],
+      Masks: [masks[0]!, masks[1]!, masks[2]!, bandMask],
       Starts: pages,
       ClassOnly: [false, false, false, false],
       BarFields: [0, 1, 5, 6],
@@ -330,12 +341,12 @@ Remove-Item -LiteralPath $target -Recurse -Force
 }
 
 const describe = (settings: Record<string, unknown>): string => {
-  const rig = (settings.Rig as { Name?: string; Namespace?: string; Kind?: string; Face?: { Zones?: number[] } }[] | undefined) ?? [];
+  const rig = (settings.Rig as { Name?: string; Namespace?: string; Kind?: string; Theme?: string; Face?: { Zones?: number[] } }[] | undefined) ?? [];
   if (rig.length === 0) return '  (no screens)';
   return rig
     .map((s) => {
       const z = s.Face?.Zones;
-      const pages = z ? `A ${ZONE_A_PAGES[z[0]!]?.name}, B ${MODULE_CATALOGUE[z[1]!]?.name}, C ${MODULE_CATALOGUE[z[2]!]?.name}, D ${BAND_D_PAGES[z[3]!]?.name}` : (s.Kind ?? 'no zones');
+      const pages = z ? `A ${ZONE_A_PAGES[z[0]!]?.name}, B ${MODULE_CATALOGUE[z[1]!]?.name}, C ${MODULE_CATALOGUE[z[2]!]?.name}, D ${pagesForZone('D', s.Theme ? themeEntry(s.Theme) : undefined)[z[3]!]?.name}` : (s.Kind ?? 'no zones');
       return `  ${(s.Name ?? s.Namespace ?? '?').padEnd(26)} ${pages}`;
     })
     .join('\n');
