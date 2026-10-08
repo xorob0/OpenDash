@@ -44,17 +44,24 @@ bun run trace show green 0     # one frame as a property map
 bun run trace check            # parse every trace
 ```
 
-In code, `scripts/trace.ts` is the reader: `readTrace(scenario)` and `frame(trace, index)`.
+In code, `scripts/trace.ts` is the reader: `readTrace(scenario)` and `frame(trace, index)`. The
+format itself is `scripts/traceFormat.ts`, which imports nothing from node so that the demo can
+bundle it into a page.
 
 ## The format
 
-NDJSON, one header line and then one line per property, sorted by name:
+NDJSON, one header line, then one line per property sorted by name, then one line per call sorted
+by its text:
 
 ```jsonc
-{"trace":1,"scenario":"green","frames":200,"hz":10,"ticks":[72721,6],"recorded":"2026-09-13","simHub":"9.12.6","asserted":["DataCorePlugin.GameRunning"]}
+{"trace":2,"scenario":"green","frames":200,"hz":10,"ticks":[72721,6],"recorded":"2026-10-09","simHub":"9.12.6","cars":24}
 {"p":"DataCorePlugin.GameData.CurrentLapTime","t":"timespan","v":["00:01:38.4120000", "..."]}
 {"p":"DataCorePlugin.GameData.Rpms","v":[4530.1, 4602.7]}
 {"p":"DataCorePlugin.GameData.TrackName","v":"Spa"}
+{"p":"drivername(3)","k":"call","v":"Liam Byrne"}
+{"p":"driverrelativegaptoplayer(3)","k":"call","v":[-0.874, -0.9]}
+{"p":"getopponentleaderboardposition_aheadbehind(-1)","k":"call","v":3}
+{"p":"round(2.675, 2)","k":"call","v":2.68}
 ```
 
 A property that never moves is one short line carrying one value; a property that moves carries one
@@ -73,6 +80,67 @@ that the tick each frame actually came from can be read off the file.
 
 Numbers are rounded to four decimals, which is past anything a dashboard draws and short of the
 noise in a double. Without that a re-recording of an unchanged scenario would differ on every line.
+
+## The calls, version 2
+
+Half of what the pages read is not a property. `drivername(3)`, `driverrelativegaptoplayer(p)`,
+`getopponentleaderboardposition_aheadbehind(-1)`, `driversectorlastlap(p, s, false)`,
+`getbestsplittime(1)` and the rest of the opponent family are functions over SimHub's in-memory
+leaderboard, so a recording of property values cannot see them, and a version 1 trace drew the
+relative, the leaderboard, the opponents, the sectors and lap history's best splits empty (#257).
+
+Version 2 records them as columns. A column with `"k":"call"` is a formula the recorder evaluated
+with SimHub's own NCalc engine on every frame, named by its text. The text is the canonical spelling
+`packages/generator/src/opponentCalls.ts` defines: the function name in lower case, integer
+arguments, `true` or `false` in lower case, arguments joined by a comma and one space. That is the
+spelling the browser evaluator looks a call up by once it has computed its arguments, so
+`drivername(getopponentleaderboardposition_aheadbehind((repeatindex()) - (4)))` on the fifth row
+reads the `getopponentleaderboardposition_aheadbehind(1)` column and then the `drivername(5)` one.
+A call with no column, a position past the field or an argument that is not a whole number, is null,
+as a position that names no car is in SimHub.
+
+What is asked for is `recordedCalls()` in `scripts/record.ts`: every call `callsRead()` finds in the
+packages, with each argument the expression computes enumerated over its kind's domain, and the
+probes below. `cars` in the header is the field size that domain was enumerated over, 24: positions
+1..24, ahead-and-behind offsets -23..23, sectors 1..3. Most of those columns are a position past the
+end of the field, null on every frame, and cost one short line each.
+
+`frame()` returns the calls in the same map as the properties, by their text, and the evaluator reads
+an opponent call from that map (`readCall` in `packages/generator/src/ncalc/scope.ts`), so a reader
+that hands a frame to the evaluator gets the opponent pages filled without doing anything else.
+`propertiesOf()` lists only the properties and `callsOf()` only the calls.
+
+The recorder evaluates the calls inside `IDataPlugin.DataUpdate`. SimHub's PluginManager sets
+`NCalcEngineBase.lastData` to the update's `GameData` before it calls any data plugin, so the
+leaderboard a call reads there is the finished frame the properties in the same line were read from.
+How the recorder keeps a column from freezing is in [its README](../tools/trace-recorder/README.md).
+
+### The probes
+
+A few call columns are not opponent calls but questions. The browser evaluator was written from
+NCalc 1.3.8's source and SimHub's decompiled function table, with no SimHub to ask, and where those
+could not settle a reading the code says **Unverified**. A probe is a literal formula whose answer
+settles one: `max(0, 2.6)` is 3 if `max` takes its left operand's type and 2.6 if not, `abs(7) / 2`
+is 3.5 if `abs` returns a decimal, `round(2.5, 0)` is 2 if it rounds to even, `format(-0.04, '0.0')`
+says whether .NET Framework writes `-0.0`, `'3' = 3` whether a string against a number compares as
+text, and `toshorttime(secondstotimespan(5.2), 1, false, false)` what shape a short time takes under
+a minute. A formula that throws in SimHub records null, which is what the dash draws. Null is put in
+with `[OpenDashTraceProbe.Unpublished]`, a property nobody publishes, since NCalc 1.3.8 has no null
+literal.
+
+The list, each with what it settles, is `PROBE_CALLS` in `scripts/record.ts`.
+`scripts/trace.test.ts` holds the evaluator to every recorded answer once a version 2 trace is
+committed; a probe that disagrees is a reading in `packages/generator/src/ncalc/` to fix.
+
+### Until the re-record
+
+The nine committed traces are version 1 until they are recorded again on the VM with
+`bun run record`. The reader accepts both meanwhile, a version 1 trace reading as a version 2 one with
+no calls, and the version 2 tests in `scripts/trace.test.ts` say by name which file they are
+waiting for instead of failing. The re-record takes 1 off `READABLE_TRACE_VERSIONS` in
+`scripts/traceFormat.ts`. `scripts/fixtures/relative.v2.ndjson` is a version 2 trace written by
+hand, seven cars and the relative's calls, which `scripts/traceV2.test.ts` replays through the
+relative page to prove the path end to end without the VM.
 
 ## A column that was typed rather than observed says so
 
