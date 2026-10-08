@@ -4,6 +4,7 @@
  * a layout change moves it. Only the words live here.
  */
 import type { FacePartId, SiteFace } from '../scripts/content';
+import type { Counts } from './counts';
 
 export interface AnatomyPart {
   id: FacePartId;
@@ -14,7 +15,7 @@ export interface AnatomyPart {
   rect: { left: number; top: number; width: number; height: number };
 }
 
-const COPY: Record<FacePartId, Omit<AnatomyPart, 'id' | 'rect'>> = {
+const copy = (c: Counts): Record<FacePartId, Omit<AnatomyPart, 'id' | 'rect'>> => ({
   revBar: {
     tag: 'Rev bar',
     name: 'The car’s own shift lights.',
@@ -23,28 +24,31 @@ const COPY: Record<FacePartId, Omit<AnatomyPart, 'id' | 'rect'>> = {
   bar: {
     tag: 'The bar',
     name: 'Settled values.',
-    body: '2 fields at each end, chosen from 10, and the car settings between them. It never cycles.',
+    body: `2 fields at each end, chosen from ${c.barFields}, and the car settings between them. It never cycles.`,
   },
   zoneB: {
     tag: 'Zone B',
-    name: '1 of 21 pages.',
+    name: `1 of ${c.pages} pages.`,
     body: 'A wheel button cycles it. Here: lap times.',
   },
   zoneA: {
     tag: 'Zone A',
     name: 'The gear, read by reflex.',
-    body: '4 pages: gear with speed and revs, gear alone, speed, or the track.',
+    body: `${c.zoneAPages} pages: gear with speed and revs, gear alone, speed, or the track.`,
   },
   zoneC: {
     tag: 'Zone C',
-    name: 'A second page from the same 21.',
+    name: `A second page from the same ${c.pages}.`,
     body: 'On its own button. Here: the relative.',
   },
   band: {
     tag: 'Band D',
     name: 'Fuel by default.',
-    body: '8 pages in all. A flag takes the band for three seconds, then both ends of it.',
+    body: `${c.bandDPages} pages in all, and a car theme adds its own. A flag takes the band for three seconds, then both ends of it.`,
   },
-};
+});
 
-export const anatomyParts = (face: SiteFace): AnatomyPart[] => face.parts.map((p) => ({ id: p.id, rect: p.rect, ...COPY[p.id] }));
+export const anatomyParts = (face: SiteFace, c: Counts): AnatomyPart[] => {
+  const words = copy(c);
+  return face.parts.map((p) => ({ id: p.id, rect: p.rect, ...words[p.id] }));
+};

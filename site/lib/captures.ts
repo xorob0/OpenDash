@@ -20,6 +20,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { slug } from './packages';
 
+export { provenanceNote } from './provenance';
+
 /** Which build a capture was taken from: what `scripts/shotsRun.ts` records for a run. */
 export interface Provenance {
   /** The VERSION the capture was taken from. */
