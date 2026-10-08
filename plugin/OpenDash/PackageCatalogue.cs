@@ -364,14 +364,21 @@ namespace OpenDashPlugin
         /// from the build remembers a name that is gone, so both fall back: first to the package whose own
         /// folder the screen holds, which is every stock screen, and then to the kind and the size. The
         /// installer and the panel's Duplicate both ask here, so the two cannot find different packages.
+        ///
+        /// Both fallbacks stay within the screen's theme. A themed screen whose package has gone would otherwise be
+        /// matched to the default package of its size and written from it at the next start, replacing the car's
+        /// face with the house's in silence; it finds nothing instead, so its folder is left as it is and the
+        /// screen reads as no longer shipped (ADR 0016). The same rule keeps a default screen from ever being
+        /// written from a themed package of its size.
         /// </remarks>
         public static PackageEntry EntryFor(IEnumerable<PackageEntry> catalogue, ScreenInstance screen)
         {
             if (catalogue == null || screen == null) return null;
             var entries = catalogue.Where(entry => entry != null).ToList();
+            var sameTheme = entries.Where(entry => string.Equals(entry.Theme, screen.Theme, StringComparison.Ordinal)).ToList();
             return (string.IsNullOrEmpty(screen.Package) ? null : entries.FirstOrDefault(entry => string.Equals(entry.Package, screen.Package, StringComparison.Ordinal)))
-                ?? entries.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase))
-                ?? entries.FirstOrDefault(entry =>
+                ?? sameTheme.FirstOrDefault(entry => string.Equals(entry.Folder, screen.Folder, StringComparison.OrdinalIgnoreCase))
+                ?? sameTheme.FirstOrDefault(entry =>
                     string.Equals(entry.Kind, screen.Kind, StringComparison.Ordinal)
                     && entry.Width == screen.Width
                     && entry.Height == screen.Height);
@@ -398,6 +405,7 @@ namespace OpenDashPlugin
                 Width = entry.Width,
                 Height = entry.Height,
                 Package = entry.Package,
+                Theme = entry.Theme,
             };
             var used = new HashSet<string>(taken ?? new string[0], StringComparer.OrdinalIgnoreCase);
             var held = new HashSet<string>(folders ?? new string[0], StringComparer.OrdinalIgnoreCase);

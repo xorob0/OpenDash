@@ -41,7 +41,13 @@
     // The session's incident limit, which iRacing writes as a number or as "unlimited". A placeholder
     // since #109, so that the alerts scenario can count an incident against a limit of 17; every
     // other scenario renders the word it always did.
-    "IncidentLimit": "unlimited"
+    "IncidentLimit": "unlimited",
+    // The player's car as SimHub's iRacing reader names it: CarPath is the id SimHub's per-car playlists
+    // match on (#199). Placeholders so that cars.json can change the car mid-run.
+    "PlayerCarPath": "porsche992rgt3",
+    "PlayerCarID": "161",
+    "PlayerCarScreenName": "Porsche 911 GT3 R (992)",
+    "PlayerCarScreenNameShort": "Porsche 992 GT3 R"
   },
 
   // All variables of the built-in catalogue are present (with their defaults); the entries below

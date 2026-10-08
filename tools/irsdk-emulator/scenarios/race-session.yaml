@@ -752,14 +752,14 @@ DriverInfo:
    TeamName: "OpenDash Tester"
    CarNumber: "92"
    CarNumberRaw: 92
-   CarPath: porsche992rgt3
+   CarPath: {{PlayerCarPath}}
    CarClassID: 2708
-   CarID: 161
+   CarID: {{PlayerCarID}}
    CarIsPaceCar: 0
    CarIsAI: 0
    CarIsElectric: 0
-   CarScreenName: Porsche 911 GT3 R (992)
-   CarScreenNameShort: Porsche 992 GT3 R
+   CarScreenName: {{PlayerCarScreenName}}
+   CarScreenNameShort: {{PlayerCarScreenNameShort}}
    CarClassShortName: GT3
    CarClassRelSpeed: 84
    CarClassLicenseLevel: 0

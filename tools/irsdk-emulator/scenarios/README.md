@@ -25,6 +25,7 @@ capture from the next.
 | | What it does |
 |---|---|
 | `shiftlights` | One slow RPM sweep, 1200 to 9600 over twenty seconds, against a 7800 / 8400 / 8800 / 9000 ladder — slow enough to see which LED changes at which threshold. At forty seconds the car changes to one with a much lower ladder and five gears, and at eighty it changes back. That swap is the point: it is what tells a mirror (ADR 0014) apart from arithmetic over the redline, and it is what the generated `.ledsprofile` files are verified against. Nothing else moves — the flag is held green, the limiter is off, and the pedals are pinned — because a strip that is also cycling flags says nothing about its revs. |
+| `cars` | The race of `race.json` with the player changing car: the Porsche 911 GT3 R (992) at the start, the Ferrari 296 GT3 at 45 s, the Porsche at 90 s and the Ferrari at 135 s. It is the scenario for SimHub's per-car playlists (#199), which match the player's `CarPath`, so only the player's `CarPath`, `CarID` and screen names change, through `{{PlayerCarPath}}`, `{{PlayerCarID}}`, `{{PlayerCarScreenName}}` and `{{PlayerCarScreenNameShort}}` in `race-session.yaml`, whose defaults in `race.json` are the Porsche every other scenario drives. |
 
 The four shift RPMs, the redline and the forward-gear count are `{{placeholders}}` in
 `race-session.yaml` rather than literals, so a scenario can hand the mirror a different car mid-run.

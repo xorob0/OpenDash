@@ -77,6 +77,32 @@ namespace OpenDashPlugin
         /// </summary>
         public ISet<string> TemplatesAtStart { get; private set; }
 
+        /// <summary>What the last sync of SimHub's per-car playlists did and found, for the themed screens' pages;
+        /// null before the first, and after one that could not reach SimHub's devices (<see cref="CarPlaylistsFailed"/>).</summary>
+        public CarPlaylistPlan CarPlaylist { get; private set; }
+
+        public bool CarPlaylistsFailed { get; private set; }
+
+        /// <summary>Set once the first frame has queued this start's sync.</summary>
+        private int carPlaylistsQueued;
+
+        /// <summary>
+        /// Brings SimHub's per-car playlists to what the rig's themed screens want (#199). On the interface thread.
+        /// </summary>
+        /// <remarks>
+        /// Asked by the panel after it adds, resizes or removes a themed screen, and once per start from the first
+        /// frame, which comes after every plugin has finished starting and therefore after SimHub has read its
+        /// devices and its dashboard list. A rig with no themed screen is not synchronised at start, so a driver who
+        /// never picks a theme never has their displays read; the panel's own call after a removal is what takes
+        /// the last of our entries out.
+        /// </remarks>
+        public void SyncCarPlaylists()
+        {
+            var rig = Settings.RigScreens();
+            CarPlaylist = CarPlaylists.Sync(rig, PackageCatalogue.From(Installer.PackageSource, new SimHubInstallLog()));
+            CarPlaylistsFailed = CarPlaylist == null;
+        }
+
         /// <summary>
         /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
         /// Built on first use, like the installer, because it needs the SimHub root the settings name.
@@ -599,6 +625,17 @@ namespace OpenDashPlugin
         /// </summary>
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
+            if (System.Threading.Interlocked.Exchange(ref carPlaylistsQueued, 1) == 0)
+            {
+                try
+                {
+                    if (Settings.RigScreens().Any(screen => screen != null && screen.Theme != null)) OnInterfaceThread(SyncCarPlaylists);
+                }
+                catch (Exception e)
+                {
+                    Log.Warn("The per-car playlists were not synchronised at start: " + e.Message);
+                }
+            }
             try
             {
                 // First and on its own, so that nothing the lights do below can leave it stale. A frame
