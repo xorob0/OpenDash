@@ -1,6 +1,6 @@
 /**
- * The trace format, and the promise the committed traces make: that everything the packages read
- * is in every one of them.
+ * The trace format, and the promise the committed traces make: that everything the packages read,
+ * through any expression of any package of any shipped theme, is in every one of them.
  *
  * That last test is the point of the whole thing. A trace is recorded once, on the Windows VM, and
  * replayed by everything afterwards, so nothing except this test would notice a package that
@@ -118,7 +118,7 @@ describe('the committed traces', () => {
         expect(trace.header.frames).toBeGreaterThan(0);
       });
 
-      test('it carries every property any binding of any package reads', () => {
+      test('it carries every property any expression of any package of any shipped theme reads', () => {
         const present = new Set(propertiesOf(trace));
         const missing = required.filter((p) => !present.has(p));
         // A failure here is not a broken trace, it is an out-of-date one: something now reads a

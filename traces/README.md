@@ -17,6 +17,14 @@ bun run record                 # every scenario that keeps a trace
 bun run record green pit       # some of them
 ```
 
+What a recording asks SimHub for is `propertiesRead()` in
+[packages/dash/src/properties.ts](../packages/dash/src/properties.ts): every property read by any
+expression of any package of any theme a release ships, the item bindings, the border colours, the
+screens' enabled expressions and the dashboard variables alike, plus the lap-history names no scan
+can see. Until #581 the scan read only the item bindings of the default theme, so the engine chip's
+border, the companion's module switches, the pit wall's page and everything the Porsche reads on its
+own were in no trace, and nothing said so.
+
 The bare form records the scenarios `scripts/trace.test.ts` expects a trace for, which is every
 scenario the emulator ships except the ones `UNTRACED_SCENARIOS` in
 [scripts/emulator.ts](../scripts/emulator.ts) names and says why for. Naming one of those records
@@ -80,9 +88,9 @@ noise in a double. Without that a re-recording of an unchanged scenario would di
 came out of a real SimHub and `recorded` and `simHub` say which one and when; a hand-written column
 has none of that behind it, so it is listed rather than left to look like the rest.
 
-It exists because "it carries every property any binding of any package reads" fails the moment a
-package starts reading a property no trace holds, and the honest answers to that are a re-record or
-this. A re-record is the better one and is what removes an entry: `toTrace` builds the header from
+It exists because "it carries every property any expression of any package of any shipped theme
+reads" fails the moment a package starts reading a property no trace holds, and the honest answers to
+that are a re-record or this. A re-record is the better one and is what removes an entry: `toTrace` builds the header from
 scratch, so the next recording of a scenario drops the list, and `recordedProperties()` derives what
 it asks SimHub for from `propertiesRead()`, so a property a binding reads is picked up without
 anybody adding it anywhere. Until then the entry is a claim, `scripts/trace.test.ts` holds it to

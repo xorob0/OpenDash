@@ -183,14 +183,29 @@ const checkFunctions = (ctx: Context, expression: string, path: string): void =>
   }
 };
 
+/** One binding of an item: where it is bound, and where in the item's JSON it is written. */
+export interface ItemBinding {
+  /** `Text`, `Visible`, `BorderColor`... */
+  target: string;
+  binding: Binding;
+  /** The binding's place in the item's JSON, as a validation path suffix. */
+  bpath: string;
+  /** Written inside a nested style rather than in the item's own `Bindings`, so not held to the item's targets. */
+  nested: boolean;
+}
+
 /**
  * Every binding on an item, the one inside its border included.
  *
  * A border's colour is bound in `BorderStyle`'s own `Bindings`, which is a different place in the
  * JSON and the same expression everywhere else: it has to go through the property and function
  * guards like any other, or a border is the one place a typo survives the build.
+ *
+ * Exported because the validator is not the only reader of a dashboard's expressions: the property
+ * scan behind the telemetry traces walks the same bindings, and with a walker of its own it once
+ * missed every border for a year (#581). One walker, so the two cannot drift apart again.
  */
-const bindingsOf = (item: Item): { target: string; binding: Binding; bpath: string; nested: boolean }[] => {
+export const bindingsOf = (item: Item): ItemBinding[] => {
   const all = Object.entries(item.bindings ?? {})
     .filter(([, binding]) => binding)
     .map(([target, binding]) => ({ target, binding: binding as Binding, bpath: `#Bindings.${target}`, nested: false }));
@@ -459,7 +474,7 @@ const checkImages = (ctx: Context, dashboard: Dashboard, path: string): void => 
 };
 
 /** The prefix NCalc gives a dashboard variable. SimHub matches it case-sensitively (`StartsWith("variable.")`). */
-const VARIABLE_PREFIX = 'variable.';
+export const VARIABLE_PREFIX = 'variable.';
 
 /** A variable name `[variable.<name>]` can carry: the characters a property reference is scanned for. */
 const VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
