@@ -69,6 +69,7 @@ export const SHORT: Readonly<Record<string, string>> = {
   'Best lap': 'BEST',
   'Best': 'BEST',
   'Session best': 'SBEST',
+  'Your best': 'PBEST',
   'Delta': 'DELTA',
   'Position': 'POS',
   'Laps completed': 'LAPS',
@@ -107,29 +108,37 @@ export function registerFor(frame: Rect): Register {
 
 const captionText = (label: string): string => (SHORT[label] ?? label).toUpperCase();
 
-/** A bound caption written as the unit writes it: each long form short, and in capitals. */
-function captionBind(bind: Expr): Expr {
-  const short = Object.entries(SHORT).reduce((expr, [long, to]) => (bind.includes(long) ? ncalc.replace(expr, long, to) : expr), bind);
-  return ucase(short);
-}
+/** Longest first, so that `Delta` does not take the start of `Delta to your best` before that is replaced whole. */
+const LONGEST_FIRST = Object.entries(SHORT).sort(([a], [b]) => b.length - a.length);
 
-/** What a reading's caption says and how it is bound: its label short, and its unit or denominator after it. */
+/** A bound text with each long form it can write replaced by its short one. */
+const shortened = (bind: Expr): Expr => LONGEST_FIRST.reduce((expr, [long, to]) => (bind.includes(long) ? ncalc.replace(expr, long, to) : expr), bind);
+
+/** The short forms a binding can write, which a declaration written for the long ones does not name. */
+const writtenShort = (bind: Expr | undefined): string[] => LONGEST_FIRST.filter(([long]) => bind?.includes(long)).map(([, to]) => to);
+
+const widestOf = (texts: readonly string[]): string => texts.reduce((a, b) => (b.length > a.length ? b : a), '');
+
+/**
+ * What a reading's caption says and how it is bound: its label short and in capitals, and the unit or
+ * the denominator that follows its value in the house after it, a caption the house writes after the
+ * value (the delta's `vs all-time best`) written short as well.
+ */
 function captionOf(spec: FieldSpec): { text: string; widest: string; bind?: Expr } {
   const follower = spec.value.follower;
   const label = captionText(spec.label);
-  const labelWidest = spec.labelWidest === undefined ? label : captionText(spec.labelWidest);
-  const writtenLong = Object.entries(SHORT).filter(([long]) => spec.labelBind?.includes(long)).map(([, short]) => short.toUpperCase());
-  const widestLabel = [labelWidest, ...writtenLong].reduce((a, b) => (b.length > a.length ? b : a));
-  const after = follower ? ` ${follower.text}` : '';
-  const afterWidest = follower ? ` ${follower.widest ?? follower.text}` : '';
-  const text = label === '' ? after.trim() : `${label}${after}`;
-  const widest = label === '' ? afterWidest.trim() : `${widestLabel}${afterWidest.length > after.length ? afterWidest : after}`;
-  const labelExpr = spec.labelBind === undefined ? undefined : captionBind(spec.labelBind);
-  const followerExpr = follower?.bind;
+  const labelWidest = widestOf([spec.labelWidest === undefined ? label : captionText(spec.labelWidest), ...writtenShort(spec.labelBind).map((t) => t.toUpperCase())]);
+  const after = follower ? (SHORT[follower.text] ?? follower.text) : '';
+  const afterWidest = follower ? widestOf([after, SHORT[follower.widest ?? ''] ?? follower.widest ?? '', ...writtenShort(follower.bind)]) : '';
+  const join = (a: string, b: string): string => [a, b].filter((t) => t !== '').join(' ');
+  const text = join(label, after);
+  const widest = join(labelWidest, afterWidest);
+  const labelExpr = spec.labelBind === undefined ? undefined : ucase(shortened(spec.labelBind));
+  const followerExpr = follower?.bind === undefined ? undefined : shortened(follower.bind);
   if (labelExpr === undefined && followerExpr === undefined) return { text, widest };
   const parts: Expr[] = [];
-  if (label !== '' || labelExpr !== undefined) parts.push(labelExpr ?? str(label));
-  if (follower) parts.push(str(' '), followerExpr ?? str(follower.text));
+  if (labelExpr !== undefined || label !== '') parts.push(labelExpr ?? str(label));
+  if (follower) parts.push(...(parts.length > 0 ? [str(' ')] : []), followerExpr ?? str(after));
   return { text, widest, bind: parts.length === 1 ? parts[0] : concat(...parts) };
 }
 

@@ -123,9 +123,12 @@ export function aimTacho(ctx: FaceContext): Item[] {
   const line = Math.round(TACHO.letters.line * k);
   const lettersLeft = well.left + well.width + RPM_LETTERS.gap;
   const letterWidth = segmentWidth('DSEG14Regular', 'M', letterSize);
+  // The unlit mask and its ghost run off the tacho's right end as the revs climb, so the ground is
+  // put back over the row from the end of the widest segment to the edge of the face.
+  const end = Math.ceil(well.left + well.width + TACHO.segment / 2);
   return [
     ...SCALES.map((thousands) => scaleLayer(ctx, well, row, thousands, numeralSize)),
-    // After the layers, since the unlit mask runs off the tacho's right end as the revs climb.
+    rectItem('revBar.end', rect(end, row.top, ctx.layout.width - end, row.height), 'ground'),
     ...['R', 'P', 'M'].map((letter, i) =>
       segment(`revBar.letter${letter}`, 'DSEG14Regular', letter, lettersLeft + Math.round((RPM_LETTERS.width - letterWidth) / 2), well.top + i * line + Math.round((line - letterSize) / 2), letterWidth, { size: letterSize, hAlign: 'center' }),
     ),

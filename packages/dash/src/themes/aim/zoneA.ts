@@ -71,11 +71,13 @@ function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
   const gearSize = fitting(scaled(frame, COLUMN.gear), frame.width - 4, (s) => segmentWidth('DSEG7Bold', '8', s));
   const speedSize = fitting(scaled(frame, COLUMN.speed), frame.width - 4, (s) => figureWidth(SPEED.ghost, s, SPEED.unit));
   const revsSize = fitting(speedSize, frame.width - 4, (s) => figureWidth(REVS.ghost, s, REVS.unit));
-  const withRevs = frame.height >= gearSize + speedSize + revsSize + 2 * COLUMN.gap + COLUMN.height - COLUMN.gear - COLUMN.speed;
   // The last figure's box ends on the column's foot, its line box running a fifth of the size under its ink.
   const bottom = frame.top + frame.height;
-  const revsTop = bottom - segmentLine(revsSize);
-  const speedTop = withRevs ? revsTop - COLUMN.gap - speedSize : bottom - segmentLine(speedSize);
+  // The speed stands where the canvas's column puts it, at the foot of the first 284 px; a deeper
+  // column keeps it there and gives the room under it to the revs.
+  const speedTop = Math.min(bottom, frame.top + scaled(frame, COLUMN.height)) - segmentLine(speedSize);
+  const revsTop = speedTop + speedSize + 2 * COLUMN.gap;
+  const withRevs = revsTop + segmentLine(revsSize) <= bottom;
   const items = [...gear(`${prefix}`, frame, frame.top, gearSize), ...figure(`${prefix}speed`, frame, speedTop, speedSize, SPEED)];
   if (withRevs) items.push(...figure(`${prefix}revs`, frame, revsTop, revsSize, REVS));
   return items;

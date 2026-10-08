@@ -19,6 +19,7 @@ import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { gameRunning } from '../../second/values.ts';
+import { walkItems } from '../../walk.ts';
 import { BAND_PAGES, bandPageItems, relativeFields, type BandField } from '../../zones/bandPages.ts';
 import { TELLTALE_PAGE } from '../../zones/telltales.ts';
 import { ghostOf, reading, segment, segmentWidth } from './register.ts';
@@ -124,13 +125,18 @@ export function aimBandPage(page: string, frame: Rect, prefix: string, classOnly
   if (page === TELLTALE_PAGE) return bandPageItems(page, frame, prefix, false, classOnly);
   const fields = page === 'relative' && classOnly !== undefined ? relativeFields(classOnly) : BAND_PAGES[page];
   if (!fields) throw new RangeError(`band D has no page "${page}"`);
-  const plan = arrangementFor(fields, frame);
-  if (!plan) return bandPageItems(page, frame, prefix, false, classOnly);
+  // The fields the house page draws at this width, which is the page's own shedding: on a narrow band
+  // the house keeps the first few and drops the tail, and the LCD keeps the same ones.
+  const house = bandPageItems(page, frame, prefix, false, classOnly);
+  const names = house.flatMap((item) => [...walkItems([item])]).map((item) => item.name);
+  const kept = fields.filter((f) => names.some((name) => name === `${prefix}${f.id}` || name.startsWith(`${prefix}${f.id}.`)));
+  const plan = arrangementFor(kept, frame);
+  if (!plan) return house;
   const items: Item[] = plan.withStatus ? [status(prefix, frame, plan.value)] : [];
   // The cells from the band's right edge leftwards, so that the last ends against it as the canvas's does.
   let right = frame.left + frame.width;
   const placed: Item[] = [];
-  for (const f of [...fields].reverse()) {
+  for (const f of [...kept].reverse()) {
     placed.unshift(cell(f, prefix, right, frame, plan.value));
     right -= cellWidth(f, plan.value) + plan.gap;
   }
