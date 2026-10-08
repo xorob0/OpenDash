@@ -131,6 +131,7 @@ namespace OpenDashPlugin
                 var lines = plugin.CarPlaylistsFailed ? new List<string> { PanelCarPlaylist.Failed } : PanelCarPlaylist.Lines(report, screen);
                 if (lines.Count > 0) rows.Add(Ui.SettingRow(PanelCarPlaylist.RowTitle, null, string.Join(" ", lines)));
             }
+            if (PanelCrest.Shown(screen)) rows.Add(BuildCrestRow(column));
             rows.Add(Ui.SoonRow(PanelSoon.RevFill));
             rows.Add(Ui.SoonRow(PanelSoon.SpotterAtRevBarEnds));
             rows.Add(Ui.SoonRow(PanelSoon.PitPageInPitLane));
@@ -140,6 +141,87 @@ namespace OpenDashPlugin
             rows.Add(Ui.SoonRow(PanelSoon.Fit));
             rows.Add(BuildScreenDetails(screen));
             return Ui.Rows(rows.ToArray());
+        }
+
+        /// <summary>
+        /// The crest's row (#714): the address it is downloaded from, a line saying whether it is on this computer,
+        /// and a Download press after a failure.
+        /// </summary>
+        /// <remarks>
+        /// The address is the rig's (OpenDashSettings.PorscheCrestUrl), written when the box loses focus or Enter
+        /// is pressed. A commit asks the plugin to make the disk agree with it, which downloads only when the crest
+        /// from that address is not there yet, and removes the copy when the address is cleared. The line is
+        /// redrawn on the panel's tick whenever the service's state moves, since the download lands on a thread
+        /// of its own.
+        /// </remarks>
+        private FrameworkElement BuildCrestRow(double column)
+        {
+            var width = PanelPitWallPlan.AddressWidthFor(column);
+            var box = Ui.Input(Settings.PorscheCrestUrl ?? string.Empty, width);
+            var watermark = Ui.Text(PanelPitWallPlan.AddressPlaceholder, PanelShell.InputTextSize, FontWeights.Normal, Theme.TextLabel);
+            watermark.HorizontalAlignment = HorizontalAlignment.Left;
+            watermark.VerticalAlignment = VerticalAlignment.Center;
+            watermark.Margin = new Thickness(PanelShell.InputPaddingX, 0, 0, 0);
+            watermark.IsHitTestVisible = false;
+            var field = new Grid { Width = width };
+            field.Children.Add(box);
+            field.Children.Add(watermark);
+
+            var retry = Ui.Button(PanelCrest.Retry, PanelButtonKind.Outline, PanelButtonSize.Small);
+            retry.ToolTip = PanelCrest.RetryTooltip;
+            retry.Margin = new Thickness(0, 0, 8, 0);
+            var control = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
+            control.Children.Add(retry);
+            control.Children.Add(field);
+
+            var row = Ui.SettingRow(PanelCrest.Title, control, null, Ui.NewTag());
+            var line = Ui.Caption(string.Empty, PanelShell.RowCaptionMaxWidth);
+            line.Margin = new Thickness(0, PanelKit.FixDetailGap, 0, 0);
+            var parts = row.Tag as RowParts;
+            var left = parts == null || parts.TitleLine == null ? null : parts.TitleLine.Parent as StackPanel;
+            FrameworkElement drawn = row;
+            if (left != null) left.Children.Add(line);
+            else drawn = Ui.VStack(0, row, line);
+
+            CarCrestState? shown = null;
+            Action paint = () =>
+            {
+                var state = plugin.Crest.State;
+                if (shown == state) return;
+                shown = state;
+                line.Text = PanelCrest.Line(state);
+                retry.Visibility = PanelCrest.OffersRetry(state) ? Visibility.Visible : Visibility.Collapsed;
+            };
+            Action reread = () =>
+            {
+                var empty = box.Text.Length == 0;
+                watermark.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+                box.ToolTip = empty ? PanelCrest.EmptyTooltip : box.Text;
+            };
+            Action commit = () =>
+            {
+                var normalised = CarCrestLibrary.NormaliseUrl(box.Text);
+                if (!string.Equals(normalised, Settings.PorscheCrestUrl ?? string.Empty, StringComparison.Ordinal))
+                {
+                    Settings.PorscheCrestUrl = normalised;
+                    Save();
+                    plugin.RefreshCrest();
+                }
+                if (box.Text != normalised) box.Text = normalised;
+            };
+            box.TextChanged += (sender, args) => reread();
+            box.LostFocus += (sender, args) => commit();
+            box.KeyDown += (sender, args) =>
+            {
+                if (args.Key == Key.Enter) commit();
+            };
+            retry.Click += (sender, args) => plugin.RefreshCrest();
+            reread();
+            // A face added since the start has not been looked at; this asks, and reads the disk only.
+            if (plugin.Crest.State == CarCrestState.NotNeeded) plugin.RefreshCrest();
+            paint();
+            OnTick(paint);
+            return drawn;
         }
 
         /// <summary>

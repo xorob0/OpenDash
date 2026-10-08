@@ -5,12 +5,20 @@
  * Laid at the ticket's rectangles, which are the face's, less the band's top: the band runs the
  * whole width from x 0, so the page's x are the face's.
  *
- * **The badge is a place and not a mark.** The car shows the Porsche crest, a registered trade mark
- * that cannot ship in an MIT package (#765), so the page draws the canvas's placeholder: a shield
- * 54 by 62 at x 14, square at the top and round at the foot, outlined in the label grey with `your`
- * over `badge` in it at 10 px. The canvas dashes the outline and a SimHub border has no dash, so it
- * is solid; and it sits six pixels lower than the canvas's 404, because the face draws band D's `D`
- * at the band's left padding on every page and the shield's top would cross its foot.
+ * **The badge draws the crest the plugin fetched, and the package carries none.** The car shows the
+ * Porsche crest, a registered trade mark that cannot ship in an MIT package (#765), so the page holds
+ * the canvas's placeholder: a shield 54 by 62 at x 14, square at the top and round at the foot,
+ * outlined in the label grey with `your` over `badge` in it at 10 px. The canvas dashes the outline and
+ * a SimHub border has no dash, so it is solid; and it sits six pixels lower than the canvas's 404,
+ * because the face draws band D's `D` at the band's left padding on every page and the shield's top
+ * would cross its foot.
+ *
+ * Over it, in the same rectangle, an `ImageFromFileItem` draws the file `OpenDash.PorscheCrest` names:
+ * the crest the plugin downloads once into the user's own SimHub folder, the way the car light tables
+ * are fetched (#714, the trade dress paragraph of `docs/scope.md`). SimHub fits the picture to the
+ * rectangle keeping its proportions, so the crest stands 62 high and about 47 wide, centred. While the
+ * property is empty -- no plugin, the address cleared on the panel, or a fetch that failed -- the item
+ * draws nothing, and the placeholder, bound to the same emptiness, is what shows.
  *
  * The two TC boxes read the two traction dials a GT3 car exposes, `TC` and `TC cut` in the house's
  * list of watched settings, where the car shows the same value in both; each is hidden on a car
@@ -20,6 +28,8 @@
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
+import { withMoreBindings } from '../../bind.ts';
+import { setting } from '../../contract.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
@@ -29,7 +39,7 @@ import { ds, TRANSPARENT } from '../../tokens.ts';
 import type { ThemeBandPage } from '../drawing.ts';
 import { BORDER, carColour, centredY, INSET_RADIUS, LABEL_SIZE, namedCell, RADIUS, runWidth, settingBox } from './register.ts';
 
-const { fmt } = ncalc;
+const { eq, fmt, str } = ncalc;
 
 /** The tyre box's figures: the tab, the corner temperatures and the pressures, from the ticket. */
 const TYRE = { tab: { height: 26, pad: 14 }, corner: { x: 8, y: 2 }, grid: { x: 52, top: 26, bottom: 6 }, pressure: 32 };
@@ -104,17 +114,24 @@ function footItems(frame: Rect, prefix: string): Item[] {
   const abs = settingReading('abs');
   const bias = at(788, 54, 309, 50);
   const biasValue = rect(bias.left + bias.width - 4 - BIAS_VALUE.width, bias.top + 4, BIAS_VALUE.width, bias.height - 8);
+  const crest = setting.porscheCrest();
+  const noCrest = eq(crest, str(''));
   return [
-    {
-      kind: 'rect',
-      name: `${prefix}badge`,
-      rect: badge,
-      backgroundColor: TRANSPARENT,
-      border: { color: carColour('badge'), top: 1, bottom: 1, left: 1, right: 1, radius: { topLeft: INSET_RADIUS, topRight: INSET_RADIUS, bottomLeft: BADGE.width / 2, bottomRight: BADGE.width / 2 } },
-    },
-    ...['your', 'badge'].map((word, i) =>
-      label(`${prefix}badge.${word}`, word, badge.left, words + i * BADGE.line + (BADGE.line - BADGE.word) / 2, badge.width, { size: BADGE.word, color: carColour('badge'), hAlign: 'center' }),
+    withMoreBindings(
+      {
+        kind: 'rect',
+        name: `${prefix}badge`,
+        rect: badge,
+        backgroundColor: TRANSPARENT,
+        border: { color: carColour('badge'), top: 1, bottom: 1, left: 1, right: 1, radius: { topLeft: INSET_RADIUS, topRight: INSET_RADIUS, bottomLeft: BADGE.width / 2, bottomRight: BADGE.width / 2 } },
+      },
+      { Visible: noCrest },
     ),
+    ...['your', 'badge'].map((word, i) =>
+      label(`${prefix}badge.${word}`, word, badge.left, words + i * BADGE.line + (BADGE.line - BADGE.word) / 2, badge.width, { size: BADGE.word, color: carColour('badge'), hAlign: 'center', visibleBind: noCrest }),
+    ),
+    // The crest itself, from the user's own folder and never from the package (#714).
+    withMoreBindings({ kind: 'imageFromFile', name: `${prefix}badge.crest`, rect: badge, backgroundColor: TRANSPARENT }, { ImagePath: crest }),
     settingBox(`${prefix}tcLa`, at(160, 0, 151, 56), ds.color.danger.primary, 'TC-LA', tc.reading, hasSetting(tc.value)),
     settingBox(`${prefix}tcLo`, at(318, 0, 151, 56), ds.color.good.primary, 'TC-LO', cut.reading, hasSetting(cut.value)),
     settingBox(`${prefix}abs`, at(236, 66, 153, 56), ds.color.info.primary, 'ABS', abs.reading, hasSetting(abs.value)),

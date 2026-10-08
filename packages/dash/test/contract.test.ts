@@ -64,6 +64,7 @@ import {
   DELTA_PRECISIONS,
   DELTA_REFERENCES,
   FLAGS_IN_PIT_LANE_SETTING,
+  PORSCHE_CREST,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -171,13 +172,14 @@ describe('settings', () => {
       'OpenDash.WheelLock',
       'OpenDash.TCInferred',
     ]);
-    // The lone 10 is RevBar, the blue flag detail, the two that decide how a driver is named, the
-    // idle screen's two, the class best, the clock format, the delta's precision and whether a flag
-    // shows in the pit lane, which every screen shares with the four modes and the twelve slots.
+    // The lone 11 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // idle screen's two, the class best, the clock format, the delta's precision, whether a flag
+    // shows in the pit lane and the Porsche crest's path, which every screen shares with the four
+    // modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        10 +
+        11 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -222,8 +224,9 @@ describe('settings', () => {
     // was rebuilt around the rig (#791), which asked for whether a flag shows in the pit lane, a
     // position per zone so that a zone's pages can be put in any order, and a brightness and fifteen
     // effect switches for a strip. And 399 before a strip's aid lamps could read the plugin's slip
-    // estimate: the strip's switch, and the three the plugin computes.
-    expect(props).toHaveLength(403);
+    // estimate: the strip's switch, and the three the plugin computes. And 403 before the Porsche's
+    // badge could draw the crest the plugin fetches into the user's own folder (#714).
+    expect(props).toHaveLength(404);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -255,6 +258,9 @@ describe('settings', () => {
     // And whether a flag shows in the pit lane after it, shared because every screen that draws a
     // flag asks it and a screen may not read what another owns. #791.
     expect(props[13 + SLOT_MAX]).toBe('OpenDash.FlagsInPitLane');
+    // And the Porsche crest's path after it, published rather than chosen and shared because the file
+    // is the rig's and every Porsche screen draws it. #714.
+    expect(props[14 + SLOT_MAX]).toBe('OpenDash.PorscheCrest');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -357,6 +363,7 @@ describe('settings', () => {
         CLOCK_FORMAT_SETTING,
         DELTA_PRECISION_SETTING,
         FLAGS_IN_PIT_LANE_SETTING,
+        PORSCHE_CREST,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 

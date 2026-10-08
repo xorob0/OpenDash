@@ -73,6 +73,17 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string ClassBestLap = "ClassBestLap";
 
+        /// <summary>
+        /// The path of the Porsche crest the plugin fetched into the user's own folder, or "" when there is
+        /// none to draw. Published rather than chosen; the Porsche foot's badge draws the file. #714.
+        /// </summary>
+        /// <remarks>
+        /// The package ships no mark (#765): CarCrest.cs downloads the crest once, from the address on the
+        /// panel, checks it and names the file here. Empty draws the empty shield, which is what a rig with
+        /// the address cleared, or whose fetch failed, has always drawn.
+        /// </remarks>
+        public const string PorscheCrest = "PorscheCrest";
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1324,6 +1335,9 @@ namespace OpenDashPlugin
             // And whether a flag shows in the pit lane, appended for the same reason and shared because
             // a driver asking for quiet on the way down the lane asks it of every surface. #791.
             yield return FlagsInPitLane;
+            // And the Porsche crest's path, appended for the same reason, published rather than chosen and
+            // shared because the file is the rig's: one crest serves every Porsche screen. #714.
+            yield return PorscheCrest;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
