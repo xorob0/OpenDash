@@ -29,7 +29,8 @@ export const COUNTS: Counts = {
   zoneAPages: ZONE_A_PAGES.length,
   bandDPages: BAND_D_PAGES.length,
   barFields: BAR_FIELDS.length,
-  pitWallPages: PIT_WALL_PAGES.length,
+  // The portrait pit wall is a package of its own with one page; the count is the landscape package's.
+  pitWallPages: PIT_WALL_PAGES.filter((p) => p.landscape).length,
   pitWallZonePages: PIT_WALL_ZONE_PAGES.length,
   stripShapes: STRIP_SHAPES.length,
   ledProfiles: LED_PROFILE_COUNT,

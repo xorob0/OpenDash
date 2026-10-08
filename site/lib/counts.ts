@@ -26,6 +26,7 @@ export interface Counts {
   /** Band D's house pages; a theme may add its own after them. */
   bandDPages: number;
   barFields: number;
+  /** The landscape pit wall's pages; the portrait one is a package of its own with one page. */
   pitWallPages: number;
   pitWallZonePages: number;
   stripShapes: number;
