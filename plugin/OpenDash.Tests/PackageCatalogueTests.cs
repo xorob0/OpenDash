@@ -59,7 +59,14 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         private static readonly (string Folder, int Width, int Height)[] Themed =
         {
+            ("OpenDash Porsche 1920x480", 1920, 480),
             ("OpenDash Porsche 1280x480", 1280, 480),
+            ("OpenDash Porsche 1280x400", 1280, 400),
+            ("OpenDash Porsche 850x480", 850, 480),
+            ("OpenDash Porsche 800x480", 800, 480),
+            ("OpenDash Porsche 1280x720", 1280, 720),
+            ("OpenDash Porsche 800x286", 800, 286),
+            ("OpenDash Porsche 600x686", 600, 686),
         };
 
         private static PackageEntry Entry(string folder, int width, int height)
@@ -339,8 +346,8 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         /// <remarks>
         /// Read from the catalogue at the sizes each theme claims and at nothing looser, because a second
-        /// screen's folder is slugged from a name its owner typed, and "OpenDash Porsche 1920x480" names
-        /// no package while the Porsche claims 1280 x 480 alone.
+        /// screen's folder is slugged from a name its owner typed, and "OpenDash Porsche 1366x768" names
+        /// no package, being no size the Porsche claims.
         /// </remarks>
         [Fact]
         public void A_themed_folder_is_a_face_of_its_theme_and_its_size()
@@ -354,7 +361,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(1280, width);
             Assert.Equal(480, height);
 
-            foreach (var folder in new[] { "OpenDash", "OpenDash 1280x480", "OpenDash Porsche", "OpenDash Porsche 1920x480", "OpenDash Companion", "OpenDash Rim", null, "" })
+            foreach (var folder in new[] { "OpenDash", "OpenDash 1280x480", "OpenDash Porsche", "OpenDash Porsche 1366x768", "OpenDash Companion", "OpenDash Rim", null, "" })
             {
                 Assert.Null(PackageCatalogue.ThemeOf(folder));
             }

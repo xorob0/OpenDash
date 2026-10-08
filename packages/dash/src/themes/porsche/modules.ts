@@ -36,6 +36,7 @@ import { zoneCounterX, zoneFrameMetrics } from '../../second/header.ts';
 import { stack, type StackRow } from '../../second/layout.ts';
 import { withHouseLayout } from '../moduleRegister.ts';
 import { ds } from '../../tokens.ts';
+import { walkItems } from '../../walk.ts';
 import type { ModuleRegister } from '../drawing.ts';
 import { BORDER, carColour, RADIUS } from './register.ts';
 
@@ -50,7 +51,16 @@ export const ZONE_TYPE = { label: 23, value: 32 } as const;
  * it stands beneath, and a cell keeps 8 px either side of its label.
  */
 const LINE = Math.ceil(1.2 * ZONE_TYPE.value) + 2;
-const TITLE = Math.ceil(1.2 * ZONE_TYPE.label) + 2;
+
+/**
+ * The type a page is being laid in: the register's on a zone as wide as the reference's zone B or
+ * wider, and in a narrower zone the largest, down to three quarters of it, at which the page's lines
+ * still stand side by side (#713). Set for the length of one page's stack by {@link carStack}.
+ */
+let type: { label: number; value: number } = ZONE_TYPE;
+/** A line's height and a title row's in the page's type. */
+const lineHeight = (): number => Math.ceil(1.2 * type.value) + 2;
+const titleHeight = (): number => Math.ceil(1.2 * type.label) + 2;
 const CELL = { pad: 8, gap: 6, valuePad: 6, under: 2 };
 
 /** The zone's header row: the house face's, 6 px of margin and a 22 px title line twice over, so the counter the face draws sits on its middle. */
@@ -85,13 +95,13 @@ const shortBind = (bind: string | undefined): string | undefined =>
 function widestLabelOf(spec: FieldSpec): string {
   const own = spec.labelWidest === undefined ? textOf(spec) : (SHORT[spec.labelWidest] ?? spec.labelWidest);
   const written = Object.entries(SHORT).filter(([long]) => spec.labelBind?.includes(long)).map(([, short]) => short);
-  return [own, ...written].reduce((a, b) => (measureText('BarlowMedium', b, ZONE_TYPE.label) > measureText('BarlowMedium', a, ZONE_TYPE.label) ? b : a));
+  return [own, ...written].reduce((a, b) => (measureText('BarlowMedium', b, type.label) > measureText('BarlowMedium', a, type.label) ? b : a));
 }
 
 /** The value with its label taken off, at the zone's one size. */
-const valueOf = (spec: FieldSpec): FieldSpec => scaleFields([{ ...spec, label: '', labelBind: undefined, labelWidest: undefined, labelBelow: false }], ZONE_TYPE.value / spec.value.fs)[0]!;
+const valueOf = (spec: FieldSpec): FieldSpec => scaleFields([{ ...spec, label: '', labelBind: undefined, labelWidest: undefined, labelBelow: false }], type.value / spec.value.fs)[0]!;
 
-const labelWidth = (spec: FieldSpec): number => Math.ceil(measureText('BarlowMedium', widestLabelOf(spec), ZONE_TYPE.label)) + boxSlack(ZONE_TYPE.label);
+const labelWidth = (spec: FieldSpec): number => Math.ceil(measureText('BarlowMedium', widestLabelOf(spec), type.label)) + boxSlack(type.label);
 
 /** The corners of a cell that meet the container's own rounded corners, and so are rounded with them. */
 interface Corners {
@@ -116,8 +126,8 @@ function cell(name: string, box: Rect, text: string, opts: { bind?: string; wide
   const inset = opts.align === 'left' ? CELL.pad : 0;
   return [
     blockOf(`${name}.cell`, box, opts.corners ?? {}, opts.visibleBind),
-    label(`${name}.label`, text, box.left + inset, box.top + (box.height - ZONE_TYPE.label) / 2, box.width - 2 * inset, {
-      size: ZONE_TYPE.label,
+    label(`${name}.label`, text, box.left + inset, box.top + (box.height - type.label) / 2, box.width - 2 * inset, {
+      size: type.label,
       color: ds.color.text.primary,
       hAlign: opts.align ?? 'center',
       bind: opts.bind,
@@ -200,7 +210,8 @@ function stacked(specs: readonly FieldSpec[], area: Rect, density: Density): Ite
   const block = area.height / specs.length;
   return specs.flatMap((spec, i) => {
     const top = Math.round(area.top + i * block);
-    return [...(labelled(spec) ? titleOf(spec, rect(area.left, top, area.width, TITLE)) : []), ...bareValue(spec, rect(area.left, top + TITLE + CELL.under, area.width, Math.round(block) - TITLE - CELL.under), density, 'center')];
+    const title = titleHeight();
+    return [...(labelled(spec) ? titleOf(spec, rect(area.left, top, area.width, title)) : []), ...bareValue(spec, rect(area.left, top + title + CELL.under, area.width, Math.round(block) - title - CELL.under), density, 'center')];
   });
 }
 
@@ -209,12 +220,38 @@ function pair(specs: readonly FieldSpec[], area: Rect, density: Density): Item[]
   const half = (area.width - CELL.gap) / 2;
   return specs.flatMap((spec, i) => {
     const box = rect(Math.round(area.left + i * (half + CELL.gap)), area.top, Math.floor(half), area.height);
-    return [...(labelled(spec) ? titleOf(spec, rect(box.left, box.top, box.width, TITLE)) : []), ...bareValue(spec, rect(box.left, box.top + TITLE + CELL.under, box.width, box.height - TITLE - CELL.under), density, 'center')];
+    const title = titleHeight();
+    return [...(labelled(spec) ? titleOf(spec, rect(box.left, box.top, box.width, title)) : []), ...bareValue(spec, rect(box.left, box.top + title + CELL.under, box.width, box.height - title - CELL.under), density, 'center')];
   });
 }
 
 /** A value alone, bare and centred under its title cell, as the render draws `Laptime`. */
 const alone = (spec: FieldSpec, area: Rect, density: Density): Item[] => (labelled(spec) ? stacked([spec], area, density) : bareValue(spec, area, density, 'center'));
+
+/** The width of zone B on the reference face, inside its border: the narrowest a column of lines is drawn. */
+const COLUMN_WIDTH = 309;
+
+/**
+ * A page's lines in two columns of the reference's shape, where the zone is wide enough for two and
+ * the page has more lines than one column's height holds: the 1920 x 480 face's zones B and C, which
+ * the ticket widens into two columns of the same module shape (#713). Each column has the reference
+ * row pitch, the first filled before the second is begun, so a line stands where it would on the
+ * reference and the page shows up to twice the lines. Undefined where a page draws as one column.
+ */
+function inColumns(specs: readonly FieldSpec[], order: readonly string[], area: Rect, density: Density, atFoot: boolean): Item[] | undefined {
+  const width = Math.floor((area.width - CELL.gap) / 2);
+  const perColumn = Math.floor(area.height / lineHeight());
+  if (width < COLUMN_WIDTH || perColumn < 2 || specs.length <= perColumn) return undefined;
+  const kept = linesThatFit(specs, order, 2 * perColumn);
+  const first = kept.slice(0, perColumn);
+  const second = kept.slice(perColumn);
+  if (!sideBySide(first, width, density) || !sideBySide(second, width, density)) return undefined;
+  const pitch = area.height / perColumn;
+  return [
+    ...lines(first, rect(area.left, area.top, width, area.height), density, atFoot),
+    ...lines(second, rect(area.left + area.width - width, area.top, width, Math.round(second.length * pitch)), density, false),
+  ];
+}
 
 /**
  * A page's readings in `area`: lines side by side where they fit across, a pair where two readings
@@ -223,13 +260,15 @@ const alone = (spec: FieldSpec, area: Rect, density: Density): Item[] => (labell
  */
 function readingsIn(specs: readonly FieldSpec[], order: readonly string[], area: Rect, density: Density, atFoot: boolean): Item[] {
   if (specs.length === 0) return [];
+  const columns = inColumns(specs, order, area, density, atFoot);
+  if (columns) return columns;
   const halves = (two: readonly FieldSpec[]): boolean => two.every((spec) => (!labelled(spec) || labelWidth(spec) <= (area.width - CELL.gap) / 2) && valueExtent(spec, density) <= (area.width - CELL.gap) / 2);
-  const across = linesThatFit(specs, order, Math.floor(area.height / LINE));
+  const across = linesThatFit(specs, order, Math.floor(area.height / lineHeight()));
   if (across.length === 1) return alone(across[0]!, area, density);
   if (sideBySide(across, area.width, density)) return lines(across, area, density, atFoot);
   const two = linesThatFit(specs, order, 2);
-  if (two.length === 2 && halves(two) && area.height >= TITLE + LINE) return pair(two, area, density);
-  const down = linesThatFit(specs, order, Math.floor(area.height / (TITLE + LINE)));
+  if (two.length === 2 && halves(two) && area.height >= titleHeight() + lineHeight()) return pair(two, area, density);
+  const down = linesThatFit(specs, order, Math.floor(area.height / (titleHeight() + lineHeight())));
   return down.length === 1 ? alone(down[0]!, area, density) : stacked(down, area, density);
 }
 
@@ -241,7 +280,68 @@ const READINGS = new WeakMap<StackRow, { specs: readonly FieldSpec[]; order: rea
  * A row that is not lines is kept while the lines still have one line of room, and dropped from the
  * tail after that, as the house's stack drops them.
  */
+/** The width of the zone whose page is being built, which {@link porscheModuleFrame} records. */
+let zoneWidth: number | undefined;
+
+/** The shares of the register's type a narrower zone tries, largest first. */
+const NARROW_TYPE = [1, 0.95, 0.9, 0.85, 0.8, 0.75];
+
+/** Whether a page's lines stand side by side in `frame` in the current type. */
+function linesStand(frame: Rect, rows: readonly StackRow[], density: Density): boolean {
+  const ranks = rows.map((row) => READINGS.get(row)).filter((r): r is NonNullable<typeof r> => r !== undefined);
+  const specs = ranks.flatMap((r) => r.specs);
+  if (specs.length < 2) return true;
+  const across = linesThatFit(specs, ranks[0]!.order, Math.floor(frame.height / lineHeight()));
+  return across.length < 2 || sideBySide(across, frame.width, density);
+}
+
+/** Lays a page in `at`, the type standing at it until the page is laid. */
+function inType<T>(at: { label: number; value: number }, draw: () => T): T {
+  const was = type;
+  type = at;
+  try {
+    return draw();
+  } finally {
+    type = was;
+  }
+}
+
+/**
+ * A page's stack, in the register's type, or in a zone narrower than the reference's zone B in the
+ * largest type down to three quarters of it at which its lines stand side by side: the ticket's rule
+ * that a font follows the box it is drawn in, which lets the 850 and 800 wide faces and the portrait
+ * face keep the reference's lines rather than stack each reading under its title. A page whose lines
+ * stand at none of them is laid in the register's type, as on the reference.
+ *
+ * Narrow is the zone's width and not the stack's, since a page such as pit view lays its readings in
+ * part of the zone beside a drawing and is narrow on the reference too; the zone is the one
+ * {@link porscheModuleFrame} last framed, which the face does for each page just before building it.
+ */
 function carStack(frame: Rect, rows: readonly StackRow[], density: Density): Item[] {
+  if ((zoneWidth ?? frame.width) >= COLUMN_WIDTH) return fitted(frame, rows, density);
+  for (const k of NARROW_TYPE) {
+    const at = { label: Math.round(ZONE_TYPE.label * k), value: Math.round(ZONE_TYPE.value * k) };
+    if (inType(at, () => linesStand(frame, rows, density))) return inType(at, () => fitted(frame, rows, density));
+  }
+  return fitted(frame, rows, density);
+}
+
+function fitted(frame: Rect, rows: readonly StackRow[], density: Density): Item[] {
+  // A row's text stands a little below the bottom it is drawn to, its line box being taller than its
+  // ink; where the last row's would cross the zone's foot, as on the 1280 x 400 face's shorter zones,
+  // the page is laid again in a body short by as much, so that nothing leaves the zone.
+  const foot = frame.top + frame.height;
+  const overshoot = (items: Item[]): number => Math.ceil(Math.max(0, ...[...walkItems(items)].map((item) => ('rect' in item ? item.rect.top + item.rect.height - foot : 0))));
+  let short = 0;
+  let items = stackIn(frame, rows, density);
+  for (let over = overshoot(items); over > 0 && short < frame.height / 4; over = overshoot(items)) {
+    short += over;
+    items = stackIn(rect(frame.left, frame.top, frame.width, frame.height - short), rows, density);
+  }
+  return items;
+}
+
+function stackIn(frame: Rect, rows: readonly StackRow[], density: Density): Item[] {
   const live = rows.filter((row) => row.height > 0);
   const ranks = live.map((row) => READINGS.get(row)).filter((r): r is NonNullable<typeof r> => r !== undefined);
   const specs = ranks.flatMap((r) => r.specs);
@@ -252,7 +352,7 @@ function carStack(frame: Rect, rows: readonly StackRow[], density: Density): Ite
   if (specs.length === 0) return withHouseLayout(() => stack(frame, rows, density));
   const taken = (kept: readonly StackRow[]): number => kept.reduce((sum, row) => sum + row.height + CELL.gap, 0);
   const kept = [...blocks];
-  while (kept.length > 0 && frame.height - taken(kept) < (specs.length > 0 ? LINE : 0)) kept.pop();
+  while (kept.length > 0 && frame.height - taken(kept) < (specs.length > 0 ? lineHeight() : 0)) kept.pop();
   const room = specs.length > 0 ? frame.height - taken(kept) : 0;
   const items = readingsIn(specs, order, rect(frame.left, frame.top, frame.width, room), density, kept.length === 0);
   let y = specs.length > 0 ? frame.top + room + CELL.gap : frame.top + (frame.height - taken(kept) + CELL.gap) / 2;
@@ -292,15 +392,25 @@ export const porscheModules: ModuleRegister = { fieldsRow: readingsRow, stack: c
  * lists cars or is one drawing keeps the house's margins, since it has no cells and wants room round it.
  */
 export function porscheModuleFrame(page: { id: string; name: string }, frame: Rect, body: Rect): { items: Item[]; body: Rect } {
+  zoneWidth = frame.width;
   const metrics = { ...zoneFrameMetrics('zone', 'face'), size: ZONE_TYPE.label };
   const box = rect(frame.left, frame.top, frame.width, HEADER);
   const counter = frame.left + frame.width - zoneCounterX(frame, { kind: 'reserved', widest: '21 / 21' }, metrics);
+  // Centred between the counter's room on either side where the name fits there, as on the
+  // reference; in a zone too narrow for that, as on the 850 and 800 wide faces, it starts at the
+  // cell's padding and takes the room up to the counter, and is set smaller only if it still does not fit.
+  const fits = (size: number, width: number): boolean => Math.ceil(measureText('BarlowMedium', page.name, size)) + boxSlack(size) <= width;
+  const centred = fits(ZONE_TYPE.label, box.width - 2 * counter);
+  const left = centred ? box.left + counter : box.left + CELL.pad;
+  const width = centred ? box.width - 2 * counter : box.width - counter - 2 * CELL.pad;
+  let size: number = ZONE_TYPE.label;
+  while (!fits(size, width) && size > 12) size--;
   const items: Item[] = [
     blockOf(`${page.id}.zone.cell`, box, { topLeft: true, topRight: true }),
-    label(`${page.id}.zone.title`, page.name, box.left + counter, frame.top + metrics.padTop + (metrics.title - ZONE_TYPE.label) / 2, box.width - 2 * counter, {
-      size: ZONE_TYPE.label,
+    label(`${page.id}.zone.title`, page.name, left, frame.top + metrics.padTop + (metrics.title - size) / 2, width, {
+      size,
       color: ds.color.text.primary,
-      hAlign: 'center',
+      hAlign: centred ? 'center' : 'left',
     }),
   ];
   const under = frame.top + HEADER;
