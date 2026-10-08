@@ -15,7 +15,8 @@
  *     letter the house cut it for, so it fits at that size.
  *   - A filled box holding text is either a chip, a class or a licence, which loses its fill and keeps
  *     its text, or a highlight, the driver's own row or a box over the face, which becomes inverse
- *     video: the box in the ink, its text in the ground. A filled box holding no text is a bar or a rule
+ *     video: the box in the ink, its text in the ground. Over the face an outlined box holding text is
+ *     inverse video too, as the pit family's banners are. A filled box holding no text is a bar or a rule
  *     when it is thin, and drawn in the ink, and otherwise an area, drawn as its outline.
  *   - A box, a dot or a gauge whose colour is bound says a state by it, a segment lit or not: the
  *     binding is kept and every colour it can give is turned into the ink, or into the ghost's tone
@@ -122,7 +123,7 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
   const texts = flat(items).filter((item): item is TextItem => item.kind === 'text');
   const holdsText = (r: Rect): boolean => texts.some((t) => centreIn(t.rect, r));
   const highlights: Highlight[] = flat(items)
-    .filter((item) => item.kind === 'rect' && filled(item.backgroundColor) && holdsText(item.rect) && (opts.boxesInverse || !isChip(item.rect)))
+    .filter((item) => item.kind === 'rect' && holdsText(item.rect) && (opts.boxesInverse ? filled(item.backgroundColor) || item.border !== undefined : filled(item.backgroundColor) && !isChip(item.rect)))
     .map((item) => ({ rect: (item as { rect: Rect }).rect, when: expressionOf(item.bindings?.Visible) }));
   const onHighlight = (t: TextItem): Highlight | undefined => highlights.find((h) => centreIn(t.rect, h.rect));
 
@@ -150,6 +151,8 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
         const border = plain.border ? { ...plain.border, color: ink, colorBinding: undefined } : undefined;
         const bound = boundColour(item, 'BackgroundColor');
         if (bound !== undefined && !holdsText(plain.rect)) return [withMoreBindings<'rect'>({ ...plain, backgroundColor: ink, ...(border ? { border } : {}) }, { BackgroundColor: bound })];
+        // Over the face a box holding text is inverse video whether the house filled it or outlined it, as the pit family's banners are.
+        if (opts.boxesInverse && border && holdsText(plain.rect)) return [{ ...plain, backgroundColor: ink, border }];
         if (!filled(plain.backgroundColor)) return [{ ...plain, ...(border ? { border } : {}) }];
         const r = plain.rect;
         if (holdsText(r)) {
