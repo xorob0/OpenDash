@@ -16,7 +16,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
 import { pageFile, packageFile, provenanceNote, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
-import { onSite, readBuildManifest, type Manifest } from '../scripts/content.ts';
+import { onSite, readBuildManifest, themed, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const shots = path.resolve(import.meta.dir, '..', 'public', 'shots');
@@ -107,5 +107,24 @@ describe('every package is photographed', () => {
 
   test('the hero, which two pages name by hand', () => {
     expect(exists(packageFile('OpenDash 850x480'))).toBe(true);
+  });
+});
+
+/**
+ * A themed package is photographed like the others, and the themes page draws "Not photographed
+ * yet" where one is not. That is a hole a reader sees, so it is reported; it fails only under the
+ * pre-release setting, because the pictures arrive with the reshoot and the page may ship first.
+ */
+describe('every themed package is photographed', () => {
+  const packages = manifest ? manifest.packages.filter(themed) : [];
+  const missing = packages.map((p) => packageFile(p.folder)).filter((f) => !exists(f));
+
+  test('or the missing ones are named', () => {
+    if (missing.length > 0) {
+      const message = `${missing.length} themed package${missing.length > 1 ? 's are' : ' is'} not photographed: ${missing.join(', ')}. Reshoot with bun run shots --packages <folder> --scenarios gallery, then site/scripts/sync-shots.ts.`;
+      if (process.env.OPENDASH_SHOTS_STRICT === '1') throw new Error(message);
+      console.warn(message);
+    }
+    for (const f of packages.map((p) => packageFile(p.folder)).filter(exists)) expect(readCaptures(sidecarPath).files[f]?.kind).toBe('package');
   });
 });

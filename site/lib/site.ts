@@ -26,6 +26,8 @@ export const REPO_URL = 'https://github.com/xorob0/OpenDash';
 export const REPO_LABEL = REPO_URL.replace(/^https:\/\//, '');
 export const issueUrl = (n: number): string => `${REPO_URL}/issues/${n}`;
 export const SCOPE_URL = `${REPO_URL}/blob/main/docs/scope.md`;
+/** The open theme tickets, which is where the roadmap of car themes is kept rather than on this site. */
+export const THEME_TICKETS_URL = `${REPO_URL}/issues?q=is%3Aissue+is%3Aopen+label%3Av2.0+theme+in%3Atitle`;
 /** The one link beyond the repository: CC BY attribution links its source. */
 export const CAR_DATA_URL = 'https://github.com/Lovely-Sim-Racing/lovely-car-data';
 /** Linked once, on the install page, because a reader without SimHub has to get it first. */
@@ -109,6 +111,7 @@ export const DIFFERENTIATORS: readonly { id: string; title: string; body: (c: Co
 /** The top-level pages, in the order the nav lists them. Download is the call to action, not a nav item. */
 export const NAV = [
   { href: '/screens', label: 'Screens' },
+  { href: '/themes', label: 'Themes' },
   { href: '/pages', label: 'Pages' },
   { href: '/lights', label: 'Lights' },
   { href: '/compare', label: 'Compare' },

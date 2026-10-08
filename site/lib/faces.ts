@@ -6,7 +6,7 @@
  * and missing from another. None of them carries a file to download: the plugin is the only way in
  * (#438), and the one download is its zip.
  */
-import { PACKAGES } from './content.generated';
+import { PACKAGES, THEMED_PACKAGES, THEMES } from './content.generated';
 import { hasCapture, packageFile, stillFor } from './captures';
 import { clipFor } from './clips';
 import { inReadingOrder, slug } from './packages';
@@ -30,6 +30,32 @@ export const BASE_FACE: PackageOption | undefined = FACES.find((f) => f.folder =
 export const LARGE_FACE: PackageOption | undefined = FACES.find((f) => f.folder === 'OpenDash 1280x480');
 
 export const byFolder = (folder: string): PackageOption | undefined => ALL.find((p) => p.folder === folder);
+
+/** The themed packages, in reading order, each with its capture name: `opendash-porsche-1280x480`. */
+export const THEMED: readonly PackageOption[] = inReadingOrder(THEMED_PACKAGES).map(option);
+
+/** A theme the site shows: the catalogue's entry with its packages. The default is not one. */
+export interface CarTheme {
+  id: string;
+  name: string;
+  cars: readonly string[];
+  bandPages: readonly { id: string; name: string }[];
+  packages: readonly PackageOption[];
+}
+
+export const CAR_THEMES: readonly CarTheme[] = THEMES.filter((t) => t.id !== 'default').map((t) => ({
+  id: t.id,
+  name: t.name,
+  cars: t.cars,
+  bandPages: t.bandPages,
+  packages: THEMED.filter((p) => p.theme === t.id),
+}));
+
+export const themeById = (id: string): CarTheme | undefined => CAR_THEMES.find((t) => t.id === id);
+
+/** The themed package at a size, for the page that shows a theme beside the house face of the same size. */
+export const themedAt = (theme: CarTheme, size: { width: number; height: number }): PackageOption | undefined =>
+  theme.packages.find((p) => p.width === size.width && p.height === size.height);
 
 /** The faces as the picker draws them: with their capture's URL when it has been photographed. */
 export interface PickerFace {
