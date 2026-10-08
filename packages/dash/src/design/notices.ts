@@ -21,6 +21,12 @@ import { VENDORED_FONTS_DIR } from './fontFiles.ts';
 export const FONT_LICENCE: NoticeFile = { name: 'OFL.txt', path: path.join(VENDORED_FONTS_DIR, 'OFL.txt') };
 
 /**
+ * The segment faces a theme ships (#204), under the same licence with a Reserved Font Name of their
+ * own, which is why their notice is a second file rather than a line added to Barlow's.
+ */
+export const SEGMENT_FONT_LICENCE: NoticeFile = { name: 'OFL-DSEG.txt', path: path.join(VENDORED_FONTS_DIR, 'OFL-DSEG.txt') };
+
+/**
  * What each source of artwork owes, one entry per source of `design/assets.ts`.
  *
  * The record is exhaustive over the sources, so artwork from somewhere new does not compile until
@@ -38,6 +44,7 @@ export const NOTICES_BY_SOURCE: Record<AssetSourceId, readonly NoticeFile[]> = {
 export const noticesForPackage = (pkg: DashPackage): NoticeFile[] => {
   const notices: NoticeFile[] = [];
   if (pkg.fonts.length > 0) notices.push(FONT_LICENCE);
+  if (pkg.fonts.some((font) => path.basename(font).startsWith('DSEG'))) notices.push(SEGMENT_FONT_LICENCE);
   for (const image of pkg.dashboards.flatMap((dashboard) => dashboard.images ?? [])) {
     const asset = assetNamed(image.name);
     if (asset === undefined) {

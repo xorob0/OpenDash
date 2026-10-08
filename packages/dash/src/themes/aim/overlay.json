@@ -1,0 +1,50 @@
+{
+  "palette": {
+    "aim": {
+      "ground": { "value": "#D9DDDA", "description": "The white backlight: the LCD's ground, behind every figure (#204)." },
+      "ink": { "value": "#1C2124", "description": "The LCD's ink: every figure, caption, rule and segment. The ghosts are this ink drawn at a ninth of its strength, with an opacity rather than a colour of their own." },
+      "shade": { "value": "#C9CECB", "description": "The ground a step darker, for the house's raised and inset surfaces on what this theme leaves to the house: the pop-ups, the change notifications and the lists' own blocks." },
+      "rule": { "value": "#B4BAB7", "description": "The house's rules and chips on those pages, a second step darker than the ground." },
+      "caption": { "value": "#424748", "description": "The house's label grey turned over: the ink at four fifths over the ground." },
+      "dim": { "value": "#848887", "description": "The house's dim text turned over: the ink at nine twentieths over the ground, which the absent readings take." }
+    }
+  },
+  "color": {
+    "surface": {
+      "base": { "value": "{palette.aim.ground}" },
+      "zone": { "value": "{palette.aim.shade}" },
+      "raised": { "value": "{palette.aim.rule}" },
+      "inset": { "value": "{palette.aim.shade}" }
+    },
+    "text": {
+      "primary": { "value": "{palette.aim.ink}" },
+      "secondary": { "value": "{palette.aim.ink}" },
+      "label": { "value": "{palette.aim.caption}" },
+      "dim": { "value": "{palette.aim.dim}" }
+    }
+  },
+  "font": {
+    "family": {
+      "data": { "value": "DSEG7 Classic", "note": "Every figure on the LCD is the seven-segment face, the house's pages included, so that their own layouts cut their cells for it and shed by their own rules (#204)." }
+    },
+    "cell": {
+      "semiBold": {
+        "digit": { "value": 0.82, "note": "DSEG7 Classic Regular: every glyph is a cell of 0.816 em, its ink 0.099 to 0.717." },
+        "special": { "value": 0.2, "note": "The colon is 0.2 em and the full stop none, lighting the point of the cell before it." }
+      },
+      "bold": {
+        "digit": { "value": 0.82, "note": "DSEG7 Classic Bold, the same cell as Regular." },
+        "special": { "value": 0.2 }
+      },
+      "gear": { "value": 0.82, "note": "The gear is a cell like any other in a segment face." }
+    }
+  },
+  "purpose": {
+    "flag": {
+      "onFlag": { "value": "{palette.aim.ink}" }
+    },
+    "alert": {
+      "onAlert": { "value": "{palette.aim.ink}" }
+    }
+  }
+}

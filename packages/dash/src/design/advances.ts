@@ -8,7 +8,18 @@
  * when a font file changes. Characters absent from the table fall back to `FALLBACK_ADVANCE`.
  */
 
-export type MeasuredFace = 'BarlowMedium' | 'BarlowBold' | 'BarlowCondensedSemiBold' | 'BarlowCondensedBold' | 'BarlowCondensedLight';
+/** The faces of text: Barlow at both widths, which carry every character the table lists. */
+export type TextFace = 'BarlowMedium' | 'BarlowBold' | 'BarlowCondensedSemiBold' | 'BarlowCondensedBold' | 'BarlowCondensedLight';
+
+/**
+ * The segment faces a theme draws its LCD in (#204), DSEG7 Classic and DSEG14 Classic. Each glyph is
+ * a cell of 0.816 em, the full stop has no advance at all, since it lights the point of the cell
+ * before it, and the colon a fifth of one; a character the face does not carry is left out of its
+ * table and falls back like any other, WPF drawing it in a face of its own.
+ */
+export type SegmentFace = 'DSEG7Regular' | 'DSEG7Bold' | 'DSEG14Regular';
+
+export type MeasuredFace = TextFace | SegmentFace;
 
 /** Widest advance of the measured set, used for a character the table does not carry. */
 export const FALLBACK_ADVANCE = 0.75;
@@ -87,7 +98,51 @@ const BarlowCondensedLight: Readonly<Record<string, number>> = {
   '…': 0.603, '∞': 0.634,
 };
 
-const FACES: Record<MeasuredFace, Readonly<Record<string, number>>> = { BarlowMedium, BarlowBold, BarlowCondensedSemiBold, BarlowCondensedBold, BarlowCondensedLight };
+const DSEG7Regular: Readonly<Record<string, number>> = {
+  ' ': 0.2, '!': 0.816, '-': 0.816, '.': 0, '0': 0.816, '1': 0.816, '2': 0.816, '3': 0.816, '4': 0.816, '5': 0.816,
+  '6': 0.816, '7': 0.816, '8': 0.816, '9': 0.816, ':': 0.2, 'A': 0.816, 'B': 0.816, 'C': 0.816, 'D': 0.816,
+  'E': 0.816, 'F': 0.816, 'G': 0.816, 'H': 0.816, 'I': 0.816, 'J': 0.816, 'K': 0.816, 'L': 0.816, 'M': 0.816,
+  'N': 0.816, 'O': 0.816, 'P': 0.816, 'Q': 0.816, 'R': 0.816, 'S': 0.816, 'T': 0.816, 'U': 0.816, 'V': 0.816,
+  'W': 0.816, 'X': 0.816, 'Y': 0.816, 'Z': 0.816, '_': 0.816, 'a': 0.816, 'b': 0.816, 'c': 0.816, 'd': 0.816,
+  'e': 0.816, 'f': 0.816, 'g': 0.816, 'h': 0.816, 'i': 0.816, 'j': 0.816, 'k': 0.816, 'l': 0.816, 'm': 0.816,
+  'n': 0.816, 'o': 0.816, 'p': 0.816, 'q': 0.816, 'r': 0.816, 's': 0.816, 't': 0.816, 'u': 0.816, 'v': 0.816,
+  'w': 0.816, 'x': 0.816, 'y': 0.816, 'z': 0.816, '°': 0.816,
+};
+
+const DSEG7Bold: Readonly<Record<string, number>> = {
+  ' ': 0.2, '!': 0.816, '-': 0.816, '.': 0, '0': 0.816, '1': 0.816, '2': 0.816, '3': 0.816, '4': 0.816, '5': 0.816,
+  '6': 0.816, '7': 0.816, '8': 0.816, '9': 0.816, ':': 0.2, 'A': 0.816, 'B': 0.816, 'C': 0.816, 'D': 0.816,
+  'E': 0.816, 'F': 0.816, 'G': 0.816, 'H': 0.816, 'I': 0.816, 'J': 0.816, 'K': 0.816, 'L': 0.816, 'M': 0.816,
+  'N': 0.816, 'O': 0.816, 'P': 0.816, 'Q': 0.816, 'R': 0.816, 'S': 0.816, 'T': 0.816, 'U': 0.816, 'V': 0.816,
+  'W': 0.816, 'X': 0.816, 'Y': 0.816, 'Z': 0.816, '_': 0.816, 'a': 0.816, 'b': 0.816, 'c': 0.816, 'd': 0.816,
+  'e': 0.816, 'f': 0.816, 'g': 0.816, 'h': 0.816, 'i': 0.816, 'j': 0.816, 'k': 0.816, 'l': 0.816, 'm': 0.816,
+  'n': 0.816, 'o': 0.816, 'p': 0.816, 'q': 0.816, 'r': 0.816, 's': 0.816, 't': 0.816, 'u': 0.816, 'v': 0.816,
+  'w': 0.816, 'x': 0.816, 'y': 0.816, 'z': 0.816, '°': 0.816,
+};
+
+const DSEG14Regular: Readonly<Record<string, number>> = {
+  ' ': 0.2, '!': 0.816, '"': 0.816, '$': 0.816, '%': 0.816, '&': 0.816, '\'': 0.816, '(': 0.816, ')': 0.816,
+  '*': 0.816, '+': 0.816, ',': 0.816, '-': 0.816, '.': 0, '/': 0.816, '0': 0.816, '1': 0.816, '2': 0.816, '3': 0.816,
+  '4': 0.816, '5': 0.816, '6': 0.816, '7': 0.816, '8': 0.816, '9': 0.816, ':': 0.2, '<': 0.816, '=': 0.816,
+  '>': 0.816, '?': 0.816, '@': 0.816, 'A': 0.816, 'B': 0.816, 'C': 0.816, 'D': 0.816, 'E': 0.816, 'F': 0.816,
+  'G': 0.816, 'H': 0.816, 'I': 0.816, 'J': 0.816, 'K': 0.816, 'L': 0.816, 'M': 0.816, 'N': 0.816, 'O': 0.816,
+  'P': 0.816, 'Q': 0.816, 'R': 0.816, 'S': 0.816, 'T': 0.816, 'U': 0.816, 'V': 0.816, 'W': 0.816, 'X': 0.816,
+  'Y': 0.816, 'Z': 0.816, '\\': 0.816, '^': 0.816, '_': 0.816, '`': 0.816, 'a': 0.816, 'b': 0.816, 'c': 0.816,
+  'd': 0.816, 'e': 0.816, 'f': 0.816, 'g': 0.816, 'h': 0.816, 'i': 0.816, 'j': 0.816, 'k': 0.816, 'l': 0.816,
+  'm': 0.816, 'n': 0.816, 'o': 0.816, 'p': 0.816, 'q': 0.816, 'r': 0.816, 's': 0.816, 't': 0.816, 'u': 0.816,
+  'v': 0.816, 'w': 0.816, 'x': 0.816, 'y': 0.816, 'z': 0.816, '|': 0.816, '~': 0.816, '°': 0.816,
+};
+
+const FACES: Record<MeasuredFace, Readonly<Record<string, number>>> = {
+  BarlowMedium,
+  BarlowBold,
+  BarlowCondensedSemiBold,
+  BarlowCondensedBold,
+  BarlowCondensedLight,
+  DSEG7Regular,
+  DSEG7Bold,
+  DSEG14Regular,
+};
 
 /** Width in pixels of `text` set in `face` at `fs`, from the measured advances. */
 export function measureText(face: MeasuredFace, text: string, fs: number): number {
@@ -163,7 +218,7 @@ export const widestOf = (face: MeasuredFace, chars: number): string => widestGly
  * fatter stem and a fatter dot into the same vertical, so Bold's break is 0.057 em where Light's is
  * 0.101. Reaching for a heavier weight to separate the two closes the gap.
  */
-export const TITTLE_BREAK: Readonly<Record<MeasuredFace, number>> = {
+export const TITTLE_BREAK: Readonly<Record<TextFace, number>> = {
   BarlowMedium: 0.08,
   BarlowBold: 0.057,
   BarlowCondensedSemiBold: 0.07,
@@ -192,4 +247,4 @@ const SAFE_BREAK_PX = 2;
  * relative's 13 is where the VM saw it fail first. That is what makes the name column's case rule a
  * rule and not a special case for one face.
  */
-export const dottedLetterSize = (face: MeasuredFace): number => Math.ceil(SAFE_BREAK_PX / TITTLE_BREAK[face]);
+export const dottedLetterSize = (face: TextFace): number => Math.ceil(SAFE_BREAK_PX / TITTLE_BREAK[face]);

@@ -104,12 +104,23 @@ export const FACE_FONT_FILES = [
 ] as const;
 
 /**
- * Absolute paths of the fonts to copy into `_SHFonts/`, renamed on the way so that SimHub resolves
- * the condensed family at all; `design/fontFiles.ts` explains why that is necessary.
+ * The faces a theme draws in beyond the house's, by theme id, shipped in that theme's packages
+ * alone so that a house package carries exactly the files it always has. The AiM's LCD is set in
+ * the segment faces (#204), which declare a Reserved Font Name and so are shipped as published,
+ * never renamed: WPF resolves `DSEG7 Classic` and `DSEG14 Classic` as they are.
  */
-export function fontsForPackage(): string[] {
+export const THEME_FONT_FILES: Readonly<Record<string, readonly string[]>> = {
+  aim: ['DSEG7Classic-Regular.ttf', 'DSEG7Classic-Bold.ttf', 'DSEG14Classic-Regular.ttf'],
+};
+
+/**
+ * Absolute paths of the fonts to copy into `_SHFonts/`, renamed on the way so that SimHub resolves
+ * the condensed family at all; `design/fontFiles.ts` explains why that is necessary. A theme's own
+ * faces follow the house's for a package drawn in that theme.
+ */
+export function fontsForPackage(themeId?: string): string[] {
   const dir = path.resolve(import.meta.dir, '..', 'fonts');
-  return FACE_FONT_FILES.map((f) => prepareFont(path.join(dir, f), path.join(dir, GENERATED_FONTS_DIR)));
+  return [...FACE_FONT_FILES, ...((themeId !== undefined && THEME_FONT_FILES[themeId]) || [])].map((f) => prepareFont(path.join(dir, f), path.join(dir, GENERATED_FONTS_DIR)));
 }
 
 /** The package for a layout: folder, dashboards (cards.djson only with the widget strategy) and fonts. */

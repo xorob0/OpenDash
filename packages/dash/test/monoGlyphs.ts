@@ -18,6 +18,9 @@ import type { BindingTarget, TextItem } from '../src/generator.ts';
 /** Which measured face an item draws in: the family it names, at the weight it asks for. */
 export const faceOf = (item: TextItem): MeasuredFace => {
   if (item.font === 'Barlow') return item.fontWeight === 'Bold' ? 'BarlowBold' : 'BarlowMedium';
+  // The segment faces a theme ships (#204), under the family names WPF resolves them by.
+  if (item.font === 'DSEG7 Classic') return item.fontWeight === 'Bold' ? 'DSEG7Bold' : 'DSEG7Regular';
+  if (item.font === 'DSEG14 Classic') return 'DSEG14Regular';
   if (item.fontWeight === 'Bold') return 'BarlowCondensedBold';
   if (item.fontWeight === 'Light') return 'BarlowCondensedLight';
   return 'BarlowCondensedSemiBold';

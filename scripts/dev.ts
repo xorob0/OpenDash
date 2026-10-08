@@ -56,7 +56,7 @@ export const LIST_ORDER = [
   'OpenDash Companion portrait',
   'OpenDash Pit wall',
   'OpenDash Pit wall portrait',
-  // The themed packages, built by `--all-themes` and installed on the VM like any other (#205, #713),
+  // The themed packages, built by `--all-themes` and installed on the VM like any other (#205, #713, #204),
   // in the order Dash Studio sorts the house's own sizes.
   'OpenDash Porsche 1280x400',
   'OpenDash Porsche 1280x480',
@@ -66,6 +66,14 @@ export const LIST_ORDER = [
   'OpenDash Porsche 800x286',
   'OpenDash Porsche 800x480',
   'OpenDash Porsche 850x480',
+  'OpenDash AiM 1280x400',
+  'OpenDash AiM 1280x480',
+  'OpenDash AiM 1280x720',
+  'OpenDash AiM 1920x480',
+  'OpenDash AiM 600x686',
+  'OpenDash AiM 800x286',
+  'OpenDash AiM 800x480',
+  'OpenDash AiM 850x480',
 ] as const;
 
 export interface DevOptions {
