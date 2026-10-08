@@ -12,7 +12,8 @@ import path from 'node:path';
 import { FLAG_CATALOGUE } from '../../packages/dash/src/flags.ts';
 import { ALL_SHAPES, BASE_SHAPES, LEGACY_SHAPES } from '../../packages/dash/src/leds/strip.ts';
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
-import { downloads, flags, heroFace, readBuildManifest, releases, sitePackages, stripShapes, type Manifest } from '../scripts/content.ts';
+import { THEME_CATALOGUE } from '../../packages/dash/src/contract.ts';
+import { downloads, flags, heroFace, ledProfileCount, readBuildManifest, releases, sitePackages, stripShapes, themedPackages, themes, type Manifest } from '../scripts/content.ts';
 import { stripGrid } from '../lib/stripGrid.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
@@ -136,6 +137,9 @@ describe('the package list', () => {
 
   test.if(manifest !== null)('is the fourteen packages the plugin installs', () => {
     expect(sitePackages(manifest!)).toHaveLength(14);
+    // A themed package is listed apart, never among the screens, and carries its theme.
+    const themedOnes = themedPackages(manifest!);
+    for (const p of themedOnes) expect({ folder: p.folder, theme: p.theme, listed: sitePackages(manifest!).some((s) => s.folder === p.folder) }).toEqual({ folder: p.folder, theme: expect.any(String), listed: false });
   });
 });
 
@@ -165,5 +169,34 @@ describe('the releases', () => {
       expect(r.body).not.toBe('');
       if (!r.unreleased) expect(r.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     }
+  });
+});
+
+describe('the themes', () => {
+  const list = themes(THEME_CATALOGUE);
+
+  test('are the catalogue, the default first, with the cars and the sizes each one claims', () => {
+    expect(list[0]?.id).toBe('default');
+    const porsche = list.find((t) => t.id === 'porsche');
+    expect(porsche?.cars.length).toBeGreaterThan(0);
+    expect(porsche?.sizes.length).toBeGreaterThan(0);
+    expect(porsche?.bandPages.map((p) => p.name)).toEqual(['Porsche']);
+  });
+
+  test('a themed manifest entry is one of the themes at one of its sizes', () => {
+    const entries = [
+      { folder: 'OpenDash Porsche 1280x480', kind: 'dash' as const, width: 1280, height: 480, file: 'OpenDash Porsche 1280x480.simhubdash', theme: 'porsche' },
+      { folder: 'OpenDash 1280x480', kind: 'dash' as const, width: 1280, height: 480, file: 'OpenDash 1280x480.simhubdash' },
+    ];
+    expect(themedPackages({ packages: entries }).map((p) => p.folder)).toEqual(['OpenDash Porsche 1280x480']);
+    expect(sitePackages({ packages: entries }).map((p) => p.folder)).toEqual(['OpenDash 1280x480']);
+  });
+});
+
+describe('the LED profile count', () => {
+  test('is the manifest’s when there is one, and the shapes plus the flag box when there is not', () => {
+    expect(ledProfileCount({ ledProfiles: ['a', 'b', 'c'] }, ALL_SHAPES)).toBe(3);
+    expect(ledProfileCount(null, ALL_SHAPES)).toBe(ALL_SHAPES.length + 1);
+    if (manifest) expect(ledProfileCount(manifest, ALL_SHAPES)).toBe(ALL_SHAPES.length + 1);
   });
 });

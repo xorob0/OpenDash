@@ -2,8 +2,9 @@
  * The comparison: one row per feature, one column per product. On a wide screen a table; on a
  * phone the same rows stacked, each cell labelled with its product, so nothing scrolls sideways.
  */
-import { PRODUCTS, ROWS } from '../lib/compare';
+import { PRODUCTS, rows } from '../lib/compare';
 import { VERSION } from '../lib/content.generated';
+import { COUNTS } from '../lib/liveCounts';
 import { Mark } from './Mark';
 import styles from './CompareTable.module.css';
 
@@ -25,7 +26,7 @@ export function CompareTable() {
           </tr>
         </thead>
         <tbody>
-          {ROWS.map((row) => (
+          {rows(COUNTS).map((row) => (
             <tr key={row.id} className={styles.row}>
               <th scope="row" className={styles.feature}>
                 {row.label}

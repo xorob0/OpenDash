@@ -8,12 +8,13 @@ import { Priority } from '../../components/Priority';
 import { Section } from '../../components/Section';
 import { StripGrid } from '../../components/StripGrid';
 import { STRIP_SHAPES } from '../../lib/content.generated';
+import { COUNTS } from '../../lib/liveCounts';
 import { INSTALL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Lights: the car’s own shift lights',
-  description: '62 strip shapes and an 8 × 8 flag box. Shift lights in your car’s own colours and order, and the sides for flags, the spotter and warnings.',
+  description: `${COUNTS.stripShapes} strip shapes and an 8 × 8 flag box. Shift lights in your car’s own colours and order, and the sides for flags, the spotter and warnings.`,
 };
 
 /** The states the examples show, drawn by the site. */
@@ -77,7 +78,7 @@ export default function Lights() {
       <Section
         id="flag-box"
         title="The flag box"
-        lede="An 8 × 8 WS2812b matrix on an Arduino, beside the screen. 69 glyphs, one at a time, in priority order: the flag that is out, the pit state, the warnings, then the gear."
+        lede={`An 8 × 8 WS2812b matrix on an Arduino, beside the screen. ${COUNTS.glyphs} glyphs, one at a time, in priority order: the flag that is out, the pit state, the warnings, then the gear.`}
       >
         <div className={styles.box}>
           <figure className={styles.sheet}>

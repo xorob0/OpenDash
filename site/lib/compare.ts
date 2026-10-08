@@ -7,7 +7,15 @@
  * the issue it is scheduled under) and what is not built, with the scope line where one exists. No
  * competitor image appears anywhere; the comparison is words and OpenDash's own captures.
  */
-import { FREE_FOREVER, NOTHING_TO_UNLOCK } from './site';
+import type { Counts } from './counts';
+import { FREE_FOREVER, NOTHING_TO_UNLOCK, THEMES_FREE } from './site';
+
+/**
+ * The date every competitor cell was last read against its product's own pages. The table prints
+ * it, so that a reader knows how old a line about Lovely or DNR is; a cell changed after this date
+ * moves it.
+ */
+export const CHECKED_ON = '2026-09-22';
 
 export type ProductId = 'opendash' | 'lovely' | 'dnr';
 
@@ -45,7 +53,11 @@ export const PRODUCTS: Product[] = [
 const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built' };
 const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
 
-export const ROWS: CompareRow[] = [
+/**
+ * The rows, as a function of the build's counts so that a number in a cell is read and not retyped
+ * (#560). The pages call `rows(COUNTS)`; the tests call it with counts of their own.
+ */
+export const rows = (c: Counts): CompareRow[] => [
   {
     id: 'sims',
     label: 'Sims',
@@ -59,7 +71,7 @@ export const ROWS: CompareRow[] = [
     id: 'price',
     label: 'Price',
     cells: {
-      opendash: cell('yes', `${FREE_FOREVER} ${NOTHING_TO_UNLOCK}`, { word: 'Free' }),
+      opendash: cell('yes', `${FREE_FOREVER} ${THEMES_FREE} ${NOTHING_TO_UNLOCK}`, { word: 'Free' }),
       lovely: cell('paid', 'The free tier caps you at 3 modules a side and has no pit wall. €1 a month lifts the cap, €3 adds the pit wall, €9 adds the partner LED app. Tax included.'),
       dnr: cell('paid', 'The dashboards are free the way they ship. Changing any setting starts at £3 a month, then £6 and £9, all before VAT.'),
     },
@@ -86,7 +98,7 @@ export const ROWS: CompareRow[] = [
     id: 'sizes',
     label: 'Screen sizes',
     cells: {
-      opendash: cell('yes', '10 faces: 1920 × 480, 1280 × 720, 1280 × 480, 1280 × 400, 850 × 480, 800 × 480, 800 × 286, 600 × 686, 800 round, 480 round.'),
+      opendash: cell('yes', `${c.faces} faces: 1920 × 480, 1280 × 720, 1280 × 480, 1280 × 400, 850 × 480, 800 × 480, 800 × 286, 600 × 686, 800 round, 480 round.`),
       lovely: cell('yes', '850 × 480, 1280 × 480, 1280 × 400, 1920 × 480, 800 × 286, 600 × 686, plus round and square.'),
       dnr: cell('yes', '800 × 480, 1280 × 400, 1920 × 480, 1920 × 720 and 1920 × 1080, across 7 dashboards.'),
     },
@@ -106,7 +118,7 @@ export const ROWS: CompareRow[] = [
     id: 'companion',
     label: 'Second screen',
     cells: {
-      opendash: cell('yes', '850 × 480 and 480 × 850, 21 pages.'),
+      opendash: cell('yes', `850 × 480 and 480 × 850, ${c.pages} pages.`),
       lovely: cell('yes', 'A companion, landscape and portrait, free.'),
       dnr: cell('yes', 'Co-Pilot, 14 panels. Choosing which ones appear costs £3 a month.'),
     },
@@ -115,7 +127,7 @@ export const ROWS: CompareRow[] = [
     id: 'pitWall',
     label: 'Pit wall',
     cells: {
-      opendash: cell('yes', '1920 × 1080 with 3 pages, and 1080 × 1920.'),
+      opendash: cell('yes', `1920 × 1080 with ${c.pitWallPages} pages, and 1080 × 1920.`),
       lovely: cell('paid', 'Lovely Pit Wall, on the €3 tier and up.'),
       dnr: cell('yes', 'Race Control, free: the field, a track map and traces.'),
     },
@@ -124,7 +136,7 @@ export const ROWS: CompareRow[] = [
     id: 'leds',
     label: 'LED profiles and per-car shift lights',
     cells: {
-      opendash: cell('yes', '62 strip shapes, and the car’s own lights from the open Lovely car data, fetched by the plugin.', { word: 'Free' }),
+      opendash: cell('yes', `${c.stripShapes} strip shapes, and the car’s own lights from the open Lovely car data, fetched by the plugin.`, { word: 'Free' }),
       lovely: cell('partial', 'Lovely dropped its own LED profiles in 2023. Per-car shift lights come from ATSR, a separate app, free only on the €9 tier.', { word: 'Third party' }),
       dnr: cell('paid', 'Every profile needs a membership, from £3 a month. Shift points measured for over 600 cars.'),
     },
@@ -133,7 +145,7 @@ export const ROWS: CompareRow[] = [
     id: 'flagBox',
     label: 'Flag box, 8 × 8 matrix',
     cells: {
-      opendash: cell('yes', '69 glyphs, generated. Flags, pit states, warnings, the gear and the spotter.', { word: 'Free' }),
+      opendash: cell('yes', `${c.glyphs} glyphs, generated. Flags, pit states, warnings, the gear and the spotter.`, { word: 'Free' }),
       lovely: cell('no', 'Nothing in the dashboards or the plugin drives a matrix.'),
       dnr: cell('paid', 'An 8 × 8 box and the SimRep panel, on the £6 tier.'),
     },
@@ -151,7 +163,7 @@ export const ROWS: CompareRow[] = [
     id: 'alerts',
     label: 'Alerts and pop-ups',
     cells: {
-      opendash: cell('yes', '15 flags on the band, pit alerts over the gear, pop-ups for lap times and setting changes.'),
+      opendash: cell('yes', `${c.flags} flags on the band, pit alerts over the gear, pop-ups for lap times and setting changes.`),
       lovely: cell('yes', 'Weather, damage, setup changes, a lap review and a pit-now warning.'),
       dnr: cell('yes', 'Flags, car state and setting changes, in 3 sizes. Choosing the size costs £3 a month.'),
     },
@@ -185,9 +197,22 @@ export const ROWS: CompareRow[] = [
   },
   {
     id: 'themes',
-    label: 'Themes and colours',
+    label: 'Car themes',
     cells: {
-      opendash: cell('soon', '', { issues: [127, 735] }),
+      opendash: cell(
+        'yes',
+        'A Porsche face drawn like the 992’s own display, at every rectangular size, which SimHub switches to when you drive one. More display families follow by ticket.',
+        { word: 'Free' },
+      ),
+      lovely: cell('partial', 'Your car’s logo on the dash, fetched per car. No face drawn like the car’s own display.', { word: 'Logo' }),
+      dnr: cell('partial', 'Not read against their pages yet.', { word: 'Not checked' }),
+    },
+  },
+  {
+    id: 'colours',
+    label: 'Your own colours',
+    cells: {
+      opendash: cell('soon', 'Every colour comes from one token file today. Your own, chosen in the panel, are coming.', { issues: [127, 735] }),
       lovely: cell('yes', '5 colour themes, free, plus your name, number and logo.'),
       dnr: cell('paid', 'Themes, gauges and colours, from £3 a month.'),
     },
@@ -214,7 +239,10 @@ export const ROWS: CompareRow[] = [
     id: 'overlay',
     label: 'Stream overlay',
     cells: {
-      opendash: cell('notBuilt', 'Nobody has asked for one.', { scope: 'the stream overlay is neither built nor refused; nobody has asked for it.' }),
+      opendash: cell('no', 'A face for a viewer on the other side of a broadcast is a different product, and is refused rather than left open.', {
+        word: 'Refused',
+        scope: 'the stream overlay: a different reading distance, a different set of readings, and an audience that is not holding a wheel.',
+      }),
       lovely: cell('yes', 'Lovely Overlay and Lovely Tower, free.'),
       dnr: cell('paid', '5 overlays, on the £6 tier.'),
     },
@@ -223,7 +251,7 @@ export const ROWS: CompareRow[] = [
     id: 'invisible',
     label: 'Invisible dash',
     cells: {
-      opendash: cell('notBuilt', 'A see-through dash over the game is an overlay, and nobody has asked for one.'),
+      opendash: cell('no', 'A see-through dash over the game is an overlay, and refused with it.', { word: 'Refused', scope: 'the invisible dash: a screen capture item drawn behind the face.' }),
       lovely: cell('no', 'Nothing of the kind ships.'),
       dnr: cell('yes', 'Invisible: the sim drawn through your own dash screen, on a hotkey. Free.'),
     },
@@ -276,4 +304,4 @@ export const ROWS: CompareRow[] = [
 ];
 
 /** The coming-soon rows, for the list under the table. */
-export const SCHEDULED = ROWS.filter((r) => r.cells.opendash.mark === 'soon');
+export const scheduled = (c: Counts): CompareRow[] => rows(c).filter((r) => r.cells.opendash.mark === 'soon');
