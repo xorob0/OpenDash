@@ -1,0 +1,15 @@
+{
+  // The pit lane above its limit: the limiter on, the car rolling down the lane at 66.6 km/h against
+  // the session's 60, out of the stall and in second gear. This is the red limiter body of the
+  // Porsche theme (#205), which the pit stall cannot show because the car is stationary there; the
+  // fuel stays at pit.json's 8.6 litres, so the low fuel alarm is out beside it.
+  "extends": "pit.json",
+  "name": "Down the pit lane above the limit, limiter on",
+  "variables": [
+    {"name": "PlayerCarInPitStall", "value": false, "pin": true},
+    {"name": "PitstopActive", "value": false, "pin": true},
+    {"name": "Speed", "value": 18.5, "pin": true},
+    {"name": "RPM", "value": 4200.0, "pin": true},
+    {"name": "Gear", "value": 2, "pin": true}
+  ]
+}

@@ -13,9 +13,7 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
 import {
-  BAND_D_PAGES,
   FACE_ZONE_LETTERS,
-  ZONE_A_PAGES,
   pagesForZone,
   zone as zoneSetting,
   zoneClassOnlyOnPage,
@@ -35,6 +33,7 @@ import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 import { bandCorners, bandPageItems, bandPageRoom } from './bandPages.ts';
 import { zoneAPage } from './zoneAPages.ts';
+import type { ThemeDrawing } from '../themes/drawing.ts';
 
 /** Which catalogue a zone dashboard carries. A and D have their own; B and C share the modules. */
 export type ZoneKind = 'zoneA' | 'module' | 'band';
@@ -59,15 +58,16 @@ export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zonefa
  * say which page is showing. Zone A carries none: it is the gear, and 22 px of the column it is
  * sized to is too much to spend saying so. What zone A does instead is #154.
  */
-export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false): Screen {
+export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZonePageMeta, size: Size, corners = false, drawing: ThemeDrawing = {}): Screen {
   const frame = rect(0, 0, size.width, size.height);
   const zone = zones[0];
+  const ground = drawing.zoneGround?.(zone) ?? groundOf(zone);
 
   let items: Item[];
 
   if (zone === 'A') {
     // No header: see the comment on zoneAPages.
-    items = zoneAPage(page.id, frame, `${page.id}.`);
+    items = zoneAPage(page.id, frame, `${page.id}.`, drawing.gearGhosts ?? true);
   } else if (zone === 'D') {
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
@@ -77,7 +77,12 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     // nobody: on a page of three gaps "my class only" is the car ahead in class rather than a
     // shorter list, which is the whole of #210.
     items = [
-      ...withBandSessionNotice(page, frame, corners, bandPageItems(page.id, frame, `${page.id}.`, corners, zoneClassOnlyOnPage(face, zones, page.number))),
+      ...withBandSessionNotice(
+        page,
+        frame,
+        corners,
+        (drawing.bandPage ?? ((id, at, prefix, classOnly) => bandPageItems(id, at, prefix, corners, classOnly)))(page.id, frame, `${page.id}.`, zoneClassOnlyOnPage(face, zones, page.number)),
+      ),
       ...(corners ? bandCorners(frame, `${page.id}.corner.`) : []),
     ];
   } else {
@@ -96,13 +101,26 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
       density,
       'face',
     );
+    const themed = drawing.moduleFrame?.(page, frame, body);
+    const at = themed?.body ?? body;
     items = [
-      ...chrome,
-      ...pageBuilder(page.id)({ frame: body, density, prefix: `${page.id}.`, shape: shapeOf(body), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
+      ...(themed ? themed.items : chrome),
+      ...pageBuilder(page.id)({ frame: at, density, prefix: `${page.id}.`, shape: shapeOf(at), classOnly: zoneClassOnlyOnPage(face, zones, page.number) }),
     ];
   }
 
-  return pageScreen(page.id, items, groundOf(zone));
+  return pageScreen(page.id, items, ground);
+}
+
+/**
+ * The body a module page is drawn in, in a zone dashboard of `size`: what the house's zone frame cuts
+ * under its header, or what a theme's `moduleFrame` gives the page instead. The conformance harness
+ * holds every page to it, so it is the one answer to where a page may draw.
+ */
+export function moduleBodyOf(page: { id: string; name: string }, size: Size, drawing: ThemeDrawing = {}): Rect {
+  const frame = rect(0, 0, size.width, size.height);
+  const { body } = zoneFrame('probe', { frame, title: page.name, counter: { kind: 'reserved', widest: '21 / 21' } }, densityForBox(size), 'face');
+  return drawing.moduleFrame?.(page, frame, body).body ?? body;
 }
 
 /**
@@ -142,18 +160,28 @@ function withBandSessionNotice(page: FaceZonePageMeta, frame: Rect, corners: boo
  */
 const groundOf = (zone: FaceZone): `#${string}` => (zone === 'D' ? ds.purpose.block.well : ds.color.surface.base);
 
-/** A zone dashboard: every page of its catalogue, in the order the plugin lists them. */
-export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false): Dashboard {
+/**
+ * A zone dashboard: every page of its catalogue, in the order the plugin lists them, and after
+ * band D's the pages a theme adds to it, which go at the end so that no page leaves its index.
+ */
+export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false, drawing: ThemeDrawing = {}): Dashboard {
   const zone = zones[0];
   const pages = pagesForZone(zone);
   const kind = kindOf(zone);
+  const ground = drawing.zoneGround?.(zone) ?? groundOf(zone);
+  const frame = rect(0, 0, size.width, size.height);
+  const added = zone === 'D' ? (drawing.bandPages ?? []) : [];
+  const screens = [
+    ...pages.map((page) => zonePageScreen(face, zones, page, size, corners, drawing)),
+    ...added.map((page) => pageScreen(page.id, [...page.items(frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])], ground)),
+  ];
   return pagedDashboard({
     name: zoneDashboardName(kind, size),
     size,
-    screens: pages.map((page) => zonePageScreen(face, zones, page, size, corners)),
+    screens,
     metadata,
-    description: `${kind === 'zoneA' ? ZONE_A_PAGES.length : kind === 'band' ? BAND_D_PAGES.length : pages.length} pages drawn for a ${size.width} x ${size.height} zone.`,
-    background: groundOf(zone),
+    description: `${screens.length} pages drawn for a ${size.width} x ${size.height} zone.`,
+    background: ground,
   });
 }
 
@@ -177,7 +205,7 @@ export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: 
  * which zones read it: a page that filters to the player's class asks whether *the zone showing it*
  * was set to, and answering that with the wrong letter would have zone B follow zone C's setting.
  */
-export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZone; size: Size; corners?: boolean }[], metadata: DashboardMetadata): Dashboard[] {
+export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZone; size: Size; corners?: boolean }[], metadata: DashboardMetadata, drawing: ThemeDrawing = {}): Dashboard[] {
   const groups = new Map<string, { zones: [FaceZone, ...FaceZone[]]; size: Size; corners: boolean }>();
   for (const { zone, size, corners } of zones) {
     const key = zoneDashboardName(kindOf(zone), size);
@@ -188,7 +216,7 @@ export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZo
     }
     groups.set(key, { zones: [zone], size, corners: corners ?? false });
   }
-  return [...groups.values()].map((g) => zoneDashboard(face, g.zones, g.size, metadata, g.corners));
+  return [...groups.values()].map((g) => zoneDashboard(face, g.zones, g.size, metadata, g.corners, drawing));
 }
 
 /**

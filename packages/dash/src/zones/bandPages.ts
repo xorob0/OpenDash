@@ -25,7 +25,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, monoWidth, textBox, type Chars } from '../design/metrics.ts';
+import { cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -360,7 +360,7 @@ const relativePosition = (idx: string): string => positionLabelled(idx);
  *
  * The middle field is untouched under any filter: a driver is in his own class by construction.
  */
-const relativeFields = (classOnly?: Expr): readonly BandField[] => [
+export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
   {
     id: 'ahead',
     label: 'P3',
@@ -786,7 +786,7 @@ function inlineMembers(fields: readonly BandField[], page: InlinePage, prefix: s
       // The position is set in the value's face at the value's size, so it is measured there and
       // not in the label's: a position is proportional rather than cellular, because "P" is wider
       // than any digit and a cell cut for digits would clip it.
-      const head = Math.ceil(measureText('BarlowCondensedSemiBold', field.labelWidest ?? field.label, valueFs)) + 2;
+      const head = Math.ceil(measureText(DATA_FACE.SemiBold, field.labelWidest ?? field.label, valueFs)) + 2;
       const value = valueWidthOf(field, valueFs);
       return {
         id: field.id,

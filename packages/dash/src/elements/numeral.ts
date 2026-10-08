@@ -10,8 +10,8 @@
  */
 import type { HAlign, Hex, Monospace, TextItem } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
-import { measureText, type MeasuredFace } from '../design/advances.ts';
-import { boxSlack, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { measureText } from '../design/advances.ts';
+import { boxSlack, cells, DATA_FACE, DATA_FONT_WEIGHT, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
@@ -49,9 +49,6 @@ export interface NumeralOptions {
   leftBind?: Expr;
 }
 
-/** The measured face a data weight is set in, for a value drawn proportionally. */
-const DATA_FACE: Record<DataWeight, MeasuredFace> = { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
-
 /** A numeral whose canvas line box is (y, fs) at x, sized for `chars`. */
 export function numeral(name: string, sample: string, x: number, y: number, fs: number, chars: Chars, opts: NumeralOptions = {}): TextItem {
   const weight = opts.weight ?? 'SemiBold';
@@ -78,7 +75,7 @@ export function numeral(name: string, sample: string, x: number, y: number, fs: 
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
     text: sample,
     font: ds.font.data,
-    fontWeight: weight,
+    fontWeight: DATA_FONT_WEIGHT[weight],
     fontSize: fs,
     textColor: opts.color ?? ds.color.text.primary,
     hAlign: opts.hAlign ?? 'left',

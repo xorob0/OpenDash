@@ -10,6 +10,7 @@ import type { Size } from '../design/geometry.ts';
 import { THEME_ID } from '../tokens.ts';
 import { ZONE_FACES, buildZoneFace, type BuiltFace, type FaceBuildOptions, type ZoneLayout } from '../zones/index.ts';
 import { checkRegions, type Regions } from './anatomy.ts';
+import { THEME_DRAWINGS } from './drawings.ts';
 import { THEME_ENV, THEMES, type Theme } from './index.ts';
 
 export interface ThemeFace {
@@ -59,10 +60,12 @@ export function buildThemeFace(themeId: string, size: Size, opts: FaceBuildOptio
   }
   const house = ZONE_FACES.find((f) => f.width === size.width && f.height === size.height);
   if (!house) throw new Error(`the ${themeId} theme claims ${named(size)}, which is not a face that ships`);
-  const layout = folder === undefined ? house : { ...house, folder };
+  const drawing = THEME_DRAWINGS[themeId] ?? {};
+  const titled = folder === undefined ? house : { ...house, folder };
+  const layout = drawing.bandCorners === undefined ? titled : { ...titled, bandCorners: drawing.bandCorners };
   const regions = anatomy.regions(layout);
   checkRegions(regions, size, `the ${themeId} theme at ${named(size)}`);
-  return { layout, regions, built: buildZoneFace(layout, opts, regions) };
+  return { layout, regions, built: buildZoneFace(layout, opts, regions, drawing) };
 }
 
 /** Every face of a theme, one per size it claims, in the order it claims them. */

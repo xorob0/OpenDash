@@ -10,7 +10,7 @@
 import type { TextItem } from '../generator.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { ds } from '../tokens.ts';
+import { BASE_TREE, ds, resolveTokenIn } from '../tokens.ts';
 
 /**
  * Ink width of the mark at a font size: the two halves measured in the two weights they are drawn
@@ -36,6 +36,12 @@ export interface WordmarkOptions {
   maxWidth?: number;
 }
 
+/**
+ * The wordmark is openDash's own, so it is set in the house's display face whatever a car theme sets
+ * its numerals in: the base token rather than `ds.font.data`, which a theme may point elsewhere.
+ */
+const WORDMARK_FAMILY = String(resolveTokenIn(BASE_TREE, 'font.family.data'));
+
 /** The wordmark, in the two weights the brand uses. Barlow Condensed Light and Bold are bundled. */
 export function wordmark(name: string, x: number, top: number, fs: number, opts: WordmarkOptions = {}): { items: TextItem[]; width: number } {
   // Each half is measured in its own weight: "Dash" set in Bold is wider than the same letters in
@@ -55,7 +61,7 @@ export function wordmark(name: string, x: number, top: number, fs: number, opts:
     const wanted = Math.ceil(width * 1.25) + 4;
     return limit === undefined ? wanted : Math.max(width, Math.min(wanted, limit - left));
   };
-  const common = { font: ds.font.data, fontSize: fs, textColor: ds.color.text.primary, hAlign: 'left', vAlign: 'top', backgroundColor: '#00FFFFFF' } as const;
+  const common = { font: WORDMARK_FAMILY, fontSize: fs, textColor: ds.color.text.primary, hAlign: 'left', vAlign: 'top', backgroundColor: '#00FFFFFF' } as const;
   const boxTop = Math.round(top - 0.1 * fs);
   const height = Math.ceil(1.2 * fs) + 1;
   return {

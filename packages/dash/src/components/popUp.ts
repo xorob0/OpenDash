@@ -33,7 +33,7 @@ import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
-import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -119,7 +119,7 @@ const labelText = (spec: PopUpLabel): string => (spec.bind ? (spec.widest ?? spe
 
 /** Width of a run at a size: its cells when it has a budget, its measured advances otherwise. */
 const runWidth = (text: PopUpText, fs: number): number =>
-  text.chars ? monoWidth(cells('SemiBold', fs), text.chars) : Math.ceil(measureText('BarlowCondensedSemiBold', text.widest ?? text.sample, fs));
+  text.chars ? monoWidth(cells('SemiBold', fs), text.chars) : Math.ceil(measureText(DATA_FACE.SemiBold, text.widest ?? text.sample, fs));
 
 /** The room the two runs share. */
 const innerWidth = (): number => POP_UP_WIDTH - 2 * POP_UP_PAD_X;

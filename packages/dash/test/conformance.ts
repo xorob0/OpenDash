@@ -17,13 +17,14 @@ import type { Dashboard, Item, TextItem, WidgetItem } from '../src/generator.ts'
 import { pageBuilder } from '../src/modules/index.ts';
 import { PARTS, SHEDDING, archetypeFor, type Archetype } from '../src/modules/shedding.ts';
 import { densityForBox } from '../src/second/density.ts';
-import { zoneFrame } from '../src/second/header.ts';
 import { shapeOf } from '../src/second/shape.ts';
 import type { ThemeFace } from '../src/themes/faces.ts';
 import { themesWithCode, touchedThemes, type Selection } from '../src/themes/touched.ts';
 import { walkItems } from '../src/walk.ts';
 import { BAND_PAGES, bandPageItems } from '../src/zones/bandPages.ts';
 import { FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR } from '../src/zones/index.ts';
+import { moduleBodyOf } from '../src/zones/pages.ts';
+import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 /** Set to `full` to check every theme the build knows, whatever the branch touched. */
@@ -98,12 +99,11 @@ const MODULE_DASHBOARD = /^zoneface-module-/;
 
 /**
  * The body a module page is drawn in, in a zone dashboard of this size: what `zonePageScreen` cuts
- * from the frame under the zone's header. Neither the title nor the counter moves it.
+ * from the frame under the zone's header, or what the theme's drawing gives the page instead, read
+ * from the same function the face is built with. Neither the title nor the counter moves it.
  */
-function moduleBody(dashboard: Dashboard): Rect {
-  const size = { width: dashboard.width, height: dashboard.height };
-  return zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'reserved', widest: '21 / 21' } }, densityForBox(size), 'face').body;
-}
+const moduleBody = (themeId: string, dashboard: Dashboard, page: string): Rect =>
+  moduleBodyOf({ id: page, name: page }, { width: dashboard.width, height: dashboard.height }, THEME_DRAWINGS[themeId]);
 
 /**
  * Nothing escapes its frame: every item stays on the dashboard it is drawn on, and every item a
@@ -115,7 +115,7 @@ export function escaped(themeId: string, face: ThemeFace): string[] {
   const at = `${themeId} ${named(face)}`;
   const problems: string[] = [];
   for (const { dashboard, screen, items } of screensOf(face)) {
-    const body = MODULE_DASHBOARD.test(dashboard.name) ? moduleBody(dashboard) : undefined;
+    const body = MODULE_DASHBOARD.test(dashboard.name) ? moduleBody(themeId, dashboard, screen) : undefined;
     for (const item of items) {
       if (item.kind === 'layer') continue;
       const r = item.rect;
@@ -226,7 +226,7 @@ export function disappeared(themeId: string, face: ThemeFace): string[] {
       const page = screen.name;
       const drawn = namesUnder(screen.items, `${page}.`);
       if (MODULE_DASHBOARD.test(dashboard.name) && SHEDDING[page]) {
-        const body = moduleBody(dashboard);
+        const body = moduleBody(themeId, dashboard, page);
         const density = densityForBox(dashboard);
         const archetype = archetypeFor(page, shapeOf(body), body);
         const alone = namesUnder(pageBuilder(page)({ frame: body, density, prefix: `${page}.`, shape: shapeOf(body) }), `${page}.`);

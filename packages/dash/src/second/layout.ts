@@ -10,6 +10,7 @@
 import type { Item, Rect } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
 import { densityOf, type Density } from './density.ts';
+import { moduleRegister } from '../themes/moduleRegister.ts';
 
 /**
  * One row of a module: how tall it is, and how it draws itself once its bottom edge is known.
@@ -216,6 +217,9 @@ export function stack(frame: Rect, rows: readonly StackRow[], density: Density, 
   const step = gap ?? densityOf(density).gapY;
   // A row of no height is a rank the page shed entirely. It is dropped rather than drawn, so the
   // rows under it move up instead of sitting below a gap with nothing above it.
+  // A theme with a register of its own lays the page out its own way; see `ModuleRegister`.
+  const register = moduleRegister();
+  if (register) return register.stack(frame, rows, density);
   const live = rows.filter((row) => row.height > 0);
   const kept = rowsThatFit(filled(live, frame.height, step), frame.height, step, shedOrder);
   const total = stackHeight(kept, step);

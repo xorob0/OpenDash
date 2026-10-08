@@ -198,7 +198,9 @@ const liftedBy = (r: Rect, by: number): Rect => ({ ...r, top: r.top - by });
  * and grow by what they gained, and everything else stays exactly where the anatomy put it. Band D
  * does not move, because it is measured from the bottom edge and the bottom edge has not changed;
  * the pit alert moves with the zone it is drawn over, which is the zone holding its top left corner.
- * The hero and the flag's body are body regions like the zones, so they grow when they start it.
+ * The hero and the flag's body are body regions like the zones, so they grow when they start it,
+ * and a region that encloses the zones from above starts it too: the Porsche's flag body is the
+ * panels the zones are inset in, four pixels above the zones' own top.
  *
  * In landscape B, A and C all start the body, so all three grow. In portrait only zone A does, and
  * B and C keep both their rectangles and their zone dashboards -- which is why a portrait package
@@ -207,7 +209,7 @@ const liftedBy = (r: Rect, by: number): Rect => ({ ...r, top: r.top - by });
 export function regionsWithoutRevBar(regions: Regions): Regions {
   const reclaim = reclaimOf(regions);
   const top = bodyTop(regions);
-  const grown = (r: Rect): Rect => (r.top === top ? { ...r, top: r.top - reclaim, height: r.height + reclaim } : r);
+  const grown = (r: Rect): Rect => (r.top <= top ? { ...r, top: r.top - reclaim, height: r.height + reclaim } : r);
   const pitAlert = regionRect(regions, 'pitAlert');
   const under = regions.find((r) => r.role === 'zone' && contains(r.rect, pitAlert.left, pitAlert.top));
   const pitAlertLift = under && under.rect.top === top ? reclaim : 0;

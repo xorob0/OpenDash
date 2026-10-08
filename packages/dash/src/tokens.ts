@@ -17,6 +17,15 @@ const HEX6 = /^#[0-9A-F]{6}$/;
 /** The colour layers. A size, a spacing or a font is the anatomy's to change, not an overlay's. */
 const OVERLAY_LAYERS: readonly string[] = ['palette', 'color', 'purpose'];
 
+/**
+ * The one exception to the colour layers: the face the numerals are set in and the cells they are
+ * laid in, which go together or not at all, since a cell is measured from its face. ADR 0015 lets a
+ * theme change the type within what the packages carry and `design/advances.ts` measures, and the
+ * Porsche's display is not condensed (#205). Which weights a family is drawn in is
+ * `DATA_FONT_WEIGHT` in `design/metrics.ts`.
+ */
+const DATA_FACE_TOKENS: readonly string[] = ['font.family.data', 'font.cell.semiBold.digit', 'font.cell.semiBold.special', 'font.cell.bold.digit', 'font.cell.bold.special', 'font.cell.gear'];
+
 const isObject = (v: unknown): v is Tree => v !== null && typeof v === 'object';
 
 /** SimHub's transparent colour. Not a token: it is the absence of one. */
@@ -88,7 +97,7 @@ export function applyOverlay(base: Tree, overlay: Overlay, themeId: string): Tre
       parent[path.slice(dot + 1)] = structuredClone(token);
       continue;
     }
-    if (!OVERLAY_LAYERS.includes(path.split('.')[0] ?? '')) throw new Error(`tokens: an overlay writes ${OVERLAY_LAYERS.join(', ')} only, not ${path}`);
+    if (!OVERLAY_LAYERS.includes(path.split('.')[0] ?? '') && !DATA_FACE_TOKENS.includes(path)) throw new Error(`tokens: an overlay writes ${OVERLAY_LAYERS.join(', ')} only, not ${path}`);
     const node = tokenNodeIn(merged, path);
     if (!isObject(node) || !('value' in node)) throw new Error(`tokens: the overlay overrides ${path}, which tokens.json does not define as a token`);
     node.value = token.value;

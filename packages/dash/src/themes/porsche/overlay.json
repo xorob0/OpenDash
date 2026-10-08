@@ -1,0 +1,39 @@
+{
+  "palette": {
+    "porsche": {
+      "panel": { "value": "#4A4E53", "description": "The car's container grey: the readings panels, the lap pill and the brake bias cell." },
+      "tile": { "value": "#16181B", "description": "Behind the speed and the gear, and the small value cells inside a grey cell." },
+      "inset": { "value": "#0F1113", "description": "The dark value boxes inside a grey panel, which every reading of a module and of band D sits in." },
+      "edge": { "value": "{palette.grey.100}", "description": "The light border of the speed box and the gear tile." },
+      "divider": { "value": "#6B7079", "description": "The lines inside the tyre box's grid." },
+      "badge": { "value": "{palette.grey.200}", "description": "The outline of the place the car's crest would take, which stays empty." },
+      "compound": { "value": "#33D9F2", "description": "The car's teal around the track state. It is the value of the brand cyan and it is the car's colour rather than openDash's, which is why themes.test.ts admits it by name." }
+    }
+  },
+  "color": {
+    "text": {
+      "label": { "value": "{palette.grey.50}" }
+    }
+  },
+  "font": {
+    "family": {
+      "data": { "value": "{font.family.label}", "note": "The 992 display is set in a plain humanist sans at normal width, so the numerals are Barlow like the labels, in Medium (#205)." }
+    },
+    "cell": {
+      "semiBold": {
+        "digit": { "value": 0.63, "note": "Barlow Medium: the widest digit is the 4 at 0.570 em and the O of OFF is 0.622, which the cell holds as the house cell holds the condensed O." },
+        "special": { "value": 0.35, "note": "Barlow Medium: the colon is 0.348 em." }
+      },
+      "bold": {
+        "digit": { "value": 0.63, "note": "The same face as semiBold, since this theme draws both data weights in Medium." },
+        "special": { "value": 0.35 }
+      },
+      "gear": { "value": 0.68, "note": "Barlow Medium: the N is 0.673 em." }
+    }
+  },
+  "purpose": {
+    "shift": {
+      "stage2": { "value": "{palette.yellow.200}" }
+    }
+  }
+}

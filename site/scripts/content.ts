@@ -74,6 +74,13 @@ export interface SitePackage {
  */
 export const SUPERSEDED = /^OpenDash slots /;
 
+/**
+ * The packages the site shows: not the card faces, and not a car theme's, which a fresh install
+ * never writes (ADR 0016) and which the site has no photograph of. The manifest names a themed
+ * package's theme and leaves the field out on everything else.
+ */
+export const onSite = (p: ManifestEntry): boolean => !SUPERSEDED.test(p.folder) && p.theme === undefined;
+
 /** The manifest's own shape, of which the site uses these fields. */
 export interface ManifestEntry {
   folder: string;
@@ -81,6 +88,7 @@ export interface ManifestEntry {
   width: number;
   height: number;
   file: string;
+  theme?: string;
 }
 
 export interface Manifest {
@@ -121,7 +129,7 @@ export function readBuildManifest(repoRoot: string, warn: (message: string) => v
 
 export function sitePackages(manifest: { packages: ManifestEntry[] }): SitePackage[] {
   return manifest.packages
-    .filter((p) => !SUPERSEDED.test(p.folder))
+    .filter(onSite)
     .map(({ folder, kind, width, height }) => ({ folder, kind, width, height, round: /round/.test(folder) }));
 }
 

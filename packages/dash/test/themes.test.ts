@@ -91,7 +91,8 @@ describe('the theme a process builds', () => {
     expect(selectedThemeId({})).toBe(DEFAULT_THEME_ID);
     expect(selectedThemeId({ [THEME_ENV]: '' })).toBe(DEFAULT_THEME_ID);
     expect(selectedThemeId({ [THEME_ENV]: 'default' })).toBe(DEFAULT_THEME_ID);
-    expect(() => selectedThemeId({ [THEME_ENV]: 'porsche' })).toThrow(/is not a theme/);
+    expect(selectedThemeId({ [THEME_ENV]: 'porsche' })).toBe('porsche');
+    expect(() => selectedThemeId({ [THEME_ENV]: 'ferrari' })).toThrow(/is not a theme/);
     expect(() => selectedThemeId({ [THEME_ENV]: 'toString' })).toThrow(/is not a theme/);
   });
 
@@ -150,8 +151,25 @@ describe('a theme that redefines one palette entry', () => {
   });
 });
 
+/**
+ * The colours a theme adds that are a brand value and are the car's all the same, by path, each with
+ * its reason. The brand cyan never appears on a face as openDash's; a car that draws the same teal
+ * draws it as its own, and naming the token here is what keeps that a decision rather than a leak.
+ */
+const CAR_COLOURS_AT_A_BRAND_VALUE: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  porsche: { 'palette.porsche.compound': "the 992 display's teal outline round DRY and WET (#205)" },
+};
+
 describe('every registered theme', () => {
   for (const [id, theme] of Object.entries({ ...THEMES, 'test-green': { overlay: greenTheme as Overlay } })) {
+    test(`${id}: a colour of its own is the brand cyan only where it is declared the car's`, () => {
+      const tree = applyOverlay(BASE_TREE, theme.overlay, id);
+      const brand = new Set(['100', '200', '300'].map((shade) => resolveTokenIn(BASE_TREE, `palette.cyan.${shade}`)));
+      const own = colourTokenPaths(tree).filter((at) => at.startsWith(`palette.${id}.`));
+      const atBrand = own.filter((at) => brand.has(resolveTokenIn(tree, at)));
+      expect(atBrand.sort()).toEqual(Object.keys(CAR_COLOURS_AT_A_BRAND_VALUE[id] ?? {}).sort());
+    });
+
     test(`${id}: no colour the face reads is the brand cyan`, () => {
       const tree = applyOverlay(BASE_TREE, theme.overlay, id);
       const brand = new Set([

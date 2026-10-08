@@ -38,6 +38,8 @@ The four shift RPMs, the redline and the forward-gear count are `{{placeholders}
 |---|---|
 | `nosession` | The game running with no session named, which is the state #406's notice is for: zones B and C and band D's fuel page read `… · Go into a session` while the rest of the face draws normally. It extends `green`, so it holds as still as a capture. |
 | `untimed` | A lap-counted race that publishes no session clock, which is what iRacing publishes for one. It is the scenario for the laps form of #387's fuel margin, for the session page counting laps rather than time, and for #439's `∞` where a clock would go. Also `green`'s held lap. |
+| `pitspeeding` | The pit lane above its limit: `pit`'s limiter on and its 8.6 litres, with the car out of the stall at 66.6 km/h in second gear against the session's 60. It is the over-the-limit case of the Porsche theme's limiter body (#205), which the stationary `pit` cannot reach. |
+| `settingchange` | `green`'s held lap with ABS stepped between 2 and 5 every two seconds, so the change notification is out at any moment a capture is taken. It is the capture of the Porsche theme's blue box in zone C (#205); `green`'s single step of TC at twenty seconds has closed by the time `bun run shots` has waited its two laps. |
 
 Neither has a committed trace; `UNTRACED_SCENARIOS` in [scripts/emulator.ts](../../../scripts/emulator.ts)
 says why, and `bun run record nosession untimed` is what removes them from that list.
