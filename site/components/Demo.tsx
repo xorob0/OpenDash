@@ -55,8 +55,8 @@ function panelFor(catalogue: PanelCatalogue, face: DemoFace): PanelState {
 async function loadFace(face: DemoFace): Promise<Loaded> {
   const library = new Map<string, SceneDashboard>();
   await Promise.all(
-    face.files.map(async ({ file }) => {
-      const response = await fetch(`${face.base}${encodeURIComponent(file)}`);
+    face.files.map(async ({ file, src }) => {
+      const response = await fetch(src);
       if (!response.ok) throw new Error(`${file} answered ${response.status}`);
       library.set(file, parseDashboard(await response.json(), file));
     }),

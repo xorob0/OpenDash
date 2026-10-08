@@ -240,7 +240,7 @@
 }
 
 .compact {
-  grid-template-columns: 4rem minmax(0, 1fr);
+  grid-template-columns: 5rem minmax(0, 1fr);
 }
 
 .fieldLabel {
@@ -375,4 +375,8 @@
 /* A companion pages on a tap of either half, as SimHub's simple touch mode does. */
 .tappable {
   cursor: pointer;
+}
+
+.zone > .fieldLabel {
+  font-size: var(--size-small);
 }

@@ -6,6 +6,8 @@
 /** One `.djson` the demo fetches, with what it weighs as served and as the build wrote it. */
 export interface DemoFile {
   readonly file: string;
+  /** Where it is served, under `public/`: as `.json`, so that the server compresses it. */
+  readonly src: string;
   /** Minified, as served from `public/demo/`. */
   readonly bytes: number;
   /** As the build wrote it, indented. */

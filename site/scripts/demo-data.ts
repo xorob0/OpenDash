@@ -13,9 +13,9 @@
  *
  * and writes
  *
- *   public/demo/<slug>/<file>.djson            minified, otherwise as built
+ *   public/demo/<slug>/<file>.djson.json       minified, otherwise as built
  *   public/demo/<slug>/images/<file>/<name>    each picture out of its sidecar
- *   public/demo/traces/<scenario>.ndjson
+ *   public/demo/traces/<scenario>.ndjson.txt   as committed
  *   lib/demo.generated.ts                      what was copied, and the panel's catalogue
  *
  * all of them gitignored. Every face of the default theme, every face of each car theme the build
@@ -123,6 +123,15 @@ export const COMPANION_TIMING: { readonly openOnWindowMs: number; readonly backW
   defaultStart: 0,
   defaultGlance: 12,
 };
+
+/**
+ * What the copies are served as. `next start` compresses a response only when its type is one it
+ * knows to be compressible, and a `.djson` or an `.ndjson` is served as `application/octet-stream`,
+ * which it is not: a companion went over the wire as 4.6 MB rather than 330 KB. A `.djson` is JSON
+ * and a trace is lines of text, so they are served as what they are.
+ */
+const SERVED_AS_JSON = '.json';
+const SERVED_AS_TEXT = '.txt';
 
 // ------------------------------------------------------------------------------------- faces
 
@@ -298,8 +307,8 @@ function copyFace(entry: Entry, prefixes: ReadonlyMap<string, string>): DemoFace
     const from = path.join(source, file);
     const document = readJson(from) as { Images?: { Name?: string; Extension?: string }[] };
     const text = JSON.stringify(document);
-    writeFileSync(path.join(target, file), text);
-    files.push({ file, bytes: Buffer.byteLength(text), builtBytes: statSync(from).size });
+    writeFileSync(path.join(target, `${file}${SERVED_AS_JSON}`), text);
+    files.push({ file, src: `/demo/${s}/${encodeURIComponent(file)}${SERVED_AS_JSON}`, bytes: Buffer.byteLength(text), builtBytes: statSync(from).size });
     const sidecar = `${from}.ressources`;
     if (!existsSync(sidecar) || !document.Images?.length) continue;
     const entries = unzip(readFileSync(sidecar));
@@ -349,11 +358,11 @@ function copyTrace(file: string): DemoTrace {
   const from = path.join(repoRoot, 'traces', file);
   const dir = path.join(outDir, 'traces');
   mkdirSync(dir, { recursive: true });
-  copyFileSync(from, path.join(dir, file));
+  copyFileSync(from, path.join(dir, `${file}${SERVED_AS_TEXT}`));
   const text = readFileSync(from, 'utf8');
   const header = parseHeader(text.slice(0, text.indexOf('\n')));
   return {
-    src: `/demo/traces/${encodeURIComponent(file)}`,
+    src: `/demo/traces/${encodeURIComponent(file)}${SERVED_AS_TEXT}`,
     scenario: header.scenario,
     frames: header.frames,
     hz: header.hz,
