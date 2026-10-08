@@ -1,9 +1,11 @@
 /**
  * The demo's scene parser against the `.djson` files the build writes (#395): every item is read
- * as a kind the renderer draws, every binding is kept with its expression, and the widgets a face
- * includes are all in its folder.
+ * as a kind the renderer draws, every binding is kept with its expression, the widgets a package
+ * includes are all in its folder, and every face and weight a text names is one the demo loads.
  */
 import { describe, expect, test } from 'bun:test';
+import { THEME_CATALOGUE } from '../../packages/dash/src/contract.ts';
+import { DEMO_FACES as DEMO_FONT_FACES, familyFor, WEIGHTS } from '../lib/demo/fonts.ts';
 import { itemsOf, parseDashboard, parsePaint, shortType, widgetFiles, SceneError } from '../lib/demo/scene.ts';
 import { builtFaces, HAS_BUILD } from './demoBuild.ts';
 
@@ -40,17 +42,48 @@ describe('a document that is not a dashboard', () => {
   });
 });
 
-describe('the built faces', () => {
+describe('the built packages', () => {
   const faces = builtFaces();
 
   test.if(!HAS_BUILD)('skipped: build/manifest.json is absent or stale, run bun run build at the repository root', () => {
     expect(HAS_BUILD).toBe(false);
   });
 
-  test.if(HAS_BUILD)('are the ten faces of the default look', () => {
-    expect(faces.length).toBe(10);
-    expect(faces.map((f) => f.folder)).toContain('OpenDash 850x480');
-    expect(faces.some((f) => /Porsche|slots|Companion|Pit wall/.test(f.folder))).toBe(false);
+  test.if(HAS_BUILD)('are the ten faces of the default look, the two companions and the two pit walls, and no superseded package', () => {
+    const of = (group: string) => faces.filter((f) => f.group === group).map((f) => f.folder);
+    expect(of('face').length).toBe(10);
+    expect(of('face')).toContain('OpenDash 850x480');
+    expect(of('companion')).toEqual(['OpenDash Companion', 'OpenDash Companion portrait']);
+    expect(of('pitwall')).toEqual(['OpenDash Pit wall', 'OpenDash Pit wall portrait']);
+    expect(faces.some((f) => /slots/.test(f.folder))).toBe(false);
+  });
+
+  // A plain `bun run build` writes the default theme alone; `--all-themes` writes the car themes too.
+  test.if(HAS_BUILD)('and every face of every car theme the build wrote, at each size the catalogue claims for it', () => {
+    for (const theme of THEME_CATALOGUE.filter((t) => t.id !== 'default')) {
+      const built = faces.filter((f) => f.group === 'theme' && f.theme === theme.id);
+      if (built.length === 0) continue;
+      expect(built.map((f) => `${f.width}x${f.height}`).sort()).toEqual(theme.sizes.map((s) => `${s.width}x${s.height}`).sort());
+    }
+  });
+
+  /**
+   * Every face and weight a built text names is one the demo loads, so that a run is drawn in the
+   * weight it was measured in and not in one the browser synthesises: the Porsche draws its numerals
+   * in Barlow Medium (`DATA_IN_LABEL_FAMILY` in packages/dash/src/design/metrics.ts), the house in the
+   * condensed display's SemiBold and Bold.
+   */
+  test.each(faces.map((f) => [f.folder, f] as const))('%s: every font and weight it names is one the demo loads', (_folder, face) => {
+    const missing = new Set<string>();
+    for (const json of face.raw.values()) {
+      for (const item of rawItems(json)) {
+        if (shortType(String(item.$type)) !== 'TextItem') continue;
+        const family = familyFor(String(item.Font ?? 'Segoe UI'));
+        const weight = WEIGHTS[String(item.FontWeight ?? 'Normal')];
+        if (!DEMO_FONT_FACES.some((f) => f.family === family && f.weight === weight)) missing.add(`${String(item.Font)} ${String(item.FontWeight)}`);
+      }
+    }
+    expect([...missing]).toEqual([]);
   });
 
   test.each(faces.map((f) => [f.folder, f] as const))('%s: every item is kept, as a kind the renderer draws', (_folder, face) => {

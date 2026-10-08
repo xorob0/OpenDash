@@ -1,5 +1,5 @@
 /**
- * The built faces, read the way the demo reads them, for the demo's tests. Not a test itself.
+ * The built packages, read the way the demo reads them, for the demo's tests. Not a test itself.
  *
  * Null when `build/` is absent or from another version, which `readBuildManifest` says once; the
  * tests that need a build then skip with a message, as `captures.test.ts` does.
@@ -7,13 +7,16 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { readBuildManifest } from '../scripts/content.ts';
-import { demoEntries } from '../scripts/demo-data.ts';
+import { demoEntries, demoGroup } from '../scripts/demo-data.ts';
+import type { DemoGroup } from '../lib/demo/types.ts';
 import { parseDashboard, type SceneDashboard } from '../lib/demo/scene.ts';
 
 export const repoRoot = path.resolve(import.meta.dir, '..', '..');
 
 export interface BuiltFace {
   folder: string;
+  group: DemoGroup;
+  theme: string;
   width: number;
   height: number;
   main: string;
@@ -37,6 +40,6 @@ export const builtFaces = (): BuiltFace[] =>
           raw.set(file, json);
           library.set(file, parseDashboard(json, file));
         }
-        return { folder: entry.folder, width: entry.width, height: entry.height, main: `${entry.folder}.djson`, library, raw };
+        return { folder: entry.folder, group: demoGroup(entry)!, theme: entry.theme ?? 'default', width: entry.width, height: entry.height, main: `${entry.folder}.djson`, library, raw };
       })
     : [];
