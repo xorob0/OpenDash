@@ -4,7 +4,7 @@ import { Releases } from '../../components/Releases';
 import { Section } from '../../components/Section';
 import { SizeList } from '../../components/SizeList';
 import { DOWNLOADS, RELEASES, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
-import { COMPANIONS, FACES, PIT_WALLS } from '../../lib/faces';
+import { CAR_THEMES, COMPANIONS, FACES, PIT_WALLS } from '../../lib/faces';
 import { weigh } from '../../lib/packages';
 import { counted, dashboards } from '../../lib/counts';
 import { COUNTS } from '../../lib/liveCounts';
@@ -74,6 +74,12 @@ export default function Download() {
             <h3 className="h3">Pit wall</h3>
             <SizeList packages={PIT_WALLS} />
           </div>
+          {CAR_THEMES.map((t) => (
+            <div key={t.id} className={styles.group}>
+              <h3 className="h3">{t.name} theme</h3>
+              <SizeList packages={t.packages} />
+            </div>
+          ))}
         </div>
       </Section>
 
