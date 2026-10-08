@@ -758,19 +758,31 @@ describe('plugin mirror', () => {
   });
 
   /** The other half of `ContractTests.Themes_agree_with_contract_ts_when_present` (#202). */
-  test('Contract.cs lists every theme THEME_CATALOGUE does, with its name, its cars and its sizes', () => {
+  test('Contract.cs lists every theme THEME_CATALOGUE does, with its name, its cars, its sizes and its band pages', () => {
     const source = pluginSource('Contract.cs');
     expect(source).toContain(`public const string DefaultThemeId = "${DEFAULT_THEME_ID}";`);
     const block = /Themes = new\[\]\s*\{(?<items>.*?)\n\s*\};/s.exec(source)?.groups?.items ?? '';
     const strings = (list: string): string[] => [...list.matchAll(/"([^"]*)"/g)].map((m) => m[1]!);
-    const rows = [...block.matchAll(/new ThemeEntry\("([^"]*)", "([^"]*)", (new string\[0\]|new\[\] \{[^}]*\}), (new string\[0\]|new\[\] \{[^}]*\}), (FaceSizes|new\[\] \{[^}]*\})\)/g)].map((m) => ({
+    const rows = [
+      ...block.matchAll(/new ThemeEntry\("([^"]*)", "([^"]*)", (new string\[0\]|new\[\] \{[^}]*\}), (new string\[0\]|new\[\] \{[^}]*\}), (FaceSizes|new\[\] \{[^}]*\}), (new ThemeBandPage\[0\]|new\[\] \{[^}]*\})\)/g),
+    ].map((m) => ({
       id: m[1],
       name: m[2],
       cars: strings(m[3]!),
       iracingCarPaths: strings(m[4]!),
       sizes: m[5] === 'FaceSizes' ? FACE_SIZES.map((f) => `${f.width}x${f.height}`) : [...m[5]!.matchAll(/FaceOf\((\d+), (\d+)\)\.Value/g)].map((s) => `${s[1]}x${s[2]}`),
+      bandPages: [...m[6]!.matchAll(/new ThemeBandPage\("([^"]*)", "([^"]*)"\)/g)].map((p) => ({ id: p[1], name: p[2] })),
     }));
-    expect(rows).toEqual(THEME_CATALOGUE.map((t) => ({ id: t.id, name: t.name, cars: [...t.cars], iracingCarPaths: [...t.iracingCarPaths], sizes: t.sizes.map((f) => `${f.width}x${f.height}`) })));
+    expect(rows).toEqual(
+      THEME_CATALOGUE.map((t) => ({
+        id: t.id,
+        name: t.name,
+        cars: [...t.cars],
+        iracingCarPaths: [...t.iracingCarPaths],
+        sizes: t.sizes.map((f) => `${f.width}x${f.height}`),
+        bandPages: t.bandPages.map((p) => ({ id: p.id, name: p.name })),
+      })),
+    );
     // And the folder spelled as themedFolder spells it, the one string both halves must agree on.
     expect(source).toContain('return "OpenDash " + Name + " " + width + "x" + height;');
   });

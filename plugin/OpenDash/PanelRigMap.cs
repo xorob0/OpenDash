@@ -1189,15 +1189,16 @@ namespace OpenDashPlugin
         {
             var size = FaceShape(screen);
             var face = screen == null ? null : screen.Face;
+            var theme = screen == null ? null : screen.Theme;
             var zones = new List<RigZone>();
             var order = size.BodyOrder;
             for (var i = 0; i < order.Length; i++)
             {
                 var letter = order[i];
-                var page = face == null ? Contract.DefaultFaceZonePages[Array.IndexOf(Contract.FaceZoneLetters, letter)] : face.Zone(letter);
-                var gear = letter == "A" && IsGearPage(FacePages.IdOf(letter, page));
+                var page = face == null ? Contract.DefaultFaceZonePage(Array.IndexOf(Contract.FaceZoneLetters, letter), theme) : face.Zone(letter);
+                var gear = letter == "A" && IsGearPage(FacePages.IdOf(letter, page, theme));
                 var weight = size.Parts != null && i < size.Parts.Length ? size.Parts[i] : 1;
-                zones.Add(new RigZone(letter, gear ? PanelEmulation.Gear : FacePages.NameOf(letter, page), gear, weight));
+                zones.Add(new RigZone(letter, gear ? PanelEmulation.Gear : FacePages.NameOf(letter, page, theme), gear, weight));
             }
             return zones;
         }
