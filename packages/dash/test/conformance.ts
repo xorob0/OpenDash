@@ -25,6 +25,7 @@ import { BAND_PAGES, bandPageItems } from '../src/zones/bandPages.ts';
 import { FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR } from '../src/zones/index.ts';
 import { moduleBodyOf } from '../src/zones/pages.ts';
 import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
+import { withHouseLayout } from '../src/themes/moduleRegister.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 /** Set to `full` to check every theme the build knows, whatever the branch touched. */
@@ -211,6 +212,11 @@ const namesUnder = (items: readonly Item[], prefix: string): string[] =>
  *
  * Band D's pages are held to the same rule with the band's own fields. Zone A's are a drawing each,
  * the gear and its kin, and carry no field to lose, so the catalogue is what holds them.
+ *
+ * A page whose body draws nothing at all has disappeared whatever its fields say, which a page with
+ * no fields to declare, a drawing, would otherwise pass: the Porsche's tyres page did. So a module
+ * page that draws no item of its own, its header aside, fails where the same page built in the house's
+ * layout, the theme's register standing aside, draws some in the same body.
  */
 export function disappeared(themeId: string, face: ThemeFace): string[] {
   const at = `${themeId} ${named(face)}`;
@@ -225,6 +231,11 @@ export function disappeared(themeId: string, face: ThemeFace): string[] {
     for (const screen of dashboard.screens) {
       const page = screen.name;
       const drawn = namesUnder(screen.items, `${page}.`);
+      if (MODULE_DASHBOARD.test(dashboard.name) && drawn.every((name) => name.startsWith('zone.'))) {
+        const body = moduleBody(themeId, dashboard, page);
+        const house = withHouseLayout(() => pageBuilder(page)({ frame: body, density: densityForBox(dashboard), prefix: `${page}.`, shape: shapeOf(body) }));
+        if (house.length > 0) problems.push(`${at} ${dashboard.name}: the ${page} page draws nothing in its ${body.width} x ${body.height} body, where the page in the house's layout draws ${house.length} items`);
+      }
       if (MODULE_DASHBOARD.test(dashboard.name) && SHEDDING[page]) {
         const body = moduleBody(themeId, dashboard, page);
         const density = densityForBox(dashboard);
