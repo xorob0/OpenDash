@@ -8,7 +8,7 @@
  * nobody thinks to distrust.
  */
 import { describe, expect, test } from 'bun:test';
-import { statSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { propertiesRead } from '../packages/dash/src/properties.ts';
 import { scenarios, tracedScenarioNames, UNTRACED_SCENARIOS } from './emulator.ts';
 import { PROVENANCE_PROPERTIES } from './record.ts';
@@ -93,6 +93,16 @@ describe('reading a frame', () => {
   test('a frame outside the trace is an error rather than a map of undefined', () => {
     expect(() => frame(sample, 3)).toThrow();
     expect(() => frame(sample, -1)).toThrow();
+  });
+});
+
+describe('the format a browser can read', () => {
+  // The demo (#395) bundles the reader into a page, where node:fs does not exist: one import of it
+  // at the top of traceFormat.ts and the page fails to build, so the file is held to having none.
+  test('traceFormat.ts imports nothing from node', () => {
+    const source = readFileSync(new URL('./traceFormat.ts', import.meta.url), 'utf8');
+    expect(source).not.toMatch(/from ['"](node:|fs['"]|path['"])/);
+    expect(source).not.toMatch(/import\.meta\.dir/);
   });
 });
 
