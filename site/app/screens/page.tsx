@@ -10,13 +10,15 @@ import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
 import { HERO_FACE } from '../../lib/content.generated';
 import { ALL, BASE_FACE, LARGE_FACE, byFolder, pickerFaces } from '../../lib/faces';
+import { counted } from '../../lib/counts';
+import { COUNTS } from '../../lib/liveCounts';
 import { sizeLabel } from '../../lib/packages';
 import { INSTALL, REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
   title: 'Screens and sizes',
-  description: '10 face sizes from 1920 × 480 to a 480 round, 2 companions and 2 pit walls. Pick your screen and see it.',
+  description: `${counted(COUNTS.faces, 'face size')} from 1920 × 480 to a 480 round, ${counted(COUNTS.companions, 'companion')} and ${counted(COUNTS.pitWalls, 'pit wall')}. Pick your screen and see it.`,
 };
 
 export default function Screens() {
@@ -37,14 +39,14 @@ export default function Screens() {
         ruled={false}
         id="faces"
         title="Every screen on the rig"
-        lede="Ten faces for the wheel or the dash, two companions and two pit walls, all in the plugin. Drawn to scale below: pick one to watch it run."
+        lede={`${counted(COUNTS.faces, 'face')} for the wheel or the dash, ${counted(COUNTS.companions, 'companion')} and ${counted(COUNTS.pitWalls, 'pit wall')}, all in the plugin. Drawn to scale below: pick one to watch it run.`}
       >
         <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
       </Section>
 
       <Section id="anatomy" title="One face, five parts" lede="Every rectangular face is built the same way. Hover or tap a part.">
         {base ? (
-          <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={anatomyParts(HERO_FACE)} />
+          <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={anatomyParts(HERO_FACE, COUNTS)} />
         ) : null}
       </Section>
 
@@ -102,11 +104,11 @@ export default function Screens() {
         title="The two round faces"
         lede={
           <>
-            800 round and 480 round still use the old 12-slot design. What a round face does with zones is not decided (
+            800 round and 480 round still draw the earlier card layout. What a round face does with zones is decided (
             <a href={issueUrl(145)} className="link" rel="noopener">
               #145
             </a>
-            ). Both install and work.
+            ) and the conversion comes after 1.0. Both install and work.
           </>
         }
       >

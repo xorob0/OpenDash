@@ -238,8 +238,8 @@ export const SURVEY: readonly SurveySection[] = [
     questions: [
       {
         id: 'q14',
-        label: 'Likely to try the beta (1-5)',
-        prompt: 'How likely are you to try OpenDash while it is in beta?',
+        label: 'Likely to try a release candidate (1-5)',
+        prompt: 'How likely are you to try OpenDash while it is a release candidate?',
         kind: 'scale',
         scaleEnds: ['Very unlikely', 'Very likely'],
       },

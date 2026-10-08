@@ -4,6 +4,8 @@ import { Section } from '../../components/Section';
 import { Steps } from '../../components/Steps';
 import { DOWNLOADS, SIMHUB_VERSION, VERSION } from '../../lib/content.generated';
 import { weigh } from '../../lib/packages';
+import { counted, dashboards } from '../../lib/counts';
+import { COUNTS } from '../../lib/liveCounts';
 import { NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP, SCOPE_URL, SIMHUB_URL } from '../../lib/site';
 import styles from './page.module.css';
 
@@ -24,7 +26,7 @@ export default function Install() {
         title="Install the plugin"
         lede={
           <>
-            One file installs all 14 dashboards and 122 LED profiles, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
+            One file carries {counted(dashboards(COUNTS), 'dashboard')}, the car themes and {counted(COUNTS.ledProfiles, 'LED profile')}, and adds an OpenDash page to SimHub where every setting lives. You need Windows and{' '}
             <a href={SIMHUB_URL} className="link" rel="noopener">
               SimHub
             </a>{' '}
@@ -46,7 +48,7 @@ export default function Install() {
         <Steps
           steps={[
             { title: 'Close SimHub.', body: 'Fully closed, not in the tray.' },
-            { title: `Unzip ${PLUGIN_ZIP}.`, body: `Version ${VERSION}. It carries every dashboard and every LED profile.` },
+            { title: `Unzip ${PLUGIN_ZIP}.`, body: `Version ${VERSION}. It carries every dashboard, every car theme and every LED profile.` },
             {
               title: 'Copy OpenDash.dll next to SimHubWPF.exe.',
               body: (
@@ -61,7 +63,7 @@ export default function Install() {
             },
             {
               title: 'Add your screens on the Screens page, then restart SimHub.',
-              body: 'The Screens page starts empty. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
+              body: 'The Screens page starts empty. Add asks the kind, the size, and the theme where the size has one. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
             },
           ]}
         />
@@ -70,10 +72,13 @@ export default function Install() {
       <Section id="after" title="After installing" lede="Nothing has to be configured to work. The plugin is where you change what each screen shows.">
         <ul className={`rows ${styles.points}`}>
           <li>
-            <strong>Assign a dashboard to a display in Dash Studio.</strong> A DDU, a USB screen, or a phone on the network, like any other dashboard.
+            <strong>Add a screen on the Screens page.</strong> Add asks the kind, the size, and the theme where the size has one, and writes that screen into SimHub as a dashboard of its own.
           </li>
           <li>
-            <strong>Set each screen up on the Screens page.</strong> Choose the pages for each zone, and bind the wheel buttons on the Shortcuts page.
+            <strong>Assign it to a display in Dash Studio.</strong> After the restart: a DDU, a USB screen, or a phone on the network, like any other dashboard. A themed screen also goes into SimHub’s per-car playlist, so the display follows the car.
+          </li>
+          <li>
+            <strong>Set each screen up on its own card.</strong> Choose the pages for each zone on a picture of the face, and bind the wheel buttons on the Shortcuts page.
           </li>
           <li>
             <strong>Every screen keeps its own settings.</strong> A face on the wheel and a face beside it are set up apart.

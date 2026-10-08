@@ -20,7 +20,8 @@
  * broken image: the panel pictures arrive with the reshoot, and a page may ship before them.
  */
 import Image from 'next/image';
-import { hasCapture } from '../lib/captures';
+import { CAPTURES, hasCapture, provenanceNote } from '../lib/captures';
+import { VERSION } from '../lib/content.generated';
 import { PANNABLE_ASPECT } from './frame';
 import styles from './Capture.module.css';
 
@@ -44,6 +45,8 @@ export interface CaptureProps {
 export function Capture({ file, alt, width, height, caption, round, priority, sizes = '(min-width: 88rem) 84rem, 100vw', scale = 1 }: CaptureProps) {
   const pannable = !round && width / height > PANNABLE_ASPECT;
   const known = hasCapture(file);
+  // Every picture says which build took it, and whether that is the one being served (#552).
+  const taken = CAPTURES.files[file]?.version;
   return (
     <figure className={styles.figure}>
       <div
@@ -58,7 +61,12 @@ export function Capture({ file, alt, width, height, caption, round, priority, si
           </div>
         )}
       </div>
-      {caption ? <figcaption className={styles.caption}>{caption}</figcaption> : null}
+      {caption || taken ? (
+        <figcaption className={styles.caption}>
+          {caption}
+          {taken ? <span className={styles.taken}>{caption ? ' · ' : ''}{provenanceNote(taken, VERSION)}</span> : null}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }

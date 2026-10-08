@@ -2,11 +2,12 @@ import type { Metadata } from 'next';
 import { PageGrid } from '../../components/PageGrid';
 import { Section } from '../../components/Section';
 import { BAND_D_PAGES, BAR_FIELDS, MODULES, PIT_WALL_ZONE_PAGES, ZONE_A_PAGES } from '../../lib/content.generated';
+import { COUNTS } from '../../lib/liveCounts';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
-  title: 'The 21 pages',
-  description: 'Lap times, delta, fuel, tyres, radar, relative, leaderboard and 14 more, on every zone and on the companion.',
+  title: `The ${COUNTS.pages} pages`,
+  description: `Lap times, delta, fuel, tyres, radar, relative, leaderboard and ${COUNTS.pages - 7} more, on every zone and on the companion.`,
 };
 
 const names = (list: readonly { name: string }[]): string => list.map((p) => p.name).join(' · ');
@@ -20,7 +21,7 @@ export default function Pages() {
         level={1}
         ruled={false}
         id="catalogue"
-        title="21 pages"
+        title={`${COUNTS.pages} pages`}
         lede="The same pages serve zone B, zone C, the companion and the pit wall zones, each laid out for the box it gets."
       >
         <PageGrid pages={on} />

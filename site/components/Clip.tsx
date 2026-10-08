@@ -12,6 +12,8 @@
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import type { ClipSources } from '../lib/clips';
+import { VERSION } from '../lib/content.generated';
+import { provenanceNote } from '../lib/provenance';
 import frame from './Capture.module.css';
 import styles from './Clip.module.css';
 import { PANNABLE_ASPECT } from './frame';
@@ -100,7 +102,10 @@ export function Clip({ clip, alt, caption, priority, sizes = '(min-width: 88rem)
           </video>
         ) : null}
       </div>
-      {caption ? <figcaption className={frame.caption}>{caption}</figcaption> : null}
+      <figcaption className={frame.caption}>
+        {caption}
+        <span className={frame.taken}>{caption ? ' · ' : ''}{provenanceNote(clip.entry.version, VERSION)}</span>
+      </figcaption>
     </figure>
   );
 }

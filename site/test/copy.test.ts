@@ -9,7 +9,9 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { DIFFERENTIATORS, FREE_FOREVER, NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP } from '../lib/site.ts';
+import { counted } from '../lib/counts.ts';
+import { DIFFERENTIATORS, FREE_FOREVER, NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP, THEMES_FREE, releaseWord } from '../lib/site.ts';
+import { SAMPLE_COUNTS } from './sampleCounts.ts';
 
 const site = path.resolve(import.meta.dir, '..');
 const read = (rel: string): string => readFileSync(path.join(site, rel), 'utf8');
@@ -40,8 +42,85 @@ describe('the promise', () => {
     expect(read(page)).toContain('FREE_FOREVER');
   });
 
+  test.each(PROMISE_PAGES)('%s says the car themes are free too', (page) => {
+    expect(read(page)).toContain('THEMES_FREE');
+  });
+
   test('is a promise and not a price', () => {
     expect(FREE_FOREVER).toContain('always will be');
+    expect(THEMES_FREE).toContain('free too');
+  });
+});
+
+/**
+ * A count in the copy is read from the build, never typed (#560). A digit followed by one of the
+ * nouns the site counts is what a retyped number looks like, and the sources are refused one. A
+ * sentence that needs the number interpolates it from a `Counts`, through `counted()` where the
+ * build may be absent.
+ */
+describe('the counts', () => {
+  const NOUNS = 'dashboards?|LED profiles?|pages?|strip shapes?|faces?|screens?|glyphs?|flags?|companions?|pit walls?|themes?|sizes?';
+  const TYPED = new RegExp(`(?<![×x$] )\\b\\d+ (${NOUNS})\\b`, 'g');
+
+  test('no source types a count', () => {
+    const offenders: string[] = [];
+    for (const f of ALL_SOURCES) {
+      // Comments explain the rule with examples of what it refuses, so they are not read.
+      const text = readFileSync(f, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+      for (const m of text.matchAll(TYPED)) {
+        // A competitor's cell is a fact about them, read from their pages, and carries no count of ours.
+        const line = text.slice(text.lastIndexOf('\n', m.index) + 1, text.indexOf('\n', m.index));
+        if (/\b(lovely|dnr): cell\(/.test(line)) continue;
+        // A size in a caption, `480 face` after a width, is a size and not a count.
+        if (/^\d+ (face|companion)$/.test(m[0]) && /\b(\d+ × |x)\d+ /.test(line)) continue;
+        offenders.push(`${path.relative(site, f)}: ${m[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('a count the build has not made says every rather than zero', () => {
+    expect(counted(14, 'dashboard')).toBe('14 dashboards');
+    expect(counted(1, 'theme')).toBe('1 theme');
+    expect(counted(0, 'dashboard')).toBe('every dashboard');
+    expect(counted(0, 'LED profile')).toBe('every LED profile');
+  });
+
+  test('the three reasons read their numbers from the counts', () => {
+    const bodies = DIFFERENTIATORS.map((d) => d.body(SAMPLE_COUNTS));
+    expect(bodies.some((b) => b.includes(`${SAMPLE_COUNTS.stripShapes} strip shapes`))).toBe(true);
+    expect(bodies.some((b) => b.includes(`${SAMPLE_COUNTS.pages} pages`))).toBe(true);
+  });
+});
+
+/** One word for what a version is, on the home page and in the survey: never alpha here and beta there. */
+describe('the status word', () => {
+  test('a suffix is a candidate, and none is a release', () => {
+    expect(releaseWord('0.3.0-rc.12')).toBe('Release candidate');
+    expect(releaseWord('1.0.0')).toBe('Release');
+  });
+
+  test('no source says alpha or beta of the product', () => {
+    const offenders: string[] = [];
+    for (const f of ALL_SOURCES) {
+      const lines = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').split('\n');
+      for (const line of lines) {
+        if (/^\s*\/\//.test(line)) continue;
+        // A competitor's cell may say their product is in beta; that is their word about theirs.
+        if (/\b(lovely|dnr): cell\(/.test(line)) continue;
+        if (/\b(alpha|beta)\b/i.test(line)) offenders.push(`${path.relative(site, f)}: ${line.trim()}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+/** Every picture says which build took it (#552): the two components that draw one call the note. */
+describe('the pictures say where they came from', () => {
+  test.each(['components/Capture.tsx', 'components/Clip.tsx'])('%s prints the provenance note', (file) => {
+    expect(read(file)).toContain('provenanceNote(');
   });
 });
 
@@ -110,7 +189,7 @@ describe('the way in', () => {
   });
 
   test('no reason to switch claims a file runs without the plugin', () => {
-    for (const d of DIFFERENTIATORS) expect({ id: d.id, claims: /without the plugin|on its own/i.test(d.body) }).toEqual({ id: d.id, claims: false });
+    for (const d of DIFFERENTIATORS) expect({ id: d.id, claims: /without the plugin|on its own/i.test(d.body(SAMPLE_COUNTS)) }).toEqual({ id: d.id, claims: false });
   });
 });
 

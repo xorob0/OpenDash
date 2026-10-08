@@ -17,7 +17,7 @@
 
 /* Alpha is stated, not warned about: the caution colour, at label size, once. The version is one
    token, so a narrow screen wraps before it rather than inside it. */
-.alpha {
+.state {
   color: var(--color-caution-primary);
   white-space: nowrap;
 }

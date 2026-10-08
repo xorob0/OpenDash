@@ -24,17 +24,21 @@ Three scripts read the repository at build time, and their output is generated a
 | `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `build/OpenDash-plugin.zip` | `lib/content.generated.ts` |
 | `scripts/fonts.ts` | `packages/dash/fonts/*.ttf` | `public/fonts/*.woff2` |
 
-So which packages exist, how big the plugin zip is, what the 21 pages are called, which 3 ship off, the
-62 strip shapes, the flags in ranked order, the rectangles of the base face, what version this is
-and what each release changed are all read rather than retyped. A colour comes from the token file
-through three layers of `var()`.
+So which packages exist, which of them are a car theme's and what the themes are, how big the plugin
+zip is, what the pages are called, which ship off, the strip shapes, how many LED profiles and flag
+box glyphs there are, the flags in ranked order, the rectangles of the base face, what version this
+is and what each release changed are all read rather than retyped. A colour comes from the token
+file through three layers of `var()`. A count in a sentence comes through `lib/counts.ts`, which
+`lib/liveCounts.ts` fills from the generated file, and `test/copy.test.ts` refuses a digit typed
+before one of the nouns the site counts.
 
 What is **not** generated is the prose. `lib/site.ts` holds the sentences every page reuses: the
-free-forever promise, the sim claim, the no-tracking line, the car data attribution and the three
-differentiators. `lib/packages.ts` holds the sentence that says what each size is for.
-`lib/compare.ts` holds the comparison with Lovely Sim Racing and Daniel Newman Racing, every
-competitor cell read from their pages on the date in `CHECKED_ON`. `lib/anatomy.ts` holds the words
-for the parts of the face; their rectangles are generated.
+free-forever promise and the sentence that puts the car themes inside it, the sim claim, the
+no-tracking line, the car data attribution and the three differentiators. `lib/packages.ts` holds
+the sentence that says what each size is for. `lib/compare.ts` holds the comparison with Lovely Sim
+Racing and Daniel Newman Racing, every competitor cell read from their pages on the date in
+`CHECKED_ON`, which the page prints. `lib/anatomy.ts` holds the words for the parts of the face;
+their rectangles are generated.
 
 `content.ts` reads `build/`, which only exists after `bun run build` at the repository root, and the
 plugin zip is in it only after `bun run package`. Without it the download comes back empty and the
@@ -59,9 +63,10 @@ pages say so rather than inventing a file.
 
 Every picture is a capture of the package through SimHub's own renderer on the Windows VM. None is
 a mock-up. `public/shots/captures.json` records the version, commit, date and emulator scenario
-behind every file, and the pages show that version under the pictures; when it is not the version
-being served they say so. `test/captures.test.ts` fails on a missing picture and warns on a stale
-one (`OPENDASH_SHOTS_STRICT=1` makes it fail).
+behind every file, and every caption says which version took the picture through
+`provenanceNote()`; when it is not the version being served the caption says it is older.
+`test/captures.test.ts` fails on a missing picture and warns on a stale one
+(`OPENDASH_SHOTS_STRICT=1` makes it fail).
 
 Files are `<slug>.png` for a package, `page-<id>.png` for a page and `panel-<page>.png` for a page
 of the plugin. Two commands make them, both from the repository root:
@@ -80,8 +85,8 @@ bun scripts/sync-shots.ts ../build/shots/gallery
 It is run by hand rather than as part of a build: a capture that caught SimHub mid-reconnect is a
 photograph of a bug, and the only thing that catches one is an eye.
 
-TODO(#529): `panel-rig.png` and `panel-lights.png` show the old four tabs. #529 replaces them with
-the pages, from `bun run panel-shots` through `bun scripts/sync-shots.ts --panel`.
+The pictures of the plugin's panel are `bun run panel-shots` at the repository root, one per page of
+the sidebar, synced one at a time with `bun scripts/sync-shots.ts --panel <page> <file>`.
 
 The clips under `public/clips/` are the same idea in motion: raw frames of a dash window recorded
 by `bun run clips`, encoded on the host, with `clips.json` saying what was taken. A page shows a
@@ -141,8 +146,8 @@ rather than by boxes.
 
 Two things differ, both deliberate and both explained at the top of `app/globals.css`. The type ramp
 is the site's own, because the dash's is pixels on a 480 px panel and the plugin's is 96 dpi inside
-SimHub. And motion is allowed: rule 11 holds the dash to motion that carries meaning because a face
-is read at speed, while a web page is documentation — the surface brand cyan already lives on.
+SimHub. And motion is kept to what carries meaning, as on the dash: a clip moves because the
+dashboard moves, and a reader who asked for reduced motion sees the still.
 
 `design/` is not edited from code. When the build and the canvas disagree, say so rather than
 quietly changing either.
