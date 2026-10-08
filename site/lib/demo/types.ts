@@ -6,6 +6,8 @@
 /** One `.djson` the demo fetches, with what it weighs as served and as the build wrote it. */
 export interface DemoFile {
   readonly file: string;
+  /** Where it is served, under `public/`: as `.json`, so that the server compresses it. */
+  readonly src: string;
   /** Minified, as served from `public/demo/`. */
   readonly bytes: number;
   /** As the build wrote it, indented. */
@@ -22,9 +24,18 @@ export interface DemoImage {
   readonly src: string;
 }
 
+/**
+ * Which row of the size switcher a package sits in: the default theme's faces, a car theme's faces,
+ * the companion, or the pit wall.
+ */
+export type DemoGroup = 'face' | 'theme' | 'companion' | 'pitwall';
+
 export interface DemoFace {
   readonly slug: string;
   readonly folder: string;
+  readonly group: DemoGroup;
+  /** The theme it is drawn in, `default` for every package that is not a car theme's. */
+  readonly theme: string;
   readonly width: number;
   readonly height: number;
   readonly round: boolean;
@@ -34,7 +45,11 @@ export interface DemoFace {
   readonly base: string;
   readonly files: readonly DemoFile[];
   readonly images: readonly DemoImage[];
-  /** The zone face's settings prefix, e.g. `Face850x480`; null for a round face, which has slots. */
+  /**
+   * The zone face's settings prefix, e.g. `Face850x480`; null for a round face, which has slots, and
+   * for the companion and the pit wall, which have settings of their own. A car theme's face of a
+   * size reads the same names as the default's.
+   */
   readonly prefix: string | null;
   /** How many slot settings a round face reads; zero on a zone face. */
   readonly slots: number;

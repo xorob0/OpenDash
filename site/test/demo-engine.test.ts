@@ -1,18 +1,35 @@
 /**
- * The demo's engine (#395): SimHub's order within a tick, its rule for choosing a screen, and every
- * built face run against the race trace on every page of every zone without reaching a construct
- * the evaluator does not compute.
+ * The demo's engine (#395): SimHub's order within a tick, its rule for choosing a screen, its paging
+ * between frames, and every built package (the faces, the car theme's faces, the companions and the
+ * pit walls) run against the race trace on every page it can show, and against every committed
+ * trace as it opens, without reaching a construct the evaluator does not compute.
  */
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { blinkOn, chooseScreen, Engine, modeOf, type Mode, type Op, type TextOp } from '../lib/demo/engine.ts';
+import { activeScreens, blinkOn, chooseScreen, Engine, modeOf, type Mode, type Op, type TextOp } from '../lib/demo/engine.ts';
 import { Replay } from '../lib/demo/frame.ts';
 import { parseTrace } from '../lib/demo/ncalc.ts';
-import { initialPanel, panelProperties, prefixFor, setPage, update, type PanelState } from '../lib/demo/panel.ts';
+import {
+  beginCompanionGlance,
+  companionOpenOn,
+  endCompanionGlance,
+  initialPanel,
+  openCompanion,
+  panelProperties,
+  pitWallPagesFor,
+  prefixFor,
+  setPage,
+  setPitWallPage,
+  setPitWallZone,
+  update,
+  updatePitWall,
+  zonesOf,
+  type PanelState,
+} from '../lib/demo/panel.ts';
 import { parseDashboard, type SceneDashboard, type Screen } from '../lib/demo/scene.ts';
-import { panelCatalogue } from '../scripts/demo-data.ts';
-import { builtFaces, HAS_BUILD, repoRoot } from './demoBuild.ts';
+import { panelCatalogue, traceFiles } from '../scripts/demo-data.ts';
+import { builtFaces, HAS_BUILD, repoRoot, type BuiltFace } from './demoBuild.ts';
 
 const TEXT = 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.TextItem, SimHub.Plugins';
 const LAYER = 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.Layer, SimHub.Plugins';
@@ -151,42 +168,243 @@ describe('one tick, in SimHub order', () => {
   });
 });
 
-describe('every built face against the race trace', () => {
-  const faces = builtFaces();
-  const catalogue = panelCatalogue();
-  const replay = new Replay(parseTrace(readFileSync(path.join(repoRoot, 'traces', 'race.ndjson'), 'utf8')));
-  const frames = [0, replay.duration / 2, replay.duration].map((t) => ({ t, properties: replay.at(t) }));
+describe('paging, as SimHub pages a dashboard between frames', () => {
+  const s = (name: string, roles: Partial<Screen> = {}): Screen => ({ name, inGame: true, idle: true, pit: true, enabledExpression: '', background: { css: '#000', alpha: 1 }, items: [], ...roles });
 
-  test.if(!HAS_BUILD)('skipped: build/manifest.json is absent or stale, run bun run build at the repository root', () => {
+  test('walks every enabled screen when they carry the same roles, and filters by role only when they differ', () => {
+    const same = [s('A'), s('B'), s('C')];
+    expect(activeScreens(same, [true, false, true], false, false)).toEqual([0, 2]);
+    const mixed = [s('A', { idle: false, pit: false }), s('B', { idle: false, pit: false }), s('Pit', { idle: false, inGame: false }), s('Idle', { inGame: false, pit: false })];
+    expect(activeScreens(mixed, [true, true, true, true], true, false)).toEqual([0, 1]);
+    expect(activeScreens(mixed, [true, true, true, true], true, true)).toEqual([2]);
+    expect(activeScreens(mixed, [true, true, false, true], true, true)).toEqual([0, 1]);
+    expect(activeScreens(mixed, [true, true, true, true], false, false)).toEqual([3]);
+  });
+
+  const paged = () => {
+    const scene = dashboard(
+      ['A', 'B', 'C'].map((n) => screen(n, `[${n}] > 0`, [text('t', `'${n}'`)], { IdleScreen: false })).concat([screen('Idle', '', [], { InGameScreen: false, PitScreen: false })]),
+    );
+    const engine = new Engine(new Map([[scene.file, scene]]), scene.file);
+    return engine;
+  };
+
+  test('steps to the next enabled screen and wraps, skips one that is off, and the next frame keeps it', () => {
+    const engine = paged();
+    const props: Record<string, unknown> = { 'DataCorePlugin.GameRunning': true, A: 1, B: 0, C: 1 };
+    const tick = (now = 0) => engine.tick({ properties: (n) => props[n], now }).screen;
+    expect(tick()).toBe('A');
+    expect(engine.navigate(1)).toBe(true);
+    expect(tick()).toBe('C');
+    expect(tick()).toBe('C');
+    engine.navigate(1);
+    expect(tick()).toBe('A');
+    engine.navigate(-1);
+    expect(tick()).toBe('C');
+    // One screen in the ring is nowhere to go.
+    props.A = 0;
+    expect(tick()).toBe('C');
+    expect(engine.navigate(1)).toBe(false);
+  });
+
+  test('a rewind of the clock keeps the screen paged to, and a reset does not', () => {
+    const engine = paged();
+    const props: Record<string, unknown> = { 'DataCorePlugin.GameRunning': true, A: 1, B: 1, C: 1 };
+    const tick = (now: number) => engine.tick({ properties: (n) => props[n], now }).screen;
+    expect(tick(1000)).toBe('A');
+    engine.navigate(1);
+    expect(tick(2000)).toBe('B');
+    expect(tick(0)).toBe('B');
+    engine.reset();
+    expect(tick(0)).toBe('A');
+  });
+});
+
+describe('the stand-ins', () => {
+  const FROM_FILE = 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageFromFileItem, SimHub.Plugins';
+  const WEB = 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WebPageItem, SimHub.Plugins';
+  const kinds = (ops: readonly Op[]) => ops.map((o) => (o.kind === 'standIn' ? `standIn ${o.label}` : o.kind));
+
+  test('an image from a file with no file named draws nothing, so what is beneath it shows', () => {
+    const item = { $type: FROM_FILE, Name: 'crest', ImagePath: '', Width: 50, Height: 50, Bindings: { ImagePath: { Formula: { Expression: "isnull([Crest], '')" }, Mode: 2 } } };
+    const tick = run(dashboard([screen('S', '', [text('under', "'shield'"), item])]));
+    expect(kinds(tick({}).ops)).toEqual(['text']);
+    expect(kinds(tick({ Crest: 'C:\\crest.png' }).ops)).toEqual(['text', 'standIn Image from file: C:\\crest.png']);
+  });
+
+  test('a web page names the address it would show', () => {
+    const item = { $type: WEB, Name: 'web', StartAddress: '', Width: 50, Height: 50, Bindings: { StartAddress: { Formula: { Expression: "isnull([Url], '')" }, Mode: 2 } } };
+    const tick = run(dashboard([screen('S', '', [item])]));
+    expect(kinds(tick({}).ops)).toEqual(['standIn Web page']);
+    expect(kinds(tick({ Url: 'https://example.com' }).ops)).toEqual(['standIn Web page: https://example.com']);
+  });
+});
+
+const catalogue = panelCatalogue();
+const faces = builtFaces();
+const readReplay = (file: string) => new Replay(parseTrace(readFileSync(path.join(repoRoot, 'traces', file), 'utf8')));
+const moments = (replay: Replay) => [0, replay.duration / 2, replay.duration].map((t) => ({ t, properties: replay.at(t) }));
+
+/** The panel a package opens with, as the page builds it. */
+const panelFor = (face: BuiltFace, now = 0): PanelState => {
+  if (face.group === 'companion') return openCompanion(catalogue, initialPanel(catalogue, null, { screen: 'companion' }), now);
+  if (face.group === 'pitwall') return initialPanel(catalogue, null, { screen: 'pitwall' });
+  return initialPanel(catalogue, prefixFor(catalogue, face.width, face.height), { theme: face.theme });
+};
+
+/**
+ * Every panel state worth drawing: each page of each zone and the face's other modes; every module
+ * of a companion forced in turn and its flag formats; every page of a pit wall with every page of
+ * its catalogue in each of its zones, and its other settings.
+ */
+function states(face: BuiltFace): PanelState[] {
+  const base = panelFor(face);
+  if (face.group === 'companion') {
+    const all = { ...base, companion: { ...base.companion, modules: base.companion.modules.map(() => true) } };
+    const forced = (module: number, patch: Partial<PanelState['companion']> = {}): PanelState => ({ ...all, companion: { ...all.companion, ...patch, force: { module, until: Number.POSITIVE_INFINITY } } });
+    return [...catalogue.companion.modules.map((_, i) => forced(i)), ...catalogue.companion.flagFormats.map((f) => forced(0, { flagFormat: f }))];
+  }
+  if (face.group === 'pitwall') {
+    const w = catalogue.pitWall;
+    return pitWallPagesFor(catalogue, face.width > face.height).flatMap((page, n) => [
+      ...w.standardPages.map((p) => page.zones.reduce((s, z) => setPitWallZone(s, z.setting, z.kind === 'wide' ? p.number % w.widePages.length : p.number), setPitWallPage(base, n))),
+      updatePitWall(updatePitWall(updatePitWall(setPitWallPage(base, n), 'classOnly', true), 'flagFormat', 'full'), 'webViewUrl', 'https://example.com'),
+      updatePitWall(setPitWallPage(base, n), 'flagFormat', 'off'),
+    ]);
+  }
+  if (base.face === null) return catalogue.cards.map((c) => update(base, 'slots', base.slots.map(() => c.number)));
+  return [
+    ...zonesOf(catalogue, base).flatMap((z) => z.pages.map((p) => setPage(catalogue, base, z.letter, p.number))),
+    update(update(update(base, 'flagFormat', 'full'), 'lapReview', 'all'), 'revBar', 'off'),
+    update(base, 'revBar', 'rpm'),
+    update(base, 'rig', { ...base.rig, ClockFormat: '12h', DeltaPrecision: 'thousandths', PositionMode: 'overall', DeltaReference: 'lastlap' }),
+  ];
+}
+
+const problemsOf = (engine: Engine) => [...engine.problems.values()].map((p) => `${p.kind}: ${p.where}\n${p.message}`);
+
+describe('every built package against the race trace', () => {
+  const frames = moments(readReplay('race.ndjson'));
+
+  test.if(!HAS_BUILD)('skipped: build/manifest.json is absent or stale, run bun run build --all-themes at the repository root', () => {
     expect(HAS_BUILD).toBe(false);
   });
 
-  /** Every panel state worth drawing: each page of each zone, and the face's other modes. */
-  const states = (prefix: string | null): PanelState[] => {
-    const base = initialPanel(catalogue, prefix);
-    if (prefix === null) return catalogue.cards.map((c) => update(base, 'slots', base.slots.map(() => c.number)));
-    return [
-      ...catalogue.zones.flatMap((z) => z.pages.map((p) => setPage(catalogue, base, z.letter, p.number))),
-      update(update(update(base, 'flagFormat', 'full'), 'lapReview', 'all'), 'revBar', 'off'),
-      update(base, 'revBar', 'rpm'),
-      update(base, 'rig', { ...base.rig, ClockFormat: '12h', DeltaPrecision: 'thousandths', PositionMode: 'overall', DeltaReference: 'lastlap' }),
-    ];
-  };
-
   test.each(faces.map((f) => [f.folder, f] as const))('%s draws every page without reaching a construct the evaluator does not compute', (_folder, face) => {
-    const prefix = prefixFor(catalogue, face.width, face.height);
-    if (!/round/.test(face.folder)) expect(prefix).not.toBeNull();
+    if (face.group === 'face' && !/round/.test(face.folder)) expect(prefixFor(catalogue, face.width, face.height)).not.toBeNull();
     const engine = new Engine(face.library, face.main);
     let drawn = 0;
-    for (const state of states(prefix)) {
+    const screens: [string | null, string][] = [];
+    for (const state of states(face)) {
       const overlay = panelProperties(catalogue, state);
       engine.reset();
       for (const { t, properties } of frames) {
         const frame = engine.tick({ properties: (n) => (overlay.has(n) ? overlay.get(n) : properties[n]), now: t });
         drawn += texts(frame.ops).filter((s) => s !== '').length;
+        // The screen is the one the panel asks for: the forced module, the pit wall's page.
+        if (face.group === 'companion') screens.push([frame.screen, catalogue.companion.modules[state.companion.force!.module]!.id]);
+        if (face.group === 'pitwall' && face.width > face.height) screens.push([frame.screen, pitWallPagesFor(catalogue, true)[state.pitWall.page]!.id]);
       }
     }
     expect(drawn).toBeGreaterThan(0);
-    expect([...engine.problems.values()].map((p) => `${p.kind}: ${p.where}\n${p.message}`)).toEqual([]);
+    expect(screens.filter(([drawn, asked]) => drawn !== asked)).toEqual([]);
+    expect(problemsOf(engine)).toEqual([]);
+  });
+});
+
+describe('every built package against every committed trace', () => {
+  const traces = traceFiles();
+
+  test('the nine traces are all there and all version 1', () => {
+    expect(traces.length).toBe(9);
+    expect(traces[0]).toBe('race.ndjson');
+    for (const file of traces) expect(readReplay(file).trace.header.trace).toBe(1);
+  });
+
+  test.each(faces.map((f) => [f.folder, f] as const))('%s draws every scenario as it opens without reaching a construct the evaluator does not compute', (_folder, face) => {
+    const engine = new Engine(face.library, face.main);
+    const overlay = panelProperties(catalogue, panelFor(face));
+    for (const file of traces) {
+      engine.reset();
+      for (const { t, properties } of moments(readReplay(file))) engine.tick({ properties: (n) => (overlay.has(n) ? overlay.get(n) : properties[n]), now: t });
+    }
+    expect(problemsOf(engine)).toEqual([]);
+  });
+});
+
+describe('the second screens and the car theme, as the page drives them', () => {
+  const find = (folder: string) => faces.find((f) => f.folder === folder);
+  const race = moments(readReplay('race.ndjson'))[1]!.properties;
+  const driver = (face: BuiltFace) => {
+    const engine = new Engine(face.library, face.main);
+    let clock = 0;
+    return {
+      engine,
+      tick: (state: PanelState) => {
+        clock += 50;
+        const overlay = panelProperties(catalogue, state, clock);
+        return engine.tick({ properties: (n) => (overlay.has(n) ? overlay.get(n) : race[n]), now: 10_000 });
+      },
+      get clock() {
+        return clock;
+      },
+    };
+  };
+  const id = (i: number) => catalogue.companion.modules[i]!.id;
+
+  test.if(find('OpenDash Companion') !== undefined)('a companion opens on its start module, pages as NextScreen does, and comes back from a glance to the module it was on', () => {
+    const d = driver(find('OpenDash Companion')!);
+    let state = openCompanion(catalogue, initialPanel(catalogue, null, { screen: 'companion' }), 0);
+    expect(d.tick(state).screen).toBe(id(catalogue.companion.defaultStart));
+    // While the start module is forced it is the only screen enabled, so a tap has nowhere to go.
+    expect(d.engine.navigate(1)).toBe(false);
+    // Once the window has passed the paging is SimHub's: past the modules the rotation leaves off.
+    while (d.clock < catalogue.companion.openOnWindowMs + 100) d.tick(state);
+    d.engine.navigate(1);
+    expect(d.tick(state).screen).toBe(id(1));
+    d.engine.navigate(1);
+    d.engine.navigate(1);
+    d.engine.navigate(1);
+    expect(d.tick(state).screen).toBe(id(4));
+    // The sixth module, energy, is off on a fresh install, and the paging steps over it both ways.
+    d.engine.navigate(1);
+    expect(d.tick(state).screen).toBe(id(6));
+    d.engine.navigate(-1);
+    expect(d.tick(state).screen).toBe(id(4));
+    // Hold the glance: its module, whatever the driver had paged to.
+    state = beginCompanionGlance(state);
+    for (let i = 0; i < 3; i++) expect(d.tick(state).screen).toBe(id(catalogue.companion.defaultGlance));
+    // Let go: -2 for the back window, which the dashboard's own variables resolve to the module it was on.
+    state = endCompanionGlance(catalogue, state, d.clock);
+    expect(companionOpenOn(catalogue, state, d.clock)).toBe(catalogue.companion.openOnBack);
+    for (let i = 0; i < 3; i++) expect(d.tick(state).screen).toBe(id(4));
+    while (d.clock < catalogue.companion.openOnWindowMs + 100 + 5000) d.tick(state);
+    expect(companionOpenOn(catalogue, state, d.clock)).toBe(catalogue.companion.openOnNone);
+    expect(d.tick(state).screen).toBe(id(4));
+    expect(problemsOf(d.engine)).toEqual([]);
+  });
+
+  test.if(find('OpenDash Pit wall') !== undefined)('a pit wall shows the page the panel names, and NextScreen does not page it', () => {
+    const d = driver(find('OpenDash Pit wall')!);
+    const base = initialPanel(catalogue, null, { screen: 'pitwall' });
+    pitWallPagesFor(catalogue, true).forEach((page, n) => {
+      expect(d.tick(setPitWallPage(base, n)).screen).toBe(page.id);
+      d.engine.navigate(1);
+      expect(d.tick(setPitWallPage(base, n)).screen).toBe(page.id);
+    });
+  });
+
+  test.if(find('OpenDash Porsche 1280x480') !== undefined)('a Porsche face opens band D on its own page, and with no crest set draws the placeholder shield', () => {
+    const face = find('OpenDash Porsche 1280x480')!;
+    const state = panelFor(face);
+    const d = driver(face);
+    const ops = (list: readonly Op[]): Op[] => list.flatMap((o) => (o.kind === 'widget' ? [o, ...ops(o.ops)] : [o]));
+    const drawn = ops(d.tick(state).ops);
+    const band = zonesOf(catalogue, state).find((z) => z.letter === 'D')!;
+    expect(band.pages.length).toBe(9);
+    expect(band.pages[state.zones[3]!]!.id).toBe('porscheFoot');
+    expect(drawn.some((o) => o.path.includes('/ porscheFoot >'))).toBe(true);
+    expect(drawn.some((o) => o.path.endsWith('porscheFoot.badge'))).toBe(true);
+    expect(drawn.some((o) => o.kind === 'standIn' && o.label.startsWith('Image from file'))).toBe(false);
   });
 });

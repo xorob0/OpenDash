@@ -4,8 +4,36 @@
   gap: var(--space-5);
 }
 
-/* The size switcher: a row of ruled numerals, the chosen one in the accent. */
+/* The size switcher: a row of ruled numerals per kind of screen, the chosen one in the accent. */
 .sizes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sizeGroup {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+@media (max-width: 40rem) {
+  .sizeGroup {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sizeGroupLabel {
+  font-weight: 500;
+  font-size: var(--size-label);
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.sizeRow {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
@@ -212,7 +240,7 @@
 }
 
 .compact {
-  grid-template-columns: 4rem minmax(0, 1fr);
+  grid-template-columns: 5rem minmax(0, 1fr);
 }
 
 .fieldLabel {
@@ -317,4 +345,38 @@
   color: var(--purpose-ui-on-accent);
   background: var(--purpose-ui-accent);
   border-color: var(--purpose-ui-accent);
+}
+
+.note {
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+.subgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.subTitle {
+  font-weight: 500;
+  font-size: var(--size-small);
+  color: var(--color-text-primary);
+}
+
+.scenario {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+/* A companion pages on a tap of either half, as SimHub's simple touch mode does. */
+.tappable {
+  cursor: pointer;
+}
+
+.zone > .fieldLabel {
+  font-size: var(--size-small);
 }

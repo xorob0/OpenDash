@@ -230,6 +230,24 @@ export function chooseScreen(
   return any >= 0 ? any : Math.max(0, Math.min(previous.screen, screens.length - 1));
 }
 
+/**
+ * The screens SimHub's paging walks (`Dashboard.GetActiveScreens`), by index: the enabled ones, and
+ * among them, when their roles differ, the pit screens while a game runs in the pit lane (the
+ * in-game ones when there are none), the in-game screens while a game runs, and the idle screens
+ * while none does. When every enabled screen carries the same three roles, all of them.
+ */
+export function activeScreens(screens: readonly Screen[], enabled: readonly boolean[], gameRunning: boolean, inPitLane: boolean): number[] {
+  const on = screens.flatMap((_, i) => (enabled[i] ? [i] : []));
+  const roles = new Set(on.map((i) => `${screens[i]!.pit};${screens[i]!.inGame};${screens[i]!.idle}`));
+  if (roles.size <= 1) return on;
+  if (gameRunning) {
+    const pit = on.filter((i) => screens[i]!.pit);
+    if (inPitLane && pit.length > 0) return pit;
+    return on.filter((i) => screens[i]!.inGame);
+  }
+  return on.filter((i) => screens[i]!.idle);
+}
+
 /** Whether a blinking item is drawn at this moment: on for the first half period, off for the next. */
 export const blinkOn = (now: number, delay: number, inverted: boolean): boolean => (Math.floor(now / Math.max(1, delay)) % 2 === 0) !== inverted;
 
@@ -261,6 +279,10 @@ class DashboardRun {
   private mode: Mode | null = null;
   private remembered = new Map<Mode, number>();
   private lastScreenName: string | null = null;
+  /** What the last tick saw, for SimHub's paging between ticks. */
+  private lastEnabled: readonly boolean[] = [];
+  private lastGame = false;
+  private lastPit = false;
   private charts = new Map<string, number[]>();
   private widgets = new Map<string, DashboardRun>();
 
@@ -278,8 +300,37 @@ class DashboardRun {
     this.mode = null;
     this.remembered.clear();
     this.lastScreenName = null;
+    this.lastEnabled = [];
     this.charts.clear();
     for (const w of this.widgets.values()) w.reset();
+  }
+
+  /**
+   * The clock went back. Everything the trace's past fed is dropped: the state `changed` and its
+   * siblings keep, and the charts' buffers. What the driver chose is not: the screen paged to, the
+   * one each mode remembers, and the dashboard's variables, which on a companion are the memory of
+   * that choice. A loop of the replay is not SimHub restarting.
+   */
+  rewind(): void {
+    this.state.clear();
+    this.charts.clear();
+    for (const w of this.widgets.values()) w.rewind();
+  }
+
+  /**
+   * SimHub's `SelectNextScreen` or `SelectPreviousScreen` between two ticks: the next or previous of
+   * the screens its paging walks, wrapping, from the one drawn last. The next tick keeps it while it
+   * stays enabled and the mode stays the same, as `FindModeScreen` does. Returns whether it moved.
+   */
+  navigate(direction: 1 | -1): boolean {
+    const ring = activeScreens(this.scene.screens, this.lastEnabled, this.lastGame, this.lastPit);
+    if (ring.length === 0) return false;
+    const at = ring.indexOf(this.screen);
+    const next = at < 0 ? ring[0]! : ring[(at + direction + ring.length) % ring.length]!;
+    if (next === this.screen) return false;
+    this.screen = next;
+    if (this.mode !== null) this.remembered.set(this.mode, next);
+    return true;
   }
 
   /** The screen drawn on the last tick, by name. */
@@ -329,7 +380,10 @@ class DashboardRun {
     if (this.root) {
       const p = input.properties;
       const truthy = (name: string) => toBool(E.toValue(p(name) ?? null)) === true;
-      const mode = modeOf(screens, enabled, truthy(GAME_RUNNING), truthy(PIT_LIMITER) || truthy(IN_PIT_LANE));
+      this.lastGame = truthy(GAME_RUNNING);
+      this.lastPit = truthy(PIT_LIMITER) || truthy(IN_PIT_LANE);
+      this.lastEnabled = enabled;
+      const mode = modeOf(screens, enabled, this.lastGame, this.lastPit);
       this.screen = chooseScreen(screens, enabled, mode, { screen: this.screen, mode: this.mode, remembered: this.remembered });
       this.mode = mode;
       this.remembered.set(mode, this.screen);
@@ -475,13 +529,24 @@ class DashboardRun {
         return;
       case 'standIn': {
         // Evaluated all the same, so an address or a path that cannot be computed is still reported.
-        value('StartAddress');
-        value('ImagePath');
+        const address = value('StartAddress');
+        const file = value('ImagePath');
         value('Scale');
         if (!['RadarItem', 'GeneratedStaticMapItem', 'WebPageItem', 'ImageFromFileItem'].includes(item.type)) {
           this.engine.report('unknown item', fullPath, `${item.type || 'an item with no $type'} is not a kind the demo draws`);
         }
-        ops.push({ kind: 'standIn', ...common, label: item.label, error: error() });
+        let label = item.label;
+        if (item.type === 'ImageFromFileItem') {
+          // A picture from a file on the rig. With no file named there is nothing to draw, which is
+          // how a Porsche face with no crest set shows the placeholder shield beneath it.
+          const path = file === undefined ? item.imagePath : file === null ? '' : E.valueToString(file);
+          if (path.trim() === '') return;
+          label = `${item.label}: ${path}`;
+        } else if (item.type === 'WebPageItem') {
+          const url = address === undefined ? item.startAddress : address === null ? '' : E.valueToString(address);
+          if (url.trim() !== '') label = `${item.label}: ${url}`;
+        }
+        ops.push({ kind: 'standIn', ...common, label, error: error() });
         return;
       }
       case 'widget': {
@@ -573,7 +638,8 @@ export interface EvaluateResult {
  *
  * The clock is the trace's. When it goes backwards (the scrubber moved back, or the replay looped),
  * every piece of state SimHub keeps between frames is dropped, because state carried from the end
- * of a lap into its start is state the dash never had.
+ * of a lap into its start is state the dash never had. The screen the driver paged to is kept: that
+ * is theirs, not the trace's.
  */
 export class Engine {
   readonly problems = new Map<string, Problem>();
@@ -600,6 +666,11 @@ export class Engine {
   reset(): void {
     this.run.reset();
     this.last = -Infinity;
+  }
+
+  /** SimHub's NextScreen (1) or PreviousScreen (-1) on the main dashboard. Returns whether it moved. */
+  navigate(direction: 1 | -1): boolean {
+    return this.run.navigate(direction);
   }
 
   report(kind: Problem['kind'], where: string, message: string): void {
@@ -632,7 +703,7 @@ export class Engine {
 
   /** Computes the frame at `now`, in milliseconds of trace time. */
   tick(input: TickInput): Frame {
-    if (input.now < this.last) this.run.reset();
+    if (input.now < this.last) this.run.rewind();
     this.last = input.now;
     const { ops, screen } = this.run.tick(input, null, null, '');
     return { screen: screen?.name ?? null, background: this.run.scene.background, screenBackground: screen?.background ?? TRANSPARENT, ops };

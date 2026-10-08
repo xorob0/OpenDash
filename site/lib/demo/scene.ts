@@ -206,6 +206,9 @@ export interface StandInItem extends Drawable {
   readonly label: string;
   /** The `$type`, short. */
   readonly type: string;
+  /** An image-from-file's `ImagePath`, and a web page's `StartAddress`, as written; empty otherwise. */
+  readonly imagePath: string;
+  readonly startAddress: string;
 }
 
 export type Item = TextItem | RectItem | EllipseItem | LayerItem | WidgetItem | ChartItem | GaugeItem | ImageItem | StandInItem;
@@ -424,7 +427,14 @@ function parseItem(raw: unknown, index: number, unknown: Set<string>): Item | nu
       return { kind: 'image', ...drawable(raw, fallbackName), image: str(raw.Image, '') };
     default: {
       if (!(type in STAND_INS)) unknown.add(type || '(no $type)');
-      return { kind: 'standIn', ...drawable(raw, fallbackName), label: STAND_INS[type] ?? (type || 'Unknown item'), type };
+      return {
+        kind: 'standIn',
+        ...drawable(raw, fallbackName),
+        label: STAND_INS[type] ?? (type || 'Unknown item'),
+        type,
+        imagePath: str(raw.ImagePath, ''),
+        startAddress: str(raw.StartAddress, ''),
+      };
     }
   }
 }
