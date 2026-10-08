@@ -139,6 +139,17 @@ export const PORSCHE_PICTOGRAMS: readonly DashAsset[] = [
   porschePictogram('hazard', 'lit'),
   porschePictogram('hazard', 'ink'),
   porschePictogram('tyre', 'dim'),
+  // The four the 1280 x 720 face's column of eight adds (#713): the fuel pump, the charge lamp, the
+  // oil can and the limiter's dial, the warnings lit in `color.danger.primary` and the limiter in
+  // `color.good.primary`, the colour of the limiter body.
+  porschePictogram('fuel', 'dim'),
+  porschePictogram('fuel', 'lit'),
+  porschePictogram('battery', 'dim'),
+  porschePictogram('battery', 'lit'),
+  porschePictogram('oil', 'dim'),
+  porschePictogram('oil', 'lit'),
+  porschePictogram('limiter', 'dim'),
+  porschePictogram('limiter', 'lit'),
 ];
 
 /** Every asset a package may carry. */

@@ -1,7 +1,8 @@
 /**
  * The car's pictograms, the ISO 2575 symbols its display shows: the low beam of the top strip, and
  * down the telltale column the position lamps, the brake system warning, the general warning
- * triangle and the tyre pressure warning.
+ * triangle and the tyre pressure warning. The 1280 x 720 face's column of eight adds the fuel pump,
+ * the charge lamp, the oil can and the limiter's dial (#713).
  *
  * Each is a picture from `design/assets.ts`, one file per state, because SimHub's format has no
  * vector item and an image carries no tint (docs/research/simhub-dash-format.md): a lit pictogram is
@@ -20,7 +21,7 @@ export interface Lit {
   state: 'lit' | 'ink';
 }
 
-export type Pictogram = 'headlight' | 'lights' | 'warning' | 'hazard' | 'tyre';
+export type Pictogram = 'headlight' | 'lights' | 'warning' | 'hazard' | 'tyre' | 'fuel' | 'battery' | 'oil' | 'limiter';
 
 /** One file of a pictogram in `box`, kept to its own proportions. */
 export function picture(name: string, pictogram: Pictogram, state: 'dim' | 'lit' | 'ink', box: Rect, visible?: Expr): ImageItem {
