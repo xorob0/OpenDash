@@ -1,0 +1,91 @@
+{"trace":2,"scenario":"relative-fixture","frames":2,"hz":10,"ticks":[0,6],"recorded":"2026-10-08","simHub":"none, written by hand","cars":24}
+{"p":"DataCorePlugin.GameData.SessionTypeName","v":"Race"}
+{"p":"DataCorePlugin.GameRunning","v":1}
+{"p":"OpenDash.DriverNameFormat","v":"full"}
+{"p":"OpenDash.DriverNameTeam","v":false}
+{"p":"OpenDash.PositionMode","v":"overall"}
+{"p":"driveravailable(1)","k":"call","v":true}
+{"p":"driveravailable(2)","k":"call","v":true}
+{"p":"driveravailable(3)","k":"call","v":true}
+{"p":"driveravailable(4)","k":"call","v":true}
+{"p":"driveravailable(5)","k":"call","v":true}
+{"p":"driveravailable(6)","k":"call","v":true}
+{"p":"driveravailable(7)","k":"call","v":true}
+{"p":"drivercarclass(1)","k":"call","v":"GT3"}
+{"p":"drivercarclass(2)","k":"call","v":"GT3"}
+{"p":"drivercarclass(3)","k":"call","v":"GT3"}
+{"p":"drivercarclass(4)","k":"call","v":"GT3"}
+{"p":"drivercarclass(5)","k":"call","v":"GT3"}
+{"p":"drivercarclass(6)","k":"call","v":"GT3"}
+{"p":"drivercarclass(7)","k":"call","v":"GT3"}
+{"p":"drivercarnumber(1)","k":"call","v":"7"}
+{"p":"drivercarnumber(2)","k":"call","v":"11"}
+{"p":"drivercarnumber(3)","k":"call","v":"22"}
+{"p":"drivercarnumber(4)","k":"call","v":"31"}
+{"p":"drivercarnumber(5)","k":"call","v":"5"}
+{"p":"drivercarnumber(6)","k":"call","v":"64"}
+{"p":"drivercarnumber(7)","k":"call","v":"18"}
+{"p":"driverclassposition(1)","k":"call","v":1}
+{"p":"driverclassposition(2)","k":"call","v":2}
+{"p":"driverclassposition(3)","k":"call","v":3}
+{"p":"driverclassposition(4)","k":"call","v":4}
+{"p":"driverclassposition(5)","k":"call","v":5}
+{"p":"driverclassposition(6)","k":"call","v":6}
+{"p":"driverclassposition(7)","k":"call","v":7}
+{"p":"driveriscarinpitlane(1)","k":"call","v":false}
+{"p":"driveriscarinpitlane(2)","k":"call","v":false}
+{"p":"driveriscarinpitlane(3)","k":"call","v":false}
+{"p":"driveriscarinpitlane(4)","k":"call","v":false}
+{"p":"driveriscarinpitlane(5)","k":"call","v":false}
+{"p":"driveriscarinpitlane(6)","k":"call","v":false}
+{"p":"driveriscarinpitlane(7)","k":"call","v":false}
+{"p":"driverisplayer(1)","k":"call","v":false}
+{"p":"driverisplayer(2)","k":"call","v":false}
+{"p":"driverisplayer(3)","k":"call","v":false}
+{"p":"driverisplayer(4)","k":"call","v":true}
+{"p":"driverisplayer(5)","k":"call","v":false}
+{"p":"driverisplayer(6)","k":"call","v":false}
+{"p":"driverisplayer(7)","k":"call","v":false}
+{"p":"drivername(1)","k":"call","v":"Marco Rossi"}
+{"p":"drivername(2)","k":"call","v":"Chloe Martin"}
+{"p":"drivername(3)","k":"call","v":"Liam Byrne"}
+{"p":"drivername(4)","k":"call","v":"Ana Silva"}
+{"p":"drivername(5)","k":"call","v":"Jonas Weber"}
+{"p":"drivername(6)","k":"call","v":"Sofia Rossi"}
+{"p":"drivername(7)","k":"call","v":"Tom Hale"}
+{"p":"driverposition(1)","k":"call","v":1}
+{"p":"driverposition(2)","k":"call","v":2}
+{"p":"driverposition(3)","k":"call","v":3}
+{"p":"driverposition(4)","k":"call","v":4}
+{"p":"driverposition(5)","k":"call","v":5}
+{"p":"driverposition(6)","k":"call","v":6}
+{"p":"driverposition(7)","k":"call","v":7}
+{"p":"driverrelativegaptoplayer(1)","k":"call","v":[6.5,6.25]}
+{"p":"driverrelativegaptoplayer(2)","k":"call","v":[-2.1,-2.05]}
+{"p":"driverrelativegaptoplayer(3)","k":"call","v":[-0.874,-0.9]}
+{"p":"driverrelativegaptoplayer(4)","k":"call","v":0}
+{"p":"driverrelativegaptoplayer(5)","k":"call","v":[1.203,1.25]}
+{"p":"driverrelativegaptoplayer(6)","k":"call","v":[-4.512,-4.5]}
+{"p":"driverrelativegaptoplayer(7)","k":"call","v":[3.95,4]}
+{"p":"drivershortname(1)","k":"call","v":"MR"}
+{"p":"drivershortname(2)","k":"call","v":"CM"}
+{"p":"drivershortname(3)","k":"call","v":"LB"}
+{"p":"drivershortname(4)","k":"call","v":"AS"}
+{"p":"drivershortname(5)","k":"call","v":"JW"}
+{"p":"drivershortname(6)","k":"call","v":"SR"}
+{"p":"drivershortname(7)","k":"call","v":"TH"}
+{"p":"driverteamname(1)","k":"call","v":""}
+{"p":"driverteamname(2)","k":"call","v":""}
+{"p":"driverteamname(3)","k":"call","v":""}
+{"p":"driverteamname(4)","k":"call","v":""}
+{"p":"driverteamname(5)","k":"call","v":""}
+{"p":"driverteamname(6)","k":"call","v":""}
+{"p":"driverteamname(7)","k":"call","v":""}
+{"p":"getopponentleaderboardposition_aheadbehind(-1)","k":"call","v":3}
+{"p":"getopponentleaderboardposition_aheadbehind(-2)","k":"call","v":2}
+{"p":"getopponentleaderboardposition_aheadbehind(-3)","k":"call","v":6}
+{"p":"getopponentleaderboardposition_aheadbehind(0)","k":"call","v":4}
+{"p":"getopponentleaderboardposition_aheadbehind(1)","k":"call","v":5}
+{"p":"getopponentleaderboardposition_aheadbehind(2)","k":"call","v":7}
+{"p":"getopponentleaderboardposition_aheadbehind(3)","k":"call","v":1}
+{"p":"getplayerleaderboardposition()","k":"call","v":4}

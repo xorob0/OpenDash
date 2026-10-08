@@ -315,10 +315,12 @@ describe('every built package against the race trace', () => {
 describe('every built package against every committed trace', () => {
   const traces = traceFiles();
 
-  test('the nine traces are all there and all version 1', () => {
+  // Version 1 until the nine are re-recorded on the VM with their opponent calls (#257), and version
+  // 2 afterwards; the demo reads both, a version 1 trace drawing the opponent pages empty.
+  test('the nine traces are all there, each a version the demo reads', () => {
     expect(traces.length).toBe(9);
     expect(traces[0]).toBe('race.ndjson');
-    for (const file of traces) expect(readReplay(file).trace.header.trace).toBe(1);
+    for (const file of traces) expect([1, 2]).toContain(readReplay(file).trace.header.trace);
   });
 
   test.each(faces.map((f) => [f.folder, f] as const))('%s draws every scenario as it opens without reaching a construct the evaluator does not compute', (_folder, face) => {

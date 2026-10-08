@@ -77,3 +77,22 @@ describe('the race trace the demo replays', () => {
     expect(race.at(50)['DataCorePlugin.GameRawData.Telemetry.Gear']).toEqual(E.int(6));
   });
 });
+
+describe('a version 2 trace, with the opponent calls (#257)', () => {
+  const replay = new Replay(parseTrace(readFileSync(path.resolve(import.meta.dir, '..', '..', 'scripts', 'fixtures', 'relative.v2.ndjson'), 'utf8')));
+
+  test('carries each call under its text beside the properties, a gap interpolated as any measured value is', () => {
+    const at = replay.at(50);
+    expect(at['OpenDash.PositionMode']).toBe('overall');
+    expect(at['drivername(3)']).toBe('Liam Byrne');
+    expect(at['getopponentleaderboardposition_aheadbehind(-3)']).toEqual(E.int(6));
+    expect((at['driverrelativegaptoplayer(6)'] as E.NumberValue).value).toBeCloseTo(-4.506, 6);
+  });
+
+  test('is what the evaluator answers an opponent call from, given the moment as the properties', () => {
+    const at = replay.at(0);
+    const scope: E.Scope = { properties: (name: string) => at[name] };
+    expect(E.evaluate('drivername(getopponentleaderboardposition_aheadbehind(-1))', scope)).toBe('Liam Byrne');
+    expect(E.evaluate('drivername(9)', scope)).toBeNull();
+  });
+});
