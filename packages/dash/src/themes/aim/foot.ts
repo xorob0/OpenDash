@@ -22,7 +22,7 @@ import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { gameRunning } from '../../second/values.ts';
 import { walkItems } from '../../walk.ts';
-import { BAND_PAGES, bandPageItems, relativeFields, type BandField } from '../../zones/bandPages.ts';
+import { BAND_PAGES, bandFlagBlocks, bandPageItems, relativeFields, type BandField } from '../../zones/bandPages.ts';
 import { TELLTALE_PAGE, TELLTALES } from '../../zones/telltales.ts';
 import { ghostOf, lcdColour, reading, segment, segmentWidth } from './register.ts';
 
@@ -37,6 +37,9 @@ const VALUE_STEPS: readonly number[] = [32, 28, 24, 20];
 const GAP_STEPS: readonly number[] = [56, 32, 20];
 
 const STATUS = { good: 'GPS: GOOD', lost: 'GPS: LOST' } as const;
+
+/** Between a flag's end block and the page. */
+const FLAG_GAP = 6;
 
 /** What a field's caption says: its label in capitals and its unit after it, as `FUEL  L`. */
 function captionOf(f: BandField): { text: string; widest: string; bind?: Expr } {
@@ -169,14 +172,24 @@ function lampWords(frame: Rect, prefix: string): Item[] {
   });
 }
 
+/**
+ * The room a page has: the band less the blocks at its two ends, which a flag settles into after it
+ * has taken the whole band, so that a flag never covers the status line or the last cell.
+ */
+function pageRoom(frame: Rect): Rect {
+  const { left, right } = bandFlagBlocks(frame, false);
+  return { left: frame.left + left.width + FLAG_GAP, top: frame.top, width: frame.width - left.width - right.width - 2 * FLAG_GAP, height: frame.height };
+}
+
 /** One of band D's pages on the LCD; see the file comment. */
-export function aimBandPage(page: string, frame: Rect, prefix: string, classOnly?: Expr): Item[] {
+export function aimBandPage(page: string, band: Rect, prefix: string, classOnly?: Expr): Item[] {
+  const frame = pageRoom(band);
   if (page === TELLTALE_PAGE) return lampWords(frame, prefix);
   const fields = page === 'relative' && classOnly !== undefined ? relativeFields(classOnly) : BAND_PAGES[page];
   if (!fields) throw new RangeError(`band D has no page "${page}"`);
   // The fields the house page draws at this width, which is the page's own shedding: on a narrow band
   // the house keeps the first few and drops the tail, and the LCD keeps the same ones.
-  const house = bandPageItems(page, frame, prefix, false, classOnly);
+  const house = bandPageItems(page, band, prefix, false, classOnly);
   const names = house.flatMap((item) => [...walkItems([item])]).map((item) => item.name);
   const kept = fields.filter((f) => names.some((name) => name === `${prefix}${f.id}` || name.startsWith(`${prefix}${f.id}.`)));
   const plan = arrangementFor(kept, frame);
