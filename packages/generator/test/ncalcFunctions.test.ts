@@ -39,6 +39,11 @@ describe('finding the calls in an expression', () => {
     expect(functionCalls("replace([A], '\\'', ',')")).toMatchObject([{ name: 'replace', argumentCount: 3 }]);
   });
 
+  test('each argument comes back as its source text, a comma inside a nested call or a string kept in it', () => {
+    expect(functionCalls("if(max([A], 1), 'a,b', (2))")[0]!.args).toEqual(['max([A], 1)', "'a,b'", '(2)']);
+    expect(functionCalls('getplayerleaderboardposition()')[0]!.args).toEqual([]);
+  });
+
   test('a property reference is not a call, even one that looks like a name', () => {
     expect(functionCalls('[DataCorePlugin.GameData.Rpms] + 1')).toEqual([]);
   });
