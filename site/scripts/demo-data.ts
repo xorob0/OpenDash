@@ -190,24 +190,47 @@ export function unzip(buffer: Buffer): { name: string; data: Buffer }[] {
 
 // ------------------------------------------------------------------------------------ copying
 
-const readJson = (file: string): unknown => JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, ''));
+/**
+ * The files of a built package: its `.djson` documents and their `.ressources` sidecars. Read from
+ * `build/<folder>/` when the build left the folder there, and otherwise out of the `.simhubdash`
+ * the build also writes, which is the same folder zipped with the folder's name as its root. CI's
+ * Website job has only the zips: it downloads the dash job's artifact, which carries
+ * `build/*.simhubdash` and the manifest and not the unpacked folders.
+ */
+export function packageFiles(entry: ManifestEntry, buildDir = path.join(repoRoot, 'build')): Map<string, Buffer> {
+  const out = new Map<string, Buffer>();
+  const folder = path.join(buildDir, entry.folder);
+  if (existsSync(folder)) {
+    for (const file of readdirSync(folder)) if (/\.djson(\.ressources)?$/.test(file)) out.set(file, readFileSync(path.join(folder, file)));
+    return out;
+  }
+  const zip = path.join(buildDir, entry.file);
+  if (!existsSync(zip)) throw new Error(`neither build/${entry.folder}/ nor build/${entry.file} exists; run bun run build at the repository root`);
+  const prefix = `${entry.folder}/`;
+  for (const { name, data } of unzip(readFileSync(zip))) {
+    if (!name.startsWith(prefix)) continue;
+    const file = name.slice(prefix.length);
+    if (/\.djson(\.ressources)?$/.test(file) && !file.includes('/')) out.set(file, data);
+  }
+  return out;
+}
 
 function copyFace(entry: ManifestEntry & { slots?: number }, prefixes: ReadonlyMap<string, string>): DemoFace {
-  const source = path.join(repoRoot, 'build', entry.folder);
+  const sources = packageFiles(entry);
   const s = slug(entry.folder);
   const target = path.join(outDir, s);
   mkdirSync(target, { recursive: true });
   const files: DemoFile[] = [];
   const images: DemoImage[] = [];
-  for (const file of readdirSync(source).filter((f) => f.endsWith('.djson')).sort()) {
-    const from = path.join(source, file);
-    const document = readJson(from) as { Images?: { Name?: string; Extension?: string }[] };
+  for (const file of [...sources.keys()].filter((f) => f.endsWith('.djson')).sort()) {
+    const built = sources.get(file)!;
+    const document = JSON.parse(built.toString('utf8').replace(/^\uFEFF/, '')) as { Images?: { Name?: string; Extension?: string }[] };
     const text = JSON.stringify(document);
     writeFileSync(path.join(target, file), text);
-    files.push({ file, bytes: Buffer.byteLength(text), builtBytes: statSync(from).size });
-    const sidecar = `${from}.ressources`;
-    if (!existsSync(sidecar) || !document.Images?.length) continue;
-    const entries = unzip(readFileSync(sidecar));
+    files.push({ file, bytes: Buffer.byteLength(text), builtBytes: built.length });
+    const sidecar = sources.get(`${file}.ressources`);
+    if (!sidecar || !document.Images?.length) continue;
+    const entries = unzip(sidecar);
     const dir = path.join(target, 'images', file);
     mkdirSync(dir, { recursive: true });
     for (const image of document.Images) {
