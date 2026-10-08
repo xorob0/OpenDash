@@ -1,6 +1,7 @@
 // FacePages.cs: what each zone of the dash face can show, mirroring ZONE_A_PAGES, BAND_D_PAGES and
 // BAR_FIELDS in packages/dash/src/contract.ts. A test compares the two files, so keep one entry per
-// line. Zones B and C draw from the module catalogue in Modules.cs rather than a list of their own.
+// line. Zones B and C draw from the module catalogue in Modules.cs rather than a list of their own,
+// and band D on a themed face carries the theme's band pages after its own (Contract.Themes, #718).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,8 @@ namespace OpenDashPlugin
             new ZonePage(3, "track", "Track"),
         };
 
-        /// <summary>Band D's eight pages, across the foot of the face.</summary>
+        /// <summary>Band D's eight pages, across the foot of the face: the house's, which a theme's band
+        /// pages follow on a face of that theme (<see cref="BandDFor"/>).</summary>
         public static readonly IReadOnlyList<ZonePage> BandD = new[]
         {
             new ZonePage(0, "fuel", "Fuel"),
@@ -53,11 +55,25 @@ namespace OpenDashPlugin
         public static readonly IReadOnlyList<ZonePage> ZoneBC =
             Modules.All.Select(m => new ZonePage(m.Number - 1, m.Id, m.Name)).ToArray();
 
-        /// <summary>The catalogue a zone draws from, by its letter.</summary>
-        public static IReadOnlyList<ZonePage> For(string letter)
+        /// <summary>
+        /// Band D's catalogue on a face of a theme: the house's eight, then the theme's band pages numbered
+        /// on from them, under the names the theme gives them. The house's eight for the default look.
+        /// </summary>
+        public static IReadOnlyList<ZonePage> BandDFor(string theme)
+        {
+            var added = Contract.ThemeBandPages(theme);
+            if (added.Count == 0) return BandD;
+            var pages = new List<ZonePage>(BandD);
+            foreach (var page in added) pages.Add(new ZonePage(pages.Count, page.Id, page.Name));
+            return pages;
+        }
+
+        /// <summary>The catalogue a zone draws from, by its letter, on a face of the theme given (null for
+        /// the default look). Only band D's depends on the theme.</summary>
+        public static IReadOnlyList<ZonePage> For(string letter, string theme = null)
         {
             if (letter == "A") return ZoneA;
-            if (letter == "D") return BandD;
+            if (letter == "D") return BandDFor(theme);
             if (letter == "B" || letter == "C") return ZoneBC;
             throw new ArgumentOutOfRangeException(nameof(letter));
         }
@@ -79,26 +95,32 @@ namespace OpenDashPlugin
             return letter == "B" || letter == "C" || letter == "D";
         }
 
-        /// <summary>How many pages a zone can show, by its index in Contract.FaceZoneLetters.</summary>
+        /// <summary>How many pages a zone can show, by its index in Contract.FaceZoneLetters, on a default face.</summary>
         public static int CountAt(int zoneIndex)
         {
+            return CountAt(zoneIndex, null);
+        }
+
+        /// <summary>How many pages a zone can show, by its index in Contract.FaceZoneLetters, on a face of the theme given.</summary>
+        public static int CountAt(int zoneIndex, string theme)
+        {
             if (zoneIndex < 0 || zoneIndex >= Contract.FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
-            return For(Contract.FaceZoneLetters[zoneIndex]).Count;
+            return For(Contract.FaceZoneLetters[zoneIndex], theme).Count;
         }
 
         /// <summary>The name of a page of a zone, or "Page n" when the number is outside the catalogue.</summary>
-        public static string NameOf(string letter, int page)
+        public static string NameOf(string letter, int page, string theme = null)
         {
-            var pages = For(letter);
+            var pages = For(letter, theme);
             return page >= 0 && page < pages.Count ? pages[page].Name : ("Page " + page);
         }
 
         /// <summary>The id of a page of a zone, or null when the number is outside the catalogue. Two
         /// zones showing the same id are showing the same page even when their catalogues differ:
         /// zone A's track page and module 13 are one drawing.</summary>
-        public static string IdOf(string letter, int page)
+        public static string IdOf(string letter, int page, string theme = null)
         {
-            var pages = For(letter);
+            var pages = For(letter, theme);
             return page >= 0 && page < pages.Count ? pages[page].Id : null;
         }
 

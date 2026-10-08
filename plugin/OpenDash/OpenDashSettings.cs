@@ -1947,7 +1947,7 @@ namespace OpenDashPlugin
             }
             if (screen.Face == null)
             {
-                screen.Face = new FaceSettings();
+                screen.Face = FaceSettings.For(screen.Theme);
                 screen.Face.Normalise();
             }
             return screen.Face;
@@ -2027,12 +2027,13 @@ namespace OpenDashPlugin
         /// <summary>The zone and page a held button shows on this face.</summary>
         public int QuickGlanceOf(Contract.FaceSize face)
         {
-            return Contract.NormaliseQuickGlance(Face(face).QuickGlance);
+            return Face(face).NormalisedQuickGlance();
         }
 
         public void SetQuickGlance(Contract.FaceSize face, int value)
         {
-            Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
+            var settings = Face(face);
+            settings.QuickGlance = Contract.NormaliseQuickGlance(value, settings.ThemeId());
         }
 
         /// <summary>Puts every zone of every face, and every companion, on the page it opens on, once,
@@ -2316,12 +2317,12 @@ namespace OpenDashPlugin
                 if (letter == null) glanced.Add(id);
                 else zones.Add(letter);
             };
-            foreach (var letter in Contract.FaceZoneLetters) add(FacePages.IdOf(letter, face.Start(letter)), FacePages.NameOf(letter, face.Start(letter)), letter);
+            foreach (var letter in Contract.FaceZoneLetters) add(face.PageId(letter, face.Start(letter)), face.PageName(letter, face.Start(letter)), letter);
 
-            var glance = Contract.NormaliseQuickGlance(face.QuickGlance);
+            var glance = face.NormalisedQuickGlance();
             var glanceLetter = Contract.FaceZoneLetters[Contract.QuickGlanceZone(glance)];
             var glancePage = Contract.QuickGlancePage(glance);
-            add(FacePages.IdOf(glanceLetter, glancePage), FacePages.NameOf(glanceLetter, glancePage), null);
+            add(face.PageId(glanceLetter, glancePage), face.PageName(glanceLetter, glancePage), null);
 
             foreach (var id in order)
             {
