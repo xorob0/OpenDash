@@ -1,0 +1,320 @@
+.demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* The size switcher: a row of ruled numerals, the chosen one in the accent. */
+.sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.size {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  transition:
+    border-color var(--fast) var(--ease),
+    color var(--fast) var(--ease);
+}
+
+.size:hover {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+}
+
+.on {
+  color: var(--color-text-primary);
+  border-color: var(--purpose-ui-accent);
+  outline: 1px solid var(--purpose-ui-accent);
+  outline-offset: -1px;
+}
+
+.layout {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (min-width: 72rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+
+.player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.stage {
+  width: 100%;
+  min-width: 0;
+}
+
+.canvasWrap {
+  position: relative;
+  max-width: 100%;
+  background: var(--color-surface-inset);
+}
+
+.canvas {
+  display: block;
+}
+
+.round {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--size-small);
+  text-align: center;
+}
+
+/* The outline overlay: one ruled box per drawn item, for reading the scene graph off the face. */
+.outline {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.box {
+  position: absolute;
+  border: 1px solid color-mix(in srgb, var(--color-brand-primary) 55%, transparent);
+  pointer-events: auto;
+}
+
+.box:hover {
+  background: color-mix(in srgb, var(--color-brand-primary) 18%, transparent);
+}
+
+.boxError {
+  border-color: var(--color-danger-primary);
+}
+
+.transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+}
+
+.play {
+  min-width: 5.5rem;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-weight: 500;
+  color: var(--purpose-ui-on-accent);
+  background: var(--purpose-ui-accent);
+  border-radius: var(--radius-sm);
+  transition: background var(--fast) var(--ease);
+}
+
+.play:hover {
+  background: var(--color-brand-tint);
+}
+
+.scrubber {
+  flex: 1 1 12rem;
+  min-width: 0;
+  accent-color: var(--purpose-ui-accent);
+}
+
+.time {
+  font-size: 1rem;
+  color: var(--color-text-primary);
+}
+
+.meta {
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+.alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-danger-primary);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+  font-size: var(--size-small);
+}
+
+.problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.problemKind {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: var(--size-label);
+  color: var(--color-danger-primary);
+}
+
+.problemMessage {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--color-text-secondary);
+}
+
+/* ---------------------------------------------------------------- the panel */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.groupTitle {
+  font-weight: 500;
+  font-size: var(--size-label);
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--size-small);
+}
+
+.compact {
+  grid-template-columns: 4rem minmax(0, 1fr);
+}
+
+.fieldLabel {
+  color: var(--color-text-secondary);
+}
+
+.select {
+  min-width: 0;
+  min-height: 36px;
+  padding: var(--space-1) var(--space-2);
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-surface-inset);
+  border: 1px solid var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+}
+
+.zone {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2) var(--space-2);
+  align-items: center;
+}
+
+.zone > .pages {
+  grid-column: 1 / -1;
+}
+
+.wheel {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.wheelButton {
+  width: 36px;
+  height: 36px;
+  font-size: 1.25rem;
+  line-height: 1;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--fast) var(--ease);
+}
+
+.wheelButton:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.pages {
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+.pages summary {
+  cursor: pointer;
+}
+
+.pageList {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-1) var(--space-3);
+  margin-block: var(--space-2);
+}
+
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--size-small);
+  color: var(--color-text-secondary);
+}
+
+.check input {
+  accent-color: var(--purpose-ui-accent);
+}
+
+.glance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.holdButton {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-weight: 500;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+  touch-action: none;
+  user-select: none;
+  transition:
+    border-color var(--fast) var(--ease),
+    background var(--fast) var(--ease);
+}
+
+.holdButton:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.held {
+  color: var(--purpose-ui-on-accent);
+  background: var(--purpose-ui-accent);
+  border-color: var(--purpose-ui-accent);
+}

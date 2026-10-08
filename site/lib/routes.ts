@@ -20,6 +20,7 @@ export const ROUTES = {
   compare: { path: '/compare', anchors: ['table', 'scheduled'], changeFrequency: 'monthly' },
   install: { path: '/install', anchors: ['plugin', 'after', 'nothing-showing', 'only-way'], changeFrequency: 'monthly' },
   download: { path: '/download', anchors: ['plugin', 'packages', 'source', 'releases'], changeFrequency: 'weekly' },
+  demo: { path: '/demo', anchors: ['demo', 'empty'], changeFrequency: 'monthly' },
 } as const satisfies Record<string, Route>;
 
 export const ROUTE_LIST: readonly Route[] = Object.values(ROUTES);
@@ -33,7 +34,7 @@ export const REDIRECTS = [
 ] as const;
 
 /** Static files a page may link to besides its routes. */
-export const STATIC_PREFIXES = ['/downloads/', '/shots/', '/clips/', '/fonts/', '/flag-box.svg', '/icon.svg'] as const;
+export const STATIC_PREFIXES = ['/downloads/', '/shots/', '/clips/', '/fonts/', '/flag-box.svg', '/icon.svg', '/demo/'] as const;
 
 export const routeFor = (path: string): Route | undefined => ROUTE_LIST.find((r) => r.path === path);
 

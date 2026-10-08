@@ -8,7 +8,7 @@ bun install
 bun run dev              # http://localhost:3000
 bun run build            # generate, then next build
 bun run typecheck
-bun run generate         # just the three generators
+bun run generate         # just the generators
 ```
 
 `dev`, `build` and `typecheck` all run `generate` first, because what it writes is gitignored and a
@@ -16,13 +16,14 @@ fresh clone has none of it.
 
 ## Nothing here restates a fact the repository already holds
 
-Three scripts read the repository at build time, and their output is generated and gitignored.
+Four scripts read the repository at build time, and their output is generated and gitignored.
 
 | Script | Reads | Writes |
 |---|---|---|
 | `scripts/tokens.ts` | `design/tokens.json` | `app/tokens.css` |
 | `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `build/OpenDash-plugin.zip` | `lib/content.generated.ts` |
 | `scripts/fonts.ts` | `packages/dash/fonts/*.ttf` | `public/fonts/*.woff2` |
+| `scripts/demo-data.ts` | `build/manifest.json`, each default-theme face's `build/<folder>/*.djson` and `.djson.ressources`, `traces/race.ndjson`, `packages/dash/src/contract.ts` | `public/demo/`, `lib/demo.generated.ts` |
 
 So which packages exist, how big the plugin zip is, what the 21 pages are called, which 3 ship off, the
 62 strip shapes, the flags in ranked order, the rectangles of the base face, what version this is
@@ -51,6 +52,7 @@ pages say so rather than inventing a file.
 | `/compare` | openDash beside the two competitors, dated |
 | `/install` | the plugin, the unblock step, nothing showing, and why there is no other way in |
 | `/download` | the plugin, what it carries, the release notes |
+| `/demo` | the faces drawn in the browser from their own `.djson` files, replaying a recorded race, with a fake panel; linked from the hero, not the nav |
 
 `lib/routes.ts` lists them with their anchors. The sitemap is generated from it and
 `test/links.test.ts` checks every `href` against it.
@@ -86,6 +88,16 @@ the pages, from `bun run panel-shots` through `bun scripts/sync-shots.ts --panel
 The clips under `public/clips/` are the same idea in motion: raw frames of a dash window recorded
 by `bun run clips`, encoded on the host, with `clips.json` saying what was taken. A page shows a
 clip where one exists and the still otherwise; a reader who asked for reduced motion sees the still.
+
+## The demo draws the real files
+
+`/demo` runs the default theme's ten faces in the browser (#395). `scripts/demo-data.ts` copies each
+face's `.djson` files out of `build/` and the race trace out of `traces/`; `lib/demo/` parses the
+scene, evaluates every binding with the NCalc evaluator in `packages/generator/src/ncalc/`, chooses
+the screen as SimHub does and draws on a canvas, and `lib/demo/panel.ts` writes the properties the
+plugin writes. An expression the evaluator does not compute is listed on the page and its item
+outlined in red, never drawn as a quiet blank. The opponent pages are empty until the traces record
+the opponent calls (#257), and the page says so. The clips stay the proof.
 
 ## Tests
 
