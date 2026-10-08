@@ -1563,11 +1563,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelScreens.BarFlagLabels.Length, Contract.CompanionFlagFormats.Length);
 
             // Duplicate; the drag hint and Previous page; the portrait layout; the companion's Flag display and
-            // Quick glance (the glance has no artboard: it is new on the companion in this release).
+            // Quick glance (the glance has no artboard: it is new on the companion in this release); and a
+            // Porsche face's Crest row (#714), which has no artboard either.
             var tags = new Dictionary<string, int>
             {
                 { "SettingsControl.Screens.cs", 1 },
-                { "SettingsControl.Screens.Face.cs", 2 },
+                { "SettingsControl.Screens.Face.cs", 3 },
                 { "SettingsControl.Screens.PitWall.cs", 1 },
                 { "SettingsControl.Screens.Companion.cs", 2 },
                 { "SettingsControl.Screens.Round.cs", 0 },

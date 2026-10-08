@@ -289,7 +289,7 @@ are in `media/362/`.
 | `Layer` | all | grouping, with `Childrens`, `Group`, `Repetitions` |
 | `GroupItem` | DNR | container with `ChildsPositioning`, that is to say a stacking layout |
 | `ImageItem` | all | image referenced by name from `Images` |
-| `ImageFromFileItem` | DNR | image from a user file path |
+| `ImageFromFileItem` | DNR, OpenDash's Porsche badge (#714) | image from a user file path, fitted keeping its proportions |
 | `WidgetItem` | Blumlaut, Dahl, DNR | includes another `.djson` by `FileName`, with dashboard variables |
 | `LinearGaugeItem` | Blumlaut, DNR | bar gauge with `Minimum`, `Maximum`, `Value`, optional `GaugeImage` |
 | `DialGaugeItem` | ETS2, Blumlaut | radial gauge |
@@ -412,8 +412,41 @@ the properties a text box was measured from, and a behaviour that survives only 
 enforces the attribute is one update away from disappearing without a message.
 
 **`ImageFromFileItem.ImagePath` is an ordinary bindable string**, unattributed, which is the path to
-an image outside the package. `ImageFromUrlItem.ImageUrl` likewise. Both are read off the type
-rather than run, so what SimHub does with a path that does not resolve is still unknown.
+an image outside the package. `ImageFromUrlItem.ImageUrl` likewise, beside an `ImageRefreshIntervalSeconds`
+that defaults to 60.
+
+**Verified on the VM on 2026-10-08** (#714), on SimHub 9.12.6, with a hand-built 1280 x 480 dashboard of
+both items, each over a grey frame, its path or address bound or literal, opened windowed and captured at
+1:1, and read against the decompiled types:
+
+- **A path that resolves draws, fitted to the rect with its proportions kept.** A 274 x 364 PNG in a
+  54 x 62 item stood 62 high and about 47 wide, centred; in a 160 x 60 item it stood 60 high, centred.
+  This is not `ImageItem`, which stretches to fill its box. A 274 px source, a 120 px and a 60 px one
+  came out alike at 54 x 62: SimHub decodes through `DashboardImage.LoadImage`, which caches the bitmap
+  with linear scaling, and the downscale is clean.
+- **A path that does not resolve, and an empty path, draw nothing and log nothing.** `ImageData` is
+  `File.Exists(ImagePath) ? decode : null`, inside a `try` that also gives null. The item's own
+  `BackgroundColor` still paints, so a transparent item over something else lets it show.
+- **A relative path was not tried.** The type passes `ImagePath` to `File.Exists` as it stands, so a
+  relative one resolves against SimHub's working directory and not the dashboard's folder; OpenDash
+  publishes a full path.
+- **A bound `ImagePath` that changes at run time is followed.** A JavaScript binding cycling an existing
+  file, a missing one and `''` every six seconds drew, blanked and drew again on cue. The setter raises
+  `ImageData` on a change, and the getter reloads when the path differs from the one it last read.
+- **A file that appears, or is rewritten, at an unchanged path is picked up within a second.**
+  `UpdateData` compares the file's write time once a second and reloads on a change; a path that did not
+  exist when the dash opened drew as soon as the file was copied there. A writer should therefore
+  replace the file in one move rather than write it in place, so the item never reads half of one.
+- **`ImageFromUrlItem` fetches again every `ImageRefreshIntervalSeconds` for as long as the dash is
+  open.** Twelve requests in two minutes at 10 s, from a bare `WebClient` that sends no User-Agent. So
+  Wikimedia's `upload.wikimedia.org`, which answers 403 to a request without one, drew nothing, while the
+  same file served from the host drew. An unresolvable host drew nothing and logged nothing. With the
+  server stopped, the last image stayed on screen: `LoadImage`'s `catch` nulls the field, but the
+  `ImageData = null` that follows raises no change when the field is already null.
+
+So a picture OpenDash may not ship is drawn from a file: the plugin downloads it once with a User-Agent,
+names it in a property, and the item reads it from disk, offline and without polling. `ImageFromUrlItem`
+is the wrong tool for anything fetched from a host that minds being asked once a minute per rig.
 
 **What it costs, per frame.** `ApplyBindings` runs over the rendered screen every frame.
 

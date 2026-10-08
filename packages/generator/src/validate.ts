@@ -69,6 +69,7 @@ export const ALLOWED_BINDING_TARGETS: Record<Item['kind'], readonly BindingTarge
   // `Image` is bindable in SimHub and is deliberately not offered until something needs it: a
   // telltale set draws one item per lamp with `Visible` bound, which is the same picture.
   image: DRAWABLE_TARGETS,
+  imageFromFile: [...DRAWABLE_TARGETS, 'ImagePath'],
 };
 
 /** Targets a colour gradient (Mode 4) can drive. */
