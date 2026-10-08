@@ -10,8 +10,9 @@
  * order, less the two settings openDash has no reading for: MAP and THR from the column, then TC-LA
  * and ABS from the foot, then the brake bias the 1280 x 720 board puts next in the column, and then,
  * for the eight that board's column holds, TC-LO from the foot and the two anti-roll bars the board
- * names after the bias. The foot is a page the plugin cannot reach yet, which is the second reason
- * its boxes belong here. As many as fit are drawn, stacked from the top at the column's fixed gap
+ * names after the bias. The foot is band D's own page, reachable from a rig since #718, and a driver
+ * who keeps the band on another page still wants the boxes, which is the second reason they belong
+ * here. As many as fit are drawn, stacked from the top at the column's fixed gap
  * as the ticket's size rule says, which is four on the 480 and 400 tall faces and eight at 720;
  * a box whose setting the car does not publish is hidden, and the ones under it move up into its
  * place, so that a car with two settings shows two boxes at the top and not two boxes with holes.
