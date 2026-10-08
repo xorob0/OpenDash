@@ -4,22 +4,27 @@
  * effect and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { propertiesRead } from '../packages/dash/src/properties.ts';
+import { callsRead, propertiesRead } from '../packages/dash/src/properties.ts';
+import { ncalcEvaluator as E, MAX_CARS } from '../packages/generator/src/index.ts';
 import { tracedScenarioNames, UNTRACED_SCENARIOS } from './emulator.ts';
 import {
   DEFAULT_FRAMES,
   DEFAULT_HZ,
   DEFAULT_WARM_UP_SECONDS,
+  PROBE_CALLS,
   PROVENANCE_PROPERTIES,
+  RECORDER_VERSION,
   parseArgs,
   parseEmulatorScenario,
   parseRecording,
   parseSimHubVersion,
+  recordedCalls,
   recordedProperties,
+  request,
   toTrace,
   untracedWarnings,
 } from './record.ts';
-import { TRACE_DIR, TRACE_VERSION } from './trace.ts';
+import { TRACE_DIR, TRACE_VERSION, formatTrace, frame, parseTrace } from './trace.ts';
 import type { RecordOptions } from './record.ts';
 
 /** parseArgs answers --help instead of options; every case below passes real arguments. */
@@ -29,14 +34,16 @@ const opts = (argv: string[]): RecordOptions => {
   return parsed;
 };
 
-const header = { recorder: 1, scenario: 'green', hz: 10, frames: 3, warmUpTicks: 7200, step: 6, started: '2026-09-13T06:50:00.0000000Z' };
+const header = { recorder: 2, scenario: 'green', hz: 10, frames: 3, warmUpTicks: 7200, step: 6, cars: 24, started: '2026-09-13T06:50:00.0000000Z' };
+
+const calls = (gap: number, name: string | null) => ({ 'drivername(2)': name, 'drivergaptoplayer(2)': gap, 'driverlastlap(2)': '00:01:39.1000000', 'drivername(24)': null });
 
 const recording = [
   JSON.stringify(header),
-  JSON.stringify({ tick: 300, v: { 'A.Constant': 7, 'B.Moving': 1, 'C.Lap': '00:01:38.4120000' } }),
-  JSON.stringify({ tick: 306, v: { 'A.Constant': 7, 'B.Moving': 2, 'C.Lap': '00:01:38.4120000' } }),
-  JSON.stringify({ tick: 312, v: { 'A.Constant': 7, 'B.Moving': 3, 'C.Lap': null } }),
-  JSON.stringify({ types: { 'C.Lap': 'timespan' } }),
+  JSON.stringify({ tick: 300, v: { 'A.Constant': 7, 'B.Moving': 1, 'C.Lap': '00:01:38.4120000' }, c: calls(-1.25, 'L. Byrne') }),
+  JSON.stringify({ tick: 306, v: { 'A.Constant': 7, 'B.Moving': 2, 'C.Lap': '00:01:38.4120000' }, c: calls(-1.2, 'L. Byrne') }),
+  JSON.stringify({ tick: 312, v: { 'A.Constant': 7, 'B.Moving': 3, 'C.Lap': null }, c: calls(-1.15, 'L. Byrne') }),
+  JSON.stringify({ types: { 'C.Lap': 'timespan', 'driverlastlap(2)': 'timespan' } }),
 ].join('\n');
 
 describe('reading what the recorder wrote', () => {
@@ -44,8 +51,8 @@ describe('reading what the recorder wrote', () => {
     const parsed = parseRecording(`${recording}\n`);
     expect(parsed.header).toEqual(header);
     expect(parsed.frames).toHaveLength(3);
-    expect(parsed.frames[1]).toEqual({ tick: 306, v: { 'A.Constant': 7, 'B.Moving': 2, 'C.Lap': '00:01:38.4120000' } });
-    expect(parsed.types).toEqual({ 'C.Lap': 'timespan' });
+    expect(parsed.frames[1]).toEqual({ tick: 306, v: { 'A.Constant': 7, 'B.Moving': 2, 'C.Lap': '00:01:38.4120000' }, c: calls(-1.2, 'L. Byrne') });
+    expect(parsed.types).toEqual({ 'C.Lap': 'timespan', 'driverlastlap(2)': 'timespan' });
   });
 
   test('a recording with no trailer was interrupted and is refused', () => {
@@ -57,8 +64,10 @@ describe('reading what the recorder wrote', () => {
     expect(() => parseRecording('')).toThrow(/wrote nothing/);
   });
 
-  test('a format this reader does not know is refused', () => {
-    expect(() => parseRecording(`${JSON.stringify({ ...header, recorder: 2 })}\n`)).toThrow(/recorder format/);
+  test('a format this reader does not know is refused, the first one included, since the recorder is built from this tree', () => {
+    expect(RECORDER_VERSION).toBe(2);
+    expect(() => parseRecording(`${JSON.stringify({ ...header, recorder: 3 })}\n`)).toThrow(/recorder format/);
+    expect(() => parseRecording(`${JSON.stringify({ ...header, recorder: 1 })}\n`)).toThrow(/rebuild the recorder/);
   });
 });
 
@@ -68,7 +77,31 @@ describe('transposing a recording into a trace', () => {
   test('the header carries the scenario, the shape and where it came from', () => {
     // The first tick is the one the first frame actually came from, not the one asked for: the
     // recorder starts its grid where the game appeared, which no caller can know in advance.
-    expect(trace.header).toEqual({ trace: TRACE_VERSION, scenario: 'green', frames: 3, hz: 10, ticks: [300, 6], recorded: '2026-09-13', simHub: '9.12.6' });
+    expect(trace.header).toEqual({ trace: TRACE_VERSION, scenario: 'green', frames: 3, hz: 10, ticks: [300, 6], recorded: '2026-09-13', simHub: '9.12.6', cars: 24 });
+    expect(TRACE_VERSION).toBe(2);
+  });
+
+  test('a call becomes a call column under its text, after the properties, transposed as a property is', () => {
+    expect(trace.columns.map((c) => [c.p, c.k ?? 'property'])).toEqual([
+      ['A.Constant', 'property'],
+      ['B.Moving', 'property'],
+      ['C.Lap', 'property'],
+      ['drivergaptoplayer(2)', 'call'],
+      ['driverlastlap(2)', 'call'],
+      ['drivername(2)', 'call'],
+      ['drivername(24)', 'call'],
+    ]);
+    expect(trace.columns.find((c) => c.p === 'drivergaptoplayer(2)')).toEqual({ p: 'drivergaptoplayer(2)', k: 'call', v: [-1.25, -1.2, -1.15] });
+    expect(trace.columns.find((c) => c.p === 'drivername(2)')).toEqual({ p: 'drivername(2)', k: 'call', v: 'L. Byrne' });
+    expect(trace.columns.find((c) => c.p === 'driverlastlap(2)')).toEqual({ p: 'driverlastlap(2)', k: 'call', t: 'timespan', v: '00:01:39.1000000' });
+    // A position past the end of the field names no car, every frame: one short line.
+    expect(trace.columns.find((c) => c.p === 'drivername(24)')).toEqual({ p: 'drivername(24)', k: 'call', v: null });
+  });
+
+  test('what it writes is what the reader reads, the calls in the frame beside the properties', () => {
+    const back = parseTrace(formatTrace(trace));
+    expect(back).toEqual(trace);
+    expect(frame(back, 1)).toMatchObject({ 'B.Moving': 2, 'drivername(2)': 'L. Byrne', 'drivergaptoplayer(2)': -1.2 });
   });
 
   test('a property that never moved becomes one value, which is what keeps a trace small', () => {
@@ -97,7 +130,7 @@ describe('transposing a recording into a trace', () => {
   });
 
   test('a property missing from a frame is recorded as null rather than dropped', () => {
-    const patchy = [JSON.stringify({ ...header, frames: 2 }), JSON.stringify({ tick: 300, v: { 'A.X': 1 } }), JSON.stringify({ tick: 306, v: {} }), JSON.stringify({ types: {} })].join('\n');
+    const patchy = [JSON.stringify({ ...header, frames: 2 }), JSON.stringify({ tick: 300, v: { 'A.X': 1 }, c: {} }), JSON.stringify({ tick: 306, v: {} }), JSON.stringify({ types: {} })].join('\n');
     expect(toTrace(parseRecording(patchy), '2026-09-13', '9.12.6').columns).toEqual([{ p: 'A.X', v: [1, null] }]);
   });
 });
@@ -136,6 +169,42 @@ describe('what a recording asks SimHub for', () => {
 
   test('it is sorted and holds no duplicate, since it is written into a request as it is', () => {
     expect(recorded).toEqual([...new Set(recorded)].sort());
+  });
+
+  const asked = recordedCalls();
+  const made = callsRead();
+
+  test('the calls are every opponent call the packages make, and the probes', () => {
+    const set = new Set(asked);
+    expect(made.filter((c) => !set.has(c))).toEqual([]);
+    expect(PROBE_CALLS.map((p) => p.text).filter((c) => !set.has(c))).toEqual([]);
+    expect(asked).toEqual([...new Set(asked)].sort());
+    expect(asked.length).toBe(new Set([...made, ...PROBE_CALLS.map((p) => p.text)]).size);
+  });
+
+  test('the request names the properties, the calls and the field size they were enumerated over', () => {
+    const r = request('green', { hz: 10, frames: 200, warmUpSeconds: 120 }, { properties: recorded, calls: asked });
+    expect(r).toMatchObject({ scenario: 'green', hz: 10, frames: 200, step: 6, warmUpTicks: 7200, cars: MAX_CARS });
+    expect(r.properties).toEqual(recorded);
+    expect(r.calls).toEqual(asked);
+  });
+});
+
+describe('the probes', () => {
+  // A probe is only worth recording if the evaluator can be held to its answer afterwards: it has to
+  // parse in the subset the evaluator reads and call nothing it refuses, or the comparison in
+  // trace.test.ts could never run.
+  for (const probe of PROBE_CALLS) {
+    test(`${probe.text} is one the evaluator can answer`, () => {
+      const parsed = E.parse(probe.text);
+      expect(E.callProblems(parsed)).toEqual([]);
+      expect(() => E.evaluateBinding(probe.text, { properties: {} })).not.toThrow();
+    });
+  }
+
+  test('each is asked once and says what it settles', () => {
+    expect(new Set(PROBE_CALLS.map((p) => p.text)).size).toBe(PROBE_CALLS.length);
+    for (const probe of PROBE_CALLS) expect(probe.settles.length).toBeGreaterThan(10);
   });
 });
 

@@ -6,6 +6,12 @@
 // samples the named properties frame by frame and writes what it saw. The file it leaves is
 // transposed into the committed columnar trace by scripts/record.ts; nothing here knows that format.
 //
+// Beside the properties it records calls (#257): `drivername(3)`, `getopponentleaderboardposition_
+// aheadbehind(-1)` and the rest answer from SimHub's in-memory leaderboard rather than from a
+// property, so no amount of reading properties sees them. The recorder evaluates each call text
+// with SimHub's own NCalc engine, the one a dashboard binding goes through, and writes the answer
+// under that text.
+//
 // Frames are taken on the emulator's own tick rather than on the wall clock. The emulator is a
 // function of its tick, so a frame keyed to tick 300 holds the same telemetry on every run, and a
 // re-recording of an unchanged scenario differs only where SimHub itself carries history.
@@ -17,6 +23,8 @@ using GameReaderCommon;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SimHub.Plugins;
+using SimHub.Plugins.OutputPlugins.Dash.GLCDTemplating;
+using SimHub.Plugins.OutputPlugins.Dash.TemplatingCommon;
 
 namespace OpenDashTraceRecorder
 {
@@ -42,6 +50,15 @@ namespace OpenDashTraceRecorder
         private bool warnedAboutTick;
         /// <summary>The first tick seen with the game running; the warm-up and the grid start here.</summary>
         private long? firstTick;
+
+        /// <summary>
+        /// SimHub's NCalc engine, our own instance of it, for the calls. Null when the request names
+        /// none. Built with the parsing cache, so that a call is parsed once rather than on every
+        /// frame, and with the result cache off: <c>ParseValue</c> otherwise keeps one answer per
+        /// expression text in a dictionary shared with every dashboard, cleared once per update, and
+        /// there is no reason to write into SimHub's cache or read a dashboard's answer back out of it.
+        /// </summary>
+        private NCalcEngineBase engine;
 
         /// <summary>Properties whose .NET type a JSON scalar would not carry; written as a trailer.</summary>
         private readonly Dictionary<string, string> valueTypes = new Dictionary<string, string>();
@@ -88,9 +105,17 @@ namespace OpenDashTraceRecorder
                 return;
             }
 
+            if (request.Calls.Count > 0)
+            {
+                // Logging off: a call that throws (a null compared, a probe asking what NCalc does
+                // with a bad operand) answers null, which is what the dash draws, and SimHub would
+                // otherwise log it on every frame, since each frame evaluates a fresh value.
+                engine = new NCalcEngineBase(true) { UseCache = false, AllowLogging = false };
+            }
+
             SimHub.Logging.Current.Info(string.Format(CultureInfo.InvariantCulture,
-                "OpenDash trace recorder: {0} frames of {1} properties every {2} ticks, {3} ticks after the game appears, into {4}",
-                request.Frames, request.Properties.Count, request.Step, request.WarmUpTicks, request.Out));
+                "OpenDash trace recorder: {0} frames of {1} properties and {2} calls every {3} ticks, {4} ticks after the game appears, into {5}",
+                request.Frames, request.Properties.Count, request.Calls.Count, request.Step, request.WarmUpTicks, request.Out));
         }
 
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
@@ -153,12 +178,13 @@ namespace OpenDashTraceRecorder
         {
             var header = new JObject
             {
-                ["recorder"] = 1,
+                ["recorder"] = 2,
                 ["scenario"] = request.Scenario,
                 ["hz"] = request.Hz,
                 ["frames"] = request.Frames,
                 ["warmUpTicks"] = request.WarmUpTicks,
                 ["step"] = request.Step,
+                ["cars"] = request.Cars,
                 ["started"] = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture),
             };
             writer.WriteLine(header.ToString(Formatting.None));
@@ -169,7 +195,42 @@ namespace OpenDashTraceRecorder
             var values = new JObject();
             foreach (var property in request.Properties) values[property] = Convert(property, pluginManager.GetPropertyValue(property));
             var frame = new JObject { ["tick"] = tick, ["v"] = values };
+            if (engine != null)
+            {
+                var calls = new JObject();
+                foreach (var call in request.Calls) calls[call] = Convert(call, Evaluate(call));
+                frame["c"] = calls;
+            }
             writer.WriteLine(frame.ToString(Formatting.None));
+        }
+
+        /// <summary>
+        /// One call's value on this frame, as SimHub's engine answers it to a dashboard.
+        ///
+        /// DataUpdate runs after the PluginManager has set <c>NCalcEngineBase.lastData</c> to this
+        /// update's GameData and raised PreUpdate, so the leaderboard a call reads is the finished
+        /// frame the properties above were read from.
+        ///
+        /// A fresh ExpressionValue every frame. The value object is where the engine keeps what it
+        /// learnt about an expression: <c>IsDeterminist</c>, which once true makes ParseValue return
+        /// the first answer for ever, and <c>Invalid</c>, which after one exception makes it answer
+        /// null for thirty seconds without evaluating. No call recorded today is determinist, since
+        /// any function call makes an expression not so, but a fresh value keeps a column from ever
+        /// depending on what the frame before it did. The parse is not repeated: the engine's
+        /// parsing cache is keyed by the text.
+        /// </summary>
+        private object Evaluate(string call)
+        {
+            try
+            {
+                return engine.ParseValue((ExpressionValue)call);
+            }
+            catch (Exception)
+            {
+                // ParseValue catches what NCalc throws and answers null; anything that escapes it is
+                // the same answer as far as a dashboard is concerned.
+                return null;
+            }
         }
 
         private void Finish()
@@ -206,24 +267,24 @@ namespace OpenDashTraceRecorder
         }
 
         /// <summary>
-        /// A property value as JSON. Numbers are rounded, because SimHub's doubles carry noise far
+        /// A property or call value as JSON. Numbers are rounded, because SimHub's doubles carry noise far
         /// below anything a dashboard draws and an unrounded trace would diff on every re-recording.
         /// A TimeSpan and a DateTime travel as strings and are noted in the trailer, so that a reader
         /// can tell them from a property that really is text.
         /// </summary>
-        private JToken Convert(string property, object value)
+        private JToken Convert(string column, object value)
         {
             if (value == null) return JValue.CreateNull();
             if (value is string s) return new JValue(s);
             if (value is bool b) return new JValue(b);
             if (value is TimeSpan ts)
             {
-                valueTypes[property] = "timespan";
+                valueTypes[column] = "timespan";
                 return new JValue(ts.ToString("c", CultureInfo.InvariantCulture));
             }
             if (value is DateTime dt)
             {
-                valueTypes[property] = "datetime";
+                valueTypes[column] = "datetime";
                 return new JValue(dt.ToString("o", CultureInfo.InvariantCulture));
             }
             if (value is float || value is double || value is decimal)

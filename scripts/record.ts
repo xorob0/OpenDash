@@ -12,6 +12,12 @@
  * scenario changes or when a package starts reading a property that was not recorded; everything
  * afterwards replays the committed file and needs no Windows at all.
  *
+ * Beside the properties it records calls (#257). `drivername(3)` and the rest of the opponent calls
+ * answer from SimHub's in-memory leaderboard, which no property carries, so the recorder evaluates
+ * every call `callsRead()` lists with SimHub's own NCalc engine on every frame and keeps the answer
+ * under the call's text; a few probes ride along, literal formulas whose answers settle what NCalc
+ * does where the browser evaluator could only read the source.
+ *
  * Frames are taken on the emulator's tick rather than on the wall clock, so two recordings of an
  * unchanged scenario cover the same span of it. What still moves between them is what SimHub keeps
  * its own history of, the lap deltas and the fuel averages, and the wall clock it publishes.
@@ -19,7 +25,8 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { propertiesRead } from '../packages/dash/src/properties.ts';
+import { callsRead, propertiesRead } from '../packages/dash/src/properties.ts';
+import { MAX_CARS } from '../packages/generator/src/opponentCalls.ts';
 import {
   build as buildEmulator,
   runningPid,
@@ -110,7 +117,93 @@ export const stepFor = (hz: number): number => TICK_RATE / hz;
 /** Every property a recording asks SimHub for: what the packages read, plus the provenance column. */
 export const recordedProperties = (): string[] => [...new Set([...propertiesRead(), ...PROVENANCE_PROPERTIES])].sort();
 
+/**
+ * A formula recorded for what SimHub's NCalc answers to it rather than for anything a dashboard
+ * draws. The browser evaluator (#395) was written from NCalc 1.3.8's source and SimHub's decompiled
+ * function table, without a SimHub to ask, and where the two could not settle a reading it says
+ * **Unverified** (the list is in `packages/generator/src/ncalc/functions.ts` and PR #726). A probe
+ * asks SimHub the question once per frame, like any call, and `scripts/trace.test.ts` holds the
+ * evaluator to every answer once a version 2 trace is committed.
+ */
+export interface Probe {
+  /** The formula, written as the evaluator parses it; it is also the column's name. */
+  text: string;
+  /** What its answer settles. */
+  settles: string;
+}
+
+/**
+ * A property nobody publishes, which SimHub reads as null: the only way to put a null into a
+ * formula, since NCalc 1.3.8 has no null literal.
+ */
+export const PROBE_NULL = '[OpenDashTraceProbe.Unpublished]';
+
+/**
+ * The probes. Each is chosen so that the readings in question give different answers: `max(0, 2.6)`
+ * is 3 if `max` takes its left operand's type and 2.6 if it does not, and `abs(7) / 2` is 3.5 for a
+ * decimal and 3 for an integer.
+ */
+export const PROBE_CALLS: readonly Probe[] = [
+  { text: 'max(0, 2.6)', settles: 'max takes the left operand\'s type, Int32 here: 3 rather than 2.6' },
+  { text: 'min(5, 2.6)', settles: 'min takes the left operand\'s type: 3 rather than 2.6' },
+  { text: 'max(0, 2.6) / 2', settles: 'the Int32 max divides as an integer: 1 rather than 1.3' },
+  { text: 'max(2.6, 0)', settles: 'a double on the left stays a double: 2.6' },
+  { text: `max(${PROBE_NULL}, 2)`, settles: 'a null side of max returns the other side' },
+  { text: 'abs(7) / 2', settles: 'abs returns a decimal: 3.5 rather than the integer 3' },
+  { text: 'abs(-2.5) * 1.5', settles: 'a decimal times a double throws, so the dash draws nothing' },
+  { text: 'abs(-2.5) > 2.4', settles: 'a decimal compares with a double' },
+  { text: 'round(2.675, 2)', settles: 'round on the scaled double, as .NET Framework does it' },
+  { text: 'round(1.005, 2)', settles: 'round on a value just under its midpoint in binary' },
+  { text: 'round(2.5, 0)', settles: 'round goes to even at a midpoint: 2 rather than 3' },
+  { text: 'round(0.125, 2)', settles: 'round goes to even at an exact binary midpoint: 0.12' },
+  { text: `round(${PROBE_NULL}, 1)`, settles: 'round reads a null as 0 through Convert.ToDouble' },
+  { text: `truncate(${PROBE_NULL})`, settles: 'truncate reads a null as 0' },
+  { text: "format(2.675, '0.00')", settles: 'format keeps 15 significant digits, then rounds half away from zero: 2.68' },
+  { text: "format(0.125, '0.00')", settles: 'format rounds an exact midpoint away from zero: 0.13' },
+  { text: "format(1.005, '0.00')", settles: 'format rounds the 15-digit 1.005 up, where round does not' },
+  { text: "format(0, '0.0', true)", settles: 'format with addSign puts + on zero' },
+  { text: "format(-0.04, '0.0', true)", settles: 'the sign format gives a negative that rounds to zero' },
+  { text: "format(-0.04, '0.0')", settles: 'whether .NET Framework writes -0.0 or 0.0 for a negative that rounds to zero' },
+  { text: "format(0.04, '0.0', true)", settles: 'a positive that rounds to zero keeps its +' },
+  { text: `format(${PROBE_NULL}, '0.0')`, settles: 'format of a null is null' },
+  { text: "format('text', '0.0')", settles: 'format returns text it cannot format unchanged' },
+  { text: "'3' = 3", settles: 'a string against a number compares as strings: true' },
+  { text: "'03' = 3", settles: 'and so 03 is not 3: false' },
+  { text: "1 + '2'", settles: 'a number plus a numeric string adds, as a decimal' },
+  { text: "'1' + 2", settles: 'a string on the left concatenates' },
+  { text: "1 + 'a'", settles: 'a number plus text throws, so the dash draws nothing' },
+  { text: `${PROBE_NULL} = ${PROBE_NULL}`, settles: 'a comparison with null throws, null = null included' },
+  { text: `if(${PROBE_NULL}, 1, 2)`, settles: 'if reads a null as false' },
+  { text: `isnull(${PROBE_NULL}, 'x')`, settles: 'isnull returns the fallback for a null' },
+  { text: 'secondstotimespan(5.2)', settles: 'FromSeconds rounds to the millisecond' },
+  { text: `secondstotimespan(${PROBE_NULL})`, settles: 'secondstotimespan of a null is null' },
+  { text: 'toshorttime(secondstotimespan(5.2), 1, false, false)', settles: 'toshorttime drops the minutes under a minute: 5.2' },
+  { text: 'toshorttime(secondstotimespan(5.2), 1, true, false)', settles: 'toshorttime puts + on request: +5.2' },
+  { text: 'toshorttime(secondstotimespan(5.2), 1, false, true)', settles: 'forceMinutes keeps the minutes: 0:05.2' },
+  { text: 'toshorttime(secondstotimespan(65.27), 3, false, false)', settles: 'toshorttime over a minute, to three decimals' },
+  { text: 'toshorttime(secondstotimespan(-1.5), 1, true, false)', settles: 'toshorttime of a negative span' },
+  { text: 'toshorttime(secondstotimespan(5.29), 1, false, false)', settles: 'toshorttime truncates the fraction rather than rounding it: 5.2' },
+  { text: `toshorttime(${PROBE_NULL}, 1, false, false)`, settles: 'toshorttime of a null is null' },
+  { text: `ucase(${PROBE_NULL})`, settles: 'ucase reads a null as the empty string' },
+  { text: "left('abc', 0, 5)", settles: 'left clamps a length past the end of the text' },
+  { text: "right('abcdef', 0, 2)", settles: 'what right takes its three arguments to mean' },
+];
+
+/**
+ * Every call a recording asks SimHub to evaluate: each opponent call any package can make, in the
+ * canonical spelling the evaluator looks it up by, and the probes. Sorted and deduplicated, since it
+ * is written into the request as it is and the trace keeps calls sorted by text.
+ */
+export const recordedCalls = (): string[] => [...new Set([...callsRead(), ...PROBE_CALLS.map((probe) => probe.text)])].sort();
+
 // --------------------------------------------------------------- the recorder's own file format
+
+/**
+ * The version of the file the recorder plugin writes. 2 added a frame's `c`, the calls, and the
+ * header's `cars`; the plugin is built from this tree for every recording, so only the current
+ * version is ever read.
+ */
+export const RECORDER_VERSION = 2;
 
 export interface RecordingHeader {
   recorder: number;
@@ -119,18 +212,23 @@ export interface RecordingHeader {
   frames: number;
   warmUpTicks: number;
   step: number;
+  /** The field size the calls were enumerated over, as the request gave it. */
+  cars: number;
   started: string;
 }
 
 export interface RecordingFrame {
   tick: number;
+  /** The properties, by name. */
   v: Record<string, TraceValue>;
+  /** The calls, by text; empty when the request named none. */
+  c: Record<string, TraceValue>;
 }
 
 export interface Recording {
   header: RecordingHeader;
   frames: RecordingFrame[];
-  /** Only the properties whose .NET type a JSON scalar would not carry. */
+  /** Only the properties and calls whose .NET type a JSON scalar would not carry. */
   types: Record<string, TraceValueType>;
 }
 
@@ -151,7 +249,9 @@ export function parseRecording(text: string): Recording {
   const first = lines[0];
   if (first === undefined) throw new RecordingError('the recorder wrote nothing; SimHub never loaded it, or it never saw the game running');
   const header = JSON.parse(first) as RecordingHeader;
-  if (header.recorder !== 1) throw new RecordingError(`recorder format ${JSON.stringify(header.recorder)}; this reader understands 1`);
+  if (header.recorder !== RECORDER_VERSION) {
+    throw new RecordingError(`recorder format ${JSON.stringify(header.recorder)}; this reader understands ${RECORDER_VERSION}, so rebuild the recorder from this tree`);
+  }
 
   const frames: RecordingFrame[] = [];
   let types: Record<string, TraceValueType> | undefined;
@@ -161,7 +261,7 @@ export function parseRecording(text: string): Recording {
       types = parsed.types as Record<string, TraceValueType>;
       continue;
     }
-    frames.push({ tick: parsed.tick as number, v: parsed.v as Record<string, TraceValue> });
+    frames.push({ tick: parsed.tick as number, v: parsed.v as Record<string, TraceValue>, c: (parsed.c ?? {}) as Record<string, TraceValue> });
   }
   if (types === undefined) throw new RecordingError(`the recording stops after ${frames.length} of ${header.frames} frames; SimHub closed or the emulator stopped before it was done`);
   if (frames.length !== header.frames) throw new RecordingError(`the recording holds ${frames.length} frames and claims ${header.frames}`);
@@ -169,20 +269,21 @@ export function parseRecording(text: string): Recording {
 }
 
 /**
- * Turns a recording into the committed trace: one column per property, a scalar when it never
- * moved. The transposition is the whole reason a trace is small, since most of what SimHub
- * publishes holds still for the length of a twenty second scenario.
+ * Turns a recording into the committed trace: one column per property and one per call, a scalar
+ * when it never moved. The transposition is the whole reason a trace is small, since most of what
+ * SimHub publishes holds still for the length of a twenty second scenario, and most of the calls are
+ * positions past the end of the field, which are null on every frame.
  */
 export function toTrace(recording: Recording, recorded: string, simHub: string): Trace {
   const { header, frames, types } = recording;
-  const names = [...new Set(frames.flatMap((f) => Object.keys(f.v)))].sort();
-  const columns: TraceColumn[] = names.map((name) => {
-    const values = frames.map((f) => (f.v[name] === undefined ? null : (f.v[name] as TraceValue)));
-    const first = values[0] as TraceValue;
-    const constant = values.every((v) => v === first);
-    const type = types[name];
-    return { p: name, ...(type === undefined ? {} : { t: type }), v: constant ? first : values };
-  });
+  const columnsOf = (pick: (f: RecordingFrame) => Record<string, TraceValue>, call: boolean): TraceColumn[] =>
+    [...new Set(frames.flatMap((f) => Object.keys(pick(f))))].sort().map((name) => {
+      const values = frames.map((f) => (pick(f)[name] === undefined ? null : (pick(f)[name] as TraceValue)));
+      const first = values[0] as TraceValue;
+      const constant = values.every((v) => v === first);
+      const type = types[name];
+      return { p: name, ...(call ? { k: 'call' as const } : {}), ...(type === undefined ? {} : { t: type }), v: constant ? first : values };
+    });
   return {
     header: {
       trace: TRACE_VERSION,
@@ -192,8 +293,9 @@ export function toTrace(recording: Recording, recorded: string, simHub: string):
       ticks: [frames[0]?.tick ?? 0, header.step],
       recorded,
       simHub,
+      cars: header.cars,
     },
-    columns,
+    columns: [...columnsOf((f) => f.v, false), ...columnsOf((f) => f.c, true)],
   };
 }
 
@@ -294,20 +396,32 @@ export function putBack(host: Host): RunResult {
   return { ok: true, code: 0, stdout: `took the recorder out; SimHub ${started.stdout}`, stderr: '' };
 }
 
-/** Writes the request the recorder reads at startup. SimHub must be restarted afterwards to see it. */
-function writeRequest(host: Host, scenario: string, opts: RecordOptions, properties: readonly string[]): RunResult {
-  const request = {
+/** What is recorded: the properties read by name, and the calls evaluated by SimHub's NCalc. */
+export interface Asked {
+  properties: readonly string[];
+  calls: readonly string[];
+}
+
+/** The request the recorder reads at startup, as JSON. */
+export function request(scenario: string, opts: Pick<RecordOptions, 'hz' | 'frames' | 'warmUpSeconds'>, asked: Asked) {
+  return {
     scenario,
     hz: opts.hz,
     frames: opts.frames,
     step: stepFor(opts.hz),
     warmUpTicks: opts.warmUpSeconds * TICK_RATE,
+    cars: MAX_CARS,
     out: GUEST_OUT,
-    properties,
+    properties: asked.properties,
+    calls: asked.calls,
   };
+}
+
+/** Writes the request the recorder reads at startup. SimHub must be restarted afterwards to see it. */
+function writeRequest(host: Host, scenario: string, opts: RecordOptions, asked: Asked): RunResult {
   const local = path.join(repoRoot, 'build', REQUEST_NAME);
   mkdirSync(path.dirname(local), { recursive: true });
-  writeFileSync(local, `${JSON.stringify(request, null, 2)}\n`, 'utf8');
+  writeFileSync(local, `${JSON.stringify(request(scenario, opts, asked), null, 2)}\n`, 'utf8');
   const sent = toShare(host, local, REQUEST_NAME);
   if (!sent.ok) return sent;
   return powershell(
@@ -315,7 +429,7 @@ function writeRequest(host: Host, scenario: string, opts: RecordOptions, propert
     `$ErrorActionPreference = 'Stop'
 Copy-Item ${psq(`${SHARE_UNC}\\${REQUEST_NAME}`)} (Join-Path ${psq(SIMHUB_DIR)} ${psq(REQUEST_NAME)}) -Force
 Remove-Item ${psq(`${GUEST_OUT}.done`)} -Force -ErrorAction SilentlyContinue
-"asked for ${opts.frames} frames of ${properties.length} properties"`,
+"asked for ${opts.frames} frames of ${asked.properties.length} properties and ${asked.calls.length} calls"`,
     180,
   );
 }
@@ -354,22 +468,23 @@ Copy-Item ${psq(GUEST_OUT)} ${psq(`${SHARE_UNC}\\opendash-trace.ndjson`)} -Force
   const file = traceFile(scenario, outDir);
   writeFileSync(file, formatTrace(trace), 'utf8');
   const moving = trace.columns.filter((c) => Array.isArray(c.v)).length;
+  const calls = trace.columns.filter((c) => c.k === 'call').length;
   const bytes = readFileSync(file).byteLength;
   return {
     ok: true,
     code: 0,
-    stdout: `${path.relative(repoRoot, file)}: ${trace.columns.length} properties, ${moving} moving, ${trace.header.frames} frames, ${(bytes / 1024).toFixed(0)} KB`,
+    stdout: `${path.relative(repoRoot, file)}: ${trace.columns.length - calls} properties, ${calls} calls, ${moving} moving, ${trace.header.frames} frames, ${(bytes / 1024).toFixed(0)} KB`,
     stderr: '',
   };
 }
 
 /** One scenario, from a stopped SimHub to a written trace. */
-function recordOne(host: Host, scenario: string, opts: RecordOptions, properties: readonly string[]): RunResult {
+function recordOne(host: Host, scenario: string, opts: RecordOptions, asked: Asked): RunResult {
   console.log(`\n${scenario}: asking SimHub for ${opts.frames} frames at ${opts.hz} Hz`);
   stopEmulator(host);
   const stopped = simhubStop(host);
   if (!stopped.ok) return stopped;
-  const requested = writeRequest(host, scenario, opts, properties);
+  const requested = writeRequest(host, scenario, opts, asked);
   if (!requested.ok) return requested;
   // SimHub reads the request once, in Init, so it has to start after the request is in place.
   const started = simhubStart(host);
@@ -451,8 +566,8 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
         return 1;
       }
     }
-    const properties = recordedProperties();
-    console.log(`recording ${properties.length} properties`);
+    const asked: Asked = { properties: recordedProperties(), calls: recordedCalls() };
+    console.log(`recording ${asked.properties.length} properties and ${asked.calls.length} calls`);
 
     const recorder = buildRecorder();
     if (!recorder.ok) {
@@ -482,7 +597,7 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
     }
 
     for (const scenario of opts.scenarios) {
-      const one = recordOne(host, scenario, opts, properties);
+      const one = recordOne(host, scenario, opts, asked);
       if (!one.ok) {
         console.error(`${scenario}: ${one.stderr || one.stdout}`);
         code = 1;

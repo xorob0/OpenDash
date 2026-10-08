@@ -435,6 +435,14 @@ describe('the opponent calls', () => {
     expect(ev('drivername(2.5)', {}, { calls })).toBeNull();
     expect(ev('drivername(3)')).toBeNull();
   });
+
+  test('with no calls of its own, a scope reads a call from its frame map, which is where a version 2 trace keeps it', () => {
+    const frame = { 'DataCorePlugin.GameData.Position': 4, ...calls };
+    expect(ev('drivername(getopponentleaderboardposition_aheadbehind(-1))', frame)).toBe('L. Byrne');
+    expect(js('[DataCorePlugin.GameData.Position] + getplayerleaderboardposition()', frame)).toBe(8);
+    // A scope that brings its own calls is answered from those alone.
+    expect(ev('drivername(3)', frame, { calls: {} })).toBeNull();
+  });
 });
 
 describe('what the evaluator refuses', () => {

@@ -7,7 +7,20 @@
  * the parts that read the repository and the command line.
  */
 
-export const TRACE_VERSION = 1;
+/**
+ * The version `record.ts` writes. Version 2 added the call columns (#257): every opponent call a
+ * package can make, and a handful of probes, each recorded under its own text beside the properties.
+ */
+export const TRACE_VERSION = 2;
+
+/**
+ * The versions this reader accepts. Version 1 is a version 2 trace with no call column and no `cars`,
+ * so it is read as one rather than converted: every call in it answers null, which is what the
+ * relative and the leaderboard drew before version 2 existed. It is here only because the nine
+ * committed traces are still version 1 until they are re-recorded on the VM, and the demo and its
+ * tests replay them meanwhile; the re-record takes 1 off this list.
+ */
+export const READABLE_TRACE_VERSIONS: readonly number[] = [1, 2];
 export const TRACE_EXTENSION = '.ndjson';
 
 /**
@@ -37,6 +50,12 @@ export interface TraceHeader {
   /** The SimHub whose mapping this is. A trace is only as truthful as the build that produced it. */
   simHub: string;
   /**
+   * The field size the opponent calls were enumerated over: every `driver*` call at positions
+   * 1..cars, every ahead-and-behind offset in -(cars - 1)..(cars - 1). A position past it has no
+   * column and answers null. Version 2 and later; a version 1 trace has no call columns at all.
+   */
+  cars?: number;
+  /**
    * Columns in this file that were written by hand rather than observed, and are therefore claims
    * rather than recordings.
    *
@@ -56,8 +75,17 @@ export interface TraceHeader {
 }
 
 export interface TraceColumn {
-  /** The full property name, e.g. `DataCorePlugin.GameData.Rpms`. */
+  /** The full property name, e.g. `DataCorePlugin.GameData.Rpms`, or a call's text, e.g. `drivername(3)`. */
   p: string;
+  /**
+   * `'call'` for a call column; absent for a property, which is most of a trace.
+   *
+   * A call is a formula SimHub evaluated with its own NCalc engine on every frame, named by its
+   * text: an opponent call in the canonical spelling of `packages/generator/src/opponentCalls.ts`
+   * (`drivername(3)`), which answers from SimHub's leaderboard and which no property carries, or a
+   * probe, which records what NCalc itself answers to a literal question (`round(2.675, 2)`).
+   */
+  k?: 'call';
   /** Absent for a plain JSON scalar; see {@link TraceValueType}. */
   t?: TraceValueType;
   /** One value per frame, or a single value when the property never moved. */
@@ -66,7 +94,10 @@ export interface TraceColumn {
 
 export interface Trace {
   header: TraceHeader;
-  /** Sorted by property name, one entry per property, never two for the same name. */
+  /**
+   * The properties sorted by name, then the calls sorted by text; one entry per name, never two.
+   * Properties first, so that the file reads as it did before calls existed, with the calls after.
+   */
   columns: TraceColumn[];
 }
 
@@ -83,6 +114,17 @@ const isValue = (v: unknown): v is TraceValue => v === null || typeof v === 'num
 
 const VALUE_TYPES: readonly string[] = ['timespan', 'datetime'];
 
+/** Whether a column is a call column. */
+export const isCall = (column: TraceColumn): boolean => column.k === 'call';
+
+/** The order columns are kept in: properties before calls, and by name within each. */
+export function compareColumns(a: TraceColumn, b: TraceColumn): number {
+  const ka = isCall(a) ? 1 : 0;
+  const kb = isCall(b) ? 1 : 0;
+  if (ka !== kb) return ka - kb;
+  return a.p < b.p ? -1 : a.p > b.p ? 1 : 0;
+}
+
 export function parseHeader(line: string): TraceHeader {
   let raw: unknown;
   try {
@@ -92,7 +134,9 @@ export function parseHeader(line: string): TraceHeader {
   }
   if (typeof raw !== 'object' || raw === null) throw new TraceError('the first line is not a header object');
   const h = raw as Record<string, unknown>;
-  if (h.trace !== TRACE_VERSION) throw new TraceError(`trace version ${JSON.stringify(h.trace)}; this reader understands ${TRACE_VERSION}`);
+  if (typeof h.trace !== 'number' || !READABLE_TRACE_VERSIONS.includes(h.trace)) {
+    throw new TraceError(`trace version ${JSON.stringify(h.trace)}; this reader understands ${READABLE_TRACE_VERSIONS.join(' and ')}`);
+  }
   if (typeof h.scenario !== 'string' || h.scenario === '') throw new TraceError('the header names no scenario');
   if (typeof h.frames !== 'number' || !Number.isInteger(h.frames) || h.frames < 1) throw new TraceError(`frames must be a positive integer, got ${JSON.stringify(h.frames)}`);
   if (typeof h.hz !== 'number' || h.hz <= 0) throw new TraceError(`hz must be positive, got ${JSON.stringify(h.hz)}`);
@@ -102,6 +146,10 @@ export function parseHeader(line: string): TraceHeader {
   }
   if (typeof h.recorded !== 'string') throw new TraceError('the header says nothing about when it was recorded');
   if (typeof h.simHub !== 'string') throw new TraceError('the header says nothing about which SimHub produced it');
+  if (h.trace >= 2 && (typeof h.cars !== 'number' || !Number.isInteger(h.cars) || h.cars < 1)) {
+    throw new TraceError(`a version ${h.trace} header says how many cars its calls were enumerated over, got ${JSON.stringify(h.cars)}`);
+  }
+  if (h.trace < 2 && h.cars !== undefined) throw new TraceError('a version 1 trace has no calls, so it has no cars');
   const asserted = h.asserted;
   if (asserted !== undefined && (!Array.isArray(asserted) || !asserted.every((p) => typeof p === 'string' && p !== ''))) {
     throw new TraceError('asserted must be a list of property names');
@@ -114,14 +162,15 @@ export function parseHeader(line: string): TraceHeader {
     ticks: [ticks[0] as number, ticks[1] as number],
     recorded: h.recorded,
     simHub: h.simHub,
+    ...(typeof h.cars === 'number' ? { cars: h.cars } : {}),
     ...(asserted === undefined ? {} : { asserted: asserted as string[] }),
   };
 }
 
 /**
  * Parses a trace. Everything the readers downstream rely on is checked here rather than left to
- * fail later as an undefined: one column per property, sorted, and every array exactly as long as
- * the header says.
+ * fail later as an undefined: one column per name, properties then calls, each sorted, and every
+ * array exactly as long as the header says.
  */
 export function parseTrace(text: string): Trace {
   // Line numbers are the file's own, so that a message points at the line an editor shows.
@@ -142,8 +191,10 @@ export function parseTrace(text: string): Trace {
     if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) throw new TraceError(`line ${number} is not a column object`);
     const c = raw as Record<string, unknown>;
     if (typeof c.p !== 'string' || c.p === '') throw new TraceError(`line ${number} names no property`);
-    if (seen.has(c.p)) throw new TraceError(`${c.p} has two columns; a property is recorded once`);
+    if (seen.has(c.p)) throw new TraceError(`${c.p} has two columns; a property or a call is recorded once`);
     seen.add(c.p);
+    if (c.k !== undefined && c.k !== 'call') throw new TraceError(`${c.p} is of kind ${JSON.stringify(c.k)}; a column is a property, with no kind, or a call`);
+    if (c.k === 'call' && header.trace < 2) throw new TraceError(`${c.p} is a call column, which a version ${header.trace} trace cannot carry`);
     if (c.t !== undefined && !VALUE_TYPES.includes(c.t as string)) throw new TraceError(`${c.p} has type ${JSON.stringify(c.t)}; expected ${VALUE_TYPES.join(' or ')}`);
     const v = c.v;
     if (Array.isArray(v)) {
@@ -152,32 +203,44 @@ export function parseTrace(text: string): Trace {
     } else if (!isValue(v)) {
       throw new TraceError(`${c.p} holds a value that is not a number, string, boolean or null`);
     }
-    columns.push({ p: c.p, ...(c.t === undefined ? {} : { t: c.t as TraceValueType }), v: v as TraceValue | TraceValue[] });
+    columns.push({
+      p: c.p,
+      ...(c.k === 'call' ? { k: 'call' as const } : {}),
+      ...(c.t === undefined ? {} : { t: c.t as TraceValueType }),
+      v: v as TraceValue | TraceValue[],
+    });
   }
-  if (columns.length === 0) throw new TraceError('the trace has a header and no property');
+  if (!columns.some((c) => !isCall(c))) throw new TraceError('the trace has a header and no property');
 
-  const sorted = [...columns].map((c) => c.p).sort();
-  const actual = columns.map((c) => c.p);
-  const wrong = actual.findIndex((p, i) => p !== sorted[i]);
-  if (wrong >= 0) throw new TraceError(`the columns are not sorted by property name: ${JSON.stringify(actual[wrong])} comes after ${JSON.stringify(actual[wrong - 1] ?? '')}`);
+  const wrong = columns.findIndex((c, i) => i > 0 && compareColumns(columns[i - 1] as TraceColumn, c) > 0);
+  if (wrong >= 0) {
+    throw new TraceError(`the columns are not sorted, properties by name and then calls by text: ${JSON.stringify(columns[wrong]?.p)} comes after ${JSON.stringify(columns[wrong - 1]?.p)}`);
+  }
 
   return { header, columns };
 }
 
-/** Serialises a trace back to the committed form: header, then one line per column, sorted. */
+/** Serialises a trace back to the committed form: header, then one line per column, properties then calls, each sorted. */
 export function formatTrace(trace: Trace): string {
   const lines = [JSON.stringify(trace.header)];
-  for (const column of [...trace.columns].sort((a, b) => (a.p < b.p ? -1 : a.p > b.p ? 1 : 0))) {
-    lines.push(JSON.stringify(column.t === undefined ? { p: column.p, v: column.v } : { p: column.p, t: column.t, v: column.v }));
+  for (const column of [...trace.columns].sort(compareColumns)) {
+    lines.push(JSON.stringify({ p: column.p, ...(isCall(column) ? { k: 'call' } : {}), ...(column.t === undefined ? {} : { t: column.t }), v: column.v }));
   }
   return `${lines.join('\n')}\n`;
 }
 
-/** Every property the trace carries, in file order, which is sorted. */
-export const propertiesOf = (trace: Trace): string[] => trace.columns.map((c) => c.p);
+/** Every property the trace carries, in file order, which is sorted. Calls are not properties. */
+export const propertiesOf = (trace: Trace): string[] => trace.columns.filter((c) => !isCall(c)).map((c) => c.p);
+
+/** Every call the trace carries, by its text, in file order, which is sorted. Empty in a version 1 trace. */
+export const callsOf = (trace: Trace): string[] => trace.columns.filter(isCall).map((c) => c.p);
 
 /**
- * One frame as a property map, which is what a renderer asks for. Frames are 0-based; a column
+ * One frame as a map from column name to value, which is what a renderer asks for: every property
+ * by its name and every call by its text, in the one map. The two cannot collide, since a property
+ * name is a dotted identifier and a call is a formula with brackets, quotes or an operator in it, and
+ * `parseTrace` refuses a name used twice in any case. It is the map the evaluator reads an opponent
+ * call from (`readCall` in `packages/generator/src/ncalc/scope.ts`). Frames are 0-based; a column
  * that never moved gives its one value for every frame.
  */
 export function frame(trace: Trace, index: number): Record<string, TraceValue> {
