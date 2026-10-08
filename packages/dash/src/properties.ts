@@ -19,8 +19,9 @@
  * which is every theme with code, so that is what the traces are held to.
  */
 import { composePackages, themesToBuild } from './build.ts';
+import { callTextsFor, functionCalls, isOpponentCall } from './generator.ts';
 import { PREVIOUS_LAP_SLOTS } from './second/values.ts';
-import { propertiesIn } from './walk.ts';
+import { expressionsIn, propertiesIn } from './walk.ts';
 
 /**
  * The reads whose property name is computed at render time: `PersistantTrackerPlugin.PreviousLap_NN`
@@ -34,13 +35,27 @@ export const COMPUTED_PROPERTIES: readonly string[] = Array.from({ length: PREVI
 /** Every theme a release ships: the default and every other one that has code, as `--all-themes` picks them. */
 const shippedThemes = () => themesToBuild({ themes: [], allThemes: true, touchedThemes: false }, () => {});
 
-/** The scan itself: compose every package of every shipped theme, and collect what its expressions read. */
-function scanPackages(): string[] {
-  const all = new Set<string>(COMPUTED_PROPERTIES);
+/** What one composition of every package of every shipped theme yields: the properties read and the opponent calls made. */
+interface Scan {
+  properties: string[];
+  calls: string[];
+}
+
+/** The scan itself: compose every package of every shipped theme, and collect what its expressions read and call. */
+function scanPackages(): Scan {
+  const properties = new Set<string>(COMPUTED_PROPERTIES);
+  const calls = new Set<string>();
   for (const { pkg } of composePackages({ log: () => {}, themes: shippedThemes() })) {
-    for (const dashboard of pkg.dashboards) for (const property of propertiesIn(dashboard)) all.add(property);
+    for (const dashboard of pkg.dashboards) {
+      for (const property of propertiesIn(dashboard)) properties.add(property);
+      for (const expression of new Set(expressionsIn(dashboard))) {
+        for (const call of functionCalls(expression)) {
+          if (isOpponentCall(call.name)) for (const text of callTextsFor(call.name, call.args)) calls.add(text);
+        }
+      }
+    }
   }
-  return [...all].sort();
+  return { properties: [...properties].sort(), calls: [...calls].sort() };
 }
 
 /**
@@ -53,7 +68,7 @@ function scanPackages(): string[] {
  * asks three times in one file, which on a loaded CI runner once took a single test past Bun's
  * five-second timeout and failed a build that had nothing wrong with it.
  */
-let scanned: string[] | undefined;
+let scanned: Scan | undefined;
 
 /**
  * Every property read by any expression of any package of any shipped theme, deduplicated and sorted.
@@ -63,5 +78,20 @@ let scanned: string[] | undefined;
  */
 export function propertiesRead(): string[] {
   scanned ??= scanPackages();
-  return [...scanned];
+  return [...scanned.properties];
+}
+
+/**
+ * Every opponent call any expression of any package of any shipped theme can make, as the canonical text a recorder names
+ * its column by and the browser evaluator looks it up by (`opponentCalls.ts` in the generator).
+ *
+ * The other half of what a trace has to carry (#257). A call's argument is usually computed, as in
+ * `drivername(repeatindex() + 1)`, so a scan cannot know which car it will ask for; each computed
+ * argument is enumerated over its kind's domain instead, every position from 1 to 24 for a
+ * `driver*` call, every offset from -23 to 23 for an ahead-and-behind lookup, and a literal argument
+ * is kept as written. Deduplicated and sorted, and a copy each time.
+ */
+export function callsRead(): string[] {
+  scanned ??= scanPackages();
+  return [...scanned.calls];
 }
