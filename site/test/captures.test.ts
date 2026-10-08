@@ -15,7 +15,8 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
-import { pageFile, packageFile, provenanceNote, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
+import { pageFile, packageFile, panelFile, provenanceNote, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
+import { PANEL_PAGES } from '../lib/panel.ts';
 import { onSite, readBuildManifest, themed, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
@@ -126,5 +127,32 @@ describe('every themed package is photographed', () => {
       console.warn(message);
     }
     for (const f of packages.map((p) => packageFile(p.folder)).filter(exists)) expect(readCaptures(sidecarPath).files[f]?.kind).toBe('package');
+  });
+});
+
+/**
+ * The plugin page shows the panel's eight pages, by `panel-<id>.png` from `bun run panel-shots`,
+ * and draws "Not photographed yet" where one is not. Reported like a missing themed package: a
+ * failure only under the pre-release setting, since the captures come from the VM after the page.
+ */
+describe('every panel page is photographed', () => {
+  const missing = PANEL_PAGES.map((p) => panelFile(p.id)).filter((f) => !exists(f));
+
+  test('or the missing ones are named', () => {
+    if (missing.length > 0) {
+      const message = `${missing.length} of the panel's ${PANEL_PAGES.length} pages are not photographed: ${missing.join(', ')}. Take them with bun run panel-shots, then site/scripts/sync-shots.ts --panel <page> <file>.`;
+      if (process.env.OPENDASH_SHOTS_STRICT === '1') throw new Error(message);
+      console.warn(message);
+    }
+    for (const f of PANEL_PAGES.map((p) => panelFile(p.id)).filter(exists)) expect(readCaptures(sidecarPath).files[f]?.kind).toBe('panel');
+  });
+
+  test('no capture of the panel is of a page the sidebar does not have', () => {
+    const ids = new Set(PANEL_PAGES.map((p) => p.id));
+    const strays = Object.entries(readCaptures(sidecarPath).files)
+      .filter(([, e]) => e.kind === 'panel')
+      .map(([f, e]) => ({ f, panel: e.panel }))
+      .filter((e) => !ids.has(e.panel ?? ''));
+    expect(strays).toEqual([]);
   });
 });

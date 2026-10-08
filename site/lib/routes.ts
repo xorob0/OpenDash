@@ -16,6 +16,7 @@ export const ROUTES = {
   home: { path: '/', anchors: ['why', 'screen', 'pages', 'second-screens', 'themes', 'lights', 'status', 'get'], changeFrequency: 'weekly' },
   screens: { path: '/screens', anchors: ['faces', 'anatomy', 'fit', 'companion', 'pit-wall', 'round', 'not-listed'], changeFrequency: 'monthly' },
   themes: { path: '/themes', anchors: ['porsche', 'what', 'follows', 'free'], changeFrequency: 'monthly' },
+  plugin: { path: '/plugin', anchors: ['pages', 'screens', 'rig', 'leds', 'updates', 'privacy'], changeFrequency: 'monthly' },
   pages: { path: '/pages', anchors: ['catalogue', 'face', 'glance'], changeFrequency: 'monthly' },
   lights: { path: '/lights', anchors: ['car', 'strips', 'strip-shows', 'flag-box', 'plugin'], changeFrequency: 'monthly' },
   compare: { path: '/compare', anchors: ['table', 'scheduled'], changeFrequency: 'monthly' },

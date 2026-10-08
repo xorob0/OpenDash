@@ -385,28 +385,6 @@
       "commit": "3720e1e",
       "date": "2026-09-22",
       "simHubVersion": "9.12.6"
-    },
-    "panel-rig.png": {
-      "kind": "panel",
-      "panel": "rig",
-      "width": 1200,
-      "height": 1790,
-      "scenario": null,
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
-      "simHubVersion": "9.12.6"
-    },
-    "panel-lights.png": {
-      "kind": "panel",
-      "panel": "lights",
-      "width": 1200,
-      "height": 1790,
-      "scenario": null,
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
-      "simHubVersion": "9.12.6"
     }
   }
 }
