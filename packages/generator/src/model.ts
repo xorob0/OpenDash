@@ -95,6 +95,8 @@ export type BindingTarget =
   | 'BorderColor'
   /** Web page: the URL. */
   | 'StartAddress'
+  /** Image from file: the path of an image outside the package. */
+  | 'ImagePath'
   /** Layer: the total number of rows a repeated layer stamps. */
   | 'Repetitions';
 
@@ -386,6 +388,23 @@ export interface ImageItem extends ItemBase {
 }
 
 /**
+ * An image read from the user's own disk at run time (SimHub's `ImageFromFileItem`), never from the
+ * package: what a dashboard draws when the picture is one OpenDash may not ship (#714).
+ *
+ * `ImagePath` is an ordinary bindable string, so a plugin property names the file. SimHub loads it
+ * when the path changes and again within a second of the file's write time changing; a path that
+ * does not resolve, or an empty one, draws nothing and logs nothing (verified on the VM, see
+ * docs/research/simhub-dash-format.md). The item has no `AutoSize`: the picture is fitted to the
+ * rect, keeping its proportions.
+ */
+export interface ImageFromFileItem extends ItemBase {
+  kind: 'imageFromFile';
+  rect: Rect;
+  /** The literal path, written for the editor. Bind `ImagePath` for the one the dash draws. */
+  imagePath?: string;
+}
+
+/**
  * Embeds another `.djson` of the same package. `initialScreenIndex` selects which of its screens
  * is shown and can be bound, which is how OpenDash slots switch cards.
  */
@@ -399,7 +418,7 @@ export interface WidgetItem extends ItemBase {
   autoSize?: boolean;
 }
 
-export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem | ChartItem | LinearGaugeItem | RadarItem | StaticMapItem | WebPageItem | ImageItem;
+export type Item = TextItem | RectangleItem | EllipseItem | LayerItem | WidgetItem | ChartItem | LinearGaugeItem | RadarItem | StaticMapItem | WebPageItem | ImageItem | ImageFromFileItem;
 
 /** The item kinds that carry a rect (everything but a Layer). */
 export type DrawableItem = Exclude<Item, LayerItem>;

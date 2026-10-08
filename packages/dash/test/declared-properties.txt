@@ -37,6 +37,7 @@ OpenDash.ClassBestLap
 OpenDash.ClockFormat
 OpenDash.DeltaPrecision
 OpenDash.FlagsInPitLane
+OpenDash.PorscheCrest
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart

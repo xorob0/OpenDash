@@ -26,7 +26,7 @@ const named = (s: { width: number; height: number }): string => `${s.width}x${s.
 const isTestTheme = (id: string): boolean => id.startsWith('test-');
 
 /** The test theme as a catalogue would hold it, at the one size the builds below need. */
-const gearLeft: ThemeEntry = { id: GEAR_LEFT_THEME_ID, name: 'Gear left', cars: [], iracingCarPaths: [], sizes: [at(1280, 480)] };
+const gearLeft: ThemeEntry = { id: GEAR_LEFT_THEME_ID, name: 'Gear left', cars: [], iracingCarPaths: [], sizes: [at(1280, 480)], bandPages: [] };
 const defaultAt1280: ThemeEntry = { ...themeEntry(DEFAULT_THEME_ID)!, sizes: [at(1280, 480)] };
 const REQUEST = { version: '0.0.0-test', simHubVersion: '9.12.6' };
 
@@ -83,7 +83,7 @@ describe('the theme catalogue', () => {
   });
 
   test('names a themed package after the theme and always after its size, and the default after nothing', () => {
-    const porsche: ThemeEntry = { id: 'porsche', name: 'Porsche', cars: [], iracingCarPaths: [], sizes: [] };
+    const porsche: ThemeEntry = { id: 'porsche', name: 'Porsche', cars: [], iracingCarPaths: [], sizes: [], bandPages: [] };
     expect(themedFolder(porsche, { width: 1280, height: 480 })).toBe('OpenDash Porsche 1280x480');
     // At 1920 x 480 as well, where the default's package is the bare `OpenDash` (ADR 0016).
     expect(themedFolder(porsche, { width: 1920, height: 480 })).toBe('OpenDash Porsche 1920x480');
@@ -126,7 +126,7 @@ describe('what the build is asked to build', () => {
   });
 
   test('a theme the catalogue holds and no code draws fails the build, and says where the code goes', () => {
-    const missing: ThemeEntry = { id: 'test-uncoded', name: 'Uncoded', cars: [], iracingCarPaths: [], sizes: [at(1280, 480)] };
+    const missing: ThemeEntry = { id: 'test-uncoded', name: 'Uncoded', cars: [], iracingCarPaths: [], sizes: [at(1280, 480)], bandPages: [] };
     expect(() => composeTheme({ ...REQUEST, theme: missing })).toThrow('the test-uncoded theme is in the catalogue and has no code under packages/dash/src/themes/test-uncoded/ yet');
   });
 

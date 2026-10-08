@@ -152,6 +152,13 @@ namespace OpenDashPlugin
         /// <summary>Pre-rig web view address. Migrated onto the pit wall screen.</summary>
         public string WebViewUrl { get; set; } = Contract.DefaultWebViewUrl;
 
+        /// <summary>
+        /// Where the Porsche crest is fetched from, or "" for no crest (#714). The rig's, not a screen's: one
+        /// file serves every Porsche screen. Prefilled with CarCrestLibrary.DefaultUrl, and a settings file
+        /// written before it existed reads the default too.
+        /// </summary>
+        public string PorscheCrestUrl { get; set; } = CarCrestLibrary.DefaultUrl;
+
         // --- The lights ------------------------------------------------------------------------
         //
         // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
@@ -1101,6 +1108,8 @@ namespace OpenDashPlugin
 
             WideZone = Contract.NormaliseWideZonePage(WideZone);
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
+            // Null is a file that never held the key; "" is a driver who cleared it, and stays cleared.
+            PorscheCrestUrl = PorscheCrestUrl == null ? CarCrestLibrary.DefaultUrl : CarCrestLibrary.NormaliseUrl(PorscheCrestUrl);
             NormaliseScreens();
             NormaliseFace();
             NormaliseRig();
@@ -1938,7 +1947,7 @@ namespace OpenDashPlugin
             }
             if (screen.Face == null)
             {
-                screen.Face = new FaceSettings();
+                screen.Face = FaceSettings.For(screen.Theme);
                 screen.Face.Normalise();
             }
             return screen.Face;
@@ -2018,12 +2027,13 @@ namespace OpenDashPlugin
         /// <summary>The zone and page a held button shows on this face.</summary>
         public int QuickGlanceOf(Contract.FaceSize face)
         {
-            return Contract.NormaliseQuickGlance(Face(face).QuickGlance);
+            return Face(face).NormalisedQuickGlance();
         }
 
         public void SetQuickGlance(Contract.FaceSize face, int value)
         {
-            Face(face).QuickGlance = Contract.NormaliseQuickGlance(value);
+            var settings = Face(face);
+            settings.QuickGlance = Contract.NormaliseQuickGlance(value, settings.ThemeId());
         }
 
         /// <summary>Puts every zone of every face, and every companion, on the page it opens on, once,
@@ -2147,6 +2157,7 @@ namespace OpenDashPlugin
             Zones = other.Zones == null ? null : (int[])other.Zones.Clone();
             WideZone = other.WideZone;
             WebViewUrl = other.WebViewUrl;
+            PorscheCrestUrl = other.PorscheCrestUrl;
             // The lights, which were not carried at all before the strips were added: a copy that drops
             // them hands the panel a rig with the brightness back at 100 and matrix 1 back on flags.
             // The per-matrix arrays are cloned for the same reason the slots above are.
@@ -2306,12 +2317,12 @@ namespace OpenDashPlugin
                 if (letter == null) glanced.Add(id);
                 else zones.Add(letter);
             };
-            foreach (var letter in Contract.FaceZoneLetters) add(FacePages.IdOf(letter, face.Start(letter)), FacePages.NameOf(letter, face.Start(letter)), letter);
+            foreach (var letter in Contract.FaceZoneLetters) add(face.PageId(letter, face.Start(letter)), face.PageName(letter, face.Start(letter)), letter);
 
-            var glance = Contract.NormaliseQuickGlance(face.QuickGlance);
+            var glance = face.NormalisedQuickGlance();
             var glanceLetter = Contract.FaceZoneLetters[Contract.QuickGlanceZone(glance)];
             var glancePage = Contract.QuickGlancePage(glance);
-            add(FacePages.IdOf(glanceLetter, glancePage), FacePages.NameOf(glanceLetter, glancePage), null);
+            add(face.PageId(glanceLetter, glancePage), face.PageName(glanceLetter, glancePage), null);
 
             foreach (var id in order)
             {

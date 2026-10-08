@@ -239,6 +239,20 @@ export const DELTA_PRECISION_SETTING = 'DeltaPrecision';
  */
 export const FLAGS_IN_PIT_LANE_SETTING = 'FlagsInPitLane';
 
+/**
+ * The path of the Porsche crest the plugin fetched into the user's own folder, or `''` when there is none
+ * to draw. #714.
+ *
+ * Published rather than chosen, like {@link UPDATE_VERSION}. The package ships no mark (#194, the trade
+ * dress paragraph of `docs/scope.md`): the plugin downloads the crest once, from an address the panel
+ * shows and the driver may change or clear, checks it, and names the file here. The Porsche foot's badge
+ * draws the file through an `ImageFromFileItem` and draws the empty shield while this is empty, which it
+ * is with no plugin at all, with the address cleared, and after a fetch that failed.
+ *
+ * Shared rather than a screen's, because the file is the rig's: one crest serves every Porsche screen.
+ */
+export const PORSCHE_CREST = 'PorscheCrest';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -384,6 +398,9 @@ export function dashProperties(): string[] {
     CLOCK_FORMAT_SETTING,
     DELTA_PRECISION_SETTING,
     FLAGS_IN_PIT_LANE_SETTING,
+    // And the Porsche crest's path after that, published rather than chosen and shared because the file
+    // is the rig's, which every Porsche screen draws. #714.
+    PORSCHE_CREST,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -772,6 +789,8 @@ export const setting = {
   updateAvailable: (): Expr => isnull(prop(propertyName(UPDATE_AVAILABLE)), 'false'),
   /** `isnull([OpenDash.UpdateVersion], '')`: the version it names, or nothing. */
   updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
+  /** `isnull([OpenDash.PorscheCrest], '')`: the crest's file, or `''` for the empty shield. #714. */
+  porscheCrest: (): Expr => isnull(prop(propertyName(PORSCHE_CREST)), str('')),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
@@ -916,6 +935,20 @@ export interface ThemeEntry {
    * there, and a size it claims and its anatomy does not draw fails the build.
    */
   sizes: readonly FaceSize[];
+  /**
+   * The pages it adds to band D's catalogue, after the house's eight and in this order, so that no
+   * house page leaves its index (ADR 0015). On a face of this theme band D cycles all of them, and it
+   * opens on the first of these rather than on fuel: the theme's own row is the one its car opens on
+   * (#205, #718). The plugin reads the same list from `Contract.Themes` for the screen's count, mask,
+   * order, default page and names; the drawing of each is the theme's `bandPages`, in the same order.
+   */
+  bandPages: readonly ThemeBandPageMeta[];
+}
+
+/** A page a theme adds to band D: its id, which is the screen's name in the band's dashboard, and the name the panel lists. */
+export interface ThemeBandPageMeta {
+  id: string;
+  name: string;
 }
 
 /** The entry of {@link FACE_SIZES} at a size, so that a theme claims a face rather than a pair of numbers. */
@@ -928,18 +961,18 @@ function faceSizeAt(width: number, height: number): FaceSize {
 /**
  * Every theme, the default first. One entry to a line, in the shape `ContractTests.cs` reads back.
  *
- * The Porsche is here before its code is (#205 draws it), and the build says so and builds nothing
- * for it until `packages/dash/src/themes/porsche/` exists. The two Cup and legacy car paths that #205
- * leaves to be read on the VM are left out rather than guessed.
+ * The Porsche claims every face size, the portrait one included in the car's stacked form (#205,
+ * #713). The two Cup and legacy car paths that #205 leaves to be read on the VM are left out rather
+ * than guessed.
  *
  * The AiM is one LCD for the three iRacing cars that carry an AiM unit (#204), at every size. The
  * MX-5 Cup's path is the one the ticket expects; the Legends' and the Cross Car's are to be read on
  * the VM with the car loaded and are left out until they are, as the Porsche's two were.
  */
 export const THEME_CATALOGUE: readonly ThemeEntry[] = [
-  { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES },
-  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: [faceSizeAt(1280, 480)] },
-  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car'], iracingCarPaths: ['mx5 mx52016'], sizes: FACE_SIZES },
+  { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES, bandPages: [] },
+  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
+  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car'], iracingCarPaths: ['mx5 mx52016'], sizes: FACE_SIZES, bandPages: [] },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */
@@ -987,6 +1020,9 @@ export const ZONE_A_PAGES: readonly FaceZonePageMeta[] = [
  * specific than the caption, so eight is taken and the disagreement is recorded in
  * docs/design/zones.md. The car page needs the telltale pictograms and arrives with #148; the
  * mask is sized for eight from the start so that adding it costs nothing.
+ *
+ * These are the house's. A theme may add pages after them, which {@link bandDPages} appends: on a
+ * Porsche face band D has nine and opens on the ninth.
  */
 export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
   { number: 0, id: 'fuel', name: 'Fuel' },
@@ -999,13 +1035,26 @@ export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
   { number: 7, id: 'car', name: 'Car' },
 ];
 
+/**
+ * Band D's catalogue on a face of a theme: the house's eight, then the theme's own, numbered on from
+ * them. The house's eight alone for the default theme and for no theme at all.
+ */
+export function bandDPages(theme?: ThemeEntry): readonly FaceZonePageMeta[] {
+  const added = theme?.bandPages ?? [];
+  if (added.length === 0) return BAND_D_PAGES;
+  return [...BAND_D_PAGES, ...added.map((page, i) => ({ number: BAND_D_PAGES.length + i, id: page.id, name: page.name }))];
+}
+
 /** Zones B and C draw from the full module catalogue, which is no longer companion-only. */
 export const zoneBCPages = (): readonly FaceZonePageMeta[] => MODULE_CATALOGUE.map((m) => ({ number: m.number - 1, id: m.id, name: m.name }));
 
-/** The catalogue a zone draws from. */
-export function pagesForZone(zone: FaceZone): readonly FaceZonePageMeta[] {
+/**
+ * The catalogue a zone draws from, on a face of the theme given. Only band D's depends on it: a theme
+ * adds pages there and nowhere else.
+ */
+export function pagesForZone(zone: FaceZone, theme?: ThemeEntry): readonly FaceZonePageMeta[] {
   if (zone === 'A') return ZONE_A_PAGES;
-  if (zone === 'D') return BAND_D_PAGES;
+  if (zone === 'D') return bandDPages(theme);
   return zoneBCPages();
 }
 
@@ -1044,10 +1093,17 @@ export const DEFAULT_BAR_FIELDS: Record<BarSlot, number> = { Left1: 0, Left2: 1,
 export const DEFAULT_ZONE_PAGE: Record<FaceZone, number> = { A: 0, B: 0, C: 14, D: 0 };
 
 /**
+ * The page a zone opens on, on a face of the theme given: {@link DEFAULT_ZONE_PAGE}, except that band
+ * D on a theme that adds pages to it opens on the first of them, the row its car opens on (#718).
+ */
+export const defaultZonePage = (zone: FaceZone, theme?: ThemeEntry): number =>
+  zone === 'D' && (theme?.bandPages.length ?? 0) > 0 ? BAND_D_PAGES.length : DEFAULT_ZONE_PAGE[zone];
+
+/**
  * Which pages are enabled, as a bit mask, which is what sets the length of a zone's cycle. All of
  * them by default: a driver turns off what they do not want rather than turning on what they do.
  */
-export const defaultZoneMask = (zone: FaceZone): number => (1 << pagesForZone(zone).length) - 1;
+export const defaultZoneMask = (zone: FaceZone, theme?: ThemeEntry): number => (1 << pagesForZone(zone, theme).length) - 1;
 
 export const zonePageSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}`;
 export const zoneMaskSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Pages`;
@@ -1152,12 +1208,12 @@ export const quickGlancePage = (value: number): number => value % 100;
 
 /** Reads of the zone settings, each defaulted so a face works without the plugin. */
 export const zone = {
-  /** `isnull([OpenDash.Face1920x480ZoneB], 0)`: the page a zone is showing. */
-  page: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zonePageSettingName(face, z))), num(DEFAULT_ZONE_PAGE[z])),
+  /** `isnull([OpenDash.Face1920x480ZoneB], 0)`: the page a zone is showing, on a face of the theme given. */
+  page: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zonePageSettingName(face, z))), num(defaultZonePage(z, theme))),
   /** `isnull([OpenDash.Face1920x480ZoneBPages], 2097151)`: which pages are enabled, as a mask. */
-  mask: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneMaskSettingName(face, z))), num(defaultZoneMask(z))),
+  mask: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zoneMaskSettingName(face, z))), num(defaultZoneMask(z, theme))),
   /** `isnull([OpenDash.Face1920x480ZoneBStart], 0)`: the page the zone opens on. */
-  start: (face: FaceSize, z: FaceZone): Expr => isnull(prop(propertyName(zoneStartSettingName(face, z))), num(DEFAULT_ZONE_PAGE[z])),
+  start: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zoneStartSettingName(face, z))), num(defaultZonePage(z, theme))),
   /** `isnull([OpenDash.Face1920x480QuickGlance], 212)`: the zone and page a held button shows. */
   quickGlance: (face: FaceSize): Expr => isnull(prop(propertyName(quickGlanceSettingName(face))), num(DEFAULT_QUICK_GLANCE)),
   /** `isnull([OpenDash.Face1920x480BarLeft1], 0)`: which field an end of the bar shows. */

@@ -68,7 +68,8 @@ namespace OpenDashPlugin.Tests
             // the flag format, the lap review and its own rev bar), twenty-one companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
             // the URL, the pit wall's class filter, its flag format, and the flag box. And, since #503,
-            // whether a flag shows in the pit lane, and where each zone's page sits in its own order.
+            // whether a flag shows in the pit lane, and where each zone's page sits in its own order. And,
+            // since #714, the Porsche crest's path.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             // Eight global flag box names and thirteen per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
@@ -83,7 +84,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -119,8 +120,10 @@ namespace OpenDashPlugin.Tests
             // zones sits in the order its driver chose, which is thirty-two names over the eight faces,
             // and a strip's own brightness and its fifteen switches, one per thing it can draw.
             // And 399 before a strip's aid lamps could read the plugin's slip estimate: the strip's
-            // switch, and the three the plugin computes because SimHub publishes none of them.
-            Assert.Equal(403, names.Count);
+            // switch, and the three the plugin computes because SimHub publishes none of them. And 403
+            // before the Porsche's badge could draw the crest the plugin fetches into the user's own
+            // folder (#714).
+            Assert.Equal(404, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -166,7 +169,10 @@ namespace OpenDashPlugin.Tests
             // And whether a flag shows in the pit lane, appended after it and shared because a driver who
             // wants quiet on the way down the lane wants it of every surface. #503.
             Assert.Equal("FlagsInPitLane", names[25]);
-            Assert.Equal(26, Contract.SharedPropertyNames().Count());
+            // And the Porsche crest's path, published rather than chosen and shared because the file is the
+            // rig's. #714.
+            Assert.Equal("PorscheCrest", names[26]);
+            Assert.Equal(27, Contract.SharedPropertyNames().Count());
             Assert.True(Contract.DefaultFlagsInPitLane);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
@@ -776,7 +782,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(block.Success, "THEME_CATALOGUE not found in contract.ts");
             var rows = Regex.Matches(
                 block.Groups["items"].Value,
-                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\])\s*\}");
+                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\]),\s*bandPages:\s*\[(?<bands>[^\]]*)\]\s*\}");
             Assert.Equal(Contract.Themes.Count, rows.Count);
             Assert.True(Contract.Themes[0].IsDefault);
             for (var i = 0; i < rows.Count; i++)
@@ -791,6 +797,11 @@ namespace OpenDashPlugin.Tests
                     ? Contract.FaceSizes.Select(f => f.Width + "x" + f.Height)
                     : Regex.Matches(sizes, @"faceSizeAt\((\d+),\s*(\d+)\)").Cast<Match>().Select(m => m.Groups[1].Value + "x" + m.Groups[2].Value);
                 Assert.Equal(expected, theme.Sizes.Select(f => f.Width + "x" + f.Height));
+                // Its band pages, id and name, in order: the plugin cycles band D by this list and the
+                // dash draws its band dashboard by the same one (#718).
+                var bands = Regex.Matches(rows[i].Groups["bands"].Value, @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)'\s*\}")
+                    .Cast<Match>().Select(m => m.Groups["id"].Value + "/" + m.Groups["name"].Value);
+                Assert.Equal(bands, theme.BandPages.Select(p => p.Id + "/" + p.Name));
             }
             Assert.Equal(Contract.Themes.Count, Contract.Themes.Select(t => t.Id).Distinct().Count());
             Assert.Equal("OpenDash Porsche 1280x480", Contract.Themes.Single(t => t.Id == "porsche").FolderAt(1280, 480));

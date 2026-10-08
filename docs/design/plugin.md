@@ -253,6 +253,18 @@ is a press that opens its aside: the info bar's fields, or a zone's pages as a l
 into order, with its next-page and previous-page bindings as chips. Under the picture: Rev bar, Flag
 display, Lap review, the quick glance, and Details.
 
+**A Porsche face that draws the badge has a Crest row** (#714): the address the car's crest is
+downloaded from, prefilled, and one line saying whether it is on this computer, with a Download press
+after a download that did not work. The address is the rig's, as a card face's Rev bar is, so it reads
+the same on every Porsche face. Clearing it removes the copy and the badge draws its empty outline; the
+package never carries the crest ([scope.md](../scope.md), the trade dress section).
+
+**Band D lists a theme's own pages after the house's eight** (#718). The aside's catalogue is the
+screen's, read from its theme: eight pages on a default face, as before, and nine on a Porsche face, the
+ninth named for the theme, `Porsche`, which is the car's foot of boxes, tyres and bias. A Porsche screen
+opens band D on that row, so the aside draws it first, tagged First, and then the eight in their order;
+the count reads "9 of 9", and the quick glance's page picker lists `Porsche` after the eight.
+
 A pit wall draws the page on screen and its zones, the web view address and the portrait layout. A
 companion draws its modules to tick and order, and its first module. A round screen draws its cards on
 the disc and the Rev ring; its cards are shared by every round screen.
@@ -301,6 +313,13 @@ zones on one page is a thing people do on purpose.
   artboard does not draw comes after them. The edit sheet reads the same order.
 - **The round plan's card numbers are its own**, tighter than the artboard's, so that six cards fit on
   the disc.
+- **The Porsche row has no artboard of the panel's own** (#718). It is band D's ninth page on a Porsche
+  face, a row like the eight before it, named as the theme is named in the Add sheet and SimHub's list.
+  A Porsche screen set up before #718 is offered it unticked, because its mask is the driver's and the
+  page did not exist when they answered it.
+- **The Crest row has no artboard** (#714). It is the web view address's box with the Updates page's
+  status line under its title, and the row appears only on a Porsche face at a size that keeps the
+  badge (`PanelCrest.Shown`).
 
 ## LEDs
 
@@ -576,7 +595,7 @@ rc.7 could not do, which is more than the artboard tags:
 
 - The sidebar's search; the Rig and Shortcuts pages, on their titles.
 - Screens: Duplicate, the zone list's drag to reorder, every previous-page row, the pit wall's
-  portrait layout, and the companion's Flag display and Quick glance.
+  portrait layout, the companion's Flag display and Quick glance, and a Porsche face's Crest.
 - Shortcuts: night mode, brightness up and down, the companion's quick glance, every previous-page row.
 - LEDs: a strip's own Brightness, Reverse direction and Effects.
 - Matrix: the preview.

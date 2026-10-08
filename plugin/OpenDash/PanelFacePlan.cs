@@ -338,24 +338,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every zone and page the quick glance can be set to, packed the way
-        /// Contract.QuickGlanceValue packs them, in Contract.FaceZoneLetters order.</summary>
-        public static int[] GlanceOptions()
+        /// Contract.QuickGlanceValue packs them, in Contract.FaceZoneLetters order, on a face of the theme given.</summary>
+        public static int[] GlanceOptions(string theme = null)
         {
             var values = new List<int>();
             for (var zone = 0; zone < Contract.FaceZoneLetters.Length; zone++)
             {
-                var pages = FacePages.CountAt(zone);
+                var pages = FacePages.CountAt(zone, theme);
                 for (var page = 0; page < pages; page++) values.Add(Contract.QuickGlanceValue(zone, page));
             }
             return values.ToArray();
         }
 
         /// <summary>"Zone C · Track": the zone and the page together, as a glance is one choice.</summary>
-        public static string GlanceLabel(int value)
+        public static string GlanceLabel(int value, string theme = null)
         {
-            var glance = Contract.NormaliseQuickGlance(value);
+            var glance = Contract.NormaliseQuickGlance(value, theme);
             var letter = Contract.FaceZoneLetters[Contract.QuickGlanceZone(glance)];
-            return ZoneLabel(letter) + " · " + FacePages.NameOf(letter, Contract.QuickGlancePage(glance));
+            return ZoneLabel(letter) + " · " + FacePages.NameOf(letter, Contract.QuickGlancePage(glance), theme);
         }
 
         /// <summary>A row of the picture: the face's own rectangle at the picture's scale, floored so that

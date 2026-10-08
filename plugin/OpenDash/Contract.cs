@@ -73,6 +73,17 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string ClassBestLap = "ClassBestLap";
 
+        /// <summary>
+        /// The path of the Porsche crest the plugin fetched into the user's own folder, or "" when there is
+        /// none to draw. Published rather than chosen; the Porsche foot's badge draws the file. #714.
+        /// </summary>
+        /// <remarks>
+        /// The package ships no mark (#194): CarCrest.cs downloads the crest once, from the address on the
+        /// panel, checks it and names the file here. Empty draws the empty shield, which is what a rig with
+        /// the address cleared, or whose fetch failed, has always drawn.
+        /// </remarks>
+        public const string PorscheCrest = "PorscheCrest";
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1075,17 +1086,19 @@ namespace OpenDashPlugin
         /// A theme is a build-time variant (ADR 0015): one package per size it claims, embedded like the
         /// default ones and written only when it is picked (ADR 0016). Nothing here is a property and
         /// nothing reads a theme at runtime; the plugin needs the catalogue to know which embedded package
-        /// is themed, to offer it, and to write the per-car playlist entry (#199).
+        /// is themed, to offer it, and to write the per-car playlist entry (#199). The one thing a screen
+        /// reads from it is its band pages, which band D cycles on a face of the theme (#718).
         /// </remarks>
         public sealed class ThemeEntry
         {
-            public ThemeEntry(string id, string name, string[] cars, string[] iracingCarPaths, IReadOnlyList<FaceSize> sizes)
+            public ThemeEntry(string id, string name, string[] cars, string[] iracingCarPaths, IReadOnlyList<FaceSize> sizes, IReadOnlyList<ThemeBandPage> bandPages = null)
             {
                 Id = id;
                 Name = name;
                 Cars = cars;
                 IracingCarPaths = iracingCarPaths;
                 Sizes = sizes;
+                BandPages = bandPages ?? new ThemeBandPage[0];
             }
 
             /// <summary>Lower case, and the name of its directory under packages/dash/src/themes/.</summary>
@@ -1103,6 +1116,12 @@ namespace OpenDashPlugin
             /// <summary>The sizes it claims. A size it leaves out keeps the default face there.</summary>
             public IReadOnlyList<FaceSize> Sizes { get; }
 
+            /// <summary>
+            /// The pages it adds to band D, after the house's eight and in this order, so that no house page
+            /// leaves its index. A face of the theme cycles all of them and opens on the first of these.
+            /// </summary>
+            public IReadOnlyList<ThemeBandPage> BandPages { get; }
+
             public bool IsDefault { get { return string.Equals(Id, DefaultThemeId, StringComparison.Ordinal); } }
 
             /// <summary>
@@ -1118,20 +1137,57 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>A page a theme adds to band D: the id its screen is named by and the name the panel lists.
+        /// Mirrors ThemeBandPageMeta in contract.ts; its number is its place after the house's eight.</summary>
+        public sealed class ThemeBandPage
+        {
+            public ThemeBandPage(string id, string name)
+            {
+                Id = id;
+                Name = name;
+            }
+
+            public string Id { get; }
+
+            public string Name { get; }
+        }
+
         /// <summary>
         /// Every theme, the default first. Mirrors THEME_CATALOGUE in packages/dash/src/contract.ts, which
         /// ContractTests reads back and contract.test.ts reads this from, so the two cannot drift.
         /// </summary>
         /// <remarks>
-        /// The Porsche is catalogued before its code exists (#205), so for now no package of it is embedded;
-        /// what the plugin offers is what it carries, and the catalogue says what each carried package is.
+        /// The Porsche claims every face size, the portrait one in the car's stacked form (#205, #713). What
+        /// the plugin offers is what it carries, and the catalogue says what each carried package is.
         /// </remarks>
         public static readonly IReadOnlyList<ThemeEntry> Themes = new[]
         {
-            new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes),
-            new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche992cup" }, new[] { FaceOf(1280, 480).Value }),
-            new ThemeEntry("aim", "AiM", new[] { "Global Mazda MX-5 Cup", "Legends Ford Coupe", "FIA Cross Car" }, new[] { "mx5 mx52016" }, FaceSizes),
+            new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes, new ThemeBandPage[0]),
+            new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche992cup" }, FaceSizes, new[] { new ThemeBandPage("porscheFoot", "Porsche") }),
+            new ThemeEntry("aim", "AiM", new[] { "Global Mazda MX-5 Cup", "Legends Ford Coupe", "FIA Cross Car" }, new[] { "mx5 mx52016" }, FaceSizes, new ThemeBandPage[0]),
         };
+
+        /// <summary>The catalogue entry of a theme by its id, or null for the default look, an unknown id, or none.</summary>
+        /// <remarks>Indexed rather than enumerated: a face asks it for every zone of every screen each frame
+        /// (FaceSettings.Position), and an enumerator over the interface would allocate there.</remarks>
+        public static ThemeEntry ThemeById(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            for (var i = 0; i < Themes.Count; i++)
+            {
+                if (string.Equals(Themes[i].Id, id, StringComparison.Ordinal)) return Themes[i];
+            }
+            return null;
+        }
+
+        /// <summary>The band pages a theme adds, by its id: none for the default look, an unknown id, or none.</summary>
+        public static IReadOnlyList<ThemeBandPage> ThemeBandPages(string theme)
+        {
+            var entry = ThemeById(theme);
+            return entry == null ? NoBandPages : entry.BandPages;
+        }
+
+        private static readonly ThemeBandPage[] NoBandPages = new ThemeBandPage[0];
 
         /// <summary>Whether a prefix names a face that ships, for reading a settings file written by another version.</summary>
         public static bool IsKnownFacePrefix(string prefix)
@@ -1325,17 +1381,48 @@ namespace OpenDashPlugin
             // And whether a flag shows in the pit lane, appended for the same reason and shared because
             // a driver asking for quiet on the way down the lane asks it of every surface. #503.
             yield return FlagsInPitLane;
+            // And the Porsche crest's path, appended for the same reason, published rather than chosen and
+            // shared because the file is the rig's: one crest serves every Porsche screen. #714.
+            yield return PorscheCrest;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
         public static readonly string[] FaceZoneLetters = { "A", "B", "C", "D" };
 
         /// <summary>How many pages each zone can show, in letter order: A four, B and C the twenty-one
-        /// modules, D eight.</summary>
+        /// modules, D eight. The house's catalogues: a theme adds band pages, which
+        /// <see cref="FaceZonePageCount"/> counts.</summary>
         public static readonly IReadOnlyList<int> FaceZonePageCounts = new[] { 4, Modules.Count, Modules.Count, 8 };
 
-        /// <summary>Which page each zone opens on: the gear, lap times, the relative, and fuel.</summary>
+        /// <summary>Which page each zone opens on: the gear, lap times, the relative, and fuel. The house's:
+        /// a theme with band pages opens band D on its own, which <see cref="DefaultFaceZonePage"/> says.</summary>
         public static readonly IReadOnlyList<int> DefaultFaceZonePages = new[] { 0, 0, 14, 0 };
+
+        /// <summary>
+        /// How many pages a zone can show on a face of a theme: <see cref="FaceZonePageCounts"/>, and in band
+        /// D the theme's band pages after the house's eight. Nine on a Porsche face, eight on every other (#718).
+        /// </summary>
+        public static int FaceZonePageCount(int zoneIndex, string theme = null)
+        {
+            if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            var count = FaceZonePageCounts[zoneIndex];
+            return zoneIndex == BandIndex ? count + ThemeBandPages(theme).Count : count;
+        }
+
+        /// <summary>
+        /// The page a zone opens on, on a face of a theme: <see cref="DefaultFaceZonePages"/>, except that band
+        /// D on a theme with band pages opens on the first of them, the row its car opens on. Mirrors
+        /// defaultZonePage in contract.ts.
+        /// </summary>
+        public static int DefaultFaceZonePage(int zoneIndex, string theme = null)
+        {
+            if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
+            if (zoneIndex == BandIndex && ThemeBandPages(theme).Count > 0) return FaceZonePageCounts[BandIndex];
+            return DefaultFaceZonePages[zoneIndex];
+        }
+
+        /// <summary>Band D's index in <see cref="FaceZoneLetters"/>, the one zone a theme adds pages to.</summary>
+        private const int BandIndex = 3;
 
         /// <summary>The bar's four end fields, left to right.</summary>
         public static readonly string[] BarSlots = { "Left1", "Left2", "Right1", "Right2" };
@@ -1723,17 +1810,17 @@ namespace OpenDashPlugin
 
         /// <summary>Every page enabled, which is the mask a zone starts with: a driver turns off what
         /// they do not want rather than turning on what they do.</summary>
-        public static int DefaultZoneMask(int zoneIndex)
+        public static int DefaultZoneMask(int zoneIndex, string theme = null)
         {
             if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
-            return (1 << FaceZonePageCounts[zoneIndex]) - 1;
+            return (1 << FaceZonePageCount(zoneIndex, theme)) - 1;
         }
 
-        /// <summary>The default page of every face zone, in letter order.</summary>
-        public static int[] DefaultFaceZones()
+        /// <summary>The default page of every face zone, in letter order, on a face of the theme given.</summary>
+        public static int[] DefaultFaceZones(string theme = null)
         {
             var zones = new int[FaceZoneLetters.Length];
-            for (var i = 0; i < zones.Length; i++) zones[i] = DefaultFaceZonePages[i];
+            for (var i = 0; i < zones.Length; i++) zones[i] = DefaultFaceZonePage(i, theme);
             return zones;
         }
 
@@ -1775,11 +1862,11 @@ namespace OpenDashPlugin
             return flags;
         }
 
-        /// <summary>The default mask of every face zone, in letter order.</summary>
-        public static int[] DefaultFaceZoneMasks()
+        /// <summary>The default mask of every face zone, in letter order, on a face of the theme given.</summary>
+        public static int[] DefaultFaceZoneMasks(string theme = null)
         {
             var masks = new int[FaceZoneLetters.Length];
-            for (var i = 0; i < masks.Length; i++) masks[i] = DefaultZoneMask(i);
+            for (var i = 0; i < masks.Length; i++) masks[i] = DefaultZoneMask(i, theme);
             return masks;
         }
 
@@ -2359,11 +2446,11 @@ namespace OpenDashPlugin
             return result.ToArray();
         }
 
-        /// <summary>The catalogue's own order for every face zone, in letter order.</summary>
-        public static int[][] DefaultFaceZoneOrders()
+        /// <summary>The catalogue's own order for every face zone, in letter order, on a face of the theme given.</summary>
+        public static int[][] DefaultFaceZoneOrders(string theme = null)
         {
             var orders = new int[FaceZoneLetters.Length][];
-            for (var i = 0; i < orders.Length; i++) orders[i] = NormaliseOrder(null, FaceZonePageCounts[i]);
+            for (var i = 0; i < orders.Length; i++) orders[i] = NormaliseOrder(null, FaceZonePageCount(i, theme));
             return orders;
         }
 
@@ -2446,14 +2533,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Returns the glance when both halves are in range, else the default. A page outside
-        /// its zone's catalogue takes the zone with it: half a glance is not a glance.</summary>
-        public static int NormaliseQuickGlance(int value)
+        /// its zone's catalogue takes the zone with it: half a glance is not a glance. The catalogue is the
+        /// one of a face of the theme given, so a Porsche face can glance at its own band page.</summary>
+        public static int NormaliseQuickGlance(int value, string theme = null)
         {
             if (value < 0) return DefaultQuickGlance;
             var zoneIndex = QuickGlanceZone(value);
             if (zoneIndex >= FaceZoneLetters.Length) return DefaultQuickGlance;
             var page = QuickGlancePage(value);
-            return page < FaceZonePageCounts[zoneIndex] ? value : DefaultQuickGlance;
+            return page < FaceZonePageCount(zoneIndex, theme) ? value : DefaultQuickGlance;
         }
 
         /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>

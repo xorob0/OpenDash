@@ -110,7 +110,10 @@ export interface ThemeDrawing {
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */
   bandCorners?: boolean;
-  /** Pages added to band D's catalogue, after the contract's own. */
+  /**
+   * Pages added to band D's catalogue, after the contract's own: the drawing of each page the theme's
+   * catalogue entry lists in `bandPages`, the same pages in the same order, which the build holds it to.
+   */
   bandPages?: readonly ThemeBandPage[];
   /** How the modules of zones B and C lay their fields out; see {@link ModuleRegister}. */
   modules?: ModuleRegister;

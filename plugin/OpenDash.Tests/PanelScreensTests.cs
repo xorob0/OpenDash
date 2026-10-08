@@ -1272,9 +1272,9 @@ namespace OpenDashPlugin.Tests
                 "ScreensSegmented(Contract.FlagFormats, PanelScreens.FlagLabels, Settings.ScreenFlagFormat(ns), value => { screen.FlagFormat = value;",
                 "ScreensSegmented(Contract.LapReviewModes, PanelScreens.LapReviewLabels, Settings.ScreenLapReview(ns), value => { screen.LapReview = value;",
                 "Ui.ChoiceButton(fields, screen.Face.BarField(slot), index => { screen.Face.SetBarField(slot, index); ScreensSave(screen, redraw); });",
-                "var glance = Contract.NormaliseQuickGlance(screen.Face.QuickGlance); var zoneIndex = Contract.QuickGlanceZone(glance);",
-                "Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen => { screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen); ScreensSave(screen, redraw); }",
-                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex), Contract.QuickGlancePage(glance), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen); ScreensSave(screen, redraw); }",
+                "var glance = screen.Face.NormalisedQuickGlance(); var zoneIndex = Contract.QuickGlanceZone(glance);",
+                "Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen => { screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen, screen.Theme); ScreensSave(screen, redraw); }",
+                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex, screen.Theme), Contract.QuickGlancePage(glance), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen); ScreensSave(screen, redraw); }",
                 // A tick, a drag, All and None each settle, and settling redraws: the count, the First tag and
                 // the cell's page follow.
                 "Action settle = () => { ScreensSave(screen, redraw); };",
@@ -1563,11 +1563,12 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelScreens.BarFlagLabels.Length, Contract.CompanionFlagFormats.Length);
 
             // Duplicate; the drag hint and Previous page; the portrait layout; the companion's Flag display and
-            // Quick glance (the glance has no artboard: it is new on the companion in this release).
+            // Quick glance (the glance has no artboard: it is new on the companion in this release); and a
+            // Porsche face's Crest row (#714), which has no artboard either.
             var tags = new Dictionary<string, int>
             {
                 { "SettingsControl.Screens.cs", 1 },
-                { "SettingsControl.Screens.Face.cs", 2 },
+                { "SettingsControl.Screens.Face.cs", 3 },
                 { "SettingsControl.Screens.PitWall.cs", 1 },
                 { "SettingsControl.Screens.Companion.cs", 2 },
                 { "SettingsControl.Screens.Round.cs", 0 },

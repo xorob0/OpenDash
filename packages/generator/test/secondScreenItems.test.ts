@@ -5,9 +5,9 @@
  * that drifts from SimHub shows up as a failing key rather than as a blank panel.
  */
 import { describe, expect, test } from 'bun:test';
-import type { ChartItem, Item, LayerItem, LinearGaugeItem, RadarItem, StaticMapItem, WebPageItem } from '../src/model.ts';
+import type { ChartItem, ImageFromFileItem, Item, LayerItem, LinearGaugeItem, RadarItem, StaticMapItem, WebPageItem } from '../src/model.ts';
 import { ITEM_TYPES, buildItemObject, DEFAULT_REPEAT_TOP_OFFSET } from '../src/serialize.ts';
-import { validatePackage } from '../src/validate.ts';
+import { ALLOWED_BINDING_TARGETS, validatePackage } from '../src/validate.ts';
 import { dashboard, rect, samplePackage, screen } from './fixtures.ts';
 
 const PATH = 'OpenDash/OpenDash/Main';
@@ -136,6 +136,32 @@ describe('web page', () => {
     expect(o.$type).toBe(ITEM_TYPES.webPage);
     expect(o).toMatchObject({ StartAddress: '', AllowTransparency: false, ClickThrough: false });
     expect(o.Bindings).toMatchObject({ StartAddress: { Mode: 2 } });
+  });
+});
+
+describe('image from file', () => {
+  const crest = (over: Partial<ImageFromFileItem> = {}): ImageFromFileItem => ({
+    kind: 'imageFromFile',
+    name: 'crest',
+    rect: { left: 14, top: 80, width: 54, height: 62 },
+    ...over,
+  });
+
+  test('is SimHub\'s ImageFromFileItem with its path written even when empty, and bindable (#714)', () => {
+    const o = build(crest({ bindings: { ImagePath: { mode: 'formula', formula: "isnull([OpenDash.PorscheCrest], '')" } } }));
+    expect(o.$type).toBe('SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageFromFileItem, SimHub.Plugins');
+    expect(o.$type).toBe(ITEM_TYPES.imageFromFile);
+    expect(o).toMatchObject({ ImagePath: '', Left: 14, Top: 80, Width: 54, Height: 62 });
+    expect(o.Bindings).toMatchObject({ ImagePath: { Mode: 2, Formula: { Expression: "isnull([OpenDash.PorscheCrest], '')" } } });
+    // The type has no AutoSize: SimHub fits the picture to the rect, keeping its proportions.
+    expect(o).not.toHaveProperty('AutoSize');
+    expect(o).not.toHaveProperty('Image');
+  });
+
+  test('ImagePath is a target of this kind alone', () => {
+    expect(ALLOWED_BINDING_TARGETS.imageFromFile).toContain('ImagePath');
+    expect(ALLOWED_BINDING_TARGETS.imageFromFile).toContain('Visible');
+    for (const kind of ['text', 'rect', 'image', 'webPage'] as const) expect(ALLOWED_BINDING_TARGETS[kind]).not.toContain('ImagePath');
   });
 });
 

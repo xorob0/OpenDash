@@ -13,6 +13,7 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
 import {
+  defaultZonePage,
   pagesForZone,
   zone as zoneSetting,
   zoneClassOnlyOnPage,
@@ -20,6 +21,7 @@ import {
   type FaceSize,
   type FaceZone,
   type FaceZonePageMeta,
+  type ThemeEntry,
 } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Size } from '../design/geometry.ts';
@@ -181,16 +183,21 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
   });
 }
 
-/** The widget that embeds a zone dashboard in a face, its screen bound to the zone's property. */
-export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }): WidgetItem {
+/**
+ * The widget that embeds a zone dashboard in a face, its screen bound to the zone's property.
+ *
+ * `theme` is the catalogue entry of the theme the face is drawn in. It changes band D alone: on a
+ * theme that adds band pages, the band opens on the first of them, with no plugin as with one (#718).
+ */
+export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }, theme?: ThemeEntry): WidgetItem {
   const size = { width: frame.width, height: frame.height };
-  const start = pagesForZone(zone).findIndex((p) => p.number === 0);
+  const start = zone === 'D' ? defaultZonePage(zone, theme) : pagesForZone(zone).findIndex((p) => p.number === 0);
   return pagedWidget({
     name,
     rect: { ...frame },
     fileName: `${zoneDashboardName(kindOf(zone), size)}.djson`,
     initialScreenIndex: Math.max(0, start),
-    page: zoneSetting.page(face, zone),
+    page: zoneSetting.page(face, zone, theme),
   });
 }
 

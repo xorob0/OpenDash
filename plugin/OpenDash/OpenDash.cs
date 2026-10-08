@@ -112,6 +112,29 @@ namespace OpenDashPlugin
 
         private CarLightService carLights;
 
+        /// <summary>
+        /// The Porsche crest, fetched into the user's own folder rather than shipped (#714). Built on first use,
+        /// like the tables, for the SimHub root.
+        /// </summary>
+        public CarCrestService Crest =>
+            crest ?? (crest = new CarCrestService(new ReleaseClient(Version), CarCrestLibrary.FolderPath(Installer.SimHubRoot)));
+
+        private CarCrestService crest;
+
+        /// <summary>
+        /// Makes the crest on disk agree with the address on the panel, off the calling thread, and logs a failure.
+        /// Called at the start and whenever the address or the rig's screens change; it fetches only when a screen
+        /// draws the badge and the crest from that address is not already there.
+        /// </summary>
+        public void RefreshCrest()
+        {
+            var url = Settings.PorscheCrestUrl;
+            Crest.RefreshInBackground(url, CarCrestLibrary.Wanted(Settings.RigScreens()), (state, reason) =>
+            {
+                if (state == CarCrestState.Failed) Log.Warn("The Porsche crest could not be fetched from " + url + ": " + reason);
+            });
+        }
+
         /// <summary>Wheelspin and lock-up, estimated from the engine against the road; see SlipEstimate.cs.</summary>
         private readonly SlipEstimate slip = new SlipEstimate();
 
@@ -388,6 +411,17 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Loading the car light tables failed", ex);
+            }
+            try
+            {
+                // The crest is the one thing fetched at a start without a press, and only on a rig with a Porsche
+                // screen that draws the badge and no crest from the address yet: the theme's default (#714, the
+                // trade dress paragraph of scope.md). A copy already on disk is read and nothing is asked.
+                RefreshCrest();
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Refreshing the Porsche crest failed", ex);
             }
             Log.Info("Dashboard status: " + Installer.Status);
             Log.Info(FlagBoxProfile.Summary(FlagBox));
@@ -921,6 +955,8 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.DeltaPrecision, () => Settings.DeltaPrecision);
             // And whether a flag shows in the pit lane, which every surface that draws a flag asks. #503.
             this.AttachDelegate(Contract.FlagsInPitLane, () => Settings.FlagsInPitLane);
+            // And the Porsche crest's path, published rather than chosen: the file CarCrest.cs fetched, or "". #714.
+            this.AttachDelegate(Contract.PorscheCrest, () => Crest.Path);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
@@ -949,7 +985,7 @@ namespace OpenDashPlugin
                     var captured = slot;
                     this.AttachDelegate(Contract.BarFieldProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).BarField(captured));
                 }
-                this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Contract.NormaliseQuickGlance(Settings.ScreenFace(s.Namespace).QuickGlance));
+                this.AttachDelegate(Contract.QuickGlanceProperty(s.Namespace), () => Settings.ScreenFace(s.Namespace).NormalisedQuickGlance());
                 this.AttachDelegate(Contract.FlagFormatProperty(s.Namespace), () => Settings.ScreenFlagFormat(s.Namespace));
                 this.AttachDelegate(Contract.LapReviewProperty(s.Namespace), () => Settings.ScreenLapReview(s.Namespace));
                 this.AttachDelegate(Contract.RevBarProperty(s.Namespace), () => Settings.ScreenRevBar(s.Namespace));

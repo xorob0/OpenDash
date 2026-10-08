@@ -186,8 +186,9 @@ the one a reviewer will hold you to. In short, a theme takes the arrangement, th
 colour logic of the car's display, and it may draw the elements a driver identifies the cluster by
 in the car's way, so that the face is recognisable beside the manual's render. It never takes a word
 mark, a logo or crest, a manufacturer's typeface, a badge drawn as artwork, or any image from a
-manual or a photograph, traced or not, and where the car shows a crest the theme leaves the place
-empty for an image the user supplies. Its faces are OFL or MIT, since they ship in `_SHFonts/`, and
+manual or a photograph, traced or not, and where the car shows a crest the package leaves the place
+empty and the plugin may fetch the crest into the user's own folder by default, as the Porsche's is
+(#714): the repository carries an address and a hash, never the image. Its faces are OFL or MIT, since they ship in `_SHFonts/`, and
 it is named after the display family as a driver says it, `Porsche` for the 992-era display, which
 is the name in its package folder, in SimHub's list, in the panel and in its ticket's title.
 

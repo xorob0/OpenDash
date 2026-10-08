@@ -18,6 +18,7 @@ import type {
   EllipseItem,
   Formula,
   ImageAsset,
+  ImageFromFileItem,
   ImageItem,
   Item,
   ItemBase,
@@ -57,6 +58,7 @@ export const ITEM_TYPES = {
   staticMap: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.GeneratedStaticMapItem, SimHub.Plugins',
   webPage: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.WebPageItem, SimHub.Plugins',
   image: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageItem, SimHub.Plugins',
+  imageFromFile: 'SimHub.Plugins.OutputPlugins.GraphicalDash.Models.ImageFromFileItem, SimHub.Plugins',
 } as const satisfies Record<Item['kind'], string>;
 
 export const DEFAULT_OPACITY = 100;
@@ -425,6 +427,16 @@ const buildImageObject = (item: ImageItem, id: string): JsonObject => {
   return o;
 };
 
+/** `ImagePath` is the type's one property of its own; the picture is fitted to the item's rect. */
+const buildImageFromFileObject = (item: ImageFromFileItem, id: string): JsonObject => {
+  const o: JsonObject = {
+    $type: ITEM_TYPES.imageFromFile,
+    ImagePath: item.imagePath ?? '',
+  };
+  appendDrawable(o, item, id, { border: false, rotation: false });
+  return o;
+};
+
 /**
  * One item as SimHub's JSON. `parentPath` is the screen's or enclosing layer's path; the item's
  * own path is `<parentPath>/<name>` and its id derives from it unless `item.id` is set.
@@ -453,6 +465,8 @@ export const buildItemObject = (item: Item, parentPath: string): JsonObject => {
       return buildStaticMapObject(item, id);
     case 'image':
       return buildImageObject(item, id);
+    case 'imageFromFile':
+      return buildImageFromFileObject(item, id);
     case 'webPage':
       return buildWebPageObject(item, id);
   }

@@ -64,6 +64,7 @@ import {
   DELTA_PRECISIONS,
   DELTA_REFERENCES,
   FLAGS_IN_PIT_LANE_SETTING,
+  PORSCHE_CREST,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -171,13 +172,14 @@ describe('settings', () => {
       'OpenDash.WheelLock',
       'OpenDash.TCInferred',
     ]);
-    // The lone 10 is RevBar, the blue flag detail, the two that decide how a driver is named, the
-    // idle screen's two, the class best, the clock format, the delta's precision and whether a flag
-    // shows in the pit lane, which every screen shares with the four modes and the twelve slots.
+    // The lone 11 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // idle screen's two, the class best, the clock format, the delta's precision, whether a flag
+    // shows in the pit lane and the Porsche crest's path, which every screen shares with the four
+    // modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        10 +
+        11 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -222,8 +224,9 @@ describe('settings', () => {
     // was rebuilt around the rig (#503), which asked for whether a flag shows in the pit lane, a
     // position per zone so that a zone's pages can be put in any order, and a brightness and fifteen
     // effect switches for a strip. And 399 before a strip's aid lamps could read the plugin's slip
-    // estimate: the strip's switch, and the three the plugin computes.
-    expect(props).toHaveLength(403);
+    // estimate: the strip's switch, and the three the plugin computes. And 403 before the Porsche's
+    // badge could draw the crest the plugin fetches into the user's own folder (#714).
+    expect(props).toHaveLength(404);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -255,6 +258,9 @@ describe('settings', () => {
     // And whether a flag shows in the pit lane after it, shared because every screen that draws a
     // flag asks it and a screen may not read what another owns. #503.
     expect(props[13 + SLOT_MAX]).toBe('OpenDash.FlagsInPitLane');
+    // And the Porsche crest's path after it, published rather than chosen and shared because the file
+    // is the rig's and every Porsche screen draws it. #714.
+    expect(props[14 + SLOT_MAX]).toBe('OpenDash.PorscheCrest');
     expect(props).toContain('OpenDash.Face1920x480ZoneA');
     expect(props).toContain('OpenDash.Face1920x480ZoneDPages');
     expect(props).toContain('OpenDash.Face850x480ZoneCStart');
@@ -357,6 +363,7 @@ describe('settings', () => {
         CLOCK_FORMAT_SETTING,
         DELTA_PRECISION_SETTING,
         FLAGS_IN_PIT_LANE_SETTING,
+        PORSCHE_CREST,
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -751,19 +758,31 @@ describe('plugin mirror', () => {
   });
 
   /** The other half of `ContractTests.Themes_agree_with_contract_ts_when_present` (#202). */
-  test('Contract.cs lists every theme THEME_CATALOGUE does, with its name, its cars and its sizes', () => {
+  test('Contract.cs lists every theme THEME_CATALOGUE does, with its name, its cars, its sizes and its band pages', () => {
     const source = pluginSource('Contract.cs');
     expect(source).toContain(`public const string DefaultThemeId = "${DEFAULT_THEME_ID}";`);
     const block = /Themes = new\[\]\s*\{(?<items>.*?)\n\s*\};/s.exec(source)?.groups?.items ?? '';
     const strings = (list: string): string[] => [...list.matchAll(/"([^"]*)"/g)].map((m) => m[1]!);
-    const rows = [...block.matchAll(/new ThemeEntry\("([^"]*)", "([^"]*)", (new string\[0\]|new\[\] \{[^}]*\}), (new string\[0\]|new\[\] \{[^}]*\}), (FaceSizes|new\[\] \{[^}]*\})\)/g)].map((m) => ({
+    const rows = [
+      ...block.matchAll(/new ThemeEntry\("([^"]*)", "([^"]*)", (new string\[0\]|new\[\] \{[^}]*\}), (new string\[0\]|new\[\] \{[^}]*\}), (FaceSizes|new\[\] \{[^}]*\}), (new ThemeBandPage\[0\]|new\[\] \{[^}]*\})\)/g),
+    ].map((m) => ({
       id: m[1],
       name: m[2],
       cars: strings(m[3]!),
       iracingCarPaths: strings(m[4]!),
       sizes: m[5] === 'FaceSizes' ? FACE_SIZES.map((f) => `${f.width}x${f.height}`) : [...m[5]!.matchAll(/FaceOf\((\d+), (\d+)\)\.Value/g)].map((s) => `${s[1]}x${s[2]}`),
+      bandPages: [...m[6]!.matchAll(/new ThemeBandPage\("([^"]*)", "([^"]*)"\)/g)].map((p) => ({ id: p[1], name: p[2] })),
     }));
-    expect(rows).toEqual(THEME_CATALOGUE.map((t) => ({ id: t.id, name: t.name, cars: [...t.cars], iracingCarPaths: [...t.iracingCarPaths], sizes: t.sizes.map((f) => `${f.width}x${f.height}`) })));
+    expect(rows).toEqual(
+      THEME_CATALOGUE.map((t) => ({
+        id: t.id,
+        name: t.name,
+        cars: [...t.cars],
+        iracingCarPaths: [...t.iracingCarPaths],
+        sizes: t.sizes.map((f) => `${f.width}x${f.height}`),
+        bandPages: t.bandPages.map((p) => ({ id: p.id, name: p.name })),
+      })),
+    );
     // And the folder spelled as themedFolder spells it, the one string both halves must agree on.
     expect(source).toContain('return "OpenDash " + Name + " " + width + "x" + height;');
   });

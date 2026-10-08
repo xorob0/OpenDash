@@ -30,7 +30,7 @@ export interface Theme {
 export const THEMES: Record<string, Theme> = {
   /** The look `main` has always built: an overlay that changes nothing, over the zone anatomy. */
   [DEFAULT_THEME_ID]: { overlay: defaultOverlay, anatomy: defaultAnatomy },
-  /** The 992 display of the GT3 R and both Cups, at 1280 x 480 (#205). Its drawing is in `drawings.ts`. */
+  /** The 992 display of the GT3 R and both Cups, at every face size (#205, #713). Its drawing is in `drawings.ts`. */
   porsche: { overlay: porscheOverlay, anatomy: porscheAnatomy },
   /** The AiM LCD of the MX-5 Cup, the Legends and the Cross Car, at every size (#204). */
   aim: { overlay: aimOverlay, anatomy: aimAnatomy },
