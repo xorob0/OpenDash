@@ -7,8 +7,11 @@
  * them again from a font CDN would put a second copy of the same typeface under a second licence
  * trail, so this converts the vendored ones instead. The originals are never touched.
  *
- * Only the five faces the site actually sets are converted; the rest of the family would be dead
- * weight in the image. OFL.txt travels with them, as it must.
+ * Only the faces the site actually sets are converted; the rest of the family would be dead weight
+ * in the image. That is the five its own copy uses, and the two more the dashboards draw with that
+ * the copy does not: Barlow Condensed Light and Barlow Bold, which `design/advances.ts` measures and
+ * the in-browser demo (#395) has to draw in the same faces to clip where SimHub clips. OFL.txt
+ * travels with them, as it must.
  */
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -18,11 +21,16 @@ const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const fontsDir = path.join(repoRoot, 'packages', 'dash', 'fonts');
 const outDir = path.resolve(import.meta.dir, '..', 'public', 'fonts');
 
-/** The faces the site sets, and nothing else. Barlow for copy, Barlow Condensed for numerals. */
+/**
+ * The faces the site sets, and nothing else. Barlow for copy, Barlow Condensed for numerals, and the
+ * two the dashboards add for the demo: Barlow Bold and Barlow Condensed Light.
+ */
 export const FACES = [
   'Barlow-Regular.ttf',
   'Barlow-Medium.ttf',
   'Barlow-SemiBold.ttf',
+  'Barlow-Bold.ttf',
+  'BarlowCondensed-Light.ttf',
   'BarlowCondensed-SemiBold.ttf',
   'BarlowCondensed-Bold.ttf',
 ] as const;
