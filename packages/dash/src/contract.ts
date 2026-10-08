@@ -239,6 +239,20 @@ export const DELTA_PRECISION_SETTING = 'DeltaPrecision';
  */
 export const FLAGS_IN_PIT_LANE_SETTING = 'FlagsInPitLane';
 
+/**
+ * The path of the Porsche crest the plugin fetched into the user's own folder, or `''` when there is none
+ * to draw. #714.
+ *
+ * Published rather than chosen, like {@link UPDATE_VERSION}. The package ships no mark (#194, the trade
+ * dress paragraph of `docs/scope.md`): the plugin downloads the crest once, from an address the panel
+ * shows and the driver may change or clear, checks it, and names the file here. The Porsche foot's badge
+ * draws the file through an `ImageFromFileItem` and draws the empty shield while this is empty, which it
+ * is with no plugin at all, with the address cleared, and after a fetch that failed.
+ *
+ * Shared rather than a screen's, because the file is the rig's: one crest serves every Porsche screen.
+ */
+export const PORSCHE_CREST = 'PorscheCrest';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -384,6 +398,9 @@ export function dashProperties(): string[] {
     CLOCK_FORMAT_SETTING,
     DELTA_PRECISION_SETTING,
     FLAGS_IN_PIT_LANE_SETTING,
+    // And the Porsche crest's path after that, published rather than chosen and shared because the file
+    // is the rig's, which every Porsche screen draws. #714.
+    PORSCHE_CREST,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -772,6 +789,8 @@ export const setting = {
   updateAvailable: (): Expr => isnull(prop(propertyName(UPDATE_AVAILABLE)), 'false'),
   /** `isnull([OpenDash.UpdateVersion], '')`: the version it names, or nothing. */
   updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
+  /** `isnull([OpenDash.PorscheCrest], '')`: the crest's file, or `''` for the empty shield. #714. */
+  porscheCrest: (): Expr => isnull(prop(propertyName(PORSCHE_CREST)), str('')),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
