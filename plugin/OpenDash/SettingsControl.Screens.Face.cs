@@ -37,6 +37,10 @@ namespace OpenDashPlugin
             {
                 return Ui.VStack(12, Ui.Prose(PanelScreens.NoLongerShipped(screen.SizeLabel), Theme.SizeBody), BuildScreenDetails(screen));
             }
+            if (screen.Theme != null && ScreenInstaller.PackageNameFor(screen, plugin.Installer.PackageSource, new SimHubInstallLog()) == null)
+            {
+                return Ui.VStack(12, Ui.Prose(PanelScreens.ThemeNoLongerShipped(screen.Theme, screen.SizeLabel), Theme.SizeBody), BuildScreenDetails(screen));
+            }
             var face = size.Value;
             var host = new ContentControl { Focusable = false, HorizontalContentAlignment = HorizontalAlignment.Stretch };
             Action redraw = null;
@@ -121,6 +125,12 @@ namespace OpenDashPlugin
                 Ui.Anchor(Ui.SettingRow(PanelScreens.LapReviewTitle, lapReview, PanelScreens.LapReviewCaption), PanelScreens.AnchorLapReview),
                 Ui.Anchor(Ui.SettingRow(PanelShortcuts.QuickGlanceTitle, BuildFaceGlance(screen, redraw, column), PanelCopy.FaceGlance), PanelScreens.AnchorGlance),
             };
+            if (screen.Theme != null)
+            {
+                var report = plugin.CarPlaylist == null ? null : PanelCarPlaylist.ReportFor(plugin.CarPlaylist, screen.Namespace);
+                var lines = plugin.CarPlaylistsFailed ? new List<string> { PanelCarPlaylist.Failed } : PanelCarPlaylist.Lines(report, screen);
+                if (lines.Count > 0) rows.Add(Ui.SettingRow(PanelCarPlaylist.RowTitle, null, string.Join(" ", lines)));
+            }
             rows.Add(Ui.SoonRow(PanelSoon.RevFill));
             rows.Add(Ui.SoonRow(PanelSoon.SpotterAtRevBarEnds));
             rows.Add(Ui.SoonRow(PanelSoon.PitPageInPitLane));

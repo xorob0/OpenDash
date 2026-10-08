@@ -1,0 +1,17 @@
+{
+  // The race of race.json with the player changing car, for SimHub's per-car playlists (#199): the playlist
+  // matches the player's CarPath, which SimHub re-reads when the session YAML changes, so each event below is a
+  // car change with nothing else touched. Porsche 911 GT3 R (992) at the start, which the Porsche theme is drawn
+  // for; the Ferrari 296 GT3 of CarIdx 1 at 45 s, which no theme is drawn for; the Porsche again at 90 s, and the
+  // Ferrari at 135 s, so that a capture taken at any point after the first minute has seen both directions.
+  "extends": "race.json",
+  "name": "GT3/GT4 race, Spa, the player switching between a Porsche and a Ferrari",
+  "timeline": [
+    {"at": 45, "log": "player car: Ferrari 296 GT3",
+     "yaml": {"PlayerCarPath": "ferrari296gt3", "PlayerCarID": "173", "PlayerCarScreenName": "Ferrari 296 GT3", "PlayerCarScreenNameShort": "Ferrari 296"}},
+    {"at": 90, "log": "player car: Porsche 911 GT3 R (992)",
+     "yaml": {"PlayerCarPath": "porsche992rgt3", "PlayerCarID": "161", "PlayerCarScreenName": "Porsche 911 GT3 R (992)", "PlayerCarScreenNameShort": "Porsche 992 GT3 R"}},
+    {"at": 135, "log": "player car: Ferrari 296 GT3",
+     "yaml": {"PlayerCarPath": "ferrari296gt3", "PlayerCarID": "173", "PlayerCarScreenName": "Ferrari 296 GT3", "PlayerCarScreenNameShort": "Ferrari 296"}}
+  ]
+}

@@ -1733,6 +1733,7 @@ namespace OpenDashPlugin
             copy.Namespace = PackageCatalogue.UniqueNamespace(copy.Name, new HashSet<string>(taken, StringComparer.OrdinalIgnoreCase));
             copy.Folder = PackageCatalogue.UniqueFolder(copy.Name, folders, entry.Folder);
             copy.Package = entry.Package;
+            copy.Theme = entry.Theme;
             copy.Unclaimed = false;
             // Laid out by the Rig page until the driver drags it: on top of the source is nowhere.
             copy.LayoutX = null;
@@ -1788,6 +1789,7 @@ namespace OpenDashPlugin
             screen.Width = entry.Width;
             screen.Height = entry.Height;
             screen.Package = entry.Package;
+            screen.Theme = entry.Theme;
             screen.Folder = screen.IsStock
                 ? entry.Folder
                 : PackageCatalogue.UniqueFolder(screen.Name, Taken(screen), entry.Folder);

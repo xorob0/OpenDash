@@ -282,10 +282,16 @@ namespace OpenDashPlugin
         public static string RemoveBody(ScreenInstance screen)
         {
             var goes = OwnsSettings(screen) ? "Removes the screen, its dashboard and its settings." : "Removes the screen and its dashboard.";
-            return goes + (HasActions(screen) ? " " + BoundButtonsStop : string.Empty);
+            return goes
+                + (HasActions(screen) ? " " + BoundButtonsStop : string.Empty)
+                + (screen != null && screen.Theme != null ? " " + ThemedStopsSwitching : string.Empty);
         }
 
         public const string BoundButtonsStop = "Any wheel button you bound to it stops working.";
+
+        /// <summary>What else goes with a themed screen, and what stays: the plugin takes its own playlist entries out
+        /// with the screen (#199), and only those.</summary>
+        public const string ThemedStopsSwitching = "Your displays stop switching to it by car; playlists you made in SimHub are kept.";
         public const string KeepButton = "Keep it";
         /// <summary>Keep keeps the screen (Save(screen) calls Keep), which answers the line over the cards'
         /// "Keep or remove", so the hover says keep as the button does.</summary>
@@ -336,6 +342,16 @@ namespace OpenDashPlugin
         public static string NoLongerShipped(string sizeLabel)
         {
             return "OpenDash no longer ships a " + sizeLabel + " face. Your settings are kept.";
+        }
+
+        /// <summary>
+        /// The body of a themed face whose package this build no longer carries: its folder is left as it is, rather
+        /// than written from the default package of its size (ADR 0016), and its displays stop switching to it.
+        /// </summary>
+        public static string ThemeNoLongerShipped(string theme, string sizeLabel)
+        {
+            var name = Contract.Themes.FirstOrDefault(t => string.Equals(t.Id, theme, StringComparison.Ordinal));
+            return "OpenDash no longer ships the " + (name == null ? theme : name.Name) + " face at " + sizeLabel + ". Its dashboard and your settings are kept.";
         }
 
         // --- The face's picture and its asides -----------------------------------------------------------
