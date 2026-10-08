@@ -95,8 +95,9 @@ instance can reproduce the result without this conversation.
 The machinery exists now; a new theme is a folder. These are the steps and the gates.
 
 1. **Catalogue row** in `packages/dash/src/contract.ts` (`THEME_CATALOGUE`) and its mirror in
-   `plugin/OpenDash/Contract.cs`: id, name, cars, iRacing car paths, sizes. Cross-reading tests on
-   both sides hold them equal. A catalogued theme without code is skipped by `--all-themes` and
+   `plugin/OpenDash/Contract.cs`: id, name, cars, iRacing car paths, sizes and band pages. Cross-reading
+   tests on both sides hold them equal. A page the theme adds to band D is listed here by id and name,
+   and the plugin reads band D's count, mask, order and opening page from this list (#718). A catalogued theme without code is skipped by `--all-themes` and
    refused by `--theme`.
 2. **The folder** `packages/dash/src/themes/<id>/`, registered in `THEMES` in `themes/index.ts`
    with type-only imports: `overlay.json` (the car's colours under `palette.<id>.*`, overrides of
@@ -145,9 +146,6 @@ pages. Sections 1 and 2 are the answers to those rounds, asked before the code.
 
 ## 5. Open before the next theme
 
-- The foot page of band D (the car's row of boxes, tyres and bias) cannot be reached on a rig: the
-  plugin cycles band D through a fixed page count and the zones open on the house defaults rather
-  than the car's. Plugin work, one ticket.
 - The dim colours for an unavailable reading (label and value both dimmed, as the car does) are not
   drawn, because a module writes its own dash and the layout cannot tell which label it belongs to.
 - Band D's Stint cells are blank in every theme: the bindings turn a timespan defaulted to zero into
