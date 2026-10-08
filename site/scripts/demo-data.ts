@@ -1,0 +1,292 @@
+#!/usr/bin/env bun
+/**
+ * demo-data: what the in-browser demo (#395) draws and replays, copied out of the repository.
+ *
+ * The demo runs the dashboards from the same `.djson` files the plugin installs, so this does not
+ * describe them, it copies them. It reads
+ *
+ *   build/manifest.json                which faces the build wrote, and their sizes
+ *   build/<folder>/*.djson             each default-theme face's dashboards, the widgets included
+ *   build/<folder>/*.djson.ressources  the pictures those dashboards reference, a zip per dashboard
+ *   traces/race.ndjson                 the recorded race the demo replays
+ *   packages/dash/src/contract.ts      the panel: catalogues, value sets, defaults, property names
+ *
+ * and writes
+ *
+ *   public/demo/<slug>/<file>.djson            minified, otherwise as built
+ *   public/demo/<slug>/images/<file>/<name>    each picture out of its sidecar
+ *   public/demo/traces/race.ndjson
+ *   lib/demo.generated.ts                      what was copied, and the panel's catalogue
+ *
+ * all of them gitignored. Only the default theme's faces: the companion, the pit wall and the car
+ * themes come later. With no build the face list comes back empty and the page says so, as the
+ * Downloads page does.
+ */
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { inflateRawSync } from 'node:zlib';
+import {
+  BAR_FIELDS,
+  BAR_SLOTS,
+  BLUE_FLAG_DETAILS,
+  BLUE_FLAG_DETAIL_SETTING,
+  CARD_CATALOGUE,
+  CLOCK_FORMATS,
+  CLOCK_FORMAT_SETTING,
+  DEFAULT_BAR_FIELDS,
+  DEFAULT_FLAG_FORMAT,
+  DEFAULT_LAP_REVIEW,
+  DEFAULT_QUICK_GLANCE,
+  DEFAULT_SLOT_CARDS,
+  DEFAULTS,
+  DELTA_PRECISIONS,
+  DELTA_PRECISION_SETTING,
+  DELTA_REFERENCES,
+  DRIVER_NAME_FORMATS,
+  DRIVER_NAME_FORMAT_SETTING,
+  DRIVER_NAME_TEAM_SETTING,
+  FACE_SIZES,
+  FACE_ZONE_LETTERS,
+  FLAGS_IN_PIT_LANE_SETTING,
+  FLAG_FORMATS,
+  LAP_REVIEW_MODES,
+  POSITION_MODES,
+  PROPERTY_PREFIX,
+  REV_BAR_MODES,
+  REV_BAR_SETTING,
+  SESSION_PROGRESS_MODES,
+  SLOT_MAX,
+  barFieldSettingName,
+  defaultZoneMask,
+  defaultZonePage,
+  facePrefix,
+  flagFormatSettingName,
+  lapReviewSettingName,
+  pagesForZone,
+  quickGlanceSettingName,
+  revBarSettingName,
+  slotSettingName,
+  zoneClassOnlySettingName,
+  zoneMaskSettingName,
+  zonePageSettingName,
+  zonePositionSettingName,
+  zoneStartSettingName,
+} from '../../packages/dash/src/contract.ts';
+import { parseHeader } from '../../scripts/traceFormat.ts';
+import type { PanelCatalogue, PanelChoice, PanelFace } from '../lib/demo/panel.ts';
+import type { DemoFace, DemoFile, DemoImage, DemoTrace } from '../lib/demo/types.ts';
+import { slug } from '../lib/packages.ts';
+import { onSite, type Manifest, type ManifestEntry } from './content.ts';
+
+const repoRoot = path.resolve(import.meta.dir, '..', '..');
+const siteRoot = path.resolve(import.meta.dir, '..');
+const outDir = path.join(siteRoot, 'public', 'demo');
+const outPath = path.join(siteRoot, 'lib', 'demo.generated.ts');
+
+/** The trace the demo replays. One for now: a race lap, the state a face spends its life in. */
+export const DEMO_SCENARIO = 'race';
+
+// ------------------------------------------------------------------------------------- faces
+
+/** The faces the demo draws: the default theme's, as the site lists them. Not a second screen. */
+export const demoEntries = (manifest: { packages: (ManifestEntry & { slots?: number })[] }): (ManifestEntry & { slots?: number })[] =>
+  manifest.packages.filter((p) => onSite(p) && p.kind === 'dash');
+
+// --------------------------------------------------------------------------------- the panel
+
+const rigChoice = (setting: string, label: string, values: readonly (string | boolean)[], fallback: string | boolean): PanelChoice => ({ setting, label, values: [...values], default: fallback });
+
+/** The panel's whole catalogue, from the contract and nothing else. */
+export function panelCatalogue(): PanelCatalogue {
+  const faces: PanelFace[] = FACE_SIZES.map((face) => {
+    const perZone = (f: (face: (typeof FACE_SIZES)[number], z: (typeof FACE_ZONE_LETTERS)[number]) => string) =>
+      Object.fromEntries(FACE_ZONE_LETTERS.map((z) => [z, f(face, z)]));
+    return {
+      width: face.width,
+      height: face.height,
+      prefix: facePrefix(face),
+      hasBar: face.hasBar,
+      barFieldsPerEnd: face.barFieldsPerEnd,
+      names: {
+        zonePage: perZone(zonePageSettingName),
+        zoneMask: perZone(zoneMaskSettingName),
+        zoneStart: perZone(zoneStartSettingName),
+        zoneClassOnly: perZone(zoneClassOnlySettingName),
+        zonePosition: perZone(zonePositionSettingName),
+        barField: Object.fromEntries(BAR_SLOTS.map((s) => [s, barFieldSettingName(face, s)])),
+        quickGlance: quickGlanceSettingName(face),
+        flagFormat: flagFormatSettingName(face),
+        lapReview: lapReviewSettingName(face),
+        revBar: revBarSettingName(face),
+      },
+    };
+  });
+  return {
+    propertyPrefix: PROPERTY_PREFIX,
+    zones: FACE_ZONE_LETTERS.map((letter) => ({
+      letter,
+      pages: pagesForZone(letter).map(({ number, id, name }) => ({ number, id, name })),
+      defaultPage: defaultZonePage(letter),
+      defaultMask: defaultZoneMask(letter),
+    })),
+    barFields: BAR_FIELDS.map(({ number, id, name }) => ({ number, id, name })),
+    barSlots: [...BAR_SLOTS],
+    defaultBarFields: { ...DEFAULT_BAR_FIELDS },
+    defaultQuickGlance: DEFAULT_QUICK_GLANCE,
+    flagFormats: [...FLAG_FORMATS],
+    defaultFlagFormat: DEFAULT_FLAG_FORMAT,
+    lapReviewModes: [...LAP_REVIEW_MODES],
+    defaultLapReview: DEFAULT_LAP_REVIEW,
+    revBarModes: [...REV_BAR_MODES],
+    defaultRevBar: DEFAULTS.RevBar,
+    rig: [
+      rigChoice('PositionMode', 'Position', POSITION_MODES, DEFAULTS.PositionMode),
+      rigChoice('DeltaReference', 'Delta against', DELTA_REFERENCES, DEFAULTS.DeltaReference),
+      rigChoice(DELTA_PRECISION_SETTING, 'Delta precision', DELTA_PRECISIONS, DEFAULTS.DeltaPrecision),
+      rigChoice('SessionProgress', 'Session progress', SESSION_PROGRESS_MODES, DEFAULTS.SessionProgress),
+      rigChoice(CLOCK_FORMAT_SETTING, 'Clock', CLOCK_FORMATS, DEFAULTS.ClockFormat),
+      rigChoice(DRIVER_NAME_FORMAT_SETTING, 'Driver names', DRIVER_NAME_FORMATS, DEFAULTS.DriverNameFormat),
+      rigChoice(DRIVER_NAME_TEAM_SETTING, 'Team names in lists', [false, true], DEFAULTS.DriverNameTeam),
+      rigChoice(BLUE_FLAG_DETAIL_SETTING, 'Blue flag detail', BLUE_FLAG_DETAILS, DEFAULTS.BlueFlagDetail),
+      rigChoice(FLAGS_IN_PIT_LANE_SETTING, 'Flags in the pit lane', [true, false], DEFAULTS.FlagsInPitLane),
+      rigChoice(REV_BAR_SETTING, 'Rev bar, every screen', REV_BAR_MODES, DEFAULTS.RevBar),
+    ],
+    cards: CARD_CATALOGUE.map(({ number, id, displayName }) => ({ number, id, name: displayName })),
+    defaultSlotCards: [...DEFAULT_SLOT_CARDS],
+    slotNames: Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)),
+    faces,
+  };
+}
+
+// ------------------------------------------------------------------------------- the pictures
+
+/**
+ * The entries of a zip, as a `.djson.ressources` sidecar is: stored or deflated, named at its root.
+ * Read from the central directory, so a local header's data descriptor does not matter.
+ */
+export function unzip(buffer: Buffer): { name: string; data: Buffer }[] {
+  const eocd = buffer.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06]));
+  if (eocd < 0) throw new Error('not a zip: no end of central directory');
+  const count = buffer.readUInt16LE(eocd + 10);
+  let at = buffer.readUInt32LE(eocd + 16);
+  const out: { name: string; data: Buffer }[] = [];
+  for (let i = 0; i < count; i++) {
+    if (buffer.readUInt32LE(at) !== 0x02014b50) throw new Error('not a zip: a central directory entry is malformed');
+    const method = buffer.readUInt16LE(at + 10);
+    const compressed = buffer.readUInt32LE(at + 20);
+    const nameLength = buffer.readUInt16LE(at + 28);
+    const extraLength = buffer.readUInt16LE(at + 30);
+    const commentLength = buffer.readUInt16LE(at + 32);
+    const local = buffer.readUInt32LE(at + 42);
+    const name = buffer.toString('utf8', at + 46, at + 46 + nameLength);
+    const start = local + 30 + buffer.readUInt16LE(local + 26) + buffer.readUInt16LE(local + 28);
+    const raw = buffer.subarray(start, start + compressed);
+    if (method !== 0 && method !== 8) throw new Error(`${name} is compressed with method ${method}, which this reader does not know`);
+    out.push({ name, data: method === 8 ? inflateRawSync(raw) : Buffer.from(raw) });
+    at += 46 + nameLength + extraLength + commentLength;
+  }
+  return out;
+}
+
+// ------------------------------------------------------------------------------------ copying
+
+const readJson = (file: string): unknown => JSON.parse(readFileSync(file, 'utf8').replace(/^﻿/, ''));
+
+function copyFace(entry: ManifestEntry & { slots?: number }, prefixes: ReadonlyMap<string, string>): DemoFace {
+  const source = path.join(repoRoot, 'build', entry.folder);
+  const s = slug(entry.folder);
+  const target = path.join(outDir, s);
+  mkdirSync(target, { recursive: true });
+  const files: DemoFile[] = [];
+  const images: DemoImage[] = [];
+  for (const file of readdirSync(source).filter((f) => f.endsWith('.djson')).sort()) {
+    const from = path.join(source, file);
+    const document = readJson(from) as { Images?: { Name?: string; Extension?: string }[] };
+    const text = JSON.stringify(document);
+    writeFileSync(path.join(target, file), text);
+    files.push({ file, bytes: Buffer.byteLength(text), builtBytes: statSync(from).size });
+    const sidecar = `${from}.ressources`;
+    if (!existsSync(sidecar) || !document.Images?.length) continue;
+    const entries = unzip(readFileSync(sidecar));
+    const dir = path.join(target, 'images', file);
+    mkdirSync(dir, { recursive: true });
+    for (const image of document.Images) {
+      const entryName = `${image.Name}${image.Extension}`;
+      const found = entries.find((e) => e.name === entryName);
+      if (!found || !image.Name) {
+        console.warn(`  ${entry.folder}/${file} names ${entryName}, which its sidecar does not carry`);
+        continue;
+      }
+      writeFileSync(path.join(dir, entryName), found.data);
+      images.push({ dashboard: file, name: image.Name, src: `/demo/${s}/images/${encodeURIComponent(file)}/${encodeURIComponent(entryName)}` });
+    }
+  }
+  const main = `${entry.folder}.djson`;
+  if (!files.some((f) => f.file === main)) throw new Error(`build/${entry.folder} has no ${main}`);
+  return {
+    slug: s,
+    folder: entry.folder,
+    width: entry.width,
+    height: entry.height,
+    round: /round/.test(entry.folder),
+    main,
+    base: `/demo/${s}/`,
+    files,
+    images,
+    prefix: prefixes.get(`${entry.width}x${entry.height}`) ?? null,
+    slots: /round/.test(entry.folder) ? (entry.slots ?? 0) : 0,
+  };
+}
+
+function copyTrace(): DemoTrace | null {
+  const from = path.join(repoRoot, 'traces', `${DEMO_SCENARIO}.ndjson`);
+  if (!existsSync(from)) return null;
+  const dir = path.join(outDir, 'traces');
+  mkdirSync(dir, { recursive: true });
+  copyFileSync(from, path.join(dir, `${DEMO_SCENARIO}.ndjson`));
+  const text = readFileSync(from, 'utf8');
+  const header = parseHeader(text.slice(0, text.indexOf('\n')));
+  return {
+    src: `/demo/traces/${DEMO_SCENARIO}.ndjson`,
+    scenario: header.scenario,
+    frames: header.frames,
+    hz: header.hz,
+    recorded: header.recorded,
+    simHub: header.simHub,
+    bytes: statSync(from).size,
+  };
+}
+
+if (import.meta.main) {
+  const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
+  const manifest = existsSync(manifestPath) ? (JSON.parse(readFileSync(manifestPath, 'utf8')) as Manifest & { packages: (ManifestEntry & { slots?: number })[] }) : null;
+  rmSync(outDir, { recursive: true, force: true });
+  mkdirSync(outDir, { recursive: true });
+  const catalogue = panelCatalogue();
+  const prefixes = new Map(catalogue.faces.map((f) => [`${f.width}x${f.height}`, f.prefix]));
+  const faces = manifest ? demoEntries(manifest).map((e) => copyFace(e, prefixes)) : [];
+  const trace = copyTrace();
+  const json = (value: unknown): string => JSON.stringify(value, null, 2);
+  const body = `/*
+ * Generated by site/scripts/demo-data.ts. Do not edit.
+ * The faces and the trace the demo serves from public/demo/, and the panel's catalogue from the contract.
+ */
+import type { PanelCatalogue } from './demo/panel';
+import type { DemoFace, DemoTrace } from './demo/types';
+
+/** The version of the build the faces were copied from, or null when there was none. */
+export const DEMO_BUILD_VERSION: string | null = ${JSON.stringify(manifest?.version ?? null)};
+
+/** The default theme's faces. Empty when the repository has not been built. */
+export const DEMO_FACES: readonly DemoFace[] = ${json(faces)};
+
+/** The trace the demo replays, or null when it is missing. */
+export const DEMO_TRACE: DemoTrace | null = ${json(trace)};
+
+/** Everything the fake panel offers, read from packages/dash/src/contract.ts. */
+export const PANEL_CATALOGUE: PanelCatalogue = ${json(catalogue)};
+`;
+  writeFileSync(outPath, body);
+  const weight = faces.map((f) => `${f.slug} ${Math.round(f.files.reduce((n, x) => n + x.bytes, 0) / 1024)} KB`).join(', ');
+  console.log(`wrote lib/demo.generated.ts and public/demo/ (${faces.length} faces${weight ? `: ${weight}` : ''}; ${faces.reduce((n, f) => n + f.images.length, 0)} pictures; trace ${trace ? trace.scenario : 'missing'})`);
+}

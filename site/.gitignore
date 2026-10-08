@@ -4,6 +4,9 @@
 # Generated from design/tokens.json and from the repository's own sources by scripts/.
 /app/tokens.css
 /lib/content.generated.ts
+# The demo's faces, pictures and trace, copied out of build/ and traces/ by scripts/demo-data.ts.
+/lib/demo.generated.ts
+/public/demo/
 
 # Screenshots taken by hand to check a page, never part of the site.
 /.screenshots

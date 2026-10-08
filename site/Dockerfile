@@ -75,6 +75,8 @@ COPY VERSION CHANGELOG.md package.json bun.lock bunfig.toml ./
 # the move intact.
 RUN bun install --frozen-lockfile
 COPY media ./media
+# The recorded telemetry the demo page replays; scripts/demo-data.ts copies one trace into public/demo/.
+COPY traces ./traces
 COPY site ./site
 # The build output the generators read (the manifest says which screens exist), and the one file the
 # site hands out, in the one place next/static serves from. Only the zip is copied into downloads:
@@ -90,8 +92,9 @@ WORKDIR /repo/site
 # for npm would be a second answer to the same question. What bun writes is an ordinary
 # node_modules, so the build below still runs under node.
 RUN bun install --frozen-lockfile
-# tokens.css from design/tokens.json, content.generated.ts from the manifest and the changelog, and
-# the woff2 faces from the vendored TTFs. All three are gitignored, so the image has to make them.
+# tokens.css from design/tokens.json, content.generated.ts from the manifest and the changelog, the
+# demo's faces and trace from build/ and traces/, and the woff2 faces from the vendored TTFs. All of
+# them are gitignored, so the image has to make them.
 RUN bun run generate
 # Next substitutes every NEXT_PUBLIC_* variable into the output as it builds rather than reading it
 # when the server starts, so the canonical origin has to be given here. Passing it to `docker run`,

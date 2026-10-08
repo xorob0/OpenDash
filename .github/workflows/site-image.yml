@@ -18,9 +18,9 @@
 name: Site image
 
 # Only on the pushes that can break it. The paths are everything the image copies: the two build
-# stages between them take packages/, design/, scripts/, tools/, data/, plugin/, media/, site/ and
-# the root's manifests, so the list is most of the tree and a run is skipped only for a change to
-# docs/, traces/ or the repository's own prose. That is the honest version of a path filter — a
+# stages between them take packages/, design/, scripts/, tools/, data/, plugin/, media/, traces/,
+# site/ and the root's manifests, so the list is most of the tree and a run is skipped only for a
+# change to docs/ or the repository's own prose. That is the honest version of a path filter — a
 # skipped run here means nothing the image reads has moved, rather than a green tick that proves
 # nothing.
 #
@@ -44,6 +44,7 @@ on:
       - "data/**"
       - "plugin/**"
       - "media/**"
+      - "traces/**"
       - "package.json"
       - "bun.lock"
       - "bunfig.toml"

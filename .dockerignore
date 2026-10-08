@@ -5,6 +5,7 @@ build/
 **/.next
 .git
 .claude
-traces/
 site/out
 site/public/downloads
+# Copied out of build/ and traces/ by the image's own `bun run generate`; a local copy would be stale.
+site/public/demo
