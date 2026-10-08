@@ -58,6 +58,15 @@ export const LIST_ORDER = [
   'OpenDash Pit wall portrait',
   // A themed package, built by `--all-themes` and installed on the VM like any other (#205).
   'OpenDash Porsche 1280x480',
+  // The AiM LCD, at every size (#204).
+  'OpenDash AiM 1920x480',
+  'OpenDash AiM 1280x480',
+  'OpenDash AiM 1280x400',
+  'OpenDash AiM 1280x720',
+  'OpenDash AiM 850x480',
+  'OpenDash AiM 800x480',
+  'OpenDash AiM 800x286',
+  'OpenDash AiM 600x686',
 ] as const;
 
 export interface DevOptions {
