@@ -1,0 +1,22 @@
+.pair {
+  display: grid;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.points {
+  margin-top: var(--space-7);
+}
+
+.sizes {
+  margin-top: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+@media (min-width: 62rem) {
+  .pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
