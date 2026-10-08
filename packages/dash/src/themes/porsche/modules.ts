@@ -33,7 +33,8 @@ import type { ModuleContext } from '../../modules/module.ts';
 import type { Density } from '../../second/density.ts';
 import { field, fieldWidth, scaleFields, type FieldSpec } from '../../second/field.ts';
 import { zoneCounterX, zoneFrameMetrics } from '../../second/header.ts';
-import type { StackRow } from '../../second/layout.ts';
+import { stack, type StackRow } from '../../second/layout.ts';
+import { withHouseLayout } from '../moduleRegister.ts';
 import { ds } from '../../tokens.ts';
 import type { ModuleRegister } from '../drawing.ts';
 import { BORDER, carColour, RADIUS } from './register.ts';
@@ -246,6 +247,9 @@ function carStack(frame: Rect, rows: readonly StackRow[], density: Density): Ite
   const specs = ranks.flatMap((r) => r.specs);
   const order = ranks[0]?.order ?? specs.map(idOf);
   const blocks = live.filter((row) => !READINGS.has(row));
+  // A page with no readings is a drawing, and the house's stack is what fits a drawing to its box:
+  // it sheds and grows by the page's own rules, and never leaves the page with nothing drawn.
+  if (specs.length === 0) return withHouseLayout(() => stack(frame, rows, density));
   const taken = (kept: readonly StackRow[]): number => kept.reduce((sum, row) => sum + row.height + CELL.gap, 0);
   const kept = [...blocks];
   while (kept.length > 0 && frame.height - taken(kept) < (specs.length > 0 ? LINE : 0)) kept.pop();
@@ -272,10 +276,13 @@ function readingsRow(specs: readonly FieldSpec[], _ctx: ModuleContext, order: re
  */
 export const LIST_PAGES: ReadonlySet<string> = new Set(['leaderboard', 'relative', 'opponents', 'trackRivals', 'lapHistory']);
 
-export const porscheModules: ModuleRegister = { fieldsRow: readingsRow, stack: carStack, houseLayout: LIST_PAGES };
-
-/** The pages that are one drawing, which keep the house's margins round it as the lists do: they have no cells to fit to the border. */
+/**
+ * The pages that are one drawing, which keep the house's layout and margins as the lists do: they have
+ * no readings to set in cells, and a drawing is fitted to its box by the house's rules.
+ */
 const DRAWING_PAGES: ReadonlySet<string> = new Set(['inputs', 'radar', 'track', 'tyres', 'damage']);
+
+export const porscheModules: ModuleRegister = { fieldsRow: readingsRow, stack: carStack, houseLayout: new Set([...LIST_PAGES, ...DRAWING_PAGES]) };
 
 /**
  * A module page's frame: its title cell across the top of the zone, flush against the border on
