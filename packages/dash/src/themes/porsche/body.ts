@@ -70,6 +70,12 @@ export const panelOf = (ctx: FaceContext, zone: 'B' | 'C'): Rect => outset(zoneR
 /** The tile behind the gear, its border three pixels outside zone A and its ends four. */
 const tileOf = (ctx: FaceContext): Rect => {
   const gear = zoneRect(ctx.regions, 'A');
+  // Where zone A begins under the pit banner, the tile stands as high as zone B's panel beside it,
+  // which also keeps it level with the panels in the arrangement without the rev bar.
+  if (porscheFace(ctx.layout).gearClear > 0) {
+    const beside = panelOf(ctx, 'B');
+    return rect(gear.left - BORDER, beside.top, gear.width + 2 * BORDER, beside.height);
+  }
   return rect(gear.left - BORDER, gear.top - PANEL_PAD, gear.width + 2 * BORDER, gear.height + 2 * PANEL_PAD);
 };
 

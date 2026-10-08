@@ -32,6 +32,9 @@ import { rect, type Rect, type Size } from '../../design/geometry.ts';
 /** The border every panel, tile and outlined box is drawn with, which a zone sits inside. */
 const BORDER = 3;
 
+/** The house pit family's banner, at the top of the gear's tile: 4 px under its inside top, 30 tall. */
+export const PIT_BANNER = { inset: 3, top: 4, height: 30 };
+
 /** The settings column down the left edge. */
 export interface SettingsColumn {
   left: number;
@@ -106,6 +109,13 @@ export interface PorscheFace {
   foot: Rect;
   settings?: SettingsColumn;
   telltales?: TelltaleColumn;
+  /**
+   * How far below the top of the gear's tile zone A begins, the pit family's banner standing in the
+   * room above it. Nothing on the faces whose tile is tall enough for the gear to start below the
+   * banner by itself; 34 on the nano, whose 136 px tile would otherwise draw the gear's top under the
+   * banner, as the house's 800 x 286 face keeps its banner above the gear.
+   */
+  gearClear: number;
   parts: StripParts;
   footParts: FootParts;
 }
@@ -227,6 +237,8 @@ function landscape(size: Size): PorscheFace {
     foot: rect(0, footTop, W, footH),
     settings: settings ? { left: 9, width: 146, box: Math.round(48 * Math.min(1, bodyH / 226)), gap: s(10), size: s(23), pad: s(14) } : undefined,
     telltales: { left: tellX, width: tellW, icon: s(32), gap: s(26), inset: 8, most: figures.telltales },
+    // The banner is 4 px under the tile's inside top and 30 tall.
+    gearClear: small ? PIT_BANNER.top + PIT_BANNER.height : 0,
     parts,
     footParts: small ? compactFoot(panels, footH, fs) : fullFoot(panels, footH, fs, settings),
   };
@@ -287,6 +299,7 @@ function portrait(): PorscheFace {
     panels: { A: rect(9, 92, 582, 170), B: rect(9, 270, 287, 250), C: rect(304, 270, 287, 250) },
     body: rect(9, 92, 582, 428),
     foot: rect(0, footTop, W, 150),
+    gearClear: 0,
     parts: {
       page: { left: 16, size: 20 },
       headlight: { left: 100, width: 40, height: 26, drop: 1 },
