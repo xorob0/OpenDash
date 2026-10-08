@@ -50,7 +50,7 @@ import { PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
 const { and, eq, game, isNull, isnull, not, num, raw } = ncalc;
 
 /** The limiter is engaged. Null-safe, so a sim that publishes nothing draws no pit alert at all. */
-const limiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
+export const limiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
 
 /**
  * This car has a limiter to engage.

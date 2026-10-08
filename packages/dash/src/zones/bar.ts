@@ -18,7 +18,7 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, type Chars } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { mark, type Mark, unmarked } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -112,7 +112,7 @@ interface BarFieldSpec {
 }
 
 /** The face the bar's followers are set in, which is the value's own. */
-const FOLLOWER_FACE = 'BarlowCondensedSemiBold';
+const FOLLOWER_FACE = DATA_FACE.SemiBold;
 
 /**
  * One of the two clocks of the day: its digits in {@link CHARS.timeOfDay} and its meridiem after
@@ -282,7 +282,7 @@ function stripCellWidth(cell: StripCell, scale: BarScale): number {
 
 /** Width a field's value takes: its cells, or its widest rendering where it is drawn proportionally. */
 const valueWidth = (spec: BarFieldSpec, fs: number): number =>
-  spec.widest === undefined ? monoWidth(cells('SemiBold', fs), spec.chars) : Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs));
+  spec.widest === undefined ? monoWidth(cells('SemiBold', fs), spec.chars) : Math.ceil(measureText(DATA_FACE.SemiBold, spec.widest, fs));
 
 /** Width a field's denominator takes, and nothing for a field that has none. */
 const denominatorWidth = (spec: BarFieldSpec, fs: number): number =>

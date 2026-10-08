@@ -39,6 +39,7 @@
 import type { Hex, Item, LayerItem, Rect, RectangleItem } from '../generator.ts';
 import { withMoreBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
+import { DATA_FACE } from '../design/metrics.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -179,7 +180,7 @@ export const FLAG_FULL_NAMES: readonly string[] = [...new Set(BLOCK_CONDITIONS.f
  */
 export function flagFullNameSize(frame: Rect): number {
   const room = frame.width - 2 * FLAG_FULL_NAME_PAD;
-  const widestEm = Math.max(...FLAG_FULL_NAMES.map((name) => measureText('BarlowCondensedBold', name, 1)));
+  const widestEm = Math.max(...FLAG_FULL_NAMES.map((name) => measureText(DATA_FACE.Bold, name, 1)));
   return Math.max(1, Math.min(Math.floor(FLAG_FULL_NAME_RATIO * frame.height), Math.floor(room / widestEm)));
 }
 
@@ -204,7 +205,7 @@ const blockName = (condition: AlertCondition, frame: Rect): WrittenName => {
   const [long, short] = blockNames(condition);
   if (short === undefined) return { text: long!, size };
   const room = frame.width - 2 * FLAG_FULL_NAME_PAD;
-  const own = Math.min(size, Math.floor(room / measureText('BarlowCondensedBold', long!, 1)));
+  const own = Math.min(size, Math.floor(room / measureText(DATA_FACE.Bold, long!, 1)));
   return own >= FLAG_FULL_LONG_NAME_MIN_RATIO * size ? { text: long!, size: own } : { text: short, size };
 };
 
@@ -318,7 +319,7 @@ function stripedFull(name: string, frame: Rect, colour: Hex, stripe: Hex, writte
   return [
     band(`${name}.band`, frame, colour),
     ...stripes(name, frame, Math.min(frame.width, frame.height) / FLAG_FULL_CHEQUER_ACROSS, stripe),
-    namePlate(`${name}.plate`, frame, measureText('BarlowCondensedBold', text, size), lineTop, size, ds.space[4], colour),
+    namePlate(`${name}.plate`, frame, measureText(DATA_FACE.Bold, text, size), lineTop, size, ds.space[4], colour),
     flagFullName(`${name}.name`, frame, written, ds.purpose.flag.onFlag),
   ];
 }

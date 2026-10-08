@@ -10,6 +10,8 @@ import type { Overlay } from '../tokens.ts';
 import type { Anatomy } from './anatomy.ts';
 import { defaultAnatomy } from './default/anatomy.ts';
 import defaultOverlay from './default/overlay.json';
+import { porscheAnatomy } from './porsche/anatomy.ts';
+import porscheOverlay from './porsche/overlay.json';
 
 /** The environment variable naming the theme a process builds. Unset or empty is the default theme. */
 export const THEME_ENV = 'OPENDASH_THEME';
@@ -26,6 +28,8 @@ export interface Theme {
 export const THEMES: Record<string, Theme> = {
   /** The look `main` has always built: an overlay that changes nothing, over the zone anatomy. */
   [DEFAULT_THEME_ID]: { overlay: defaultOverlay, anatomy: defaultAnatomy },
+  /** The 992 display of the GT3 R and both Cups, at 1280 x 480 (#205). Its drawing is in `drawings.ts`. */
+  porsche: { overlay: porscheOverlay, anatomy: porscheAnatomy },
 };
 
 /** The theme {@link THEME_ENV} names, refusing one that is not registered rather than falling back. */

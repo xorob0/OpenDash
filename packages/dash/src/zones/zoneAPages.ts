@@ -251,24 +251,30 @@ const revsRuns = (prefix: string, fs: number, unitFs: number, gap?: number): Run
   { kind: 'label', name: `${prefix}revs.unit`, text: 'RPM', fs: unitFs, widest: 'RPM' },
 ];
 
-/** A1: the gear with its neighbours ghosted either side, the speed under it, the revs under that. */
-function gearSpeedRevs(frame: Rect, prefix: string): Item[] {
+/** The width a gear takes alone, with no neighbour either side of it. */
+const plainGearWidth = (fs: number): number => monoWidth(gearCells(fs), GEAR_CHARS) + GEAR_BOX_SLACK;
+
+/**
+ * A1: the gear with its neighbours ghosted either side, the speed under it, the revs under that.
+ * Without the ghosts where the face asks for the gear alone, as a car whose display shows one gear does.
+ */
+function gearSpeedRevs(frame: Rect, prefix: string, ghosts = true): Item[] {
   const d = densityOf('zone');
   const share = SHARE.a1;
-  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => ghostedGearWidth(fs, GHOSTS));
+  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => (ghosts ? ghostedGearWidth(fs, GHOSTS) : plainGearWidth(fs)));
   const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowExtent(speedRuns(prefix, fs, d.labelSm)));
   const revsSize = fitWidth(shareOf(frame.height, share.revs), frame.width, (fs) => rowExtent(revsRuns(prefix, fs, d.labelSm)));
   return stack(frame, rowGap(frame.height, share.gap), [
-    { fs: gearSize, draw: (top) => gearRow(frame, top, gearSize, prefix) },
+    { fs: gearSize, draw: (top) => gearRow(frame, top, gearSize, prefix, ghosts) },
     { fs: speedSize, draw: (top) => row(frame, top, speedRuns(prefix, speedSize, d.labelSm)) },
     { fs: revsSize, draw: (top) => row(frame, top, revsRuns(prefix, revsSize, d.labelSm)) },
   ]);
 }
 
 /** The gear and its ghosts, in a box exactly the gear's own canvas line box. */
-function gearRow(frame: Rect, top: number, size: number, prefix: string): Item[] {
+function gearRow(frame: Rect, top: number, size: number, prefix: string, ghosts: boolean): Item[] {
   const box = rect(frame.left, rowLineBox(top, size), frame.width, size);
-  return [...gearGhosts(box, size, GHOSTS, `${prefix}gear`), ...gearComponent(box, size, `${prefix}main`)];
+  return [...(ghosts ? gearGhosts(box, size, GHOSTS, `${prefix}gear`) : []), ...gearComponent(box, size, `${prefix}main`)];
 }
 
 /** A2: the gear alone, as large as the column allows. */
@@ -319,16 +325,16 @@ function trackPage(frame: Rect, prefix: string): Item[] {
   return pageBuilder('track')({ frame: inner, density: 'zone', prefix, shape: shapeOf(inner), title: false });
 }
 
-const PAGES: Record<string, (frame: Rect, prefix: string) => Item[]> = {
+const PAGES: Record<string, (frame: Rect, prefix: string, ghosts?: boolean) => Item[]> = {
   gearSpeedRevs,
   gearAlone,
   speed: speedPage,
   track: trackPage,
 };
 
-/** One of zone A's four pages, drawn in `frame`. */
-export function zoneAPage(id: string, frame: Rect, prefix: string): Item[] {
+/** One of zone A's four pages, drawn in `frame`; `ghosts` false draws the gear without its neighbours. */
+export function zoneAPage(id: string, frame: Rect, prefix: string, ghosts = true): Item[] {
   const draw = PAGES[id];
   if (!draw) throw new RangeError(`zone A has no page "${id}"`);
-  return draw(frame, prefix);
+  return draw(frame, prefix, ghosts);
 }

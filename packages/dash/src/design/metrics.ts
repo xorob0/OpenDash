@@ -7,7 +7,8 @@
  * baseline sits 0.9 em below the top. Reproducing a canvas line box (y, fs) therefore means
  * Top = y - 0.1 fs, Height = 1.2 fs, VerticalAlignment top.
  */
-import type { Monospace } from '../generator.ts';
+import type { FontWeight, Monospace } from '../generator.ts';
+import type { MeasuredFace } from './advances.ts';
 import { ds } from '../tokens.ts';
 
 export const FONT_METRICS = { unitsPerEm: 1000, ascender: 1000, descender: -200, lineGap: 0, capHeight: 700, xHeight: 510 } as const;
@@ -55,6 +56,25 @@ export const canvasBaseline = (y: number, fs: number): number => y + CANVAS_BASE
 export const canvasYForBaseline = (baseline: number, fs: number): number => baseline - CANVAS_BASELINE * fs;
 
 export type DataWeight = 'SemiBold' | 'Bold';
+
+/**
+ * Whether the numerals are set in the label family, Barlow at normal width, rather than in the
+ * condensed openDash Display. The house never does; a car theme whose display is not condensed does,
+ * by pointing `font.family.data` at the label family in its overlay (#205).
+ */
+const DATA_IN_LABEL_FAMILY = ds.font.data === ds.font.label;
+
+/**
+ * The weight a data weight is drawn in. The label family ships in Medium and Bold alone, and a car
+ * theme that draws its numerals in it draws them at 500 throughout, as the Porsche's display does, so
+ * both data weights are Medium there and themselves everywhere else.
+ */
+export const DATA_FONT_WEIGHT: Readonly<Record<DataWeight, FontWeight>> = DATA_IN_LABEL_FAMILY ? { SemiBold: 'Medium', Bold: 'Medium' } : { SemiBold: 'SemiBold', Bold: 'Bold' };
+
+/** The measured face a data weight is drawn in, which is what every run set in it is measured by. */
+export const DATA_FACE: Readonly<Record<DataWeight, MeasuredFace>> = DATA_IN_LABEL_FAMILY
+  ? { SemiBold: 'BarlowMedium', Bold: 'BarlowMedium' }
+  : { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
 
 /**
  * Monospace cell widths as a fraction of the font size, per face, from the tokens. The cell holds

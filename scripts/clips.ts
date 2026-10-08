@@ -326,7 +326,7 @@ export async function clips(host: Host, opts: ClipsOptions): Promise<number> {
     }
     if (!opts.noBuild) {
       console.log('building the packages');
-      const b = Bun.spawnSync(['bun', 'run', 'build'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
+      const b = Bun.spawnSync(['bun', 'run', 'build', '--all-themes'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
       if (b.exitCode !== 0) {
         console.error(new TextDecoder().decode(b.stderr) || new TextDecoder().decode(b.stdout));
         return 1;

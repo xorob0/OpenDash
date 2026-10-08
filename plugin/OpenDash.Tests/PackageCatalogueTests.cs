@@ -31,8 +31,8 @@ namespace OpenDashPlugin.Tests
         /// <remarks>
         /// Fourteen: the eight zone faces, the two rounds, and the landscape and portrait of each second
         /// screen. The card faces are built but excluded from the assembly (OpenDash.csproj), so they are
-        /// not here either. The_packages_a_release_carries_are_the_fourteen_this_file_lists holds this
-        /// table against what the dash actually built.
+        /// not here either. The_packages_a_release_carries_are_the_ones_this_file_lists holds this
+        /// table, with the themed packages below it, against what the dash actually built.
         /// </remarks>
         private static readonly (string Folder, int Width, int Height)[] Release =
         {
@@ -50,6 +50,16 @@ namespace OpenDashPlugin.Tests
             ("OpenDash Companion portrait", 480, 850),
             ("OpenDash Pit wall", 1920, 1080),
             ("OpenDash Pit wall portrait", 1080, 1920),
+        };
+
+        /// <summary>
+        /// The themed packages a release embeds beside those fourteen, which are written only when a
+        /// driver picks one (ADR 0016) and are therefore kept out of the table the design's names and
+        /// order are asserted against.
+        /// </summary>
+        private static readonly (string Folder, int Width, int Height)[] Themed =
+        {
+            ("OpenDash Porsche 1280x480", 1280, 480),
         };
 
         private static PackageEntry Entry(string folder, int width, int height)
@@ -226,7 +236,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The fourteen packages a release embeds are the fourteen this file lists.
+        /// The packages a release embeds are the fourteen this file lists and the themed ones after them.
         /// </summary>
         /// <remarks>
         /// The other half of the pin above: the table of folders is what the order and the captions are
@@ -235,7 +245,7 @@ namespace OpenDashPlugin.Tests
         /// released catalogue fourteen rows rather than twenty-two.
         /// </remarks>
         [Fact]
-        public void The_packages_a_release_carries_are_the_fourteen_this_file_lists()
+        public void The_packages_a_release_carries_are_the_ones_this_file_lists()
         {
             var packages = TheBuiltPackages();
             if (packages == null)
@@ -251,10 +261,11 @@ namespace OpenDashPlugin.Tests
             }
 
             var catalogue = PackageCatalogue.From(packages);
+            var carried = Release.Concat(Themed).ToArray();
             Assert.Equal(
-                Release.Select(package => package.Folder).OrderBy(folder => folder, StringComparer.Ordinal).ToArray(),
+                carried.Select(package => package.Folder).OrderBy(folder => folder, StringComparer.Ordinal).ToArray(),
                 catalogue.Select(entry => entry.Folder).OrderBy(folder => folder, StringComparer.Ordinal).ToArray());
-            foreach (var package in Release)
+            foreach (var package in carried)
             {
                 var entry = catalogue.Single(row => string.Equals(row.Folder, package.Folder, StringComparison.Ordinal));
                 Assert.Equal(package.Width, entry.Width);

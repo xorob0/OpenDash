@@ -4,7 +4,7 @@
  */
 import type { TextItem } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
-import { textBox } from '../design/metrics.ts';
+import { DATA_FONT_WEIGHT, textBox } from '../design/metrics.ts';
 import { roundRect } from '../design/geometry.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
@@ -22,7 +22,7 @@ export function denominator(name: string, sample: string, x: number, y: number, 
     rect: roundRect({ left: x, top: box.top, width, height: box.height }),
     text: sample,
     font: ds.font.data,
-    fontWeight: 'SemiBold',
+    fontWeight: DATA_FONT_WEIGHT.SemiBold,
     fontSize: fs,
     textColor: ds.color.text.secondary,
     hAlign: 'left',
