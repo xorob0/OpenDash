@@ -99,6 +99,13 @@ export interface ThemeDrawing {
   zoneAPage?(page: string, frame: Rect, prefix: string): Item[] | undefined;
   /** Whether the face draws each module zone's page counter; the house does, and a display that counts no pages does not. */
   zoneCounters?: boolean;
+  /**
+   * What the house draws, turned into the theme's register without moving it: every zone page, and the
+   * pit family, the pop-ups, the change notifications and the lap review over the face, never the flag.
+   * `boxesInverse` says that every box holding text is a highlight, as the boxes over the face are.
+   * The AiM's monochrome LCD is the case (#204).
+   */
+  restyle?(items: Item[], opts?: { boxesInverse?: boolean }): Item[];
   /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */

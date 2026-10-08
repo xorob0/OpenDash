@@ -69,12 +69,24 @@ const DATA_IN_LABEL_FAMILY = ds.font.data === ds.font.label;
  * theme that draws its numerals in it draws them at 500 throughout, as the Porsche's display does, so
  * both data weights are Medium there and themselves everywhere else.
  */
-export const DATA_FONT_WEIGHT: Readonly<Record<DataWeight, FontWeight>> = DATA_IN_LABEL_FAMILY ? { SemiBold: 'Medium', Bold: 'Medium' } : { SemiBold: 'SemiBold', Bold: 'Bold' };
+/**
+ * Whether the numerals are set in the seven-segment face a car theme's LCD draws (#204), which ships
+ * in Regular and Bold alone: the data weights are drawn in those two there.
+ */
+const DATA_IN_SEGMENT_FAMILY = ds.font.data === 'DSEG7 Classic';
+
+export const DATA_FONT_WEIGHT: Readonly<Record<DataWeight, FontWeight>> = DATA_IN_LABEL_FAMILY
+  ? { SemiBold: 'Medium', Bold: 'Medium' }
+  : DATA_IN_SEGMENT_FAMILY
+    ? { SemiBold: 'Normal', Bold: 'Bold' }
+    : { SemiBold: 'SemiBold', Bold: 'Bold' };
 
 /** The measured face a data weight is drawn in, which is what every run set in it is measured by. */
 export const DATA_FACE: Readonly<Record<DataWeight, MeasuredFace>> = DATA_IN_LABEL_FAMILY
   ? { SemiBold: 'BarlowMedium', Bold: 'BarlowMedium' }
-  : { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
+  : DATA_IN_SEGMENT_FAMILY
+    ? { SemiBold: 'DSEG7Regular', Bold: 'DSEG7Bold' }
+    : { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
 
 /**
  * Monospace cell widths as a fraction of the font size, per face, from the tokens. The cell holds

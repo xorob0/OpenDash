@@ -165,7 +165,8 @@ export function faceItems(
   // seconds at a time and it is the one thing that matters while it is. Drawn last, so it is over
   // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
   // stop under a red flag still has to know whether the limiter is on.
-  items.push(...pitAlerts(regionRect(regions, 'pitAlert'), 'pitAlert'));
+  const restyled = (drawn: Item[]): Item[] => (drawing.restyle ? drawing.restyle(drawn, { boxesInverse: true }) : drawn);
+  items.push(...restyled(pitAlerts(regionRect(regions, 'pitAlert'), 'pitAlert')));
   if (drawing.takeovers) items.push(...drawing.takeovers(ctx));
 
   // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
@@ -174,12 +175,12 @@ export function faceItems(
   // column, the bar of settled values above it and band D below, where a flag has the better claim
   // on the same sixty pixels. Drawn after the limiter, which is the only other thing over a zone.
   const hero = regionRect(regions, 'hero');
-  items.push(...popUps(hero, 'popUp'));
+  items.push(...restyled(popUps(hero, 'popUp')));
 
   // And the smaller box of the same family, on the same rectangle: a car setting that has just
   // moved, for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up
   // inside the component, so a lap time at the line is never covered by a click of traction control.
-  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : changeNotifications(hero, 'notice')));
+  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(hero, 'notice'))));
 
   // The largest of the family, last, and on the same rectangle again: the debrief of the lap just
   // finished, for the four seconds after the line.
@@ -194,7 +195,7 @@ export function faceItems(
   // The limiter banner is above the review rather than under it on every face but the nano, where
   // the body is 194 px and a 160 px panel leaves it seventeen either side. That is the same trade
   // the pop-ups already make on that face and is why the pit alerts are pushed before this.
-  items.push(lapReview(lapReviewFrame(hero, layout.width), lapReviewOut(face), 'lapReview'));
+  items.push(...restyled([lapReview(lapReviewFrame(hero, layout.width), lapReviewOut(face), 'lapReview')]));
 
   return items;
 }

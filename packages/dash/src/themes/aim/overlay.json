@@ -23,6 +23,22 @@
       "dim": { "value": "{palette.aim.dim}" }
     }
   },
+  "font": {
+    "family": {
+      "data": { "value": "DSEG7 Classic", "note": "Every figure on the LCD is the seven-segment face, the house's pages included, so that their own layouts cut their cells for it and shed by their own rules (#204)." }
+    },
+    "cell": {
+      "semiBold": {
+        "digit": { "value": 0.82, "note": "DSEG7 Classic Regular: every glyph is a cell of 0.816 em, its ink 0.099 to 0.717." },
+        "special": { "value": 0.2, "note": "The colon is 0.2 em and the full stop none, lighting the point of the cell before it." }
+      },
+      "bold": {
+        "digit": { "value": 0.82, "note": "DSEG7 Classic Bold, the same cell as Regular." },
+        "special": { "value": 0.2 }
+      },
+      "gear": { "value": 0.82, "note": "The gear is a cell like any other in a segment face." }
+    }
+  },
   "purpose": {
     "flag": {
       "onFlag": { "value": "{palette.aim.ink}" }

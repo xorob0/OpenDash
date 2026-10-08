@@ -105,7 +105,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     ];
   }
 
-  return pageScreen(page.id, items, ground);
+  return pageScreen(page.id, drawing.restyle ? drawing.restyle(items) : items, ground);
 }
 
 /**

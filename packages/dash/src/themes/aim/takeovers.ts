@@ -4,6 +4,9 @@
  * what is wrong. The gear and the speed stay in zone A under either. The full-screen flag is the
  * house's, given the LCD below the tacho as its body by the anatomy.
  *
+ * `Pit Speed` and the warning's `ENGINE` are in inverse video, an ink block with the word in the
+ * ground, which is how an LCD that has one ink says that something is not a reading.
+ *
  * Each is one of the house's states drawn the LCD's way rather than a state of its own. The limiter
  * is the house pit family's `limiter` state, shown exactly when that state's banner is and drawn over
  * it, so that the four states of the family that are mistakes keep the house's banner at the top of
@@ -43,6 +46,17 @@ const WARNING_WIDEST = WARNINGS.map((w) => w.text).reduce((a, b) => (b.length > 
 /** The lane's limit in the driver's unit; an unpublished one reads as the house's no-data dashes. */
 const pitLimit = (): Expr => isnull(game('PitLimiterSpeed'), num(999));
 
+/** A word in inverse video: the ink block, `pad` round it, and the word in the ground. */
+function inverse(name: string, text: string, centreX: number, top: number, size: number): Item[] {
+  const width = segmentWidth('DSEG14Regular', text, size);
+  const pad = Math.round(size / 3);
+  const left = Math.round(centreX - width / 2);
+  return [
+    { kind: 'rect', name: `${name}.block`, rect: rect(left - pad, top - pad, width + 2 * pad, size + 2 * pad), backgroundColor: lcdColour('ink') },
+    segment(name, 'DSEG14Regular', text, left, top, width, { size, hAlign: 'center', color: lcdColour('ground') }),
+  ];
+}
+
 /** How large the canvas's sizes can be in `frame`: scaled to its height and held to its width. */
 const sizeIn = (frame: Rect, wanted: number, text: string): number => {
   let size = Math.round(wanted * Math.min(1, frame.height / 284));
@@ -55,11 +69,10 @@ function limiter(frame: Rect): Item {
   const value = Math.round(LIMITER.value * Math.min(1, frame.height / 284));
   const gap = Math.round(LIMITER.gap * Math.min(1, frame.height / 284));
   const top = Math.round(frame.top + (frame.height - label - gap - value) / 2);
-  const labelWidth = segmentWidth('DSEG14Regular', 'Pit Speed', label);
   const valueWidth = segmentWidth('DSEG7Bold', '888', value);
   const children: Item[] = [
     { kind: 'rect', name: 'limiter.ground', rect: frame, backgroundColor: lcdColour('ground') },
-    segment('limiter.label', 'DSEG14Regular', 'Pit Speed', Math.round(frame.left + (frame.width - labelWidth) / 2), top, labelWidth, { size: label, hAlign: 'center' }),
+    ...inverse('limiter.label', 'Pit Speed', frame.left + frame.width / 2, top, label),
     ...reading('limiter.limit', '60', Math.round(frame.left + (frame.width + valueWidth) / 2), top + label + gap, value, {
       bind: iff(lt(pitLimit(), num(999)), fmt(pitLimit(), '0'), str('--')),
       widest: '888',
@@ -80,7 +93,7 @@ function warning(frame: Rect): Item {
   const which = WARNINGS.reduceRight<Expr>((rest, w) => iff(engineWarning(w.bit), str(w.text), rest), str(WARNINGS[0].text));
   const children: Item[] = [
     { kind: 'rect', name: 'warning.box', rect: box, backgroundColor: lcdColour('ground'), border: { color: lcdColour('ink'), top: WARNING.border, bottom: WARNING.border, left: WARNING.border, right: WARNING.border } },
-    line('warning.title', 'ENGINE', top),
+    ...inverse('warning.title', 'ENGINE', box.left + box.width / 2, top, size),
     line('warning.reading', WARNINGS[0].text, top + size + gap, which, WARNING_WIDEST),
   ];
   const on = and(inTheCar(), or(...WARNINGS.map((w) => engineWarning(w.bit))));

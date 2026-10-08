@@ -9,6 +9,7 @@ import { regionRect } from '../anatomy.ts';
 import { footRuleOf } from './anatomy.ts';
 import { aimBandPage } from './foot.ts';
 import { aimModuleFrame, aimModules } from './modules.ts';
+import { lcd } from './lcd.ts';
 import { inkRect, lcdColour } from './register.ts';
 import { aimTacho } from './tacho.ts';
 import { aimTakeovers } from './takeovers.ts';
@@ -29,4 +30,6 @@ export const aimDrawing: ThemeDrawing = {
   zoneCounters: false,
   zoneAPage: aimZoneAPage,
   bandPage: aimBandPage,
+  // Everything the house draws on the LCD, in the LCD's register; the flag is never handed to it.
+  restyle: (items, opts) => lcd(items, opts),
 };

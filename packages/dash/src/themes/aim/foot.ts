@@ -13,7 +13,9 @@
  * reads `GPS: LOST` while the game is not running, which on a face is the second before the idle
  * screen takes it.
  *
- * The car page, the house's twelve lamps, is pictograms and not readings, and keeps the house's.
+ * The car page, the house's twelve lamps, is pictograms the LCD cannot draw, so each lamp is its word
+ * in the 14-segment face instead: a ghost while it is dark, and inverse video, an ink block with the
+ * word in the ground, while it is lit. A lamp nothing the sim publishes lights stays a ghost.
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
@@ -21,10 +23,11 @@ import { withMoreBindings, type Expr } from '../../bind.ts';
 import { gameRunning } from '../../second/values.ts';
 import { walkItems } from '../../walk.ts';
 import { BAND_PAGES, bandPageItems, relativeFields, type BandField } from '../../zones/bandPages.ts';
-import { TELLTALE_PAGE } from '../../zones/telltales.ts';
-import { ghostOf, reading, segment, segmentWidth } from './register.ts';
+import { TELLTALE_PAGE, TELLTALES } from '../../zones/telltales.ts';
+import { ghostOf, lcdColour, reading, segment, segmentWidth } from './register.ts';
 
 const { concat, iff, str, ucase } = ncalc;
+
 
 /** The canvas's foot at 60 px: the status 20 px in 200, cells 32 over 12 with 4 between, 56 apart. */
 const FOOT = { height: 60, status: { size: 20, width: 200 }, value: 32, caption: 12, between: 4, gap: 56, rowGap: 10 } as const;
@@ -120,9 +123,50 @@ function arrangementFor(fields: readonly BandField[], frame: Rect): { withStatus
   return undefined;
 }
 
+/** The word each of the house's twelve lamps is written as, in the house's order. */
+const LAMP_WORDS: Readonly<Record<string, string>> = {
+  tyreLines: 'TYRE',
+  tyreSlant: 'GRIP',
+  wiper: 'WIPER',
+  surface: 'WET',
+  abs: 'ABS',
+  esp: 'ESP',
+  engine: 'ENGINE',
+  fuel: 'FUEL',
+  battery: 'BATT',
+  limiter: 'PIT',
+  pressure: 'PRESS',
+  door: 'DOOR',
+};
+
+/** The car page: the lamps as words across the band, as many as fit, the tail shed as the house's rank sheds it. */
+function lampWords(frame: Rect, prefix: string): Item[] {
+  const size = Math.min(FOOT.status.size, Math.floor(frame.height / 2.4));
+  const pad = Math.round(size / 3);
+  const cell = Math.max(...Object.values(LAMP_WORDS).map((word) => segmentWidth('DSEG14Regular', word, size))) + 2 * pad;
+  const gap = Math.round(size / 2);
+  const fits = Math.max(1, Math.min(TELLTALES.length, Math.floor((frame.width + gap) / (cell + gap))));
+  const top = Math.round(frame.top + (frame.height - size) / 2);
+  return TELLTALES.slice(0, fits).flatMap((lamp, i) => {
+    const word = LAMP_WORDS[lamp.id] ?? lamp.id.toUpperCase();
+    const left = frame.left + i * (cell + gap);
+    const name = `${prefix}${lamp.id}`;
+    const width = segmentWidth('DSEG14Regular', word, size);
+    const at = left + Math.round((cell - width) / 2);
+    const items: Item[] = [segment(`${name}.dark`, 'DSEG14Regular', word, at, top, width, { size, ghost: true, visibleBind: lamp.on === undefined ? undefined : ncalc.not(lamp.on) })];
+    if (lamp.on !== undefined) {
+      items.push(
+        withMoreBindings<'rect'>({ kind: 'rect', name: `${name}.block`, rect: { left, top: top - pad, width: cell, height: size + 2 * pad }, backgroundColor: lcdColour('ink') }, { Visible: lamp.on }),
+        segment(`${name}.lit`, 'DSEG14Regular', word, at, top, width, { size, color: lcdColour('ground'), visibleBind: lamp.on }),
+      );
+    }
+    return items;
+  });
+}
+
 /** One of band D's pages on the LCD; see the file comment. */
 export function aimBandPage(page: string, frame: Rect, prefix: string, classOnly?: Expr): Item[] {
-  if (page === TELLTALE_PAGE) return bandPageItems(page, frame, prefix, false, classOnly);
+  if (page === TELLTALE_PAGE) return lampWords(frame, prefix);
   const fields = page === 'relative' && classOnly !== undefined ? relativeFields(classOnly) : BAND_PAGES[page];
   if (!fields) throw new RangeError(`band D has no page "${page}"`);
   // The fields the house page draws at this width, which is the page's own shedding: on a narrow band
