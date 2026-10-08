@@ -18,7 +18,7 @@ export default function SurveyPage() {
       level={1}
       ruled={false}
       title="Ten minutes of your honesty"
-      lede="OpenDash is a free, open source dashboard package for SimHub, currently in beta, and your answers will decide what gets built next. No answer is wrong: what you already use and what you would not pay for are exactly what we need to hear. Nothing is recorded until you press send, and then only your answers are."
+      lede="OpenDash is a free, open source dashboard package for SimHub, a release candidate today, and your answers will decide what gets built next. No answer is wrong: what you already use and what you would not pay for are exactly what we need to hear. Nothing is recorded until you press send, and then only your answers are."
     >
       <SurveyForm />
     </Section>

@@ -11,6 +11,8 @@
  * make the promise do. This file must not import `content.generated.ts`: the tests under `test/`
  * run from the repository root without the generators, and they read these sentences too.
  */
+import type { Counts } from './counts';
+
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
 
 /** The product, in prose. */
@@ -37,7 +39,21 @@ export const SIMHUB_URL = 'https://www.simhubdash.com/';
  */
 export const FREE_HEADLINE = 'Free, forever.';
 export const FREE_FOREVER = 'OpenDash is 100% free and always will be.';
+/**
+ * The car themes are in the promise. They were once the thing that might have been sold; Tim
+ * decided on 2026-10-08 that they are free like the rest, and the sentence goes wherever the
+ * promise is made so that a reader who has seen a paid theme elsewhere is told at once.
+ */
+export const THEMES_FREE = 'The car themes are free too. A face drawn like your car’s own display costs what the plain one does: nothing.';
 export const NOTHING_TO_UNLOCK = 'No licence, no account, nothing to unlock.';
+
+/**
+ * What a version is, in one word: a version carrying a suffix such as `-rc.12` is a release
+ * candidate, as the changelog says and the download page already marks it; one without is a
+ * release. The home page says this beside the version, and the survey says it in prose, so the two
+ * cannot call the same build alpha and beta.
+ */
+export const releaseWord = (version: string): string => (/-/.test(version) ? 'Release candidate' : 'Release');
 
 /**
  * The one file a user is offered. docs/scope.md makes the plugin the only way in (#438): a release
@@ -66,25 +82,29 @@ export const CAR_DATA_CREDIT =
 
 /**
  * The three reasons, on the first screen and nowhere else. One sentence each, because they are
- * read standing up: the thing neither competitor can offer, then what it gets you.
+ * read standing up: the thing neither competitor can offer, then what it gets you. A body takes the
+ * counts so that a number in it is the build's and not a retype (#560).
  */
-export const DIFFERENTIATORS = [
+export const DIFFERENTIATORS: readonly { id: string; title: string; body: (c: Counts) => string }[] = [
   {
     id: 'free',
     title: 'Free and open source, under MIT',
-    body: 'No tier, no key, no limit on how many machines: the dashboards are generated from source on GitHub, so a new size or a new field is a pull request and not a paid pack.',
+    body: () =>
+      'No tier, no key, no limit on how many machines: the dashboards and the car themes are generated from source on GitHub, so a new size, a new field or a new car is a pull request and not a paid pack.',
   },
   {
     id: 'lights',
     title: 'LEDs and matrix panels',
-    body: 'Shift lights in your car’s own colours and order, from an open table, on any of 62 strip shapes, with the flags and the spotter down the sides and an 8 × 8 flag box.',
+    body: (c) =>
+      `Shift lights in your car’s own colours and order, from an open table, on any of ${c.stripShapes} strip shapes, with the flags and the spotter down the sides and an 8 × 8 flag box.`,
   },
   {
     id: 'design',
-    title: 'Modern design and features',
-    body: 'A dashboard drawn for each screen, 21 pages on a wheel button, a phone companion and a pit wall, every one of them set up from one page in SimHub.',
+    title: 'Drawn for your screen, and for your car',
+    body: (c) =>
+      `A face for each screen and a face drawn like your car’s own display, ${c.pages} pages on a wheel button, a phone companion and a pit wall, all set up from one page in SimHub.`,
   },
-] as const;
+];
 
 /** The top-level pages, in the order the nav lists them. Download is the call to action, not a nav item. */
 export const NAV = [

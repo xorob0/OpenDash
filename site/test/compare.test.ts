@@ -4,8 +4,11 @@
  * blank. A cell we could not stand behind is cut from the row, never hedged.
  */
 import { describe, expect, test } from 'bun:test';
-import { PRODUCTS, ROWS } from '../lib/compare.ts';
-import { FREE_FOREVER } from '../lib/site.ts';
+import { CHECKED_ON, PRODUCTS, rows, scheduled } from '../lib/compare.ts';
+import { FREE_FOREVER, THEMES_FREE } from '../lib/site.ts';
+import { SAMPLE_COUNTS } from './sampleCounts.ts';
+
+const ROWS = rows(SAMPLE_COUNTS);
 
 describe('the comparison', () => {
   test('every row has a cell for every product', () => {
@@ -38,8 +41,25 @@ describe('the comparison', () => {
     for (const row of ROWS) for (const p of PRODUCTS) expect({ cell: `${row.id}/${p.id}`, word: row.cells[p.id].word.length > 0 }).toEqual({ cell: `${row.id}/${p.id}`, word: true });
   });
 
-  test('the price row makes the promise', () => {
-    expect(ROWS.find((r) => r.id === 'price')?.cells.opendash.text).toContain(FREE_FOREVER);
+  test('the price row makes the promise, themes included', () => {
+    const price = ROWS.find((r) => r.id === 'price')?.cells.opendash.text;
+    expect(price).toContain(FREE_FOREVER);
+    expect(price).toContain(THEMES_FREE);
+  });
+
+  test('the car themes are included, and the user’s own colours are still coming', () => {
+    expect(ROWS.find((r) => r.id === 'themes')?.cells.opendash.word).toBe('Free');
+    expect(scheduled(SAMPLE_COUNTS).map((r) => r.id)).toContain('colours');
+    expect(scheduled(SAMPLE_COUNTS).map((r) => r.id)).not.toContain('themes');
+  });
+
+  test('the counts in the cells are the build’s', () => {
+    expect(ROWS.find((r) => r.id === 'sizes')?.cells.opendash.text).toContain(`${SAMPLE_COUNTS.faces} faces`);
+    expect(ROWS.find((r) => r.id === 'flagBox')?.cells.opendash.text).toContain(`${SAMPLE_COUNTS.glyphs} glyphs`);
+  });
+
+  test('the competitor cells carry the date they were read', () => {
+    expect(CHECKED_ON).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 
   test('row ids are unique', () => {

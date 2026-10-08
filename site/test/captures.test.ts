@@ -15,7 +15,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
-import { pageFile, packageFile, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
+import { pageFile, packageFile, provenanceNote, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
 import { onSite, readBuildManifest, type Manifest } from '../scripts/content.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
@@ -74,6 +74,13 @@ describe('a stale capture', () => {
   test('is read off every entry of a schema 1 sidecar too, which gave them all its one version', () => {
     const v1 = { schema: 1 as const, version: '0.3.0-rc.6', commit: '2b876e2', date: '2026-09-22', simHubVersion: '9.12.6', scenario: 'gallery', files: { 'page-fuel.png': { kind: 'page' as const, page: 'fuel', width: 850, height: 480, scenario: 'gallery' } } };
     expect(staleCaptures(upgradeCaptures(v1), '0.3.0-rc.7')).toEqual(['page-fuel.png']);
+  });
+});
+
+describe('the provenance note', () => {
+  test('names the build, and says when the picture is older than the one served', () => {
+    expect(provenanceNote('0.3.0-rc.12', '0.3.0-rc.12')).toBe('captured at 0.3.0-rc.12');
+    expect(provenanceNote('0.3.0-rc.6', '0.3.0-rc.12')).toBe('captured at 0.3.0-rc.6, before 0.3.0-rc.12');
   });
 });
 
