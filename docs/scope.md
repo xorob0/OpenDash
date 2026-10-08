@@ -327,7 +327,11 @@ installation id, no usage counting, no error reporting. The one exception is the
 it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
 What is sent is an anonymous request to GitHub asking what the newest release is, carrying the
 user's IP address, which reaches GitHub and not us, and a `User-Agent` naming the product. It can
-be switched off, and switching it off means nothing is fetched at all.
+be switched off, and switching it off means nothing is fetched at all. The car's crest is the other
+request a rig makes without a press ([#714](https://github.com/xorob0/OpenDash/issues/714), the trade dress
+section below): one file, once, from the address on the panel, carrying the same `User-Agent` and the
+user's IP address to that address's host, and only on a rig with a screen that draws the crest. Clearing
+the address stops it and removes the copy.
 
 **Copying Lovely's visual design.** Lovely's licence forbids reuse of its UI design. OpenDash's
 design is independently derived: do not copy its layouts, and do not use its screenshots in any
@@ -357,12 +361,28 @@ than the car's display, which is why Porsche's corporate red appears nowhere on 
 A theme may never take a manufacturer's word mark, its logo or crest, a typeface licensed
 to the manufacturer, a badge drawn as artwork, or any image from a manual or a photograph,
 whether traced, cropped or redrawn from it. A manual is a reference to read and cite and never an
-asset to extract. Where the car draws a crest on its display, the theme reserves that place and leaves
-it empty, and the user may fill it with an image of their own from the panel, as the idle screen's
-image already is a setting ([ADR 0011](decisions/0011-personalisation.md)). Every face a theme draws
+asset to extract. Where the car draws a crest on its display, the theme reserves that place and the
+package leaves it empty ([#194](https://github.com/xorob0/OpenDash/issues/194)). Every face a theme draws
 is under the OFL or MIT, for a reason that has nothing to do with trade dress: it is redistributed
 inside `_SHFonts/` in every package, so a manufacturer's corporate face is unavailable whatever this
 paragraph said, and a theme reaches its register with the faces OpenDash may legally ship.
+
+**The crest is fetched, never shipped**, as was decided on 2026-10-08 for the Porsche
+([#714](https://github.com/xorob0/OpenDash/issues/714)), amending the ruling of #194 that the place stays
+empty. Nothing above about redistribution changes: no package, release or file of this repository
+carries a mark. A theme may, by default, have the plugin fetch the car's crest into the user's own
+folder, the way the car light tables are fetched ([ADR 0018](decisions/0018-the-cars-own-lights.md)), and
+draw it in the place the car draws it. The plugin carries an address and the hash of the file expected
+there, the panel shows the address and the user may change or clear it, and a cleared address or a fetch
+that fails leaves the place empty as before. Two things the fetch does not answer are answered here
+instead. Drawing a manufacturer's crest on OpenDash's screen, wherever the file came from, is a *use* of
+the mark, which is a different question from shipping it; it is accepted knowingly, as a nominative
+reference to the car whose display the theme draws, and the fetch is not offered as the reason it is
+allowed. And the Porsche theme is free, so the question of a sold product drawing the mark, which is the
+case trade mark law cares about most, does not arise for it; what a paid theme does is answered when one
+exists, and until then the default fetch belongs to the free themes alone. The request is the one thing
+OpenDash fetches at a start without a press: one file, from the address on the panel, on a rig with a
+screen that draws the crest and no copy of it yet.
 
 A theme is named after the display family as a driver says it, as a nominative reference to the
 product and in OpenDash's own type, never styled as the manufacturer presents it. The Porsche theme is
