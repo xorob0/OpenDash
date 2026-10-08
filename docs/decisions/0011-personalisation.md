@@ -80,7 +80,7 @@ tried and wrong about the conclusion it drew.
 | `BorderStyle.Bindings.BorderColor` | Color | yes | probe 6 |
 | `BorderStyle.Bindings.BorderTop` and siblings | int | yes | probe 8 |
 | `TextPadding.Bindings.PaddingLeft` and siblings | int | yes | probe 12 |
-| `ImagePath` on `ImageFromFileItem` | string | yes, on the face of it | an unattributed `string` property; not yet run on the VM |
+| `ImagePath` on `ImageFromFileItem` | string | yes | an unattributed `string` property; run on the VM on 2026-10-08 (#714), see the format doc |
 | item-level `Bindings.BorderColor` | n/a | **no** | probe 7; the property is not on the item |
 | an unknown target name | n/a | **no, silently** | probe 11; the item draws its literal and nothing is logged |
 | `Font` | string | yes, and marked `[NoBinding]` | probe 4: the face changed to Courier New |
@@ -314,6 +314,12 @@ and it is not answered here.
 **`ImagePath` is verified as a property, not as a behaviour.** #104 needs to know what SimHub does
 with a path that does not exist, a file replaced while the dash is open, and an image larger than
 the screen. Its own acceptance criteria already say so.
+
+*Answered on 2026-10-08 (#714), on the VM:* a path that does not exist, or an empty one, draws nothing
+and logs nothing; a file replaced, or one that appears at an unchanged path, is reloaded within a second;
+a bound path that changes is followed; and the picture is fitted to the item keeping its proportions, so
+a large image is scaled down into its box rather than overflowing it. The details are in the format
+doc.
 
 **What a round face does with any of this.** [ADR 0006](0006-the-zone-face.md) leaves the round
 faces on the card model, and nothing here changes that.
