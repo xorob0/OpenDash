@@ -50,20 +50,27 @@ export interface Reading {
   widest: string;
 }
 
+/** The text of a setting box, which follows the box: its size and the padding inside the border. */
+export interface BoxType {
+  size: number;
+  pad: number;
+}
+
 /**
  * The car's setting box: a rounded outline in the box's own colour, the short name in Barlow Bold
  * at the left and the value at the right, both at the label size. Hidden while `present` is false,
  * which is how a box whose setting the sim does not publish disappears.
  */
-export function settingBox(name: string, frame: Rect, colour: Hex, title: string, reading: Reading, present?: Expr): Item {
-  const y = centredY(frame, LABEL_SIZE);
-  const inner = frame.width - 2 * (BORDER + BOX_PAD);
-  const valueWidth = Math.min(inner, runWidth(reading.widest, LABEL_SIZE));
+export function settingBox(name: string, frame: Rect, colour: Hex, title: string, reading: Reading, present?: Expr, type: BoxType = { size: LABEL_SIZE, pad: BOX_PAD }): Item {
+  const { size, pad } = type;
+  const y = centredY(frame, size);
+  const inner = frame.width - 2 * (BORDER + pad);
+  const valueWidth = Math.min(inner, runWidth(reading.widest, size));
   const children: Item[] = [
     band(`${name}.box`, frame, TRANSPARENT, { border: { color: colour, width: BORDER }, radius: RADIUS }),
-    label(`${name}.name`, title, frame.left + BORDER + BOX_PAD, y, runWidth(title, LABEL_SIZE, true), { size: LABEL_SIZE, weight: 'Bold', color: ds.color.text.primary }),
-    label(`${name}.value`, reading.sample, frame.left + frame.width - BORDER - BOX_PAD - valueWidth, y, valueWidth, {
-      size: LABEL_SIZE,
+    label(`${name}.name`, title, frame.left + BORDER + pad, y, runWidth(title, size, true), { size, weight: 'Bold', color: ds.color.text.primary }),
+    label(`${name}.value`, reading.sample, frame.left + frame.width - BORDER - pad - valueWidth, y, valueWidth, {
+      size,
       color: ds.color.text.primary,
       hAlign: 'right',
       bind: reading.bind,
@@ -81,12 +88,12 @@ export const CONTAINER_BORDER = 2;
  * grey border and nothing else, the name is in a grey title cell at its left, as tall as the container
  * holds with no padding, and the value is bare on the black ground in `valueCell`, centred.
  */
-export function namedCell(name: string, frame: Rect, title: string, valueCell: Rect, valueSize: number, reading: Reading): Item[] {
+export function namedCell(name: string, frame: Rect, title: string, valueCell: Rect, valueSize: number, reading: Reading, labelSize = LABEL_SIZE): Item[] {
   const titleCell = rect(frame.left + CONTAINER_BORDER, frame.top + CONTAINER_BORDER, valueCell.left - frame.left - 2 * CONTAINER_BORDER, frame.height - 2 * CONTAINER_BORDER);
   return [
     band(`${name}.cell`, frame, TRANSPARENT, { border: { color: carColour('panel'), width: CONTAINER_BORDER }, radius: RADIUS }),
     band(`${name}.title`, titleCell, carColour('panel'), { radius: INSET_RADIUS }),
-    label(`${name}.name`, title, titleCell.left, centredY(titleCell, LABEL_SIZE), titleCell.width, { size: LABEL_SIZE, color: ds.color.text.primary, hAlign: 'center' }),
+    label(`${name}.name`, title, titleCell.left, centredY(titleCell, labelSize), titleCell.width, { size: labelSize, color: ds.color.text.primary, hAlign: 'center' }),
     label(`${name}.value`, reading.sample, valueCell.left, centredY(valueCell, valueSize), valueCell.width, {
       size: valueSize,
       color: ds.color.text.primary,

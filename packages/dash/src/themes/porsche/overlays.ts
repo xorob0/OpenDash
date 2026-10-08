@@ -31,7 +31,7 @@ import { TRACKED_VALUES } from '../../second/tracked.ts';
 import { speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { gearSizeIn } from '../../zones/zoneAPages.ts';
-import { regionRect } from '../anatomy.ts';
+import { regionRect, zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
 import { panelOf } from './body.ts';
 import { picture } from './pictograms.ts';
@@ -39,8 +39,30 @@ import { BORDER, BOX_PAD, centredY, lowFuelAlarm, RADIUS, runWidth } from './reg
 
 const { add, fmt, game, gt, iff, isnull, lt, num, raw, str, concat } = ncalc;
 
-/** The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side. */
-const LIMITER = { padTop: 8, padX: 18, padBottom: 10, column: 300, label: 24, speed: 96, limit: { width: 230, height: 50, value: 40 } };
+/**
+ * The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side,
+ * the speed 28 px under its label, and the limit's box padded as a setting box is.
+ */
+const LIMITER_AT_REFERENCE = { padTop: 8, padX: 18, padBottom: 10, column: 300, label: 24, speed: 96, speedTop: 28, pad: BOX_PAD, limit: { width: 230, height: 50, value: 40 } };
+
+/** The reference body the limiter is drawn for, 957 by 226, and zone C's panel, 350 by 226. */
+const BODY = { width: 957, height: 226 };
+const PANEL = { width: 350, height: 226 };
+
+/**
+ * A layout's numbers at `k`, each rounded: a box smaller than the reference's draws everything in it
+ * smaller by the same factor, and one as large or larger draws it as the reference does. This is the
+ * ticket's rule that a font follows the box it is drawn in, the box here being the region the state
+ * takes over.
+ */
+function scaled<T>(layout: T, k: number): T {
+  if (typeof layout === 'number') return Math.round(layout * k) as T;
+  if (layout !== null && typeof layout === 'object') return Object.fromEntries(Object.entries(layout).map(([key, value]) => [key, scaled(value, k)])) as T;
+  return layout;
+}
+
+/** How much smaller than `reference` a frame is, never larger than one. */
+const shrink = (frame: Rect, reference: { width: number; height: number }): number => Math.min(1, frame.width / reference.width, frame.height / reference.height);
 
 /**
  * The pit lane limit in the driver's own unit, which is the unit `SpeedLocal` is in, so the two are
@@ -53,27 +75,36 @@ const overTheLimit = (): string => gt(speed(), add(pitLimit(), num(1)));
 
 
 /** The change box's name and value, and the alarm's two lines, as the canvas sets them. */
-const NOTICE = { name: 32, value: 116, line: 36 };
-const ALARM = { triangle: { width: 44, height: 40 }, word: 34, reading: 26, gap: 6 };
+const NOTICE_AT_REFERENCE = { name: 32, value: 116, line: 36 };
+const ALARM_AT_REFERENCE = { triangle: { width: 44, height: 40 }, word: 34, reading: 26, gap: 6 };
 
-function limiterBody(frame: Rect): Item {
+/**
+ * The limiter body over `frame`, the speed and the limit at its left and the gear in its middle. On
+ * the portrait face, where the body is the gear's tile over zones B and C, the gear stays on its own
+ * tile, `gear`, rather than in the middle of the whole body, where it would stand over zone C.
+ */
+function limiterBody(frame: Rect, gear: Rect): Item {
   const ink = ds.color.surface.base;
+  const LIMITER = scaled(LIMITER_AT_REFERENCE, shrink(frame, BODY));
   const fill = iff(overTheLimit(), str(ds.color.danger.primary), str(ds.color.good.primary));
   const left = frame.left + LIMITER.padX;
   const top = frame.top + LIMITER.padTop;
   const limit = rect(left, frame.top + frame.height - LIMITER.padBottom - LIMITER.limit.height, LIMITER.limit.width, LIMITER.limit.height);
   const limitValueWidth = runWidth('888', LIMITER.limit.value);
-  const middle = rect(left + LIMITER.column, top, frame.width - 2 * (LIMITER.padX + LIMITER.column), frame.height - LIMITER.padTop - LIMITER.padBottom);
+  const portrait = frame.height > frame.width / 2;
+  const middle = portrait
+    ? rect(left + LIMITER.column, top, frame.width - 2 * (LIMITER.padX + LIMITER.column), gear.top + gear.height - top)
+    : rect(left + LIMITER.column, top, frame.width - 2 * (LIMITER.padX + LIMITER.column), frame.height - LIMITER.padTop - LIMITER.padBottom);
   const size = gearSizeIn(middle);
   const cells = gearCells(size);
   const gearWidth = monoWidth(cells, GEAR_CHARS);
   const children: Item[] = [
     withMoreBindings(band('limiter.body', frame, ds.color.good.primary, { radius: RADIUS }), { BackgroundColor: fill }),
     label('limiter.speed.label', 'Speed', left, top, runWidth('Speed', LIMITER.label), { size: LIMITER.label, color: ink }),
-    label('limiter.speed.value', '58', left, top + 28, LIMITER.column, { size: LIMITER.speed, color: ink, hAlign: 'center', bind: fmt(speed(), '0'), widest: '888' }),
+    label('limiter.speed.value', '58', left, top + LIMITER.speedTop, LIMITER.column, { size: LIMITER.speed, color: ink, hAlign: 'center', bind: fmt(speed(), '0'), widest: '888' }),
     band('limiter.limit.box', limit, TRANSPARENT, { border: { color: ink, width: BORDER }, radius: RADIUS }),
-    label('limiter.limit.label', 'Limit', limit.left + BOX_PAD, centredY(limit, LIMITER.label), runWidth('Limit', LIMITER.label), { size: LIMITER.label, color: ink }),
-    label('limiter.limit.value', '60', limit.left + limit.width - BOX_PAD - limitValueWidth, centredY(limit, LIMITER.limit.value), limitValueWidth, {
+    label('limiter.limit.label', 'Limit', limit.left + LIMITER.pad, centredY(limit, LIMITER.label), runWidth('Limit', LIMITER.label), { size: LIMITER.label, color: ink }),
+    label('limiter.limit.value', '60', limit.left + limit.width - LIMITER.pad - limitValueWidth, centredY(limit, LIMITER.limit.value), limitValueWidth, {
       size: LIMITER.limit.value,
       color: ink,
       hAlign: 'right',
@@ -95,6 +126,7 @@ function limiterBody(frame: Rect): Item {
 
 function lowFuel(frame: Rect): Item {
   const ink = ds.color.surface.base;
+  const ALARM = scaled(ALARM_AT_REFERENCE, shrink(frame, PANEL));
   const fuel = raw('FuelLevel');
   const top = frame.top + (frame.height - (ALARM.triangle.height + ALARM.gap + ALARM.word + ALARM.gap + ALARM.reading)) / 2;
   const triangle = rect(frame.left + (frame.width - ALARM.triangle.width) / 2, top, ALARM.triangle.width, ALARM.triangle.height);
@@ -115,12 +147,13 @@ function lowFuel(frame: Rect): Item {
   return withMoreBindings({ kind: 'layer', name: 'lowFuel', children }, { Visible: lowFuelAlarm() });
 }
 
-export const porscheTakeovers = (ctx: FaceContext): Item[] => [limiterBody(regionRect(ctx.regions, 'flagBody')), lowFuel(panelOf(ctx, 'C'))];
+export const porscheTakeovers = (ctx: FaceContext): Item[] => [limiterBody(regionRect(ctx.regions, 'flagBody'), zoneRect(ctx.regions, 'A')), lowFuel(panelOf(ctx, 'C'))];
 
 /** The house's change notifications, each filling zone C's panel in blue with its name over its value. */
 export function porscheChangeNotifications(ctx: FaceContext): Item[] {
   const frame = panelOf(ctx, 'C');
   const ink = ds.color.surface.base;
+  const NOTICE = scaled(NOTICE_AT_REFERENCE, shrink(frame, PANEL));
   const top = frame.top + (frame.height - (NOTICE.line + NOTICE.value)) / 2;
   return TRACKED_VALUES.map((value) => {
     const name = `notice.${value.id}`;
