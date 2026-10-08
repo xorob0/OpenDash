@@ -1164,6 +1164,7 @@ namespace OpenDashPlugin
         {
             new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes, new ThemeBandPage[0]),
             new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche992cup" }, FaceSizes, new[] { new ThemeBandPage("porscheFoot", "Porsche") }),
+            new ThemeEntry("aim", "AiM", new[] { "Global Mazda MX-5 Cup", "Legends Ford Coupe", "FIA Cross Car" }, new[] { "mx5 mx52016" }, FaceSizes, new ThemeBandPage[0]),
         };
 
         /// <summary>The catalogue entry of a theme by its id, or null for the default look, an unknown id, or none.</summary>

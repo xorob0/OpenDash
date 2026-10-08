@@ -9,10 +9,12 @@
  */
 import type { ThemeDrawing } from './drawing.ts';
 import { defineModuleRegister } from './moduleRegister.ts';
+import { aimDrawing } from './aim/drawing.ts';
 import { porscheDrawing } from './porsche/drawing.ts';
 
 export const THEME_DRAWINGS: Readonly<Record<string, ThemeDrawing>> = {
   porsche: porscheDrawing,
+  aim: aimDrawing,
 };
 
 // The modules read their theme's register out of a slot rather than from here; see moduleRegister.ts.

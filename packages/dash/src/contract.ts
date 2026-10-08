@@ -964,10 +964,15 @@ function faceSizeAt(width: number, height: number): FaceSize {
  * The Porsche claims every face size, the portrait one included in the car's stacked form (#205,
  * #713). The two Cup and legacy car paths that #205 leaves to be read on the VM are left out rather
  * than guessed.
+ *
+ * The AiM is one LCD for the three iRacing cars that carry an AiM unit (#204), at every size. The
+ * MX-5 Cup's path is the one the ticket expects; the Legends' and the Cross Car's are to be read on
+ * the VM with the car loaded and are left out until they are, as the Porsche's two were.
  */
 export const THEME_CATALOGUE: readonly ThemeEntry[] = [
   { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES, bandPages: [] },
   { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
+  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car'], iracingCarPaths: ['mx5 mx52016'], sizes: FACE_SIZES, bandPages: [] },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */

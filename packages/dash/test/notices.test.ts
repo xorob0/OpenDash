@@ -10,7 +10,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { buildPackage, fontsForPackage } from '../src/dashboard.ts';
 import { ASSET_SOURCES, imageOf, WHEEL_CHANGE_TICK, type AssetSource, type AssetSourceId } from '../src/design/assets.ts';
 import { VENDORED_FONTS_DIR } from '../src/design/fontFiles.ts';
-import { FONT_LICENCE, NOTICES_BY_SOURCE, noticesForPackage, PANEL_NOTICES } from '../src/design/notices.ts';
+import { FONT_LICENCE, NOTICES_BY_SOURCE, noticesForPackage, PANEL_NOTICES, SEGMENT_FONT_LICENCE } from '../src/design/notices.ts';
 import { layout1920x480 } from '../src/layouts/1920x480.ts';
 import type { DashPackage, ImageAsset } from '../src/generator.ts';
 
@@ -40,13 +40,20 @@ describe('what a package owes', () => {
     // faces are renamed to openDash Display so that WPF resolves them (#159) and their file
     // names no longer say Barlow. The OFL covers Barlow; a face from another foundry would need
     // its own notice, and this is the assertion that would fail rather than a release quietly
-    // breaking somebody's licence.
+    // breaking somebody's licence. The segment faces the AiM theme ships (#204) are that case, and
+    // carry theirs, `OFL-DSEG.txt`, which the test below holds a package of them to.
     const vendored = readdirSync(VENDORED_FONTS_DIR).filter((f) => f.toLowerCase().endsWith('.ttf'));
     expect(vendored.length).toBeGreaterThan(0);
-    for (const font of vendored) expect(font.toLowerCase()).toContain('barlow');
+    for (const font of vendored) expect({ font, covered: font.toLowerCase().includes('barlow') || font.startsWith('DSEG') }).toEqual({ font, covered: true });
     // And what is packed all came from there.
     expect(fontsForPackage().length).toBeGreaterThan(0);
     for (const font of fontsForPackage()) expect(font.startsWith(VENDORED_FONTS_DIR)).toBe(true);
+  });
+
+  test('a package that ships the segment faces carries their own licence beside Barlow\'s', () => {
+    expect(existsSync(SEGMENT_FONT_LICENCE.path)).toBe(true);
+    expect(readFileSync(SEGMENT_FONT_LICENCE.path, 'utf8')).toContain('Reserved Font Name "DSEG"');
+    expect(noticesForPackage({ ...pkg, fonts: fontsForPackage('aim') })).toEqual([FONT_LICENCE, SEGMENT_FONT_LICENCE]);
   });
 
   test('the plugin zip owes the same notice, because it embeds the same faces', () => {

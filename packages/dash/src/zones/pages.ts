@@ -67,7 +67,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
 
   if (zone === 'A') {
     // No header: see the comment on zoneAPages.
-    items = zoneAPage(page.id, frame, `${page.id}.`, drawing.gearGhosts ?? true);
+    items = drawing.zoneAPage?.(page.id, frame, `${page.id}.`) ?? zoneAPage(page.id, frame, `${page.id}.`, drawing.gearGhosts ?? true);
   } else if (zone === 'D') {
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
@@ -107,7 +107,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
     ];
   }
 
-  return pageScreen(page.id, items, ground);
+  return pageScreen(page.id, drawing.restyle ? drawing.restyle(items) : items, ground);
 }
 
 /**

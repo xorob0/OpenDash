@@ -10,6 +10,8 @@ import type { Overlay } from '../tokens.ts';
 import type { Anatomy } from './anatomy.ts';
 import { defaultAnatomy } from './default/anatomy.ts';
 import defaultOverlay from './default/overlay.json';
+import { aimAnatomy } from './aim/anatomy.ts';
+import aimOverlay from './aim/overlay.json';
 import { porscheAnatomy } from './porsche/anatomy.ts';
 import porscheOverlay from './porsche/overlay.json';
 
@@ -30,6 +32,8 @@ export const THEMES: Record<string, Theme> = {
   [DEFAULT_THEME_ID]: { overlay: defaultOverlay, anatomy: defaultAnatomy },
   /** The 992 display of the GT3 R and both Cups, at every face size (#205, #713). Its drawing is in `drawings.ts`. */
   porsche: { overlay: porscheOverlay, anatomy: porscheAnatomy },
+  /** The AiM LCD of the MX-5 Cup, the Legends and the Cross Car, at every size (#204). */
+  aim: { overlay: aimOverlay, anatomy: aimAnatomy },
 };
 
 /** The theme {@link THEME_ENV} names, refusing one that is not registered rather than falling back. */
