@@ -120,6 +120,7 @@ export const NAV = [
   { href: '/themes', label: 'Themes' },
   { href: '/pages', label: 'Pages' },
   { href: '/lights', label: 'Lights' },
+  { href: '/plugin', label: 'Plugin' },
   { href: '/compare', label: 'Compare' },
   { href: '/download', label: 'Download' },
 ] as const;
