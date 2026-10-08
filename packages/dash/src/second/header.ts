@@ -222,7 +222,7 @@ export interface ZoneFrameMetrics {
   gap: number;
   /** What is left under the body. */
   padBottom: number;
-  /** The size the zone letter, the page name and the counter are drawn at. */
+  /** The size the page name and the counter are drawn at. */
   size: number;
   /** Their ink. */
   color: Hex;
@@ -272,15 +272,9 @@ export interface ZoneSpec {
   frame: Rect;
   title: string;
   counter: ZoneCounter;
-  /**
-   * Space kept clear before the title, for a zone letter somebody else draws. Zones B and C are the
-   * same rectangle on most faces and so share one dashboard file, which means the letter cannot be
-   * baked into it: the face draws it, and this is the room it needs.
-   */
-  indent?: number;
 }
 
-/** The y a zone frame puts its title on, which the face needs to line the letter up with it. */
+/** The y a zone frame puts its title on, which the face needs to line the counter up with it. */
 export const zoneTitleY = (frame: Rect, metrics: ZoneFrameMetrics): number => frame.top + metrics.padTop + (metrics.title - metrics.size) / 2;
 
 /** The room a zone's title bar keeps at its right for the counter, drawn there or not. */
@@ -298,10 +292,9 @@ export function zoneFrame(name: string, spec: ZoneSpec, density: Density = 'zone
   const metrics = zoneFrameMetrics(density, chrome);
   const { title: titleHeight, padX, padTop, gap, padBottom, size, color } = metrics;
   const titleY = zoneTitleY(spec.frame, metrics);
-  const indent = spec.indent ?? 0;
   const counterWidth = zoneCounterWidth(spec.counter, metrics);
   const items: Item[] = [
-    label(`${name}.title`, spec.title, spec.frame.left + padX + indent, titleY, spec.frame.width - 2 * padX - indent - counterWidth, { size, color }),
+    label(`${name}.title`, spec.title, spec.frame.left + padX, titleY, spec.frame.width - 2 * padX - counterWidth, { size, color }),
   ];
   if (spec.counter.kind === 'static') {
     items.push(label(`${name}.counter`, `${spec.counter.page} / ${spec.counter.pages}`, zoneCounterX(spec.frame, spec.counter, metrics), titleY, counterWidth, { size, hAlign: 'right' }));

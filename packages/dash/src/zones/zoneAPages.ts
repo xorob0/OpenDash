@@ -12,9 +12,8 @@
  * round faces' size and was what left 241 px of the 1280x720 column empty. What bounds a run here
  * is the box: its line box down, its cells across.
  *
- * None of these draws a header. The other three zones carry the zone letter and the page name in a
- * 22 px line, and spending that here would cost the gear its size for the sake of saying "gear".
- * What zone A does when its page changes is the question #154 owns.
+ * None of these draws a header. Zones B and C carry the page name in a 22 px line, and spending that
+ * here would cost the gear its size for the sake of saying "gear". What zone A does when its page changes is the question #154 owns.
  */
 import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';

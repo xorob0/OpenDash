@@ -32,8 +32,7 @@ export const porscheDrawing: ThemeDrawing = {
   // Every module, band page and the foot in the one register of the car's panels.
   modules: porscheModules,
   moduleFrame: porscheModuleFrame,
-  // The car titles its boxes and draws no zone letter; its titles are set at the zone's label size.
-  zoneLetters: false,
+  // The car's titles are set at the zone's label size.
   zoneHeaderSize: ZONE_TYPE.label,
   bandPage: porscheBandPage,
 };

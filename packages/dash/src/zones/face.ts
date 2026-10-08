@@ -34,11 +34,10 @@ import { regionsWithoutRevBar, zoneRegions, type ZoneLayout } from './layout.ts'
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../themes/anatomy.ts';
 import type { FaceContext, ThemeDrawing } from '../themes/drawing.ts';
 import { label } from '../elements/label.ts';
-import { measureText } from '../design/advances.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { bandFlagBlocks, bandMetrics } from './bandPages.ts';
-import { widestCounter, zoneDashboardsFor, zoneLetterWidth, zoneWidget } from './pages.ts';
+import { bandFlagBlocks } from './bandPages.ts';
+import { widestCounter, zoneDashboardsFor, zoneWidget } from './pages.ts';
 
 const { and, not } = ncalc;
 
@@ -243,23 +242,20 @@ function houseChrome(layout: ZoneLayout, band_: Rect, body: readonly { zone: 'A'
 }
 
 /**
- * The two ends of a zone's header, drawn by the face rather than by the zone: the letter and the
- * page counter.
+ * A zone's page counter, drawn by the face rather than by the zone.
  *
- * Zones B and C are the same rectangle on most faces, so one dashboard file serves both. A letter
- * inside it would say B in each, and a counter inside it would count the catalogue -- "15 / 21" on
- * a cycle of three, because a screen cannot know which zone's mask is deciding its length. The face
- * is the only thing that knows which rect is which zone, so both are drawn here, over the widget,
- * in the room the zone's header keeps at each end.
+ * Zones B and C are the same rectangle on most faces, so one dashboard file serves both, and a
+ * counter inside it would count the catalogue -- "15 / 21" on a cycle of three, because a screen
+ * cannot know which zone's mask is deciding its length. The face is the only thing that knows which
+ * rect is which zone, so the counter is drawn here, over the widget, in the room the zone's header
+ * keeps at its right.
  *
- * Zone A carries no header, so it gets neither. Band D carries the letter alone: the artboards
- * open the band with a D in the same ink as the zone letters, and its pages count nothing, being
- * eight fields across a strip rather than a cycle a driver pages through deliberately.
+ * Zone A carries no header, so it gets none, and band D counts nothing, being eight fields across a
+ * strip rather than a cycle a driver pages through deliberately. No zone draws its letter, the page
+ * name being what says what is showing (#708).
  */
 function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect, drawing: ThemeDrawing): Item[] {
-  const letters = drawing.zoneLetters ?? true;
-  if (zone === 'A') return [];
-  if (zone === 'D') return letters ? [bandLetter(r)] : [];
+  if (zone === 'A' || zone === 'D') return [];
   const density = densityForBox({ width: r.width, height: r.height });
   const house = zoneFrameMetrics(density, 'face');
   const metrics = drawing.zoneHeaderSize === undefined ? house : { ...house, size: drawing.zoneHeaderSize };
@@ -267,7 +263,6 @@ function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect, drawing: Theme
   const y = zoneTitleY(r, metrics);
   const counter = { kind: 'reserved', widest: widestCounter(zone, size) } as const;
   return [
-    ...(letters ? [label(`zone${zone}.letter`, zone, r.left + metrics.padX, y, zoneLetterWidth(size), { size })] : []),
     label(`zone${zone}.counter`, counter.widest, zoneCounterX(r, counter, metrics), y, zoneCounterWidth(counter, metrics), {
       size,
       hAlign: 'right',
@@ -275,20 +270,6 @@ function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect, drawing: Theme
       widest: counter.widest,
     }),
   ];
-}
-
-/**
- * Band D's letter, centred on the height of the band rather than on a header row it has none of.
- *
- * Drawn by the face for the same reason B's and C's are: the band's dashboard is one file per
- * rectangle and knows neither which zone it is serving nor that there is a letter. `bandMetrics`
- * is the table the band already lays itself out from, so the letter and the rank it stands before
- * take their padding from the same row of it.
- */
-function bandLetter(r: Rect): Item {
-  const size = ds.size.label;
-  const width = Math.ceil(measureText('BarlowMedium', 'D', size)) + 2;
-  return label('zoneD.letter', 'D', r.left + bandMetrics(r).padX, r.top + (r.height - size) / 2, width, { size });
 }
 
 export interface FaceBuildOptions {
