@@ -17,6 +17,9 @@
  *     its text, or a highlight, the driver's own row or a box over the face, which becomes inverse
  *     video: the box in the ink, its text in the ground. A filled box holding no text is a bar or a rule
  *     when it is thin, and drawn in the ink, and otherwise an area, drawn as its outline.
+ *   - A box, a dot or a gauge whose colour is bound says a state by it, a segment lit or not: the
+ *     binding is kept and every colour it can give is turned into the ink, or into the ghost's tone
+ *     where the house gives an unlit, dim or ground colour, so the segment still lights.
  *   - A picture is coloured artwork no ink can tint, and is not drawn.
  *
  * The flag is never handed to this pass: a flag that is not its colour is not a flag.
@@ -50,6 +53,18 @@ const COLOUR_BINDINGS: readonly BindingTarget[] = ['TextColor', 'BackgroundColor
 const expressionOf = (binding: Binding | undefined): string | undefined => (binding && 'formula' in binding && typeof binding.formula === 'string' ? binding.formula : undefined);
 
 const withoutColourBindings = <T extends Item>(item: T): T => withoutBindings(item as unknown as Extract<Item, { kind: T['kind'] }>, COLOUR_BINDINGS) as unknown as T;
+
+/** A bound colour turned over: every colour the expression can give is the ink, or the ghost's tone where the house gave one of its off greys. */
+function inkedExpression(expression: string): string {
+  const off = new Set([lcdColour('ground'), ds.color.surface.zone, ds.color.surface.raised, ds.color.surface.inset, ds.color.text.dim, ds.purpose.shift.unlit, ds.purpose.telltale.off].map((c) => c.toUpperCase()));
+  return expression.replace(/'#([0-9A-Fa-f]{6})'/g, (_, hex: string) => `'${off.has(`#${hex.toUpperCase()}`) ? ds.color.surface.zone : lcdColour('ink')}'`);
+}
+
+/** The item's bound colour, if any, turned over by {@link inkedExpression}. */
+const boundColour = (item: Item, target: BindingTarget): string | undefined => {
+  const expression = expressionOf(item.bindings?.[target]);
+  return expression === undefined ? undefined : inkedExpression(expression);
+};
 
 const filled = (colour: Hex | undefined): boolean => colour !== undefined && colour !== TRANSPARENT && colour !== lcdColour('ground');
 
@@ -133,6 +148,8 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
       }
       case 'rect': {
         const border = plain.border ? { ...plain.border, color: ink, colorBinding: undefined } : undefined;
+        const bound = boundColour(item, 'BackgroundColor');
+        if (bound !== undefined && !holdsText(plain.rect)) return [withMoreBindings<'rect'>({ ...plain, backgroundColor: ink, ...(border ? { border } : {}) }, { BackgroundColor: bound })];
         if (!filled(plain.backgroundColor)) return [{ ...plain, ...(border ? { border } : {}) }];
         const r = plain.rect;
         if (holdsText(r)) {
@@ -143,7 +160,12 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
         return [{ ...plain, backgroundColor: TRANSPARENT, border: { ...border, color: ink, top: OUTLINE, bottom: OUTLINE, left: OUTLINE, right: OUTLINE } }];
       }
       case 'ellipse':
-        return [{ ...plain, fillColor: filled(plain.fillColor) ? ink : plain.fillColor, strokeColor: ink, backgroundColor: TRANSPARENT }];
+        return [
+          withMoreBindings<'ellipse'>(
+            { ...plain, fillColor: filled(plain.fillColor) ? ink : plain.fillColor, strokeColor: ink, backgroundColor: TRANSPARENT },
+            { FillColor: boundColour(item, 'FillColor'), EllipseColor: boundColour(item, 'EllipseColor') },
+          ),
+        ];
       case 'chart':
         return [{ ...plain, lineColor: ink, backgroundColor: TRANSPARENT, ...(plain.border ? { border: { ...plain.border, color: ink, colorBinding: undefined } } : {}) }];
       case 'linearGauge':
@@ -155,8 +177,8 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
           {
             ...plain,
             backgroundColor: TRANSPARENT,
-            trackColor: ground,
-            trackBorderColor: ink,
+            trackColor: ink,
+            trackBorderColor: ground,
             ...(plain.alternateTrackSectorColor ? { alternateTrackSectorColor: ink } : {}),
             overrideColorsWithCarClassColors: false,
             mapShadow: false,

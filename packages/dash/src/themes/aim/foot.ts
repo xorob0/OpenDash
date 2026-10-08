@@ -141,11 +141,16 @@ const LAMP_WORDS: Readonly<Record<string, string>> = {
 
 /** The car page: the lamps as words across the band, as many as fit, the tail shed as the house's rank sheds it. */
 function lampWords(frame: Rect, prefix: string): Item[] {
-  const size = Math.min(FOOT.status.size, Math.floor(frame.height / 2.4));
-  const pad = Math.round(size / 3);
-  const cell = Math.max(...Object.values(LAMP_WORDS).map((word) => segmentWidth('DSEG14Regular', word, size))) + 2 * pad;
-  const gap = Math.round(size / 2);
-  const fits = Math.max(1, Math.min(TELLTALES.length, Math.floor((frame.width + gap) / (cell + gap))));
+  // The largest size at which all twelve fit, never over the status line's nor under 10 px, and as many as fit at that.
+  const geometry = (size: number) => {
+    const pad = Math.round(size / 3);
+    const cell = Math.max(...Object.values(LAMP_WORDS).map((word) => segmentWidth('DSEG14Regular', word, size))) + 2 * pad;
+    const gap = Math.round(size / 2);
+    return { size, pad, cell, gap, fits: Math.max(1, Math.min(TELLTALES.length, Math.floor((frame.width + gap) / (cell + gap)))) };
+  };
+  let g = geometry(Math.min(FOOT.status.size, Math.floor(frame.height / 2.4)));
+  while (g.fits < TELLTALES.length && g.size > 10) g = geometry(g.size - 1);
+  const { size, pad, cell, gap, fits } = g;
   const top = Math.round(frame.top + (frame.height - size) / 2);
   return TELLTALES.slice(0, fits).flatMap((lamp, i) => {
     const word = LAMP_WORDS[lamp.id] ?? lamp.id.toUpperCase();
