@@ -7,9 +7,9 @@
       "width": 1280,
       "height": 400,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-1280x480.png": {
@@ -18,9 +18,9 @@
       "width": 1280,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-1280x720.png": {
@@ -29,9 +29,9 @@
       "width": 1280,
       "height": 720,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-480-round.png": {
@@ -40,9 +40,9 @@
       "width": 480,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-600x686.png": {
@@ -51,9 +51,9 @@
       "width": 600,
       "height": 686,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-800-round.png": {
@@ -62,9 +62,9 @@
       "width": 800,
       "height": 800,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-800x286.png": {
@@ -73,9 +73,9 @@
       "width": 800,
       "height": 286,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-800x480.png": {
@@ -84,9 +84,9 @@
       "width": 800,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-850x480.png": {
@@ -95,9 +95,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-companion-portrait.png": {
@@ -106,9 +106,9 @@
       "width": 480,
       "height": 850,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-companion.png": {
@@ -117,9 +117,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-pit-wall-portrait.png": {
@@ -128,9 +128,9 @@
       "width": 1080,
       "height": 1920,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash-pit-wall.png": {
@@ -139,9 +139,9 @@
       "width": 1920,
       "height": 1080,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "opendash.png": {
@@ -150,9 +150,9 @@
       "width": 1920,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "2b876e2",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-carSettings.png": {
@@ -161,9 +161,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-damage.png": {
@@ -183,9 +183,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-energy.png": {
@@ -194,9 +194,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-fuel.png": {
@@ -205,9 +205,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-gear.png": {
@@ -216,9 +216,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-inputs.png": {
@@ -227,9 +227,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-lapHistory.png": {
@@ -249,9 +249,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-leaderboard.png": {
@@ -260,9 +260,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-opponents.png": {
@@ -271,9 +271,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-pitView.png": {
@@ -282,9 +282,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-radar.png": {
@@ -293,9 +293,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-relative.png": {
@@ -304,9 +304,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-sectors.png": {
@@ -315,9 +315,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-session.png": {
@@ -326,9 +326,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-speedo.png": {
@@ -337,9 +337,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-stint.png": {
@@ -348,9 +348,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-track.png": {
@@ -359,9 +359,9 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "page-trackRivals.png": {
@@ -381,9 +381,97 @@
       "width": 850,
       "height": 480,
       "scenario": "gallery",
-      "version": "0.3.0-rc.6",
-      "commit": "3720e1e",
-      "date": "2026-09-22",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-1920x480.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 1920x480",
+      "width": 1920,
+      "height": 480,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-1280x480.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 1280x480",
+      "width": 1280,
+      "height": 480,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-1280x400.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 1280x400",
+      "width": 1280,
+      "height": 400,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-850x480.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 850x480",
+      "width": 850,
+      "height": 480,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-800x480.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 800x480",
+      "width": 800,
+      "height": 480,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-1280x720.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 1280x720",
+      "width": 1280,
+      "height": 720,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-800x286.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 800x286",
+      "width": 800,
+      "height": 286,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
+      "simHubVersion": "9.12.6"
+    },
+    "opendash-porsche-600x686.png": {
+      "kind": "package",
+      "package": "OpenDash Porsche 600x686",
+      "width": 600,
+      "height": 686,
+      "scenario": "gallery",
+      "version": "0.3.0-rc.12",
+      "commit": "8fe8b99a",
+      "date": "2026-10-08",
       "simHubVersion": "9.12.6"
     },
     "panel-rig.png": {
