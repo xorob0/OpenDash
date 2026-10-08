@@ -8,11 +8,11 @@
  * are checked here against the files the package ships.
  */
 import { describe, expect, test } from 'bun:test';
-import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type MeasuredFace } from '../src/design/advances.ts';
+import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type SegmentFace, type TextFace } from '../src/design/advances.ts';
 import { UNTIMED_MARK } from '../src/second/values.ts';
 
 /** Which bundled file each measured face is measured from. */
-const FILES: Record<MeasuredFace, string> = {
+const FILES: Record<TextFace, string> = {
   BarlowMedium: 'Barlow-Medium.ttf',
   BarlowBold: 'Barlow-Bold.ttf',
   BarlowCondensedSemiBold: 'BarlowCondensed-SemiBold.ttf',
@@ -20,7 +20,19 @@ const FILES: Record<MeasuredFace, string> = {
   BarlowCondensedLight: 'BarlowCondensed-Light.ttf',
 };
 
-const FACES = Object.keys(FILES) as MeasuredFace[];
+const FACES = Object.keys(FILES) as TextFace[];
+
+/**
+ * The segment faces a theme ships (#204), which carry fewer characters than Barlow: no `#`, no `;`,
+ * no brackets, and DSEG7 none of the punctuation a seven-segment cell cannot draw. Their tables hold
+ * exactly the characters the file has, so a character outside them falls back as an accented letter
+ * does in Barlow, and is measured at the fallback rather than at a width the face never drew.
+ */
+const SEGMENT_FILES: Record<SegmentFace, string> = {
+  DSEG7Regular: 'DSEG7Classic-Regular.ttf',
+  DSEG7Bold: 'DSEG7Classic-Bold.ttf',
+  DSEG14Regular: 'DSEG14Classic-Regular.ttf',
+};
 
 /** Every character any face's table carries, which is the same set for all five. */
 const CHARACTERS = [...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~', '°', '·', '−', '–', 'Δ', ELLIPSIS, UNTIMED_MARK];
@@ -39,6 +51,23 @@ describe('the advance table is the fonts', () => {
           table: Math.round(m.advance * 1000) / 1000,
         });
       }
+    });
+  }
+});
+
+describe('the segment faces are their fonts', () => {
+  for (const face of Object.keys(SEGMENT_FILES) as SegmentFace[]) {
+    test(`${face} advances every character it carries as its file does, and carries none the file has not`, async () => {
+      const { loadFont, measure } = await import('../../../tools/measure-font/measure.ts');
+      const font = loadFont(`packages/dash/fonts/${SEGMENT_FILES[face]}`);
+      for (const ch of CHARACTERS) {
+        const m = measure(font, ch);
+        const table = Math.round(measureText(face, ch, 1000)) / 1000;
+        expect({ face, ch, table }).toMatchObject({ table: m ? Math.round(m.advance * 1000) / 1000 : FALLBACK_ADVANCE });
+      }
+      // The fallback is under the cell, so a character a segment face does not carry is inside any
+      // box measured from the face's own glyphs.
+      expect({ face, under: FALLBACK_ADVANCE <= widestGlyph(face).advance }).toMatchObject({ under: true });
     });
   }
 });
