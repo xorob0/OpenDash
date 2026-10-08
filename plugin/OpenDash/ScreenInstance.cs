@@ -46,9 +46,21 @@ namespace OpenDashPlugin
         /// Kept beside the package rather than read off it, because the package is the one thing that can go: a
         /// themed screen whose package a later build no longer carries must keep its folder rather than be written
         /// again from the default package of its size (ADR 0016), and only the screen can still say what it was.
-        /// It also decides which cars SimHub's per-car playlist switches to the screen (#199).
+        /// It also decides which cars SimHub's per-car playlist switches to the screen (#199), and band D's
+        /// catalogue on a face: the theme's band pages follow the house's eight (#718), so the face is told
+        /// whenever either changes.
         /// </remarks>
-        public string Theme { get; set; }
+        public string Theme
+        {
+            get { return theme; }
+            set
+            {
+                theme = value;
+                if (face != null) face.UseTheme(value);
+            }
+        }
+
+        private string theme;
 
         /// <summary>
         /// Whether the migration made this screen and the driver has neither kept it nor removed it since.
@@ -95,8 +107,19 @@ namespace OpenDashPlugin
 
         public int? LayoutY { get; set; }
 
-        /// <summary>The zones, the bar and the glance. Null on a screen that is not a face.</summary>
-        public FaceSettings Face { get; set; }
+        /// <summary>The zones, the bar and the glance. Null on a screen that is not a face. Drawn in the
+        /// screen's <see cref="Theme"/>, which it is handed whenever either is set.</summary>
+        public FaceSettings Face
+        {
+            get { return face; }
+            set
+            {
+                face = value;
+                if (value != null) value.UseTheme(theme);
+            }
+        }
+
+        private FaceSettings face;
 
         /// <summary>
         /// How this face draws a flag: "band" or "full". Null on a screen that is not a face.
@@ -419,7 +442,9 @@ namespace OpenDashPlugin
 
             if (IsFace)
             {
-                if (Face == null) Face = new FaceSettings();
+                // A face nothing has configured opens as its theme's does: on a Porsche, band D on the
+                // Porsche row (#718).
+                if (Face == null) Face = FaceSettings.For(Theme);
                 Face.Normalise();
                 FlagFormat = Contract.NormaliseChoice(FlagFormat, Contract.FlagFormats, Contract.DefaultFlagFormat);
                 LapReview = Contract.NormaliseChoice(LapReview, Contract.LapReviewModes, Contract.DefaultLapReview);

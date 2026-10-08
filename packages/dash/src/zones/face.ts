@@ -15,7 +15,7 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone, type ThemeEntry } from '../contract.ts';
 import { withMoreBindings } from '../bind.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
@@ -84,7 +84,7 @@ export const zonesOf = (layout: ZoneLayout, regions: Regions = zoneRegions(layou
  */
 export function faceItems(
   layout: ZoneLayout,
-  { revBar: withRevBar = true, regions = zoneRegions(layout), drawing = {} }: { revBar?: boolean; regions?: Regions; drawing?: ThemeDrawing } = {},
+  { revBar: withRevBar = true, regions = zoneRegions(layout), drawing = {}, theme }: { revBar?: boolean; regions?: Regions; drawing?: ThemeDrawing; theme?: ThemeEntry } = {},
 ): Item[] {
   const items: Item[] = [];
   const band_ = regionRect(regions, 'band');
@@ -118,7 +118,7 @@ export function faceItems(
 
   const face = sizeOf(layout);
   for (const zone of FACE_ZONE_LETTERS) {
-    items.push(zoneWidget(`zone${zone}`, face, zone, zoneRect(regions, zone)));
+    items.push(zoneWidget(`zone${zone}`, face, zone, zoneRect(regions, zone), theme));
     items.push(...zoneHeaderParts(face, zone, zoneRect(regions, zone), drawing));
   }
 
@@ -294,7 +294,7 @@ export interface BuiltFace {
  * The name follows the flag rather than being passed beside it, so a screen cannot end up named for
  * one arrangement and drawn as the other.
  */
-function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean, drawing: ThemeDrawing): Screen {
+function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean, drawing: ThemeDrawing, theme?: ThemeEntry): Screen {
   return {
     name: withRevBar ? FACE_SCREEN_NAME : FACE_SCREEN_NAME_NO_REV_BAR,
     inGame: true,
@@ -303,7 +303,7 @@ function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean, d
     idle: false,
     pit: true,
     backgroundColor: layout.background,
-    items: faceItems(layout, { revBar: withRevBar, regions, drawing }),
+    items: faceItems(layout, { revBar: withRevBar, regions, drawing, theme }),
     // This face's own answer, not the rig's: a wheel that carries LEDs across its top and a display
     // that does not are two screens on one rig, and the switch used to answer for both at once.
     enabledExpression: withRevBar ? not(zoneSetting.revBarIs(sizeOf(layout), 'off')) : zoneSetting.revBarIs(sizeOf(layout), 'off'),
@@ -313,8 +313,11 @@ function faceScreen(layout: ZoneLayout, regions: Regions, withRevBar: boolean, d
 /**
  * A zone face and the dashboards its zones cycle, in the regions a theme gives it or the house
  * face's own, drawn the house's way except where a theme's drawing says otherwise.
+ *
+ * `theme` is the theme's catalogue entry, which says what band D opens on; left out, the band opens
+ * where the house's does.
  */
-export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions, regions: Regions = zoneRegions(layout), drawing: ThemeDrawing = {}): BuiltFace {
+export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions, regions: Regions = zoneRegions(layout), drawing: ThemeDrawing = {}, theme?: ThemeEntry): BuiltFace {
   const metadata: DashboardMetadata = {
     title: layout.folder,
     author: opts.author,
@@ -331,7 +334,7 @@ export function buildZoneFace(layout: ZoneLayout, opts: FaceBuildOptions, region
     // One idle screen for the face and not one per arrangement: the rev bar's setting says how the
     // face is laid out while a game is running, and a rig at rest has no rev bar to arrange. It goes
     // last, so screen 0 is still the face SimHub previews and the tests reach for.
-    screens: [faceScreen(layout, regions, true, drawing), faceScreen(layout, off, false, drawing), idleScreen({ frame: rect(0, 0, layout.width, layout.height), background: layout.background })],
+    screens: [faceScreen(layout, regions, true, drawing, theme), faceScreen(layout, off, false, drawing, theme), idleScreen({ frame: rect(0, 0, layout.width, layout.height), background: layout.background })],
     metadata,
   };
   // Both arrangements' rectangles, deduplicated by zoneDashboardsFor: the zones the rev bar's room

@@ -1010,6 +1010,29 @@ the face draws one there as well, so that a face whose zone D widget has not res
 
 Fuel is the default because it is what a driver checks on a straight.
 
+**A theme's band pages come after the house's eight** ([#718](https://github.com/xorob0/OpenDash/issues/718)).
+The eight above are the contract's, and a theme may add pages after them, never between or before,
+since a zone's setting is its page's index ([ADR 0015](../decisions/0015-car-themes.md)). The pages are
+part of the theme's catalogue entry, `bandPages` in `THEME_CATALOGUE` and `BandPages` in
+`Contract.Themes`, so both halves of the contract count them: band D's catalogue on a face of a theme
+is the house's eight and then the theme's, numbered on from 8 (`bandDPages`, `pagesForZone(zone,
+theme)`), its whole-catalogue mask is that many bits wide, and the band opens on the theme's first page
+rather than on fuel (`defaultZonePage`), with the plugin as without it. The drawing of each page is the
+theme's `bandPages` hook, and the build refuses a theme whose drawing and catalogue entry do not name
+the same pages in the same order. The default theme adds none, so a default face is the eight above
+exactly as before.
+
+| Theme | Pages added | Index | Band D opens on |
+|---|---|---|---|
+| OpenDash (default) | none | | Fuel, 0 |
+| Porsche | Porsche: the badge, the TC and ABS boxes, the tyre box and Brake Bias, the car's foot (`porscheFoot`) | 8 | Porsche, 8 |
+
+The plugin reads the count, the mask width, the order, the default page and the names per screen, from
+the screen's theme: a Porsche screen added from the Add sheet opens band D on the Porsche row with all
+nine pages ticked, and its button steps through the eight house pages and back to it. A Porsche screen
+whose settings were written before #718 keeps the eight-page mask and the start it had, and is offered
+the Porsche row unticked rather than given it behind its driver's back.
+
 **Corner blocks.** A block at each end on the wider faces: incidents against their limit and the
 track state on the left; DRS, push to pass, spotter lamps and both clocks on the right. They are
 drawn at 1920 × 480, 1280 × 480, 1280 × 400 and 1280 × 720, and absent at 850 × 480, 800 × 480,

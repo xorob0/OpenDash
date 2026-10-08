@@ -6,6 +6,7 @@
  * Kept apart from `themes/index.ts` because it builds faces, which needs `ds`, whereas the registry
  * is read before `ds` exists.
  */
+import { themeEntry } from '../contract.ts';
 import type { Size } from '../design/geometry.ts';
 import { THEME_ID } from '../tokens.ts';
 import { ZONE_FACES, buildZoneFace, type BuiltFace, type FaceBuildOptions, type ZoneLayout } from '../zones/index.ts';
@@ -61,11 +62,19 @@ export function buildThemeFace(themeId: string, size: Size, opts: FaceBuildOptio
   const house = ZONE_FACES.find((f) => f.width === size.width && f.height === size.height);
   if (!house) throw new Error(`the ${themeId} theme claims ${named(size)}, which is not a face that ships`);
   const drawing = THEME_DRAWINGS[themeId] ?? {};
+  // The plugin cycles band D by the catalogue entry's list and the face draws the drawing's, so the
+  // two are one list or a page is drawn that no rig can reach, or reached and drawn blank (#718).
+  const entry = themeEntry(themeId);
+  const listed = (entry?.bandPages ?? []).map((p) => p.id);
+  const drawn = (drawing.bandPages ?? []).map((p) => p.id);
+  if (JSON.stringify(listed) !== JSON.stringify(drawn)) {
+    throw new Error(`the ${themeId} theme draws band pages ${JSON.stringify(drawn)} and its catalogue entry lists ${JSON.stringify(listed)}; they have to be the same pages in the same order`);
+  }
   const titled = folder === undefined ? house : { ...house, folder };
   const layout = drawing.bandCorners === undefined ? titled : { ...titled, bandCorners: drawing.bandCorners };
   const regions = anatomy.regions(layout);
   checkRegions(regions, size, `the ${themeId} theme at ${named(size)}`);
-  return { layout, regions, built: buildZoneFace(layout, opts, regions, drawing) };
+  return { layout, regions, built: buildZoneFace(layout, opts, regions, drawing, entry) };
 }
 
 /** Every face of a theme, one per size it claims, in the order it claims them. */

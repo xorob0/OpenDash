@@ -38,6 +38,22 @@ describe('a seeded screen', () => {
 
   test('refuses a page no catalogue has', () => {
     expect(() => screenFor(pkg, ['gearSpeedRevs', 'nonesuch', 'relative', 'fuel'])).toThrow(/catalogue/);
+    // The Porsche's row is a page of a Porsche's band, and of no other.
+    expect(() => screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'porscheFoot'])).toThrow(/band D has no page "porscheFoot"/);
+  });
+
+  test('carries its theme, which gives a Porsche band D its own row and a nine-page mask (#718)', () => {
+    const porsche: ManifestPackage = { folder: 'OpenDash Porsche 1280x480', kind: 'dash', width: 1280, height: 480, file: 'OpenDash Porsche 1280x480.simhubdash', theme: 'porsche' };
+    const screen = screenFor(porsche, ['gearSpeedRevs', 'lapTimes', 'relative', 'porscheFoot']);
+    const face = screen.Face as { Zones: number[]; Starts: number[]; Masks: number[] };
+    expect(screen.Theme).toBe('porsche');
+    expect(screen.Folder).toBe('OpenDash Porsche 1280x480');
+    expect(face.Zones[3]).toBe(8);
+    expect(face.Starts[3]).toBe(8);
+    expect(face.Masks[3]).toBe(511);
+    // And a default package's screen says nothing of a theme, as it never did.
+    expect(Object.keys(screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']))).not.toContain('Theme');
+    expect((screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']).Face as { Masks: number[] }).Masks[3]).toBe(255);
   });
 });
 
@@ -63,6 +79,8 @@ describe('the gallery rig', () => {
  * The public settable properties a C# settings class declares, which are the JSON fields Json.NET
  * reads into it. Read from the source as text, the way ThemeTests reads tokens.json: the plugin's
  * classes cannot be loaded from here, and a field they do not declare is dropped without a word.
+ * Both shapes count: `{ get; set; }` on one line, and a property with a body whose setter does more,
+ * as a screen's `Theme` and `Face` do, each handing the theme to the other (#718).
  */
 function csharpFields(file: string, className: string): Set<string> {
   const text = readFileSync(path.join(repoRoot, 'plugin', 'OpenDash', file), 'utf8');
@@ -70,7 +88,9 @@ function csharpFields(file: string, className: string): Set<string> {
   if (start < 0) throw new Error(`${file} has no class ${className}`);
   const next = text.slice(start + 1).search(/\n {4}public (sealed |static )?class /);
   const body = next < 0 ? text.slice(start) : text.slice(start, start + 1 + next);
-  return new Set([...body.matchAll(/public [\w<>[\],?. ]+? (\w+) \{ get; set; \}/g)].map((m) => m[1]!));
+  const auto = [...body.matchAll(/public [\w<>[\],?. ]+? (\w+) \{ get; set; \}/g)].map((m) => m[1]!);
+  const bodied = [...body.matchAll(/public [\w<>[\],?. ]+? (\w+)\r?\n\s*\{\r?\n\s*get \{[^\n]*\}\r?\n\s*set\b/g)].map((m) => m[1]!);
+  return new Set([...auto, ...bodied]);
 }
 
 /** A `public const string` of Contract.cs, which is where the kind names are spelled. */

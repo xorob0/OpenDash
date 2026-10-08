@@ -782,7 +782,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(block.Success, "THEME_CATALOGUE not found in contract.ts");
             var rows = Regex.Matches(
                 block.Groups["items"].Value,
-                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\])\s*\}");
+                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\]),\s*bandPages:\s*\[(?<bands>[^\]]*)\]\s*\}");
             Assert.Equal(Contract.Themes.Count, rows.Count);
             Assert.True(Contract.Themes[0].IsDefault);
             for (var i = 0; i < rows.Count; i++)
@@ -797,6 +797,11 @@ namespace OpenDashPlugin.Tests
                     ? Contract.FaceSizes.Select(f => f.Width + "x" + f.Height)
                     : Regex.Matches(sizes, @"faceSizeAt\((\d+),\s*(\d+)\)").Cast<Match>().Select(m => m.Groups[1].Value + "x" + m.Groups[2].Value);
                 Assert.Equal(expected, theme.Sizes.Select(f => f.Width + "x" + f.Height));
+                // Its band pages, id and name, in order: the plugin cycles band D by this list and the
+                // dash draws its band dashboard by the same one (#718).
+                var bands = Regex.Matches(rows[i].Groups["bands"].Value, @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)'\s*\}")
+                    .Cast<Match>().Select(m => m.Groups["id"].Value + "/" + m.Groups["name"].Value);
+                Assert.Equal(bands, theme.BandPages.Select(p => p.Id + "/" + p.Name));
             }
             Assert.Equal(Contract.Themes.Count, Contract.Themes.Select(t => t.Id).Distinct().Count());
             Assert.Equal("OpenDash Porsche 1280x480", Contract.Themes.Single(t => t.Id == "porsche").FolderAt(1280, 480));

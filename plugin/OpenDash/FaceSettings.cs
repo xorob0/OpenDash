@@ -50,6 +50,78 @@ namespace OpenDashPlugin
         private int glanceZone = -1;
         private int glanceRestore = -1;
 
+        /// <summary>
+        /// The id of the theme the face is drawn in, or null for the default look: what decides band D's
+        /// catalogue, nine pages on a Porsche face and eight on every other (#718).
+        /// </summary>
+        /// <remarks>
+        /// A field and two methods rather than a property, so that Json.NET leaves it out of the file: the
+        /// theme is the screen's (<see cref="ScreenInstance.Theme"/>), which hands it here, and a settings file
+        /// written before #718 is the same file after it.
+        /// </remarks>
+        private string theme;
+
+        /// <summary>The theme the face is drawn in, or null for the default look.</summary>
+        public string ThemeId() { return theme; }
+
+        /// <summary>Says which theme the face is drawn in. Changes nothing stored: <see cref="Normalise"/> is
+        /// what fits the zones to the theme's catalogues, and every reader clamps in the meantime.</summary>
+        public void UseTheme(string themeId)
+        {
+            theme = string.IsNullOrEmpty(themeId) ? null : themeId;
+        }
+
+        /// <summary>
+        /// A face as it starts on a screen of a theme: every zone on its default page with every page
+        /// enabled, band D on the theme's first band page where it has one.
+        /// </summary>
+        public static FaceSettings For(string themeId)
+        {
+            var face = new FaceSettings();
+            face.UseTheme(themeId);
+            face.Zones = Contract.DefaultFaceZones(face.theme);
+            face.Masks = Contract.DefaultFaceZoneMasks(face.theme);
+            face.Starts = Contract.DefaultFaceZones(face.theme);
+            face.Orders = Contract.DefaultFaceZoneOrders(face.theme);
+            return face;
+        }
+
+        /// <summary>A zone's catalogue on this face, by its letter: band D's carries the theme's band pages.</summary>
+        public IReadOnlyList<ZonePage> Pages(string letter)
+        {
+            return FacePages.For(letter, theme);
+        }
+
+        /// <summary>The name of a page of a zone of this face, or "Page n" outside its catalogue.</summary>
+        public string PageName(string letter, int page)
+        {
+            return FacePages.NameOf(letter, page, theme);
+        }
+
+        /// <summary>The id of a page of a zone of this face, or null outside its catalogue.</summary>
+        public string PageId(string letter, int page)
+        {
+            return FacePages.IdOf(letter, page, theme);
+        }
+
+        /// <summary>How many pages a zone of this face can show, by its index.</summary>
+        private int PageCount(int index)
+        {
+            return Contract.FaceZonePageCount(index, theme);
+        }
+
+        /// <summary>The page a zone of this face opens on by default, by its index.</summary>
+        private int DefaultPage(int index)
+        {
+            return Contract.DefaultFaceZonePage(index, theme);
+        }
+
+        /// <summary>The glance, or the default where it names a page this face does not carry.</summary>
+        public int NormalisedQuickGlance()
+        {
+            return Contract.NormaliseQuickGlance(QuickGlance, theme);
+        }
+
         /// <summary>Whether a glance is being held on this face; a second press while one is does nothing.</summary>
         public bool GlanceHeld { get { return glanceZone >= 0; } }
 
@@ -62,14 +134,14 @@ namespace OpenDashPlugin
         /// </summary>
         public void Normalise()
         {
-            var zones = Contract.DefaultFaceZones();
-            var masks = Contract.DefaultFaceZoneMasks();
-            var starts = Contract.DefaultFaceZones();
+            var zones = Contract.DefaultFaceZones(theme);
+            var masks = Contract.DefaultFaceZoneMasks(theme);
+            var starts = Contract.DefaultFaceZones(theme);
             var orders = new int[zones.Length][];
             for (var i = 0; i < zones.Length; i++)
             {
-                var pages = Contract.FaceZonePageCounts[i];
-                var all = Contract.DefaultZoneMask(i);
+                var pages = PageCount(i);
+                var all = Contract.DefaultZoneMask(i, theme);
 
                 orders[i] = Contract.NormaliseOrder(Orders != null && i < Orders.Length ? Orders[i] : null, pages);
 
@@ -77,7 +149,7 @@ namespace OpenDashPlugin
                 if (masks[i] == 0) masks[i] = all;
 
                 // Forward in the zone's own order, which is where its button would carry on to.
-                if (Starts != null && i < Starts.Length) starts[i] = Contract.NormalisePage(Starts[i], pages, Contract.DefaultFaceZonePages[i]);
+                if (Starts != null && i < Starts.Length) starts[i] = Contract.NormalisePage(Starts[i], pages, DefaultPage(i));
                 starts[i] = Contract.FirstEnabledInOrder(starts[i], masks[i], orders[i]);
 
                 if (Zones != null && i < Zones.Length) zones[i] = Contract.NormalisePage(Zones[i], pages, starts[i]);
@@ -105,23 +177,23 @@ namespace OpenDashPlugin
             }
             BarFields = bar;
 
-            QuickGlance = Contract.NormaliseQuickGlance(QuickGlance);
+            QuickGlance = NormalisedQuickGlance();
         }
 
         /// <summary>Page a zone is showing, by its letter. Safe to call before Normalise().</summary>
         public int Zone(string letter)
         {
             var index = ZoneIndex(letter);
-            if (Zones == null || index >= Zones.Length) return Contract.DefaultFaceZonePages[index];
-            return Contract.NormalisePage(Zones[index], Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+            if (Zones == null || index >= Zones.Length) return DefaultPage(index);
+            return Contract.NormalisePage(Zones[index], PageCount(index), DefaultPage(index));
         }
 
         /// <summary>Page a zone opens on, by its letter. Safe to call before Normalise().</summary>
         public int Start(string letter)
         {
             var index = ZoneIndex(letter);
-            if (Starts == null || index >= Starts.Length) return Contract.DefaultFaceZonePages[index];
-            return Contract.NormalisePage(Starts[index], Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+            if (Starts == null || index >= Starts.Length) return DefaultPage(index);
+            return Contract.NormalisePage(Starts[index], PageCount(index), DefaultPage(index));
         }
 
         /// <summary>Sets the page a zone opens on, and the page it is showing with it: the panel is in
@@ -130,7 +202,7 @@ namespace OpenDashPlugin
         {
             var index = ZoneIndex(letter);
             EnsureArrays();
-            var clamped = Contract.NormalisePage(page, Contract.FaceZonePageCounts[index], Contract.DefaultFaceZonePages[index]);
+            var clamped = Contract.NormalisePage(page, PageCount(index), DefaultPage(index));
             Starts[index] = clamped;
             Zones[index] = clamped;
             SetPageEnabled(letter, clamped, true);
@@ -156,9 +228,10 @@ namespace OpenDashPlugin
         public int Mask(string letter)
         {
             var index = ZoneIndex(letter);
-            if (Masks == null || index >= Masks.Length) return Contract.DefaultZoneMask(index);
-            var mask = Masks[index] & Contract.DefaultZoneMask(index);
-            return mask == 0 ? Contract.DefaultZoneMask(index) : mask;
+            var all = Contract.DefaultZoneMask(index, theme);
+            if (Masks == null || index >= Masks.Length) return all;
+            var mask = Masks[index] & all;
+            return mask == 0 ? all : mask;
         }
 
         /// <summary>The order a zone cycles in, by its letter: every page of its catalogue once. Safe to
@@ -167,7 +240,7 @@ namespace OpenDashPlugin
         {
             var index = ZoneIndex(letter);
             var stored = Orders != null && index < Orders.Length ? Orders[index] : null;
-            return Contract.NormaliseOrder(stored, Contract.FaceZonePageCounts[index]);
+            return Contract.NormaliseOrder(stored, PageCount(index));
         }
 
         /// <summary>
@@ -182,7 +255,7 @@ namespace OpenDashPlugin
         {
             var index = ZoneIndex(letter);
             EnsureArrays();
-            Orders[index] = Contract.NormaliseOrder(order, Contract.FaceZonePageCounts[index]);
+            Orders[index] = Contract.NormaliseOrder(order, PageCount(index));
         }
 
         /// <summary>
@@ -204,7 +277,7 @@ namespace OpenDashPlugin
             var page = Zone(letter);
             var mask = Mask(letter);
             var stored = Orders != null && index < Orders.Length ? Orders[index] : null;
-            var order = IsWholeOrder(stored, Contract.FaceZonePageCounts[index]) ? stored : Order(letter);
+            var order = IsWholeOrder(stored, PageCount(index)) ? stored : Order(letter);
             var position = 1;
             foreach (var candidate in order)
             {
@@ -233,7 +306,7 @@ namespace OpenDashPlugin
         public bool PageEnabled(string letter, int page)
         {
             var index = ZoneIndex(letter);
-            if (page < 0 || page >= Contract.FaceZonePageCounts[index]) return false;
+            if (page < 0 || page >= PageCount(index)) return false;
             return (Mask(letter) & (1 << page)) != 0;
         }
 
@@ -245,7 +318,7 @@ namespace OpenDashPlugin
         public void SetPageEnabled(string letter, int page, bool enabled)
         {
             var index = ZoneIndex(letter);
-            if (page < 0 || page >= Contract.FaceZonePageCounts[index]) throw new ArgumentOutOfRangeException("page");
+            if (page < 0 || page >= PageCount(index)) throw new ArgumentOutOfRangeException("page");
             EnsureArrays();
             var mask = Mask(letter);
             var next = enabled ? mask | (1 << page) : mask & ~(1 << page);
@@ -325,7 +398,7 @@ namespace OpenDashPlugin
         {
             if (GlanceHeld) return;
             EnsureArrays();
-            var glance = Contract.NormaliseQuickGlance(QuickGlance);
+            var glance = NormalisedQuickGlance();
             var zone = Contract.QuickGlanceZone(glance);
             glanceZone = zone;
             glanceRestore = Zones[zone];
@@ -354,6 +427,7 @@ namespace OpenDashPlugin
                 BarFields = (int[])BarFields?.Clone(),
                 QuickGlance = QuickGlance,
                 Orders = CloneOrders(Orders),
+                theme = theme,
             };
         }
 
@@ -400,7 +474,7 @@ namespace OpenDashPlugin
             if (Orders == null || Orders.Length != Contract.FaceZoneLetters.Length) return false;
             for (var i = 0; i < Orders.Length; i++)
             {
-                if (!IsWholeOrder(Orders[i], Contract.FaceZonePageCounts[i])) return false;
+                if (!IsWholeOrder(Orders[i], PageCount(i))) return false;
             }
             return true;
         }
