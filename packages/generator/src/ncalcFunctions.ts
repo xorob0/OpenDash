@@ -204,6 +204,8 @@ export interface FunctionCall {
   /** As written, for the message. */
   raw: string;
   argumentCount: number;
+  /** Each argument's source text, trimmed, in order; as many as `argumentCount`. */
+  args: string[];
   /** Index in the expression where the name starts. */
   at: number;
 }
@@ -255,6 +257,8 @@ export function functionCalls(expression: string): FunctionCall[] {
     let depth = 0;
     let commas = 0;
     let seenArgument = false;
+    let argStart = after + 1;
+    const args: string[] = [];
     let j = after;
     for (; j < expression.length; j++) {
       const c = expression[j]!;
@@ -285,11 +289,14 @@ export function functionCalls(expression: string): FunctionCall[] {
       }
       if (c === ',' && depth === 1) {
         commas += 1;
+        args.push(expression.slice(argStart, j).trim());
+        argStart = j + 1;
         continue;
       }
       if (!/\s/.test(c)) seenArgument = true;
     }
-    calls.push({ name, raw: expression.slice(i, Math.min(j + 1, expression.length)), argumentCount: seenArgument ? commas + 1 : 0, at: i });
+    if (seenArgument) args.push(expression.slice(argStart, j).trim());
+    calls.push({ name, raw: expression.slice(i, Math.min(j + 1, expression.length)), argumentCount: seenArgument ? commas + 1 : 0, args, at: i });
     i = end;
   }
   return calls;
