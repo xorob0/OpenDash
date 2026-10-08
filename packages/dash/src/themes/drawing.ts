@@ -92,6 +92,13 @@ export interface ThemeDrawing {
    * and the body the page is drawn in, given the zone's frame and the house's body under its header.
    */
   moduleFrame?(page: { id: string; name: string }, frame: Rect, body: Rect): { items: Item[]; body: Rect };
+  /**
+   * One of zone A's pages drawn the theme's way, in place of the house's, or undefined for a page the
+   * theme leaves to the house. The AiM's gear and speed are figures of its own faces (#204).
+   */
+  zoneAPage?(page: string, frame: Rect, prefix: string): Item[] | undefined;
+  /** Whether the face draws each module zone's page counter; the house does, and a display that counts no pages does not. */
+  zoneCounters?: boolean;
   /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */

@@ -1130,6 +1130,7 @@ namespace OpenDashPlugin
         {
             new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes),
             new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche992cup" }, new[] { FaceOf(1280, 480).Value }),
+            new ThemeEntry("aim", "AiM", new[] { "Global Mazda MX-5 Cup", "Legends Ford Coupe", "FIA Cross Car" }, new[] { "mx5 mx52016" }, FaceSizes),
         };
 
         /// <summary>Whether a prefix names a face that ships, for reading a settings file written by another version.</summary>

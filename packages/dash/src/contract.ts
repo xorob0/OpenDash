@@ -931,10 +931,15 @@ function faceSizeAt(width: number, height: number): FaceSize {
  * The Porsche is here before its code is (#205 draws it), and the build says so and builds nothing
  * for it until `packages/dash/src/themes/porsche/` exists. The two Cup and legacy car paths that #205
  * leaves to be read on the VM are left out rather than guessed.
+ *
+ * The AiM is one LCD for the three iRacing cars that carry an AiM unit (#204), at every size. The
+ * MX-5 Cup's path is the one the ticket expects; the Legends' and the Cross Car's are to be read on
+ * the VM with the car loaded and are left out until they are, as the Porsche's two were.
  */
 export const THEME_CATALOGUE: readonly ThemeEntry[] = [
   { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES },
   { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: [faceSizeAt(1280, 480)] },
+  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car'], iracingCarPaths: ['mx5 mx52016'], sizes: FACE_SIZES },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */

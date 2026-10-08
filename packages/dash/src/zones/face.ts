@@ -255,7 +255,7 @@ function houseChrome(layout: ZoneLayout, band_: Rect, body: readonly { zone: 'A'
  * name being what says what is showing (#708).
  */
 function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect, drawing: ThemeDrawing): Item[] {
-  if (zone === 'A' || zone === 'D') return [];
+  if (zone === 'A' || zone === 'D' || drawing.zoneCounters === false) return [];
   const density = densityForBox({ width: r.width, height: r.height });
   const house = zoneFrameMetrics(density, 'face');
   const metrics = drawing.zoneHeaderSize === undefined ? house : { ...house, size: drawing.zoneHeaderSize };
