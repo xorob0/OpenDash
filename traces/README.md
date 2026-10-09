@@ -119,6 +119,15 @@ full and whose order is the catalogue's -- the plugin's answer for a zone nobody
 seventeenth is `OpenDash.FlagsInPitLane` at `true`, the default a plugin nobody has opened
 publishes. The next `bun run record` reads all of them from the plugin and drops the entries.
 
+That recording was 2026-10-09, for #581, which is also when the nine traces first carried the
+twenty-seven properties the scan had never seen: the engine chip's border reads the warnings
+bitfield, the companion's enables read its twenty-one module switches and its forced module, the pit
+wall's enables read its page, and the Porsche's face reads the raw fuel level, the pit limiter speed
+and the crest. All seventeen #503 entries were observed and the lists are gone. `FlagsInPitLane` is
+true as asserted; the zone positions are on a different face than predicted, null on the 850x480 and
+1 and 16 on the 1280x480, because that is the screen the VM's rig carried that day and zone C's
+cycle had grown a page. The rig's state is the recording's, like the lap history, not the scenario's.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be
