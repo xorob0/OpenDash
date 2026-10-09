@@ -13,7 +13,7 @@ import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts'
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
-import { CHIP_WIDEST, chipText } from './chip.ts';
+import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
@@ -820,13 +820,26 @@ export const carBehindPositionClass = (): Expr => {
 };
 
 /**
- * The widest `carBehindPositionClass` can draw: a two-digit place and the widest chip.
+ * The widest class cut the blue flag band draws for the car behind: `LAMB`, from Lamborghini.
+ *
+ * Not the chip's `LMP2`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: {@link chipText}
+ * keeps whatever four letters a class name starts with, and in the band's Barlow Bold fourteen real
+ * cuts are wider than LMP2's, `LAMB`, `MCLA`, `ARCA` and `MAZD` the widest of them (#931). It is not
+ * `MUST` either, which is the widest in the data face {@link classAndPlace} is set in and not in
+ * this one. `alertBand.test.ts` measures every cut of `classNames.ts` against it.
+ */
+export const WIDEST_BEHIND_CLASS = 'LAMB';
+
+/**
+ * The widest `carBehindPositionClass` can draw: a two-digit place and the widest class cut.
  *
  * `44` and not `99`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: the band is set in a
  * proportional face, whose `4` is the widest digit it has. The placeholder `--` is narrower than
- * either, so the place before a car is placed draws inside the same box.
+ * either, so the place before a car is placed draws inside the same box. The class is
+ * {@link WIDEST_BEHIND_CLASS} and not the chip's `LMP2`, which a Lamborghini or a McLaren behind
+ * drew past.
  */
-export const WIDEST_BEHIND_POSITION_CLASS = `P44 ${CHIP_WIDEST}`;
+export const WIDEST_BEHIND_POSITION_CLASS = `P44 ${WIDEST_BEHIND_CLASS}`;
 
 // --- Session, car and environment -----------------------------------------------------------
 

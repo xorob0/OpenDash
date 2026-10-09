@@ -21,8 +21,8 @@ import { describe, expect, test } from 'bun:test';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_DISC_RATIO, ALERT_FLASH_MS, type AlertBandStyle } from '../src/components/alertBand.ts';
 import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
 import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
-import { CHIP_WIDEST } from '../src/second/chip.ts';
 import { carBehindClass, carBehindPositionClass, NO_VALUE } from '../src/second/values.ts';
+import { CLASS_CUTS } from './classNames.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { measureText } from '../src/design/advances.ts';
 import { contains, rect } from '../src/design/geometry.ts';
@@ -179,16 +179,26 @@ describe('the band is the catalogue', () => {
     expect(behind(4, 'GT3', undefined, false)).toBe('BLUE');
   });
 
-  test('the position and class run declares the widest it draws, placed or not', () => {
-    // The band is set in a proportional face, so the widest digit is measured rather than assumed:
-    // every place the run can draw, and the placeholder, against the place in what it declares.
-    const run = texts(layerOf('blue')).find((r) => r.name === 'flag.blue.label.positionClass')!;
-    expect({ font: run.font, weight: run.fontWeight }).toEqual({ font: ds.font.label, weight: 'Bold' });
-    const face = 'BarlowBold';
-    const declared = measureText(face, run.widest!, run.fontSize);
+  test('the class runs declare the widest they draw, for every class a sim reports, placed or not', () => {
+    // The band is set in a proportional face, so neither half is assumed: every real class name as
+    // the chip cuts it, which for a Lamborghini or a McLaren behind is wider than the chip's LMP2,
+    // and for the position every place the run can draw and the placeholder (#931).
+    const runs = texts(layerOf('blue'));
     const places = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE];
-    const over = places.filter((p) => measureText(face, `BLUE · P${p} ${CHIP_WIDEST}`, run.fontSize) > declared);
-    expect(over).toEqual([]);
+    const readings: Record<string, readonly string[]> = {
+      'flag.blue.label.class': CLASS_CUTS.map((cut) => `BLUE · ${cut}`),
+      'flag.blue.label.positionClass': CLASS_CUTS.flatMap((cut) => places.map((p) => `BLUE · P${p} ${cut}`)),
+    };
+    const face = 'BarlowBold';
+    for (const [name, drawn] of Object.entries(readings)) {
+      const run = runs.find((r) => r.name === name)!;
+      expect({ name, font: run.font, weight: run.fontWeight }).toEqual({ name, font: ds.font.label, weight: 'Bold' });
+      // The declaration is a reading the run draws for a real class, and nothing it draws is wider.
+      expect(drawn).toContain(run.widest!);
+      const declared = measureText(face, run.widest!, run.fontSize);
+      const over = drawn.filter((text) => measureText(face, text, run.fontSize) > declared);
+      expect({ name, over }).toEqual({ name, over: [] });
+    }
   });
 
   test('the nano writes no name at all, on any condition it draws', () => {
