@@ -2,20 +2,19 @@
 import { ncalc } from '../generator.ts';
 import { readout } from '../components/readout.ts';
 import { ds } from '../tokens.ts';
-import { NO_TIME } from '../second/values.ts';
+import { NO_TIME, hasTime, secondsOf } from '../second/values.ts';
 import { defineCard } from './card.ts';
 import { LAP_TIME_CHARS } from './chars.ts';
 
-const { game, timespanToSeconds, le, lt, abs, sub, num, iff, str, toShortTime } = ncalc;
+const { game, not, lt, abs, sub, num, iff, str, toShortTime } = ncalc;
 
 /** Two lap times closer than this are the same lap. */
 export const SAME_LAP_EPSILON = 0.0005;
 
 export const lastLap = defineCard('lastLap', (slot, rung, prefix, meta) => {
   const last = game('LastLapTime');
-  const seconds = timespanToSeconds(last);
-  const noData = le(seconds, num(0));
-  const isOwnBest = lt(abs(sub(seconds, timespanToSeconds(game('BestLapTime')))), num(SAME_LAP_EPSILON));
+  const noData = not(hasTime(last));
+  const isOwnBest = lt(abs(sub(secondsOf(last), secondsOf(game('BestLapTime')))), num(SAME_LAP_EPSILON));
   return readout(
     slot,
     rung,

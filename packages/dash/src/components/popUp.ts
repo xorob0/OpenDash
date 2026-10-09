@@ -38,12 +38,12 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { flagBox } from '../contract.ts';
-import { CHARS, hasTime, lapTime, lastLap, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaText, tankIsLow } from '../second/values.ts';
+import { CHARS, hasTime, lapTime, lastLap, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaText, secondsOf, tankIsLow } from '../second/values.ts';
 import { FIT_LADDER } from '../second/field.ts';
 import { ds } from '../tokens.ts';
 import { FLAG_BLINK_MS } from './flagStrip.ts';
 
-const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, str, timespanToSeconds } = ncalc;
+const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, str } = ncalc;
 
 /**
  * The box the pagesandalerts artboard draws.
@@ -212,7 +212,7 @@ function popUpRun(name: string, text: PopUpText, x: number, y: number, fs: numbe
  * the sense ADR 0009 allows. The last lap has to be a real time as well, or the out lap would open
  * with a pop-up whose value is the no-data glyph.
  */
-const atTheLine = (): Expr => and(hasTime(lastLap()), lt(timespanToSeconds(isnull(game('CurrentLapTime'), num(0))), num(POP_UP_SECONDS)));
+const atTheLine = (): Expr => and(hasTime(lastLap()), lt(secondsOf(game('CurrentLapTime')), num(POP_UP_SECONDS)));
 
 /** A SimHub status property, read the null-safe way the LED catalogue reads the same ones. */
 const on = (name: string): Expr => eq(isnull(game(name), num(0)), num(1));

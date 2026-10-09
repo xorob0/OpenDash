@@ -14,9 +14,9 @@ import { band } from '../elements/band.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { field, fieldRowFitted, fieldWidth, type FieldSpec } from './field.ts';
-import { CHARS, hasTime, sectorDelta, sectorLast, sectorTime, sessionBestSplit } from './values.ts';
+import { CHARS, hasTime, secondsOf, sectorDelta, sectorLast, sectorTime, sessionBestSplit } from './values.ts';
 
-const { iff, and, lt, le, gt, eq, str, num, signed, concat, timespanToSeconds, isnull } = ncalc;
+const { iff, and, lt, le, gt, eq, str, num, signed, concat } = ncalc;
 
 export const SECTORS = [1, 2, 3] as const;
 
@@ -36,7 +36,7 @@ export function sectorColour(sector: number): Expr {
   const last = sectorLast(sector);
   const delta = sectorDelta(sector);
   const best = sessionBestSplit(sector);
-  const isSessionBest = and(hasTime(best), hasTime(last), lt(ncalc.abs(ncalc.sub(timespanToSeconds(last), timespanToSeconds(isnull(best, num(0))))), num(0.0005)));
+  const isSessionBest = and(hasTime(best), hasTime(last), lt(ncalc.abs(ncalc.sub(secondsOf(last), secondsOf(best))), num(0.0005)));
   return iff(
     ncalc.not(hasTime(last)),
     str(ds.color.text.dim),

@@ -173,7 +173,20 @@ export const CHARS = {
  * with no value behind it drew nothing where it should have drawn {@link noTime}, and a value that
  * came and went drew a field that vanished and came back. #454.
  */
-export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(0)), num(0));
+export const hasTime = (ts: Expr): Expr => gt(secondsOf(ts), num(0));
+
+/**
+ * A TimeSpan as seconds, or nought when there is no TimeSpan behind it.
+ *
+ * The one place a time is converted for arithmetic or a comparison, because every comparison and
+ * every operator throws on the null `timespantoseconds` answers for a missing time (see
+ * {@link hasTime}), and a binding that throws draws nothing at all. The `driver*` reads are null on
+ * a frame SimHub is still building and while the player is unplaced, and a `GameData` time is null
+ * with no session, so a guard written inside the conversion instead, `timespantoseconds(isnull(t,
+ * 0))`, blanked the stint, the sectors and the session clock on exactly the frames they had a
+ * placeholder for. `test/timespanGuard.test.ts` holds every binding of every package to this. #586.
+ */
+export const secondsOf = (ts: Expr): Expr => isnull(timespanToSeconds(ts), num(0));
 
 /** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
 export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
@@ -194,7 +207,7 @@ export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShor
  * already writes its sectors in. Five digits hold up to `999.99`, which no sector of a lap reaches.
  */
 export const sectorTime = (ts: Expr, decimals = 2): Expr =>
-  iff(hasTime(ts), fmt(timespanToSeconds(ts), `0.${'0'.repeat(decimals)}`), str(NO_VALUE));
+  iff(hasTime(ts), fmt(secondsOf(ts), `0.${'0'.repeat(decimals)}`), str(NO_VALUE));
 
 /** Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count. */
 export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(seconds), str('-:--:--'));
@@ -755,7 +768,12 @@ export const currentLap = (): Expr => isnull(game('CurrentLap'), num(0));
 /** Laps completed, which is one behind the lap in progress for as long as a lap is in progress. */
 export const completedLaps = (): Expr => isnull(game('CompletedLaps'), num(0));
 export const totalLaps = (): Expr => isnull(game('TotalLaps'), num(0));
-export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLeft'));
+/**
+ * The session's time left in seconds, nought with no session. Guarded here rather than at each
+ * caller, so that {@link isTimedSession}, {@link sessionClock} and the fuel margin read a session
+ * that is not there as untimed instead of throwing on it. #586.
+ */
+export const sessionTimeLeft = (): Expr => secondsOf(game('SessionTimeLeft'));
 /**
  * The longest session clock taken at its word: a day, and a day inclusive.
  *
@@ -865,7 +883,8 @@ export const fuel = (): Expr => isnull(game('Fuel'), num(0));
 export const fuelPercent = (): Expr => isnull(game('FuelPercent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
 export const fuelLapsLeft = (): Expr => isnull(computed('Fuel_RemainingLaps'), num(0));
-export const fuelTimeLeft = (): Expr => timespanToSeconds(computed('Fuel_RemainingTime'));
+/** The fuel range in seconds, nought when SimHub has none, guarded here for every caller as {@link sessionTimeLeft} is. */
+export const fuelTimeLeft = (): Expr => secondsOf(computed('Fuel_RemainingTime'));
 export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'), num(0));
 export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumption'), num(-1));
 export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
@@ -1480,7 +1499,7 @@ export const average5 = (): Expr => {
   // left the newest out, so the number moved a lap late; `modules/lapHistory.ts` reads the same
   // slots and says so where it draws row one.
   const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i)));
-  const seconds = slots.map((slot) => timespanToSeconds(slot));
+  const seconds = slots.map((slot) => secondsOf(slot));
   return iff(
     and(...slots.map((slot) => hasTime(slot))),
     toShortTime(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS))), 3, false, true),
@@ -1643,11 +1662,11 @@ export const sectorBest = (sector: number): Expr => game(`Sector${sector}BestTim
 
 /** True when a sector of the last lap beat your own best of that sector. */
 export const sectorImproved = (sector: number): Expr =>
-  and(hasTime(sectorLast(sector)), hasTime(sectorBest(sector)), lt(timespanToSeconds(sectorLast(sector)), timespanToSeconds(sectorBest(sector))));
+  and(hasTime(sectorLast(sector)), hasTime(sectorBest(sector)), lt(secondsOf(sectorLast(sector)), secondsOf(sectorBest(sector))));
 
 /** The signed difference between a sector of the last lap and your best of that sector. */
 export const sectorDelta = (sector: number): Expr =>
-  sub(timespanToSeconds(isnull(sectorLast(sector), num(0))), timespanToSeconds(isnull(sectorBest(sector), num(0))));
+  sub(secondsOf(sectorLast(sector)), secondsOf(sectorBest(sector)));
 
 /** Absolute seconds, for a gain-or-loss bar that only knows how far it is from zero. */
 export const magnitude = (expr: Expr): Expr => abs(expr);
