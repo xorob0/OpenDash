@@ -1088,23 +1088,6 @@ export const fuelToEndColour = (): Expr =>
   );
 
 /**
- * How long the race is expected to run, in laps.
- *
- * `TotalLaps` where it is the race's length, which is {@link hasLapTotal}: every lap-limited race and
- * no timed one. Asking only whether it was above nought read the leader's completed laps as the
- * length of every timed iRacing race, so the stint page drew `12 / 14` with half an hour to run
- * (#989). For a timed race the length is a prediction, and the one SimHub already makes is
- * `RemainingLaps` -- laps done plus laps to come. Adding rather than reading a second property keeps
- * the two forms in one expression and means the number always agrees with the remaining-laps figure
- * beside it.
- *
- * Nought where there are no laps to come, which is a session with no end: laps done and none to come
- * is not a length, and drawn as one it is `12 / 11`.
- */
-export const estimatedRaceLaps = (): Expr =>
-  iff(hasLapTotal(), totalLaps(), iff(gt(lapsLeft(), num(0)), add(completedLaps(), lapsLeft()), num(0)));
-
-/**
  * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
  * three-digit lap of a three-digit race. Its sample is the short end, and a field measured by
  * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
@@ -1124,16 +1107,21 @@ export const LAP_TOTAL_WIDEST = '/ 999';
 export const INCIDENTS_WIDEST = '999x';
 
 /**
- * `12 / 43`: the lap you are on, out of the race's estimated length.
+ * `12 / 43`: the lap you are on, out of the race's length, and `12` alone where the race has none.
  *
  * The lap you are *on* and not the lap you have finished, because that is the number a driver says
  * out loud. SimHub's `CurrentLap` is already 1 on the opening lap, so it needs no adjusting.
  *
- * `--` until there is a length to count against. A timed race has none until the sim has an average
- * lap to divide by, and a total of zero drawn as "12 / 0" is worse than saying nothing.
+ * The length is `TotalLaps` where {@link hasLapTotal} says it is one, and there is no other. This
+ * used to predict a timed race's length as laps done plus `RemainingLaps`, on the belief that SimHub
+ * makes that prediction; it does not. SimHub sets `RemainingLaps` for every game to `TotalLaps` less
+ * `CompletedLaps`, never below nought (GameReaderCommon 9.12.6, `GameManagerBase`), so the sum was
+ * `TotalLaps` again: the leader's laps in a timed iRacing race, `12 / 14` with half an hour to run, and
+ * nought for a car on the lead lap (#989). A timed race and an open session draw the lap alone, as
+ * the bar and the headers do.
  */
 export const lapOfTotal = (): Expr =>
-  iff(gt(estimatedRaceLaps(), num(0)), concat(fmt(currentLap(), '0'), str(' / '), fmt(estimatedRaceLaps(), '0')), str(NO_VALUE));
+  iff(hasLapTotal(), concat(fmt(currentLap(), '0'), str(' / '), fmt(totalLaps(), '0')), fmt(currentLap(), '0'));
 
 /**
  * The tank under the threshold the driver set, which is the sentence three separate drawings had
