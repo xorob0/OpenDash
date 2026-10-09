@@ -199,6 +199,25 @@ export function charsThatFit(face: MeasuredFace, fs: number, width: number): num
 export const widestOf = (face: MeasuredFace, chars: number): string => widestGlyph(face).glyph.repeat(Math.max(0, chars));
 
 /**
+ * The widest string a number written in `shape` draws in `face`, for a box that is not monospaced.
+ *
+ * Each digit of the shape is the largest that place can hold, so `9:59.999` is a lap under ten
+ * minutes, whose tens of seconds stop at five; every other character is drawn as written. A
+ * proportional face draws its digits at their own advances, and the widest of them is not the nine
+ * a budget is usually written with: in Barlow Medium it is the four, at 0.570 em against the nine's
+ * 0.525. So each place is filled with the widest digit it can hold, which is the face's to say.
+ */
+export const widestFigure = (face: MeasuredFace, shape: string): string =>
+  [...shape]
+    .map((ch) => {
+      if (ch < '0' || ch > '9') return ch;
+      let widest = '0';
+      for (let d = 1; d <= Number(ch); d++) if (measureText(face, String(d), 100) > measureText(face, widest, 100)) widest = String(d);
+      return widest;
+    })
+    .join('');
+
+/**
  * The gap between an `i`'s tittle and its stem, in em, per face, measured from the same TTFs.
  *
  * The one thing an advance table cannot say: where a glyph's ink **stops and starts again**. Barlow's

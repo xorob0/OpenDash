@@ -1176,6 +1176,56 @@ describe('the opponents block keeps the gaps the canvas draws it with', () => {
 });
 
 /**
+ * The rating and the lap time on the gap row hold every reading the sim can hand them.
+ *
+ * Both are the sim's values drawn in a proportional face, which is the case `widest.test.ts` says
+ * it cannot hold: the binding has no floor to read, so the declaration is the only place the answer
+ * can be, and a declaration copied from the sample holds the sample and nothing wider. The rating
+ * label was cut to `iR 3.1k` and clipped the `k` of every driver rated 10 000 or more, and of a
+ * `4.0k` too, the four being Barlow Medium's widest digit; the lap was cut to `1:43.234` and had no
+ * room for a `1:40.000`. #902.
+ *
+ * So the readings are listed here rather than derived from what the module declares: every rating
+ * from 0.1k to 99.9k, and every lap under ten minutes to the second with the thousandths that draw
+ * narrowest and widest. Each has to fit strictly inside its box, the rule `textFit.test.ts` holds.
+ */
+describe('the opponents gap row holds every rating and every lap', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  const RATINGS = ['--', ...Array.from({ length: 999 }, (_, n) => `${((n + 1) / 10).toFixed(1)}k`)];
+  const LAPS = Array.from({ length: 10 * 60 }, (_, n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`).flatMap((mss) =>
+    ['000', '040', '404', '444', '999'].map((fff) => `${mss}.${fff}`),
+  );
+  /** What a lap label can draw, by the words its sample carries around the time. */
+  const lapReadings = (sample: string): string[] =>
+    sample.startsWith('Last Best ') ? LAPS.map((lap) => `Last Best ${lap} · ${lap}`) : sample.startsWith('Last ') ? LAPS.map((lap) => `Last ${lap}`) : LAPS;
+  const widestOf = (item: TextItem, readings: readonly string[]): { text: string; width: number } =>
+    readings.map((text) => ({ text, width: measureText(faceOf(item), text, item.fontSize) })).reduce((a, b) => (b.width > a.width ? b : a));
+
+  test('a driver rated ten thousand needs more than the sample did', () => {
+    // The case the ticket names, measured so that a change to the advances that made it moot says so.
+    expect(measureText('BarlowMedium', 'iR 10.0k', 15)).toBeGreaterThan(Math.ceil(measureText('BarlowMedium', 'iR 3.1k', 15)) + 1);
+  });
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const items = opponents.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+      for (const side of ['ahead', 'behind']) {
+        const rating = items.find((i): i is TextItem => i.kind === 'text' && i.name === `${side}.rating`);
+        if (rating) {
+          const widest = widestOf(rating, RATINGS.map((r) => `iR ${r}`));
+          expect({ box: box.name, item: rating.name, widest: widest.text, fits: widest.width < rating.rect.width }).toMatchObject({ fits: true });
+        }
+        const lap = items.find((i): i is TextItem => i.kind === 'text' && i.name === `${side}.lastLap`);
+        if (lap) {
+          const widest = widestOf(lap, lapReadings(lap.text));
+          expect({ box: box.name, item: lap.name, widest: widest.text, fits: widest.width < lap.rect.width }).toMatchObject({ fits: true });
+        }
+      }
+    });
+  }
+});
+
+/**
  * The identity row across, which is the one line of this page that no fit check can speak for.
  *
  * The three cells are placed by arithmetic rather than by a rank, so two of them can sit on top of
