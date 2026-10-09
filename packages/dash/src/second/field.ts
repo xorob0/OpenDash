@@ -6,14 +6,14 @@
  * field is placed by its bottom and reports the height it needs above that line.
  *
  * Width is measured, never guessed: the label through the font's advance table and the value
- * through its monospace cells, so `fieldRow` can lay fields out without a renderer and a test can
- * prove the row fits its module.
+ * through its monospace cells (or, for a run of text, the advances of its declared widest), so
+ * `fieldRow` can lay fields out without a renderer and a test can prove the row fits its module.
  */
 import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -69,6 +69,17 @@ export interface FieldValue {
    * Declare it wherever the sample is the short end of the range rather than the long one.
    */
   widest?: string;
+  /**
+   * Set in the face's own advances rather than in cells, for the one kind of value that is a run of
+   * text and not a number: a class and the place after it, `LMP2 · P4`. The letters of a class name
+   * are not digits, and `M` and `W` overrun a digit cell (`font.cell.excluded`), so a run that holds
+   * them cannot be drawn in cells at all.
+   *
+   * The box is then cut from {@link FieldValue.widest}, which a proportional value has to declare,
+   * and `chars` is not what it is measured by. It takes no follower: a follower is placed after the
+   * figure by counting cells, and a proportional run has none to count.
+   */
+  proportional?: boolean;
   /** Font size; a density size, e.g. `d.big`. */
   fs: number;
   color?: Hex;
@@ -192,9 +203,29 @@ export function valueCells(spec: FieldSpec, mono: Monospace): number {
   return budget;
 }
 
+/**
+ * The width a value's box is cut from: its cells, or for a proportional value the advances of the
+ * widest string it declares.
+ *
+ * A proportional value is refused without a `widest`, with a follower, or with a sample wider than
+ * what it declares, each for the reason `valueCells` refuses a sample past its budget: the box is a
+ * declaration, and a value that cannot say how wide it draws has nothing to cut one from.
+ */
+export function valueBudget(spec: FieldSpec): number {
+  const weight = spec.value.weight ?? 'SemiBold';
+  if (!spec.value.proportional) return valueCells(spec, cells(weight, spec.value.fs));
+  const { sample, widest, follower, fs } = spec.value;
+  if (widest === undefined) throw new Error(`field ${spec.name}: a proportional value is measured by its widest and declares none`);
+  if (follower) throw new Error(`field ${spec.name}: a proportional value has no cells to place a follower after`);
+  const face = DATA_FACE[weight];
+  if (measureText(face, sample, fs) > measureText(face, widest, fs)) {
+    throw new Error(`field ${spec.name}: the sample ${JSON.stringify(sample)} is wider than the widest ${JSON.stringify(widest)} it declares`);
+  }
+  return Math.ceil(measureText(face, widest, fs));
+}
+
 export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
-  const mono = cells(spec.value.weight ?? 'SemiBold', spec.value.fs);
-  const width = valueCells(spec, mono);
+  const width = valueBudget(spec);
   const follower = spec.value.follower;
   if (!follower) return width;
   return width + followerGap(follower) + followerWidth(follower, d, spec.value.fs);
@@ -291,7 +322,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   // Before anything is placed, and whether or not the width was measured here: a caller that hands
   // its own `maxWidth` goes through no measurement at all, so this is the one point every drawn
   // field passes through.
-  const cellsWidth = valueCells(spec, cells(spec.value.weight ?? 'SemiBold', spec.value.fs));
+  const cellsWidth = valueBudget(spec);
   if (hasLabel) {
     // The row is the sheets' 13 px and the run inside it is the ramp's 15, centred: `label` takes
     // the run's own line box, so the row's top is offset by half the difference the way
@@ -314,6 +345,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
       weight: spec.value.weight,
       bind: spec.value.bind,
       widest: spec.value.widest,
+      proportional: spec.value.proportional,
       color: spec.value.color,
       colorBind: spec.value.colorBind,
       visibleBind: unmarked(spec.value.mark, spec.visibleBind),

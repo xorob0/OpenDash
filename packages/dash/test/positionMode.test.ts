@@ -116,7 +116,6 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
   const bestIndex = settings.bestIndex ?? { field: FIELD_BEST_ROW - 1, class: CLASS_BEST_ROW - 1 };
   const properties: Record<string, unknown> = {
     'OpenDash.PositionMode': settings.positionMode,
-    'DataCorePlugin.GameData.CarClass': PLAYER_CLASS,
     'DataCorePlugin.GameData.OpponentsCount': GRID.length,
     'DataCorePlugin.GameData.PlayerClassOpponentsCount': CLASS_ROWS.length,
     ...(settings.screenFilter === undefined ? {} : { 'OpenDash.PitWallClassOnly': settings.screenFilter }),
@@ -147,6 +146,10 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
     getplayerleaderboardposition: (): number => PLAYER_ROW,
     driverposition: (row: number): number | undefined => (onGrid(row) ? row : undefined),
     driverclassposition: (row: number): number | undefined => (onGrid(row) ? classPositionOf(row) : undefined),
+    drivercarclass: (row: number): string | undefined => (onGrid(row) ? GRID[row - 1] : undefined),
+    // SimHub's three-argument `left(value, start, count)`, and `ucase`: the cut a class chip makes.
+    left: (value: unknown, start: number, count: number): string => String(value).slice(start, start + count),
+    ucase: (value: unknown): string => String(value).toUpperCase(),
     driverpositiongain: (row: number): number | undefined => (onGrid(row) ? START[row - 1]! - row : undefined),
     driverpositiongainclass: (row: number): number | undefined => (onGrid(row) ? classStartOf(row) - classPositionOf(row) : undefined),
     driveravailable: (row: number): boolean | undefined => (onGrid(row) ? true : undefined),
@@ -174,7 +177,7 @@ function toJavaScript(formula: string): string {
     .replace(/ and /g, ' && ')
     .replace(/ or /g, ' || ');
   const unknown = js.replace(/'[^']*'/g, '').match(/\b[a-z][a-z0-9_]*\(/g) ?? [];
-  const known = ['nz(', 'if(', 'format(', 'abs(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'driverpositiongain(', 'driverpositiongainclass(',
+  const known = ['nz(', 'if(', 'format(', 'abs(', 'left(', 'ucase(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'drivercarclass(', 'driverpositiongain(', 'driverpositiongainclass(',
     'driveravailable(', 'getplayerleaderboardposition(', 'driverbestlap(', 'driveriscarinpitlane(', 'driverisplayer(', 'timespantoseconds(',
     'getbestsplittime(', 'getbestsplittime_playerclassonly(',
     'getopponentleaderboardposition_playerclassonly(', 'getopponentleaderboardposition_aheadbehind(', 'getopponentleaderboardposition_aheadbehind_playerclassonly('];

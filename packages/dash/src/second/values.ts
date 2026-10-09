@@ -155,7 +155,11 @@ export const CHARS = {
   percent: { digits: 3, specials: 0 } as Chars,
   /** `54.2` brake bias, `3` assist levels. */
   setting: { digits: 4, specials: 1 } as Chars,
-  /** `GT3 · P12` and `GT3 · #12`: a class or car name, a separator and a number. */
+  /**
+   * `LMP2 · P12`, as it would be counted in cells. Nothing measures it by them: the run holds
+   * letters a cell cannot, so every surface sets it proportionally and measures it from
+   * {@link CLASS_AND_PLACE_WIDEST}, and this is only the budget a field has to carry.
+   */
   classPosition: { digits: 10, specials: 0 } as Chars,
   /** A short word: `Race`, `Dry`, `M`. */
   word: { digits: 8, specials: 0 } as Chars,
@@ -559,6 +563,63 @@ export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDi
 
 /** How wide {@link positionLabelled} draws: the P, and then the digits or the placeholder. */
 export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P', positionDrawn(idx));
+
+/**
+ * A car's place in its own class, or 0 while the sim has not placed it.
+ *
+ * Always the class, whatever `PositionMode` says, which is what sets it apart from
+ * {@link carPosition}: it is the place that stands beside a class name, and with the rig counting
+ * overall it is the one reading left that says where a car stands among its own.
+ */
+export const classPlace = (idx: Expr): Expr => isnull(driver('classposition', idx), num(0));
+
+/**
+ * `LMP2 · P4`: a car's class and its place in that class, or `LMP2 · P--` before the sim has placed
+ * it. Every surface that draws the pair binds this, and no other binding spells `' · P'`.
+ *
+ * It was written out three times, as the player's `CarClass` and a formatted `classposition`, and
+ * each copy had the same three faults. The grid read `GT3 · P0`, where every other position on the
+ * face reads `--` until {@link hasPosition} holds. The class went in whole, so a box measured for
+ * four letters drew `Ferrari 296` into itself and WPF cut it wherever it ran out. And two of the
+ * three drew it in digit cells, where the `M` of LMP2 and of BMW overruns its cell
+ * (`font.cell.excluded`).
+ *
+ * So the class is cut by {@link chipText}, the cut the leaderboard's chip makes, because a header
+ * reading one spelling of a class beside a chip reading another would be two answers to one
+ * question; the place is drawn `--` until there is one, as {@link positionDigits} draws it; and the
+ * run is set proportionally by every caller and measured from {@link CLASS_AND_PLACE_WIDEST}.
+ *
+ * Both halves are read from the same leaderboard entry, so the class and the place cannot belong to
+ * two different cars. It takes the car's index for that reason, and any car's pair can be drawn
+ * from it.
+ *
+ * A car with no class name reads its place alone, `P4`, rather than a separator with nothing before
+ * it. The evaluator reads ` · P4` for an empty or null class, and an entry can carry one: the
+ * emulator's pace car does, and a session whose cars carry no class may.
+ */
+export const classAndPlace = (idx: Expr): Expr => {
+  const cut = chipText(carClass(idx));
+  const place = iff(gt(classPlace(idx), num(0)), fmt(classPlace(idx), '0'), str(NO_VALUE));
+  return iff(eq(cut, str('')), concat(str('P'), place), concat(cut, str(' · P'), place));
+};
+
+/**
+ * The widest {@link classAndPlace} draws: the widest four capitals a real class name is cut to, and
+ * the widest of the ninety-nine places and the placeholder.
+ *
+ * `MUST`, from Mustang, and not the chip's `LMP2`: the cut keeps whatever four letters a class starts
+ * with, and four letters with an `M` among them are wider than LMP2's, so a Mustang, a Mercedes or a
+ * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit.
+ * `LMDH` draws exactly as wide in SemiBold and is a hair narrower in Bold. `44` and not `99` or
+ * `24`, because the face is proportional and its `4` is the widest digit it has.
+ * `classAndPlace.test.ts` holds a list of class names from iRacing, Assetto Corsa and ACC and
+ * measures every cut of them at every place against this, in SemiBold and in Bold.
+ *
+ * It also sets the width of the bar's ends, and at 600 x 686 the strip's five cells now fill what
+ * the ends leave to the pixel. A class wider than `MUST` added to that list is therefore a decision
+ * about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`, would cost it.
+ */
+export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it.
@@ -1240,7 +1301,6 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
  */
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
-export const playerClass = (): Expr => isnull(game('CarClass'), str(''));
 
 /** Wind speed in km/h, from the raw metres per second iRacing publishes. */
 export const windKmh = (): Expr => mul(isnull(raw('WindVel'), num(0)), num(3.6));

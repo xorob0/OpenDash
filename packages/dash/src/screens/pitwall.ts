@@ -29,14 +29,14 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { assistPresent } from '../second/tracked.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 
-const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game, raw } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, game, raw } = ncalc;
 
 /** A pit wall panel draws at zone density with the pit wall's own label: 24 px numerals, 13 px labels. */
 const DENSITY = 'panel' as const;
@@ -86,7 +86,6 @@ const WIDEST_SESSION_LABEL = 'Offline Testing';
 export function sessionPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Session' });
-  const classPosition = isnull(driver('classposition', player()), num(0));
   return [
     ...items,
     ...panelRow(body, [
@@ -111,7 +110,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
         ctxOf(body, `${name}.`),
         'class',
         'Class',
-        { sample: 'GT3 · P4', bind: concat(playerClass(), str(' · P'), fmt(classPosition, '0')), chars: CHARS.classPosition, fs: d.mid },
+        { sample: 'GT3 · P4', bind: classAndPlace(player()), chars: CHARS.classPosition, widest: CLASS_AND_PLACE_WIDEST, proportional: true, fs: d.mid },
         { visibleBind: gt(classOpponentCount(), num(0)) },
       ),
     ]),

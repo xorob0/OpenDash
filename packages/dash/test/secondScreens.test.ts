@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { charsThatFit, measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
+import { DATA_FACE, LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   COMPANION_PAGE_SETTING,
   MODULE_CATALOGUE,
@@ -1365,6 +1365,29 @@ describe('a value is drawn from its budget and not from its sample', () => {
 
   test('and a sample past it is refused, with the module and both counts named', () => {
     expect(() => field(spec('1:43.234', { digits: 3, specials: 1 }), 0, 200, 'companion')).toThrow(/probe.*1:43\.234.*6\+2 cells.*3\+1/);
+  });
+
+  // A class and its place is a run of letters, and a letter is not a digit: `M` overruns a cell. So
+  // that one value is set in advances, and its box is cut from the widest it declares instead.
+  describe('a proportional value', () => {
+    const run = (value: Partial<FieldSpec['value']>): FieldSpec => ({
+      name: 'probe',
+      label: 'Class',
+      value: { sample: 'GT3 · P4', chars: CHARS.classPosition, fs: 46, proportional: true, ...value },
+    });
+
+    test('is drawn without cells, in a box cut from its widest', () => {
+      const value = field(run({ widest: 'LMP2 · P44' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+      expect(value.monospace).toBeUndefined();
+      expect(value.rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText(DATA_FACE.SemiBold, 'LMP2 · P44', 46)));
+      expect(value.rect.width).toBeLessThan(monoWidth(cells('SemiBold', 46), CHARS.classPosition));
+    });
+
+    test('and is refused without a widest, with a follower, or with a sample wider than its widest', () => {
+      expect(() => field(run({}), 0, 200, 'companion')).toThrow(/probe.*proportional.*declares none/);
+      expect(() => field(run({ widest: 'LMP2 · P44', follower: { text: 'L' } }), 0, 200, 'companion')).toThrow(/probe.*follower/);
+      expect(() => field(run({ sample: 'WWWW · P44', widest: 'LMP2 · P44' }), 0, 200, 'companion')).toThrow(/probe.*WWWW.*wider/);
+    });
   });
 });
 
