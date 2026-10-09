@@ -159,8 +159,16 @@ export const CHARS = {
   classPosition: { digits: 10, specials: 0 } as Chars,
   /** A short word: `Race`, `Dry`, `M`. */
   word: { digits: 8, specials: 0 } as Chars,
-  /** `12 / 43`, and `142 / 350` in an endurance race: the two spaces and the slash are the specials. */
-  lapOfTotal: { digits: 6, specials: 3 } as Chars,
+  /**
+   * `12 / 43`, and `142 / 350` in an endurance race: nine digit cells and no special.
+   *
+   * The two spaces and the slash take the full cell, since the narrow one is given only to `.,:`,
+   * so the reading is as many cells as it has characters. Three digits either side of the slash is
+   * every oval race of a hundred laps and more and every day-long race. The budget used to count the
+   * spaces and the slash as specials, which at 46 px is a box of 168 px for a `12 / 120` of 176, and
+   * WPF cut the last digit of the total from the first lap of any race that long. #921.
+   */
+  lapOfTotal: { digits: 9, specials: 0 } as Chars,
 };
 
 /**
@@ -1059,6 +1067,13 @@ export const fuelToEndColour = (): Expr =>
  * expression and means the number always agrees with the remaining-laps figure beside it.
  */
 export const estimatedRaceLaps = (): Expr => iff(gt(totalLaps(), num(0)), totalLaps(), add(completedLaps(), lapsLeft()));
+
+/**
+ * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
+ * three-digit lap of a three-digit race. Its sample is the short end, and a field measured by
+ * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
+ */
+export const LAP_OF_TOTAL_WIDEST = '999 / 999';
 
 /**
  * `12 / 43`: the lap you are on, out of the race's estimated length.
