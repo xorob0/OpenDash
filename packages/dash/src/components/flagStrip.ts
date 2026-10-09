@@ -306,7 +306,7 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
  * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
  *
  * The blue flag keeps its detail, #497: the block writes it as the whole band does, under the same
- * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P99 LMP2" is narrower than
+ * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P99 MMMM" is narrower than
  * FULL COURSE YELLOW, so that is every corner block there is, and the sixteen pixels of the four faces
  * without one write neither the detail nor BLUE. One thing the takeover has that this does not: the
  * incident's count against its limit. The block writes INCIDENT.

@@ -74,7 +74,7 @@ import { rule } from '../elements/rule.ts';
 import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
 import { charsThatFit, measureText, widestOf } from '../design/advances.ts';
 import { densityOf, grownAtMost, rampOf } from '../second/density.ts';
-import { chip, chipText, chipWidth } from '../second/chip.ts';
+import { CHIP_WIDEST, chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
@@ -348,7 +348,7 @@ function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, kee
         }
         if (cell.id === 'num') items.push(...field(numSpec, x, centred(numberSize) + numberSize, ctx.density, cell.width));
         if (cell.id === 'class') {
-          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), width: cell.width }));
+          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), widest: CHIP_WIDEST, width: cell.width }));
         }
         x += cell.width + IDENTITY_GAP;
       }
