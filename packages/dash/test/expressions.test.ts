@@ -21,6 +21,7 @@ import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -204,6 +205,25 @@ describe('second-screen values', () => {
     const gap = values.carRelativeGap('1');
     expect(gap).toContain("format(driverrelativegaptoplayer(1), '0.000', true)");
     expect(gap).toContain("'-', '−'");
+  });
+
+  test('a relative gap past a hundred seconds gives up a place rather than its last digit (#886)', () => {
+    // Half a lap of Le Mans: `−104.315` is seven digit cells of six, and WPF drew it `−104.31`
+    // only by cutting the last one off; rounded, it is the figure.
+    const gap = values.carRelativeGap('1').replaceAll('driverrelativegaptoplayer(1)', '[GAP]');
+    const READINGS: readonly [number | null, string][] = [
+      [-5.886, '−5.886'],
+      [0.722, '+0.722'],
+      [-45.678, '−45.678'],
+      [-104.317, '−104.32'],
+      [241.567, '+241.57'],
+      [null, '--'],
+    ];
+    for (const [seconds, text] of READINGS) {
+      const drawn = String(evalNcalc(gap, { GAP: seconds }));
+      // The point is the one narrow cell; every other character takes a digit cell.
+      expect({ seconds, drawn, fits: drawn.replace('.', '').length <= values.CHARS.relativeGap.digits }).toEqual({ seconds, drawn: text, fits: true });
+    }
   });
 
   test('the no-data lap time is one placeholder of the same shape as the time it stands in for', () => {

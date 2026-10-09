@@ -14,9 +14,9 @@ import { band } from '../elements/band.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { field, fieldRowFitted, fieldWidth, type FieldSpec } from './field.ts';
-import { CHARS, hasTime, secondsOf, sectorDelta, sectorLast, sectorTime, sessionBestSplit } from './values.ts';
+import { CHARS, DELTA_WIDEST, hasTime, secondsOf, sectorDelta, sectorLast, sectorTime, sessionBestSplit, signedToFit } from './values.ts';
 
-const { iff, and, lt, le, gt, eq, str, num, signed, concat } = ncalc;
+const { iff, and, lt, le, gt, eq, str, num, concat } = ncalc;
 
 export const SECTORS = [1, 2, 3] as const;
 
@@ -44,11 +44,18 @@ export function sectorColour(sector: number): Expr {
   );
 }
 
+/**
+ * A sector's delta as it is drawn, `−0.29`, giving up places rather than its last digit when the
+ * sector is a hundred seconds or more off your best of it, which is the sector of the in-lap that
+ * holds the pit stall (#886).
+ */
+export const sectorDeltaText = (sector: number): Expr => signedToFit(sectorDelta(sector), CHARS.delta, 2);
+
 /** "S1 · −0.29": the sector number and its delta, which is the field's label. */
 export const sectorLabel = (sector: number): Expr =>
   iff(
     hasTime(sectorLast(sector)),
-    concat(str(`S${sector} · `), signed(sectorDelta(sector), '0.00')),
+    concat(str(`S${sector} · `), sectorDeltaText(sector)),
     str(`S${sector}`),
   );
 
@@ -100,7 +107,8 @@ const sectorDeltaField = (prefix: string, sector: number, fs: number): FieldSpec
   label: `Δ S${sector}`,
   value: {
     sample: ['−0.29', '+0.11', '−0.04'][sector - 1] ?? '0.00',
-    bind: signed(sectorDelta(sector), '0.00'),
+    widest: DELTA_WIDEST,
+    bind: sectorDeltaText(sector),
     chars: CHARS.delta,
     fs,
     colorBind: sectorColour(sector),

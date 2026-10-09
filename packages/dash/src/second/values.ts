@@ -88,8 +88,10 @@ export const CHARS = {
   /**
    * `-0.21`: a signed delta in five digit cells and a point, the sign taking one of the cells. The
    * sector deltas and the lap review's two draw it to two places, which leaves two whole digits; the
-   * lap history's column draws it to three, `+0.594`, which leaves one. The live delta to the
-   * reference has a budget of its own, {@link CHARS.referenceDelta}.
+   * lap history's column draws it to three, `+0.594`, which leaves one. A reading with more whole
+   * digits than that gives up places to keep them, through {@link signedToFit}, so the in-lap's
+   * `+123.45` is drawn `+123.5` rather than cut. The live delta to the reference has a budget of
+   * its own, {@link CHARS.referenceDelta}.
    */
   delta: { digits: 5, specials: 1 } as Chars,
   /**
@@ -667,9 +669,21 @@ export const carClassRaceGap = (idx: Expr): Expr => {
  * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
  * behind `+0.722`. The minus is the typographic one, which `signed` substitutes for the hyphen
  * .NET's formatter writes.
+ *
+ * Three places in {@link CHARS.relativeGap}'s six cells leave two whole digits, and a car half a lap
+ * away is a hundred seconds off on a lap of three and a half minutes, which is Le Mans and the
+ * Nordschleife with a thin field. Past that the gap gives up places rather than its last digit,
+ * `−104.31`, through {@link signedToFit}, as the deltas do (#886).
  */
 export const carRelativeGap = (idx: Expr): Expr =>
-  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signed(driver('relativegaptoplayer', idx), '0.000'));
+  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signedToFit(driver('relativegaptoplayer', idx), CHARS.relativeGap, 3));
+
+/**
+ * The widest reading {@link carRelativeGap} draws, which is what a box drawing it declares: the true
+ * minus and five digits around a point, the whole of {@link CHARS.relativeGap}. Past a hundred
+ * seconds the gap draws `−104.32` in the same six cells, so this is the length of every reading.
+ */
+export const RELATIVE_GAP_WIDEST = `${MINUS}99.999`;
 
 /**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
@@ -1481,6 +1495,52 @@ export const previousLap = (slotExpr: Expr): Expr => propByName(concat(str('Pers
 /** The same lap's delta to the session best, in seconds. */
 export const previousLapDelta = (slotExpr: Expr): Expr =>
   propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_DeltaToSessionBest')));
+
+/**
+ * A signed delta to `places` decimals where `chars` holds it, and to fewer where it does not:
+ * `+1.03`, `+123.5` and `+1234` in {@link CHARS.delta}'s five cells at two places.
+ *
+ * A box cannot change its cells at runtime, so a delta whose whole part grows past what its cells
+ * were cut for loses its last digit to WPF instead, and `+123.45` in five cells is drawn `+123.4`,
+ * a figure the sim never published. The lap that carried a stop, a tow or a repair is a minute or
+ * three off the session best and off the lap before it, and its sectors with it, so the deltas that
+ * are cut for an ordinary lap meet that reading once a stint, on the lap they are most looked at
+ * (#886). Each place given up buys a whole digit, which is the trade
+ * {@link referenceDeltaText} already makes past 100 s: a figure rounded to the tenth is still the
+ * figure, and a hundredth of a lap two minutes off is not what anybody is reading it for.
+ *
+ * The sign takes a digit cell and the point a narrow one, so `places` decimals leave
+ * `chars.digits - 1 - places` whole digits. Each edge is half a unit of the last place short of the
+ * next power of ten, under which .NET still rounds to the shorter figure: 99.995 to two places is
+ * `100.00`, a sixth digit. Past the last edge the figure is whole seconds, which five cells hold to
+ * 9999 s, the better part of three hours. The choice is an `if` around literal patterns for the
+ * reason {@link referenceDeltaText} gives.
+ */
+export const signedToFit = (seconds: Expr, chars: Chars, places: number): Expr => {
+  const patternOf = (p: number): string => (p === 0 ? '0' : `0.${'0'.repeat(p)}`);
+  let text: Expr = signed(seconds, '0');
+  for (let p = 1; p <= places; p++) {
+    const whole = chars.digits - 1 - p;
+    if (whole < 1) throw new Error(`signedToFit: ${chars.digits} digit cells hold no whole digit beside a sign and ${p} places`);
+    text = iff(lt(abs(seconds), num(Number((10 ** whole - 0.5 * 10 ** -p).toFixed(p + 1)))), signed(seconds, patternOf(p)), text);
+  }
+  return text;
+};
+
+/**
+ * The widest reading {@link signedToFit} draws in {@link CHARS.delta} at two places, which is what a
+ * box drawing one declares as its `widest`: the true minus and four digits around a point. The
+ * samples stay the canvas's `+1.03` and `−0.21`, the short end of the range.
+ */
+export const DELTA_WIDEST = `${MINUS}99.99`;
+
+/**
+ * The same budget for the lap history's column, which draws {@link signedToFit} to three places:
+ * `−9.999` is as long as {@link DELTA_WIDEST} in every face, since both are five digit cells and a
+ * point, but it has the column's own shape. The AiM theme ghosts a reading's widest cell for cell,
+ * and a ghost of `888.88` behind `+0.594` puts the point a cell off its ghost on every row.
+ */
+export const HISTORY_DELTA_WIDEST = `${MINUS}9.999`;
 
 /** How many laps the rolling average covers, and the number the field is named after. */
 export const AVERAGE_LAPS = 5;

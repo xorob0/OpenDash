@@ -11,7 +11,6 @@
  * column drops both and keeps the number and its three sectors, which is the catalogue's own
  * answer at `tall narrow`: the reading the page exists for survives, and the picture of it goes.
  */
-import { ncalc } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { measureText } from '../design/advances.ts';
 import { label } from '../elements/label.ts';
@@ -20,12 +19,13 @@ import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
 import { fieldWidth } from '../second/field.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
-import { SECTORS, sectorColour } from '../second/sectors.ts';
+import { SECTORS, sectorColour, sectorDeltaText } from '../second/sectors.ts';
 import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
 import { archetypeOf } from './shedding.ts';
 import { stack, type StackRow } from '../second/layout.ts';
 import {
   CHARS,
+  DELTA_WIDEST,
   REFERENCE_DELTA_WIDEST,
   REFERENCE_LABEL_WIDEST,
   referenceDelta,
@@ -33,10 +33,7 @@ import {
   referenceDeltaDrawn,
   referenceDeltaText,
   referenceLabel,
-  sectorDelta,
 } from '../second/values.ts';
-
-const { signed } = ncalc;
 
 /** Seconds either side of zero the bar covers. */
 export const DELTA_RANGE = 2;
@@ -145,7 +142,8 @@ export const delta = defineModule('delta', (ctx) => {
           SECTORS.map((sector) =>
             fld(ctx, `s${sector}`, `S${sector}`, {
               sample: SECTOR_SAMPLES[sector - 1] ?? '0.00',
-              bind: signed(sectorDelta(sector), '0.00'),
+              widest: DELTA_WIDEST,
+              bind: sectorDeltaText(sector),
               chars: CHARS.delta,
               fs: sectorSize,
               colorBind: sectorColour(sector),
