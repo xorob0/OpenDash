@@ -38,9 +38,9 @@ import { ds } from '../tokens.ts';
 import { tyreGlyph, tyreGlyphSize } from './tyreGlyph.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { drawnFigure, drawnOr, figureWidth, textWidth, type DrawnFigure } from './drawn.ts';
-import { CHARS, NO_VALUE, pressureUnit, temperatureMark, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
+import { CHARS, NO_VALUE, pressureUnit, perTemperatureUnit, temperatureMark, tyrePressure, tyreTemperature, tyreWear, type Corner } from './values.ts';
 
-const { iff, eq, lt, gt, str, num, fmt, mul, add, game } = ncalc;
+const { iff, eq, lt, gt, str, num, fmt, mul, add } = ncalc;
 
 /** Tread left below this percentage is drawn in caution. */
 export const WEAR_CAUTION = 65;
@@ -52,8 +52,7 @@ export const TYRE_THRESHOLDS = {
   Kelvin: { cold: 333, hot: 373 },
 } as const;
 
-const unitExpr = game('TemperatureUnit');
-const perUnit = (f: string, k: string, c: string): string => iff(eq(unitExpr, str('Fahrenheit')), f, iff(eq(unitExpr, str('Kelvin')), k, c));
+const perUnit = perTemperatureUnit;
 
 /**
  * The canvas's own spacings inside a corner, none of them on the `space` scale, so the literals

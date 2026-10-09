@@ -18,7 +18,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { GEAR_CELL, gearCells, monoWidth } from '../design/metrics.ts';
 import { numeral } from '../elements/numeral.ts';
-import { lastGear } from '../shift.ts';
+import { FORWARD_GEARS, lastGear } from '../shift.ts';
 import { ds } from '../tokens.ts';
 
 const { game, iff, eq, str, not } = ncalc;
@@ -107,7 +107,7 @@ export function gearGhosts(frame: Rect, size: number, ghosts: GearGhosts, name: 
   const sides = [
     { id: 'below', x: cell.left - ghosts.gap - width, step: -1 as const, visibleBind: undefined },
     // The gear above is nothing to show in the car's top gear, which the ladder cannot know: the
-    // mapping stops at the eight gears SimHub reports, and this stops at the count the car declares.
+    // mapping stops at the last of `FORWARD_GEARS`, and this stops at the count the car declares.
     { id: 'above', x: cell.left + cell.width + ghosts.gap, step: 1 as const, visibleBind: not(lastGear()) },
   ];
   return sides.map((side) =>
@@ -136,9 +136,6 @@ export function gearCluster(frame: Rect, ghosts: GearGhosts, size: number = GEAR
   const fits = ghostedGearWidth(size, ghosts) <= frame.width;
   return [...(fits ? gearGhosts(frame, size, ghosts, `${prefix}.gear`) : []), ...gear(frame, size, prefix)];
 }
-
-/** The forward gears SimHub can report, as the strings it reports them in. */
-const FORWARD_GEARS = ['1', '2', '3', '4', '5', '6', '7', '8'] as const;
 
 /**
  * The gear one above or one below, as text mapped from text.

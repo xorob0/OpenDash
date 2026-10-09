@@ -18,7 +18,6 @@ import {
   DROPPED,
   FAST_BLINK_MS,
   NO_PROPERTY,
-  PIT_SPEEDING_MARGIN,
   SIDE_EFFECTS,
   SLOW_BLINK_MS,
   SPOTTER_EFFECTS,
@@ -31,7 +30,7 @@ import {
 import { lampsOf } from '../src/leds/lamps.ts';
 import { ignitionIsOn } from '../src/leds/gates.ts';
 import * as values from '../src/second/values.ts';
-import { fuelPercent } from '../src/second/values.ts';
+import { fuelPercent, PIT_SPEEDING_MARGIN } from '../src/second/values.ts';
 // The flag box's own states, so that "the strip and the box compare the same thing" is asserted
 // against the box rather than against a copy of what the box is believed to say.
 import { warningStates } from '../src/leds/states.ts';

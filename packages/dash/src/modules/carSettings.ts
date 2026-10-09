@@ -13,15 +13,14 @@
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { assistPresent } from '../second/tracked.ts';
-import { CHARS, absLevel, antiRollFront, antiRollRear, brakeBias, fuelMixture, tcLevel } from '../second/values.ts';
+import { assistValue, hasAssist, type Assist } from '../cards/assist.ts';
+import { CHARS, antiRollFront, antiRollRear, brakeBias, fuelMixture } from '../second/values.ts';
 import { defineModule, drawnAt, fieldsRow, fld } from './module.ts';
-import type { Expr } from '../bind.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { fmt, isNull, not, raw, game } = ncalc;
+const { fmt, isNull, not, game } = ncalc;
 
 /**
  * The longest reading a setting draws in each of its two patterns: a level of two digits, and a brake
@@ -44,15 +43,20 @@ const settingField = (ctx: ModuleContext, id: string, label: string, expr: strin
   fld(ctx, id, label, { sample: '3', widest: SETTING_WIDEST[pattern], bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
 
 /**
- * The same field, but told directly when it is there rather than handed a property to test.
+ * A traction control or ABS field: the cards' own reading, `OFF` at zero in its colour, in a setting
+ * cell, hidden on a car without the system.
  *
  * Apart from {@link settingField} because the two take different things: that one takes a property
- * and asks whether the sim published it, this one takes the answer. Passing a condition to the first
- * produces `!(isnull(<a boolean>))`, which is true whatever the boolean was -- a field that can no
- * longer hide, silently, which is worse than the gap it was meant to close.
+ * and asks whether the sim published it, this one asks `hasAssist`, which is a condition. Passing a
+ * condition to the first produces `!(isnull(<a boolean>))`, which is true whatever the boolean was --
+ * a field that can no longer hide, silently, which is worse than the gap it was meant to close.
+ *
+ * The pit wall's Track panel draws its two assist cells with this as well. Each surface used to
+ * format the level itself, so a car with TC switched off read `0` here and on the pit wall and `OFF`
+ * on the card.
  */
-const presentField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, visible: Expr): FieldSpec =>
-  fld(ctx, id, label, { sample: '3', widest: SETTING_WIDEST[pattern], bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: visible });
+export const assistField = (ctx: ModuleContext, assist: Assist, label: string, fs: number, sample = '3'): FieldSpec =>
+  fld(ctx, assist, label, { ...assistValue(assist, sample), chars: CHARS.setting, fs }, { visibleBind: hasAssist(assist) });
 
 /** The canvas sets a readout group's pairs 20 px apart, which is closer than a row of fields. */
 const SETTING_GAP = 20;
@@ -83,12 +87,12 @@ const COLUMNS: Record<Archetype, number> = { wide: 3, grid: 3, tallNarrow: 2, ta
  * DIFF cell to the rear anti-roll bar, which is exactly that mistake.
  */
 export const settingCells = (ctx: ModuleContext, fs: number): FieldSpec[] => [
-  presentField(ctx, 'tc', 'TC', tcLevel(), '0', fs, assistPresent(raw('dcTractionControl'), tcLevel())),
+  assistField(ctx, 'tc', 'TC', fs),
   settingField(ctx, 'bb', 'BB', brakeBias(), '0.0', fs, game('BrakeBias')),
   // `Map` is what the catalogue and the bar's own strip call this cell; iRacing publishes the
   // engine map as the mixture.
   settingField(ctx, 'mix', 'Map', fuelMixture(), '0', fs),
-  presentField(ctx, 'abs', 'ABS', absLevel(), '0', fs, assistPresent(raw('dcABS'), absLevel())),
+  assistField(ctx, 'abs', 'ABS', fs),
 ];
 
 export const carSettings = defineModule('carSettings', (ctx) => {

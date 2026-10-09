@@ -20,6 +20,8 @@ import { expressionsOf, walkItems } from '../src/walk.ts';
 import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
+import { ds } from '../src/tokens.ts';
 import type { TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
@@ -171,14 +173,22 @@ describe('card expressions', () => {
     expect(colour).toContain(`${deadband}'#F5F7FA'`);
   });
 
-  test('assists show -- without the raw field, OFF at zero', () => {
-    expect(formulaOf(textItem('tc', 'value'), 'Text')).toBe(
-      "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))",
-    );
-    expect(formulaOf(textItem('abs', 'value'), 'Text')).toContain('dcABS');
-    expect(formulaOf(textItem('abs', 'value'), 'TextColor')).toBe(
-      "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))",
-    );
+  test('assists show -- on a car without the system, OFF at zero', () => {
+    const KNOB = { tc: 'DataCorePlugin.GameRawData.Telemetry.dcTractionControl', abs: 'DataCorePlugin.GameRawData.Telemetry.dcABS' };
+    const LEVEL = { tc: 'DataCorePlugin.GameData.TCLevel', abs: 'DataCorePlugin.GameData.ABSLevel' };
+    for (const id of ['tc', 'abs'] as const) {
+      const shown = (props: Props) => ({ text: evalNcalc(formulaOf(textItem(id, 'value'), 'Text'), props), colour: evalNcalc(formulaOf(textItem(id, 'value'), 'TextColor'), props) });
+      // No knob and no level: a car without the system, which is the one case for the dashes.
+      expect(shown({ [LEVEL[id]]: 0 })).toEqual({ text: '--', colour: ds.purpose.assist.none });
+      // The knob turned to zero is the system switched off.
+      expect(shown({ [KNOB[id]]: 0, [LEVEL[id]]: 0 })).toEqual({ text: 'OFF', colour: ds.purpose.assist.off });
+      expect(shown({ [KNOB[id]]: 3, [LEVEL[id]]: 3 })).toEqual({ text: '3', colour: ds.color.text.primary });
+      // A level and no knob is a fixed system, or a sim without iRacing's knobs: `assistPresent`
+      // says the car has it, as the strip beside the card does, so the level is drawn and not `--`.
+      expect(shown({ [LEVEL[id]]: 4 })).toEqual({ text: '4', colour: ds.color.text.primary });
+      // A knob with no level published reads as off rather than throwing on a null.
+      expect(shown({ [KNOB[id]]: 0 })).toEqual({ text: 'OFF', colour: ds.purpose.assist.off });
+    }
   });
 
   test('tyre temps convert thresholds per unit and tyre pressures spell the unit as its symbol', () => {

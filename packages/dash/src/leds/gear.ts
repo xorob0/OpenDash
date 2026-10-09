@@ -40,7 +40,7 @@ import type { Expr } from '../bind.ts';
 import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
 import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type Hex, type MatrixContainer } from '../generator.ts';
-import { carLadderFlash, carLadderOnScreens, carLadderStageEntered, eitherOf } from '../shift.ts';
+import { carLadderFlash, carLadderOnScreens, carLadderStageEntered, eitherOf, FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 
@@ -93,8 +93,8 @@ export const GEAR_FONT: Readonly<Record<string, Grid>> = {
   '9': ['.GGGGGG.', '.GGGGGG.', '.GG..GG.', '.GGGGGG.', '.GGGGGG.', '.....GG.', '.GGGGGG.', '.GGGGGG.'],
 };
 
-/** The gears iRacing reports, as SimHub's `Gear` string gives them. */
-export const GEARS: readonly string[] = ['R', 'N', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+/** The gears the box draws, as SimHub's `Gear` string gives them: reverse, neutral and {@link FORWARD_GEARS}. */
+export const GEARS: readonly string[] = ['R', 'N', ...FORWARD_GEARS];
 
 /** The palette a gear is drawn in at one shift band. */
 const paletteFor = (colour: Hex): Palette => ({ [INK]: colour });

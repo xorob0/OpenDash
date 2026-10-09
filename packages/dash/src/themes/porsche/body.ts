@@ -34,8 +34,7 @@ import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { hasSetting, trackedValue } from '../../second/tracked.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
-import { limiterOn } from '../../components/pitAlerts.ts';
-import { antiRollFront } from '../../second/values.ts';
+import { antiRollFront, pitLimiterOn } from '../../second/values.ts';
 import type { TrackedValue } from '../../second/tracked.ts';
 import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
@@ -118,7 +117,7 @@ const TELLTALE_LIST = (): readonly { id: string; pictogram: Pictogram; lit?: Lit
   { id: 'fuel', pictogram: 'fuel', lit: { on: engineWarning(ENGINE_WARNING_BITS.fuelPressure), state: 'lit' } },
   { id: 'battery', pictogram: 'battery', lit: { on: engineWarning(ENGINE_WARNING_BITS.stalled), state: 'lit' } },
   { id: 'oil', pictogram: 'oil', lit: { on: engineWarning(ENGINE_WARNING_BITS.oilPressure), state: 'lit' } },
-  { id: 'limiter', pictogram: 'limiter', lit: { on: limiterOn(), state: 'lit' } },
+  { id: 'limiter', pictogram: 'limiter', lit: { on: pitLimiterOn(), state: 'lit' } },
 ];
 
 function telltaleColumn(column: TelltaleColumn, top: number, height: number): Item[] {
