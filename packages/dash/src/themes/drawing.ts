@@ -19,7 +19,7 @@
  */
 import type { Expr } from '../bind.ts';
 import type { FaceSize, FaceZone } from '../contract.ts';
-import type { Hex, Item, Rect } from '../generator.ts';
+import type { Dashboard, Hex, Item, Rect } from '../generator.ts';
 import type { ModuleContext } from '../modules/module.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { Density } from '../second/density.ts';
@@ -122,4 +122,10 @@ export interface ThemeDrawing {
    * drawn under the same id. `classOnly` is the zone's class filter, which the relative page reads.
    */
   bandPage?(page: string, frame: Rect, prefix: string, classOnly?: Expr): Item[];
+  /**
+   * The theme's settings (`THEME_SETTINGS` in the contract) bound into each dashboard of a face once it
+   * is built, for a theme whose setting reaches every item rather than a part it draws: the AiM's
+   * backlight (#715). A setting that colours one part binds it where the part is drawn instead.
+   */
+  settings?(dashboard: Dashboard): Dashboard;
 }

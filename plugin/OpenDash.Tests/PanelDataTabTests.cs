@@ -45,9 +45,14 @@ namespace OpenDashPlugin.Tests
                 // SimHub's own frame and nobody sets it.
                 .Where(name => !name.StartsWith("Slot", StringComparison.Ordinal) && name != Contract.ShiftLights)
                 .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion && name != Contract.ClassBestLap)
+                // A theme's own settings are drawn from their declaration, which names no theme, so they are
+                // reached through Contract.ThemeSettings rather than by name; the two lines after this hold that. #715.
+                .Where(name => !Contract.ThemeSettings.Any(setting => setting.Property == name))
                 .Where(name => !sources.Contains("Settings." + name) && !sources.Contains("Set" + name))
                 .ToArray();
             Assert.Equal(Array.Empty<string>(), unreachable);
+            Assert.Contains("Contract.ThemeSettingsOf(", sources);
+            Assert.Contains("Settings.SetThemeSetting(", sources);
         }
 
         [Fact]

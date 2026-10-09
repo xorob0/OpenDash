@@ -7,6 +7,7 @@
 import type { ThemeDrawing } from '../drawing.ts';
 import { regionRect } from '../anatomy.ts';
 import { footRuleOf } from './anatomy.ts';
+import { backlit } from './backlight.ts';
 import { aimBandPage } from './foot.ts';
 import { aimModuleFrame, aimModules } from './modules.ts';
 import { lcd } from './lcd.ts';
@@ -32,4 +33,6 @@ export const aimDrawing: ThemeDrawing = {
   bandPage: aimBandPage,
   // Everything the house draws on the LCD, in the LCD's register; the flag is never handed to it.
   restyle: (items, opts) => lcd(items, opts),
+  // The backlight the driver chose, on every item the LCD draws; the white with no plugin (#715).
+  settings: backlit,
 };

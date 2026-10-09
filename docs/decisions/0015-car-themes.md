@@ -49,6 +49,16 @@ dashboard a display shows is SimHub's decision, and SimHub already makes it per 
 playlist ([#199](https://github.com/xorob0/OpenDash/issues/199)), so a theme selected at runtime would
 be a second matching engine competing with the one the driver already configures.
 
+*Added on 2026-10-09 ([#715](https://github.com/xorob0/OpenDash/issues/715)):* a theme may nonetheless
+offer the driver settings of its own, which is not a runtime selection of the theme. One could read the
+AiM's backlight, eight looks behind one property, as the switch this record rejects; in reality it changes
+colours alone, through bindings whose fallback is the overlay's value, which is the runtime bucket of
+[ADR 0011](0011-personalisation.md), and the theme that is drawn is still the package SimHub's playlist
+chose. A theme declares its settings in a `settings.json` beside its overlay, each choice an alias into
+that overlay, so that no colour escapes the token file; the plugin publishes each as
+`OpenDash.Theme<Theme><Setting>` and offers the settings of every theme on the rig, since in auto mode
+the theme on screen is the car's.
+
 ### What a theme may change
 
 A theme may change four things, listed in the order of what they cost.

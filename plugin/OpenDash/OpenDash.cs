@@ -957,6 +957,13 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.FlagsInPitLane, () => Settings.FlagsInPitLane);
             // And the Porsche crest's path, published rather than chosen: the file CarCrest.cs fetched, or "". #714.
             this.AttachDelegate(Contract.PorscheCrest, () => Crest.Path);
+            // And every theme's own settings, the id of the choice made, whether or not a screen of that theme
+            // is on the rig: a themed package installed by hand reads them as well as one the panel added. #715.
+            foreach (var themeSetting in Contract.ThemeSettings)
+            {
+                var declared = themeSetting;
+                this.AttachDelegate(declared.Property, () => Settings.ThemeSetting(declared));
+            }
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

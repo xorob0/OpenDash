@@ -1611,10 +1611,11 @@ namespace OpenDashPlugin.Tests
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar, the
             // blue flag detail, the two that say how a driver is named, the idle screen's two, the class
             // best, the clock format, the delta's precision, whether a flag shows in the pit lane and the
-            // Porsche crest's path, which every screen shares, and one group per screen the rig holds.
+            // Porsche crest's path and the AiM's backlight, which every screen shares, and one group per
+            // screen the rig holds.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(27, shared);
+            Assert.Equal(28, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and a hundred and nine names is still
             // fewer than the screens' two hundred and sixty-four, which are what was worth narrowing.
