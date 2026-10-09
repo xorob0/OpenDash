@@ -16,7 +16,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { composePackages, themesToBuild } from '../src/build.ts';
-import { ncalcEvaluator as E, type TextItem } from '../src/generator.ts';
+import { ncalcEvaluator as E, type Item, type TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
 import { CHARS, LAP_TIME_WIDEST, lapTime, lapTimeWidest, noTime } from '../src/second/values.ts';
@@ -116,10 +116,10 @@ function problems(item: TextItem): object[] {
   return found.filter((r) => r.width > item.rect.width || r.width > limit).map((r) => ({ item: item.name, drawn: r.text, width: r.width, box: item.rect.width, widest: item.widest }));
 }
 
-describe('a lap of ten minutes fits every box a lap time is drawn in', () => {
-  const themes = themesToBuild({ themes: [], allThemes: true, touchedThemes: false }, () => {});
-  const packages = composePackages({ version: '0.0.0-test', themes, log: () => {} });
+/** Every package of every theme. */
+const packages = composePackages({ version: '0.0.0-test', themes: themesToBuild({ themes: [], allThemes: true, touchedThemes: false }, () => {}), log: () => {} });
 
+describe('a lap of ten minutes fits every box a lap time is drawn in', () => {
   test('there is something to check, on the faces, the cards and the second screens', () => {
     const drawing = packages.flatMap(({ pkg }) => pkg.dashboards.flatMap((d) => itemsOf(d).filter((i): i is TextItem => i.kind === 'text' && readings(i).length > 0)));
     const names = new Set(drawing.map((i) => i.name.replace(/^.*\.(?=[^.]+\.value$)/, '')));
@@ -148,6 +148,63 @@ describe('a lap of ten minutes fits every box a lap time is drawn in', () => {
           expect({ module: module.id, problems: problems(item) }).toEqual({ module: module.id, problems: [] });
         }
       }
+    });
+  }
+});
+
+/**
+ * The AiM theme draws an unlit LCD ghost behind every reading, from the `widest` the reading
+ * declares (#751), so the shape of a lap's `widest` is drawn as well as measured. A ghost of
+ * `88:88.88` behind `1:42.905` puts the lit colon and point a cell away from the unlit ones, which
+ * is what declaring the ten-minute shape did to every ordinary lap. So every ghost behind a lap time
+ * is held to the readings of ordinary laps: counted from the side the reading is aligned to, its
+ * colon and point fall on the ghost's colon and point and its digits on the ghost's 8s. A lap of ten
+ * minutes is the rare one, and is the one left to draw over a ghost of the other shape.
+ */
+const ORDINARY_LAPS = [102.905, 59.999, 599.999];
+
+/** Whether `reading` sits in `ghost` cell for cell, counted from the side the box aligns it to. */
+function registers(ghost: string, reading: string, hAlign: 'left' | 'center' | 'right'): boolean {
+  const kind = (c: string): string => (c === '.' || c === ':' || c === ' ' ? c : '8');
+  const g = [...ghost].map(kind);
+  const r = [...reading].map(kind);
+  if (r.length > g.length) return false;
+  const offset = hAlign === 'right' ? g.length - r.length : hAlign === 'center' ? (g.length - r.length) / 2 : 0;
+  return Number.isInteger(offset) && r.every((c, i) => c === g[offset + i]);
+}
+
+/** Every ghost of a screen paired with the reading it is drawn behind, where that reading is a lap time. */
+function lapGhosts(screenItems: readonly Item[]): { ghost: TextItem; value: TextItem }[] {
+  const texts = [...walkItems(screenItems)].filter((i): i is TextItem => i.kind === 'text');
+  return texts.flatMap((ghost, at) => {
+    if (!ghost.name.endsWith('.ghost')) return [];
+    const base = ghost.name.slice(0, -'.ghost'.length);
+    const nearest = texts
+      .map((value, index) => ({ value, index }))
+      .filter(({ value }) => value !== ghost && (value.name === base || value.name === `${base}.value`))
+      .sort((a, b) => Math.abs(a.index - at) - Math.abs(b.index - at))[0];
+    return nearest && bindingExpression(nearest.value, 'Text').includes('toshorttime(') ? [{ ghost, value: nearest.value }] : [];
+  });
+}
+
+describe('behind an ordinary lap, the LCD ghost registers with the reading', () => {
+  const ghostsOf = (pkg: (typeof packages)[number]['pkg']) => pkg.dashboards.flatMap((d) => d.screens.flatMap((s) => lapGhosts(s.items)));
+
+  test('there are lap ghosts to check, the lap pop-up and the lap review among them', () => {
+    const found = packages.flatMap(({ pkg }) => ghostsOf(pkg));
+    expect(found.length).toBeGreaterThan(10);
+    expect(found.some(({ value }) => value.name.endsWith('popUp.lap.value'))).toBe(true);
+    expect(found.some(({ value }) => value.name.endsWith('lapReview.lap.value'))).toBe(true);
+  });
+
+  for (const { pkg } of packages) {
+    test(pkg.folderName, () => {
+      const misregistered = ghostsOf(pkg).flatMap(({ ghost, value }) =>
+        ORDINARY_LAPS.map((lap) => drawn(bindingExpression(value, 'Text'), lap))
+          .filter((reading) => !registers(ghost.text, reading, value.hAlign))
+          .map((reading) => ({ item: value.name, ghost: ghost.text, reading, hAlign: value.hAlign })),
+      );
+      expect(misregistered).toEqual([]);
     });
   }
 });

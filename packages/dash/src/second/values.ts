@@ -107,13 +107,19 @@ export const LONG_LAP_SECONDS = 600;
  * The widest reading a lap time draws at `decimals` places, which every box that draws one declares
  * as its `widest` so that the fit tests measure the budget and not the sample.
  *
- * The ten-minute form, two minute digits and at most {@link LONG_LAP_DECIMALS} places, which is as
- * many cells as a lap under ten minutes at three. Every digit is a 4, the widest digit of Barlow and
- * Barlow Condensed in every weight a lap time is drawn in (Light alone draws its 0 wider, and draws
- * no lap), so the one string is the widest a proportional reading can be as well as the cell count
- * of a monospaced one.
+ * Every digit is a 4, the widest digit of Barlow and Barlow Condensed in every weight a lap time is
+ * drawn in (Light alone draws its 0 wider, and draws no lap), so the one string is the widest a
+ * proportional reading can be as well as the cell count of a monospaced one.
+ *
+ * At three places it is in the shape of a lap under ten minutes, `4:44.444`. A ten-minute lap,
+ * `10:30.12`, takes the same cells and draws no wider, but the shape is not only a width: the AiM
+ * theme draws its LCD ghost from the `widest`, and a ghost of `88:88.88` behind `1:42.905` puts the
+ * lit colon and point a cell away from the unlit ones on every ordinary lap. The ten-minute lap is
+ * the rare one, so it is the one drawn over a ghost of the other shape. At fewer places the ten
+ * minute form keeps its places and has the one more cell, so it is the widest, `44:44.4`.
  */
-export const lapTimeWidest = (decimals = 3): string => `44:44.${'4'.repeat(Math.min(decimals, LONG_LAP_DECIMALS))}`;
+export const lapTimeWidest = (decimals = 3): string =>
+  decimals > LONG_LAP_DECIMALS ? `4:44.${'4'.repeat(decimals)}` : `44:44.${'4'.repeat(decimals)}`;
 
 /** The three-decimal form, which is what a lap time is drawn to unless it asks for fewer. */
 export const LAP_TIME_WIDEST = lapTimeWidest();
