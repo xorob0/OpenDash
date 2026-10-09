@@ -1756,17 +1756,28 @@ export const magnitude = (expr: Expr): Expr => abs(expr);
  * The canvas states a two-colour rule for the lap review's own deltas -- red when slower, green when
  * faster -- and the code has three states here, the third being `purpose.delta.zero` inside this
  * band. The three are kept, and for a finished lap as well as for a live one. A lap that came in
- * five thousandths off the session best is not a lap that was faster, and colouring it as though it
- * were is a claim the number does not carry; besides, one comparison drawn two ways is how the delta
- * card and the delta module would come to disagree, since every surface that draws a delta goes
- * through {@link deltaColour}. The difference from the canvas is recorded here rather than resolved
- * by a second rule.
+ * four thousandths off the session best is drawn `+0.00`, which is not a lap that was slower, and
+ * colouring it as though it were is a claim the number does not carry. The difference from the
+ * canvas is recorded here rather than resolved by a second rule.
+ *
+ * The lap review's two deltas are what {@link deltaColour} colours. The live delta to the reference
+ * has a band of its own, {@link referenceDeltaBand}, which narrows when the delta is drawn to
+ * thousandths, and the lap history's column and the sectors colour by rules of their own. What the
+ * reference's band shares with this one is the edge: half a unit of the last place drawn, and
+ * strictly inside it.
  */
 export const DELTA_DEADBAND = 0.005;
 
-/** Green when faster, red when slower, white within the deadband. */
+/**
+ * Green when faster, red when slower, white within the deadband.
+ *
+ * Strictly within. .NET rounds a half away from zero, so 0.005 to two places is `+0.01` and −0.005
+ * is `−0.01`, and a band that took its own edge in coloured those figures as level. Every figure
+ * drawn as a zero is white and every other is green or red, which is {@link referenceDeltaLevel}'s
+ * rule at hundredths (#614).
+ */
 export const deltaColour = (seconds: Expr): Expr =>
-  iff(lt(seconds, num(-DELTA_DEADBAND)), str(dsColour.faster), iff(gt(seconds, num(DELTA_DEADBAND)), str(dsColour.slower), str(dsColour.zero)));
+  iff(le(seconds, num(-DELTA_DEADBAND)), str(dsColour.faster), iff(ge(seconds, num(DELTA_DEADBAND)), str(dsColour.slower), str(dsColour.zero)));
 
 /** The delta colours, named so the expression above reads as a sentence. */
 const dsColour = { faster: dsTokens.purpose.delta.faster, slower: dsTokens.purpose.delta.slower, zero: dsTokens.purpose.delta.zero };
