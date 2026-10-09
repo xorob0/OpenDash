@@ -1917,7 +1917,7 @@ namespace OpenDashPlugin
             return slots;
         }
 
-        /// <summary>Property name of a companion module, 1-based: CompanionModule01 .. CompanionModule21.</summary>
+        /// <summary>Property name of a companion module, 1-based: CompanionModule01 .. CompanionModule22.</summary>
         public static string ModuleProperty(string ns, int module)
         {
             if (!Modules.IsValidNumber(module)) throw new ArgumentOutOfRangeException(nameof(module));
@@ -2169,7 +2169,7 @@ namespace OpenDashPlugin
             return PitWallDefaultZonePages[index];
         }
 
-        /// <summary>The default on/off state of the 21 companion modules, index 0 is module 1.</summary>
+        /// <summary>The default on/off state of the 22 companion modules, index 0 is module 1.</summary>
         public static bool[] DefaultModules()
         {
             return Modules.Defaults();

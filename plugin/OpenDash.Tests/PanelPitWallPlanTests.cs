@@ -314,7 +314,7 @@ namespace OpenDashPlugin.Tests
         public void The_companion_grid_is_three_columns_where_they_fit()
         {
             Assert.Equal(3, PanelCompanionPlan.ModuleColumns);
-            Assert.Equal(7, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
+            Assert.Equal(8, (Modules.Count + PanelCompanionPlan.ModuleColumns - 1) / PanelCompanionPlan.ModuleColumns);
             Assert.Equal(6, PanelCompanionPlan.ModuleGap);
             Assert.Equal(34, PanelCompanionPlan.ModuleHeight);
             Assert.Equal(10, PanelCompanionPlan.ModulePaddingX);

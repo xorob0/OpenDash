@@ -300,11 +300,12 @@ namespace OpenDashPlugin.Tests
             // Since ADR 0017 the companion's rotation and the pit wall's zones live on the screen that
             // has them, so the defaults are a new screen's rather than the settings object's.
             var companion = Screen(Contract.KindCompanion, 850, 480);
-            Assert.Equal(21, companion.Modules.Length);
+            Assert.Equal(22, companion.Modules.Length);
             Assert.True(companion.Modules[0]);
             Assert.False(companion.Modules[5]);
             Assert.False(companion.Modules[19]);
             Assert.False(companion.Modules[20]);
+            Assert.True(companion.Modules[21]);
 
             var wall = Screen(Contract.KindPitWall, 1920, 1080);
             // Every zone of every page, each on the page its own slot names.
@@ -325,7 +326,7 @@ namespace OpenDashPlugin.Tests
             };
             companion.Normalise();
             // What the file carried is kept; the rest goes back to the catalogue defaults.
-            Assert.Equal(21, companion.Modules.Length);
+            Assert.Equal(22, companion.Modules.Length);
             Assert.False(companion.Modules[0]);
             Assert.True(companion.Modules[1]);
             Assert.False(companion.Modules[5]);
@@ -2192,8 +2193,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(4, settings.CycleScreenModule("Companion"));
             companion.CompanionPage = 4;
             Assert.Equal(6, settings.CycleScreenModule("Companion"));
-            // And it wraps over the two that are off at the end of the catalogue.
+            // Over the two that are off near the end of the catalogue to the engine readings, which is
+            // on, and from there it wraps.
             companion.CompanionPage = 18;
+            Assert.Equal(21, settings.CycleScreenModule("Companion"));
             Assert.Equal(0, settings.CycleScreenModule("Companion"));
 
             // A glance shows a module the rotation has turned off, because a glance is a thing the

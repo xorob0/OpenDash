@@ -225,8 +225,9 @@ describe('settings', () => {
     // position per zone so that a zone's pages can be put in any order, and a brightness and fifteen
     // effect switches for a strip. And 399 before a strip's aid lamps could read the plugin's slip
     // estimate: the strip's switch, and the three the plugin computes. And 403 before the Porsche's
-    // badge could draw the crest the plugin fetches into the user's own folder (#714).
-    expect(props).toHaveLength(404);
+    // badge could draw the crest the plugin fetches into the user's own folder (#714). And 404
+    // before the catalogue gained the engine readings, and with them a companion switch (#752).
+    expect(props).toHaveLength(405);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -906,24 +907,26 @@ describe('plugin mirror', () => {
 
 
 describe('the second screens', () => {
-  test('21 modules, numbered in page order, three of them off', () => {
-    expect(MODULE_CATALOGUE).toHaveLength(21);
-    expect(MODULE_COUNT).toBe(21);
+  test('22 modules, numbered in page order, three of them off', () => {
+    expect(MODULE_CATALOGUE).toHaveLength(22);
+    expect(MODULE_COUNT).toBe(22);
     MODULE_CATALOGUE.forEach((m, i) => expect(m.number).toBe(i + 1));
-    expect(new Set(MODULE_CATALOGUE.map((m) => m.id)).size).toBe(21);
+    expect(new Set(MODULE_CATALOGUE.map((m) => m.id)).size).toBe(22);
     // Virtual energy, damage and segment rivals: the three iRacing cannot fill.
     expect(MODULE_CATALOGUE.filter((m) => !m.enabled).map((m) => m.id)).toEqual(['energy', 'damage', 'trackRivals']);
     // Module 17 is the gear alone, as the hero is: a module shows one thing.
     expect(moduleAt(17)).toMatchObject({ id: 'gear', name: 'Gear' });
     expect(moduleMeta('gear').number).toBe(17);
+    // An added page goes at the end, so that no page leaves the index a zone setting holds (#752).
+    expect(moduleAt(22)).toMatchObject({ id: 'engineReadings', name: 'Engine readings' });
     expect(() => moduleAt(0)).toThrow(RangeError);
-    expect(() => moduleAt(22)).toThrow(RangeError);
+    expect(() => moduleAt(23)).toThrow(RangeError);
     expect(() => moduleMeta('nope')).toThrow();
   });
 
   test('module settings are two-digit and zero-padded', () => {
     expect(moduleSettingName(1)).toBe('CompanionModule01');
-    expect(moduleSettingName(21)).toBe('CompanionModule21');
+    expect(moduleSettingName(22)).toBe('CompanionModule22');
     expect(pitWallZoneSettingName('race', 'A')).toBe('PitWallRaceA');
     expect(pitWallZoneSettingName('tower', 'Wide')).toBe('PitWallTowerWide');
   });

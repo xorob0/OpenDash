@@ -84,7 +84,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 21 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -122,8 +122,9 @@ namespace OpenDashPlugin.Tests
             // And 399 before a strip's aid lamps could read the plugin's slip estimate: the strip's
             // switch, and the three the plugin computes because SimHub publishes none of them. And 403
             // before the Porsche's badge could draw the crest the plugin fetches into the user's own
-            // folder (#714).
-            Assert.Equal(404, names.Count);
+            // folder (#714). And 404 before the catalogue gained the engine readings, and with them a
+            // companion switch (#752).
+            Assert.Equal(405, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -197,15 +198,15 @@ namespace OpenDashPlugin.Tests
 
             var afterFaces = face + Contract.FaceSizes.Count * perFace;
             Assert.Equal("CompanionModule01", Contract.ModuleProperty(1));
-            Assert.Equal("CompanionModule21", Contract.ModuleProperty(21));
-            Assert.Equal(Enumerable.Range(1, 21).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(21));
+            Assert.Equal("CompanionModule22", Contract.ModuleProperty(22));
+            Assert.Equal(Enumerable.Range(1, 22).Select(Contract.ModuleProperty), names.Skip(afterFaces).Take(22));
             // The page after the switches: live state the screens' enabled expressions follow, and the
             // one companion name that is not a switch. The start and the glance are not properties.
-            Assert.Equal("CompanionPage", names[afterFaces + 21]);
-            Assert.Equal("CompanionFlagFormat", names[afterFaces + 22]);
-            Assert.Equal("CompanionOpenOn", names[afterFaces + 23]);
+            Assert.Equal("CompanionPage", names[afterFaces + 22]);
+            Assert.Equal("CompanionFlagFormat", names[afterFaces + 23]);
+            Assert.Equal("CompanionOpenOn", names[afterFaces + 24]);
             Assert.Equal(new[] { "PitWallRaceA", "PitWallRaceB", "PitWallTowerWide", "PitWallTowerA", "PitWallTowerB", "PitWallTelemetryA", "PitWallTelemetryB", "PitWallTelemetryC", "PitWallPortraitA", "PitWallPortraitB", "PitWallPortraitC", "PitWallPortraitD", "PitWallPage", "WebViewUrl", "PitWallClassOnly", "PitWallFlagFormat", "LightsBrightness", "LightsNightBrightness",
-                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 24).Take(22));
+                "LightsNightMode", "FlagBoxLowFuelLaps", "LightsLowFuelLaps", "FlagBoxSpotterAnimation" }, names.Skip(afterFaces + 25).Take(22));
             // One filter for the screen, not one per zone: a pit wall zone is a widget pointed at one
             // dashboard file per rectangle, so zones A and B of the race page are the same file. The
             // page they belong to is what tells them apart now, and that is a different question.
@@ -262,17 +263,18 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Module_catalogue_has_twenty_one_pages_three_of_them_off()
+        public void Module_catalogue_has_twenty_two_pages_three_of_them_off()
         {
-            Assert.Equal(21, Modules.Count);
-            Assert.Equal(21, Modules.All.Count);
-            Assert.Equal(Enumerable.Range(1, 21), Modules.All.Select(m => m.Number));
-            Assert.Equal(21, Modules.All.Select(m => m.Id).Distinct().Count());
+            Assert.Equal(22, Modules.Count);
+            Assert.Equal(22, Modules.All.Count);
+            Assert.Equal(Enumerable.Range(1, 22), Modules.All.Select(m => m.Number));
+            Assert.Equal(22, Modules.All.Select(m => m.Id).Distinct().Count());
             Assert.All(Modules.All, m => Assert.False(string.IsNullOrWhiteSpace(m.Description)));
             // The three iRacing cannot fill: virtual energy, damage and segment rivals.
             Assert.Equal(new[] { "energy", "damage", "trackRivals" }, Modules.All.Where(m => !m.Enabled).Select(m => m.Id));
             Assert.Equal("Gear", Modules.DisplayName(17));
-            Assert.Equal("Module 22", Modules.DisplayName(22));
+            Assert.Equal("Engine readings", Modules.DisplayName(22));
+            Assert.Equal("Module 23", Modules.DisplayName(23));
             Assert.Null(Modules.ByNumber(0));
         }
 
