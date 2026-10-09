@@ -81,9 +81,52 @@ export const noTime = (decimals = 3): string => `${MINUS}:${MINUS}${MINUS}.${MIN
 /** The three-decimal form, which is what a lap time is drawn to unless it asks for fewer. */
 export const NO_TIME = noTime();
 
+/**
+ * The places a lap of ten minutes or more is drawn to, which is one fewer than a shorter lap's.
+ *
+ * `toshorttime` does not pad the minutes, so a lap that reaches ten minutes gains a digit: the
+ * Nordschleife's 24h and Tourist layouts lap in ten to eleven minutes in the MX-5 Cup, the Legends
+ * and the Cross Car, the three cars the AiM theme was built for, and `10:30.123` is seven digits in
+ * a box cut for the six of `1:42.905`. WPF clips at the box, so the lap pop-up, the lap review and
+ * every other lap-time box drew `10:30.12` and a sliver of the last digit (#883).
+ *
+ * The lap drops its thousandth rather than every box gaining a cell, which is the trade
+ * {@link sectorTime} makes for the same track. A seventh cell is wider than a rung L card's slot at
+ * 64 px, and on the faces and the pit wall it costs columns on every lap of every track: the
+ * 800 x 286 lap-times zone sheds Your best, the pit wall boards draw their Last and Best wider than
+ * the artboard heads them, the leaderboard gives its lap columns up sooner. A thousandth of a ten
+ * minute lap is noise, and `toshorttime` truncates as the clip did, so what is lost is what was
+ * already not drawn, and what is gained is the digit that was cut. An hour is not a lap.
+ */
+export const LONG_LAP_DECIMALS = 2;
+
+/** Ten minutes, in the seconds `timespantoseconds` reads a lap in: the first lap with two minute digits. */
+export const LONG_LAP_SECONDS = 600;
+
+/**
+ * The widest reading a lap time draws at `decimals` places, which every box that draws one declares
+ * as its `widest` so that the fit tests measure the budget and not the sample.
+ *
+ * Every digit is a 4, the widest digit of Barlow and Barlow Condensed in every weight a lap time is
+ * drawn in (Light alone draws its 0 wider, and draws no lap), so the one string is the widest a
+ * proportional reading can be as well as the cell count of a monospaced one.
+ *
+ * At three places it is in the shape of a lap under ten minutes, `4:44.444`. A ten-minute lap,
+ * `10:30.12`, takes the same cells and draws no wider, but the shape is not only a width: the AiM
+ * theme draws its LCD ghost from the `widest`, and a ghost of `88:88.88` behind `1:42.905` puts the
+ * lit colon and point a cell away from the unlit ones on every ordinary lap. The ten-minute lap is
+ * the rare one, so it is the one drawn over a ghost of the other shape. At fewer places the ten
+ * minute form keeps its places and has the one more cell, so it is the widest, `44:44.4`.
+ */
+export const lapTimeWidest = (decimals = 3): string =>
+  decimals > LONG_LAP_DECIMALS ? `4:44.${'4'.repeat(decimals)}` : `44:44.${'4'.repeat(decimals)}`;
+
+/** The three-decimal form, which is what a lap time is drawn to unless it asks for fewer. */
+export const LAP_TIME_WIDEST = lapTimeWidest();
+
 /** Character budgets of the values the second screens draw. */
 export const CHARS = {
-  /** `1:42.905` */
+  /** `1:42.905`, and `10:42.90`: a lap of ten minutes is drawn to {@link LONG_LAP_DECIMALS} places to fit. */
   lapTime: { digits: 6, specials: 2 } as Chars,
   /**
    * `-0.21`: a signed delta in five digit cells and a point, the sign taking one of the cells. The
@@ -175,8 +218,22 @@ export const CHARS = {
  */
 export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(0)), num(0));
 
-/** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
-export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
+/**
+ * A lap time as `toshorttime` writes it, `m:ss.fff`, and to {@link LONG_LAP_DECIMALS} places once
+ * the lap reaches ten minutes, `10:42.90`, so that every lap fits the cells cut for `1:42.905`.
+ *
+ * With no guard of its own: a lap that may be unset goes through {@link lapTime}, which reads this
+ * only once {@link hasTime} has said there is a time to read. `timespantoseconds` of a TimeSpan is
+ * never null, and NCalc's `if` evaluates the branch it takes and not the other.
+ */
+export const lapReading = (ts: Expr, decimals = 3): Expr => {
+  const long = Math.min(decimals, LONG_LAP_DECIMALS);
+  if (long === decimals) return toShortTime(ts, decimals, false, true);
+  return iff(lt(timespanToSeconds(ts), num(LONG_LAP_SECONDS)), toShortTime(ts, decimals, false, true), toShortTime(ts, long, false, true));
+};
+
+/** A lap time as {@link lapReading} draws it, or the placeholder of the same shape when it was never set. */
+export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), lapReading(ts, decimals), str(noTime(decimals)));
 
 /**
  * A sector time as seconds to two decimals, `28.41`, or `--` when it was never set.
@@ -1483,7 +1540,7 @@ export const average5 = (): Expr => {
   const seconds = slots.map((slot) => timespanToSeconds(slot));
   return iff(
     and(...slots.map((slot) => hasTime(slot))),
-    toShortTime(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS))), 3, false, true),
+    lapReading(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS)))),
     str(NO_TIME),
   );
 };

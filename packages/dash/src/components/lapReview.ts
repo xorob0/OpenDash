@@ -60,6 +60,7 @@ import {
   fuelLastLapIsSettled,
   fuelUnit,
   hasTime,
+  LAP_TIME_WIDEST,
   lapTime,
   lastLap,
   player,
@@ -212,7 +213,7 @@ const lapField = (prefix: string, fs: number = densityOf(DENSITY).hero): FieldSp
   label: 'Lap 12',
   labelBind: lapNumber(),
   labelWidest: 'Lap 999',
-  value: { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs },
+  value: { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs },
 });
 
 const deltaFields = (prefix: string): FieldSpec[] => [

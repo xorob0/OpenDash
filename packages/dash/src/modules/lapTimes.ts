@@ -25,7 +25,9 @@ import {
   currentLap,
   estimatedLap,
   fieldSize,
+  LAP_TIME_WIDEST,
   lapTime,
+  lapTimeWidest,
   lastLap,
   player,
   positionDrawn,
@@ -78,13 +80,13 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
    * do it. The portrait companion has its own drawing, with the last lap alone at the hero.
    */
   const lead = leadRankSize(ctx);
-  const last = fld(ctx, 'last', 'Last lap', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: portrait ? d.hero : lead });
+  const last = fld(ctx, 'last', 'Last lap', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: portrait ? d.hero : lead });
   const bests = [
-    fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: lead, color: ds.purpose.lap.sessionBest }),
-    fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: lead }),
+    fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: lead, color: ds.purpose.lap.sessionBest }),
+    fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: lead }),
   ];
   const laps = fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid });
-  const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid });
+  const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, widest: lapTimeWidest(1), fs: d.mid });
   /**
    * The canvas's "Delta to your best" is true of two of the three references, the session best and
    * the all-time best both being the driver's own, and false of the third. So the label follows the
@@ -116,7 +118,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
         : [fieldsRow([laps, estimated, toYourBest], ctx, columns)]),
       fieldsRow(
         [
-          fld(ctx, 'average5', 'Average 5', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.mid }),
+          fld(ctx, 'average5', 'Average 5', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.mid }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
             bind: positionDigits(player()),

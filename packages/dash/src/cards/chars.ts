@@ -6,7 +6,10 @@ import type { Chars } from '../design/metrics.ts';
 
 /** `m:ss.f` with room for a two-digit minute. */
 export const CURRENT_LAP_CHARS: Chars = { digits: 5, specials: 2 };
-/** `m:ss.fff`; laps over ten minutes overflow the box to the right, which SimHub allows. */
+/**
+ * `m:ss.fff`, and `mm:ss.ff` from ten minutes. A lap of ten minutes drawn to three places does not
+ * overflow the box, it is clipped at it, so it is drawn to two (`lapReading` in `second/values.ts`). #883.
+ */
 export const LAP_TIME_CHARS: Chars = { digits: 6, specials: 2 };
 /** `24` */
 export const POSITION_CHARS: Chars = { digits: 2, specials: 0 };

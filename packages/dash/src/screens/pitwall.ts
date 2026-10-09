@@ -29,7 +29,7 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { assistPresent } from '../second/tracked.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
@@ -185,9 +185,9 @@ export function lapDataPanel(name: string, frame: Rect): Item[] {
     ...panelRow(
       body,
       [
-        fld(ctx, 'estimated', 'Est.', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid }),
-        fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.mid }),
-        fld(ctx, 'last', 'Last', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: d.mid }),
+        fld(ctx, 'estimated', 'Est.', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, widest: lapTimeWidest(1), fs: d.mid }),
+        fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.mid }),
+        fld(ctx, 'last', 'Last', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.mid }),
       ],
       LAP_DATA_GAP,
     ),
@@ -237,7 +237,7 @@ export function trackPanel(name: string, frame: Rect): Item[] {
       ...track.build({ frame: rect(body.left, body.top, mapWidth, body.height), density: DENSITY, prefix: `${name}.map.`, notice: false }),
       ...fitFields(
         [
-          fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.mid, color: ds.purpose.lap.sessionBest }),
+          fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.mid, color: ds.purpose.lap.sessionBest }),
           fld(ctx, 'road', 'Road', {
             sample: '31',
             bind: fmt(roadTemperature(), '0'),
