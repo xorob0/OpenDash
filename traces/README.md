@@ -17,6 +17,14 @@ bun run record                 # every scenario that keeps a trace
 bun run record green pit       # some of them
 ```
 
+What a recording asks SimHub for is `propertiesRead()` in
+[packages/dash/src/properties.ts](../packages/dash/src/properties.ts): every property read by any
+expression of any package of any theme a release ships, the item bindings, the border colours, the
+screens' enabled expressions and the dashboard variables alike, plus the lap-history names no scan
+can see. Until #581 the scan read only the item bindings of the default theme, so the engine chip's
+border, the companion's module switches, the pit wall's page and everything the Porsche reads on its
+own were in no trace, and nothing said so.
+
 The bare form records the scenarios `scripts/trace.test.ts` expects a trace for, which is every
 scenario the emulator ships except the ones `UNTRACED_SCENARIOS` in
 [scripts/emulator.ts](../scripts/emulator.ts) names and says why for. Naming one of those records
@@ -80,9 +88,9 @@ noise in a double. Without that a re-recording of an unchanged scenario would di
 came out of a real SimHub and `recorded` and `simHub` say which one and when; a hand-written column
 has none of that behind it, so it is listed rather than left to look like the rest.
 
-It exists because "it carries every property any binding of any package reads" fails the moment a
-package starts reading a property no trace holds, and the honest answers to that are a re-record or
-this. A re-record is the better one and is what removes an entry: `toTrace` builds the header from
+It exists because "it carries every property any expression of any package of any shipped theme
+reads" fails the moment a package starts reading a property no trace holds, and the honest answers to
+that are a re-record or this. A re-record is the better one and is what removes an entry: `toTrace` builds the header from
 scratch, so the next recording of a scenario drops the list, and `recordedProperties()` derives what
 it asks SimHub for from `propertiesRead()`, so a property a binding reads is picked up without
 anybody adding it anywhere. Until then the entry is a claim, `scripts/trace.test.ts` holds it to
@@ -110,6 +118,28 @@ the 850x480, and 1 and 15 on the 850x480, which is where pages 0 and 14 sit in a
 full and whose order is the catalogue's -- the plugin's answer for a zone nobody has arranged. The
 seventeenth is `OpenDash.FlagsInPitLane` at `true`, the default a plugin nobody has opened
 publishes. The next `bun run record` reads all of them from the plugin and drops the entries.
+
+That recording was 2026-10-09, for #581, which is also when the nine traces first carried the
+twenty-seven properties the scan had never seen: the engine chip's border reads the warnings
+bitfield, the companion's enables read its twenty-one module switches and its forced module, the pit
+wall's enables read its page, and the Porsche's face reads the raw fuel level, the pit limiter speed
+and the crest. All seventeen #791 entries were observed and the lists are gone. `FlagsInPitLane` is
+true as asserted; the zone positions are on a different face than predicted, null on the 850x480 and
+1 and 16 on the 1280x480, because that is the screen the VM's rig carried that day and zone C's
+cycle had grown a page. The rig's state is the recording's, like the lap history, not the scenario's.
+
+The same day, a second recording, because #800 had re-recorded the nine on `main` at the same
+time for its engine-readings page and the two recordings could not be spliced: a trace is one
+timeline, and a column from another recording in it is a frame that never happened. The second pass
+was taken from the merged tree and carries both sides' columns and two more that neither had. The
+AiM theme (#204) and its backlight setting (#715) had landed between the first recording and the
+merge, and a scan that reads every shipped theme sees the AiM's face reading its setting: the plugin
+publishes the chosen look or the default, and `white`, the default in
+`packages/dash/src/themes/aim/settings.json`, is what the rig nobody has set published. The
+companion's twenty-second switch, #800's page, published true like the rest. #800's six engine
+readings stand still in every scenario, oil at 81.22 and 103.2, water at 88.5, fuel pressure 4.3,
+manifold 1.02 and 13.9 volts, which is the emulator's steady engine rather than anything the
+scenarios drive. No entry is asserted in any of the nine.
 
 ## Why a recording waits two minutes first
 
