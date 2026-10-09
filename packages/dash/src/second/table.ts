@@ -35,7 +35,7 @@ import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, LAP_TIME_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
@@ -464,13 +464,17 @@ const drawsOneClass = (ctx: CellContext): Expr | boolean => (ctx.mode === 'class
  * left inside cells cut for the widest value the column can hold, so P1 sat a whole digit cell
  * short of the edge and so did a `+9.9` measured against `+12.6`. `numeral` documents `width` as
  * the option for a value that does not fill its cells, and that is what this passes.
+ *
+ * `widest` is what the fit tests measure a cell by where its sample is the short end of what the
+ * binding draws, as `numeral` documents it; it never moves the cell.
  */
-function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign } = {}): Item[] {
+function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign; widest?: string } = {}): Item[] {
   const fs = opts.fs ?? ctx.type.lead;
   const align = opts.align ?? ctx.align;
   return [
     numeral(`${ctx.name}.${id}`, sample, ctx.x, ctx.top + (ctx.height - fs) / 2, fs, chars, {
       bind,
+      ...(opts.widest ? { widest: opts.widest } : {}),
       color: (opts.color as `#${string}`) ?? ds.color.text.secondary,
       colorBind: opts.colorBind ?? inkBind(ctx),
       hAlign: align,
@@ -658,13 +662,14 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
         : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
   int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },
-  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
+  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime, { widest: LAP_TIME_WIDEST }) },
   best: {
     header: 'Best',
     align: 'right',
     width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
+        widest: LAP_TIME_WIDEST,
         colorBind: iff(carIsSessionBest(ctx.idx, drawsOneClass(ctx)), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },

@@ -79,7 +79,7 @@ import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../sec
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, listNeighbour } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -213,6 +213,15 @@ function cellsThatFit(cells: readonly Cell[], width: number): Cell[] {
 /** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
 const detailWidth = (text: string, fs: number): number => Math.ceil(measureText('BarlowMedium', text, fs)) + 1;
 
+/** One of the labels that follow the gap: its sample, the widest its binding draws, and the binding. */
+interface Detail {
+  id: string;
+  text: string;
+  /** What the label is measured by, which for a lap time is a lap of ten minutes and not the sample. #883. */
+  widest: string;
+  bind: Expr;
+}
+
 /**
  * The labels that follow the gap on its baseline, by the piece that keeps each.
  *
@@ -220,7 +229,7 @@ const detailWidth = (text: string, fs: number): number => Math.ceil(measureText(
  * to say what the time is; `grid` and `tall` print it bare, a time beside a gap being unambiguous
  * once the page has been read once, and that is the width the prefix costs spent on the reading.
  */
-function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id: string; text: string; bind: Expr }[] {
+function details(ctx: ModuleContext, side: Side, keep: readonly string[]): Detail[] {
   const idx = listNeighbour(side.offset, ctx.classOnly);
   // The wide page is "Opponents · best and last", so its label carries the best lap as well as the
   // last one. The sheet writes "Last Best 1:42.994 · 1:43.234" and leaves which time is which to
@@ -233,11 +242,12 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): { id:
           {
             id: 'lastLap',
             text: best ? 'Last Best 1:42.994 · 1:43.234' : named ? 'Last 1:43.234' : '1:43.234',
+            widest: best ? `Last Best ${LAP_TIME_WIDEST} · ${LAP_TIME_WIDEST}` : named ? `Last ${LAP_TIME_WIDEST}` : LAP_TIME_WIDEST,
             bind: best ? concat(str('Last Best '), carBestLap(idx), str(' · '), carLastLap(idx)) : named ? concat(str('Last '), carLastLap(idx)) : carLastLap(idx),
           },
         ]
       : []),
-    ...(keep.includes('rating') ? [{ id: 'rating', text: 'iR 3.1k', bind: concat(str('iR '), carRating(idx)) }] : []),
+    ...(keep.includes('rating') ? [{ id: 'rating', text: 'iR 3.1k', widest: 'iR 3.1k', bind: concat(str('iR '), carRating(idx)) }] : []),
   ];
 }
 
@@ -252,7 +262,7 @@ interface Measured {
   gapSpec: FieldSpec;
   numSpec: FieldSpec;
   numberSize: number;
-  following: { id: string; text: string; bind: Expr }[];
+  following: Detail[];
   identity: Cell[];
   identityHeight: number;
   valueHeight: number;
@@ -292,7 +302,7 @@ function measure(ctx: ModuleContext, side: Side, box: Column, type: BlockType, k
   const gapHeight = has('gap') || following.length > 0 ? valueHeight + fieldTail(gapSpec, ctx.density) : 0;
   const lines = [d.label, identityHeight, gapHeight].filter((line) => line > 0);
   const height = lines.reduce((sum, line) => sum + line, 0) + INNER_GAP * (lines.length - 1);
-  const across = [...(has('gap') ? [Math.ceil(valueWidth(gapSpec, d))] : []), ...following.map((detail) => detailWidth(detail.text, d.label))];
+  const across = [...(has('gap') ? [Math.ceil(valueWidth(gapSpec, d))] : []), ...following.map((detail) => detailWidth(detail.widest, d.label))];
   const name = identity.find((cell) => cell.id === 'name');
   return {
     gapSpec,
@@ -368,8 +378,8 @@ function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, kee
       // read as one line rather than as a line with a caption under it.
       const baseline = canvasBaseline(lineBottom - valueHeight, valueHeight);
       for (const detail of following) {
-        const width = detailWidth(detail.text, d.label);
-        items.push(label(`${ctx.prefix}${side.id}.${detail.id}`, detail.text, x, canvasYForBaseline(baseline, d.label), width, { size: d.label, bind: detail.bind, widest: detail.text }));
+        const width = detailWidth(detail.widest, d.label);
+        items.push(label(`${ctx.prefix}${side.id}.${detail.id}`, detail.text, x, canvasYForBaseline(baseline, d.label), width, { size: d.label, bind: detail.bind, widest: detail.widest }));
         x += width + DETAIL_GAP;
       }
     }
