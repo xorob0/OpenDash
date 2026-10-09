@@ -6,19 +6,19 @@
  * reason (see UNTIMED_SECONDS); iRacing's TotalLaps is the leader's completed laps in timed
  * sessions, which is why the mode never keys off it. The label follows the resolved mode; in
  * time mode an untimed session shows `∞` and a session that has not started shows `-:--:--` in
- * text.dim; the `/ N` denominator is visible only in laps mode with a declared lap count, its Left
- * following the lap count's digits.
+ * text.dim; the `/ N` denominator is visible only in laps mode in a session that is not timed and
+ * declares a lap count (`hasLapTotal`), its Left following the lap count's digits.
  */
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
 import { markWhen } from '../elements/mark.ts';
-import { LAP_TOTAL_WIDEST, NO_CLOCK, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
+import { LAP_TOTAL_WIDEST, NO_CLOCK, hasLapTotal, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { SESSION_CHARS, SESSION_LAP_DIGITS } from './chars.ts';
 
-const { game, eq, gt, lt, or, and, not, str, iff, fmt, concat, add, mul, num, digitCount } = ncalc;
+const { game, eq, lt, or, and, not, str, iff, fmt, concat, add, mul, num, digitCount } = ncalc;
 
 /** What the time value shows when time mode is forced and there is no session to count. */
 export const TIME_PLACEHOLDER = NO_CLOCK;
@@ -59,7 +59,9 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
       bind: concat(str('/ '), fmt(totalLaps, '0')),
       after: { digits: 2, specials: 0 },
       maxAfter: { digits: SESSION_LAP_DIGITS, specials: 0 },
-      visibleBind: and(not(time), gt(totalLaps, num(0))),
+      // The race's length only where `TotalLaps` is one, which a timed session's is not even with
+      // the lap forced on (#989).
+      visibleBind: and(not(time), hasLapTotal()),
       leftBind: ({ x, mono, gap }) => add(num(x), mul(digitCount(currentLap, SESSION_LAP_DIGITS), num(mono.charWidth)), num(gap)),
     },
   );

@@ -804,6 +804,23 @@ export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), le(
  */
 export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SECONDS));
 
+/**
+ * Whether `TotalLaps` is the race's length: a session that is not timed, with a lap count.
+ *
+ * Every `/ 30` and `of 30` after a lap is drawn while this holds and only then. iRacing's
+ * `TotalLaps` in a timed session is not a length at all but the leader's completed laps, so a
+ * denominator that asked only whether the total was above nought told a driver twelve laps into a
+ * forty-five minute race that it ended at fourteen, and one that asked nothing drew `4 / 0` in an
+ * open practice. The session card had the rule right and the bar, the companion header and the pit
+ * wall header each wrote their own (#989).
+ *
+ * Not timed rather than untimed, because a sim that publishes no clock at all for a lap race, a
+ * `SessionTimeLeft` of nought rather than iRacing's week, still has its laps counted. What it costs
+ * is the iRacing race given both a lap count and a time limit, which is timed and so draws the clock
+ * and no total, as the session card has always drawn it.
+ */
+export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps(), num(0)));
+
 /** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
 export const NO_CLOCK = `-:--:--`;
 
@@ -1071,16 +1088,6 @@ export const fuelToEndColour = (): Expr =>
   );
 
 /**
- * How long the race is expected to run, in laps.
- *
- * `TotalLaps` where the session has one, which is every lap-limited race and no timed one. For a
- * timed race the length is a prediction, and the one SimHub already makes is `RemainingLaps` -- laps
- * done plus laps to come. Adding rather than reading a second property keeps the two forms in one
- * expression and means the number always agrees with the remaining-laps figure beside it.
- */
-export const estimatedRaceLaps = (): Expr => iff(gt(totalLaps(), num(0)), totalLaps(), add(completedLaps(), lapsLeft()));
-
-/**
  * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
  * three-digit lap of a three-digit race. Its sample is the short end, and a field measured by
  * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
@@ -1100,16 +1107,21 @@ export const LAP_TOTAL_WIDEST = '/ 999';
 export const INCIDENTS_WIDEST = '999x';
 
 /**
- * `12 / 43`: the lap you are on, out of the race's estimated length.
+ * `12 / 43`: the lap you are on, out of the race's length, and `12` alone where the race has none.
  *
  * The lap you are *on* and not the lap you have finished, because that is the number a driver says
  * out loud. SimHub's `CurrentLap` is already 1 on the opening lap, so it needs no adjusting.
  *
- * `--` until there is a length to count against. A timed race has none until the sim has an average
- * lap to divide by, and a total of zero drawn as "12 / 0" is worse than saying nothing.
+ * The length is `TotalLaps` where {@link hasLapTotal} says it is one, and there is no other. This
+ * used to predict a timed race's length as laps done plus `RemainingLaps`, on the belief that SimHub
+ * makes that prediction; it does not. SimHub sets `RemainingLaps` for every game to `TotalLaps` less
+ * `CompletedLaps`, never below nought (GameReaderCommon 9.12.6, `GameManagerBase`), so the sum was
+ * `TotalLaps` again: the leader's laps in a timed iRacing race, `12 / 14` with half an hour to run, and
+ * nought for a car on the lead lap (#989). A timed race and an open session draw the lap alone, as
+ * the bar and the headers do.
  */
 export const lapOfTotal = (): Expr =>
-  iff(gt(estimatedRaceLaps(), num(0)), concat(fmt(currentLap(), '0'), str(' / '), fmt(estimatedRaceLaps(), '0')), str(NO_VALUE));
+  iff(hasLapTotal(), concat(fmt(currentLap(), '0'), str(' / '), fmt(totalLaps(), '0')), fmt(currentLap(), '0'));
 
 /**
  * The tank under the threshold the driver set, which is the sentence three separate drawings had

@@ -23,6 +23,7 @@ import {
   classOpponentCount,
   currentLap,
   fieldSize,
+  hasLapTotal,
   incidents,
   lapsLeft,
   player,
@@ -89,7 +90,9 @@ export const session = defineModule('session', (ctx) => {
               // Hidden with the lap as well as without a length. iRacing's `TotalLaps` in a timed race
               // is the leader's laps, so a denominator shown for that alone drew `/ 14` with no lap
               // before it, and with the lap and the time left in one place, on top of the time left.
-              visibleBind: and(not(time), gt(totalLaps(), num(0))),
+              // The length is `hasLapTotal`'s, so a lap forced on in a timed race is drawn without
+              // the leader's laps after it too (#989).
+              visibleBind: and(not(time), hasLapTotal()),
             },
             drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
           }, { visibleBind: not(time) }),

@@ -96,8 +96,10 @@ describe('session card modes', () => {
     expect(TIME_PLACEHOLDER).toBe('-:--:--');
   });
 
-  test('laps shows the lap, with the total only when one is declared', () => {
-    expect(reading(game(1800, 20, 3, 'laps'))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: '/ 20' });
+  test('laps shows the lap, with the total only when one is declared and the session is not timed', () => {
+    // A timed session's TotalLaps is the leader's laps, not a length, and forcing the lap on does not
+    // make it one: this drew `3 / 20` with an hour to run (#989).
+    expect(reading(game(1800, 20, 3, 'laps'))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: null });
     expect(reading(game(1800, 0, 112, 'laps'))).toEqual({ label: 'Lap', value: '112', dim: false, denominator: null });
     expect(reading(game(A_WEEK, 5, 7, 'laps'))).toEqual({ label: 'Lap', value: '7', dim: false, denominator: '/ 5' });
   });
@@ -129,7 +131,8 @@ describe('the module reads the same setting as the card', () => {
     for (const [secs, mode, expected] of [
       [1800, 'auto', ['timeLeft.value']],
       [1800, 'time', ['timeLeft.value']],
-      [1800, 'laps', ['lap.value', 'lap.denominator']],
+      // The lap forced on in a timed race, without the leader's laps after it (#989).
+      [1800, 'laps', ['lap.value']],
       [0, 'time', ['timeLeft.value']],
       [0, 'auto', ['lap.value', 'lap.denominator']],
       [A_WEEK, 'auto', ['lap.value', 'lap.denominator']],

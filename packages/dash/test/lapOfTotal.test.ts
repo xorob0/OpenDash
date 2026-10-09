@@ -14,7 +14,7 @@ import { monoWidth } from '../src/design/metrics.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { charsOfText, textWidth } from '../src/second/drawn.ts';
-import { CHARS, LAP_OF_TOTAL_WIDEST, NO_VALUE } from '../src/second/values.ts';
+import { CHARS, LAP_OF_TOTAL_WIDEST } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
@@ -43,12 +43,27 @@ const lapped = (lap: number, total: number): Props => ({
   'DataCorePlugin.GameData.RemainingLaps': total - lap + 1,
 });
 
-/** A timed race, whose length is the laps done and the laps SimHub predicts are to come. */
-const timed = (lap: number, toCome: number): Props => ({
+/**
+ * A timed race as SimHub publishes it. iRacing's `TotalLaps` in a timed session is the leader's
+ * completed laps rather than a length (#989), and SimHub's `RemainingLaps` is only `TotalLaps` less
+ * `CompletedLaps`, never below nought (GameReaderCommon 9.12.6, `GameManagerBase`), so it predicts
+ * nothing and a car on the lead lap has none.
+ */
+const timed = (lap: number, leader: number): Props => ({
   'DataCorePlugin.GameData.CurrentLap': lap,
   'DataCorePlugin.GameData.CompletedLaps': lap - 1,
+  'DataCorePlugin.GameData.SessionTimeLeft': 1800,
+  'DataCorePlugin.GameData.TotalLaps': leader,
+  'DataCorePlugin.GameData.RemainingLaps': Math.max(leader - (lap - 1), 0),
+});
+
+/** An open session: no clock to speak of and no lap count, so neither `TotalLaps` nor `RemainingLaps`. */
+const openSession = (lap: number): Props => ({
+  'DataCorePlugin.GameData.CurrentLap': lap,
+  'DataCorePlugin.GameData.CompletedLaps': lap - 1,
+  'DataCorePlugin.GameData.SessionTimeLeft': 604800,
   'DataCorePlugin.GameData.TotalLaps': 0,
-  'DataCorePlugin.GameData.RemainingLaps': toCome,
+  'DataCorePlugin.GameData.RemainingLaps': 0,
 });
 
 const drawn = (props: Props): string => String(evalNcalc(formula(), props));
@@ -58,10 +73,18 @@ describe('the lap of the race on the stint page', () => {
     expect(drawn(lapped(12, 43))).toBe('12 / 43');
     expect(drawn(lapped(12, 120))).toBe('12 / 120');
     expect(drawn(lapped(142, 350))).toBe('142 / 350');
-    // A 24-hour race is timed, and its length is the laps done and the laps predicted.
-    expect(drawn(timed(142, 209))).toBe('142 / 350');
-    // A timed race with no lap to predict from has no length, and says nothing rather than `1 / 0`.
-    expect(drawn(timed(1, 0))).toBe(NO_VALUE);
+  });
+
+  test("a race with no length draws the lap alone, never the leader's laps as its length (#989)", () => {
+    // Three laps down on a leader with fourteen done: this drew `12 / 14` with half an hour to run.
+    expect(drawn(timed(12, 14))).toBe('12');
+    // On the lead lap, where `RemainingLaps` is nought: this drew `15 / 14`.
+    expect(drawn(timed(15, 14))).toBe('15');
+    // An open practice, whose `TotalLaps` is nought: never `4 / 0`.
+    expect(drawn(openSession(4))).toBe('4');
+    // A lap race keeps its length, clock or none.
+    expect(drawn({ ...lapped(12, 30), 'DataCorePlugin.GameData.SessionTimeLeft': 604800 })).toBe('12 / 30');
+    expect(drawn({ ...lapped(12, 30), 'DataCorePlugin.GameData.SessionTimeLeft': 0 })).toBe('12 / 30');
   });
 
   test('the budget is the declared reading, every space and the slash in a full cell', () => {

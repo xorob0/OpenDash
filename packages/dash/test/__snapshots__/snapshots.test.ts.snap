@@ -529,7 +529,7 @@ exports[`card snapshots card 5 session 1`] = `
       },
       "Visible": {
         "Formula": {
-          "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+          "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
         },
         "Mode": 2
       },
@@ -14117,7 +14117,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -21634,7 +21634,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -29215,7 +29215,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -35898,7 +35898,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -42521,7 +42521,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -49888,7 +49888,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -57904,7 +57904,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -64272,7 +64272,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -69397,7 +69397,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },
@@ -75228,7 +75228,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "Visible": {
               "Formula": {
-                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and (([DataCorePlugin.GameData.TotalLaps]) > (0))"
+                "Expression": "(!(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))))) and ((!(((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))"
               },
               "Mode": 2
             },

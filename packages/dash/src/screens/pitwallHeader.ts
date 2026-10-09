@@ -38,6 +38,7 @@ import {
   LAP_WIDEST,
   GRIP_WIDEST,
   currentLap,
+  hasLapTotal,
   incidentLimit,
   incidents,
   localClock,
@@ -54,7 +55,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { concat, str, fmt, iff, gt, num, isnull, isNull, not } = ncalc;
+const { concat, str, fmt, iff, num, isnull, isNull, not } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
@@ -206,7 +207,9 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
 
   const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
-  const lapTotal = gt(totalLaps(), num(0));
+  // `of 30` is the race's length only in a race counted in laps; in a timed iRacing race `TotalLaps`
+  // is the leader's laps, and `L12 of 14` read as two laps to go with half an hour to run (#989).
+  const lapTotal = hasLapTotal();
   const groups: HeaderGroup[] = [
     compact
       ? {
