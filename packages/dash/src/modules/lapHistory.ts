@@ -28,12 +28,12 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf, type DensitySpec } from '../second/density.ts';
 import { rowCapacity, tableRowHeight } from '../second/table.ts';
-import { CHARS, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta } from '../second/values.ts';
+import { CHARS, DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, pageKeeps, type ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull, signed } = ncalc;
+const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = ncalc;
 
 /**
  * A delta this far behind the session best is drawn in caution, and twice that in danger.
@@ -203,7 +203,10 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
     ...(columns.delta
       ? [
           numeral(`${ctx.prefix}row.delta`, '+0.594', columns.delta.left, centred(type.value), type.value, CHARS.delta, {
-            bind: signed(delta, '0.000'),
+            // Three places leave one whole digit, so a lap ten seconds off is drawn to two and the
+            // in-lap a minute or more off to one, rather than cut (#886).
+            bind: signedToFit(delta, CHARS.delta, 3),
+            widest: DELTA_WIDEST,
             colorBind: deltaColour,
             width: columns.delta.width,
             hAlign: 'right',

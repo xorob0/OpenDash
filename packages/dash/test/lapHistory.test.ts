@@ -15,6 +15,9 @@ import { densityOf, type Density } from '../src/second/density.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
+import { DELTA_WIDEST } from '../src/second/values.ts';
+import { widthAsDrawn } from './drawnStrings.ts';
+import { evalNcalc } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
 
 const built = (width: number, height: number, density: Density = 'zone'): Item[] =>
@@ -236,5 +239,39 @@ describe('the delta to the session best is coloured in three bands', () => {
 
   test('and the best lap carries that purple on its time as well', () => {
     expect(bound(named(built(600, 280), 'row.time')!, 'TextColor')).toContain(ds.purpose.lap.sessionBest);
+  });
+});
+
+/**
+ * #886: the column is cut for `+0.594`, five digit cells and a point, which leaves one whole digit at
+ * three places. A lap ten seconds off the session best is common and the in-lap after a stop is a
+ * minute or three off it, and the row keeps that lap for ten laps; drawn to three places regardless,
+ * `+12.594` lost its last digit and `+123.456` its last two.
+ */
+describe('the delta keeps every reading inside its column, giving up places rather than digits', () => {
+  const delta = named(built(600, 280), 'row.delta')!;
+  // Row one, which is slot zero: the lap just completed.
+  const formula = bound(delta, 'Text')!.replace(/\brepeatindex\(\)/g, '1');
+  const drawn = (seconds: number): unknown => evalNcalc(formula, { 'PersistantTrackerPlugin.PreviousLap_00_DeltaToSessionBest': seconds });
+
+  test('three places to ten seconds, two to a hundred, one to a thousand, and whole seconds past that', () => {
+    // Written out rather than computed, and away from any rounding edge.
+    const READINGS: readonly [number, string][] = [
+      [0.594, '+0.594'],
+      [-0.231, '−0.231'],
+      [12.594, '+12.59'],
+      [-45.678, '−45.68'],
+      [123.456, '+123.5'],
+      [-187.24, '−187.2'],
+      [1234.56, '+1235'],
+    ];
+    for (const [seconds, text] of READINGS) expect({ seconds, drawn: drawn(seconds) }).toEqual({ seconds, drawn: text });
+  });
+
+  test('and the column is measured by the widest of them', () => {
+    expect(delta.widest).toBe(DELTA_WIDEST);
+    for (const seconds of [9.876, 98.765, 987.65, 9876.5]) {
+      expect({ seconds, fits: widthAsDrawn(delta, String(drawn(seconds))) <= widthAsDrawn(delta, DELTA_WIDEST) }).toEqual({ seconds, fits: true });
+    }
   });
 });
