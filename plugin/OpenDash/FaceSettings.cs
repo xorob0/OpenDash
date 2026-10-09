@@ -197,12 +197,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Sets the page a zone opens on, and the page it is showing with it: the panel is in
-        /// front of a running dash, and a start page that only takes effect next time reads as broken.</summary>
+        /// front of a running dash, and a start page that only takes effect next time reads as broken. A
+        /// held-back page is not one a zone can open on, and asking for it gives the next enabled page in
+        /// the zone's order, as <see cref="Normalise"/> would.</summary>
         public void SetStart(string letter, int page)
         {
             var index = ZoneIndex(letter);
             EnsureArrays();
             var clamped = Contract.NormalisePage(page, PageCount(index), DefaultPage(index));
+            if (FacePages.IsHeldBack(letter, clamped, theme)) clamped = Contract.FirstEnabledInOrder(clamped, Mask(letter), Orders[index]);
             Starts[index] = clamped;
             Zones[index] = clamped;
             SetPageEnabled(letter, clamped, true);
@@ -313,12 +316,14 @@ namespace OpenDashPlugin
         /// <summary>
         /// Turns one page of a zone on or off. Turning off the last enabled page is refused rather than
         /// obeyed: a zone with an empty cycle has nothing to draw, and the panel would have to invent a
-        /// page to show anyway.
+        /// page to show anyway. Turning on a held-back page is refused too, since no cycle may reach it
+        /// (<see cref="FacePages.HeldBack"/>).
         /// </summary>
         public void SetPageEnabled(string letter, int page, bool enabled)
         {
             var index = ZoneIndex(letter);
             if (page < 0 || page >= PageCount(index)) throw new ArgumentOutOfRangeException("page");
+            if (enabled && FacePages.IsHeldBack(letter, page, theme)) return;
             EnsureArrays();
             var mask = Mask(letter);
             var next = enabled ? mask | (1 << page) : mask & ~(1 << page);

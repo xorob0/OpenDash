@@ -423,10 +423,11 @@ namespace OpenDashPlugin
             return FacePages.EndLabel(first, FacePages.FieldName(settings.BarField(left ? "Left2" : "Right2")));
         }
 
-        /// <summary>"4 of 21": the pages a zone cycles, of the pages it could.</summary>
+        /// <summary>"4 of 21": the pages a zone cycles, of the pages it could, which leaves out a held-back
+        /// page: band D on a default face counts seven.</summary>
         public static string ZoneCount(FaceSettings settings, string letter)
         {
-            var pages = FacePages.For(letter, settings?.ThemeId());
+            var pages = FacePages.Offered(letter, settings?.ThemeId());
             var on = 0;
             for (var i = 0; i < pages.Count; i++)
             {
@@ -523,7 +524,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A zone's pages in the order the list draws them: the ticked ones in the zone's cycle from the page
-        /// it opens on, which is therefore the First, then, with Show all, the others in the same order.
+        /// it opens on, which is therefore the First, then, with Show all, the others in the same order. A
+        /// held-back page is never drawn, ticked or not (<see cref="FacePages.HeldBack"/>).
         /// </summary>
         public static IReadOnlyList<ZoneRow> ZoneRows(FaceSettings settings, string letter, bool showAll)
         {
@@ -539,7 +541,7 @@ namespace OpenDashPlugin
             if (!showAll) return rows;
             foreach (var page in order)
             {
-                if (ticked.Contains(page)) continue;
+                if (ticked.Contains(page) || FacePages.IsHeldBack(letter, page, theme)) continue;
                 rows.Add(new ZoneRow(page, FacePages.NameOf(letter, page, theme), false, false, IsNotInIracing(FacePages.IdOf(letter, page, theme)), false));
             }
             return rows;
@@ -740,10 +742,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The pages of one of those zones, and nothing it does not carry, on a face of the theme
-        /// given: band D on a Porsche face lists the Porsche row after the house's eight.</summary>
+        /// given: band D on a Porsche face lists the Porsche row after the house's seven. A held-back page is
+        /// not listed, so the choice's index is a place in <see cref="GlancePages"/> and not a page number.</summary>
         public static string[] GlancePageLabels(int zoneIndex, string theme = null)
         {
-            return FacePages.For(Contract.FaceZoneLetters[zoneIndex], theme).Select(page => page.Name).ToArray();
+            return FacePages.Offered(Contract.FaceZoneLetters[zoneIndex], theme).Select(page => page.Name).ToArray();
+        }
+
+        /// <summary>The page number behind each of <see cref="GlancePageLabels"/>, in the same order.</summary>
+        public static int[] GlancePages(int zoneIndex, string theme = null)
+        {
+            return FacePages.Offered(Contract.FaceZoneLetters[zoneIndex], theme).Select(page => page.Number).ToArray();
         }
 
         /// <summary>
@@ -755,7 +764,7 @@ namespace OpenDashPlugin
             var current = Contract.NormaliseQuickGlance(glance, theme);
             var from = Contract.FaceZoneLetters[Contract.QuickGlanceZone(current)];
             var id = FacePages.IdOf(from, Contract.QuickGlancePage(current), theme);
-            var pages = FacePages.For(Contract.FaceZoneLetters[zoneIndex], theme);
+            var pages = FacePages.Offered(Contract.FaceZoneLetters[zoneIndex], theme);
             var page = 0;
             for (var i = 0; i < pages.Count; i++)
             {

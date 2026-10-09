@@ -1081,8 +1081,8 @@ export const ZONE_A_PAGES: readonly FaceZonePageMeta[] = [
  *
  * The catalogue artboard is headed "seven pages" and draws D1 through D8; the drawings are more
  * specific than the caption, so eight is taken and the disagreement is recorded in
- * docs/design/zones.md. The car page needs the telltale pictograms and arrives with #148; the
- * mask is sized for eight from the start so that adding it costs nothing.
+ * docs/design/zones.md. The car page, D8, is held back from 1.0 by {@link HELD_BACK_BAND_PAGES}: it
+ * keeps its place here, so that every page keeps its index, and is offered nowhere.
  *
  * These are the house's. A theme may add pages after them, which {@link bandDPages} appends: on a
  * Porsche face band D has nine and opens on the ninth.
@@ -1097,6 +1097,34 @@ export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
   { number: 6, id: 'relative', name: 'Relative' },
   { number: 7, id: 'car', name: 'Car' },
 ];
+
+/**
+ * Band D's pages that are in the catalogue and offered nowhere: never in a cycle, never a start or a
+ * glance, never listed by the panel or the site, and never drawn by a built package. This list is the
+ * one switch, and the plugin's `FacePages.HeldBack` mirrors it.
+ *
+ * Held back rather than taken out, because a page's number is the setting: the pages after it keep
+ * theirs, so a saved page, mask or order of a driver who never chose it still means what it meant, and
+ * a theme's band page is still the ninth on a Porsche face. A rig that had chosen it is moved forward
+ * in its own order when the plugin normalises its settings, which on a band nobody reordered is fuel.
+ *
+ * D8 Car, the twelve-lamp telltale rank of `zones/telltales.ts`, is held back from 1.0 (#969). It
+ * draws twelve outlined boxes with no pictogram in any of them, because the artwork is not in the
+ * repository, and nine of the twelve lamps have nothing in iRacing to light them; a page of empty
+ * boxes reads as broken. The rank, its fit tests and its snapshot stay, and #148 re-enables it by
+ * taking `car` out of this list once its pictograms land.
+ */
+export const HELD_BACK_BAND_PAGES: readonly string[] = ['car'];
+
+/** Whether a page of a zone is held back: band D's {@link HELD_BACK_BAND_PAGES}, and nothing in any other zone. */
+export const isHeldBack = (zone: FaceZone, id: string): boolean => zone === 'D' && HELD_BACK_BAND_PAGES.includes(id);
+
+/**
+ * The pages of a zone a driver can reach, on a face of the theme given: its catalogue less what is held
+ * back, each still under its own number. What the site lists and what a cycle, a start or a glance may
+ * land on.
+ */
+export const offeredPages = (zone: FaceZone, theme?: ThemeEntry): readonly FaceZonePageMeta[] => pagesForZone(zone, theme).filter((page) => !isHeldBack(zone, page.id));
 
 /**
  * Band D's catalogue on a face of a theme: the house's eight, then the theme's own, numbered on from
@@ -1165,8 +1193,11 @@ export const defaultZonePage = (zone: FaceZone, theme?: ThemeEntry): number =>
 /**
  * Which pages are enabled, as a bit mask, which is what sets the length of a zone's cycle. All of
  * them by default: a driver turns off what they do not want rather than turning on what they do.
+ *
+ * All of the {@link offeredPages}, that is: a held-back page's bit is never set, which is also the
+ * mask the plugin trims a stored one to, so a rig that had the page in its cycle loses it there.
  */
-export const defaultZoneMask = (zone: FaceZone, theme?: ThemeEntry): number => (1 << pagesForZone(zone, theme).length) - 1;
+export const defaultZoneMask = (zone: FaceZone, theme?: ThemeEntry): number => offeredPages(zone, theme).reduce((mask, page) => mask | (1 << page.number), 0);
 
 export const zonePageSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}`;
 export const zoneMaskSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Pages`;

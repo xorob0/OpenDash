@@ -405,13 +405,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Band D · Fuel", PanelFacePlan.GlanceLabel(Contract.QuickGlanceValue(3, 0)));
         }
 
-        /// <summary>One entry per page of every zone, each of them a value the settings accept as it
-        /// stands, so that what the select writes is never normalised out from under it.</summary>
+        /// <summary>One entry per page of every zone but a held-back one, each of them a value the settings
+        /// accept as it stands, so that what the select writes is never normalised out from under it.</summary>
         [Fact]
         public void The_glance_offers_every_page_of_every_zone()
         {
             var options = PanelFacePlan.GlanceOptions();
-            var pages = Enumerable.Range(0, Contract.FaceZoneLetters.Length).Sum(FacePages.CountAt);
+            var pages = Contract.FaceZoneLetters.Sum(letter => FacePages.Offered(letter).Count);
+            Assert.Equal(Enumerable.Range(0, Contract.FaceZoneLetters.Length).Sum(FacePages.CountAt) - FacePages.HeldBack.Count, pages);
             Assert.Equal(pages, options.Length);
             Assert.Equal(options.Length, options.Distinct().Count());
             Assert.Contains(Contract.DefaultQuickGlance, options);

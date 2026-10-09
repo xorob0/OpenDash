@@ -50,10 +50,11 @@ describe('a seeded screen', () => {
     expect(screen.Folder).toBe('OpenDash Porsche 1280x480');
     expect(face.Zones[3]).toBe(8);
     expect(face.Starts[3]).toBe(8);
-    expect(face.Masks[3]).toBe(511);
+    // Nine pages, less the car page held back from 1.0 (#969).
+    expect(face.Masks[3]).toBe(511 & ~(1 << 7));
     // And a default package's screen says nothing of a theme, as it never did.
     expect(Object.keys(screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']))).not.toContain('Theme');
-    expect((screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']).Face as { Masks: number[] }).Masks[3]).toBe(255);
+    expect((screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']).Face as { Masks: number[] }).Masks[3]).toBe(255 & ~(1 << 7));
   });
 });
 

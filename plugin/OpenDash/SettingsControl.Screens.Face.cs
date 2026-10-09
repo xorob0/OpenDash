@@ -242,9 +242,11 @@ namespace OpenDashPlugin
                 ScreensSave(screen, redraw);
             }, PanelScreens.GlanceZoneWidth);
             zone.Uid = "screens.glance.zone";
-            var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex, screen.Theme), Contract.QuickGlancePage(glance), chosen =>
+            // The choices skip a held-back page, so a choice is a place in the list and not a page number.
+            var pages = PanelScreens.GlancePages(zoneIndex, screen.Theme);
+            var page = Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex, screen.Theme), Array.IndexOf(pages, Contract.QuickGlancePage(glance)), chosen =>
             {
-                screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen);
+                screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, pages[chosen]);
                 // The clash line under the aside counts the glance among what shows a page twice, so the
                 // editor redraws.
                 ScreensSave(screen, redraw);

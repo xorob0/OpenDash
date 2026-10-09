@@ -21,7 +21,8 @@ namespace OpenDashPlugin
         };
 
         /// <summary>Band D's eight pages, across the foot of the face: the house's, which a theme's band
-        /// pages follow on a face of that theme (<see cref="BandDFor"/>).</summary>
+        /// pages follow on a face of that theme (<see cref="BandDFor"/>). The car page is among them and
+        /// held back (<see cref="HeldBack"/>).</summary>
         public static readonly IReadOnlyList<ZonePage> BandD = new[]
         {
             new ZonePage(0, "fuel", "Fuel"),
@@ -33,6 +34,42 @@ namespace OpenDashPlugin
             new ZonePage(6, "relative", "Relative"),
             new ZonePage(7, "car", "Car"),
         };
+
+        /// <summary>
+        /// Band D's pages that stay in <see cref="BandD"/> and are offered nowhere, by id: never in a
+        /// cycle, never a start or a glance, never listed by the panel. Mirrors HELD_BACK_BAND_PAGES in
+        /// contract.ts, which says why a page is held back rather than taken out: its number is the
+        /// setting, so the pages after it keep theirs.
+        ///
+        /// The car page, the telltale rank, is held back from 1.0 (#969): twelve boxes with no
+        /// pictogram read as a broken page. #148 takes it out of this list once its artwork lands.
+        /// </summary>
+        public static readonly IReadOnlyList<string> HeldBack = new[] { "car" };
+
+        /// <summary>The bits of <see cref="HeldBack"/> in band D's mask: only the house's pages are held
+        /// back, and a theme's band pages come after them, so the bits are the same on every face.
+        /// Computed once, because a zone's mask is read every frame.</summary>
+        public static readonly int HeldBackBandMask = BandD.Where(page => HeldBack.Contains(page.Id)).Aggregate(0, (mask, page) => mask | (1 << page.Number));
+
+        /// <summary>Whether a page of a zone is held back, by its id: band D's <see cref="HeldBack"/>, and
+        /// nothing in any other zone.</summary>
+        public static bool IsHeldBack(string letter, string id)
+        {
+            return letter == "D" && id != null && HeldBack.Contains(id);
+        }
+
+        /// <summary>Whether a page of a zone is held back, by its number on a face of the theme given.</summary>
+        public static bool IsHeldBack(string letter, int page, string theme)
+        {
+            return IsHeldBack(letter, IdOf(letter, page, theme));
+        }
+
+        /// <summary>The pages of a zone a driver can reach, on a face of the theme given: its catalogue less
+        /// what is held back, each under its own number, which is no longer its index in this list.</summary>
+        public static IReadOnlyList<ZonePage> Offered(string letter, string theme = null)
+        {
+            return For(letter, theme).Where(page => !IsHeldBack(letter, page.Id)).ToArray();
+        }
 
         /// <summary>The ten fields an end of the bar can show. Strength of field is not offered: SimHub
         /// publishes it in no form, and ADR 0009 decided a field that can never have a value is not listed.</summary>

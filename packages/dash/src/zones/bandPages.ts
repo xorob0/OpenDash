@@ -18,7 +18,8 @@
  *
  * Seven of the eight pages are that. The eighth, D8 Car, is the twelve-lamp telltale rank, which is
  * a rank of boxes rather than of fields and lives in `telltales.ts`; this file hands it the same
- * room it gives a page of fields and otherwise leaves it alone.
+ * room it gives a page of fields and otherwise leaves it alone. It is held back from 1.0 (#969), so
+ * no built band reaches it, and is drawn here still for the tests and for #148.
  */
 import type { HAlign, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -1077,5 +1078,9 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   return items;
 }
 
-/** Every page id band D can show, in cycle order, for a test that wants to walk them. */
+/**
+ * Every page id band D can draw, in catalogue order, for a test that wants to walk them. The car page
+ * is among them although it is held back from 1.0 (`HELD_BACK_BAND_PAGES` in `contract.ts`, #969):
+ * the rank is still built and measured, so that #148 re-enables it rather than rewriting it.
+ */
 export const BAND_PAGE_IDS: readonly string[] = [...Object.keys(BAND_PAGES), TELLTALE_PAGE];

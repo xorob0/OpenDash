@@ -1010,9 +1010,23 @@ the face draws one there as well, so that a face whose zone D widget has not res
 | D1 | Fuel — **the default** | D5 | Weather |
 | D2 | Energy | D6 | Sectors |
 | D3 | Stint | D7 | Relative |
-| D4 | Tyres | D8 | Car (the telltale row) |
+| D4 | Tyres | D8 | Car (the telltale row), **held back from 1.0** |
 
 Fuel is the default because it is what a driver checks on a straight.
+
+**D8 is held back from 1.0** ([#969](https://github.com/xorob0/OpenDash/issues/969)). It draws twelve
+outlined boxes with no pictogram in any of them, because the artwork is not in the repository and
+nine of the twelve lamps have nothing in iRacing to light them, and a page of empty boxes reads as
+broken. So no driver can reach it: it is in no cycle and no default mask, no start or glance may name
+it, the plugin's panel and the site do not list it, and the built band draws fuel in its place.
+It keeps its place in the catalogue all the same, and its number with it, because a zone's setting is
+its page's index: the seven pages before it and a theme's pages after it keep theirs, so a rig that
+never chose it reads exactly as it did. A rig that had chosen it is moved on when the plugin
+normalises its settings, to the next page of the band's own order, which is fuel on a band nobody
+reordered and the theme's page on a Porsche face. The one switch is `HELD_BACK_BAND_PAGES` in
+`contract.ts`, mirrored by `FacePages.HeldBack` in the plugin; the rank, its fit tests and its
+snapshot stay as they are, so [#148](https://github.com/xorob0/OpenDash/issues/148) re-enables the page
+by taking `car` out of that list once the pictograms land.
 
 **A theme's band pages come after the house's eight** ([#718](https://github.com/xorob0/OpenDash/issues/718)).
 The eight above are the contract's, and a theme may add pages after them, never between or before,
@@ -1081,7 +1095,7 @@ its three groups sit 22 apart, a corner block's two fields 18, and a page's fiel
 unit 5 px after it. `bandMetrics` in `packages/dash/src/zones/bandPages.ts` is that table, read off
 the band of each face's artboard.
 
-**D8 is a rank of lamps rather than of fields.** The page carries the twelve telltales the
+**D8 is a rank of lamps rather than of fields**, held back from 1.0 as above. The page carries the twelve telltales the
 1280 × 480 artboard draws, in its order: a tyre beside three straight lines, a tyre beside three
 slanted lines, the windscreen wiper, a car above two wavy tracks, ABS, ESP, the engine, a fuel can,
 the battery, the speed limiter, the tyre pressure warning and the car door. Each lamp is a 38 × 32
@@ -1458,7 +1472,7 @@ lists the same things.
 | The two arrangements, rev bar on and rev bar off | **Built**, as the two screens of one `.djson` with complementary `ScreenEnabledExpression`s. |
 | Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
 | Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
-| Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
+| Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. D8 is built and held back from 1.0, its screen drawing fuel ([#969](https://github.com/xorob0/OpenDash/issues/969)); what it is still short of is in the table above. |
 | The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all twenty conditions of `ALERT_CATALOGUE` over band D's rectangle, the fifteen flags and five car alerts, in the four shapes of the alert catalogue and the meatball's disc, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
 | The alert catalogue's car alerts | **Built from the five iRacing publishes, with three departures the author owes a ruling on** (#762). The ignition sits above the stalled engine, where PagesAndAlerts numbers them 2 and 1, because the pit family already ranked them that way and a face should not answer the same pair in two orders either side of the pit entry. The incident was a fourth, outlined where the sheet fills it because `purpose.alert.incident` and `purpose.flag.orange` are both `#FFB300` and the meatball was the filled band in it; since [#498](https://github.com/xorob0/OpenDash/issues/498) the meatball is a disc of that amber on the near-black, and the incident is filled as the sheet draws it. Push to pass and the headlight flash are drawn only where their name is written, because `purpose.alert.p2p` is white: filled it is the white flag and outlined the black family, and the nano, a sixteen-pixel block and the full-screen block would draw it without the word. And "Push to pass · 3 left" is written without the count, which iRacing publishes with two meanings by session type. The tokens are left as they are; the canvas either gives the two neutral alerts colours of their own or accepts these shapes. |
 | A full-screen flag over zones B, A and C, with `OpenDash.FlagFormat` set to band or full | **Built.** The property carries a face's prefix, as the zone settings do, and it is declared, mirrored, defaulted to `band` and offered on the screen's own pane. It did not need the further pair of arrangements this row once predicted: `components/flagFull.ts` draws one opaque block over the body rectangle, derived from the layout, and `face.ts` gates the band group and the block against each other, so one screen carries both. `flagFormat.test.ts` holds the block against the sheets at all eight sizes and in both rev-bar arrangements. The block reads band D's own catalogue through the band's own expression, eighteen of its twenty conditions, the two neutral alerts apart, and names each condition but the chequer and the meatball, which are their own flags, in a word short enough for a block measured on the longest of them, which is INCIDENT. The full course yellow is the one condition with two names, and its word in that measure is FCY: the block writes FULL COURSE YELLOW in its place, at the largest size at which the whole name fits, up to the one size the other names are set at, wherever that size is at least half the one size, which is every block but the portrait screens', and FCY on those ([#497](https://github.com/xorob0/OpenDash/issues/497)). |
