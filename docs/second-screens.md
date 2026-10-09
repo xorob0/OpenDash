@@ -46,16 +46,16 @@ face follows too, and the speed has the speedo module.
 
 ## The companion
 
-One dashboard, twenty-two screens, one per module in catalogue order. Each screen carries a
+One dashboard, one screen per module in catalogue order. Each screen carries a
 header (module name, page counter, position, lap), the module, a row of page dots and a compact
 flag band.
 
 Which screens exist is a plugin setting. Each screen's `ScreenEnabledExpression` reads its own
 property, `isnull([OpenDash.CompanionModule07], 1)`; SimHub treats a screen as enabled when the
-expression is above zero and removes a disabled one from its Next/Previous ring. So turning eight
-modules off means paging through thirteen.
+expression is above zero and removes a disabled one from its Next/Previous ring. So turning a
+module off takes it out of what a tap pages through.
 
-Every module screen is an in-game screen and nothing else, and a twenty-second screen after them is
+Every module screen is an in-game screen and nothing else, and one more screen after them is
 the idle screen every package carries (#763). SimHub filters screens by role only when the roles
 differ between them -- `Dashboard.GetActiveScreens` compares `"{Pit};{InGame};{Idle}"` across the
 enabled screens -- so while a game runs the ring is the modules alone and a tap still pages them, and
