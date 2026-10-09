@@ -1534,6 +1534,14 @@ export const signedToFit = (seconds: Expr, chars: Chars, places: number): Expr =
  */
 export const DELTA_WIDEST = `${MINUS}99.99`;
 
+/**
+ * The same budget for the lap history's column, which draws {@link signedToFit} to three places:
+ * `−9.999` is as long as {@link DELTA_WIDEST} in every face, since both are five digit cells and a
+ * point, but it has the column's own shape. The AiM theme ghosts a reading's widest cell for cell,
+ * and a ghost of `888.88` behind `+0.594` puts the point a cell off its ghost on every row.
+ */
+export const HISTORY_DELTA_WIDEST = `${MINUS}9.999`;
+
 /** How many laps the rolling average covers, and the number the field is named after. */
 export const AVERAGE_LAPS = 5;
 

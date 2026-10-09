@@ -15,7 +15,7 @@ import { densityOf, type Density } from '../src/second/density.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
-import { DELTA_WIDEST } from '../src/second/values.ts';
+import { HISTORY_DELTA_WIDEST } from '../src/second/values.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
 import { evalNcalc } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
@@ -269,9 +269,9 @@ describe('the delta keeps every reading inside its column, giving up places rath
   });
 
   test('and the column is measured by the widest of them', () => {
-    expect(delta.widest).toBe(DELTA_WIDEST);
+    expect(delta.widest).toBe(HISTORY_DELTA_WIDEST);
     for (const seconds of [9.876, 98.765, 987.65, 9876.5]) {
-      expect({ seconds, fits: widthAsDrawn(delta, String(drawn(seconds))) <= widthAsDrawn(delta, DELTA_WIDEST) }).toEqual({ seconds, fits: true });
+      expect({ seconds, fits: widthAsDrawn(delta, String(drawn(seconds))) <= widthAsDrawn(delta, HISTORY_DELTA_WIDEST) }).toEqual({ seconds, fits: true });
     }
   });
 });

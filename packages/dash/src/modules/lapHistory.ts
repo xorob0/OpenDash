@@ -28,7 +28,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf, type DensitySpec } from '../second/density.ts';
 import { rowCapacity, tableRowHeight } from '../second/table.ts';
-import { CHARS, DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
+import { CHARS, HISTORY_DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, pageKeeps, type ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
@@ -206,7 +206,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
             // Three places leave one whole digit, so a lap ten seconds off is drawn to two and the
             // in-lap a minute or more off to one, rather than cut (#886).
             bind: signedToFit(delta, CHARS.delta, 3),
-            widest: DELTA_WIDEST,
+            widest: HISTORY_DELTA_WIDEST,
             colorBind: deltaColour,
             width: columns.delta.width,
             hAlign: 'right',
