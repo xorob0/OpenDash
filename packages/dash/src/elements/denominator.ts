@@ -12,6 +12,8 @@ export interface DenominatorOptions {
   bind?: Expr;
   visibleBind?: Expr;
   leftBind?: Expr;
+  /** The widest text `bind` can produce, which is what the fit tests measure the box by. */
+  widest?: string;
 }
 
 export function denominator(name: string, sample: string, x: number, y: number, fs: number, width: number, opts: DenominatorOptions = {}): TextItem {
@@ -27,6 +29,7 @@ export function denominator(name: string, sample: string, x: number, y: number, 
     textColor: ds.color.text.secondary,
     hAlign: 'left',
     vAlign: 'top',
+    ...(opts.widest ? { widest: opts.widest } : {}),
     backgroundColor: TRANSPARENT,
   }, { Text: opts.bind, Visible: opts.visibleBind, Left: opts.leftBind });
 }

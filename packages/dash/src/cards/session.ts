@@ -12,7 +12,7 @@
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
 import { markWhen } from '../elements/mark.ts';
-import { NO_CLOCK, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
+import { LAP_TOTAL_WIDEST, NO_CLOCK, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
@@ -55,6 +55,7 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
     {
       kind: 'denominator',
       sample: '/ 30',
+      widest: LAP_TOTAL_WIDEST,
       bind: concat(str('/ '), fmt(totalLaps, '0')),
       after: { digits: 2, specials: 0 },
       maxAfter: { digits: SESSION_LAP_DIGITS, specials: 0 },

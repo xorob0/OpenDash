@@ -63,7 +63,7 @@ const TEMPERATURE_WIDEST = '188';
 
 const settingReading = (id: string) => {
   const value = trackedValue(id);
-  return { value, reading: { sample: value.sample, bind: fmt(value.read, value.pattern), widest: value.pattern === '0' ? '88' : '88.8' } };
+  return { value, reading: { sample: value.sample, bind: fmt(value.read, value.pattern), widest: value.widest } };
 };
 
 /** The largest size, from `size` down, at which `text` fits `width`; a font follows its box. */

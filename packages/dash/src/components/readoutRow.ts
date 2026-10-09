@@ -5,7 +5,8 @@
  */
 import type { Item, Monospace, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
+import { measureText } from '../design/advances.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, type Chars } from '../design/metrics.ts';
 import type { RungSpec } from '../design/rung.ts';
 import { denominator } from '../elements/denominator.ts';
 import { unit } from '../elements/unit.ts';
@@ -32,6 +33,8 @@ export interface FollowerSpec {
   /** Runtime Left expression, typically `x + digitCount * charWidth + gap`. */
   leftBind?: (ctx: FollowerContext) => Expr;
   visibleBind?: Expr;
+  /** The longest text `bind` can produce, which the fit tests measure the follower's box by. */
+  widest?: string;
 }
 
 export function readoutRow(slot: Rect, rung: RungSpec, prefix: string, lbl: LabelSpec, value: ValueSpec, follower: FollowerSpec): Item[] {
@@ -41,13 +44,18 @@ export function readoutRow(slot: Rect, rung: RungSpec, prefix: string, lbl: Labe
   const gap = ds.space[2];
   const staticLeft = g.x + monoWidth(mono, follower.after) + gap;
   const maxLeft = g.x + monoWidth(mono, follower.maxAfter ?? value.chars) + gap;
-  const width = Math.max(0, g.x + g.innerWidth - maxLeft);
+  // What is left of the card's inner width, or as much of its padding as the follower's longest
+  // reading needs, as the value's own box may take: the box is transparent and the padding is never
+  // drawn into, while a box cut at the inner edge cut the `/ 120` of a long race on a 480 round. #596.
+  const inner = g.x + g.innerWidth - maxLeft;
+  const needs = follower.widest === undefined || follower.kind !== 'denominator' ? 0 : Math.ceil(measureText(DATA_FACE.SemiBold, follower.widest, rung.denominator)) + boxSlack(rung.denominator);
+  const width = Math.max(0, Math.min(Math.max(inner, needs), slot.left + slot.width - maxLeft));
   const baseline = canvasBaseline(g.valueY, g.valueFs);
   const leftBind = follower.leftBind?.({ x: g.x, mono, gap });
   const opts = { bind: follower.bind, visibleBind: follower.visibleBind, leftBind };
   if (follower.kind === 'denominator') {
     const fs = rung.denominator;
-    items.push(denominator(`${prefix}denominator`, follower.sample, staticLeft, canvasYForBaseline(baseline, fs), fs, width, opts));
+    items.push(denominator(`${prefix}denominator`, follower.sample, staticLeft, canvasYForBaseline(baseline, fs), fs, width, { ...opts, widest: follower.widest }));
   } else {
     const fs = ds.size.labelSm;
     items.push(unit(`${prefix}unit`, follower.sample, staticLeft, canvasYForBaseline(baseline, fs), width, opts));

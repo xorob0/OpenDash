@@ -32,7 +32,7 @@ import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
-import { hasSetting, trackedValue } from '../../second/tracked.ts';
+import { LEVEL_WIDEST, hasSetting, trackedValue } from '../../second/tracked.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { limiterOn } from '../../components/pitAlerts.ts';
 import { antiRollFront } from '../../second/values.ts';
@@ -59,7 +59,7 @@ const COLUMN_SETTINGS: readonly { id: string; title: string; colour: () => Hex; 
   { id: 'cut', title: 'TC-LO', colour: () => ds.color.good.primary },
   // The front bar is no tracked value, having no change notification of its own, so its reading is
   // written here in the shape of one; the rear bar is the house's `diff`, which reads it.
-  { id: 'arbFront', title: 'ARB F', colour: () => ds.color.good.primary, value: () => ({ id: 'arbFront', strip: 'ARB F', notice: 'ARB front', sample: '3', read: antiRollFront(), pattern: '0' }) },
+  { id: 'arbFront', title: 'ARB F', colour: () => ds.color.good.primary, value: () => ({ id: 'arbFront', strip: 'ARB F', notice: 'ARB front', sample: '3', widest: LEVEL_WIDEST, read: antiRollFront(), pattern: '0' }) },
   { id: 'diff', title: 'ARB R', colour: () => ds.color.info.primary },
 ];
 
@@ -103,8 +103,7 @@ function settingsColumn(column: SettingsColumn, top: number, height: number): It
     const before = place === 0 ? num(0) : add(...present.slice(0, place));
     const at = Math.min(place, fits - 1);
     const frame = rect(column.left, top + at * pitch, column.width, column.box);
-    const widest = setting.value.pattern === '0' ? '88' : '88.8';
-    const box = settingBox(`settings.${setting.id}`, frame, setting.colour(), setting.title, { sample: setting.value.sample, bind: fmt(setting.value.read, setting.value.pattern), widest }, undefined, column);
+    const box = settingBox(`settings.${setting.id}`, frame, setting.colour(), setting.title, { sample: setting.value.sample, bind: fmt(setting.value.read, setting.value.pattern), widest: setting.value.widest }, undefined, column);
     return withMoreBindings(atSlot(box, before, at, pitch), { Visible: and(hasSetting(setting.value), lt(before, num(fits))) });
   });
 }

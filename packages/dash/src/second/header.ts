@@ -22,8 +22,8 @@ import { rule } from '../elements/rule.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
-import { drawnAfter, drawnFigure, type DrawnFigure } from './drawn.ts';
-import { CHARS, carPosition,
+import { charsOfText, drawnAfter, drawnFigure, textWidth, type DrawnFigure } from './drawn.ts';
+import { CHARS, LAP_TOTAL_WIDEST, LAP_WIDEST, carPosition,
   positionLabelled, positionLabelledDrawn, currentLap, fieldSize, player, totalLaps } from './values.ts';
 
 const { add, concat, str, fmt, iff, gt, num } = ncalc;
@@ -51,6 +51,8 @@ export const PAGE_DOT = { size: DOT_SIZE, gap: 6 } as const;
 function pair(
   name: string,
   valueSample: string,
+  /** The longest reading `valueBind` can produce, which the value's cells are cut from. */
+  valueWidest: string,
   valueBind: Expr,
   /** How wide the value really draws, so the denominator follows the figure: `L9 / 30` and `L12 / 30` keep one gap. */
   valueDrawn: DrawnFigure,
@@ -64,17 +66,20 @@ function pair(
 ): { width: number; draw(x: number): Item[] } {
   const d = densityOf(density);
   const mono = cells('SemiBold', fs);
-  const chars = { digits: valueSample.length, specials: 0 };
+  // Cut from the longest reading rather than from the sample, which is the short end: `L12` gave the
+  // lap three cells and WPF cut `L100` to `L10` from the hundredth lap. #596.
+  const chars = charsOfText(valueWidest, mono);
   const valueWidth = monoWidth(mono, chars);
   const denominatorWidth = Math.ceil(measureText('BarlowMedium', denominatorWidest, d.labelSm));
   return {
     width: valueWidth + ds.space[2] + denominatorWidth,
     draw: (x: number): Item[] => [
-      numeral(`${name}.value`, valueSample, x, y, fs, chars, { bind: valueBind, maxWidth: valueWidth + 4 }),
-      // The budget is the sample's own length, so the two agree at design time and part company on
-      // the dash: `L9` is a cell shorter than `L12` and `P4` a cell shorter than `P24`, and a
-      // denominator placed at the end of the cells carries that cell with it. #387.
-      unit(`${name}.denominator`, denominator, x + valueWidth + ds.space[2], canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
+      numeral(`${name}.value`, valueSample, x, y, fs, chars, { bind: valueBind, widest: valueWidest, maxWidth: valueWidth + 4 }),
+      // The denominator follows the figure rather than the end of the cells, at design time as on the
+      // dash: `L9` is a cell shorter than `L12` and `L12` one shorter than the `L999` the cells are
+      // cut for, and a denominator placed at the end of the cells carries the difference with it.
+      // #387.
+      unit(`${name}.denominator`, denominator, x + textWidth(valueSample, mono) + ds.space[2], canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
         bind: denominatorBind,
         widest: denominatorWidest,
         visibleBind,
@@ -118,17 +123,18 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
   const lap = pair(
     `${name}.lap`,
     'L12',
+    `L${LAP_WIDEST}`,
     concat(str('L'), fmt(currentLap(), '0')),
-    drawnAfter('L', drawnFigure({ value: currentLap(), digits: 2 })),
+    drawnAfter('L', drawnFigure({ value: currentLap(), digits: CHARS.lap.digits })),
     '/ 30',
-    '/ 999',
+    LAP_TOTAL_WIDEST,
     concat(str('/ '), fmt(totalLaps(), '0')),
     valueY,
     fs,
     density,
     gt(totalLaps(), num(0)),
   );
-  const position = pair(`${name}.position`, 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
+  const position = pair(`${name}.position`, 'P24', 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;
@@ -322,6 +328,8 @@ export type InlinePart =
       sample: string;
       bind?: Expr;
       chars: { digits: number; specials: number };
+      /** The longest reading `bind` can produce, which the fit tests measure the value by; `chars` has to hold it. */
+      widest?: string;
       color?: `#${string}`;
       colorBind?: Expr;
       visibleBind?: Expr;
@@ -379,6 +387,7 @@ export function inlineGroup(name: string, parts: readonly InlinePart[], fs: numb
           items.push(
             numeral(`${name}.${i}`, part.sample, cursor, top, fs, part.chars, {
               bind: part.bind,
+              widest: part.widest,
               color: part.color,
               colorBind: part.colorBind,
               hAlign: part.hAlign,
