@@ -334,7 +334,7 @@ namespace OpenDashPlugin
         /// Leaderboard · Fuel"). A landscape pit wall: its page ("Race page"). A portrait pit wall, which is its
         /// own package with one page and never reads PitWallPage: its four zones' pages, as a face's line is. A
         /// companion: how much of the catalogue its
-        /// rotation holds ("12 of 21 modules"), since which module it is on is the phone's own and not
+        /// rotation holds ("12 of 22 modules"), since which module it is on is the phone's own and not
         /// something OpenDash is told. A card face: the cards its package reads, slot by slot (SlotsRead).
         /// Nothing is made up for a kind the panel does not know.
         /// </remarks>
@@ -418,7 +418,7 @@ namespace OpenDashPlugin
                 .Select(slot => slot.Wide ? ZonePages.WideName(screen.ZonePage(slot.Key)) : ZonePages.StandardName(screen.ZonePage(slot.Key))));
         }
 
-        /// <summary>"12 of 21 modules". A rotation with nothing on reads as the whole catalogue, as the
+        /// <summary>"12 of 22 modules". A rotation with nothing on reads as the whole catalogue, as the
         /// companion itself reads it, and so does one nothing has set up yet.</summary>
         public static string ModulesLine(bool[] modules)
         {

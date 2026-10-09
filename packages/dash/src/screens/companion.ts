@@ -122,7 +122,7 @@ export function companionScreen(size: CompanionSize, page: number): Screen {
   };
 }
 
-/** The companion dashboard: 21 screens, one per module, in page order, and the idle screen. */
+/** The companion dashboard: one screen per module, in page order, and the idle screen. */
 export function companionDashboard(size: CompanionSize, metadata: DashboardMetadata): Dashboard {
   return {
     // A companion is a phone or a tablet and the tap is how it is driven, so it asks for the simple

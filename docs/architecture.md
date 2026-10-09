@@ -38,7 +38,7 @@ packages/dash/fonts/*.ttf ────────┤
                   build/OpenDash/cards.djson           one screen per card
                   build/OpenDash/*.djson.metadata
                   build/OpenDash/_SHFonts/
-                  build/OpenDash Companion/            21 screens, one per module
+                  build/OpenDash Companion/            one screen per module
                   build/OpenDash Pit wall/             3 pages and their zone dashboards
                                   v
                   zip  -->  build/OpenDash.simhubdash

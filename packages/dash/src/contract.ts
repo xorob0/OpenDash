@@ -1273,7 +1273,7 @@ export const quickGlancePage = (value: number): number => value % 100;
 export const zone = {
   /** `isnull([OpenDash.Face1920x480ZoneB], 0)`: the page a zone is showing, on a face of the theme given. */
   page: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zonePageSettingName(face, z))), num(defaultZonePage(z, theme))),
-  /** `isnull([OpenDash.Face1920x480ZoneBPages], 2097151)`: which pages are enabled, as a mask. */
+  /** `isnull([OpenDash.Face1920x480ZoneBPages], …)`: which pages are enabled, as a mask, every page on by default. */
   mask: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zoneMaskSettingName(face, z))), num(defaultZoneMask(z, theme))),
   /** `isnull([OpenDash.Face1920x480ZoneBStart], 0)`: the page the zone opens on. */
   start: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zoneStartSettingName(face, z))), num(defaultZonePage(z, theme))),
