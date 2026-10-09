@@ -43,14 +43,11 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { ALERT_BAND_BORDER } from './alertBand.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
-import { engineStopped, ignitionOff, isInPitLane } from '../second/values.ts';
+import { engineStopped, ignitionOff, isInPitLane, pitLimiterOn } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
 
-const { and, eq, game, isNull, isnull, not, num, raw } = ncalc;
-
-/** The limiter is engaged. Null-safe, so a sim that publishes nothing draws no pit alert at all. */
-export const limiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
+const { and, isNull, not, raw } = ncalc;
 
 /**
  * This car has a limiter to engage.
@@ -87,9 +84,9 @@ export interface PitAlertSpec {
 export const PIT_ALERTS: readonly PitAlertSpec[] = [
   { id: 'ignition', label: 'Ignition off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), ignitionOff()) },
   { id: 'engine', label: 'Engine off', shape: 'outlined', colour: ds.purpose.alert.power, when: and(isInPitLane(), engineStopped()) },
-  { id: 'engage', label: 'Engage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(isInPitLane(), not(limiterOn()), hasLimiter()) },
-  { id: 'disengage', label: 'Disengage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(limiterOn(), not(isInPitLane())) },
-  { id: 'limiter', label: 'Pit limiter', shape: 'filled', colour: ds.purpose.pitLimiter, when: and(limiterOn(), isInPitLane()), blinkMs: PIT_LIMITER_BLINK_MS },
+  { id: 'engage', label: 'Engage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(isInPitLane(), not(pitLimiterOn()), hasLimiter()) },
+  { id: 'disengage', label: 'Disengage limiter', shape: 'outlined', colour: ds.purpose.pitLimiter, when: and(pitLimiterOn(), not(isInPitLane())) },
+  { id: 'limiter', label: 'Pit limiter', shape: 'filled', colour: ds.purpose.pitLimiter, when: and(pitLimiterOn(), isInPitLane()), blinkMs: PIT_LIMITER_BLINK_MS },
 ];
 
 /** `spec.when` and no higher state's condition: the chain band D and the pop-ups both rank with. */

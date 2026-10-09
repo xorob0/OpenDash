@@ -70,7 +70,9 @@ Two related facts, both verified:
 There is no speeding property at any layer. It is `IsInPitLane` **and** a `PitLimiterSpeed` above
 zero **and** a `SpeedLocal` above it by a margin. The margin is what stops the light strobing while
 the limiter settles. `PitLimiterSpeedMs` exists on `StatusDataBase` but carries `[DoNotExpose]`, so
-it is not a property.
+it is not a property. The strip and the flag box read the one composition, `pitSpeeding` in
+`packages/dash/src/second/values.ts`; the pair is in one unit whatever the driver set, because
+`SpeedLocal` and `PitLimiterSpeed` are both converted by `GameUnitSettings.LocalSpeedUnit`.
 
 ### Wheelspin and lock-up are estimated by the plugin, because SimHub keeps its estimate for ShakeIt
 

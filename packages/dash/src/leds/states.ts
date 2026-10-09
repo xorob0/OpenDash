@@ -20,7 +20,7 @@ import { ncalc, type MatrixContainer, type MatrixFrame } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
-import { tankIsLow } from '../second/values.ts';
+import { isInPitLane, pitLimiterOn, pitSpeeding, spotterCar, tankIsLow } from '../second/values.ts';
 
 const { and, eq, game, gt, lt, computed, not, num, str } = ncalc;
 
@@ -179,31 +179,6 @@ export const WATER_HOT: Grid = [
 
 // --- The conditions --------------------------------------------------------------------------
 
-const limiterOn = (): Expr => eq(game('PitLimiterOn'), num(1));
-const inLane = (): Expr => eq(game('IsInPitLane'), num(1));
-
-/**
- * Over the pit lane limit, while in the lane.
- *
- * **Both sides are in metres per second, and that is the whole point of this comment.**
- * `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit` (GameManagerBase.cs:1339), so for a
- * driver whose SimHub speed unit is MPH a 60 km/h limit arrives as 37. Comparing that with
- * `SpeedKmh`, which is always km/h, reads as speeding from a standstill — and because this term
- * heads the exclusion chain that gates the spotter, the warnings and the gear, it would not merely
- * light the wrong picture, it would black out everything below the flags for every imperial user.
- * `PitLimiterSpeedMs` (GameManagerBase.cs:1340) is metres per second whatever the user has set.
- *
- * It is also `double?`: a sim or track that publishes no pit limit gives null, so it needs the
- * `isnull()` every other read here already has. The default is a speed nothing reaches, so an
- * unknown limit means "not speeding" rather than "always speeding".
- */
-export const SPEEDING_ALLOWANCE_MS = 0.3;
-/** Metres per second; nothing in a pit lane approaches it, so an unpublished limit never fires. */
-export const NO_PIT_LIMIT_MS = 999;
-const speedMs = (): Expr => ncalc.div(ncalc.isnull(game('SpeedKmh'), num(0)), num(3.6));
-const pitLimitMs = (): Expr => ncalc.isnull(game('PitLimiterSpeedMs'), num(NO_PIT_LIMIT_MS));
-const speeding = (): Expr => and(inLane(), gt(speedMs(), ncalc.add(pitLimitMs(), num(SPEEDING_ALLOWANCE_MS))));
-
 /** One state the box can show: a condition, a picture, and whether it blinks. */
 export interface BoxState {
   id: string;
@@ -222,11 +197,22 @@ export interface BoxState {
 /**
  * The pit family, highest first. Speeding outranks both limiter states because it is the one that
  * is costing a penalty right now.
+ *
+ * Speeding is `pitSpeeding` in `second/values.ts`, the one body the strip's speeding effect reads
+ * too. This compared `SpeedKmh / 3.6` with `PitLimiterSpeedMs`, which would have been right had it
+ * been a property. It carries `[DoNotExpose]` and DataCorePlugin skips every member that does, so
+ * the read was always null, the `isnull()` default of 999 m/s stood in for it, and the box never drew
+ * its speeding picture on any rig, while the strip, comparing `SpeedLocal` with `PitLimiterSpeed`,
+ * lit. The local pair is in one unit for a driver on MPH as for one on km/h, because SimHub converts
+ * both by the same setting; see `pitLimit` there.
+ *
+ * Every read goes through `isnull()`, the lane and the limiter included, and so do the spotter's
+ * below: a sim that publishes none of them leaves the box resting.
  */
 export const pitStates = (): BoxState[] => [
-  { id: 'speeding', raised: speeding(), grid: SPEEDING, blink: false },
-  { id: 'limiterOutOfLane', raised: and(limiterOn(), not(inLane())), grid: LIMITER_OUT_OF_LANE, blink: false },
-  { id: 'limiterInLane', raised: and(limiterOn(), inLane()), grid: LIMITER_IN_LANE, blink: false },
+  { id: 'speeding', raised: pitSpeeding(), grid: SPEEDING, blink: false },
+  { id: 'limiterOutOfLane', raised: and(pitLimiterOn(), not(isInPitLane())), grid: LIMITER_OUT_OF_LANE, blink: false },
+  { id: 'limiterInLane', raised: and(pitLimiterOn(), isInPitLane()), grid: LIMITER_IN_LANE, blink: false },
 ];
 
 /**
@@ -241,8 +227,8 @@ export const pitStates = (): BoxState[] => [
  */
 export function spotterStates(matrix: FlagBoxMatrix, growing = false): BoxState[] {
   const side = flagBoxMatrix(matrix).side();
-  const left = eq(game('SpotterCarLeft'), num(1));
-  const right = eq(game('SpotterCarRight'), num(1));
+  const left = spotterCar('Left');
+  const right = spotterCar('Right');
   const isSide = (name: string): Expr => eq(side, str(name));
   const shows = (name: string): Expr => ncalc.or(isSide('both'), isSide(name));
   // The two variants are named apart rather than sharing one name, because they are two pictures

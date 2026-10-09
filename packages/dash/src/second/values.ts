@@ -1373,6 +1373,12 @@ export const tyreWearMin = (corner: Corner): Expr => {
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**
+ * One of three values by the driver's temperature unit, read through {@link temperatureUnit} so that
+ * a unit SimHub does not say is Celsius. The tyre thresholds on the cards and on the second screens
+ * both pick by this; each read `TemperatureUnit` bare before.
+ */
+export const perTemperatureUnit = (f: Expr, k: Expr, c: Expr): Expr => iff(eq(temperatureUnit(), str('Fahrenheit')), f, iff(eq(temperatureUnit(), str('Kelvin')), k, c));
+/**
  * `°C`, `°F` or `K`, which is the temperature unit as a reading draws it rather than as SimHub
  * spells it: `TemperatureUnit` publishes the enum name, `Celcius` included with its own spelling,
  * and a driver reads the mark and not the enum. Kelvin takes no degree sign.
@@ -1407,6 +1413,57 @@ const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvF
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
 export const pitRefuelLitres = (): Expr => raw('PitSvFuel');
 export const isInPitLane = (): Expr => gt(isnull(game('IsInPitLane'), num(0)), num(0));
+
+// --- The pit lane and the spotter, one body each for the faces, the strips and the box -----------
+
+/** The limiter is engaged. Null-safe, so a sim that publishes nothing draws no limiter anywhere. */
+export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
+
+/** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
+export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
+
+/**
+ * What {@link pitLimit} reads when the sim publishes no limit: a speed nothing reaches in either
+ * unit, so the comparison below never fires on it and a readout can tell it from a real limit.
+ */
+export const NO_PIT_LIMIT = 999;
+
+/**
+ * The pit lane limit, in the driver's own unit.
+ *
+ * `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit` (GameManagerBase.cs:1339), and
+ * `SpeedLocal` is `SpeedKmh` or `SpeedMph` by the same setting (GameManagerBase.cs:1492), so the two
+ * are always in one unit and are compared as they are. The metres-per-second twin,
+ * `PitLimiterSpeedMs`, carries `[DoNotExpose]` and DataCorePlugin skips it, so it is not a property
+ * at all: the box compared against it, read the null as "no limit" and never lit its speeding
+ * picture, while the strip compared the local pair and did.
+ */
+export const pitLimit = (): Expr => isnull(game('PitLimiterSpeed'), num(NO_PIT_LIMIT));
+
+/** The limit as the faces write it: the number, or the house's no-data dashes where there is none. */
+export const pitLimitText = (): Expr => iff(lt(pitLimit(), num(NO_PIT_LIMIT)), fmt(pitLimit(), '0'), str(NO_VALUE));
+
+/**
+ * How far over the limit, in the driver's unit, before it counts. A limiter holds the car a
+ * fraction over its figure, and this is what stops a light strobing as it settles. One unit in
+ * either: a mile an hour lets the imperial driver by 1.6 km/h where the metric one gets 1, which is
+ * the same order as the limiter's own settling and is not worth a second spelling.
+ */
+export const PIT_SPEEDING_MARGIN = 1;
+
+/**
+ * Over the pit lane limit, wherever the car is. A limit of zero or none is never exceeded, so a
+ * track whose limit the sim does not say reads as "not speeding" rather than "always speeding".
+ */
+export const overPitLimit = (): Expr => and(gt(pitLimit(), num(0)), gt(speed(), add(pitLimit(), num(PIT_SPEEDING_MARGIN))));
+
+/**
+ * Speeding in the pit lane. SimHub publishes no speeding property of any kind, so it is composed:
+ * in the lane and over the limit. The strip's effect and the box's picture both read this one
+ * expression, so the two cannot light at different speeds.
+ */
+export const pitSpeeding = (): Expr => and(isInPitLane(), overPitLimit());
+
 export const inPitSeconds = (): Expr => isnull(game('IsInPitSince'), num(0));
 export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), num(0));
 

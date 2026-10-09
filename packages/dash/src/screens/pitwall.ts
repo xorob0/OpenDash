@@ -28,15 +28,16 @@ import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
-import { airTemperature, bestLap, brake, carPosition,
+import { assistField } from '../modules/carSettings.ts';
+import { airTemperature, bestLap, brake, brakeBias, carPosition,
   positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
-import { assistPresent } from '../second/tracked.ts';
+import { FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
 import { zoneWidget } from './zones.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 
-const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game, raw } = ncalc;
+const { fmt, concat, str, iff, eq, gt, num, isnull, driver, game } = ncalc;
 
 /** A pit wall panel draws at zone density with the pit wall's own label: 24 px numerals, 13 px labels. */
 const DENSITY = 'panel' as const;
@@ -260,9 +261,12 @@ export function trackPanel(name: string, frame: Rect): Item[] {
           // cell drawn unconditionally says the dial is turned off where there is no dial. The test is
           // `assistPresent`, the one the bar's strip and the settings page read: the raw iRacing knob,
           // or a level above zero, which is all a sim without the knob can say.
-          fld(ctx, 'tc', 'TC', { sample: '3', bind: fmt(isnull(game('TCLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: assistPresent(raw('dcTractionControl'), game('TCLevel')) }),
-          fld(ctx, 'abs', 'ABS', { sample: '2', bind: fmt(isnull(game('ABSLevel'), num(0)), '0'), chars: CHARS.setting, fs: d.small }, { visibleBind: assistPresent(raw('dcABS'), game('ABSLevel')) }),
-          fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(isnull(game('BrakeBias'), num(0)), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
+          //
+          // What the two assist cells draw is the cards' `assistValue`, `OFF` in its colour at zero,
+          // rather than a second `fmt` of the level that drew `0` where the card beside it drew `OFF`.
+          assistField(ctx, 'tc', 'TC', d.small),
+          assistField(ctx, 'abs', 'ABS', d.small, '2'),
+          fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(brakeBias(), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
         ],
         right,
         DENSITY,
@@ -273,15 +277,14 @@ export function trackPanel(name: string, frame: Rect): Item[] {
 }
 
 /**
- * Gears the trace's axis spans, reverse at the floor.
+ * Gears the trace's axis spans, reverse at the floor and the last of `FORWARD_GEARS` at the top.
  *
  * A ChartItem's Maximum is a number in the file and not an expression, so the top cannot follow
- * the car's own `DriverCarGearNumForward`; eight forward gears is above everything these sims
- * publish, and a car with fewer simply never reaches the top of the plot. Autoscaling the top
- * instead would move third gear up and down the plot as the window turned over, which on a screen
- * read from a metre away is worse than unused headroom.
+ * the car's own `DriverCarGearNumForward`; a car with fewer gears than the list simply never reaches
+ * the top of the plot. Autoscaling the top instead would move third gear up and down the plot as the
+ * window turned over, which on a screen read from a metre away is worse than unused headroom.
  */
-const GEAR_RANGE = { min: -1, max: 8 } as const;
+const GEAR_RANGE = { min: -1, max: FORWARD_GEARS.length } as const;
 
 /**
  * The gear as a number, which is what a ChartItem samples.
@@ -295,8 +298,8 @@ const GEAR_RANGE = { min: -1, max: 8 } as const;
 const present = (expr: Expr): Expr => ncalc.not(ncalc.isNull(expr));
 
 const gearNumber = (): Expr =>
-  Array.from({ length: GEAR_RANGE.max }, (_, i) => i + 1).reduce<Expr>(
-    (fallback, g) => iff(eq(game('Gear'), str(String(g))), num(g), fallback),
+  FORWARD_GEARS.reduce<Expr>(
+    (fallback, g) => iff(eq(game('Gear'), str(g)), num(Number(g)), fallback),
     iff(eq(game('Gear'), str('R')), num(GEAR_RANGE.min), num(0)),
   );
 

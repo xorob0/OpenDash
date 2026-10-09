@@ -11,6 +11,7 @@ import { cardFrame } from '../components/frame.ts';
 import { grid2x2, type CellSpec } from '../components/grid2x2.ts';
 import { fitLabelForm } from '../elements/label.ts';
 import { TYRE_THRESHOLDS, WEAR_CAUTION } from '../second/wheel.ts';
+import { perTemperatureUnit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { TEMP_CHARS } from './chars.ts';
@@ -19,9 +20,8 @@ const { game, isnull, eq, lt, gt, num, iff, str, fmt, concat } = ncalc;
 
 export const TYRE_CORNERS = ['FrontLeft', 'FrontRight', 'RearLeft', 'RearRight'] as const;
 
-const unitExpr = game('TemperatureUnit');
-/** Picks a value per unit, Celsius being the default. */
-const perUnit = (f: string, k: string, c: string): string => iff(eq(unitExpr, str('Fahrenheit')), f, iff(eq(unitExpr, str('Kelvin')), k, c));
+/** Picks a value per unit, Celsius being the default, by the one reading of the unit the second screens use too. */
+const perUnit = perTemperatureUnit;
 
 /** `100` per cent of the tread; the sign after it is a label, not a cell. */
 const WEAR_CHARS = { digits: 3, specials: 0 } as const;

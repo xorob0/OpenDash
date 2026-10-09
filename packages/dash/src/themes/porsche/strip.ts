@@ -13,11 +13,10 @@
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
-import { limiterOn } from '../../components/pitAlerts.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
-import { currentLap, GRIP_WIDEST, rpm, sessionType, speed, trackGrip } from '../../second/values.ts';
+import { currentLap, GRIP_WIDEST, pitLimiterOn, rpm, sessionType, speed, trackGrip } from '../../second/values.ts';
 import { ds } from '../../tokens.ts';
 import { regionRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
@@ -61,7 +60,7 @@ export function porscheStrip(ctx: FaceContext): Item[] {
       size: parts.speed.size,
       color: ds.color.text.primary,
       hAlign: 'center',
-      bind: iff(limiterOn(), fmt(rpm(), '0'), fmt(speed(), '0')),
+      bind: iff(pitLimiterOn(), fmt(rpm(), '0'), fmt(speed(), '0')),
       widest: '8888',
     }),
   );

@@ -319,14 +319,19 @@ yellow is being waved rather than shown, so a pit picture or a warning that blin
 the flags' distinction about something that is not a flag. The three pit states and the three
 warnings are consequently steady, and `flagBox.test.ts` holds all nine states below the flags to it.
 
-Speeding compares the car's speed with the lane limit **in metres per second**, which matters more
-than it looks: `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit`, so for a driver whose
-SimHub speed unit is MPH a 60 km/h limit arrives as 37 — and against `SpeedKmh`, which is always
-km/h, that reads as speeding from a standstill. Because speeding heads the exclusion chain, it
-would have blacked out the warnings and the gear for every imperial user rather than merely
-lighting the wrong picture. `PitLimiterSpeedMs` is metres per second whatever the user has
-set, and it is `isnull()`-wrapped with a speed nothing reaches, so a track that publishes no limit
-means "not speeding" rather than "always speeding".
+Speeding compares the car's speed with the lane limit **in one unit**, which matters more than it
+looks: `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit`, so for a driver whose SimHub
+speed unit is MPH a 60 km/h limit arrives as 37, and against `SpeedKmh`, which is always km/h, that
+reads as speeding from a standstill. Because speeding heads the exclusion chain, it would have
+blacked out the warnings and the gear for every imperial user rather than merely lighting the wrong
+picture. The pair is therefore `SpeedLocal` and `PitLimiterSpeed`, which SimHub converts by the same
+setting, with a margin of one unit of it. The limit is `isnull()`-wrapped with a speed nothing
+reaches, so a track that publishes no limit means "not speeding" rather than "always speeding".
+
+It is the same expression the strip's speeding effect reads, `pitSpeeding` in `second/values.ts`
+(#619). The box used to compare metres per second, `SpeedKmh / 3.6` against `PitLimiterSpeedMs`, but
+that member carries `[DoNotExpose]` and is never a property, so the read was always null and the box
+never drew its speeding picture at all.
 
 Comparing two published numbers is arithmetic over properties rather than state between frames, so
 it is not computed telemetry.
