@@ -55,11 +55,11 @@ function captionOf(f: BandField): { text: string; widest: string; bind?: Expr } 
   return { text, widest, bind: concat(...parts) };
 }
 
-/** The widest a reading of the field can be, in as many cells as its budget declares. */
+/** The widest a reading of the field can be, which is what its ghost shows; see `widestValue` in `modules.ts`. */
 function widestValue(f: BandField): string {
-  const base = f.numeralWidest ?? f.sample;
-  const cellsIn = [...base].filter((ch) => ch !== '.' && ch !== ':').length;
-  return '8'.repeat(Math.max(0, f.chars.digits - cellsIn)) + base;
+  if (f.numeralWidest !== undefined) return f.numeralWidest;
+  const cellsIn = [...f.sample].filter((ch) => ch !== '.' && ch !== ':').length;
+  return '8'.repeat(Math.max(0, f.chars.digits - cellsIn)) + f.sample;
 }
 
 const readingsOf = (f: BandField): { sample: string; bind: string }[] => [{ sample: f.sample, bind: f.bind }, ...(f.row ?? [])];
