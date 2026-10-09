@@ -818,8 +818,8 @@ one line of prose with nothing in it to drop.
 
 ### Where the build keeps more than the drawing
 
-The table is the catalogue read off page by page, and in five places it is deliberately not what the
-catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
+The table is the catalogue read off page by page, and in the places below it is deliberately not
+what the catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
 holding a drawing against a zone should find the argument rather than suspect a bug.
 
 - **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
@@ -879,6 +879,16 @@ holding a drawing against a zone should find the argument rather than suspect a 
 - **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
   and the companion's list does. The trade runs the other way as well: the drawing gives the row a
   rating column, and neither list declares one.
+- **Leaderboard and relative, a car in the pit lane.** Neither drawing marks one, and both lists do
+  ([#388](https://github.com/xorob0/OpenDash/issues/388)): the row's gap gives way to the inverted
+  `PIT` chip the pit wall boards draw in their pit column, read from the same `carInPit`, at every
+  shape and on the companion's lists as on the face. The gap is where it goes because it is the one
+  column no shape sheds and the chip fits it at every density, so no column is added at the narrow
+  faces. The player's own row is not marked, the limiter banner saying it already, and a board, which
+  has its pit column, keeps its gap. Off track would take the same treatment with `OFF`, and is not
+  drawn because SimHub publishes nothing a dash can read that says another car is off the track;
+  [simhub-dash-format.md](../research/simhub-dash-format.md) has the decompile. The canvas owes the
+  drawing of the marked row.
 - **Stint at `wide` and at `tall`.** The driver, where the drawing closes the page with the pit
   window. The window is not a field the module builds, and a handover is what the recap is read for.
 - **Car settings at every shape.** The module draws the seven settings iRacing exposes and the

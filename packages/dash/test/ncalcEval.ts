@@ -88,7 +88,14 @@ const formatDate = (value: Date, pattern: string): string => {
   });
 };
 
-export function evalNcalc(expression: string, props: Props): unknown {
+/**
+ * A SimHub function the evaluator does not model, answered by the test that reads it: a row's
+ * `driveriscarinpitlane(...)` is whatever the case under test says the car is doing, whichever row the
+ * index expression inside it lands on.
+ */
+export type Calls = Record<string, (...args: never[]) => unknown>;
+
+export function evalNcalc(expression: string, props: Props, calls: Calls = {}): unknown {
   // Split on string literals so that operator rewriting never touches their contents.
   const js = expression
     .split(/('(?:[^'\\]|\\.)*')/)
@@ -131,6 +138,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
     },
     truncate: Math.trunc,
     rootdashboardscreenname: (): unknown => (ROOT_SCREEN in props ? props[ROOT_SCREEN] : null),
+    ...calls,
   };
   return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));
 }
