@@ -6,7 +6,16 @@
       "shade": { "value": "#C9CECB", "description": "The ground a step darker, for the house's raised and inset surfaces on what this theme leaves to the house: the pop-ups, the change notifications and the lists' own blocks." },
       "rule": { "value": "#B4BAB7", "description": "The house's rules and chips on those pages, a second step darker than the ground." },
       "caption": { "value": "#424748", "description": "The house's label grey turned over: the ink at four fifths over the ground." },
-      "dim": { "value": "#848887", "description": "The house's dim text turned over: the ink at nine twentieths over the ground, which the absent readings take." }
+      "dim": { "value": "#848887", "description": "The house's dim text turned over: the ink at nine twentieths over the ground, which the absent readings take." },
+      "backlight": {
+        "inverted": { "ground": { "value": "#14171A", "description": "The seven backlights after the white, each a ground and an ink, which settings.json offers the driver (#715). The inverted is light figures on a dark ground: one of the LCD's looks and not night mode (#740), which applies over whatever backlight is chosen." }, "ink": { "value": "#D9DDDA" } },
+        "red": { "ground": { "value": "#CF4A3C" }, "ink": { "value": "#2A0906" } },
+        "green": { "ground": { "value": "#45C361" }, "ink": { "value": "#0A3316" } },
+        "cyan": { "ground": { "value": "#5FD3DA" }, "ink": { "value": "#073338" } },
+        "blue": { "ground": { "value": "#4E8EDF" }, "ink": { "value": "#0A1C45" } },
+        "yellow": { "ground": { "value": "#E9D84B" }, "ink": { "value": "#3A3200" } },
+        "purple": { "ground": { "value": "#B06CD5" }, "ink": { "value": "#2B0A40" } }
+      }
     }
   },
   "color": {

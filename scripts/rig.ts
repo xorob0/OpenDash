@@ -26,7 +26,7 @@
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { BAND_D_PAGES, defaultZoneMask, MODULE_CATALOGUE, pagesForZone, themeEntry, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
+import { BAND_D_PAGES, defaultZoneMask, MODULE_CATALOGUE, pagesForZone, THEME_SETTINGS, themedFolder, themeEntry, themeSettingName, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
 import { GRID_SHAPES, shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
 import { fromShare, powershell, psq, resolveHost, simhubStart, simhubStop, sleep, toShare, withClaim, type Host, type RunResult } from './vm.ts';
 
@@ -415,6 +415,28 @@ function putPreset(host: Host, preset: Preset, edit: Edit): RunResult {
   return dropped.ok ? { ...dropped, stdout: `${describe(settings)}\n  ${dropped.stdout}` } : dropped;
 }
 
+/**
+ * What `theme` writes: a 1280 by 480 screen of the theme added to the rig unless one of the theme is on
+ * it already, so that the Screens page draws the theme's settings, and the choices given, under the
+ * names the plugin publishes them by (#715). Every other setting and every other screen is kept.
+ */
+export function themedEdit(manifest: { packages: ManifestPackage[] }, themeId: string, choices: readonly string[]): (settings: Record<string, unknown>) => void {
+  const entry = themeEntry(themeId);
+  if (!entry || entry.id === 'default') throw new RangeError(`${JSON.stringify(themeId)} is not a car theme`);
+  const named = choices.map((choice) => {
+    const [setting, value] = choice.split('=');
+    const declared = THEME_SETTINGS[themeId]?.find((s) => s.id === setting);
+    if (!declared || !declared.choices.some((c) => c.id === value)) throw new RangeError(`${JSON.stringify(choice)}: the ${themeId} theme offers ${(THEME_SETTINGS[themeId] ?? []).map((s) => `${s.id}=${s.choices.map((c) => c.id).join('|')}`).join(', ') || 'no settings'}`);
+    return [themeSettingName(themeId, declared.id), value!] as const;
+  });
+  const screen = { ...screenFor(packageNamed(manifest, themedFolder(entry, { width: 1280, height: 480 })), ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']), Namespace: `${entry.name}1280x480`, Unclaimed: false };
+  return (settings) => {
+    const rig = (settings.Rig as { Theme?: string }[] | undefined) ?? [];
+    if (!rig.some((s) => s.Theme === themeId)) settings.Rig = [...rig, screen];
+    settings.ThemeSettings = { ...((settings.ThemeSettings as Record<string, string> | undefined) ?? {}), ...Object.fromEntries(named) };
+  };
+}
+
 const USAGE = `rig: put a set of screens on the VM's plugin, so the captures show more than one layout.
 
   bun scripts/rig.ts show       what is on the rig now
@@ -427,6 +449,9 @@ const USAGE = `rig: put a set of screens on the VM's plugin, so the captures sho
   bun scripts/rig.ts clear      no screens, every other setting kept
   bun scripts/rig.ts empty      a genuine first run: the settings and SimHub's copies of them
                                 deleted, and every OpenDash folder taken out of DashTemplates
+  bun scripts/rig.ts theme <id> [<setting>=<choice> ...]
+                                a 1280x480 screen of the theme added unless the rig has one, and
+                                the theme's own settings set: theme aim backlight=inverted
 
 SimHub is stopped and started again, because the plugin reads its settings once at startup, so a
 preset claims the VM for as long as it takes, and is refused while another session holds it. Run
@@ -440,13 +465,36 @@ export async function main(argv: readonly string[], host: Host = resolveHost()):
     console.log(USAGE);
     return 0;
   }
-  if (command !== 'show' && !(PRESETS as readonly string[]).includes(command)) {
+  if (command !== 'show' && command !== 'theme' && !(PRESETS as readonly string[]).includes(command)) {
     console.error(USAGE);
     return 2;
   }
   if (command === 'show') {
     console.log(describe(readSettings(host)));
     return 0;
+  }
+  if (command === 'theme') {
+    const manifest = readManifest();
+    if (typeof manifest === 'string') {
+      console.error(manifest);
+      return 1;
+    }
+    let edit: (settings: Record<string, unknown>) => void;
+    try {
+      edit = themedEdit(manifest, argv[1] ?? '', argv.slice(2));
+    } catch (e) {
+      console.error(e instanceof Error ? e.message : String(e));
+      return 2;
+    }
+    const applied = withClaim(host, `rig theme ${argv.slice(1).join(' ')}`, () => {
+      const settings = readSettings(host);
+      edit(settings);
+      const written = writeSettings(host, settings);
+      return written.ok ? { ...written, stdout: `${describe(settings)}\n  ${JSON.stringify(settings.ThemeSettings)}` } : written;
+    });
+    if (applied.stdout) console.log(applied.stdout);
+    if (!applied.ok) console.error(applied.stderr || 'the theme did not take');
+    return applied.ok ? 0 : 1;
   }
   const preset = command as Preset;
   const plan = planPreset(preset);

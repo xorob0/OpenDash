@@ -94,6 +94,9 @@ namespace OpenDashPlugin
                 Child = Ui.VStack(PanelScreens.SelectedGap, selected.ToArray()),
             };
             sections.Add(block);
+            // Every theme on the rig with settings of its own, whichever screen is selected (#715).
+            var themes = BuildThemesGroup(rig);
+            if (themes != null) sections.Add(themes);
             return PageLayout(PanelScreens.Title, null, sections.ToArray());
         }
 

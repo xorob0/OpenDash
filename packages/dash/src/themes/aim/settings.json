@@ -1,0 +1,20 @@
+{
+  "settings": [
+    {
+      "id": "backlight",
+      "name": "Backlight",
+      "tokens": ["palette.aim.ground", "palette.aim.ink"],
+      "default": "white",
+      "choices": [
+        { "id": "white", "name": "White", "values": ["{palette.aim.ground}", "{palette.aim.ink}"] },
+        { "id": "inverted", "name": "Inverted", "values": ["{palette.aim.backlight.inverted.ground}", "{palette.aim.backlight.inverted.ink}"] },
+        { "id": "red", "name": "Red", "values": ["{palette.aim.backlight.red.ground}", "{palette.aim.backlight.red.ink}"] },
+        { "id": "green", "name": "Green", "values": ["{palette.aim.backlight.green.ground}", "{palette.aim.backlight.green.ink}"] },
+        { "id": "cyan", "name": "Cyan", "values": ["{palette.aim.backlight.cyan.ground}", "{palette.aim.backlight.cyan.ink}"] },
+        { "id": "blue", "name": "Blue", "values": ["{palette.aim.backlight.blue.ground}", "{palette.aim.backlight.blue.ink}"] },
+        { "id": "yellow", "name": "Yellow", "values": ["{palette.aim.backlight.yellow.ground}", "{palette.aim.backlight.yellow.ink}"] },
+        { "id": "purple", "name": "Purple", "values": ["{palette.aim.backlight.purple.ground}", "{palette.aim.backlight.purple.ink}"] }
+      ]
+    }
+  ]
+}
