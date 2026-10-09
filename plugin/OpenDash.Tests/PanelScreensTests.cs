@@ -779,7 +779,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(new[] { "Zone A", "Zone B", "Zone C", "Band D" }, PanelScreens.GlanceZoneLabels());
             Assert.Equal(FacePages.ZoneA.Select(p => p.Name), PanelScreens.GlancePageLabels(0));
-            Assert.Equal(FacePages.BandD.Select(p => p.Name), PanelScreens.GlancePageLabels(3));
+            Assert.Equal(FacePages.BandD.Where(p => p.Id != "car").Select(p => p.Name), PanelScreens.GlancePageLabels(3));
             // Zone C's Track is zone A's Track: one drawing.
             var track = Contract.QuickGlanceValue(2, FacePages.ZoneBC.First(p => p.Id == "track").Number);
             Assert.Equal(Contract.QuickGlanceValue(0, 3), PanelScreens.GlanceWithZone(track, 0));
@@ -1275,7 +1275,8 @@ namespace OpenDashPlugin.Tests
                 "Ui.ChoiceButton(fields, screen.Face.BarField(slot), index => { screen.Face.SetBarField(slot, index); ScreensSave(screen, redraw); });",
                 "var glance = screen.Face.NormalisedQuickGlance(); var zoneIndex = Contract.QuickGlanceZone(glance);",
                 "Ui.ChoiceButton(PanelScreens.GlanceZoneLabels(), zoneIndex, chosen => { screen.Face.QuickGlance = PanelScreens.GlanceWithZone(screen.Face.QuickGlance, chosen, screen.Theme); ScreensSave(screen, redraw); }",
-                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex, screen.Theme), Contract.QuickGlancePage(glance), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, chosen); ScreensSave(screen, redraw); }",
+                "var pages = PanelScreens.GlancePages(zoneIndex, screen.Theme);",
+                "Ui.ChoiceButton(PanelScreens.GlancePageLabels(zoneIndex, screen.Theme), Array.IndexOf(pages, Contract.QuickGlancePage(glance)), chosen => { screen.Face.QuickGlance = Contract.QuickGlanceValue(zoneIndex, pages[chosen]); ScreensSave(screen, redraw); }",
                 // A tick, a drag, All and None each settle, and settling redraws: the count, the First tag and
                 // the cell's page follow.
                 "Action settle = () => { ScreensSave(screen, redraw); };",

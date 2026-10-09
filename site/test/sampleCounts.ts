@@ -13,7 +13,7 @@ export const SAMPLE_COUNTS: Counts = {
   themes: 1,
   pages: 21,
   zoneAPages: 4,
-  bandDPages: 8,
+  bandDPages: 7,
   barFields: 10,
   pitWallPages: 3,
   pitWallZonePages: 11,

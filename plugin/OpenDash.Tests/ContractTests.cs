@@ -459,6 +459,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PageNamesOf(source, "export const ZONE_A_PAGES"), FacePages.ZoneA.Select(p => p.Name));
             Assert.Equal(PageIdsOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Id));
             Assert.Equal(PageNamesOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Name));
+            // And the pages held back from it, which both halves leave out of every cycle (#969).
+            Assert.Equal(ListOf(source, "export const HELD_BACK_BAND_PAGES"), FacePages.HeldBack);
             Assert.Equal(PageIdsOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Id));
             Assert.Equal(PageNamesOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Name));
 
@@ -478,15 +480,17 @@ namespace OpenDashPlugin.Tests
         public void Zone_defaults_are_every_page_enabled()
         {
             // A driver turns off what they do not want rather than turning on what they do, so every
-            // bit of the mask is set and the cycle starts at its longest.
+            // bit of the mask is set and the cycle starts at its longest: every bit but a held-back
+            // page's, band D's car page (#969).
             for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
             {
                 var mask = Contract.DefaultZoneMask(i);
                 var pages = Contract.FaceZonePageCounts[i];
-                Assert.Equal((1 << pages) - 1, mask);
-                for (var page = 0; page < pages; page++) Assert.True((mask & (1 << page)) != 0);
+                var letter = Contract.FaceZoneLetters[i];
+                for (var page = 0; page < pages; page++) Assert.Equal(!FacePages.IsHeldBack(letter, page, null), (mask & (1 << page)) != 0);
                 Assert.Equal(0, mask >> pages);
             }
+            Assert.Equal(new[] { 15, (1 << Modules.Count) - 1, (1 << Modules.Count) - 1, 127 }, Contract.DefaultFaceZoneMasks());
             Assert.Equal(new[] { 0, 0, 14, 0 }, Contract.DefaultFaceZones());
             Assert.Equal(new[] { 0, 1, 5, 6 }, Contract.DefaultBarSlots());
         }

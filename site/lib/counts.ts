@@ -23,7 +23,7 @@ export interface Counts {
   /** The page catalogue zones B and C, the companion and the pit wall zones draw from. */
   pages: number;
   zoneAPages: number;
-  /** Band D's house pages; a theme may add its own after them. */
+  /** Band D's house pages a driver can reach, less any held back; a theme may add its own after them. */
   bandDPages: number;
   barFields: number;
   /** The landscape pit wall's pages; the portrait one is a package of its own with one page. */

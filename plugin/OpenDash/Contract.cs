@@ -1917,11 +1917,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every page enabled, which is the mask a zone starts with: a driver turns off what
-        /// they do not want rather than turning on what they do.</summary>
+        /// they do not want rather than turning on what they do. Every page offered, that is: a held-back
+        /// page's bit is never set (<see cref="FacePages.HeldBack"/>), and since this is also the mask a
+        /// stored one is trimmed to, a rig that had the page in its cycle loses it there. Mirrors
+        /// defaultZoneMask in contract.ts.</summary>
         public static int DefaultZoneMask(int zoneIndex, string theme = null)
         {
             if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
-            return (1 << FaceZonePageCount(zoneIndex, theme)) - 1;
+            var all = (1 << FaceZonePageCount(zoneIndex, theme)) - 1;
+            return zoneIndex == BandIndex ? all & ~FacePages.HeldBackBandMask : all;
         }
 
         /// <summary>The default page of every face zone, in letter order, on a face of the theme given.</summary>
@@ -2642,14 +2646,16 @@ namespace OpenDashPlugin
 
         /// <summary>Returns the glance when both halves are in range, else the default. A page outside
         /// its zone's catalogue takes the zone with it: half a glance is not a glance. The catalogue is the
-        /// one of a face of the theme given, so a Porsche face can glance at its own band page.</summary>
+        /// one of a face of the theme given, so a Porsche face can glance at its own band page; a held-back
+        /// page is outside it, so a glance saved on band D's car page is the default glance now (#969).</summary>
         public static int NormaliseQuickGlance(int value, string theme = null)
         {
             if (value < 0) return DefaultQuickGlance;
             var zoneIndex = QuickGlanceZone(value);
             if (zoneIndex >= FaceZoneLetters.Length) return DefaultQuickGlance;
             var page = QuickGlancePage(value);
-            return page < FaceZonePageCount(zoneIndex, theme) ? value : DefaultQuickGlance;
+            if (page >= FaceZonePageCount(zoneIndex, theme)) return DefaultQuickGlance;
+            return FacePages.IsHeldBack(FaceZoneLetters[zoneIndex], page, theme) ? DefaultQuickGlance : value;
         }
 
         /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>
