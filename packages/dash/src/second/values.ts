@@ -1090,12 +1090,19 @@ export const fuelToEndColour = (): Expr =>
 /**
  * How long the race is expected to run, in laps.
  *
- * `TotalLaps` where the session has one, which is every lap-limited race and no timed one. For a
- * timed race the length is a prediction, and the one SimHub already makes is `RemainingLaps` -- laps
- * done plus laps to come. Adding rather than reading a second property keeps the two forms in one
- * expression and means the number always agrees with the remaining-laps figure beside it.
+ * `TotalLaps` where it is the race's length, which is {@link hasLapTotal}: every lap-limited race and
+ * no timed one. Asking only whether it was above nought read the leader's completed laps as the
+ * length of every timed iRacing race, so the stint page drew `12 / 14` with half an hour to run
+ * (#989). For a timed race the length is a prediction, and the one SimHub already makes is
+ * `RemainingLaps` -- laps done plus laps to come. Adding rather than reading a second property keeps
+ * the two forms in one expression and means the number always agrees with the remaining-laps figure
+ * beside it.
+ *
+ * Nought where there are no laps to come, which is a session with no end: laps done and none to come
+ * is not a length, and drawn as one it is `12 / 11`.
  */
-export const estimatedRaceLaps = (): Expr => iff(gt(totalLaps(), num(0)), totalLaps(), add(completedLaps(), lapsLeft()));
+export const estimatedRaceLaps = (): Expr =>
+  iff(hasLapTotal(), totalLaps(), iff(gt(lapsLeft(), num(0)), add(completedLaps(), lapsLeft()), num(0)));
 
 /**
  * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
