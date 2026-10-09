@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79432,6],"recorded":"2026-10-09","simHub":"9.12.6"}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79432,6],"recorded":"2026-10-09","simHub":"9.12.6","asserted":["OpenDash.ThemeAimBacklight"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -348,6 +348,7 @@
 {"p":"OpenDash.Slot10","v":8}
 {"p":"OpenDash.Slot11","v":9}
 {"p":"OpenDash.Slot12","v":10}
+{"p":"OpenDash.ThemeAimBacklight","v":"white"}
 {"p":"OpenDash.UpdateAvailable","v":false}
 {"p":"OpenDash.UpdateVersion","v":""}
 {"p":"OpenDash.WebViewUrl","v":""}

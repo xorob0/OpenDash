@@ -128,6 +128,14 @@ true as asserted; the zone positions are on a different face than predicted, nul
 1 and 16 on the 1280x480, because that is the screen the VM's rig carried that day and zone C's
 cycle had grown a page. The rig's state is the recording's, like the lap history, not the scenario's.
 
+The same day, one entry went back in: `OpenDash.ThemeAimBacklight` at `white`, in all nine. The AiM
+theme (#204) and its backlight setting (#715) landed on `main` between that recording and #581's
+merge, and a scan that reads every shipped theme sees the AiM's face reading its setting. The plugin
+publishes the chosen look or the setting's default, and `white` is the default in
+`packages/dash/src/themes/aim/settings.json`, which is what a rig nobody has set publishes and what a
+re-record will write. Typed rather than recorded again because it is one constant, and the VM's half
+hour is better spent on the next property that moves.
+
 ## Why a recording waits two minutes first
 
 Frame one is taken two minutes after SimHub first reports the game running. A few seconds would be
