@@ -14,7 +14,7 @@ import { band } from '../elements/band.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { field, fieldRowFitted, fieldWidth, type FieldSpec } from './field.ts';
-import { CHARS, DELTA_WIDEST, hasTime, secondsOf, sectorDelta, sectorLast, sectorTime, sessionBestSplit, signedToFit } from './values.ts';
+import { CHARS, DELTA_WIDEST, NO_VALUE, hasTime, secondsOf, sectorBest, sectorDelta, sectorLast, sectorTime, sessionBestSplit, signedToFit } from './values.ts';
 
 const { iff, and, lt, le, gt, eq, str, num, concat } = ncalc;
 
@@ -45,17 +45,31 @@ export function sectorColour(sector: number): Expr {
 }
 
 /**
+ * Whether a sector has a delta at all: a time for it on the last lap and a best of it to hold that
+ * against. Before the sector has been timed `sectorDelta` is nought less nought, and with a time but
+ * no best it is the whole sector, so neither is a difference anybody made.
+ */
+export const sectorHasDelta = (sector: number): Expr => and(hasTime(sectorLast(sector)), hasTime(sectorBest(sector)));
+
+/** The figure itself, `−0.29`, for a sector that {@link sectorHasDelta}. */
+const sectorDeltaFigure = (sector: number): Expr => signedToFit(sectorDelta(sector), CHARS.delta, 2);
+
+/**
  * A sector's delta as it is drawn, `−0.29`, giving up places rather than its last digit when the
  * sector is a hundred seconds or more off your best of it, which is the sector of the in-lap that
  * holds the pit stall (#886).
+ *
+ * `--` until the sector has a delta. The delta page and the pit wall's panel drew `+0.00` there,
+ * which reads as a sector driven exactly to your best, on every out-lap and every first lap (#614).
+ * The placeholder takes the sector's own colour, which is dim while the sector has no time.
  */
-export const sectorDeltaText = (sector: number): Expr => signedToFit(sectorDelta(sector), CHARS.delta, 2);
+export const sectorDeltaText = (sector: number): Expr => iff(sectorHasDelta(sector), sectorDeltaFigure(sector), str(NO_VALUE));
 
-/** "S1 · −0.29": the sector number and its delta, which is the field's label. */
+/** "S1 · −0.29": the sector number and its delta, which is the field's label, and "S1" until it has one. */
 export const sectorLabel = (sector: number): Expr =>
   iff(
-    hasTime(sectorLast(sector)),
-    concat(str(`S${sector} · `), sectorDeltaText(sector)),
+    sectorHasDelta(sector),
+    concat(str(`S${sector} · `), sectorDeltaFigure(sector)),
     str(`S${sector}`),
   );
 
