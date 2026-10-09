@@ -23,6 +23,7 @@ import {
   planLines,
   raggedness,
   scaleFields,
+  takingTurns,
   type FieldSpec,
   type FieldValue,
   type LineOptions,
@@ -228,6 +229,28 @@ export interface FieldsRowOptions {
   columns?: number;
   align?: 'baseline' | 'top';
   justify?: 'left' | 'centre';
+  /**
+   * Pairs of fields, by id, that are never shown together: each is shown exactly when the other is
+   * not. A line too narrow for the two side by side draws them in one place rather than wrapping
+   * onto a line that is always empty; see `takingTurns`.
+   */
+  turns?: readonly (readonly [string, string])[];
+}
+
+/**
+ * The fields with each pair that takes turns drawn as one place, where both of the pair are kept.
+ * A pair this shape keeps only one of is that one field on its own.
+ */
+function inTurns(specs: readonly FieldSpec[], turns: readonly (readonly [string, string])[]): FieldSpec[] {
+  const idOf = (spec: FieldSpec): string => spec.id ?? spec.name;
+  let out = [...specs];
+  for (const [a, b] of turns) {
+    const first = out.find((spec) => idOf(spec) === a);
+    const second = out.find((spec) => idOf(spec) === b);
+    if (first === undefined || second === undefined) continue;
+    out = out.flatMap((spec) => (spec === first ? [takingTurns(first, second)] : spec === second ? [] : [spec]));
+  }
+  return out;
 }
 
 /**
@@ -244,7 +267,7 @@ export interface FieldsRowOptions {
  * A bare number is the gap between the fields of a line, which is what most pages pass.
  */
 export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts: number | FieldsRowOptions = {}): StackRow {
-  const { gap, lines: plan, columns, align, justify, lineGap: asked }: FieldsRowOptions = typeof opts === 'number' ? { gap: opts } : opts;
+  const { gap, lines: plan, columns, align, justify, lineGap: asked, turns = [] }: FieldsRowOptions = typeof opts === 'number' ? { gap: opts } : opts;
   const shape = shapeIn(ctx);
   const lineGap = asked ?? Math.round(densityOf(ctx.density).gapY / 2);
   const kept = keptAt(specs, ctx.page, drawnAt(ctx));
@@ -263,7 +286,15 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
     justify: justify ?? (shapeColumns === 1 ? 'centre' : 'left'),
     ...(plan === 'grid' ? { columns: columnCount } : {}),
   };
-  const linesOf = (at: readonly FieldSpec[]): FieldSpec[][] => planLines(at, ctx.frame.width, ctx.density, { plan, columns: columnCount, gap });
+  // Two fields that take turns are drawn side by side wherever the line has room for both, and the
+  // rank closes over whichever is hidden. Only a line that would wrap them apart draws them in one
+  // place, so the pair costs nothing where it already fitted.
+  const linesOf = (at: readonly FieldSpec[]): FieldSpec[][] => {
+    const apart = planLines(at, ctx.frame.width, ctx.density, { plan, columns: columnCount, gap });
+    if (turns.length === 0) return apart;
+    const together = planLines(inTurns(at, turns), ctx.frame.width, ctx.density, { plan, columns: columnCount, gap });
+    return together.length < apart.length ? together : apart;
+  };
   const rowOf = (at: readonly FieldSpec[], evenness: number): StackRow => {
     const lines = linesOf(at);
     return {

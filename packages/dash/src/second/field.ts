@@ -13,7 +13,7 @@ import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -110,7 +110,41 @@ export interface FieldSpec {
   labelBelow?: boolean;
   value: FieldValue;
   visibleBind?: Expr;
+  /**
+   * The field drawn in this one's place whenever this one is not drawn, which {@link takingTurns}
+   * builds. The two are one place in a line: as wide as the wider of them, and never empty.
+   */
+  alternate?: FieldSpec;
 }
+
+/**
+ * Two fields that are never on the screen together, as the one place they take turns in.
+ *
+ * The session page draws the lap in a race of laps and the time left in a race of time. Side by side
+ * they are the sum of their widths, and a line too narrow for the sum wraps them onto two lines of
+ * which one is always empty: a blank line between the class and the time left. One place as wide as
+ * the wider of them is what the line really draws (#596).
+ *
+ * That is only true while exactly one of them is drawn, so the two have to say so: each one's
+ * `visibleBind` is the negation of the other's. A pair that only happens to be shown apart today is
+ * refused rather than trusted, because the day both show they draw over each other.
+ */
+export function takingTurns(first: FieldSpec, second: FieldSpec): FieldSpec {
+  const a = first.visibleBind;
+  const b = second.visibleBind;
+  if (a === undefined || b === undefined || (ncalc.not(a) !== b && ncalc.not(b) !== a)) {
+    throw new Error(`fields ${first.name} and ${second.name} take turns in one place, so each has to be shown exactly when the other is not`);
+  }
+  if (first.alternate !== undefined || second.alternate !== undefined) throw new Error(`fields ${first.name} and ${second.name}: a place holds two fields, not more`);
+  return { ...first, alternate: second };
+}
+
+/** A field and the one that takes turns with it, each on its own. */
+const turnsOf = (spec: FieldSpec): FieldSpec[] => {
+  if (spec.alternate === undefined) return [spec];
+  const { alternate, ...first } = spec;
+  return [first, alternate];
+};
 
 /**
  * Gap between a value and a label drawn under it. Two pixels on the catalogue, which is off the
@@ -165,7 +199,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
   if (follower.kind === 'denominator') {
     const mono = cells('SemiBold', fs);
     const sample = monoWidth(mono, charsOfText(follower.text, mono));
-    return follower.widest === undefined ? sample : Math.max(sample, Math.ceil(measureText(DATA_FACE.SemiBold, follower.widest, fs)) + 1);
+    return follower.widest === undefined ? sample : Math.max(sample, Math.ceil(measureText(DATA_FACE.SemiBold, follower.widest, fs)) + boxSlack(fs));
   }
   if (follower.bind !== undefined && follower.widest === undefined) {
     throw new Error(`follower ${JSON.stringify(follower.text)} is bound and declares no widest; a bound unit is measured by what it can draw, not by its sample`);
@@ -205,8 +239,9 @@ export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
   return width + followerGap(follower) + followerWidth(follower, d, spec.value.fs);
 }
 
-/** Width a field needs: the wider of its label and its value. */
+/** Width a field needs: the wider of its label and its value, and of the field it takes turns with. */
 export function fieldWidth(spec: FieldSpec, density: Density): number {
+  if (spec.alternate !== undefined) return Math.max(...turnsOf(spec).map((one) => fieldWidth(one, density)));
   const d = densityOf(density);
   const text = spec.labelWidest ?? spec.label;
   const labelW = text === '' ? 0 : measureText('BarlowMedium', text, d.label);
@@ -224,6 +259,7 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
  * twenty-two pixels past the bottom edge.
  */
 export function fieldHeight(spec: FieldSpec, density: Density): number {
+  if (spec.alternate !== undefined) return Math.max(...turnsOf(spec).map((one) => fieldHeight(one, density)));
   const d = densityOf(density);
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
   const labelPart = hasLabel ? d.labelRow + (spec.labelBelow ? LABEL_BELOW_GAP : d.fieldGap) : 0;
@@ -242,6 +278,7 @@ export function fieldHeight(spec: FieldSpec, density: Density): number {
  * reserved rather than the tail of the number above it.
  */
 export function fieldTail(spec: FieldSpec, density: Density): number {
+  if (spec.alternate !== undefined) return Math.max(...turnsOf(spec).map((one) => fieldTail(one, density)));
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
   const fs = spec.labelBelow && hasLabel ? densityOf(density).label : spec.value.fs;
   const box = textBox(0, fs);
@@ -287,6 +324,7 @@ function followerLeft(spec: FieldSpec, x: number, gap: number, mono: Monospace, 
  * every field left has to move, and the unit after a value has to move with its own offset kept.
  */
 export function field(spec: FieldSpec, x: number, bottom: number, density: Density, maxWidth?: number, leftAt?: (dx?: number) => Expr | undefined): Item[] {
+  if (spec.alternate !== undefined) return inPlace(spec, x, maxWidth ?? fieldWidth(spec, density), density, () => bottom, false, leftAt);
   const d = densityOf(density);
   const items: Item[] = [];
   const hasLabel = spec.label !== '' || spec.labelBind !== undefined;
@@ -365,6 +403,30 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
 }
 
 /**
+ * A place in a line, `width` wide from `x`: one field, or the two that take turns in it.
+ *
+ * Each of the two is drawn at its own width and, in a line that is centred, centred in the place, so
+ * whichever is showing sits where it would on its own. Neither has to move at runtime, because the
+ * place is never empty and so never closed over.
+ */
+function inPlace(
+  spec: FieldSpec,
+  x: number,
+  width: number,
+  density: Density,
+  bottomOf: (one: FieldSpec) => number,
+  centred: boolean,
+  leftAt?: (dx?: number) => Expr | undefined,
+): Item[] {
+  if (spec.alternate === undefined) return field(spec, x, bottomOf(spec), density, width, leftAt);
+  return turnsOf(spec).flatMap((one) => {
+    const own = Math.min(width, fieldWidth(one, density));
+    const dx = centred ? Math.floor((width - own) / 2) : 0;
+    return field(one, x + dx, bottomOf(one), density, centred ? own : width, leftAt && ((more = 0) => leftAt(more + dx)));
+  });
+}
+
+/**
  * A row of fields from `x`, bottom-aligned on `bottom`, `gap` apart. Returns the items and the
  * width the row took, so a caller can centre it or check it against the module's box.
  */
@@ -438,12 +500,13 @@ export function fieldRowFitted(
   // Placed as a rank so that a field the sim does not publish takes its space with it rather than
   // leaving a hole in the row. `atLeast` is every field: what this row keeps was decided by the
   // page's shedding order before it got here, and the gap above is how it answers a narrow box.
+  // A place two fields take turns in is always filled, so it is never closed over.
   const { items } = rank(
     specs.map((spec, i) => ({
       id: spec.id ?? spec.name,
       width: widths[i] ?? 0,
-      present: spec.visibleBind,
-      draw: (at) => field(spec, at.x, bottomOf(spec), density, widths[i] ?? 0, at.leftAt),
+      present: spec.alternate === undefined ? spec.visibleBind : undefined,
+      draw: (at) => inPlace(spec, at.x, widths[i] ?? 0, density, bottomOf, opts.justify === 'centre', at.leftAt),
     })),
     { left: x, width, gap, when: 'close', align: opts.justify === 'centre' ? 'centre' : 'left', atLeast: specs.length },
   );
@@ -542,7 +605,7 @@ export const raggedness = (lines: readonly (readonly FieldSpec[])[]): number =>
  */
 export function growthCeiling(specs: readonly FieldSpec[], density: Density): number {
   let ceiling = Number.POSITIVE_INFINITY;
-  for (const spec of specs) {
+  for (const spec of specs.flatMap(turnsOf)) {
     const fs = spec.value.fs;
     if (fs <= 0) continue;
     ceiling = Math.min(ceiling, grownAtMost(fs, density) / fs);
@@ -551,7 +614,7 @@ export function growthCeiling(specs: readonly FieldSpec[], density: Density): nu
 }
 
 /** The largest value size in a set of fields, which is what a stack steps when it grows one. */
-export const leadSize = (specs: readonly FieldSpec[]): number => specs.reduce((fs, spec) => Math.max(fs, spec.value.fs), 0);
+export const leadSize = (specs: readonly FieldSpec[]): number => specs.flatMap(turnsOf).reduce((fs, spec) => Math.max(fs, spec.value.fs), 0);
 
 /** Height a wrapped block of fields takes: its lines and the gaps between them. */
 export const fieldBlockHeight = (lines: readonly FieldSpec[][], density: Density, lineGap: number): number =>
@@ -583,7 +646,11 @@ export function drawFieldBlock(
 
 /** The same fields at a smaller size: value sizes scale, labels keep theirs. */
 export const scaleFields = (specs: readonly FieldSpec[], factor: number): FieldSpec[] =>
-  specs.map((spec) => ({ ...spec, value: { ...spec.value, fs: Math.max(12, Math.round(spec.value.fs * factor)) } }));
+  specs.map((spec) => ({
+    ...spec,
+    value: { ...spec.value, fs: Math.max(12, Math.round(spec.value.fs * factor)) },
+    ...(spec.alternate === undefined ? {} : { alternate: scaleFields([spec.alternate], factor)[0] }),
+  }));
 
 /** How far a block of fields will shrink before it gives up and draws at the smallest size. */
 export const FIT_LADDER = [1, 0.85, 0.72, 0.6, 0.5] as const;

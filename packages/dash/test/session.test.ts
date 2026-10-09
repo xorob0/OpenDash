@@ -12,7 +12,9 @@ import { UNTIMED_MARK } from '../src/second/values.ts';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { walkItems } from '../src/walk.ts';
-import type { TextItem } from '../src/generator.ts';
+import { ncalc, type TextItem } from '../src/generator.ts';
+import type { Density } from '../src/second/density.ts';
+import { takingTurns, type FieldSpec } from '../src/second/field.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const items = session.build(rect(0, 0, 255, 187), 'session.');
@@ -134,5 +136,43 @@ describe('the module reads the same setting as the card', () => {
     ] as const) {
       expect({ secs, mode, drawn: drawn(game(secs, 20, 3, mode)) }).toEqual({ secs, mode, drawn: [...expected] });
     }
+  });
+});
+
+describe('the lap and the time left take turns in one place', () => {
+  const module = MODULES.find((m) => m.id === 'session')!;
+  const textNamed = (items: ReturnType<typeof module.build>, name: string): TextItem | undefined => {
+    const found = [...walkItems(items)].find((i) => i.name === name);
+    return found?.kind === 'text' ? found : undefined;
+  };
+
+  test('they share a line in every box, so the page never draws a line that is always empty', () => {
+    // A lap budgeted for three digits and a race of three no longer fits beside the time left in a
+    // 249 or 274 px zone, and the rank wrapped the two onto lines of their own: Position, Class, a
+    // blank line, then Time left, since only one of them is ever shown (#596).
+    const densities: Density[] = ['zone', 'panel', 'companion', 'wide', 'compact'];
+    let both = 0;
+    for (const density of densities) {
+      for (let width = 160; width <= 900; width += 3) {
+        for (const height of [158, 226, 328, 366, 598]) {
+          const items = module.build({ frame: rect(0, 0, width, height), density, prefix: '' });
+          const lap = textNamed(items, 'lap.label');
+          const time = textNamed(items, 'timeLeft.label');
+          if (lap === undefined || time === undefined) continue;
+          both++;
+          expect({ density, width, height, lap: lap.rect.top }).toEqual({ density, width, height, lap: time.rect.top });
+        }
+      }
+    }
+    expect(both).toBeGreaterThan(1000);
+  });
+
+  test('a pair is refused unless each is shown exactly when the other is not', () => {
+    const spec = (name: string, visibleBind?: string): FieldSpec => ({ name, label: name, value: { sample: '1', chars: { digits: 1, specials: 0 }, fs: 34 }, visibleBind });
+    const shown = ncalc.gt('[A]', ncalc.num(0));
+    expect(takingTurns(spec('a', ncalc.not(shown)), spec('b', shown)).alternate?.name).toBe('b');
+    expect(takingTurns(spec('a', shown), spec('b', ncalc.not(shown))).alternate?.name).toBe('b');
+    expect(() => takingTurns(spec('a', shown), spec('b', shown))).toThrow();
+    expect(() => takingTurns(spec('a'), spec('b', shown))).toThrow();
   });
 });

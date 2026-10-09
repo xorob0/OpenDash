@@ -40,9 +40,15 @@ interface Site {
 
 const texts = (items: Iterable<{ kind: string }>): TextItem[] => [...items].filter((i): i is TextItem => i.kind === 'text');
 
+/**
+ * The reading an item's `Text` binds. The AiM theme wraps every reading it draws in a `replace` that
+ * turns the house's minus into a hyphen, which is the segment face's own (`segmentText`); a count is
+ * never negative, so the wrapper is taken off and the reading inside it is held to the same budget as
+ * every other theme's.
+ */
 const formulaOf = (item: TextItem): string | undefined => {
   const f = item.bindings?.Text?.formula;
-  return typeof f === 'string' ? f : undefined;
+  return typeof f === 'string' ? f.replace(/^replace\((.*), '−', '-'\)$/, '$1') : undefined;
 };
 
 /** Every bound text the build draws, and every one a module draws in a box the build may not use. */

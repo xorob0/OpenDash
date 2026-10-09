@@ -439,8 +439,10 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
       if (spec.denominator) {
         // A left-hand field is drawn from its own edge, so its denominator follows the figure rather
         // than the cells the figure is cut from: `4 / 32` and `16 / 32` keep one gap. A right-hand
-        // one is laid from the padding inwards with the value right aligned, so the pair already
-        // does. See {@link BarFieldSpec.drawn}.
+        // one is laid from the padding inwards, the denominator right aligned in its whole budget and
+        // the value right aligned in front of that, so the pair keeps one gap only while the
+        // denominator fills its budget: `/ 32` in the five cells `/ 999` needs leaves one cell more
+        // between the figure and the slash. See {@link BarFieldSpec.drawn}.
         const mono = cells('SemiBold', valueSize);
         if (align === 'left' && spec.drawn === undefined) {
           throw new Error(`bar field ${spec.id}: a denominator needs the width its value really draws, or it is placed at the end of the budget`);
