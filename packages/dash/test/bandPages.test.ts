@@ -19,7 +19,7 @@ import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } 
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
 import { textWidth } from '../src/second/drawn.ts';
-import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
+import { bandFuelQuantity, bandFuelQuantityDrawn, bandFuelQuantityWidest, fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
 import { ncalcEvaluator as E } from '../src/generator.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
 import { ds } from '../src/tokens.ts';
@@ -401,6 +401,105 @@ describe('the fields the catalogue draws on each page', () => {
 });
 
 /**
+ * #899, the author's ruling of 2026-10-09. The fuel time's third minute digit cost the Porsche's and
+ * the AiM's feet fields at 850 and 800 wide, and the room is won back on the page's four quantities:
+ * whole from 10 up and one decimal below, in the driver's unit, judged on the figure as drawn so
+ * that a 9.96 reads `10` and never `10.0`. Each reading is evaluated as SimHub would evaluate it.
+ */
+describe('the fuel page draws its quantities whole from 10 and to a tenth below', () => {
+  const QUANTITIES = ['fuel', 'refuel', 'perLap', 'lastLap'] as const;
+  const fieldNamed = (id: string): BandField => BAND_PAGES.fuel!.find((f) => f.id === id)!;
+  const js = (expression: string, properties: Record<string, unknown>): unknown => E.toJs(E.evaluate(expression, { properties }));
+
+  /** What the helper draws for each figure, doubles all of them, as the sim publishes a tank. */
+  const READS: readonly [number, string][] = [
+    [0, '0.0'],
+    [9.5, '9.5'],
+    [9.94, '9.9'],
+    [9.96, '10'],
+    [10, '10'],
+    [10.4, '10'],
+    [10.6, '11'],
+    [30, '30'],
+    [120, '120'],
+  ];
+
+  test('the helper reads each figure in the form its size asks for, and the absence where there is none', () => {
+    for (const [value, reads] of READS) expect({ value, reads: js(bandFuelQuantity('[Q]'), { Q: E.double(value) }) }).toEqual({ value, reads });
+    // A whole number the sim hands over as an Int32 is compared and formatted as a double would be.
+    expect(js(bandFuelQuantity('[Q]'), { Q: 0 })).toBe('0.0');
+    expect(js(bandFuelQuantity('[Q]'), { Q: 10 })).toBe('10');
+    expect(js(bandFuelQuantity('[Q]'), { Q: 120 })).toBe('120');
+    // Nothing published is the page's one spelling of an absence, and not a `0.0` or a throw.
+    expect(js(bandFuelQuantity('[Q]'), {})).toBe(NO_VALUE);
+    expect(js(bandFuelQuantity('[Q]'), { Q: null })).toBe(NO_VALUE);
+    // The edge itself: 9.95 is drawn `10.0` to a tenth, so it is drawn whole.
+    expect(js(bandFuelQuantity('[Q]'), { Q: E.double(9.95) })).toBe('10');
+    expect(js(bandFuelQuantity('[Q]'), { Q: E.double(9.949) })).toBe('9.9');
+  });
+
+  test('every quantity of the page goes through it, and nothing else on the page does', () => {
+    const through = BAND_PAGES.fuel!.filter((f) => f.bind.includes("< (9.95)")).map((f) => f.id);
+    expect(through).toEqual([...QUANTITIES]);
+  });
+
+  /** The properties of a settled stint, with every quantity of the page at `value`, in `unit`. */
+  const settledAt = (value: number, unit: 'Liters' | 'Gallons'): Record<string, unknown> => ({
+    'DataCorePlugin.GameData.FuelUnit': unit,
+    'DataCorePlugin.GameData.CompletedLaps': 3,
+    'DataCorePlugin.GameData.Fuel': E.double(value),
+    'DataCorePlugin.GameRawData.Telemetry.PitSvFuel': E.double(value),
+    'DataCorePlugin.Computed.Fuel_LitersPerLap': E.double(value),
+    'DataCorePlugin.Computed.Fuel_LastLapConsumption': E.double(value),
+  });
+
+  test('each field reads the same in litres as in gallons, the threshold being ten of whichever the driver reads', () => {
+    for (const id of QUANTITIES) {
+      for (const unit of ['Liters', 'Gallons'] as const) {
+        for (const [value, reads] of READS.filter(([v]) => v > 0)) {
+          expect({ id, unit, value, reads: js(fieldNamed(id).bind, settledAt(value, unit)) }).toEqual({ id, unit, value, reads });
+        }
+      }
+    }
+    // And the unit after the tank follows the sim's, so `9.9 gal` is not drawn as litres.
+    const unit = named(pageTexts('1920x480', 'fuel'), 'fuel.unit');
+    expect(js(bound(unit, 'Text')!, settledAt(9.9, 'Gallons'))).toBe('gal');
+    expect(js(bound(unit, 'Text')!, settledAt(9.9, 'Liters'))).toBe('L');
+  });
+
+  test('the tank and the refuel are cut for 999, and a lap for 9.9, which is what the fit tests measure', () => {
+    expect(bandFuelQuantityWidest(3)).toEqual({ widest: '999', chars: { digits: 3, specials: 0 } });
+    expect(bandFuelQuantityWidest(2)).toEqual({ widest: '9.9', chars: { digits: 2, specials: 1 } });
+    for (const id of ['fuel', 'refuel']) expect({ id, widest: fieldNamed(id).numeralWidest }).toEqual({ id, widest: '999' });
+    for (const id of ['perLap', 'lastLap']) expect({ id, widest: fieldNamed(id).numeralWidest }).toEqual({ id, widest: '9.9' });
+  });
+
+  test('every reading either form draws fits its box on every face that keeps the field', () => {
+    const readings = { fuel: ['999', '9.9', NO_VALUE], refuel: ['999', '9.9', NO_VALUE], perLap: ['99', '9.9', NO_VALUE], lastLap: ['99', '9.9', NO_VALUE] } as const;
+    for (const face of Object.keys(BANDS) as (keyof typeof BANDS)[]) {
+      const texts = pageTexts(face, 'fuel');
+      for (const id of QUANTITIES) {
+        const value = texts.find((t) => t.name === `${id}.value`);
+        if (value === undefined) continue;
+        for (const reading of readings[id]) {
+          expect({ face, id, reading, fits: widthAsDrawn(value, reading) <= value.rect.width }).toEqual({ face, id, reading, fits: true });
+        }
+      }
+    }
+  });
+
+  test('the width the tank says it draws is the width of what it draws, so its unit sits after the figure', () => {
+    const mono = named(pageTexts('1920x480', 'fuel'), 'fuel.value').monospace!;
+    const drawn = bandFuelQuantityDrawn('[Q]', 3)(mono);
+    for (const [value] of READS) {
+      const text = String(js(bandFuelQuantity('[Q]'), { Q: E.double(value) }));
+      expect({ value, width: js(drawn, { Q: E.double(value) }) }).toEqual({ value, width: textWidth(text, mono) });
+    }
+    expect(js(drawn, {})).toBe(textWidth(NO_VALUE, mono));
+  });
+});
+
+/**
  * D8, the telltale rank, against the band of `design/canvas/Dash1280x480.dc.html`, which is the one
  * artboard that draws it: twelve lamps of 38 by 32 with a 1 px edge, 10 apart, centred in what the
  * corner blocks leave, and a 20 px pictogram in each.
@@ -662,12 +761,12 @@ describe('what a page does when the band is too narrow for all of it', () => {
   test('and the fuel page keeps, at each band, what zones.md §6 says it keeps', () => {
     const KEEPS = {
       '1920x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
-      '1280x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
-      '1280x400': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
-      '1280x720': ['fuel', 'time', 'toEnd', 'laps', 'refuel'],
-      '850x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
-      '800x286': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
-      '600x686': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
+      '1280x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
+      '1280x400': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
+      '1280x720': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap'],
+      '850x480': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
+      '800x286': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
+      '600x686': ['fuel', 'time', 'toEnd', 'laps', 'refuel', 'perLap', 'lastLap'],
     } as const;
     for (const [face, keeps] of Object.entries(KEEPS)) {
       expect({ face, keeps: keptIds(pageTexts(face as keyof typeof BANDS, 'fuel')) }).toEqual({ face, keeps: [...keeps] });

@@ -222,8 +222,8 @@ const MINUTES_CLOCK_CAP = 999 * 60 + 59;
  * for `08:46` was clipped by WPF, on the band's default page, at the moment a driver reads it.
  * Rolling into `1:40` instead would have fitted and read as a minute and forty seconds, which is the
  * one misreading a fuel time cannot allow, so the box has a third minute digit instead. That cell
- * costs no house face a field. The Porsche's and the AiM's feet at 850 and 800 wide, which keep what
- * the house page keeps in the room they give it, give up between one and three from the tail. The
+ * costs no house face a field. On its own it cost the Porsche's and the AiM's feet at 850 and 800
+ * wide between one and three from the tail, and {@link bandFuelQuantity} wins that room back. The
  * seconds are capped at {@link MINUTES_CLOCK_WIDEST}, over sixteen hours, which no tank lasts but a
  * per-lap figure a hair above zero can ask for, so that even that reading stays inside the cells
  * it is drawn in. The floor and the cap are doubles for the reason {@link hms} gives. #899.
@@ -943,6 +943,59 @@ export const fuelLastLapIsSettled = (): Expr => and(fuelIsSettled(), gt(fuelLast
  * box, and the shorter of the two would move the column the time sits in.
  */
 export const settledFuelTimeLeft = (): Expr => iff(fuelIsSettled(), fuelTimeLeft(), num(0));
+
+/**
+ * The least quantity band D's fuel page draws whole: from here up a quantity reads `10`, `13`, `30`,
+ * and below it `9.9`, `9.5`, one decimal. In the driver's unit, whichever it is, since the figure
+ * is read in it: ten litres and ten gallons are both where a tenth stops being worth a cell.
+ */
+export const BAND_FUEL_WHOLE_FROM = 10;
+
+/**
+ * The least value whose one-decimal reading is {@link BAND_FUEL_WHOLE_FROM}: `format` rounds a half
+ * away from zero, so 9.95 is drawn `10.0` and 9.94 `9.9`. The test is on this rather than on 10, so
+ * that a 9.96 reads `10` and never `10.0`, which would be a third whole digit cell's worth of figure
+ * in the decimal form. A double literal, so that nothing compares or formats as an Int32. #899.
+ */
+const BAND_FUEL_DECIMAL_BELOW = BAND_FUEL_WHOLE_FROM - 0.05;
+
+/**
+ * A fuel quantity as band D's fuel page draws it: whole from 10 up, one decimal below, and
+ * {@link NO_VALUE} where the sim gives nothing.
+ *
+ * The author's ruling of 2026-10-09 on #899. The fuel time's third minute digit cost the Porsche's
+ * and the AiM's feet between one and three fields at 850 and 800 wide, and the room is won back on
+ * the quantities rather than by shedding: a tank of `32.67` reads `33`, which is what a driver
+ * reads off it on a straight anyway, and the tenths come back below ten, where they are the
+ * difference between one more lap and none. Every litre or gallon reading of the page goes through
+ * this one function (the tank, the refuel, the per lap and the last lap) and no other surface does:
+ * the fuel module, pit view, the pop-ups and the cards keep their own decimals.
+ *
+ * `value` is any figure already in the driver's unit. The page's own gates and fallbacks go around
+ * or inside it, as `iff(absent, str(NO_VALUE), bandFuelQuantity(pitRefuel()))` would for a pit
+ * service order read through a converted helper. {@link bandFuelQuantityDrawn} is the width it
+ * draws, for a unit placed after it, and {@link bandFuelQuantityWidest} the longest reading.
+ */
+export const bandFuelQuantity = (value: Expr): Expr =>
+  iff(isNull(value), str(NO_VALUE), iff(lt(value, real(BAND_FUEL_DECIMAL_BELOW)), fmt(value, '0.0'), fmt(value, '0')));
+
+/** How wide {@link bandFuelQuantity} draws `value` whose whole form has at most `digits` digits. */
+export const bandFuelQuantityDrawn = (value: Expr, digits: number): DrawnFigure =>
+  drawnEither(
+    isNull(value),
+    drawnText(NO_VALUE),
+    drawnEither(lt(value, real(BAND_FUEL_DECIMAL_BELOW)), drawnFigure({ value, digits: 1, decimals: 1 }), drawnFigure({ value, digits })),
+  );
+
+/**
+ * The longest reading {@link bandFuelQuantity} draws for a quantity of at most `digits` whole
+ * digits, and the cells that hold it: `999` for a tank, against the `9.9` of the decimal form, and
+ * the decimal form itself where the whole one is two digits, since a point takes a cell of its own.
+ */
+export function bandFuelQuantityWidest(digits: number): { widest: string; chars: Chars } {
+  if (digits < 2) throw new RangeError('a band D fuel quantity is drawn whole from 10, so its whole form has two digits at least');
+  return digits > 2 ? { widest: '9'.repeat(digits), chars: { digits, specials: 0 } } : { widest: '9.9', chars: { digits: 2, specials: 1 } };
+}
 
 /** So the timed margin below reads as minutes rather than as a division by a bare 60. */
 const SECONDS_PER_MINUTE = 60;
