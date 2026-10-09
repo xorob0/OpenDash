@@ -103,6 +103,14 @@ RPMs, against iRacing's numeric `Telemetry.Gear` rather than `[Gear]`, which is 
 that does not publish a gear count keeps flashing exactly as before, because the test requires a
 count above zero.
 
+*Amended, 2026-10-09 ([#996](https://github.com/xorob0/OpenDash/issues/996)).* Both of those are
+iRacing's alone, so on Assetto Corsa the last gear was never found: the flash never stopped and the
+ghost above the gear named a seventh gear in a six-speed car. The count now falls back to SimHub's
+`CarSettings_MaxGears`, which it publishes for every sim, and the gear compared is `[Gear]`, with the
+count written as text. `CarSettings_MaxGears` is learned from the highest gear SimHub has seen in
+the car, so on a car's first drive the highest gear reached so far counts as the last until a
+higher one is used; `DriverCarGearNumForward` still wins wherever iRacing publishes it.
+
 This is where a hand-measured table beats the mirror: in a car whose power band moves with the
 ratio, the useful upshift is not the same in second as in fifth, and shift points have been
 measured per gear for six hundred cars. **This record first said OpenDash "does not, and will not"
