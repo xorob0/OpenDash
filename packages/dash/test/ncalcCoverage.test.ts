@@ -122,9 +122,11 @@ describe('every expression in a full build, held to the browser evaluator', () =
   });
 
   test('no max or min has an Int32 literal on its left unless what it bounds is already whole', () => {
-    // Whole by construction: a truncate, or another max or min, which is checked here in its own turn.
-    // Those are the two the build writes on purpose, the tacho's scale in thousands and the split
-    // list's first row, both counts. Anything else wants `real` on the left, as #831 explains.
+    // Let through: a truncate, which is whole by construction, and another max or min. Those are the
+    // two the build writes on purpose, the tacho's scale in thousands and the split list's first row,
+    // both counts. A max or min on the right is let through because whether it is whole depends on
+    // its own operands, which a walk of the tree cannot type; an inner one with a literal on its left
+    // is still held here in its own turn. Anything else wants `real` on the left, as #831 explains.
     const whole = (node: E.Node): boolean => node.type === 'call' && ['truncate', 'max', 'min'].includes(node.name.toLowerCase());
     const failures: string[] = [];
     const seen = new Set<string>();
