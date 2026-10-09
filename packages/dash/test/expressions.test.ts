@@ -21,6 +21,7 @@ import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -606,6 +607,27 @@ describe('module expressions', () => {
       expect(colour).toContain('Fuel_LitersPerLap');
       expect(colour).toContain('Fuel_RemainingLaps');
     }
+  });
+
+  test('the tank reads half full at half a tank on a gallons profile, and the gauge on the fuel page reads it (#993)', () => {
+    // SimHub's game reader computes `GameData.FuelPercent` as the sim's litres over `MaxFuel`, which it
+    // has already converted, so a 100 L tank holding 50 L on a gallons profile publishes 189. The
+    // DataCore plugin's `Computed.Fuel_Percent` divides the two converted figures. This frame is that
+    // tank as SimHub publishes it, with both properties present, so a return to the game reader's one
+    // draws a full bar and fails here.
+    const gallons: Props = {
+      'DataCorePlugin.GameData.FuelUnit': 'Gallons',
+      'DataCorePlugin.GameData.Fuel': 50 * 0.264172,
+      'DataCorePlugin.GameData.MaxFuel': 100 * 0.264172,
+      'DataCorePlugin.GameData.FuelPercent': (50 / (100 * 0.264172)) * 100,
+      'DataCorePlugin.Computed.Fuel_Percent': 50,
+    };
+    expect(evalNcalc(values.fuelPercent(), gallons)).toBe(50);
+    expect(values.fuelPercent()).not.toContain('GameData.FuelPercent');
+    // The fuel page's gauge is one of its two readers; the strip's fuel centre is pinned in leds.test.ts.
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const gauge = [...walkItems(MODULES.find((m) => m.id === 'fuel')!.build({ frame: box, density: 'zone', prefix: 'fuel.' }))].find((i) => i.name === 'fuel.gauge');
+    expect(gauge?.bindings?.Value).toMatchObject({ formula: values.fuelPercent() });
   });
 
   test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
