@@ -21,7 +21,9 @@ import { describe, expect, test } from 'bun:test';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, ALERT_DISC_RATIO, ALERT_FLASH_MS, type AlertBandStyle } from '../src/components/alertBand.ts';
 import { BLUE_FLAG_ID, flagStrip } from '../src/components/flagStrip.ts';
 import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
-import { carBehindClass, carBehindPositionClass } from '../src/second/values.ts';
+import { CHIP_WIDEST } from '../src/second/chip.ts';
+import { carBehindClass, carBehindPositionClass, NO_VALUE } from '../src/second/values.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 import { measureText } from '../src/design/advances.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { ALERT_CATALOGUE, flagBit, flagsAllowedHere, isFlag, type SessionFlagBit } from '../src/flags.ts';
@@ -145,6 +147,48 @@ describe('the band is the catalogue', () => {
     // a second reading of the leaderboard, so the band and the tables cannot name two cars.
     expect(runs[1]!.bindings?.Text?.formula).toContain(carBehindClass());
     expect(runs[2]!.bindings?.Text?.formula).toContain(carBehindPositionClass());
+  });
+
+  /**
+   * What the position-and-class run reads, evaluated rather than matched: the car behind is
+   * leaderboard row 7, and `place` is the place the sim reports for it in both fields, null where
+   * it reports none.
+   */
+  const behind = (place: number | null, carClass: string | null = 'GT3', positionMode?: string, available: unknown = true): unknown => {
+    const run = texts(layerOf('blue')).find((r) => r.name === 'flag.blue.label.positionClass')!;
+    const props: Props = { 'getopponentleaderboardposition_aheadbehind(1)': 7, 'driveravailable(7)': available };
+    if (place !== null) Object.assign(props, { 'driverposition(7)': place, 'driverclassposition(7)': place });
+    if (carClass !== null) props['drivercarclass(7)'] = carClass;
+    if (positionMode !== undefined) props['OpenDash.PositionMode'] = positionMode;
+    return evalNcalc(String(run.bindings?.Text?.formula ?? ''), props);
+  };
+
+  test('the position and class of the car behind read P-- until the sim has placed it, not P0 (#931)', () => {
+    // A placed car, in either field the rig counts.
+    expect(behind(4)).toBe('BLUE · P4 GT3');
+    expect(behind(12, 'Ferrari 296 GT3', 'overall')).toBe('BLUE · P12 FERR');
+    // The formation lap and a practice session before anyone has a time: the car is on the
+    // leaderboard and available, and its place is a zero, which the band drew as `P0 GT3`.
+    expect(behind(0)).toBe(`BLUE · P${NO_VALUE} GT3`);
+    expect(behind(0, 'GT3', 'overall')).toBe(`BLUE · P${NO_VALUE} GT3`);
+    expect(behind(null)).toBe(`BLUE · P${NO_VALUE} GT3`);
+    // A car with no class name reads its place alone, with nothing after it.
+    expect(behind(3, '')).toBe('BLUE · P3');
+    expect(behind(3, null)).toBe('BLUE · P3');
+    // And nothing behind is the label alone, as it always was.
+    expect(behind(4, 'GT3', undefined, false)).toBe('BLUE');
+  });
+
+  test('the position and class run declares the widest it draws, placed or not', () => {
+    // The band is set in a proportional face, so the widest digit is measured rather than assumed:
+    // every place the run can draw, and the placeholder, against the place in what it declares.
+    const run = texts(layerOf('blue')).find((r) => r.name === 'flag.blue.label.positionClass')!;
+    expect({ font: run.font, weight: run.fontWeight }).toEqual({ font: ds.font.label, weight: 'Bold' });
+    const face = 'BarlowBold';
+    const declared = measureText(face, run.widest!, run.fontSize);
+    const places = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE];
+    const over = places.filter((p) => measureText(face, `BLUE · P${p} ${CHIP_WIDEST}`, run.fontSize) > declared);
+    expect(over).toEqual([]);
   });
 
   test('the nano writes no name at all, on any condition it draws', () => {

@@ -801,14 +801,32 @@ export const carBehind = (): Expr => neighbour(1);
 export const carBehindClass = (): Expr => iff(carAvailable(carBehind()), chipText(carClass(carBehind())), str(''));
 
 /**
- * `P4 LMP2`: the position of the car behind and its class, or the empty string when there is
- * nothing behind. The position honours PositionMode, as every position OpenDash draws does.
+ * `P4 LMP2`: the position of the car behind and its class, `P-- LMP2` before the sim has placed
+ * it, or the empty string when there is nothing behind. The position honours PositionMode, as
+ * every position OpenDash draws does.
+ *
+ * The place is {@link positionLabelled}'s and not a second formatting of {@link carPosition}. It
+ * was one, and it asked nothing first, so on the formation lap and in a practice session before
+ * anyone had a time, which is where a blue flag is most often waved for nothing, the band read
+ * `BLUE · P0 GT3` while every other position on the face read `P--` (#931).
+ *
+ * A car with no class name reads its place alone, `P4`, as {@link classAndPlace} does, rather than
+ * a place with a space after it that a centred band would set half a space off its middle.
  */
-export const carBehindPositionClass = (): Expr =>
-  iff(carAvailable(carBehind()), concat(str('P'), fmt(carPosition(carBehind()), '0'), str(' '), chipText(carClass(carBehind()))), str(''));
+export const carBehindPositionClass = (): Expr => {
+  const car = carBehind();
+  const cut = chipText(carClass(car));
+  return iff(carAvailable(car), concat(positionLabelled(car), iff(eq(cut, str('')), str(''), concat(str(' '), cut))), str(''));
+};
 
-/** The widest `carBehindPositionClass` can draw: a two-digit place and the widest chip. */
-export const WIDEST_BEHIND_POSITION_CLASS = `P99 ${CHIP_WIDEST}`;
+/**
+ * The widest `carBehindPositionClass` can draw: a two-digit place and the widest chip.
+ *
+ * `44` and not `99`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: the band is set in a
+ * proportional face, whose `4` is the widest digit it has. The placeholder `--` is narrower than
+ * either, so the place before a car is placed draws inside the same box.
+ */
+export const WIDEST_BEHIND_POSITION_CLASS = `P44 ${CHIP_WIDEST}`;
 
 // --- Session, car and environment -----------------------------------------------------------
 
