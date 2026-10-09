@@ -420,7 +420,7 @@ const BUILT = composePackages({ version: '0.0.0-test', log: () => {} }, true);
 
 /**
  * Every full-screen chequer the build draws, once per block: the faces in both arrangements, both
- * companions and both pit walls. A companion repeats its block on twenty-one screens, so a board is
+ * companions and both pit walls. A companion repeats its block on every module screen, so a board is
  * keyed by its package and its size rather than tested once per screen.
  */
 const CHEQUERS: { where: string; ground: RectangleItem; squares: RectangleItem[] }[] = (() => {

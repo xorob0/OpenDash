@@ -96,7 +96,7 @@ export interface CompanionHeaderSpec {
 /**
  * The header: module name and page counter on the left, position and lap on the right, a rule
  * along the bottom edge. Both right-hand values are static in layout and bound in content, so the
- * header is identical on all 21 pages bar its name and number.
+ * header is identical on every page bar its name and number.
  */
 export function companionHeader(name: string, spec: CompanionHeaderSpec, density: Density = 'companion'): Item[] {
   const d = densityOf(density);

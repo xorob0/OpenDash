@@ -377,7 +377,7 @@ describe('settings', () => {
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
     expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
-    // The twenty-one switches, the page and the flag format. The start module and the glance module
+    // The module switches, the page and the flag format. The start module and the glance module
     // are the plugin's own state and not properties, because nothing on the screen reads either: the
     // start is applied once by Init, and the glance is a value the hold copies into the page and back
     // out again.

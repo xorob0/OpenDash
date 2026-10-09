@@ -476,7 +476,7 @@ namespace OpenDashPlugin
             owner.Unchecked += (sender, args) => popup.IsOpen = false;
             popup.Closed += (sender, args) => owner.IsChecked = false;
             // StaysOpen false closes the popup on a click elsewhere and not on Escape, and a panel
-            // of twenty-one checkboxes is exactly the thing somebody presses Escape to put away.
+            // of a checkbox for every module is exactly the thing somebody presses Escape to put away.
             popup.KeyDown += (sender, args) =>
             {
                 if (args.Key != Key.Escape) return;
