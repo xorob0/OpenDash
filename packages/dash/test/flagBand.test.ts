@@ -20,10 +20,11 @@ import { describe, expect, test } from 'bun:test';
 import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
 import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
-import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
+import { BLUE_FLAG_DETAILS, THEME_CATALOGUE } from '../src/contract.ts';
 import { ALERT_CATALOGUE, bandNames, bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
-import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
+import type { Item, LayerItem, RectangleItem, TextItem, WidgetItem } from '../src/generator.ts';
+import { composeTheme } from '../src/build.ts';
 import { hero } from '../src/hero/hero.ts';
 import { layout480round, layout800round, type Layout } from '../src/layouts/index.ts';
 import { ds } from '../src/tokens.ts';
@@ -479,6 +480,59 @@ describe('the flag settles into the blocks at the ends of the band', () => {
     test(`${face.folder} writes no name on the settled chequer either`, () => {
       expect(labelsOf(cornerLayerOf(face, 'chequered').children)).toEqual([]);
     });
+  }
+});
+
+/**
+ * The settled blocks are drawn over band D, at the takeover's own depth, on every face of every theme
+ * (#731).
+ *
+ * SimHub paints a container's items in the order they are listed, a later one over an earlier one, and
+ * the zone D widget paints its dashboard's ground over whatever the face drew before it. So a flag
+ * drawing listed before the widget would be hidden by the band's well and its page, and one listed
+ * after it is over them. The takeover and the settled blocks are two drawings of one reading, and the
+ * takeover is seen over the band, so the blocks are held to the same place in the list: after the
+ * widget and immediately after the takeover, with no widget after them to cover them again.
+ *
+ * Asked of the faces as the build composes them, theme by theme, rather than of `faceItems`, because a
+ * theme's `settings` pass rewrites the built dashboard after the face is drawn and a reordering there
+ * would be invisible to a test that stopped short of it. Every screen that draws both is asked, so the
+ * arrangement without the rev bar is held to it as well as the main one.
+ */
+describe('the settled blocks are drawn over band D', () => {
+  for (const theme of THEME_CATALOGUE) {
+    test(`on every face of the ${theme.id} theme, after the zone D widget and at the takeover's depth`, () => {
+      const faces = composeTheme({ theme, version: '0.0.0-test', simHubVersion: '9.12.6' });
+      expect(faces.length).toBeGreaterThan(0);
+      for (const { pkg } of faces) {
+        const main = pkg.dashboards[0]!;
+        const asked = main.screens.filter((s) => s.items.some((i) => i.name === 'zoneD') && s.items.some((i) => i.name === 'flagCorner'));
+        // The two arrangements of the face; the idle screen draws neither.
+        expect({ face: main.name, screens: asked.length }).toEqual({ face: main.name, screens: 2 });
+        for (const screen of asked) {
+          const names = screen.items.map((i) => i.name);
+          const widget = screen.items.find((i): i is WidgetItem => i.kind === 'widget' && i.name === 'zoneD')!;
+          const takeover = names.indexOf('flag');
+          const corners = names.indexOf('flagCorner');
+          const later = screen.items.slice(corners + 1).filter((i) => i.kind === 'widget').map((i) => i.name);
+          expect({ face: main.name, screen: screen.name, overBand: corners > names.indexOf('zoneD'), withTakeover: corners === takeover + 1, coveredBy: later }).toEqual({
+            face: main.name,
+            screen: screen.name,
+            overBand: true,
+            withTakeover: true,
+            coveredBy: [],
+          });
+          // And the blocks are on the band rather than beside it, so that "over band D" is about the
+          // pixels a driver reads the band in. Each block's ground is the rectangle it settles into.
+          const layer = screen.items[corners] as LayerItem;
+          const grounds = [...walkItems(layer.children)].filter((i): i is RectangleItem => i.kind === 'rect' && i.name.endsWith('.band'));
+          expect(grounds.length).toBeGreaterThan(0);
+          for (const ground of grounds) {
+            expect({ face: main.name, item: ground.name, onBand: contains(widget.rect, ground.rect) }).toEqual({ face: main.name, item: ground.name, onBand: true });
+          }
+        }
+      }
+    }, 60_000);
   }
 });
 

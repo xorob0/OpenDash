@@ -1136,6 +1136,15 @@ at each end, 12 in portrait, which is the only room in the band no page is ever 
 no name at that width, as the nano's 12 px strip writes none. None of it is drawn on any artboard, and
 [§10](#10-where-the-canvas-contradicts-itself) records that.
 
+A theme that turns the corner blocks off is in the second case at every size it draws, the widest
+included: the AiM and the Porsche both set `bandCorners: false`, so a settled flag on either keeps
+16 px of colour at each end of the band and writes no name, at 1920 and 1280 as at 850. That is the
+picture [#731](https://github.com/xorob0/OpenDash/issues/731) was opened about, and it is not the
+blocks drawn under the band: the takeover and the settled blocks are listed together, after the zone D
+widget, on every screen of every face of every theme, and `flagBand.test.ts` holds them there. Whether
+a theme without corner blocks should give a settled flag room for its name, and which part of the
+theme's band pays for it, is the canvas's to draw.
+
 **The settled form is not a setting**, which #380 asked to have decided rather than assumed, and the
 decision is worth stating together with what it costs, because it is not nothing. On the four faces
 with corner blocks it costs a driver nothing of the flag: the block holds the name, so he keeps the
