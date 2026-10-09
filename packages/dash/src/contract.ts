@@ -11,6 +11,7 @@ import type { Expr } from './bind.ts';
 // The shapes, for the run lengths the mirror publishes. strip.ts imports nothing, so this is the
 // one direction the two can face.
 import { ALL_SHAPES } from './leds/strip.ts';
+import aimSettings from './themes/aim/settings.json';
 
 const { add, and, concat, div, eq, fmt, iff, isnull, isNull, left, lt, min, mod, num, or, prop, str, truncate } = ncalc;
 
@@ -401,6 +402,9 @@ export function dashProperties(): string[] {
     // And the Porsche crest's path after that, published rather than chosen and shared because the file
     // is the rig's, which every Porsche screen draws. #714.
     PORSCHE_CREST,
+    // And every theme's own settings after that, the AiM's backlight first: shared because they are the
+    // driver's taste rather than a screen's, and a rig in auto mode shows whichever theme the car picks. #715.
+    ...themeSettingNames(),
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -791,6 +795,8 @@ export const setting = {
   updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
   /** `isnull([OpenDash.PorscheCrest], '')`: the crest's file, or `''` for the empty shield. #714. */
   porscheCrest: (): Expr => isnull(prop(propertyName(PORSCHE_CREST)), str('')),
+  /** `isnull([OpenDash.ThemeAimBacklight], 'white')`: the id of the choice the driver made of a theme's setting, or its default. #715. */
+  themeSetting: (themeId: string, settingId: string): Expr => isnull(prop(propertyName(themeSettingName(themeId, settingId))), str(themeSetting(themeId, settingId).default)),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
   ledMirrorFit: (): Expr => isnull(prop(propertyName(LED_MIRROR_FIT_SETTING)), str(DEFAULTS.LedMirrorFit)),
   /** `isnull([OpenDash.LedMirrorReady], 0) = 1`: whether there is a mirrored bar to draw. */
@@ -962,12 +968,21 @@ function faceSizeAt(width: number, height: number): FaceSize {
  * Every theme, the default first. One entry to a line, in the shape `ContractTests.cs` reads back.
  *
  * The Porsche claims every face size, the portrait one included in the car's stacked form (#205,
- * #713). The two Cup and legacy car paths that #205 leaves to be read on the VM are left out rather
- * than guessed.
+ * #713).
+ *
+ * The AiM is one LCD for the iRacing cars that carry an AiM unit (#204, #753), at every size. The two
+ * Caterhams arrived in iRacing in September 2026 and their paths are still to be read on a rig with the
+ * car loaded, so they are named in `cars` and left out of `iracingCarPaths` rather than guessed.
+ *
+ * Every car path comes from iRacing's support article "Filepath for active iRacing cars"
+ * (support.iracing.com, article 31000172625, modified on 1 May 2026), which writes it as a folder path
+ * such as `\mx5\mx52016`: the session YAML's CarPath is that path without its leading backslash and
+ * with the others as spaces, as the MX-5 Cup's `mx5 mx52016` and the Porsche's `porsche992rgt3` show.
  */
 export const THEME_CATALOGUE: readonly ThemeEntry[] = [
   { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES, bandPages: [] },
-  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
+  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche9922cup', 'porsche992cup', 'porsche911rgt3'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
+  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car', 'Caterham Academy', 'Caterham 420R'], iracingCarPaths: ['mx5 mx52016', 'legends ford34c', 'legends ford34c rookie', 'crosscartn11'], sizes: FACE_SIZES, bandPages: [] },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */
@@ -983,6 +998,58 @@ export const themeEntry = (id: string): ThemeEntry | undefined => THEME_CATALOGU
 export function themedFolder(theme: ThemeEntry, size: { width: number; height: number }): string {
   if (theme.id === DEFAULT_THEME_ID) throw new Error('the default theme keeps the folders its layouts name');
   return `OpenDash ${theme.name} ${size.width}x${size.height}`;
+}
+
+/**
+ * A setting a theme offers the driver, declared in the theme's own `settings.json` beside its overlay
+ * (#715): a choice among named looks, each giving a value to every token in `tokens`. The plugin draws
+ * the panel's controls from `Contract.ThemeSettings`, which mirrors this, and publishes the chosen
+ * choice's id; the theme's packages read it through colour bindings that fall back to `default`, whose
+ * values are the tokens' own, so that a package with no plugin draws what the overlay says.
+ *
+ * Per theme and global rather than per screen: a backlight is the driver's taste, and a rig in auto mode
+ * shows whichever theme the car picks (#199), so each installed theme's settings are edited from one place.
+ */
+export interface ThemeSetting {
+  id: string;
+  /** The row's label on the panel. */
+  name: string;
+  /** The overlay tokens a choice gives values to. The panel draws the first as a swatch's ground and the second, if any, as its ink. */
+  tokens: readonly string[];
+  /** The id of the choice whose values are the tokens' own, which a package draws with no plugin. */
+  default: string;
+  choices: readonly ThemeSettingChoice[];
+}
+
+export interface ThemeSettingChoice {
+  id: string;
+  name: string;
+  /** One `{alias}` into the theme's overlay per token, in the order of `tokens`. */
+  values: readonly string[];
+}
+
+/**
+ * Every theme's settings, by theme id. Appended to and never reordered, because their properties go on
+ * the end of the shared group, which both halves of the contract pin in order. A theme with no entry
+ * offers none and has no row on the panel.
+ */
+export const THEME_SETTINGS: Readonly<Record<string, readonly ThemeSetting[]>> = {
+  aim: aimSettings.settings,
+};
+
+const pascal = (id: string): string => id.charAt(0).toUpperCase() + id.slice(1);
+
+/** The flat name a theme setting is published under: `ThemeAimBacklight`. `Contract.ThemeSetting.Property` spells it the same way. */
+export const themeSettingName = (themeId: string, settingId: string): string => `Theme${pascal(themeId)}${pascal(settingId)}`;
+
+/** The names of every theme's settings, in {@link THEME_SETTINGS} order. */
+export const themeSettingNames = (): string[] => Object.entries(THEME_SETTINGS).flatMap(([themeId, settings]) => settings.map((s) => themeSettingName(themeId, s.id)));
+
+/** A theme's setting by its id, refusing one the theme does not declare. */
+export function themeSetting(themeId: string, settingId: string): ThemeSetting {
+  const found = THEME_SETTINGS[themeId]?.find((s) => s.id === settingId);
+  if (!found) throw new Error(`the ${themeId} theme declares no setting ${JSON.stringify(settingId)}`);
+  return found;
 }
 
 /** The four zones of a rectangular face. Band D is a zone: it cycles a catalogue like the rest. */

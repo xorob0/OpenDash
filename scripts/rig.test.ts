@@ -10,7 +10,7 @@ import path from 'node:path';
 import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
 import { shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
 import { withFakeHost, type Answer } from './fakeHost.ts';
-import { browShape, catalogueMask, GALLERY, galleryRig, main, panelRig, RIM_FOLDER, RIM_SHAPE, RIM_ZONE_B, RIM_ZONE_C, screenFor, type ManifestPackage } from './rig.ts';
+import { browShape, catalogueMask, GALLERY, galleryRig, main, panelRig, RIM_FOLDER, RIM_SHAPE, RIM_ZONE_B, RIM_ZONE_C, screenFor, themedEdit, type ManifestPackage } from './rig.ts';
 import type { Claim } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
@@ -54,6 +54,30 @@ describe('a seeded screen', () => {
     // And a default package's screen says nothing of a theme, as it never did.
     expect(Object.keys(screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']))).not.toContain('Theme');
     expect((screenFor(pkg, ['gearSpeedRevs', 'lapTimes', 'relative', 'fuel']).Face as { Masks: number[] }).Masks[3]).toBe(255);
+  });
+});
+
+describe('the theme command (#715)', () => {
+  const aim: ManifestPackage = { folder: 'OpenDash AiM 1280x480', kind: 'dash', width: 1280, height: 480, file: 'OpenDash AiM 1280x480.simhubdash', theme: 'aim' };
+
+  test('adds a screen of the theme once and sets its choices under the published names, keeping the rest', () => {
+    const settings: Record<string, unknown> = { Rig: [{ Namespace: 'Face1280x480' }], ThemeSettings: { ThemePorscheTcBox: 'blue' }, PositionMode: 'overall' };
+    themedEdit({ packages: [aim] }, 'aim', ['backlight=inverted'])(settings);
+    const rig = settings.Rig as { Namespace: string; Theme?: string; Folder?: string }[];
+    expect(rig.map((s) => s.Namespace)).toEqual(['Face1280x480', 'AiM1280x480']);
+    expect(rig[1]!.Theme).toBe('aim');
+    expect(rig[1]!.Folder).toBe('OpenDash AiM 1280x480');
+    expect(settings.ThemeSettings).toEqual({ ThemePorscheTcBox: 'blue', ThemeAimBacklight: 'inverted' });
+    expect(settings.PositionMode).toBe('overall');
+    themedEdit({ packages: [aim] }, 'aim', ['backlight=red'])(settings);
+    expect((settings.Rig as unknown[]).length).toBe(2);
+    expect(settings.ThemeSettings).toEqual({ ThemePorscheTcBox: 'blue', ThemeAimBacklight: 'red' });
+  });
+
+  test('refuses a theme, a setting or a choice the contract does not declare', () => {
+    expect(() => themedEdit({ packages: [aim] }, 'default', [])).toThrow(/not a car theme/);
+    expect(() => themedEdit({ packages: [aim] }, 'aim', ['backlight=magenta'])).toThrow(/backlight=white\|inverted/);
+    expect(() => themedEdit({ packages: [aim] }, 'aim', ['contrast=high'])).toThrow(/offers backlight=/);
   });
 });
 

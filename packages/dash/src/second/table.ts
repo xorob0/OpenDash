@@ -23,7 +23,7 @@
 import type { HAlign, Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
-import { charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type MeasuredFace } from '../design/advances.ts';
+import { charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type TextFace } from '../design/advances.ts';
 import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
 import { cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
@@ -232,7 +232,7 @@ const typeOfRow = (row: RowSize | undefined, density: Density, board = false): R
   typeof row === 'object' ? row : rowTypeOf(row ?? tableRowHeight(density), board);
 
 /** The face a driver name is set in, which is Barlow Medium at every size and in both drawings. */
-export const NAME_FACE: MeasuredFace = 'BarlowMedium';
+export const NAME_FACE: TextFace = 'BarlowMedium';
 
 /**
  * The shortest name any of the four formats draws, in characters: `L. Byrne` is eight.

@@ -442,7 +442,7 @@ export function composeThemeHere({ theme, version, simHubVersion }: ThemeRequest
   return theme.sizes.map((size) => {
     const folder = theme.id === DEFAULT_THEME_ID ? undefined : themedFolder(theme, size);
     const { layout, built } = buildThemeFace(theme.id, size, { version, simHubVersion, author: DEFAULT_AUTHOR }, folder);
-    const pkg: DashPackage = { folderName: layout.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage() };
+    const pkg: DashPackage = { folderName: layout.folder, dashboards: [built.main, ...built.zones], fonts: fontsForPackage(theme.id) };
     packImages(pkg);
     // The stock namespace of its size, for a themed face as for the default one: a theme changes the
     // register and never the contract (ADR 0016).

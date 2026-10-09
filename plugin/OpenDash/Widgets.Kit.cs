@@ -683,8 +683,10 @@ namespace OpenDashPlugin
         /// One colour of a choice of colours, drawn as the colour itself: a square of it inside an outline, which
         /// is the primary ink on the pressed one and the border elsewhere. Named by <paramref name="name"/>, since
         /// a colour is not a word a screen reader can read off it, and saying whether it is the pressed one (#694).
+        /// With <paramref name="inkHex"/>, the square is a ground with a figure of that ink on it, as a theme's
+        /// backlight is drawn (#715).
         /// </summary>
-        public static Button ColourSwatch(string name, string hex, bool pressed, Action click)
+        public static Button ColourSwatch(string name, string hex, bool pressed, Action click, string inkHex = null)
         {
             var swatch = new Border
             {
@@ -693,6 +695,15 @@ namespace OpenDashPlugin
                 CornerRadius = new CornerRadius(2),
                 Background = Brush(hex),
             };
+            if (inkHex != null)
+            {
+                var figure = Text("8", PanelKit.ColourSwatch - 4, FontWeights.Bold, inkHex);
+                figure.HorizontalAlignment = HorizontalAlignment.Center;
+                figure.VerticalAlignment = VerticalAlignment.Center;
+                figure.LineHeight = PanelKit.ColourSwatch;
+                figure.LineStackingStrategy = LineStackingStrategy.BlockLineHeight;
+                swatch.Child = figure;
+            }
             var button = new Button
             {
                 Width = PanelKit.ColourSwatch + 2 * (PanelKit.ColourSwatchInset + PanelMetrics.BorderWeight),

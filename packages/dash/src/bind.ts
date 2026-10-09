@@ -57,3 +57,15 @@ export const withMoreBindings = <K extends Item['kind']>(item: Extract<Item, { k
   }
   return { ...item, bindings: { ...existing, ...added } };
 };
+
+/**
+ * The item with some of its bindings taken off, for a pass that redraws what the house bound: the
+ * AiM's LCD drops every colour binding, the LCD having one ink (#204), and binds the text again in its
+ * own capitals. What it then binds goes through {@link withMoreBindings} as everything else does.
+ */
+export const withoutBindings = <K extends Item['kind']>(item: Extract<Item, { kind: K }>, targets: readonly BindingTarget[]): Extract<Item, { kind: K }> => {
+  if (item.bindings === undefined) return { ...item };
+  const kept = Object.fromEntries(Object.entries(item.bindings).filter(([target]) => !targets.includes(target as BindingTarget))) as Bindings;
+  const { bindings: _dropped, ...rest } = item;
+  return (Object.keys(kept).length > 0 ? { ...rest, bindings: kept } : rest) as Extract<Item, { kind: K }>;
+};

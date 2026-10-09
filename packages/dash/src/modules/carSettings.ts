@@ -24,6 +24,13 @@ import type { Archetype } from './shedding.ts';
 const { fmt, isNull, not, raw, game } = ncalc;
 
 /**
+ * The longest reading a setting draws in each of its two patterns: a level of two digits, and a brake
+ * bias of two and a place. The budget is wider, being shared with the strip's cells; a segment display
+ * draws its ghost from this, and a ghost cut from the budget stood three dead cells before a TC of 5 (#751).
+ */
+const SETTING_WIDEST: Readonly<Record<string, string>> = { '0': '12', '0.0': '56.5' };
+
+/**
  * A setting field that disappears when the sim does not publish the property behind it, and whose
  * rank then closes over the hole.
  *
@@ -34,7 +41,7 @@ const { fmt, isNull, not, raw, game } = ncalc;
  * the strip and the pit wall read as well.
  */
 const settingField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, present = expr): FieldSpec =>
-  fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
+  fld(ctx, id, label, { sample: '3', widest: SETTING_WIDEST[pattern], bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: not(isNull(present)) });
 
 /**
  * The same field, but told directly when it is there rather than handed a property to test.
@@ -45,7 +52,7 @@ const settingField = (ctx: ModuleContext, id: string, label: string, expr: strin
  * longer hide, silently, which is worse than the gap it was meant to close.
  */
 const presentField = (ctx: ModuleContext, id: string, label: string, expr: string, pattern: string, fs: number, visible: Expr): FieldSpec =>
-  fld(ctx, id, label, { sample: '3', bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: visible });
+  fld(ctx, id, label, { sample: '3', widest: SETTING_WIDEST[pattern], bind: fmt(expr, pattern), chars: CHARS.setting, fs }, { visibleBind: visible });
 
 /** The canvas sets a readout group's pairs 20 px apart, which is closer than a row of fields. */
 const SETTING_GAP = 20;

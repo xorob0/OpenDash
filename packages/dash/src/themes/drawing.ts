@@ -19,7 +19,7 @@
  */
 import type { Expr } from '../bind.ts';
 import type { FaceSize, FaceZone } from '../contract.ts';
-import type { Hex, Item, Rect } from '../generator.ts';
+import type { Dashboard, Hex, Item, Rect } from '../generator.ts';
 import type { ModuleContext } from '../modules/module.ts';
 import type { FieldSpec } from '../second/field.ts';
 import type { Density } from '../second/density.ts';
@@ -92,6 +92,20 @@ export interface ThemeDrawing {
    * and the body the page is drawn in, given the zone's frame and the house's body under its header.
    */
   moduleFrame?(page: { id: string; name: string }, frame: Rect, body: Rect): { items: Item[]; body: Rect };
+  /**
+   * One of zone A's pages drawn the theme's way, in place of the house's, or undefined for a page the
+   * theme leaves to the house. The AiM's gear and speed are figures of its own faces (#204).
+   */
+  zoneAPage?(page: string, frame: Rect, prefix: string): Item[] | undefined;
+  /** Whether the face draws each module zone's page counter; the house does, and a display that counts no pages does not. */
+  zoneCounters?: boolean;
+  /**
+   * What the house draws, turned into the theme's register without moving it: every zone page, and the
+   * pit family, the pop-ups, the change notifications and the lap review over the face, never the flag.
+   * `boxes` says how a box holding text over the face is drawn: `inverse` for the pit family's one-line
+   * banners, `outline` for the boxes over the content. The AiM's monochrome LCD is the case (#204, #751).
+   */
+  restyle?(items: Item[], opts?: { boxes?: 'inverse' | 'outline' }): Item[];
   /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */
@@ -108,4 +122,10 @@ export interface ThemeDrawing {
    * drawn under the same id. `classOnly` is the zone's class filter, which the relative page reads.
    */
   bandPage?(page: string, frame: Rect, prefix: string, classOnly?: Expr): Item[];
+  /**
+   * The theme's settings (`THEME_SETTINGS` in the contract) bound into each dashboard of a face once it
+   * is built, for a theme whose setting reaches every item rather than a part it draws: the AiM's
+   * backlight (#715). A setting that colours one part binds it where the part is drawn instead.
+   */
+  settings?(dashboard: Dashboard): Dashboard;
 }

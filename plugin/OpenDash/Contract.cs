@@ -1163,7 +1163,8 @@ namespace OpenDashPlugin
         public static readonly IReadOnlyList<ThemeEntry> Themes = new[]
         {
             new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes, new ThemeBandPage[0]),
-            new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche992cup" }, FaceSizes, new[] { new ThemeBandPage("porscheFoot", "Porsche") }),
+            new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche9922cup", "porsche992cup", "porsche911rgt3" }, FaceSizes, new[] { new ThemeBandPage("porscheFoot", "Porsche") }),
+            new ThemeEntry("aim", "AiM", new[] { "Global Mazda MX-5 Cup", "Legends Ford Coupe", "FIA Cross Car", "Caterham Academy", "Caterham 420R" }, new[] { "mx5 mx52016", "legends ford34c", "legends ford34c rookie", "crosscartn11" }, FaceSizes, new ThemeBandPage[0]),
         };
 
         /// <summary>The catalogue entry of a theme by its id, or null for the default look, an unknown id, or none.</summary>
@@ -1187,6 +1188,111 @@ namespace OpenDashPlugin
         }
 
         private static readonly ThemeBandPage[] NoBandPages = new ThemeBandPage[0];
+
+        /// <summary>
+        /// A setting a theme offers the driver: a choice among named looks, each a colour per token the theme
+        /// declares. Mirrors ThemeSetting in contract.ts, which reads it from the theme's settings.json (#715).
+        /// </summary>
+        /// <remarks>
+        /// Per theme and global, never per screen: a backlight is the driver's taste, and a rig in auto mode
+        /// shows whichever theme the car picks (#199), so the panel offers the settings of every theme a
+        /// screen of the rig is drawn in. The plugin publishes the chosen choice's id under
+        /// <see cref="Property"/>; the theme's packages turn it into colours, falling back to
+        /// <see cref="Default"/> with no plugin. The panel builds its controls from this and names no theme.
+        /// </remarks>
+        public sealed class ThemeSetting
+        {
+            public ThemeSetting(string theme, string id, string name, string defaultChoice, params ThemeSettingChoice[] choices)
+            {
+                Theme = theme;
+                Id = id;
+                Name = name;
+                Default = defaultChoice;
+                Choices = choices;
+            }
+
+            /// <summary>The id of the theme that declares it, in <see cref="Themes"/>.</summary>
+            public string Theme { get; }
+
+            public string Id { get; }
+
+            /// <summary>The row's label on the panel.</summary>
+            public string Name { get; }
+
+            /// <summary>The id of the choice a package draws with no plugin, which is the theme's own look.</summary>
+            public string Default { get; }
+
+            public IReadOnlyList<ThemeSettingChoice> Choices { get; }
+
+            /// <summary>The flat name it is published under: ThemeAimBacklight.</summary>
+            public string Property { get { return ThemeSettingProperty(Theme, Id); } }
+
+            /// <summary>A stored choice, or the default for one this build does not offer.</summary>
+            public string Normalise(string choice)
+            {
+                for (var i = 0; i < Choices.Count; i++)
+                {
+                    if (string.Equals(Choices[i].Id, choice, StringComparison.Ordinal)) return choice;
+                }
+                return Default;
+            }
+        }
+
+        /// <summary>One look of a <see cref="ThemeSetting"/>: its id, the name the panel reads out, and the colours it
+        /// gives the setting's tokens, in their order. The panel draws the first as a swatch's ground and the
+        /// second, where there is one, as the ink on it.</summary>
+        public sealed class ThemeSettingChoice
+        {
+            public ThemeSettingChoice(string id, string name, params string[] colours)
+            {
+                Id = id;
+                Name = name;
+                Colours = colours;
+            }
+
+            public string Id { get; }
+
+            public string Name { get; }
+
+            public IReadOnlyList<string> Colours { get; }
+        }
+
+        /// <summary>"Theme", the theme's id and the setting's, each with its first letter in capitals. Mirrors
+        /// themeSettingName in contract.ts.</summary>
+        public static string ThemeSettingProperty(string theme, string setting)
+        {
+            return "Theme" + char.ToUpperInvariant(theme[0]) + theme.Substring(1) + char.ToUpperInvariant(setting[0]) + setting.Substring(1);
+        }
+
+        /// <summary>
+        /// Every theme's settings. Mirrors THEME_SETTINGS in contract.ts and the settings.json of each theme,
+        /// which ContractTests reads back with the colours its aliases resolve to in the theme's overlay.
+        /// Appended to and never reordered, because their properties end the shared group, which both halves
+        /// of the contract pin in order.
+        /// </summary>
+        public static readonly IReadOnlyList<ThemeSetting> ThemeSettings = new[]
+        {
+            new ThemeSetting("aim", "backlight", "Backlight", "white",
+                new ThemeSettingChoice("white", "White", "#D9DDDA", "#1C2124"),
+                new ThemeSettingChoice("inverted", "Inverted", "#14171A", "#D9DDDA"),
+                new ThemeSettingChoice("red", "Red", "#CF4A3C", "#2A0906"),
+                new ThemeSettingChoice("green", "Green", "#45C361", "#0A3316"),
+                new ThemeSettingChoice("cyan", "Cyan", "#5FD3DA", "#073338"),
+                new ThemeSettingChoice("blue", "Blue", "#4E8EDF", "#0A1C45"),
+                new ThemeSettingChoice("yellow", "Yellow", "#E9D84B", "#3A3200"),
+                new ThemeSettingChoice("purple", "Purple", "#B06CD5", "#2B0A40")),
+        };
+
+        /// <summary>The settings a theme declares, by its id: none for the default look, an unknown id, or none.</summary>
+        public static IReadOnlyList<ThemeSetting> ThemeSettingsOf(string theme)
+        {
+            var found = new List<ThemeSetting>();
+            foreach (var setting in ThemeSettings)
+            {
+                if (string.Equals(setting.Theme, theme, StringComparison.Ordinal)) found.Add(setting);
+            }
+            return found;
+        }
 
         /// <summary>Whether a prefix names a face that ships, for reading a settings file written by another version.</summary>
         public static bool IsKnownFacePrefix(string prefix)
@@ -1383,6 +1489,9 @@ namespace OpenDashPlugin
             // And the Porsche crest's path, appended for the same reason, published rather than chosen and
             // shared because the file is the rig's: one crest serves every Porsche screen. #714.
             yield return PorscheCrest;
+            // And every theme's own settings, appended for the same reason and shared because a backlight
+            // is the driver's taste and a rig in auto mode shows whichever theme the car picks. #715.
+            foreach (var setting in ThemeSettings) yield return setting.Property;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
