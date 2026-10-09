@@ -362,10 +362,6 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // the two lap times under them, which is rule 17 taking the recap rather than shrinking the
     // reading the page exists for. The 800 x 480 face's 292 px zone keeps both.
     '800x286 269x194 sectors': ['yourBest', 'last'],
-    // The nano's session keeps the position and the class, which is what the page is read for, and
-    // sheds the lap and the time left: its two counters each carry a denominator now, and a
-    // denominator at 0.7 of a value is wider than the small label it replaced.
-    '800x286 269x194 session': ['lap', 'timeLeft'],
   };
 
   /** Every rectangle the build hands a zone: both arrangements of every face, deduplicated. */

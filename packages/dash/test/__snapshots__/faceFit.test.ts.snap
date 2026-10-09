@@ -300,7 +300,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   pitView        tallNarrow keeps refuel pitTime
   carSettings    tallNarrow keeps tc abs bb mix  sheds arbFront arbRear
   inputs         tallNarrow one drawing, nothing to shed
-  session        tallNarrow keeps position class  sheds type lap timeLeft lapsLeft incidents cars  declared position class lap timeLeft
+  session        tallNarrow keeps position class lap timeLeft  sheds type lapsLeft incidents cars
   radar          tallNarrow one drawing, nothing to shed
   track          tallNarrow one drawing, nothing to shed
   leaderboard    tallNarrow keeps pos name gap  sheds num class best last

@@ -155,7 +155,11 @@ export const CHARS = {
   percent: { digits: 3, specials: 0 } as Chars,
   /** `54.2` brake bias, `3` assist levels. */
   setting: { digits: 4, specials: 1 } as Chars,
-  /** `GT3 · P12` and `GT3 · #12`: a class or car name, a separator and a number. */
+  /**
+   * `LMP2 · P12`, as it would be counted in cells. Nothing measures it by them: the run holds
+   * letters a cell cannot, so every surface sets it proportionally and measures it from
+   * {@link CLASS_AND_PLACE_WIDEST}, and this is only the budget a field has to carry.
+   */
   classPosition: { digits: 10, specials: 0 } as Chars,
   /** A short word: `Race`, `Dry`, `M`. */
   word: { digits: 8, specials: 0 } as Chars,
@@ -559,6 +563,45 @@ export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDi
 
 /** How wide {@link positionLabelled} draws: the P, and then the digits or the placeholder. */
 export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P', positionDrawn(idx));
+
+/**
+ * A car's place in its own class, or 0 while the sim has not placed it.
+ *
+ * Always the class, whatever `PositionMode` says, which is what sets it apart from
+ * {@link carPosition}: it is the place that stands beside a class name, and with the rig counting
+ * overall it is the one reading left that says where a car stands among its own.
+ */
+export const classPlace = (idx: Expr): Expr => isnull(driver('classposition', idx), num(0));
+
+/**
+ * `LMP2 · P4`: a car's class and its place in that class, or `LMP2 · P--` before the sim has placed
+ * it. Every surface that draws the pair binds this, and no other binding spells `' · P'`.
+ *
+ * It was written out three times, as the player's `CarClass` and a formatted `classposition`, and
+ * each copy had the same three faults. The grid read `GT3 · P0`, where every other position on the
+ * face reads `--` until {@link hasPosition} holds. The class went in whole, so a box measured for
+ * four letters drew `Ferrari 296` into itself and WPF cut it wherever it ran out. And two of the
+ * three drew it in digit cells, where the `M` of LMP2 and of BMW overruns its cell
+ * (`font.cell.excluded`).
+ *
+ * So the class is cut by {@link chipText}, the cut the leaderboard's chip makes, because a header
+ * reading one spelling of a class beside a chip reading another would be two answers to one
+ * question; the place is drawn `--` until there is one, as {@link positionDigits} draws it; and the
+ * run is set proportionally by every caller and measured from {@link CLASS_AND_PLACE_WIDEST}.
+ *
+ * Both halves are read from the same leaderboard entry, so the class and the place cannot belong to
+ * two different cars. It takes the car's index for that reason, and any car's pair can be drawn
+ * from it.
+ */
+export const classAndPlace = (idx: Expr): Expr =>
+  concat(chipText(carClass(idx)), str(' · P'), iff(gt(classPlace(idx), num(0)), fmt(classPlace(idx), '0'), str(NO_VALUE)));
+
+/**
+ * The widest {@link classAndPlace} draws: the widest chip and the widest of the ninety-nine places
+ * and the placeholder. `44` and not `99` or `24`, because the face is proportional and its `4` is
+ * the widest digit it has; `classAndPlace.test.ts` measures every place against it.
+ */
+export const CLASS_AND_PLACE_WIDEST = `${CHIP_WIDEST} · P44`;
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it.
@@ -1240,7 +1283,6 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
  */
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
-export const playerClass = (): Expr => isnull(game('CarClass'), str(''));
 
 /** Wind speed in km/h, from the raw metres per second iRacing publishes. */
 export const windKmh = (): Expr => mul(isnull(raw('WindVel'), num(0)), num(3.6));

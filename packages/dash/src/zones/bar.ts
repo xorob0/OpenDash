@@ -28,6 +28,7 @@ import { TRACKED_VALUES, hasSetting } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
+  CLASS_AND_PLACE_WIDEST,
   airTemperature,
   antiRollFront,
   fieldSize,
@@ -38,7 +39,7 @@ import {
   player,
   positionDigits,
   positionDrawn,
-  playerClass,
+  classAndPlace,
   sessionClock,
   simClock,
   totalLaps,
@@ -49,7 +50,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, concat, driver, playerPosition } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, concat } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -128,13 +129,6 @@ const timeOfDayField = (id: string, label: string, sample: string, clock: TimeOf
   suffix: { sample: 'PM', bind: clock.meridiem, widest: meridiemWidest(FOLLOWER_FACE), when: twelveHour() },
 });
 
-/**
- * The widest class and position the bar promises to draw: a four-character class name and a
- * two-digit place. The field is measured from it rather than from cells, and at 600 x 686 it is
- * also what leaves the strip room for its fifth cell, so widening it shortens the strip.
- */
-const WIDEST_CLASS = 'LMP2 · P24';
-
 /** The ten fields an end of the bar can show. Ordered as the plugin lists them. */
 export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   { id: 'raceTime', label: 'Race', sample: '0:28:14', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
@@ -177,13 +171,16 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   // The position through the leaderboard function every other class reading uses, not a GameData
   // property of that name: SimHub publishes none, so the old read fell through to its own default,
   // which was the number of cars in the class. A driver fourth of twelve read "GT3 · P12".
+  //
+  // The field is measured from `CLASS_AND_PLACE_WIDEST` rather than from cells, and at 600 x 686 it
+  // is also what leaves the strip room for its fifth cell, so widening it shortens the strip.
   {
     id: 'classPosition',
     label: 'Class',
     sample: 'GT3 · P4',
-    bind: concat(playerClass(), str(' · P'), fmt(isnull(driver('classposition', playerPosition()), num(0)), '0')),
+    bind: classAndPlace(player()),
     chars: CHARS.classPosition,
-    widest: WIDEST_CLASS,
+    widest: CLASS_AND_PLACE_WIDEST,
   },
   // Four cells rather than the count's three: the x the artboard draws after the number takes one.
   { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 } },
