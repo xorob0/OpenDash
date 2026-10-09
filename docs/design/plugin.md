@@ -260,9 +260,10 @@ the same on every Porsche face. Clearing it removes the copy and the badge draws
 package never carries the crest ([scope.md](../scope.md), the trade dress section).
 
 **Band D lists a theme's own pages after the house's eight** (#718). The aside's catalogue is the
-screen's, read from its theme: eight pages on a default face, as before, and nine on a Porsche face, the
-ninth named for the theme, `Porsche`, which is the car's foot of boxes, tyres and bias. A Porsche screen
-opens band D on that row, so the aside draws it first, tagged First, and then the house's in their order.
+screen's, read from its theme: eight pages in the catalogue of a default face (seven offered, see
+below), and nine on a Porsche face, the ninth named for the theme, `Porsche`, which is the car's foot
+of boxes, tyres and bias. A Porsche screen opens band D on that row, so the aside draws it first,
+tagged First, and then the house's in their order.
 
 **Band D's eighth page, Car, is held back from 1.0** (#969): its telltales have no pictograms yet, and
 twelve empty boxes read as a broken page. The panel lists it nowhere, under Show all, in the count or in

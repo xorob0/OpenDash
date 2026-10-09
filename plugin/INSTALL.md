@@ -78,8 +78,9 @@ A face is **five parts**, and every rectangular size is the same five.
 **Each zone shows one page at a time and a wheel button cycles it.** That is the whole idea, and
 it is what replaced the twelve fixed slots of 0.1.x. Zone A chooses among four pages built around
 the gear; zones B and C choose among the same twenty-one pages the companion has; band D chooses
-among eight that suit a wide, short strip. The bar is not a zone and does not cycle: carrying what
-stays still is what earns it the space.
+among seven that suit a wide, short strip. Its eighth, the telltale row, is held back from 1.0 until
+its pictograms exist. The bar is not a zone and does not cycle: carrying what stays still is what
+earns it the space.
 
 A page is never scaled to fit. It is laid out for the shape of the box it is given and sheds its
 secondary rows before it shrinks its numerals, so a bigger screen shows more in each zone rather
