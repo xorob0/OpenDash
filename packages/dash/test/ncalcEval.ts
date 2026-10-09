@@ -5,10 +5,10 @@
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, `timespantoseconds` (seconds are passed as
  * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `abs`, `round`,
- * `truncate`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the comparisons,
- * `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by the hour and
- * minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the
- * culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
+ * `truncate`, `in`, `prop` (a read by a computed name), `rootdashboardscreenname` (answered from
+ * {@link ROOT_SCREEN}), the comparisons, `and` / `or` / `!`, and the arithmetic. A date is passed as
+ * a `Date` and formatted by the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm`
+ * and `m`, in en-US's colon, which is the culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
  * that evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
@@ -107,6 +107,8 @@ export function evalNcalc(expression: string, props: Props): unknown {
     .join('');
   const fns = {
     P: (name: string): unknown => (name in props ? props[name] : null),
+    // SimHub's `prop(name)`, a read whose name is itself an expression: the lap history's slots.
+    prop: (name: string): unknown => (name in props ? props[name] : null),
     IF: (c: unknown, a: unknown, b: unknown): unknown => (c ? a : b),
     isnull: (v: unknown, d?: unknown): unknown => (d === undefined ? v === null || v === undefined : (v ?? d)),
     format: (value: unknown, pattern: string, addSign = false): string =>

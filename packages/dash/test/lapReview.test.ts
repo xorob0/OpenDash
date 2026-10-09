@@ -34,11 +34,13 @@ import { measureText } from '../src/design/advances.ts';
 import { densityOf } from '../src/second/density.ts';
 import { UNIT_GAP } from '../src/second/field.ts';
 import { monoWidth } from '../src/design/metrics.ts';
-import { CHARS, DELTA_DEADBAND, deltaColour } from '../src/second/values.ts';
+import { CHARS, DELTA_DEADBAND, DELTA_WIDEST, deltaColour } from '../src/second/values.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, type ZoneLayout } from '../src/zones/index.ts';
+import { widthAsDrawn } from './drawnStrings.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const D = densityOf('companion');
 
@@ -223,6 +225,58 @@ describe('the two deltas', () => {
     expect(deltaColour('0')).toContain(ds.purpose.delta.zero);
     for (const name of ['vsBest', 'vsPrevious']) {
       expect(String(textNamed(reference.items, `${name}.value`).bindings?.TextColor?.formula)).toContain(ds.purpose.delta.zero);
+    }
+  });
+});
+
+describe('the two deltas at the end of an in-lap (#886)', () => {
+  const LAST = 'DataCorePlugin.GameData.LastLapTime';
+  const BEFORE = 'PersistantTrackerPlugin.PreviousLap_01';
+  const TO_BEST = 'PersistantTrackerPlugin.PreviousLap_00_DeltaToSessionBest';
+
+  /**
+   * What a driver reads, written independently of `signedToFit`: a true minus or a plus, and as
+   * many places as five digit cells leave beside the sign, which is two under 100 s, one under
+   * 1000 s and none past that. The readings are chosen away from a rounding edge.
+   */
+  const figure = (seconds: number): string => {
+    const size = Math.abs(seconds);
+    const places = size < 99.995 ? 2 : size < 999.95 ? 1 : 0;
+    return `${seconds < 0 ? '−' : '+'}${size.toFixed(places)}`;
+  };
+
+  /** An ordinary lap, the in-lap after a stop, the out-lap after it, and a lap that sat in the garage. */
+  const READINGS = [1.03, -0.21, 12.34, -99.99, 123.47, -187.24, 999.94, 1234.56] as const;
+
+  /**
+   * Each delta, and a frame in which it reads `seconds`. The laps are long enough that every reading
+   * leaves both of them a time, since a lap with none is the placeholder and not a figure.
+   */
+  const SITES: readonly { name: string; frame: (seconds: number) => Props }[] = [
+    { name: 'vsBest', frame: (seconds) => ({ [LAST]: 2000 + seconds, [TO_BEST]: seconds }) },
+    { name: 'vsPrevious', frame: (seconds) => ({ [LAST]: 2000 + seconds, [BEFORE]: 2000 }) },
+  ];
+
+  for (const { name, frame } of SITES) {
+    test(`${name} draws every reading inside the cells it is cut for, giving up places rather than its last digit`, () => {
+      const value = textNamed(reference.items, `${name}.value`);
+      const formula = String(value.bindings?.Text?.formula);
+      // The box is measured by the widest it declares, and what it declares is the full budget.
+      expect(value.widest).toBe(DELTA_WIDEST);
+      const room = widthAsDrawn(value, DELTA_WIDEST);
+      for (const seconds of READINGS) {
+        const drawn = evalNcalc(formula, frame(seconds));
+        expect({ name, seconds, drawn }).toEqual({ name, seconds, drawn: figure(seconds) });
+        // The in-lap's `+123.45` took six digit cells of five, and WPF drew it `+123.4`.
+        expect({ name, seconds, fits: widthAsDrawn(value, String(drawn)) <= room }).toEqual({ name, seconds, fits: true });
+      }
+    });
+  }
+
+  test('both say nothing rather than a figure while the lap they compare has no time', () => {
+    for (const { name } of SITES) {
+      const formula = String(textNamed(reference.items, `${name}.value`).bindings?.Text?.formula);
+      expect({ name, drawn: evalNcalc(formula, { [LAST]: 0, [TO_BEST]: 123.45, [BEFORE]: 100 }) }).toEqual({ name, drawn: '--' });
     }
   });
 });
