@@ -977,6 +977,24 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   and 9.9995 to three is `9.999` against `10.000`. At 12.345 the double is just over the half, so both
   draw `12.35`. This is from the .NET reference source and has not been measured on the VM.
 
+### `max` and `min` answer in their left operand's type (2026-10-09, #831)
+
+Read from NCalc 1.3.8's source, which is what the evaluator in `packages/generator/src/ncalc/` models; not
+yet measured on the VM.
+
+- **The left operand decides the type, and the right one is converted to it.** `Numbers.Max` and
+  `Numbers.Min` switch on the left operand's `TypeCode` and convert the right with `Convert.ToInt32`,
+  `Convert.ToDouble` and their siblings. A null on either side gives the other side. So `max(0, 2.6)`
+  is the Int32 3, rounded half to even, and `max(0.0, 2.6)` is the double 2.6.
+- **A literal is typed by its spelling**: `0` is an Int32 and `0.0` a double. A bound written on the
+  left of a reading that has a fraction is therefore written with a point, which is what `real` in
+  `packages/generator/src/ncalc.ts` does. With `max(0, …)` the `h:mm:ss` clock rounded its seconds
+  before truncating them and ticked over half a second early, and the refuel figure, formatted to
+  tenths, could only end in `.0`.
+- An Int32 on the left is still right where the value it bounds is whole, such as the tacho's scale
+  in thousands, which is a `truncate`. `packages/dash/test/ncalcCoverage.test.ts` holds every
+  expression of a full build to that.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

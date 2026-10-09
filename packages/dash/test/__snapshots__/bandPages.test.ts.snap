@@ -100,7 +100,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "backgroundColor": "#00FFFFFF",
     "bindings": {
       "Text": {
-        "formula": "if((if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0)) > (0), (format(truncate((max(0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0))) / (60)), '00')) + (':') + (format(truncate((max(0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0))) % (60)), '00')), '--:--')",
+        "formula": "if((if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0)) > (0), (format(truncate((max(0.0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0))) / (60)), '00')) + (':') + (format(truncate((max(0.0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0))) % (60)), '00')), '--:--')",
         "mode": "formula",
       },
     },

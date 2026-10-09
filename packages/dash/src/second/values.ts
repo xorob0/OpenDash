@@ -25,6 +25,7 @@ const {
   prop,
   str,
   num,
+  real,
   iff,
   eq,
   gt,
@@ -206,7 +207,7 @@ export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(secon
  * budgeted, which no tank the sims model reaches.
  */
 export const minutesClock = (seconds: Expr): Expr => {
-  const s = max(num(0), seconds);
+  const s = max(real(0), seconds);
   const mmss = concat(fmt(truncate(div(s, num(60))), '00'), str(':'), fmt(truncate(mod(s, num(60))), '00'));
   return iff(gt(seconds, num(0)), mmss, str('--:--'));
 };
@@ -870,8 +871,14 @@ export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'
 export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumption'), num(-1));
 export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
 
-/** Fuel to add: what the laps left will burn, less what is in the tank; never negative. */
-export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
+/**
+ * Fuel to add: what the laps left will burn, less what is in the tank; never negative.
+ *
+ * The floor is the double `0.0`: NCalc's `max` answers in its left operand's type, so `max(0, …)`
+ * would round the litres to a whole one and the reading would end in `.0` under a format that draws
+ * tenths. #831.
+ */
+export const fuelToAdd = (): Expr => max(real(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
 
 /**
  * Whether a fuel figure derived from a lap's consumption means anything yet.
@@ -1449,10 +1456,11 @@ export const pitTyreSelection = (): Expr => {
  * seconds since the car entered the box over the duration of the last stop, which is the only
  * figure the game gives for how long a stop takes. It reads nothing outside the lane and before a
  * first stop has been timed, which is honest about a number that is not there rather than showing
- * a quantity from another page.
+ * a quantity from another page. The cap is the double `100.0`, since `min` answers in its left
+ * operand's type and an Int32 there would round the gauge to whole percent. #831.
  */
 export const pitServiceProgress = (): Expr =>
-  iff(and(isInPitLane(), gt(lastPitDuration(), num(0))), min(num(100), mul(num(100), div(inPitSeconds(), lastPitDuration()))), num(0));
+  iff(and(isInPitLane(), gt(lastPitDuration(), num(0))), min(real(100), mul(num(100), div(inPitSeconds(), lastPitDuration()))), num(0));
 
 // --- Lap history and deltas ---------------------------------------------------------------------
 
