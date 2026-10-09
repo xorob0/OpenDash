@@ -159,6 +159,29 @@ namespace OpenDashPlugin
         /// </summary>
         public string PorscheCrestUrl { get; set; } = CarCrestLibrary.DefaultUrl;
 
+        /// <summary>
+        /// The choice made of each theme's own settings, by the property it is published under
+        /// (Contract.ThemeSetting.Property): the AiM's backlight is "ThemeAimBacklight". The rig's and not a
+        /// screen's, since a backlight is the driver's taste whichever screen the car's theme is on (#715). A
+        /// setting with no entry is at its default; an entry this build does not declare is kept, so that a
+        /// file written by a later version loses nothing by passing through this one.
+        /// </summary>
+        public Dictionary<string, string> ThemeSettings { get; set; } = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        /// <summary>The choice made of a theme's setting, or its default.</summary>
+        public string ThemeSetting(Contract.ThemeSetting setting)
+        {
+            string chosen;
+            return setting.Normalise(ThemeSettings != null && ThemeSettings.TryGetValue(setting.Property, out chosen) ? chosen : null);
+        }
+
+        /// <summary>Makes a choice of a theme's setting; one the setting does not offer is its default.</summary>
+        public void SetThemeSetting(Contract.ThemeSetting setting, string choice)
+        {
+            if (ThemeSettings == null) ThemeSettings = new Dictionary<string, string>(StringComparer.Ordinal);
+            ThemeSettings[setting.Property] = setting.Normalise(choice);
+        }
+
         // --- The lights ------------------------------------------------------------------------
         //
         // Brightness and night mode are the rig's, not this box's: a driver who owns a flag box
@@ -1110,6 +1133,20 @@ namespace OpenDashPlugin
             WebViewUrl = Contract.NormaliseUrl(WebViewUrl);
             // Null is a file that never held the key; "" is a driver who cleared it, and stays cleared.
             PorscheCrestUrl = PorscheCrestUrl == null ? CarCrestLibrary.DefaultUrl : CarCrestLibrary.NormaliseUrl(PorscheCrestUrl);
+            var themeSettings = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (ThemeSettings != null)
+            {
+                foreach (var entry in ThemeSettings)
+                {
+                    if (entry.Key != null) themeSettings[entry.Key] = entry.Value;
+                }
+            }
+            foreach (var setting in Contract.ThemeSettings)
+            {
+                string chosen;
+                if (themeSettings.TryGetValue(setting.Property, out chosen)) themeSettings[setting.Property] = setting.Normalise(chosen);
+            }
+            ThemeSettings = themeSettings;
             NormaliseScreens();
             NormaliseFace();
             NormaliseRig();
@@ -2158,6 +2195,7 @@ namespace OpenDashPlugin
             WideZone = other.WideZone;
             WebViewUrl = other.WebViewUrl;
             PorscheCrestUrl = other.PorscheCrestUrl;
+            ThemeSettings = other.ThemeSettings == null ? null : new Dictionary<string, string>(other.ThemeSettings, StringComparer.Ordinal);
             // The lights, which were not carried at all before the strips were added: a copy that drops
             // them hands the panel a rig with the brightness back at 100 and matrix 1 back on flags.
             // The per-matrix arrays are cloned for the same reason the slots above are.
