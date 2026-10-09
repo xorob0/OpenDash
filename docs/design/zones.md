@@ -37,9 +37,9 @@ change.
 |---|---|
 | **Rev bar** | Shift lights in a recessed well, full width, never moves. It can be turned off entirely, in which case the face is drawn in its second arrangement and the well's room goes to the zones. |
 | **The bar** | What the car is set to and where the session is: two fields at each end that a driver may swap, one per end at 600 × 686, and a settings strip between them that hides what the game does not expose. |
-| **Zone B** | A page from the catalogue of twenty-one. |
+| **Zone B** | A page from the catalogue of twenty-two. |
 | **Zone A** | The one read by reflex: gear, gear and speed, speed, or the track. |
-| **Zone C** | A page from the same catalogue of twenty-one. |
+| **Zone C** | A page from the same catalogue of twenty-two. |
 | **Band D** | Fuel by default, and seven more pages that suit a wide short band. A flag takes the band over for three seconds when it comes out, and then settles into the block at each end and gives the page back until it clears. |
 
 Zone A is **a narrow column holding the gear**, not a third of the screen holding one digit.
@@ -491,10 +491,10 @@ and below it, so a page is centred in its column as well as cut from it.
 
 ---
 
-## 5. Zones B and C — twenty-one pages
+## 5. Zones B and C — twenty-two pages
 
 The catalogue is `MODULE_CATALOGUE` in `packages/dash/src/contract.ts`. It is no longer
-companion-only: the same twenty-one pages serve the companion, the pit wall zones and now the
+companion-only: the same twenty-two pages serve the companion, the pit wall zones and now the
 face.
 
 | № | Page | № | Page | № | Page |
@@ -506,9 +506,12 @@ face.
 | 5 | Fuel | 12 | Radar | 19 | Lap history |
 | 6 | Energy | 13 | Track | 20 | Damage |
 | 7 | Tyres | 14 | Leaderboard | 21 | Track rivals |
+|  |  |  |  | 22 | Engine readings |
 
 Energy, Damage and Track rivals are off by default because iRacing publishes none of their data.
-[second-screens.md](../second-screens.md) says which, and why.
+[second-screens.md](../second-screens.md) says which, and why. Engine readings is the last page because
+it was the last to be added (#752), and an added page goes at the end of the catalogue so that no page
+leaves the index a zone setting already holds ([ADR 0015](../decisions/0015-car-themes.md)).
 
 Each is drawn at all four shapes on the catalogue artboard — eighty-four drawings. **That is the
 shedding order**, and it is data rather than mechanism. The table below is those drawings read off
@@ -795,6 +798,7 @@ a short box sheds the same line from both cars rather than emptying one of them.
 | 16 | Opponents | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` · `ahead.rating` · `behind.rating` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.num` · `behind.num` · `ahead.class` · `behind.class` · `ahead.lastLap` · `behind.lastLap` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` | `ahead.gap` · `behind.gap` · `ahead.name` · `behind.name` · `ahead.lastLap` · `behind.lastLap` |
 | 17 | Gear | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` | `speed` · `rpm` |
 | 18 | Stint | `lap` · `fuelTime` · `stintTime` · `stintLaps` · `completed` · `stops` · `lastStop` · `avgLap` | `lap` · `fuelTime` · `stintLaps` · `stops` | `lap` · `fuelTime` · `stintLaps` · `stops` | `lap` · `fuelTime` · `stintTime` · `stintLaps` · `completed` · `stops` · `lastStop` · `avgLap` |
+| 22 | Engine readings | `water` · `oilTemp` · `oilPressure` · `fuelPressure` · `voltage` · `manifold` | `water` · `oilTemp` · `oilPressure` · `fuelPressure` · `voltage` · `manifold` | `water` · `oilTemp` · `oilPressure` · `fuelPressure` · `voltage` · `manifold` | `water` · `oilTemp` · `oilPressure` · `fuelPressure` · `voltage` · `manifold` |
 
 Pages with nothing to shed, and why:
 

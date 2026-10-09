@@ -23,6 +23,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     wide       one drawing, nothing to shed  parts head
   damage         wide       one drawing, nothing to shed
   trackRivals    wide       one drawing, nothing to shed
+  engineReadings wide       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1920x480  zone 769x358  body 745x320  zone
   lapTimes       wide       keeps last sessionBest yourBest laps estimated delta average5 position stintLap s1 s2 s3
@@ -46,6 +47,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     wide       one drawing, nothing to shed  parts head
   damage         wide       one drawing, nothing to shed
   trackRivals    wide       one drawing, nothing to shed
+  engineReadings wide       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1280x480  zone 469x320  body 445x282  zone
   lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -69,6 +71,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
+  engineReadings grid       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1280x480  zone 469x361  body 445x323  zone
   lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -92,6 +95,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
+  engineReadings grid       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1280x400  zone 469x258  body 445x220  zone
   lapTimes       grid       keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
@@ -115,6 +119,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
+  engineReadings grid       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1280x400  zone 469x292  body 445x254  zone
   lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -138,6 +143,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
+  engineReadings grid       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 850x480  zone 274x328  body 250x290  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -161,6 +167,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
+  engineReadings tallNarrow keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 850x480  zone 274x366  body 250x328  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -184,6 +191,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
+  engineReadings tallNarrow keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 800x480  zone 249x328  body 225x290  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -207,6 +215,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
+  engineReadings tallNarrow keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 800x480  zone 249x366  body 225x328  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -230,6 +239,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
+  engineReadings tallNarrow keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1280x720  zone 469x554  body 445x516  zone
   lapTimes       tall       keeps last sessionBest yourBest laps estimated delta  sheds average5 position stintLap s1 s2 s3
@@ -253,6 +263,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tall       one drawing, nothing to shed
   damage         tall       one drawing, nothing to shed
   trackRivals    tall       one drawing, nothing to shed
+  engineReadings tall       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 1280x720  zone 469x598  body 445x560  zone
   lapTimes       tall       keeps last sessionBest yourBest laps estimated delta  sheds average5 position stintLap s1 s2 s3
@@ -276,6 +287,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tall       one drawing, nothing to shed
   damage         tall       one drawing, nothing to shed
   trackRivals    tall       one drawing, nothing to shed
+  engineReadings tall       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 800x286  zone 269x194  body 245x156  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
@@ -299,6 +311,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
+  engineReadings tallNarrow keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 800x286  zone 269x226  body 245x188  compact
   lapTimes       tallNarrow keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -322,6 +335,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     tallNarrow one drawing, nothing to shed
   damage         tallNarrow one drawing, nothing to shed
   trackRivals    tallNarrow one drawing, nothing to shed
+  engineReadings tallNarrow keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 600x686  zone 600x160  body 576x122  compact
   lapTimes       grid       keeps last sessionBest yourBest delta  sheds laps estimated average5 position stintLap s1 s2 s3
@@ -345,6 +359,7 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
+  engineReadings grid       keeps water oilTemp oilPressure fuelPressure voltage manifold
 
 600x686  zone 600x150  body 576x112  compact
   lapTimes       grid       keeps last sessionBest yourBest  sheds laps estimated delta average5 position stintLap s1 s2 s3  declared last sessionBest yourBest delta
@@ -368,5 +383,6 @@ exports[`what each face draws, per zone rectangle the shape of every zone body, 
   lapHistory     grid       one drawing, nothing to shed  parts head
   damage         grid       one drawing, nothing to shed
   trackRivals    grid       one drawing, nothing to shed
+  engineReadings grid       keeps water oilTemp oilPressure fuelPressure voltage manifold
 "
 `;

@@ -389,18 +389,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Race page", PanelHome.PitWallPage(9));
             Assert.False(PanelHome.PitWallPortrait(wall));
 
-            Assert.Equal("21 of 21 modules", PanelHome.ModulesLine(null));
-            Assert.Equal("21 of 21 modules", PanelHome.ModulesLine(new bool[Modules.Count]));
+            Assert.Equal("22 of 22 modules", PanelHome.ModulesLine(null));
+            Assert.Equal("22 of 22 modules", PanelHome.ModulesLine(new bool[Modules.Count]));
             var some = new bool[Modules.Count];
             some[0] = some[4] = some[16] = true;
-            Assert.Equal("3 of 21 modules", PanelHome.ModulesLine(some));
+            Assert.Equal("3 of 22 modules", PanelHome.ModulesLine(some));
             // A rotation longer than the catalogue, as an older settings file can carry, counts the catalogue's.
             var longer = Enumerable.Repeat(true, Modules.Count + 4).ToArray();
-            Assert.Equal("21 of 21 modules", PanelHome.ModulesLine(longer));
+            Assert.Equal("22 of 22 modules", PanelHome.ModulesLine(longer));
             var phone = Screen(Contract.KindCompanion, 1080, 2400);
             // A new companion's rotation is Contract.DefaultModules: the catalogue without the three it leaves off.
-            Assert.Equal("18 of 21 modules", PanelHome.ScreenShows(new OpenDashSettings(), phone));
-            Assert.Equal(18, Contract.DefaultModules().Count(on => on));
+            Assert.Equal("19 of 22 modules", PanelHome.ScreenShows(new OpenDashSettings(), phone));
+            Assert.Equal(19, Contract.DefaultModules().Count(on => on));
 
             // A card face names only the cards its package reads, which are the first ones.
             Assert.Equal("Speed · Current lap", PanelHome.ScreenShows(new OpenDashSettings(), Screen(Contract.KindSlots, 480, 480)));

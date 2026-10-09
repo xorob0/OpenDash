@@ -458,7 +458,7 @@ export function racePage(width: number, height: number): Screen {
   //
   // So the two are one rectangle here, a few pixels taller than either. A zone rectangle names the
   // zone dashboard the package carries, and two zones of one column that differ by twelve pixels
-  // are a second copy of all twenty-one pages, shedding their rows at different heights for a
+  // are a second copy of all twenty-two pages, shedding their rows at different heights for a
   // difference a reader of the column cannot see.
   const panels = [
     { id: 'session', height: 108, draw: sessionPanel },

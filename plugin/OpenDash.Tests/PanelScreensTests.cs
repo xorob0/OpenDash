@@ -857,13 +857,13 @@ namespace OpenDashPlugin.Tests
         public void A_companion_counts_its_modules_and_a_round_screen_its_cards()
         {
             var modules = Modules.Defaults();
-            Assert.Equal("18 of 21", PanelScreens.ModuleCount(modules));
-            Assert.Equal("0 of 21", PanelScreens.ModuleCount(null));
+            Assert.Equal("19 of 22", PanelScreens.ModuleCount(modules));
+            Assert.Equal("0 of 22", PanelScreens.ModuleCount(null));
             Assert.Equal(Modules.All.Select(m => m.Name), PanelScreens.ModuleNames());
             // First module offers the modules the rotation has on, since Save moves the start past one that
             // is off: Energy, off by default, is not offered, and nothing ticked offers everything.
             var choices = PanelScreens.FirstModuleChoices(modules);
-            Assert.Equal(18, choices.Length);
+            Assert.Equal(19, choices.Length);
             Assert.DoesNotContain(Modules.All.ToList().FindIndex(m => m.Id == "energy"), choices);
             Assert.All(choices, i => Assert.True(modules[i]));
             Assert.Contains(Contract.DefaultCompanionStart, choices);
@@ -872,6 +872,7 @@ namespace OpenDashPlugin.Tests
             // A module's hover is its number and what it shows.
             Assert.Equal("01 · " + Modules.All[0].Description, PanelScreens.ModuleTooltip(Modules.All[0]));
             Assert.Equal("21 · " + Modules.All[20].Description, PanelScreens.ModuleTooltip(Modules.All[20]));
+            Assert.Equal("22 · " + Modules.All[21].Description, PanelScreens.ModuleTooltip(Modules.All[21]));
             Assert.Equal(string.Empty, PanelScreens.ModuleTooltip(null));
             Assert.Equal(new[] { "Controls and events", "NextScreen" }, PanelScreens.CompanionPagingCrumbs);
             Assert.All(PanelScreens.CompanionPagingCrumbs, crumb => Assert.Contains(crumb, PanelCopy.CompanionPaging));

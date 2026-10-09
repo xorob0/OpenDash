@@ -18,7 +18,7 @@
  * whatever comes first. An idle screen therefore has to be enabled in every configuration a package
  * has, or the mode it exists for is the one that falls through. That is why {@link idleScreen} writes
  * no expression at all, where the face gates its two rev-bar arrangements on `OpenDash.RevBar` and the
- * companion gates its twenty-one screens on the module rotation.
+ * companion gates its twenty-two screens on the module rotation.
  *
  * `Dashboard.GetActiveScreens`, which is what the Next and Previous screen actions and the companion's
  * tap paging walk, filters by role **only when the roles differ between screens**: it compares
@@ -422,7 +422,7 @@ function placed(blocks: readonly IdleBlock[], step: IdleStep, spec: IdleSpec): I
  *
  * It shrinks before it sheds, which is the opposite of what a zone page does, and for the reason
  * `pitwall.ts` gives for drawing its panel rows explicitly rather than fitting them: a page in a zone
- * is one of twenty-one and sheds its secondary rows to keep its primary one legible, where these three
+ * is one of twenty-two and sheds its secondary rows to keep its primary one legible, where these three
  * blocks are the whole screen and losing one of them costs more than a rung of the ramp.
  *
  * Shedding is the floor under that rather than the plan. Nothing OpenDash ships reaches it --
