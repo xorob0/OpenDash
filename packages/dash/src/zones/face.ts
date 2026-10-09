@@ -246,7 +246,7 @@ function houseChrome(layout: ZoneLayout, band_: Rect, body: readonly { zone: 'A'
  * A zone's page counter, drawn by the face rather than by the zone.
  *
  * Zones B and C are the same rectangle on most faces, so one dashboard file serves both, and a
- * counter inside it would count the catalogue -- "15 / 21" on a cycle of three, because a screen
+ * counter inside it would count the catalogue -- "15 / 22" on a cycle of three, because a screen
  * cannot know which zone's mask is deciding its length. The face is the only thing that knows which
  * rect is which zone, so the counter is drawn here, over the widget, in the room the zone's header
  * keeps at its right.

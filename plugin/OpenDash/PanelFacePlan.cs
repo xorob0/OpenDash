@@ -75,7 +75,7 @@ namespace OpenDashPlugin
 
         public const double BandLetterSize = 16;
 
-        /// <summary>The count beside a letter ("4 of 21"), the first page under it, and the button line.</summary>
+        /// <summary>The count beside a letter ("4 of 22"), the first page under it, and the button line.</summary>
         public const double CountSize = 13;
 
         public const double PageSize = 15;
