@@ -9,7 +9,7 @@ import { declaredProperties, PROPERTY_PREFIX, THEME_SETTINGS, themeEntry, themeS
 import { ncalcEvaluator as E, type Binding, type Border, type Item } from '../src/generator.ts';
 import { THEMES } from '../src/themes/index.ts';
 import { choiceColours, defaultChoice, themeSettingColour } from '../src/themes/settings.ts';
-import { FLAG_LAYERS } from '../src/themes/aim/backlight.ts';
+import { backdropName, FLAG_LAYERS } from '../src/themes/aim/backlight.ts';
 
 describe('the theme settings', () => {
   const declared = Object.entries(THEME_SETTINGS).flatMap(([themeId, settings]) => settings.map((s) => ({ themeId, s })));
@@ -128,6 +128,20 @@ describe("the AiM's backlight on the AiM's packages", () => {
       expect({ where: d.where, colour: E.evaluate(d.formula!, { properties: {} }) }).toEqual({ where: d.where, colour: d.literal });
       for (const [id, pair] of pairs) {
         expect({ where: d.where, id, colour: E.evaluate(d.formula!, { properties: { [property]: id } }) }).toEqual({ where: d.where, id, colour: ground ? pair[0]! : pair[1]! });
+      }
+    }
+  });
+
+  test('draw every screen on a backdrop of the ground, since a screen background takes no binding', () => {
+    for (const { pkg } of packages) {
+      for (const dashboard of pkg.dashboards) {
+        for (const screen of dashboard.screens) {
+          const first = screen.items[0]!;
+          const where = `${pkg.folderName}/${dashboard.name}/${screen.name}`;
+          expect({ where, background: screen.backgroundColor?.toUpperCase() }).toEqual({ where, background: white[0] });
+          expect({ where, name: first.name, kind: first.kind, rect: 'rect' in first ? first.rect : undefined }).toEqual({ where, name: backdropName(screen.name), kind: 'rect', rect: { left: 0, top: 0, width: dashboard.width, height: dashboard.height } });
+          expect(formulaOf(first.bindings?.BackgroundColor)).toContain(property);
+        }
       }
     }
   });

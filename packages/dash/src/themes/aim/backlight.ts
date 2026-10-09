@@ -114,7 +114,23 @@ function backlitItem(item: Item): Item {
   return border ? ({ ...bound, border: backlitBorder(border) } as Item) : bound;
 }
 
-const backlitScreen = (screen: Screen): Screen => ({ ...screen, items: screen.items.map((item) => (item.kind === 'layer' && FLAG_LAYERS.has(item.name) ? item : backlitItem(item))) });
+/**
+ * The name of the item each screen's ground is drawn on, under everything else, since a screen's own
+ * background takes no binding. Named as the zone's own frame is, being the whole of the zone's rectangle
+ * rather than a part of the page drawn in it.
+ */
+export const backdropName = (screen: string): string => `${screen}.zone.backlight`;
+
+function backlitScreen(screen: Screen, width: number, height: number): Screen {
+  const items = screen.items.map((item) => (item.kind === 'layer' && FLAG_LAYERS.has(item.name) ? item : backlitItem(item)));
+  // The LCD's ground is the screen's background, which SimHub draws and no binding reaches, so the zones'
+  // dashboards and the margins between them would keep the white's. The same ground is drawn again as the
+  // first item, where it can follow the backlight.
+  const ground = expressionFor(screen.backgroundColor);
+  if (ground === undefined || screen.backgroundColor === undefined) return { ...screen, items };
+  const backdrop = withMoreBindings<'rect'>({ kind: 'rect', name: backdropName(screen.name), rect: { left: 0, top: 0, width, height }, backgroundColor: screen.backgroundColor }, { BackgroundColor: ground });
+  return { ...screen, items: [backdrop, ...items] };
+}
 
 /** A dashboard of the AiM theme under the driver's backlight; see the file comment. */
-export const backlit = (dashboard: Dashboard): Dashboard => ({ ...dashboard, screens: dashboard.screens.map(backlitScreen) });
+export const backlit = (dashboard: Dashboard): Dashboard => ({ ...dashboard, screens: dashboard.screens.map((screen) => backlitScreen(screen, dashboard.width, dashboard.height)) });
