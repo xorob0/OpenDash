@@ -165,7 +165,7 @@ export function porscheChangeNotifications(ctx: FaceContext): Item[] {
         color: ink,
         hAlign: 'center',
         bind: fmt(value.read, value.pattern),
-        widest: value.pattern === '0' ? '88' : '88.8',
+        widest: value.widest,
       }),
     ];
     return withMoreBindings({ kind: 'layer', name, children }, { Visible: changeNotificationVisible(value.id) });

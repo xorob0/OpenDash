@@ -33,6 +33,9 @@ import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
 import {
   CHARS,
+  INCIDENTS_WIDEST,
+  LAP_TOTAL_WIDEST,
+  LAP_WIDEST,
   GRIP_WIDEST,
   currentLap,
   incidentLimit,
@@ -74,7 +77,7 @@ const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 const WIDEST_LAP_TOTAL = 'of 999';
 
 /** The same total after the portrait's "Lap 12 / 30", which writes it as a denominator. */
-const WIDEST_LAP_DENOMINATOR = '/ 999';
+const WIDEST_LAP_DENOMINATOR = LAP_TOTAL_WIDEST;
 
 /**
  * The strongest wind the readout has room for, unit included. iRacing's weather generator stays
@@ -210,7 +213,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
           id: 'lap',
           parts: [
             { kind: 'label', text: 'Lap' },
-            { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: { digits: 3, specials: 0 } },
+            { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.lap, widest: LAP_WIDEST },
             { kind: 'label', text: '/ 30', widest: WIDEST_LAP_DENOMINATOR, bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],
         }
@@ -221,7 +224,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
             // leaves falls to the left, into the empty middle of the header, rather than opening a
             // hole between the session name and the lap.
             { kind: 'label', text: 'Race', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: sessionType() },
-            { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
+            { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 }, widest: `L${LAP_WIDEST}` },
             { kind: 'label', text: 'of 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('of '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],
         },
@@ -236,7 +239,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'incidents',
       parts: [
         { kind: 'label', text: 'Inc' },
-        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.alert.incident },
+        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, widest: INCIDENTS_WIDEST, color: ds.purpose.alert.incident },
         ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
       ],
     },

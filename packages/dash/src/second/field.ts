@@ -13,7 +13,7 @@ import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -153,14 +153,19 @@ export const followerSize = (follower: Follower, d: DensitySpec, valueFs: number
  * measured on whichever of the two the author happened to type, so a driver on a gallons profile
  * read a nine-pixel box with "gal" in it. There is no measuring what a binding returns, so the
  * declaration is the only place the answer can be, and a binding without one is refused rather than
- * measured on its sample. The denominator is outside this: its cells are cut to the same two-digit
- * budget `CHARS.position` gives a field size, so the sample and the binding take the same room.
+ * measured on its sample. A denominator is a numeral set proportionally, measured in the cells its
+ * sample takes, which is wider than its advances: a field size is two digits whatever it reads, so
+ * `/ 24` takes the room `/ 63` does. A race's length runs to three, so a denominator that can grow
+ * past its sample declares a `widest` and is measured by that reading's advances where they are the
+ * wider of the two. Not by its cells, which give the space and the slash a full cell each where they
+ * draw half of one, and would shrink the row around the lap for room it never uses. #596.
  */
 export function followerWidth(follower: Follower, d: DensitySpec, valueFs: number): number {
   const fs = followerSize(follower, d, valueFs);
   if (follower.kind === 'denominator') {
     const mono = cells('SemiBold', fs);
-    return monoWidth(mono, charsOfText(follower.text, mono));
+    const sample = monoWidth(mono, charsOfText(follower.text, mono));
+    return follower.widest === undefined ? sample : Math.max(sample, Math.ceil(measureText(DATA_FACE.SemiBold, follower.widest, fs)) + 1);
   }
   if (follower.bind !== undefined && follower.widest === undefined) {
     throw new Error(`follower ${JSON.stringify(follower.text)} is bound and declares no widest; a bound unit is measured by what it can draw, not by its sample`);
@@ -352,7 +357,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
     };
     items.push(
       follower.kind === 'denominator'
-        ? denominator(`${spec.name}.denominator`, follower.text, followerX, y, fs, box, opts)
+        ? denominator(`${spec.name}.denominator`, follower.text, followerX, y, fs, box, { ...opts, widest: follower.widest })
         : unit(`${spec.name}.unit`, follower.text, followerX, y, box, { size: fs, color: follower.color, widest: follower.widest, ...opts }),
     );
   }

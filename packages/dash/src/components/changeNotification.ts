@@ -28,7 +28,7 @@
  * leaderboard's rank mark is the opposite convention, green up and red down, and the two are
  * separate files for that reason.
  */
-import type { Item, LayerItem, Rect } from '../generator.ts';
+import type { Item, LayerItem, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { assetBox, imageOf, TREND_DOWN, TREND_UP } from '../design/assets.ts';
@@ -38,6 +38,7 @@ import { boxSlack, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
+import { charsOfText } from '../second/drawn.ts';
 import { TRACKED_VALUES, hasSetting, type TrackedValue } from '../second/tracked.ts';
 import { inTheCar } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -106,11 +107,11 @@ export function changeNotificationVisible(id: string): Expr {
   return and(not(lapPopUpOut()), ...TRACKED_VALUES.slice(0, index).map((higher) => not(moved(higher))), moved(value));
 }
 
-/** What the reading takes in cells: a number with one decimal, or a bare one. */
-const valueChars = (value: TrackedValue): Chars => ({
-  digits: value.sample.replace('.', '').length,
-  specials: value.sample.includes('.') ? 1 : 0,
-});
+/**
+ * What the reading takes in cells, cut from the longest it can draw rather than from its sample: the
+ * samples are one digit, and a TC of 10 in the one cell its `5` was cut from lost a digit. #596.
+ */
+const valueChars = (value: TrackedValue, mono: Monospace): Chars => charsOfText(value.widest, mono);
 
 /**
  * The box, centred on the rectangle the face calls its hero, which is where a pop-up goes.
@@ -134,13 +135,15 @@ export function changeNotification(frame: Rect, value: TrackedValue, prefix = 'n
   const height = frame.height - CHANGE_NOTIFICATION_RULE;
   const right = frame.left + frame.width - CHANGE_NOTIFICATION_PAD_X;
   const trend = rect(right - TREND_SIZE, inner + (height - TREND_SIZE) / 2, TREND_SIZE, TREND_SIZE);
-  const reading = monoWidth(cells('SemiBold', size), valueChars(value)) + boxSlack(size);
+  const mono = cells('SemiBold', size);
+  const reading = monoWidth(mono, valueChars(value, mono)) + boxSlack(size);
   const labelWidth = Math.ceil(measureText('BarlowMedium', value.notice, ds.size.label)) + boxSlack(ds.size.label);
   const children: Item[] = [
     band(`${name}.box`, frame, ds.purpose.popUp.surface),
     band(`${name}.rule`, rect(frame.left, frame.top, frame.width, CHANGE_NOTIFICATION_RULE), ds.purpose.popUp.rule),
     label(`${name}.label`, value.notice, frame.left + CHANGE_NOTIFICATION_PAD_X, inner + (height - ds.size.label) / 2, labelWidth),
-    numeral(`${name}.value`, value.sample, trend.left - TREND_GAP - reading, inner + (height - size) / 2, size, valueChars(value), {
+    numeral(`${name}.value`, value.sample, trend.left - TREND_GAP - reading, inner + (height - size) / 2, size, valueChars(value, mono), {
+      widest: value.widest,
       width: reading,
       hAlign: 'right',
       bind: fmt(value.read, value.pattern),

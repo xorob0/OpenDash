@@ -12,7 +12,7 @@
  * controls, which is what the `quali` capture scenario is for. What says a car has a setting is
  * `hasSetting` in `second/tracked.ts`, and nothing here second-guesses it.
  */
-import type { Item, Rect } from '../generator.ts';
+import type { Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { BAR_FIELDS, BAR_SLOTS, zone as zoneSetting, type BarSlot, type FaceSize } from '../contract.ts';
@@ -28,6 +28,9 @@ import { TRACKED_VALUES, hasSetting } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
+  INCIDENTS_WIDEST,
+  LAP_TOTAL_WIDEST,
+  LAP_WIDEST,
   airTemperature,
   antiRollFront,
   fieldSize,
@@ -81,13 +84,25 @@ interface BarFieldSpec {
    */
   widest?: string;
   /**
+   * The longest reading the binding can produce, for a field that stays a number in cells.
+   *
+   * Not `widest` above, which sets the field proportionally and measures it from the string. This one
+   * changes nothing about the drawing, the box being cut from `chars`; it is what the fit tests
+   * measure, so a lap count is held to `999` rather than to the `4` of its sample. It is band D's
+   * `numeralWidest`, for the same reason.
+   */
+  numeralWidest?: string;
+  /**
    * A mark drawn in the value's place, in the value's own box, for a state whose reading is a glyph
    * no cell can hold: the `∞` of a session with no clock. It takes no width of its own, so the
    * catalogue is measured as it was; see `elements/mark.ts`.
    */
   mark?: Mark;
-  /** A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. */
-  denominator?: { sample: string; bind: string; chars: Chars };
+  /**
+   * A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. `widest` is the
+   * longest it can read, which the fit tests measure it by; `chars` has to hold it.
+   */
+  denominator?: { sample: string; bind: string; chars: Chars; widest?: string };
   /**
    * A word after the value, drawn only while `when` holds: the `AM` or `PM` of a clock the rig writes
    * to twelve hours (#324). It is set as the denominator is -- after a gap, at the denominator's size
@@ -143,9 +158,12 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     label: 'Lap',
     sample: '4',
     bind: fmt(currentLap(), '0'),
-    chars: CHARS.position,
-    denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 4, specials: 1 } },
-    drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
+    chars: CHARS.lap,
+    numeralWidest: LAP_WIDEST,
+    // Five full cells: the space and the slash are not among the narrow `.,:`, so `/ 120` is five
+    // cells wide and the four and a narrow one this was cut from lost its last digit. #596.
+    denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 5, specials: 0 }, widest: LAP_TOTAL_WIDEST },
+    drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
   },
   { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
   timeOfDayField('clock', 'Clock', '14:32', localClock()),
@@ -185,8 +203,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     chars: CHARS.classPosition,
     widest: WIDEST_CLASS,
   },
-  // Four cells rather than the count's three: the x the artboard draws after the number takes one.
-  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 } },
+  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, numeralWidest: INCIDENTS_WIDEST },
   {
     id: 'airTemp',
     label: 'Air',
@@ -221,6 +238,8 @@ interface StripCell {
   id: string;
   label: string;
   sample: string;
+  /** The longest reading the setting can draw, which its cells are cut from: the tracked value's. */
+  widest: string;
   expr: string;
   pattern: string;
   /** True when the car has this setting: `hasSetting` of the tracked value, which is the one rule. */
@@ -232,6 +251,7 @@ export const STRIP_CELLS: readonly StripCell[] = TRACKED_VALUES.map((value) => (
   id: value.id,
   label: value.strip,
   sample: value.sample,
+  widest: value.widest,
   expr: value.read,
   pattern: value.pattern,
   present: hasSetting(value),
@@ -251,8 +271,11 @@ export const STRIP_CELLS: readonly StripCell[] = TRACKED_VALUES.map((value) => (
  */
 const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', 'map', 'diff'];
 
-/** What a strip cell's sample takes in cells: a reading with one decimal, or a bare number. */
-const cellChars = (cell: StripCell): Chars => ({ digits: cell.sample.replace('.', '').length, specials: cell.sample.includes('.') ? 1 : 0 });
+/**
+ * What a strip cell's reading takes in cells, cut from its `widest` rather than its sample: the
+ * samples are one digit, and a TC of 10 in the one cell its `5` was cut from lost a digit. #596.
+ */
+const cellChars = (cell: StripCell, mono: Monospace): Chars => charsOfText(cell.widest, mono);
 
 /** Width of the text a label is drawn with, with the pixel of room WPF needs not to clip it. */
 const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium', text, ds.size.label)) + 2;
@@ -276,7 +299,8 @@ const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium
  * pixels, and the binding agrees with the rect it was laid out from.
  */
 function stripCellWidth(cell: StripCell, scale: BarScale): number {
-  const value = monoWidth(cells('SemiBold', scale.valueSize), cellChars(cell));
+  const mono = cells('SemiBold', scale.valueSize);
+  const value = monoWidth(mono, cellChars(cell, mono));
   return 2 * Math.ceil(Math.max(value, labelWidth(cell.label), scale.stripCell) / 2);
 }
 
@@ -378,7 +402,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
           numeral(`${name}.value`, spec.sample, withoutSuffix ?? valueX, valueTop, valueSize, spec.chars, {
             width: value,
             hAlign: align,
-            ...(spec.widest === undefined ? {} : { proportional: true, widest: spec.widest }),
+            ...(spec.widest === undefined ? { widest: spec.numeralWidest } : { proportional: true, widest: spec.widest }),
           }),
           {
             Visible: unmarked(spec.mark, visible),
@@ -426,6 +450,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         items.push(
           withMoreBindings(
             numeral(`${name}.denominator`, spec.denominator.sample, dx, denominatorTop, denominatorSize, spec.denominator.chars, {
+              widest: spec.denominator.widest,
               color: ds.color.text.secondary,
               width: denominator,
               hAlign: align,
@@ -454,7 +479,8 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         present,
         draw: (at) => [
           label(`${name}.label`, cell.label, at.x, labelTop, w, { size: labelFs, hAlign: 'center', leftBind: at.leftAt(), visibleBind: at.visibleBind }),
-          numeral(`${name}.value`, cell.sample, at.x, valueTop, valueSize, cellChars(cell), {
+          numeral(`${name}.value`, cell.sample, at.x, valueTop, valueSize, cellChars(cell, cells('SemiBold', valueSize)), {
+            widest: cell.widest,
             width: w,
             hAlign: 'center',
             leftBind: at.leftAt(),

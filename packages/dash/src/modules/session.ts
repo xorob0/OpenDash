@@ -15,6 +15,9 @@ import { drawnFigure } from '../second/drawn.ts';
 import { stack } from '../second/layout.ts';
 import {
   CHARS,
+  INCIDENTS_WIDEST,
+  LAP_TOTAL_WIDEST,
+  LAP_WIDEST,
   carPosition,
   positionDigits,
   classOpponentCount,
@@ -74,11 +77,18 @@ export const session = defineModule('session', (ctx) => {
         [
           fld(ctx, 'lap', 'Lap', {
             sample: '12',
+            widest: LAP_WIDEST,
             bind: fmt(currentLap(), '0'),
-            chars: CHARS.position,
+            chars: CHARS.lap,
             fs: d.mid,
-            follower: { kind: 'denominator', text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
-            drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
+            follower: {
+              kind: 'denominator',
+              text: '/ 30',
+              widest: LAP_TOTAL_WIDEST,
+              bind: concat(str('/ '), fmt(totalLaps(), '0')),
+              visibleBind: gt(totalLaps(), num(0)),
+            },
+            drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
           }, { visibleBind: not(time) }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',
@@ -87,18 +97,17 @@ export const session = defineModule('session', (ctx) => {
             chars: CHARS.clock,
             fs: d.mid,
           }, { visibleBind: time }),
-          fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', bind: fmt(lapsLeft(), '0'), chars: CHARS.position, fs: d.mid }, { visibleBind: gt(lapsLeft(), num(0)) }),
+          fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', widest: LAP_WIDEST, bind: fmt(lapsLeft(), '0'), chars: CHARS.lap, fs: d.mid }, { visibleBind: gt(lapsLeft(), num(0)) }),
         ],
         ctx,
       ),
       fieldsRow(
         [
-          // Four cells rather than the count's three: the x the canvas draws after the number takes
-          // one, which is how `zones/bar.ts` budgets the same value.
           fld(ctx, 'incidents', 'Incidents', {
             sample: '3x',
+            widest: INCIDENTS_WIDEST,
             bind: concat(fmt(taken, '0'), str('x')),
-            chars: { digits: 4, specials: 0 },
+            chars: CHARS.incidents,
             fs: d.small,
             colorBind: iff(gt(taken, num(0)), str(ds.color.caution.primary), str(ds.color.text.primary)),
           }),
