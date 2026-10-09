@@ -4,8 +4,9 @@
  * what is wrong. The gear and the speed stay in zone A under either. The full-screen flag is the
  * house's, given the LCD below the tacho as its body by the anatomy.
  *
- * `Pit Speed` and the warning's `ENGINE` are in inverse video, an ink block with the word in the
- * ground, which is how an LCD that has one ink says that something is not a reading.
+ * `Pit Speed` is in inverse video, an ink block with the word in the ground, being the pit family's
+ * one-line banner drawn the LCD's way. The warning is a box over the content and is therefore an
+ * outline with its two lines in the ink, as the canvas draws it and as the pop-ups are (#751).
  *
  * Each is one of the house's states drawn the LCD's way rather than a state of its own. The limiter
  * is the house pit family's `limiter` state, shown exactly when that state's banner is and drawn over
@@ -93,7 +94,7 @@ function warning(frame: Rect): Item {
   const which = WARNINGS.reduceRight<Expr>((rest, w) => iff(engineWarning(w.bit), str(w.text), rest), str(WARNINGS[0].text));
   const children: Item[] = [
     { kind: 'rect', name: 'warning.box', rect: box, backgroundColor: lcdColour('ground'), border: { color: lcdColour('ink'), top: WARNING.border, bottom: WARNING.border, left: WARNING.border, right: WARNING.border } },
-    ...inverse('warning.title', 'ENGINE', box.left + box.width / 2, top, size),
+    line('warning.title', 'ENGINE', top),
     line('warning.reading', WARNINGS[0].text, top + size + gap, which, WARNING_WIDEST),
   ];
   const on = and(inTheCar(), or(...WARNINGS.map((w) => engineWarning(w.bit))));

@@ -13,10 +13,13 @@
  *     house's size, which is the height its capitals take, and smaller only where the box asks for it.
  *     A name the house cut to its cell stays cut there: the segment cell is narrower than the widest
  *     letter the house cut it for, so it fits at that size.
- *   - A filled box holding text is either a chip, a class or a licence, which loses its fill and keeps
- *     its text, or a highlight, the driver's own row or a box over the face, which becomes inverse
- *     video: the box in the ink, its text in the ground. Over the face an outlined box holding text is
- *     inverse video too, as the pit family's banners are. A filled box holding no text is a bar or a rule
+ *   - A filled box holding text on a page is either a chip, a class or a licence, which loses its fill
+ *     and keeps its text, or a highlight, the driver's own row, which becomes inverse video: the box in
+ *     the ink, its text in the ground. Over the face, the pit family's one-line banners are inverse
+ *     video whether the house filled them or outlined them, and the boxes over the content, the
+ *     pop-ups, the change notifications and the lap review, are outlines: 3 px of ink on the ground
+ *     with their figures in the ink, as the canvas's warning box is, since a block of ink that size
+ *     hides the page under it and no LCD draws one. A filled box holding no text is a bar or a rule
  *     when it is thin, and drawn in the ink, and otherwise an area, drawn as its outline.
  *   - A box, a dot or a gauge whose colour is bound says a state by it, a segment lit or not: the
  *     binding is kept and every colour it can give is turned into the ink, or into the ghost's tone
@@ -37,18 +40,20 @@ const { iff, str, ucase } = ncalc;
 
 /** The 14-segment capitals fill the em where Barlow's take 0.7 of it, so four fifths reads as the same height. */
 const CAPTION_SCALE = 0.8;
+/** No caption is set smaller than this. */
+const SMALLEST_CAPTION = 7;
 /** Under this a box is a bar or a rule rather than an area. */
 const THIN = 8;
 /** A chip is at most this big; a box holding text that is larger is a highlight. */
-/** No caption is set smaller than this. */
-const SMALLEST_CAPTION = 7;
 const CHIP = { width: 120, height: 40 } as const;
 /** The outline an area is drawn as. */
 const OUTLINE = 2;
+/** The ink round a box over the content: the canvas's warning box. */
+const BOX_OUTLINE = 3;
 
 export interface LcdOptions {
-  /** Every box holding text is a highlight, as the pit family's banners and the pop-ups are. */
-  boxesInverse?: boolean;
+  /** How every box holding text over the face is drawn: in inverse video, or as an outline on the ground. */
+  boxes?: 'inverse' | 'outline';
 }
 
 const COLOUR_BINDINGS: readonly BindingTarget[] = ['TextColor', 'BackgroundColor', 'FillColor', 'EllipseColor', 'LineColor', 'GaugeColor', 'AlternateGaugeColor'];
@@ -131,7 +136,7 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
   const texts = flat(items).filter((item): item is TextItem => item.kind === 'text');
   const holdsText = (r: Rect): boolean => texts.some((t) => centreIn(t.rect, r));
   const highlights: Highlight[] = flat(items)
-    .filter((item) => item.kind === 'rect' && holdsText(item.rect) && (opts.boxesInverse ? filled(item.backgroundColor) || item.border !== undefined : filled(item.backgroundColor) && !isChip(item.rect)))
+    .filter((item) => item.kind === 'rect' && opts.boxes !== 'outline' && holdsText(item.rect) && (opts.boxes === 'inverse' ? filled(item.backgroundColor) || item.border !== undefined : filled(item.backgroundColor) && !isChip(item.rect)))
     .map((item) => ({ rect: (item as { rect: Rect }).rect, when: expressionOf(item.bindings?.Visible) }));
   const onHighlight = (t: TextItem): Highlight | undefined => highlights.find((h) => centreIn(t.rect, h.rect));
 
@@ -160,11 +165,14 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
         const bound = boundColour(item, 'BackgroundColor');
         if (bound !== undefined && !holdsText(plain.rect)) return [withMoreBindings<'rect'>({ ...plain, backgroundColor: ink, ...(border ? { border } : {}) }, { BackgroundColor: bound })];
         // Over the face a box holding text is inverse video whether the house filled it or outlined it, as the pit family's banners are.
-        if (opts.boxesInverse && border && holdsText(plain.rect)) return [{ ...plain, backgroundColor: ink, border }];
+        if (opts.boxes === 'inverse' && border && holdsText(plain.rect)) return [{ ...plain, backgroundColor: ink, border }];
+        if (opts.boxes === 'outline' && (border || filled(plain.backgroundColor)) && holdsText(plain.rect)) {
+          return [{ ...plain, backgroundColor: ground, border: { color: ink, top: BOX_OUTLINE, bottom: BOX_OUTLINE, left: BOX_OUTLINE, right: BOX_OUTLINE } }];
+        }
         if (!filled(plain.backgroundColor)) return [{ ...plain, ...(border ? { border } : {}) }];
         const r = plain.rect;
         if (holdsText(r)) {
-          const highlight = opts.boxesInverse || !isChip(r);
+          const highlight = opts.boxes === 'inverse' || !isChip(r);
           return [{ ...plain, backgroundColor: highlight ? ink : TRANSPARENT, ...(border ? { border } : {}) }];
         }
         if (Math.min(r.width, r.height) <= THIN) return [{ ...plain, backgroundColor: ink, ...(border ? { border } : {}) }];
