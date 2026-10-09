@@ -17,6 +17,11 @@
  * reached. A runtime failure is allowed there, since SimHub fails the same way (a null compared, the
  * opponent calls a version 1 trace does not carry); an unsupported construct is not.
  *
+ * One more question is asked of the same walk, since it is the only place every expression is in
+ * hand: whether any `max` or `min` has an Int32 literal on its left against a value that may have a
+ * fraction. NCalc answers both in the left operand's type, so `max(0, x)` rounds `x` to a whole
+ * number, which is what made every clock tick early and the refuel figure end in `.0` (#831).
+ *
  * A failure names the package, the dashboard, the screen, the item path and the binding, and quotes
  * the expression.
  */
@@ -111,6 +116,26 @@ describe('every expression in a full build, held to the browser evaluator', () =
       seen.add(site.expression);
       for (const problem of E.callProblems(E.parseCached(site.expression))) {
         failures.push(describeFailure(site, `${problem.kind === 'dispatch' ? 'SimHub would not dispatch' : 'the evaluator does not compute'} ${problem.name}() with ${problem.count} argument(s) at offset ${problem.offset}: ${problem.reason}`));
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test('no max or min has an Int32 literal on its left unless what it bounds is already whole', () => {
+    // Whole by construction: a truncate, or another max or min, which is checked here in its own turn.
+    // Those are the two the build writes on purpose, the tacho's scale in thousands and the split
+    // list's first row, both counts. Anything else wants `real` on the left, as #831 explains.
+    const whole = (node: E.Node): boolean => node.type === 'call' && ['truncate', 'max', 'min'].includes(node.name.toLowerCase());
+    const failures: string[] = [];
+    const seen = new Set<string>();
+    for (const site of sites) {
+      if (seen.has(site.expression)) continue;
+      seen.add(site.expression);
+      for (const node of E.nodesOf(E.parseCached(site.expression).root)) {
+        if (node.type !== 'call' || !['max', 'min'].includes(node.name.toLowerCase())) continue;
+        const [bound, value] = node.args;
+        if (bound?.type !== 'literal' || typeof bound.value !== 'object' || bound.value?.kind !== 'int' || value === undefined || whole(value)) continue;
+        failures.push(describeFailure(site, `${E.print(node)} rounds its right operand to an Int32`));
       }
     }
     expect(failures).toEqual([]);
