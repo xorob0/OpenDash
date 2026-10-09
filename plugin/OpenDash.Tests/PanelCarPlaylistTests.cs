@@ -110,10 +110,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_display_already_switching_by_our_entries_stays_bound()
         {
-            var shown = Device(Themed, Ours(PorscheCars[0], Themed), Ours(PorscheCars[1], Themed));
+            var shown = Device(Themed, PorscheCars.Select(car => Ours(car, Themed)).ToArray());
             shown.DefaultForOtherCars = null;
             Assert.Empty(Plan(new[] { Porsche }, shown).Changes);
-            var elsewhere = Device("AIM GS-DASH", Ours(PorscheCars[0], Themed), Ours(PorscheCars[1], Themed));
+            var elsewhere = Device("AIM GS-DASH", PorscheCars.Select(car => Ours(car, Themed)).ToArray());
             elsewhere.DefaultForOtherCars = "AIM GS-DASH";
             Assert.Empty(Plan(new[] { Porsche }, elsewhere).Changes);
         }
@@ -183,8 +183,8 @@ namespace OpenDashPlugin.Tests
         public void A_screen_that_moved_folder_takes_our_entries_with_it()
         {
             var moved = Screen("OpenDash Porsche", "porsche", "Porsche");
-            var plan = Plan(new[] { Rim, moved }, Device(Default, Ours(PorscheCars[0], Themed), Ours(PorscheCars[1], Themed)));
-            Assert.Equal(2, plan.Changes.Count);
+            var plan = Plan(new[] { Rim, moved }, Device(Default, PorscheCars.Select(car => Ours(car, Themed)).ToArray()));
+            Assert.Equal(PorscheCars.Length, plan.Changes.Count);
             Assert.All(plan.Changes, c =>
             {
                 Assert.Equal(CarPlaylistChangeKind.Retarget, c.Kind);
