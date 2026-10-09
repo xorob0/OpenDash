@@ -977,6 +977,30 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   and 9.9995 to three is `9.999` against `10.000`. At 12.345 the double is just over the half, so both
   draw `12.35`. This is from the .NET reference source and has not been measured on the VM.
 
+### Another car's pit lane is published and its off track is not (2026-10-09, #388)
+
+Established by decompiling `IRacingManager.GD_Opponents` in the guest's `ICarsReader.dll`,
+`GameReaderCommon.Opponent` and `DataCorePlugin.DeclareObject` in SimHub 9.12.6 with ilspycmd.
+
+- **The pit lane is a row read.** iRacing's reader fills `Opponent.IsCarInPitLane` from
+  `CarIdxOnPitRoad` and `Opponent.IsCarInPit` from `CarIdxTrackSurface` being `InPitStall`, and
+  `driveriscarinpitlane(position)` reads the first. It is what the pit wall's chip, the row's dimmed
+  ink and the relative's and the leaderboard's PIT mark all read, as `carInPit` in
+  `packages/dash/src/second/values.ts`.
+- **Off track is not.** iRacing publishes it for every car, as `CarIdxTrackSurface` being `OffTrack`,
+  and SimHub reads that array for the pit stall alone: no member of `Opponent` says a car is off the
+  track, so no `driver<name>` function can.
+- **The raw array is not a property either.** `DeclareObject` declares an array member as one
+  property per element (`Name01`, `Name02` and on), but iRacing's `Telemetry` is a
+  `Dictionary<string, object>`, and for a dictionary `DeclareObject` attaches only the values that are
+  not arrays. So `CarIdxTrackSurface`, like every other `CarIdx*` array, never reaches
+  `GameRawData.Telemetry`, and a dash has no way to read it.
+- **Nor could a row address it.** A table row addresses its car by leaderboard position, the array is
+  indexed by `CarIdx`, and no function maps the one to the other: `Opponent` carries no `CarIdx`.
+- So marking a car off track on the lists needs the plugin to publish it per leaderboard position,
+  which is a reading of telemetry of the kind ADR 0009 refuses and ADR 0018 allows for the player's
+  own car. That is a decision and not a fault, and it is not taken.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)
