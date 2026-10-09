@@ -1327,14 +1327,19 @@ straight edge long enough to settle values along. It is taken because it reuses 
 rectangular faces already have, and because dropping the round faces would take fourteen packages to
 twelve over a question about two rectangles.
 
-**It is built before 1.0 as #487, and until then the two round faces ship on the card model
-deliberately.** That is the second half of the answer and the half a reader is most likely to need:
-the round faces are not undecided, they are decided and not yet converted. So until #487 lands
-`480round.ts` and `800round.ts` keep reading `layout.slots`, `OpenDash.Slot01` to `Slot12` keep
-driving them and nothing else ([§7](#7-the-settings-the-contract-fixes) and #170), and the card path
-is retired at 1.0 behind it — #146 waits on #487 rather than on this answer. The rule that kept the
-card path through 1.0 was removed on 2026-09-29; [ADR 0006](../decisions/0006-the-zone-face.md)
-records the amendment.
+**It is built after 1.0 as #487, and until then the two round faces ship on the card model
+deliberately, in 1.0 as well.** That is the second half of the answer and the half a reader is most
+likely to need: the round faces are not undecided, they are decided and not yet converted. So
+through 1.0 and until #487 lands `480round.ts` and `800round.ts` keep reading `layout.slots`,
+`OpenDash.Slot01` to `Slot12` keep driving them and nothing else
+([§7](#7-the-settings-the-contract-fixes) and #170), and the card path is not retired at 1.0: #146
+retires it after #487 rather than after this answer.
+
+On 2026-10-09 the rule of 2026-09-29, which put the conversion before 1.0 and retired the card path
+at it, was withdrawn in the triage of the open tickets for 1.0. The conversion starts from the two round
+artboards below, and they are not drawn, so a 1.0 gated on it could not ship; the round faces ship
+on cards instead, and #474, which keeps a round screen from being added on the Rig tab, is a 1.0
+blocker on that account. [ADR 0006](../decisions/0006-the-zone-face.md) records both amendments.
 
 Part by part, what a round face becomes:
 
@@ -1366,9 +1371,9 @@ the Screens page ([plugin.md](plugin.md#screens)) does not fit a disc. The picke
 is the arc, zone A in the middle and the catalogue zones where the card rects are. Until the
 conversion a round screen keeps its Cards on the disc, which assigns cards to slots.
 
-**The three obligations above are #487.** The two artboards, the round picker and the catalogue a
-140 × 108 box leaves are that ticket's work; #145 was the decision and closed with it, and #146
-waits on #487.
+**The three obligations above are #487, after 1.0.** The two artboards, the round picker and the
+catalogue a 140 × 108 box leaves are that ticket's work; #145 was the decision and closed with it,
+and #146 waits on #487.
 
 ---
 
