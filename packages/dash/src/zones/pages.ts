@@ -8,7 +8,7 @@
  * has used since it shipped, which is the main reason the zone face is cheap to build.
  *
  * One dashboard per distinct rectangle **and catalogue**. A widget scaled to a box it was not drawn
- * for would scale its type with it, and zone A's four pages are not zone B's twenty-one, so the two
+ * for would scale its type with it, and zone A's four pages are not zone B's twenty-two, so the two
  * cannot share a file even at the same size.
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';

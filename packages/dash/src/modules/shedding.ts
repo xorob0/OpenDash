@@ -60,7 +60,7 @@ export function archetypeOf(shape: Shape): Archetype {
  * four, and lap history draws a header row where 214 px would rather have another lap. Both take
  * the `tall narrow` drawing there, which is the sheet the canvas points at.
  *
- * A floor rather than a band of its own, because it is two pages out of twenty-one: a fifth shape
+ * A floor rather than a band of its own, because it is two pages out of twenty-two: a fifth shape
  * would put a fifth column on every row of the table and nineteen of them would repeat the fourth.
  * It sits between the 1280 x 400 face's two arrangements, 214 and 248 px, and the 1280 x 480
  * face's 276, which the canvas draws from the `grid` sheet.
@@ -263,6 +263,16 @@ export const SHEDDING: Record<string, Shedding> = {
   lapHistory: nothing('lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops'),
   damage: nothing('one line of prose: iRacing publishes no damage'),
   trackRivals: nothing('one line of prose: SimHub times sectors, not segments'),
+  // The order #752 gives: the two temperatures and the oil pressure are what an engine dash is
+  // read for, the fuel pressure and the voltage say why the engine has stopped, and the manifold
+  // pressure is the one a box too small for six is the least sorry to lose. Every shape keeps all
+  // six and the stack sheds from the end of this list when it has to.
+  engineReadings: fields({
+    wide: ['water', 'oilTemp', 'oilPressure', 'fuelPressure', 'voltage', 'manifold'],
+    grid: ['water', 'oilTemp', 'oilPressure', 'fuelPressure', 'voltage', 'manifold'],
+    tallNarrow: ['water', 'oilTemp', 'oilPressure', 'fuelPressure', 'voltage', 'manifold'],
+    tall: ['water', 'oilTemp', 'oilPressure', 'fuelPressure', 'voltage', 'manifold'],
+  }),
 };
 
 /**

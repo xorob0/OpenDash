@@ -18,7 +18,7 @@ namespace OpenDashPlugin
             Enabled = enabled;
         }
 
-        /// <summary>1-based page number: the companion header counts "n / 21".</summary>
+        /// <summary>1-based page number: the companion header counts "n / 22".</summary>
         public int Number { get; }
 
         /// <summary>Module id, which is also the screen name in the companion dashboard.</summary>
@@ -36,10 +36,10 @@ namespace OpenDashPlugin
 
     public static class Modules
     {
-        public const int Count = 21;
+        public const int Count = 22;
 
         /// <summary>
-        /// The 21 modules in page order. Energy, Damage and Track rivals are off by default because
+        /// The 22 modules in page order. Energy, Damage and Track rivals are off by default because
         /// iRacing carries none of their data; they ship as honest "not available" pages so that a
         /// user on another sim can switch them on. Module 17 draws the gear alone: a module shows one
         /// thing, and the speed has the speedo module.
@@ -67,6 +67,7 @@ namespace OpenDashPlugin
             new Module(19, "lapHistory", "Lap history", "Your last laps with the delta to the session best.", true),
             new Module(20, "damage", "Damage", "Body and suspension damage. iRacing reports none.", false),
             new Module(21, "trackRivals", "Track rivals", "How your segments compare against the field.", false),
+            new Module(22, "engineReadings", "Engine readings", "Water and oil temperatures, oil and fuel pressure, voltage and manifold pressure.", true),
         };
 
         public static bool IsValidNumber(int number) => number >= 1 && number <= Count;

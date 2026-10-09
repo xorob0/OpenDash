@@ -13,7 +13,7 @@ one shows.
 
 A driver gets the gear in the middle, where the eye already goes, the revs along the top with the
 shift lights of the car being driven, and on either side of the gear a zone showing one page at a
-time: lap times, the delta, fuel, tyres, the relative, whichever of the twenty-one pages that
+time: lap times, the delta, fuel, tyres, the relative, whichever of the twenty-two pages that
 driver wants there, changed with a wheel button rather than with a menu. Above them a bar holds
 what does not change during a lap, and along the foot a band that gives way to a flag for a few
 seconds when one comes out and then shows it at both ends until it clears.
@@ -50,7 +50,7 @@ grows to the next size on its own ramp and stops.
 
 ![The OpenDash face at 1280 by 480](media/readme/face-1280x480.png)
 
-**The companion, 850 x 480.** A phone or a tablet beside the wheel, showing one of twenty-one
+**The companion, 850 x 480.** A phone or a tablet beside the wheel, showing one of twenty-two
 modules at a time and paged with a wheel button.
 
 ![The OpenDash companion at 850 by 480](media/readme/companion-850x480.png)
@@ -118,7 +118,7 @@ the foot.
 
 **Each zone shows one page at a time and a wheel button cycles it.** Zone A is the narrow middle
 column and holds the gear, because the gear is read by reflex; zones B and C flank it and choose
-among the same twenty-one pages the companion has; the band chooses among eight that suit a wide,
+among the same twenty-two pages the companion has; the band chooses among eight that suit a wide,
 short strip, and a flag takes the band over for three seconds when it comes out and then settles
 into the block at each end until it clears. The bar does not cycle, which is what
 earns it the space: it carries what does not change during a lap, two fields at each end and the
@@ -259,7 +259,7 @@ top of that the dashboard and the plugin are checked by hand on a Windows VM run
 where [tools/irsdk-emulator](tools/irsdk-emulator/README.md) feeds scripted iRacing telemetry
 so that every card can be seen with real values. `bun run shots` is the same VM photographing a
 package, and it is where the images at the top of this file come from;
-`bun run modules` is the same loop for the twenty-one companion modules, one to a picture.
+`bun run modules` is the same loop for the twenty-two companion modules, one to a picture.
 
 ## Contributing
 

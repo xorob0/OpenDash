@@ -92,7 +92,7 @@ export const shapeIn = (ctx: ModuleContext): Shape => ctx.shape ?? shapeOf(ctx.f
 /**
  * The catalogue drawing this context takes, which is what every declaration is read at.
  *
- * Its shape's answer for twenty of the twenty-one pages, and for the two that ask, the drawing the
+ * Its shape's answer for twenty of the twenty-two pages, and for the two that ask, the drawing the
  * canvas points at for a box that short. See `archetypeFor`.
  */
 export const drawnAt = (ctx: ModuleContext): Archetype => archetypeFor(ctx.page, shapeIn(ctx), ctx.frame);

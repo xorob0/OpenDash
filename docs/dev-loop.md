@@ -33,7 +33,7 @@ bun run dev --scenario untimed                 # a lap race with no clock: #387'
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
 | [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
 | [`bun run shots`](../scripts/shots.ts) | several packages photographed on one claim, into `build/shots/` |
-| [`bun run modules`](../scripts/modules.ts) | the twenty-one companion modules, one to a picture, on one claim |
+| [`bun run modules`](../scripts/modules.ts) | the twenty-two companion modules, one to a picture, on one claim |
 | [`bun run previews`](../scripts/previews.ts) | the same captures, scaled and committed as the thumbnails SimHub's dashboard list draws |
 | [`bun scripts/rig.ts`](../scripts/rig.ts) | a rig written into the plugin's settings: `panel` for the panel's captures, `gallery` for the site's, `clear`, `empty` for a first run, `show` |
 | [`bun run panel-shots`](../scripts/panel-shots.ts) | every page of the settings panel at every width, on one claim, into `build/panel/` |

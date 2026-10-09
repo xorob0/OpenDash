@@ -128,13 +128,18 @@ true as asserted; the zone positions are on a different face than predicted, nul
 1 and 16 on the 1280x480, because that is the screen the VM's rig carried that day and zone C's
 cycle had grown a page. The rig's state is the recording's, like the lap history, not the scenario's.
 
-The same day, one entry went back in: `OpenDash.ThemeAimBacklight` at `white`, in all nine. The AiM
-theme (#204) and its backlight setting (#715) landed on `main` between that recording and #581's
-merge, and a scan that reads every shipped theme sees the AiM's face reading its setting. The plugin
-publishes the chosen look or the setting's default, and `white` is the default in
-`packages/dash/src/themes/aim/settings.json`, which is what a rig nobody has set publishes and what a
-re-record will write. Typed rather than recorded again because it is one constant, and the VM's half
-hour is better spent on the next property that moves.
+The same day, a second recording, because #800 had re-recorded the nine on `main` at the same
+time for its engine-readings page and the two recordings could not be spliced: a trace is one
+timeline, and a column from another recording in it is a frame that never happened. The second pass
+was taken from the merged tree and carries both sides' columns and two more that neither had. The
+AiM theme (#204) and its backlight setting (#715) had landed between the first recording and the
+merge, and a scan that reads every shipped theme sees the AiM's face reading its setting: the plugin
+publishes the chosen look or the default, and `white`, the default in
+`packages/dash/src/themes/aim/settings.json`, is what the rig nobody has set published. The
+companion's twenty-second switch, #800's page, published true like the rest. #800's six engine
+readings stand still in every scenario, oil at 81.22 and 103.2, water at 88.5, fuel pressure 4.3,
+manifold 1.02 and 13.9 volts, which is the emulator's steady engine rather than anything the
+scenarios drive. No entry is asserted in any of the nine.
 
 ## Why a recording waits two minutes first
 

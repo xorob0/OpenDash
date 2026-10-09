@@ -1,9 +1,10 @@
-/** The 21 modules in page order, plus the two zone pages that are not modules. */
+/** The 22 modules in page order, plus the two zone pages that are not modules. */
 import { MODULE_CATALOGUE } from '../contract.ts';
 import { carSettings } from './carSettings.ts';
 import { damage } from './damage.ts';
 import { delta } from './delta.ts';
 import { energy } from './energy.ts';
+import { engineReadings } from './engineReadings.ts';
 import { fuel } from './fuel.ts';
 import { gear } from './gear.ts';
 import { inputs } from './inputs.ts';
@@ -50,6 +51,7 @@ export const MODULES: readonly Module[] = [
   lapHistory,
   damage,
   trackRivals,
+  engineReadings,
 ];
 
 /** The module with this id. */
