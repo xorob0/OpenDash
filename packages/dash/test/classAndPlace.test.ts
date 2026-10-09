@@ -51,6 +51,12 @@ describe('the helper', () => {
     expect(String(read('Hypercar', 1)).split(' · ')[0]).toHaveLength(CHIP_CHARS);
   });
 
+  test('a car with no class name reads its place alone, not a separator with nothing before it', () => {
+    expect(read('', 3)).toBe('P3');
+    expect(read(null, 3)).toBe('P3');
+    expect(read(null, 0)).toBe(`P${NO_VALUE}`);
+  });
+
   test('the class and the place are read from the one car the helper is handed', () => {
     // Any car's pair can be drawn, and the two halves cannot come from two different entries.
     const expression = classAndPlace(player());
@@ -58,14 +64,52 @@ describe('the helper', () => {
   });
 });
 
+/**
+ * Class names a driver meets, as a sim reports them: iRacing's multiclass classes, the single-make
+ * series that race as a class named after the car, and the classes Assetto Corsa and ACC report.
+ * The helper keeps the first four letters of whichever it is handed, so this list, and not the
+ * chip's `LMP2`, is what the widest has to hold. A class found on a rig that the list lacks belongs
+ * here, and the test then says whether the declaration still holds it.
+ */
+const CLASS_NAMES = [
+  // Multiclass classes.
+  'GTP', 'LMP2', 'LMP3', 'LMDh', 'Hypercar', 'GTE', 'GTD', 'GT3', 'GT3 Class', 'GT4', 'GT4 Class', 'TCR', 'IMSA',
+  // Single-make classes, named after the car or its series.
+  'Porsche 911 Cup', 'PCup', 'Mustang', 'Ford GT', 'Mercedes W13', 'Mercedes-AMG', 'McLaren MP4-30', 'BMW M4 GT4',
+  'BMW M Hybrid V8', 'Lamborghini', 'Ferrari 296 GT3', 'Aston Martin', 'Audi RS 3 LMS', 'Cadillac V-Series.R',
+  'Acura ARX-06', 'Toyota GR86', 'Mazda MX-5 Cup', 'Global Mazda MX-5 Cup', 'MX-5 Cup', 'Chevrolet Camaro',
+  'Supercars', 'Formula Vee', 'Formula Renault', 'Super Formula', 'Dallara IR18', 'Dallara P217', 'Skip Barber',
+  'Ray FF1600', 'Williams FW31', 'Lotus 79', 'Radical SR8', 'Ligier JS P320', 'Porsche 963', 'Kia Optima',
+  'Renault Clio', 'Volkswagen Jetta', 'VW Beetle', 'Mini Cooper', 'NASCAR Cup', 'Xfinity', 'ARCA Menards',
+  'Legends', 'Late Model', 'Street Stock', 'Modified', 'Sprint Car', 'Silver Crown', 'Midget', 'Pro Mazda',
+  'Indy Pro 2000', 'USF 2000', 'HPD',
+  // Assetto Corsa's and ACC's classes.
+  'Race', 'Street', 'Drift', 'Vintage', 'Touring', 'Prototype', 'GT2', 'CUP', 'ST', 'CHL', 'TCX',
+];
+
 describe('the widest it declares', () => {
+  // The cut the helper makes, so a class longer than four letters is measured as it is drawn.
+  const cuts = [...new Set(CLASS_NAMES.map((name) => name.slice(0, CHIP_CHARS).toUpperCase()))];
   // The face is proportional, so the widest place is not the longest-looking one: its `4` is the
   // widest digit Barlow Condensed has, which is why the bar's `LMP2 · P24` was a pixel short.
-  const readings = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE].map((place) => `${CHIP_WIDEST} · P${place}`);
+  const places = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE];
+  const readings = cuts.flatMap((cut) => places.map((place) => `${cut} · P${place}`));
+
+  test('is a reading the helper draws for a real class, not a made-up bound', () => {
+    expect(readings).toContain(CLASS_AND_PLACE_WIDEST);
+  });
+
+  test("is wider than the chip's LMP2, which a Mustang or a Mercedes overran", () => {
+    for (const weight of ['SemiBold', 'Bold'] as const) {
+      expect(measureText(DATA_FACE[weight], `MUST · P44`, 100)).toBeGreaterThan(measureText(DATA_FACE[weight], `${CHIP_WIDEST} · P44`, 100));
+    }
+  });
 
   for (const weight of ['SemiBold', 'Bold'] as const) {
-    test(`holds every place from 1 to 99 and the placeholder, in ${weight}`, () => {
-      const limit = measureText(DATA_FACE[weight], CLASS_AND_PLACE_WIDEST, 100);
+    test(`holds every class at every place from 1 to 99 and the placeholder, in ${weight}`, () => {
+      // The advances are summed in floating point, and `LMDH` and `MUST` come to the same width in
+      // SemiBold by different sums, so a tie is read as a tie rather than as the last bit of a sum.
+      const limit = measureText(DATA_FACE[weight], CLASS_AND_PLACE_WIDEST, 100) + 1e-9;
       const wider = readings.filter((text) => measureText(DATA_FACE[weight], text, 100) > limit);
       expect(wider).toEqual([]);
     });

@@ -592,16 +592,34 @@ export const classPlace = (idx: Expr): Expr => isnull(driver('classposition', id
  * Both halves are read from the same leaderboard entry, so the class and the place cannot belong to
  * two different cars. It takes the car's index for that reason, and any car's pair can be drawn
  * from it.
+ *
+ * A car with no class name reads its place alone, `P4`, rather than a separator with nothing before
+ * it. The evaluator reads ` · P4` for an empty or null class, and an entry can carry one: the
+ * emulator's pace car does, and a session whose cars carry no class may.
  */
-export const classAndPlace = (idx: Expr): Expr =>
-  concat(chipText(carClass(idx)), str(' · P'), iff(gt(classPlace(idx), num(0)), fmt(classPlace(idx), '0'), str(NO_VALUE)));
+export const classAndPlace = (idx: Expr): Expr => {
+  const cut = chipText(carClass(idx));
+  const place = iff(gt(classPlace(idx), num(0)), fmt(classPlace(idx), '0'), str(NO_VALUE));
+  return iff(eq(cut, str('')), concat(str('P'), place), concat(cut, str(' · P'), place));
+};
 
 /**
- * The widest {@link classAndPlace} draws: the widest chip and the widest of the ninety-nine places
- * and the placeholder. `44` and not `99` or `24`, because the face is proportional and its `4` is
- * the widest digit it has; `classAndPlace.test.ts` measures every place against it.
+ * The widest {@link classAndPlace} draws: the widest four capitals a real class name is cut to, and
+ * the widest of the ninety-nine places and the placeholder.
+ *
+ * `MUST`, from Mustang, and not the chip's `LMP2`: the cut keeps whatever four letters a class starts
+ * with, and four letters with an `M` among them are wider than LMP2's, so a Mustang, a Mercedes or a
+ * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit.
+ * `LMDH` draws exactly as wide in SemiBold and is a hair narrower in Bold. `44` and not `99` or
+ * `24`, because the face is proportional and its `4` is the widest digit it has.
+ * `classAndPlace.test.ts` holds a list of class names from iRacing, Assetto Corsa and ACC and
+ * measures every cut of them at every place against this, in SemiBold and in Bold.
+ *
+ * It also sets the width of the bar's ends, and at 600 x 686 the strip's five cells now fill what
+ * the ends leave to the pixel. A class wider than `MUST` added to that list is therefore a decision
+ * about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`, would cost it.
  */
-export const CLASS_AND_PLACE_WIDEST = `${CHIP_WIDEST} · P44`;
+export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it.
