@@ -41,17 +41,17 @@ const STATUS = { good: 'GPS: GOOD', lost: 'GPS: LOST' } as const;
 /** Between a flag's end block and the page. */
 const FLAG_GAP = 6;
 
-/** What a field's caption says: its label in capitals and its unit after it, as `FUEL  L`. */
+/** What a field's caption says: its label in capitals and its unit after it, as `FUEL L`, its words spaced as every caption's are. */
 function captionOf(f: BandField): { text: string; widest: string; bind?: Expr } {
   const label = f.label.toUpperCase();
   const labelWidest = (f.labelWidest ?? f.label).toUpperCase();
-  const after = f.after === undefined ? '' : `  ${f.after}`;
-  const afterWidest = f.after === undefined ? '' : `  ${f.afterWidest ?? f.after}`;
+  const after = f.after === undefined ? '' : ` ${f.after}`;
+  const afterWidest = f.after === undefined ? '' : ` ${f.afterWidest ?? f.after}`;
   const text = `${label}${after}`;
   const widest = `${labelWidest}${afterWidest.length > after.length ? afterWidest : after}`;
   if (f.labelBind === undefined && f.afterBind === undefined) return { text, widest };
   const parts: Expr[] = [f.labelBind === undefined ? str(label) : ucase(f.labelBind)];
-  if (f.after !== undefined) parts.push(str('  '), f.afterBind ?? str(f.after));
+  if (f.after !== undefined) parts.push(str(' '), f.afterBind ?? str(f.after));
   return { text, widest, bind: concat(...parts) };
 }
 

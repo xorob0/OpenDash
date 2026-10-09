@@ -31,7 +31,7 @@ import { withMoreBindings, withoutBindings, type Expr } from '../../bind.ts';
 import { measureText } from '../../design/advances.ts';
 import { BOX_SLACK, LINE_SPACING } from '../../design/metrics.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
-import { ghostOf, GHOST_OPACITY, lcdColour, SEGMENT_FAMILY } from './register.ts';
+import { ghostOf, GHOST_OPACITY, lcdColour, SEGMENT_FAMILY, spacedWords, spacedWordsExpr } from './register.ts';
 
 const { iff, str, ucase } = ncalc;
 
@@ -40,6 +40,8 @@ const CAPTION_SCALE = 0.8;
 /** Under this a box is a bar or a rule rather than an area. */
 const THIN = 8;
 /** A chip is at most this big; a box holding text that is larger is a highlight. */
+/** No caption is set smaller than this. */
+const SMALLEST_CAPTION = 7;
 const CHIP = { width: 120, height: 40 } as const;
 /** The outline an area is drawn as. */
 const OUTLINE = 2;
@@ -86,11 +88,16 @@ interface Highlight {
 const isChip = (r: Rect): boolean => r.width <= CHIP.width && r.height <= CHIP.height;
 
 function captionOf(item: TextItem): TextItem {
-  const upper = (s: string): string => s.toUpperCase().replaceAll('·', '-').replaceAll('…', '.');
-  const widest = upper(item.widest ?? item.text);
+  const capitals = (s: string): string => s.toUpperCase().replaceAll('·', '-').replaceAll('…', '.');
   const room = item.rect.width - BOX_SLACK - 1;
-  const fit = Math.floor(room / Math.max(1e-6, measureText('DSEG14Regular', widest, 1)));
-  const size = Math.max(7, Math.min(Math.round(item.fontSize * CAPTION_SCALE), fit));
+  const fitOf = (widest: string): number => Math.floor(room / Math.max(1e-6, measureText('DSEG14Regular', widest, 1)));
+  // A box the house cut so close that the words two spaces apart do not fit it even at the smallest
+  // size keeps the house's one space, since a clipped caption reads worse than a tight one.
+  const spaced = fitOf(spacedWords('DSEG14Regular', capitals(item.widest ?? item.text))) >= SMALLEST_CAPTION;
+  const upper = (s: string): string => (spaced ? spacedWords('DSEG14Regular', capitals(s)) : capitals(s));
+  const widest = upper(item.widest ?? item.text);
+  const fit = fitOf(widest);
+  const size = Math.max(SMALLEST_CAPTION, Math.min(Math.round(item.fontSize * CAPTION_SCALE), fit));
   const height = Math.ceil(LINE_SPACING * size) + BOX_SLACK;
   // The house's capitals stand from a tenth to three quarters of its box; the segment cell is centred where they were.
   const centre = item.rect.top + 0.65 * item.fontSize;
@@ -105,7 +112,8 @@ function captionOf(item: TextItem): TextItem {
     ...(item.widest === undefined ? {} : { widest }),
     rect: { ...item.rect, top, height },
   };
-  return text === undefined ? set : withMoreBindings(set, { Text: ncalc.replace(ncalc.replace(ucase(text), '·', '-'), '…', '.') });
+  const bound = (expr: Expr): Expr => ncalc.replace(ncalc.replace(ucase(expr), '·', '-'), '…', '.');
+  return text === undefined ? set : withMoreBindings(set, { Text: spaced ? spacedWordsExpr('DSEG14Regular', bound(text)) : bound(text) });
 }
 
 function ghostFor(item: TextItem): TextItem | undefined {
