@@ -71,10 +71,11 @@ describe('ncalc helpers', () => {
 });
 
 describe('card expressions', () => {
-  test('position follower Left is x + digitCount * cell + gap', () => {
+  test('position follower Left is x + digitCount * cell + gap, and two cells for the `--` of a grid (#992)', () => {
     const left = formulaOf(textItem('position', 'denominator'), 'Left');
-    expect(left).toMatch(/^\(16\) \+ \(\(if\(.* >= \(10\), 2, 1\)\) \* \(31\)\) \+ \(8\)$/);
+    expect(left).toMatch(/^\(16\) \+ \(if\(.* > \(0\), \(if\(.* >= \(10\), 2, 1\)\) \* \(31\), 62\)\) \+ \(8\)$/);
     expect(left).toContain('driverclassposition(getplayerleaderboardposition())');
+    expect(left).toContain('driverposition(getplayerleaderboardposition())');
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
 
