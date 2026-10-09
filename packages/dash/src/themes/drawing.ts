@@ -102,10 +102,10 @@ export interface ThemeDrawing {
   /**
    * What the house draws, turned into the theme's register without moving it: every zone page, and the
    * pit family, the pop-ups, the change notifications and the lap review over the face, never the flag.
-   * `boxesInverse` says that every box holding text is a highlight, as the boxes over the face are.
-   * The AiM's monochrome LCD is the case (#204).
+   * `boxes` says how a box holding text over the face is drawn: `inverse` for the pit family's one-line
+   * banners, `outline` for the boxes over the content. The AiM's monochrome LCD is the case (#204, #751).
    */
-  restyle?(items: Item[], opts?: { boxesInverse?: boolean }): Item[];
+  restyle?(items: Item[], opts?: { boxes?: 'inverse' | 'outline' }): Item[];
   /** Whether zone A draws the gear's two neighbours ghosted beside it; the house does. */
   gearGhosts?: boolean;
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */

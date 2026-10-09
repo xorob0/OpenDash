@@ -35,8 +35,21 @@ export function lcdColour(name: 'ground' | 'ink'): Hex {
   return value as Hex;
 }
 
+/**
+ * The 14-segment face's space is a fifth of a cell, about the gap its letters already leave between
+ * them, so a caption of two words set with one reads as one word (`SPEEDKM/H`). Every space of a run
+ * in that face is therefore drawn as two, which is close to half a cell, and measured as two.
+ */
+export const WORD_SPACE = '  ';
+
+/** A run as the 14-segment face draws it, its words two spaces apart; the 7-segment faces' runs as they are. */
+export const spacedWords = (face: SegmentFace, text: string): string => (face === 'DSEG14Regular' ? text.replaceAll(' ', WORD_SPACE) : text);
+
+/** The same for a bound run, the spacing applied to whatever the expression writes. */
+export const spacedWordsExpr = (face: SegmentFace, expr: Expr): Expr => (face === 'DSEG14Regular' ? ncalc.replace(expr, ' ', WORD_SPACE) : expr);
+
 /** The width a run of a segment face takes at `fs`, with the slack WPF needs to draw its last cell whole. */
-export const segmentWidth = (face: SegmentFace, text: string, fs: number): number => Math.ceil(measureText(face, text, fs)) + boxSlack(fs);
+export const segmentWidth = (face: SegmentFace, text: string, fs: number): number => Math.ceil(measureText(face, spacedWords(face, text), fs)) + boxSlack(fs);
 
 /**
  * The house's minus is U+2212, which the seven-segment face does not carry, so a signed reading would
@@ -68,7 +81,7 @@ export function segment(name: string, face: SegmentFace, text: string, x: number
     kind: 'text',
     name,
     rect: roundRect({ left: x, top: y, width, height: segmentLine(opts.size) }),
-    text,
+    text: spacedWords(face, text),
     font: SEGMENT_FAMILY[face],
     fontWeight: face === 'DSEG7Bold' ? 'Bold' : 'Normal',
     fontSize: opts.size,
@@ -77,8 +90,8 @@ export function segment(name: string, face: SegmentFace, text: string, x: number
     vAlign: 'top',
     backgroundColor: TRANSPARENT,
     ...(opts.ghost ? { opacity: GHOST_OPACITY } : {}),
-    ...(opts.widest ? { widest: opts.widest } : {}),
-  } satisfies TextItem, { Text: opts.bind, Visible: opts.visibleBind });
+    ...(opts.widest ? { widest: spacedWords(face, opts.widest) } : {}),
+  } satisfies TextItem, { Text: opts.bind === undefined ? undefined : spacedWordsExpr(face, opts.bind), Visible: opts.visibleBind });
 }
 
 /**

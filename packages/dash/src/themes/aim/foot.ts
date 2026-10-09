@@ -41,25 +41,25 @@ const STATUS = { good: 'GPS: GOOD', lost: 'GPS: LOST' } as const;
 /** Between a flag's end block and the page. */
 const FLAG_GAP = 6;
 
-/** What a field's caption says: its label in capitals and its unit after it, as `FUEL  L`. */
+/** What a field's caption says: its label in capitals and its unit after it, as `FUEL L`, its words spaced as every caption's are. */
 function captionOf(f: BandField): { text: string; widest: string; bind?: Expr } {
   const label = f.label.toUpperCase();
   const labelWidest = (f.labelWidest ?? f.label).toUpperCase();
-  const after = f.after === undefined ? '' : `  ${f.after}`;
-  const afterWidest = f.after === undefined ? '' : `  ${f.afterWidest ?? f.after}`;
+  const after = f.after === undefined ? '' : ` ${f.after}`;
+  const afterWidest = f.after === undefined ? '' : ` ${f.afterWidest ?? f.after}`;
   const text = `${label}${after}`;
   const widest = `${labelWidest}${afterWidest.length > after.length ? afterWidest : after}`;
   if (f.labelBind === undefined && f.afterBind === undefined) return { text, widest };
   const parts: Expr[] = [f.labelBind === undefined ? str(label) : ucase(f.labelBind)];
-  if (f.after !== undefined) parts.push(str('  '), f.afterBind ?? str(f.after));
+  if (f.after !== undefined) parts.push(str(' '), f.afterBind ?? str(f.after));
   return { text, widest, bind: concat(...parts) };
 }
 
-/** The widest a reading of the field can be, in as many cells as its budget declares. */
+/** The widest a reading of the field can be, which is what its ghost shows; see `widestValue` in `modules.ts`. */
 function widestValue(f: BandField): string {
-  const base = f.numeralWidest ?? f.sample;
-  const cellsIn = [...base].filter((ch) => ch !== '.' && ch !== ':').length;
-  return '8'.repeat(Math.max(0, f.chars.digits - cellsIn)) + base;
+  if (f.numeralWidest !== undefined) return f.numeralWidest;
+  const cellsIn = [...f.sample].filter((ch) => ch !== '.' && ch !== ':').length;
+  return '8'.repeat(Math.max(0, f.chars.digits - cellsIn)) + f.sample;
 }
 
 const readingsOf = (f: BandField): { sample: string; bind: string }[] => [{ sample: f.sample, bind: f.bind }, ...(f.row ?? [])];
