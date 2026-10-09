@@ -49,7 +49,7 @@ Two related facts, both verified:
 | Last gear | `…DriverInfo.DriverCarGearNumForward` vs `GameRawData.Telemetry.Gear` | `[Gear]` is a string; the raw one is numeric |
 | Shift fallback | `GameData.CarSettings_RPMShiftLight1` / `2`, `CarSettings_RPMRedLineReached` | ADR 0004, for a car publishing no ladder |
 | Brake, throttle | `GameData.Brake`, `GameData.Throttle` | 0..100 |
-| Fuel gauge | `GameData.FuelPercent` | 0..100 |
+| Fuel gauge | `Computed.Fuel_Percent` | 0..100. Not `GameData.FuelPercent`, which the game reader computes as the sim's litres over a `MaxFuel` already converted to the profile's unit, so it reads 189 for a half tank on a gallons profile. DataCore's divides the two converted figures. #993 |
 | Low fuel | `GameData.CarSettings_FuelAlertActive` | What the native `Status.LowFuelRemainingLapsAlert` reads. SimHub computes it, so it works on iRacing |
 | ABS active | `GameData.ABSActive`, `OpenDash.WheelLock` | `(BrakeABSactive > 0)`, a real intervention unlike TC, on a car with ABS. Otherwise the plugin's lock-up estimate, while the strip's `LedInferSlip` is on — see below |
 | TC | `GameData.TCActive`, `OpenDash.WheelSpin` | The intervention where a sim reports it. On iRacing, the plugin's wheelspin estimate, while the strip's `LedInferSlip` is on — see below |

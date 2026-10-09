@@ -877,8 +877,12 @@ describe('every generated profile', () => {
         // And the low-fuel switch silences it, as it does the lamp: one signal, one switch (#791).
         expect({ at, switch: row.blinkFormula?.expression.includes(`(${setting.ledEffectOn('lowFuel')}) and (${box.raised})`) }).toMatchObject({ switch: true });
         expect({ at, level: row.enabledFormula.expression.includes('LedEffectLowFuel') }).toMatchObject({ level: false });
-        // The *height* is still FuelPercent, which is what a fuel bar is; only the threshold moved.
-        expect({ at, height: row.enabledFormula.expression.includes('FuelPercent') }).toMatchObject({ height: true });
+        // The *height* is still the tank's percentage, which is what a fuel bar is; only the threshold
+        // moved. And it is DataCore's converted one, not the game reader's, which reads 189 for a half
+        // tank on a gallons profile (#993).
+        expect({ at, height: row.enabledFormula.expression.includes(fuelPercent()) }).toMatchObject({ height: true });
+        expect({ at, height: row.enabledFormula.expression.includes('[DataCorePlugin.Computed.Fuel_Percent]') }).toMatchObject({ height: true });
+        expect({ at, gameReader: row.enabledFormula.expression.includes('GameData.FuelPercent') }).toMatchObject({ gameReader: false });
         expect({ at, fivePercent: row.blinkFormula?.expression.includes(ncalc.gt(ncalc.num(5), fuelPercent())) }).toMatchObject({ fivePercent: false });
         // 250 ms, the flag band's own half period, so the bar pulses with every other slow blink on
         // the strip rather than at a multiple of the shift constant that would move with it.

@@ -797,7 +797,11 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   `[DataCorePlugin.GameData.X]`.
 - Unit strings are enum names: `SpeedLocalUnit` `KMH`/`MPH`, `FuelUnit` `Liters`/`Gallons`,
   `TemperatureUnit` `Celcius`/`Fahrenheit`/`Kelvin`, `TyrePressureUnit` `Psi`/`Kpa`/`Bar`.
-  `Fuel`, tyre temperatures and pressures are already converted to the user's unit.
+  `Fuel`, tyre temperatures and pressures are already converted to the user's unit. `FuelPercent`
+  is not a ratio of two converted figures: `GameManagerBase.ComputreFuelStatsAndOdo` divides
+  `FuelRaw`, the sim's own litres, by `MaxFuel`, which is converted, so on a gallons profile it
+  reads 3.8 times too full. `[DataCorePlugin.Computed.Fuel_Percent]` is `Fuel / MaxFuel` and is
+  right in either unit (#993).
 - Class position: there is no player class position property. `[PlayerClassOpponentsCount]`
   gives the class car count and `driverclassposition(getplayerleaderboardposition())` the
   position in class.
