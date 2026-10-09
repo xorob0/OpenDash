@@ -74,7 +74,9 @@ export function buildThemeFace(themeId: string, size: Size, opts: FaceBuildOptio
   const layout = drawing.bandCorners === undefined ? titled : { ...titled, bandCorners: drawing.bandCorners };
   const regions = anatomy.regions(layout);
   checkRegions(regions, size, `the ${themeId} theme at ${named(size)}`);
-  return { layout, regions, built: buildZoneFace(layout, opts, regions, drawing, entry) };
+  const built = buildZoneFace(layout, opts, regions, drawing, entry);
+  const set = drawing.settings;
+  return { layout, regions, built: set ? { main: set(built.main), zones: built.zones.map(set) } : built };
 }
 
 /** Every face of a theme, one per size it claims, in the order it claims them. */

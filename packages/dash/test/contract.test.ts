@@ -6,6 +6,7 @@ import {
   BAR_SLOTS,
   DEFAULT_THEME_ID,
   THEME_CATALOGUE,
+  THEME_SETTINGS,
   FACE_SIZES,
   FACE_ZONE_LETTERS,
   facePrefix,
@@ -93,6 +94,7 @@ import {
   UPDATE_VERSION_MAX_LENGTH,
 } from '../src/contract.ts';
 import { CARDS } from '../src/cards/index.ts';
+import { choiceColours } from '../src/themes/settings.ts';
 import { ALL_EFFECTS, LED_COLOURS } from '../src/leds/effects.ts';
 
 describe('card catalogue', () => {
@@ -172,14 +174,14 @@ describe('settings', () => {
       'OpenDash.WheelLock',
       'OpenDash.TCInferred',
     ]);
-    // The lone 11 is RevBar, the blue flag detail, the two that decide how a driver is named, the
+    // The lone 12 is RevBar, the blue flag detail, the two that decide how a driver is named, the
     // idle screen's two, the class best, the clock format, the delta's precision, whether a flag
-    // shows in the pit lane and the Porsche crest's path, which every screen shares with the four
-    // modes and the twelve slots.
+    // shows in the pit lane, the Porsche crest's path and the AiM's backlight, which every screen
+    // shares with the four modes and the twelve slots.
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
-        11 +
+        12 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -225,9 +227,10 @@ describe('settings', () => {
     // position per zone so that a zone's pages can be put in any order, and a brightness and fifteen
     // effect switches for a strip. And 399 before a strip's aid lamps could read the plugin's slip
     // estimate: the strip's switch, and the three the plugin computes. And 403 before the Porsche's
-    // badge could draw the crest the plugin fetches into the user's own folder (#714). And 404
-    // before the catalogue gained the engine readings, and with them a companion switch (#752).
-    expect(props).toHaveLength(405);
+    // badge could draw the crest the plugin fetches into the user's own folder (#714). And 404 before
+    // the AiM's backlight became the driver's choice (#715), and 405 before the catalogue gained the
+    // engine readings, and with them a companion switch (#752).
+    expect(props).toHaveLength(406);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -365,6 +368,9 @@ describe('settings', () => {
         DELTA_PRECISION_SETTING,
         FLAGS_IN_PIT_LANE_SETTING,
         PORSCHE_CREST,
+        // And each theme's own settings, shared because a backlight is the driver's taste and a rig in
+        // auto mode shows whichever theme the car picks. #715.
+        'ThemeAimBacklight',
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
@@ -786,6 +792,25 @@ describe('plugin mirror', () => {
     );
     // And the folder spelled as themedFolder spells it, the one string both halves must agree on.
     expect(source).toContain('return "OpenDash " + Name + " " + width + "x" + height;');
+  });
+
+  /** The other half of `ContractTests.Theme_settings_agree_with_each_themes_settings_json_when_present` (#715). */
+  test("Contract.cs lists every theme's settings THEME_SETTINGS does, with their choices and the colours they resolve to", () => {
+    const source = pluginSource('Contract.cs');
+    const block = /ThemeSettings = new\[\]\s*\{(?<items>.*?)\n\s*\};/s.exec(source)?.groups?.items ?? '';
+    const rows = [...block.matchAll(/new ThemeSetting\("([^"]*)", "([^"]*)", "([^"]*)", "([^"]*)",(?<choices>.*?\))\),?\s*$/gms)].map((m) => ({
+      theme: m[1],
+      id: m[2],
+      name: m[3],
+      default: m[4],
+      choices: [...m.groups!.choices!.matchAll(/new ThemeSettingChoice\("([^"]*)", "([^"]*)", ((?:"[^"]*"(?:, )?)+)\)/g)].map((c) => ({ id: c[1], name: c[2], colours: [...c[3]!.matchAll(/"([^"]*)"/g)].map((h) => h[1]) })),
+    }));
+    expect(rows).toEqual(
+      Object.entries(THEME_SETTINGS).flatMap(([theme, settings]) =>
+        settings.map((s) => ({ theme, id: s.id, name: s.name, default: s.default, choices: s.choices.map((c) => ({ id: c.id, name: c.name, colours: choiceColours(theme, s.id, c) })) })),
+      ),
+    );
+    expect(source).toContain('return "Theme" + char.ToUpperInvariant(theme[0]) + theme.Substring(1) + char.ToUpperInvariant(setting[0]) + setting.Substring(1);');
   });
 
   test('Contract.cs carries the prefix, the slot count, the property names, the value sets and the defaults', () => {

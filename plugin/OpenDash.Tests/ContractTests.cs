@@ -69,7 +69,7 @@ namespace OpenDashPlugin.Tests
             // every zone of every pit wall page, the page it opens on and the page it is showing,
             // the URL, the pit wall's class filter, its flag format, and the flag box. And, since #503,
             // whether a flag shows in the pit lane, and where each zone's page sits in its own order. And,
-            // since #714, the Porsche crest's path.
+            // since #714, the Porsche crest's path. And, since #715, each theme's own settings.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             // Eight global flag box names and thirteen per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
@@ -84,7 +84,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -122,9 +122,9 @@ namespace OpenDashPlugin.Tests
             // And 399 before a strip's aid lamps could read the plugin's slip estimate: the strip's
             // switch, and the three the plugin computes because SimHub publishes none of them. And 403
             // before the Porsche's badge could draw the crest the plugin fetches into the user's own
-            // folder (#714). And 404 before the catalogue gained the engine readings, and with them a
-            // companion switch (#752).
-            Assert.Equal(405, names.Count);
+            // folder (#714). And 404 before the AiM's backlight became the driver's choice (#715), and
+            // 405 before the catalogue gained the engine readings, and with them a companion switch (#752).
+            Assert.Equal(406, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -173,7 +173,10 @@ namespace OpenDashPlugin.Tests
             // And the Porsche crest's path, published rather than chosen and shared because the file is the
             // rig's. #714.
             Assert.Equal("PorscheCrest", names[26]);
-            Assert.Equal(27, Contract.SharedPropertyNames().Count());
+            // And each theme's own settings after it, the AiM's backlight first, shared because a backlight is
+            // the driver's taste and a rig in auto mode shows whichever theme the car picks. #715.
+            Assert.Equal("ThemeAimBacklight", names[27]);
+            Assert.Equal(28, Contract.SharedPropertyNames().Count());
             Assert.True(Contract.DefaultFlagsInPitLane);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
@@ -809,6 +812,73 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("OpenDash Porsche 1280x480", Contract.Themes.Single(t => t.Id == "porsche").FolderAt(1280, 480));
         }
 
+        /// <summary>The themes' own settings, read back from each theme's settings.json and resolved in its
+        /// overlay.json: the panel draws the swatches from Contract.ThemeSettings and the packages draw the
+        /// colours from the JSON, so the two halves cannot move apart (#715).</summary>
+        [Fact]
+        public void Theme_settings_agree_with_each_themes_settings_json_when_present()
+        {
+            var path = RepoPaths.ContractTs();
+            if (!File.Exists(path)) return; // the dash package is built separately; nothing to compare yet
+            var source = File.ReadAllText(path);
+            var registry = Regex.Match(source, @"THEME_SETTINGS[^=]*=\s*\{(?<items>[^}]*)\}");
+            Assert.True(registry.Success, "THEME_SETTINGS not found in contract.ts");
+            var themes = Regex.Matches(registry.Groups["items"].Value, @"(\w+):\s*(\w+)Settings\.settings").Cast<Match>().Select(m => m.Groups[1].Value).ToList();
+            Assert.Equal(Contract.ThemeSettings.Select(s => s.Theme).Distinct(), themes);
+
+            var read = new List<Contract.ThemeSetting>();
+            foreach (var theme in themes)
+            {
+                Assert.Contains("import " + theme + "Settings from './themes/" + theme + "/settings.json';", source);
+                var folder = Path.Combine(Path.GetDirectoryName(path), "themes", theme);
+                using (var settings = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "settings.json"))))
+                using (var overlay = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(folder, "overlay.json"))))
+                {
+                    foreach (var setting in settings.RootElement.GetProperty("settings").EnumerateArray())
+                    {
+                        var tokens = setting.GetProperty("tokens").EnumerateArray().Select(t => t.GetString()).ToArray();
+                        var choices = setting.GetProperty("choices").EnumerateArray().Select(choice =>
+                        {
+                            var values = choice.GetProperty("values").EnumerateArray().Select(v => Resolved(overlay.RootElement, v.GetString())).ToArray();
+                            Assert.Equal(tokens.Length, values.Length);
+                            return new Contract.ThemeSettingChoice(choice.GetProperty("id").GetString(), choice.GetProperty("name").GetString(), values);
+                        }).ToArray();
+                        read.Add(new Contract.ThemeSetting(theme, setting.GetProperty("id").GetString(), setting.GetProperty("name").GetString(), setting.GetProperty("default").GetString(), choices));
+                    }
+                }
+            }
+
+            Func<Contract.ThemeSetting, string> spelled = s =>
+                s.Theme + "." + s.Id + " " + s.Name + " (" + s.Default + "): " + string.Join(", ", s.Choices.Select(c => c.Id + "/" + c.Name + "/" + string.Join("+", c.Colours)));
+            Assert.Equal(read.Select(spelled), Contract.ThemeSettings.Select(spelled));
+            Assert.Equal("ThemeAimBacklight", Contract.ThemeSettings[0].Property);
+            Assert.Contains("export const themeSettingName = (themeId: string, settingId: string): string => `Theme${pascal(themeId)}${pascal(settingId)}`;", source);
+            // Every default is one of its own choices, and a stored choice the setting does not offer reads as it.
+            foreach (var setting in Contract.ThemeSettings)
+            {
+                Assert.Contains(setting.Choices, c => c.Id == setting.Default);
+                Assert.Equal(setting.Default, setting.Normalise("no such choice"));
+                Assert.Equal(setting.Default, setting.Normalise(null));
+            }
+        }
+
+        /// <summary>An `{alias}` into a theme's overlay, followed to the `#RRGGBB` it names.</summary>
+        private static string Resolved(System.Text.Json.JsonElement overlay, string value)
+        {
+            var alias = Regex.Match(value ?? string.Empty, @"^\{([A-Za-z0-9_.$-]+)\}$");
+            Assert.True(alias.Success, "a theme setting's value is an alias into the overlay, not " + value);
+            var node = overlay;
+            foreach (var segment in alias.Groups[1].Value.Split('.'))
+            {
+                System.Text.Json.JsonElement child;
+                Assert.True(node.TryGetProperty(segment, out child), alias.Groups[1].Value + " is not in the overlay");
+                node = child;
+            }
+            var colour = node.GetProperty("value").GetString();
+            Assert.Matches("^#[0-9A-F]{6}$", colour);
+            return colour;
+        }
+
         private static string[] Quoted(string items)
         {
             return Regex.Matches(items, "'([^']*)'").Cast<Match>().Select(m => m.Groups[1].Value).ToArray();
@@ -908,6 +978,9 @@ namespace OpenDashPlugin.Tests
             // LedCentre and LedRpmStyle shipped. #503.
             var source = File.ReadAllText(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
             Assert.Contains("this.AttachDelegate(Contract.FlagsInPitLane, () => Settings.FlagsInPitLane);", source);
+            // And every theme's own settings, from the declaration rather than by name. #715.
+            Assert.Contains("foreach (var themeSetting in Contract.ThemeSettings)", source);
+            Assert.Contains("this.AttachDelegate(declared.Property, () => Settings.ThemeSetting(declared));", source);
             Assert.Contains("this.AttachDelegate(Contract.ZonePositionProperty(s.Namespace, captured), () => Settings.ScreenFace(s.Namespace).Position(captured));", source);
             Assert.Contains("this.AttachDelegate(Contract.LedSpotterWhole,", source);
             Assert.Contains("this.AttachDelegate(Contract.LedBrightness, () => (int?)null);", source);
