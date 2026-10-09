@@ -1338,7 +1338,7 @@ retires it after #487 rather than after this answer.
 On 2026-10-09 the rule of 2026-09-29, which put the conversion before 1.0 and retired the card path
 at it, was withdrawn in the triage of the open tickets for 1.0. The conversion starts from the two round
 artboards below, and they are not drawn, so a 1.0 gated on it could not ship; the round faces ship
-on cards instead, and #474, which keeps a round screen from being added on the Rig tab, is a 1.0
+on cards instead, and #474, which keeps a round screen from being added on the Screens page, is a 1.0
 blocker on that account. [ADR 0006](../decisions/0006-the-zone-face.md) records both amendments.
 
 Part by part, what a round face becomes:

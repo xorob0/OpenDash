@@ -140,7 +140,7 @@ and it is why `OpenDash.Slot01` to `Slot12` stay attached and undeprecated throu
 #487 lands (#170). The card path is not retired at 1.0: after the release #487 converts the round
 faces and #146 deletes the path behind them, in that order. The canvas owes two round artboards
 drawn on the new model and the plugin panel owes a round picker before the conversion can be built,
-and neither exists yet. So a round screen in 1.0 is a card face, and adding one from the Rig tab
+and neither exists yet. So a round screen in 1.0 is a card face, and adding one from the Screens page
 has to work (#474).
 
 From 2026-09-29 to 2026-10-09 this section said the opposite: that the conversion was before 1.0
