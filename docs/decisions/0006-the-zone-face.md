@@ -164,6 +164,21 @@ the round picker, are unchanged and are #487's blockers rather than reasons to w
 release. `OpenDash.Slot01`–`Slot12` stay attached and undeprecated until #487, and its release
 carries the warning about them, as #170 resolved.
 
+**Amended 2026-10-09 (#968): the round faces ship on the card model in 1.0, and the conversion
+follows the release.** The 2026-09-29 amendment is withdrawn and the rule of the 2026-09-27 one is
+restored: the card path is **not** retired at 1.0, the two round faces ship on it, and after the
+release #487 converts them and #146 deletes the path behind them, in that order. What changed is not
+the argument against two rendering models but what the conversion can start from. Its first
+obligation is `DashRound480.dc.html` and `DashRound800.dc.html` drawn on the new model, which are the
+author's to draw and do not exist, and its second is the round picker on the Screens page. The work
+cannot start, and a 1.0 gated on it would wait on the canvas rather than on this repository. #487
+was closed by the commit that wrote the 2026-09-29 amendment and not by a conversion, so it is
+reopened as the conversion, after 1.0. Shipping the round faces on cards puts the card face's own
+path in the release: a round screen that cannot be added from the Screens page (#474) is a 1.0 blocker,
+where under the 2026-09-29 rule it would have gone with the path. `OpenDash.Slot01`–`Slot12` stay
+attached and undeprecated through 1.0 and until #487, as #170 resolved, and #487's release still
+carries the warning about them.
+
 [design/zones.md](../design/zones.md) section 9 is the written form of the design, part by part, and
 is where the open questions inside it live: which of the twenty-one pages survive a 140 × 108 box, and
 whether a round face gains the full-screen flag format the rectangular faces have.

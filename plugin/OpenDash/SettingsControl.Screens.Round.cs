@@ -4,7 +4,7 @@
 //
 // The cards are the rig's twelve shared slots (Slot01 to Slot12), not this screen's: the 480 round reads the
 // first two and the 800 round the first six, so every round screen shows the same cards. Its rev ring is the
-// one row that writes the rig-wide rev bar, through its setter. The cards leave for zones on a ring in #146.
+// one row that writes the rig-wide rev bar, through its setter. The cards leave for zones on a ring in #487, after 1.0.
 using System;
 using System.Collections.Generic;
 using System.Linq;
