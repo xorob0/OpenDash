@@ -262,14 +262,14 @@ the data exists in other sims and the module should be there when someone runs o
 ### The one absence that is temporary: no session yet
 
 The centred dim block those three modules draw says something else too, and it is the opposite kind
-of absence from the table above. Twelve of the
-twenty-one modules have nothing to draw until timing exists -- lap times, delta, sectors, fuel, pit
-view, session, track, leaderboard, relative, opponents, stint and lap history -- and rather than an
-empty table they say `Leaderboard · Go into a session`, in the same centred dim block, until there is
-one. Not a value the sim cannot publish, therefore, but one it has not published yet, and the
-difference is that this notice goes away on its own. It matters because a dashboard is installed,
-opened and looked at before any session is joined, so the empty state is the product's first
-impression, and an empty leaderboard reads exactly like a leaderboard that has failed.
+of absence from the table above. Twelve of the modules have nothing to draw until timing exists --
+lap times, delta, sectors, fuel, pit view, session, track, leaderboard, relative, opponents, stint
+and lap history -- and rather than an empty table they say `Leaderboard · Go into a session`, in the
+same centred dim block, until there is one. Not a value the sim cannot publish, therefore, but one
+it has not published yet, and the difference is that this notice goes away on its own. It matters
+because a dashboard is installed, opened and looked at before any session is joined, so the empty
+state is the product's first impression, and an empty leaderboard reads exactly like a leaderboard
+that has failed.
 
 The declaration is `needsSession` in `MODULE_CATALOGUE`, one line per module, so a module added later
 answers the question by existing; `defineModule` composes the two halves from it through

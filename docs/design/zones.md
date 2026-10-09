@@ -315,7 +315,7 @@ because a row mixes sizes, unless the page asks them to share their top edge ins
 sits where the shape puts it: a zone narrow enough for one column centres what is in it, and a wider
 one draws from its left edge. A page may also spread its ranks over the whole height rather than
 centring them as one block, which is what the catalogue's own wrappers do for eight of the
-twenty-one pages; section 10 records that this choice belongs to the page and not to the shape.
+pages; section 10 records that this choice belongs to the page and not to the shape.
 
 **What a box too short takes off is the page's declaration, not its last row.** The stack sheds the
 least important id the shedding table names, one at a time, and builds the rank again without it;
@@ -979,7 +979,7 @@ his own class by construction.
 ### The counter
 
 **A zone's header counts its cycle, not its catalogue.** A zone with three pages enabled reads
-"2 / 3" and not "15 / 21": the mask is what decides how long the cycle is, so it is what the
+"2 / 3" and not "15 / 22": the mask is what decides how long the cycle is, so it is what the
 counter counts.
 
 The counter is drawn by the face rather than by the zone, because
@@ -987,7 +987,7 @@ zones B and C share one dashboard file where they are the same rectangle, and a 
 know whose mask is deciding its length. The length is in the expression, which is what
 [ADR 0009](../decisions/0009-does-the-plugin-compute.md) settled: a popcount is
 `truncate(mask / 2^i) % 2` summed over the catalogue, and the mask is a property that already
-exists. Without the plugin, the mask reads as its default and the counter says "n / 21".
+exists. Without the plugin, the mask reads as its default and the counter counts the whole catalogue.
 
 **The position is the plugin's since #791.** The panel lets a driver arrange a zone's pages as well
 as tick them, so "this is the third of five" depends on an order, and an expression cannot read an
@@ -1271,7 +1271,7 @@ Four things the earlier artboard did not settle, and what the panel does about e
 
 | | |
 |---|---|
-| **The mask had no control drawn.** | It is the setting that decides how long a driver's cycle is. Each zone cell reads its count, "4 of 21", and the zone's aside lists every page to tick and drag into order, with All and None, and Show all or Only ticked. The `Screens` artboard draws this now. |
+| **The mask had no control drawn.** | It is the setting that decides how long a driver's cycle is. Each zone cell reads its count, "4 of 22", and the zone's aside lists every page to tick and drag into order, with All and None, and Show all or Only ticked. The `Screens` artboard draws this now. |
 | **Nor had the class filter.** | "My class only", in the aside of each zone where a page would change. Zone A alone is offered none. |
 | **An end of the bar carries two fields.** | The info bar's aside has a picker for each field, rather than two boxes on the picture. |
 | **Nothing said what happens to a zone sitting on a page that is then turned off.** | It snaps *forward* to the next enabled page, wrapping once, because a cycle runs forward and the next press carries on rather than repeats. Unticking a zone's last page is refused: a zone with an empty cycle has nothing to draw. |
@@ -1350,7 +1350,7 @@ Part by part, what a round face becomes:
 **Which pages a round zone may show is the work's to answer, not this section's.** A 140 × 108 box is
 far smaller than any zone a rectangular face gives, and rule 17 in [§2](#2-the-shape-model) says a
 page answers to the shape of its box, shedding or shrinking rather than drawing outside it. So the
-catalogue of a round zone is whatever survives that box, and not the twenty-one by declaration. Counting it needs the boxes measured against the pages
+catalogue of a round zone is whatever survives that box, and not every page by declaration. Counting it needs the boxes measured against the pages
 the way `secondScreens.test.ts` measures the module shapes, which is part of the conversion.
 
 **The canvas is owed two artboards, and it is not this repository's to draw.** `DashRound480.dc.html`
@@ -1402,7 +1402,7 @@ a mistake in this document.
 | The hero that never moves | The Main artboard reads "Gear, speed, rev bar, flag and pit limiter are fixed per layout. Every other value is a card". **It predates the model**: zone A cycles four pages under ADR 0006, so the gear gives way to the speed or to the track map on a button press, and the speed was card 12 rather than part of the hero even under the model the sentence describes. Only the rev bar, the flag and the pit limiter are fixed on the zone face. The sentence wants marking superseded, as the DashComponents slot numbers already are. |
 | DashComponents' zone A | The component sheet calls zone A "fixed on every layout" and describes the rev bar 40 tall in its well over a 1 px rule, the gear alone, a flag band 40 tall at the bottom edge and the limiter above the gear. That is the card face, which still builds and still draws precisely that. **The zone face follows the Zones artboards instead**: a 56 px bar of settled values takes the place of the rule under the rev bar, the segments are 32 tall inside a 40 px well, and the flag takes band D's sixty pixels rather than a strip of its own. The section wants the same superseded marking as its slot numbers. |
 | The same five parts on every face | The catalogue's anatomy says the five parts differ only in size from one rectangular face to the next. Two of the per-size artboards draw otherwise: 800 × 286 has no bar at all, which leaves four parts, and 600 × 686 stacks A over B over C rather than setting B beside A beside C. **The per-size artboards are taken**, being the more specific drawing, and §1 tabulates both departures. |
-| The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every one of the twenty-one a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
+| The gap chips on the face sheets | Each `FaceVariants` sheet counts the pages that do not fit its rectangle as the catalogue draws them, and the 1280 × 720 and 1280 × 480 sheets give every page they draw a shed count of nought. The catalogue's own `tall` drawings do shed: sectors keeps two of its three lap times, a leaderboard row loses its best and its last, and the opponents blocks lose the car number. **The drawings are taken**, since §5 was read off them; the counts are annotation over the top of them. |
 | Lap times at `tall narrow` | The catalogue draws two times at 34 px in a 274 × 300 zone and leaves 234 px of it empty. **Four are taken**, one per line and grown to 45 px, 55 with the rev bar off, because the box the drawing answers is a real zone on the base face and a driver reads it at arm's length. The redraw is the canvas's to make and [#330](https://github.com/xorob0/OpenDash/issues/330) holds it open: the live canvas still drew two times at 34 on 29 September. |
 | Session's sixth field | The catalogue labels it *Est. laps* at `wide` and at `tall`, where the build labels it *Laps left*. **The build's label is kept**, on two grounds. Firstly, the value behind it is `RemainingLaps`, which is the session's own count of laps still to run, and no research note here describes that property as an estimate, so *Est.* would be a claim the datum does not make. Secondly, *Est. laps* is already the label of the fuel page's sixth field, where it carries `Computed.Fuel_RemainingLaps`, that is to say the range left in the tank; two pages drawing the same two words over two different quantities is precisely the confusion the rename would introduce. Either the catalogue renames this one, or the session field is rebound to something that is genuinely estimated. |
 | Session's third rank | The catalogue draws Strength, Incidents and Cars at `wide` and at `tall`, and **two of the three are built**. Strength of field is left out under [ADR 0009](../decisions/0009-does-the-plugin-compute.md), which found it published by SimHub in no form at all and struck it from the bar's catalogue of end fields for the same reason. The row is therefore two fields wide rather than three, and it closes over the hole the way [§11](#11-a-field-that-is-not-there) describes. |
@@ -1457,7 +1457,7 @@ lists the same things.
 |---|---|
 | The two arrangements, rev bar on and rev bar off | **Built**, as the two screens of one `.djson` with complementary `ScreenEnabledExpression`s. |
 | Zone A's four pages, A1 to A4 | **Built**, as `zoneface-zoneA-340x320` and again at 340 × 361 for the second arrangement. Three of the four carry a `proposed` chip on the sheet and are built regardless, the fourth being the catalogue's own track page. |
-| Twenty-one pages for zone B and twenty-one for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
+| Every page for zone B and every page for zone C | **Built**, as the one `zoneface-module-469x320` both zones point at, and again at 469 × 361. |
 | Band D's eight pages, D1 to D8 | **Built**, as `zoneface-band-1280x60`. What D8 is still short of is in the table above. |
 | The flag over the band, in six colours | **Built, and wider than the sheet asks**: `flagStrip` draws all twenty conditions of `ALERT_CATALOGUE` over band D's rectangle, the fifteen flags and five car alerts, in the four shapes of the alert catalogue and the meatball's disc, where the sheet draws the six SimHub normalises. The black family keeps a `surface.base` ground rather than its own token, which is the ink. |
 | The alert catalogue's car alerts | **Built from the five iRacing publishes, with three departures the author owes a ruling on** (#762). The ignition sits above the stalled engine, where PagesAndAlerts numbers them 2 and 1, because the pit family already ranked them that way and a face should not answer the same pair in two orders either side of the pit entry. The incident was a fourth, outlined where the sheet fills it because `purpose.alert.incident` and `purpose.flag.orange` are both `#FFB300` and the meatball was the filled band in it; since [#498](https://github.com/xorob0/OpenDash/issues/498) the meatball is a disc of that amber on the near-black, and the incident is filled as the sheet draws it. Push to pass and the headlight flash are drawn only where their name is written, because `purpose.alert.p2p` is white: filled it is the white flag and outlined the black family, and the nano, a sixteen-pixel block and the full-screen block would draw it without the word. And "Push to pass · 3 left" is written without the count, which iRacing publishes with two meanings by session type. The tokens are left as they are; the canvas either gives the two neutral alerts colours of their own or accepts these shapes. |
@@ -1519,9 +1519,8 @@ target, verified in [research/simhub-dash-format.md](../research/simhub-dash-for
 [scope.md](../scope.md) is what OpenDash is and what it refuses to be.
 [ADR 0006](../decisions/0006-the-zone-face.md) is why the model changed.
 [brand.md](brand.md) is the reasoning behind the colours and the type.
-[#327](https://github.com/xorob0/OpenDash/issues/327) is one ticket per page: what each of the twenty-one
+[#327](https://github.com/xorob0/OpenDash/issues/327) is one ticket per page: what each
 would have to change to put the reading a driver needs first.
-[second-screens.md](../second-screens.md) is the companion and the pit wall, which share the
-twenty-one pages.
+[second-screens.md](../second-screens.md) is the companion and the pit wall, which share the pages.
 [research/simhub-dash-format.md](../research/simhub-dash-format.md) is what SimHub actually does,
 and is the place to check before guessing.

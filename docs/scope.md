@@ -63,7 +63,7 @@ a recessed well, a bar of settled values, a body of zone B, zone A and zone C, a
 the foot.
 
 Each zone shows **one page at a time from its own catalogue, and a wheel button cycles it**. Zone
-A chooses among four pages built around the gear; zones B and C among the twenty-one that also
+A chooses among four pages built around the gear; zones B and C among the module pages that also
 serve the companion and the pit wall; band D among eight that suit a wide short band, with a flag
 taking the band over for three seconds when it comes out and then settling into the block at each
 end until it clears. The bar is not a zone and does not cycle: it carries what
@@ -144,10 +144,9 @@ model and the plugin panel owes a round picker before the conversion can be buil
 ### The companion
 
 A phone or tablet beside the wheel showing one module at a time, in landscape at 850 x 480 or in
-portrait at 480 x 850. There are twenty-one modules, each of which is its own SimHub screen with
-its own switch in the plugin, and a module that is switched off is removed from SimHub's
-next-and-previous ring rather than left as an empty page. Paging is a wheel button bound to
-SimHub's own screen navigation.
+portrait at 480 x 850. Each module is its own SimHub screen with its own switch in the plugin, and
+a module that is switched off is removed from SimHub's next-and-previous ring rather than left as an
+empty page. Paging is a wheel button bound to SimHub's own screen navigation.
 
 ### The pit wall
 
@@ -227,7 +226,7 @@ and it states how far the line moved and what would move it further.
 The settings are the shift lights, the position mode, the delta reference and the places the delta
 is drawn to, the session progress mode, the four zones of the face (the page each shows, which pages
 are enabled, and the page it opens on), the quick glance, the bar's four end fields, twelve card
-slots, twenty-one companion module switches, five pit wall zone assignments and a web view address.
+slots, a switch for each companion module, five pit wall zone assignments and a web view address.
 Because they are ordinary SimHub properties, another dashboard or an LED profile can read them, and
 a change reaches the running dashboard at once without restarting SimHub or reopening the dashboard.
 
