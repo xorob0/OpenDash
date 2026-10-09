@@ -152,3 +152,53 @@ describe('the race length after a lap', () => {
     }
   });
 });
+
+describe('a right-hand lap without its length', () => {
+  // A right-hand slot lays its denominator against the padding and the figure in front of it, so a
+  // hidden denominator would leave the figure standing its room off the edge the label and the next
+  // field are drawn against. The figure moves to that edge while the length is not drawn.
+  const ends = PACKAGES.flatMap(({ pkg }) =>
+    pkg.dashboards.flatMap((dashboard) => {
+      const items = texts(itemsOf(dashboard));
+      const find = (name: string): TextItem => {
+        const found = items.find((i) => i.name === name);
+        if (!found) throw new Error(`${pkg.folderName} / ${dashboard.name}: no ${name}`);
+        return found;
+      };
+      return items
+        .filter((i) => /^bar\.Right\d\.lap\.value$/.test(i.name))
+        .map((value) => ({
+          where: `${pkg.folderName} / ${dashboard.name} / ${value.name}`,
+          value,
+          label: find(value.name.replace(/value$/, 'label')),
+          denominator: find(value.name.replace(/value$/, 'denominator')),
+        }));
+    }),
+  );
+
+  /** Where the item's box ends in `frame`, its `Left` binding evaluated when it has one. */
+  const rightEdge = (item: TextItem, frame: Props): number => {
+    const left = item.bindings?.Left?.formula;
+    const x = typeof left === 'string' ? Number(evalNcalc(left, { ...frame, ...settings(item, 'auto') })) : item.rect.left;
+    return x + item.rect.width;
+  };
+
+  test('is drawn in every package that has a bar', () => {
+    expect(ends.length).toBeGreaterThan(10);
+  });
+
+  test('a timed race and an open practice draw the figure against the edge its label is drawn against', () => {
+    for (const { where, value, label } of ends) {
+      for (const [frame, props] of [['timed', TIMED], ['open', OPEN]] as const) {
+        expect({ where, frame, right: rightEdge(value, props) }).toEqual({ where, frame, right: label.rect.left + label.rect.width });
+      }
+    }
+  });
+
+  test('a race counted in laps draws the figure where it was designed, clear of its length', () => {
+    for (const { where, value, denominator } of ends) {
+      const right = rightEdge(value, LAPPED);
+      expect({ where, right, clear: right <= denominator.rect.left }).toEqual({ where, right: value.rect.left + value.rect.width, clear: true });
+    }
+  });
+});

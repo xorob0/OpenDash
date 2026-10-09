@@ -35,6 +35,7 @@ import {
   antiRollFront,
   fieldSize,
   currentLap,
+  hasLapTotal,
   incidents,
   localClock,
   meridiemWidest,
@@ -44,7 +45,6 @@ import {
   playerClass,
   sessionClock,
   simClock,
-  hasLapTotal,
   totalLaps,
   twelveHour,
   untimedMark,
@@ -401,6 +401,11 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
       // the padding while it is not: its design-time place is the one without the word, which is
       // what every rig draws until the setting is changed.
       const withoutSuffix = align === 'right' && spec.suffix ? x + widest - value : undefined;
+      // A denominator that is there only while `when` holds leaves the same hole: the lap's `/ 32`
+      // in a timed race, where the figure would otherwise stand a denominator's room off the edge
+      // its label is drawn against. Its design-time place is the one with the count, which is what
+      // the sample draws.
+      const withoutDenominator = align === 'right' && spec.denominator?.when !== undefined ? x + widest - value : undefined;
       items.push(
         withMoreBindings(
           numeral(`${name}.value`, spec.sample, withoutSuffix ?? valueX, valueTop, valueSize, spec.chars, {
@@ -411,7 +416,12 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
           {
             Visible: unmarked(spec.mark, visible),
             Text: spec.bind,
-            Left: withoutSuffix === undefined || !spec.suffix ? undefined : iff(spec.suffix.when, num(valueX), num(withoutSuffix)),
+            Left:
+              withoutSuffix !== undefined && spec.suffix
+                ? iff(spec.suffix.when, num(valueX), num(withoutSuffix))
+                : withoutDenominator !== undefined && spec.denominator?.when !== undefined
+                  ? iff(spec.denominator.when, num(valueX), num(withoutDenominator))
+                  : undefined,
           },
         ),
       );

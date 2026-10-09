@@ -23,6 +23,7 @@ import {
   classOpponentCount,
   currentLap,
   fieldSize,
+  hasLapTotal,
   incidents,
   lapsLeft,
   player,
@@ -31,7 +32,6 @@ import {
   sessionClock,
   sessionType,
   showsTimeLeft,
-  hasLapTotal,
   totalLaps,
   untimedMark,
 } from '../second/values.ts';
