@@ -336,7 +336,7 @@ exports[`card snapshots card 4 position 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+          "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
         },
         "Mode": 2
       }
@@ -374,7 +374,7 @@ exports[`card snapshots card 4 position 1`] = `
       },
       "Left": {
         "Formula": {
-          "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (31)) + (8)"
+          "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (31), 62)) + (8)"
         },
         "Mode": 2
       }
@@ -5272,7 +5272,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
         "Bindings": {
           "Text": {
             "Formula": {
-              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+              "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
             },
             "Mode": 2
           },
@@ -10926,7 +10926,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -13904,7 +13904,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -13942,7 +13942,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (31)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (31), 62)) + (8)"
               },
               "Mode": 2
             }
@@ -19039,7 +19039,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -21421,7 +21421,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -21459,7 +21459,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -26380,7 +26380,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -29002,7 +29002,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -29040,7 +29040,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -33676,7 +33676,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -35685,7 +35685,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -35723,7 +35723,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -40344,7 +40344,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -42308,7 +42308,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -42346,7 +42346,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -47177,7 +47177,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -49675,7 +49675,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -49713,7 +49713,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -57691,7 +57691,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -57729,7 +57729,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(12) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(12) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -62245,7 +62245,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
               "Bindings": {
                 "Text": {
                   "Formula": {
-                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), ('P') + (format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0')) + (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))), '')))"
+                    "Expression": "if((if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')) = (''), 'BLUE', ('BLUE · ') + (if(isnull(driveravailable(getopponentleaderboardposition_aheadbehind(1)), false), (('P') + (if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0))) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getopponentleaderboardposition_aheadbehind(1)), 0), isnull(driverposition(getopponentleaderboardposition_aheadbehind(1)), 0)), '0'), '--'))) + (if((ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))) = (''), '', (' ') + (ucase(left(isnull(drivercarclass(getopponentleaderboardposition_aheadbehind(1)), ''), 0, 4))))), '')))"
                   },
                   "Mode": 2
                 },
@@ -64059,7 +64059,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -64097,7 +64097,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(16) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(16) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }
@@ -69184,7 +69184,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -69222,7 +69222,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(12) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (16)) + (8)"
+                "Expression": "(12) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (16), 32)) + (8)"
               },
               "Mode": 2
             }
@@ -75015,7 +75015,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0')"
+                "Expression": "if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), format(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), '0'), '--')"
               },
               "Mode": 2
             }
@@ -75053,7 +75053,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "Left": {
               "Formula": {
-                "Expression": "(12) + ((if((if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position])) >= (10), 2, 1)) * (22)) + (8)"
+                "Expression": "(12) + (if((isnull(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) > (0), (if((round(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull(driverclassposition(getplayerleaderboardposition()), [DataCorePlugin.GameData.Position]), [DataCorePlugin.GameData.Position]), 0)) >= (10), 2, 1)) * (22), 44)) + (8)"
               },
               "Mode": 2
             }

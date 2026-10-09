@@ -71,9 +71,9 @@ describe('ncalc helpers', () => {
 });
 
 describe('card expressions', () => {
-  test('position follower Left is x + digitCount * cell + gap', () => {
+  test('position follower Left is x + digitCount * cell + gap, or the two cells of the placeholder before a place (#931)', () => {
     const left = formulaOf(textItem('position', 'denominator'), 'Left');
-    expect(left).toMatch(/^\(16\) \+ \(\(if\(.* >= \(10\), 2, 1\)\) \* \(31\)\) \+ \(8\)$/);
+    expect(left).toMatch(/^\(16\) \+ \(if\(.* > \(0\), \(if\(.* >= \(10\), 2, 1\)\) \* \(31\), 62\)\) \+ \(8\)$/);
     expect(left).toContain('driverclassposition(getplayerleaderboardposition())');
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
