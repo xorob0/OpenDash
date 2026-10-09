@@ -40,13 +40,13 @@ mistake with nothing to catch it.
 Rows of fields shrink their gaps and then wrap, so a row of three lap times is one line on the
 850 px companion and two on the 480 px portrait one. No module has a portrait variant.
 
-There are twenty-one modules; `packages/dash/src/contract.ts` lists them and the plugin mirrors
+There are twenty-two modules; `packages/dash/src/contract.ts` lists them and the plugin mirrors
 the list. Module 17 draws the gear alone: a module shows one thing, which is the rule the dash
 face follows too, and the speed has the speedo module.
 
 ## The companion
 
-One dashboard, twenty-one screens, one per module in catalogue order. Each screen carries a
+One dashboard, twenty-two screens, one per module in catalogue order. Each screen carries a
 header (module name, page counter, position, lap), the module, a row of page dots and a compact
 flag band.
 
@@ -239,6 +239,7 @@ has not arrived yet.
 | Virtual energy (module 6) | A Le Mans Ultimate feature. SimHub's ERS members are never filled by the iRacing reader. |
 | Damage (module 20) | iRacing publishes no damage values. SimHub's damage members are filled with zeros, so a body diagram drawn from them would show an undamaged car after a crash. |
 | Track rivals (module 21) | SimHub times sectors, not segments, and has no notion of a rival's time over the stretch of track you are on. |
+| Fuel pressure, voltage and manifold pressure off iRacing (module 22) | SimHub normalises the water and oil temperatures and the oil pressure for every sim, and has no name for the other three, so they are read from iRacing's own telemetry and read as no data on any other sim. |
 | Mini-sectors | SimHub has no subdivision below a sector. The sector strip has one cell per real sector. |
 | Class header bands | Per-class rows exist only for the player's class (above). |
 | The gain-and-loss bar on the opponents module | It needs a history of the gap, which neither SimHub nor a generated dashboard keeps. The gap itself, refreshed every frame, says the same thing. |
@@ -312,7 +313,7 @@ module is drawn in.
 
 ```
 packages/dash/src/second/     density, fields, chips, gauges, traces, tables, wheels, sectors, headers
-packages/dash/src/modules/    the 21 modules, plus the web view and the wide car-telemetry page
+packages/dash/src/modules/    the 22 modules, plus the web view and the wide car-telemetry page
 packages/dash/src/screens/    the four packages: companion, companion portrait, pit wall, pit wall portrait
 ```
 

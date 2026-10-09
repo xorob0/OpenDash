@@ -1484,7 +1484,7 @@ export function cardMeta(id: string): CardMeta {
 /**
  * A companion module: one page of the companion dashboard, and also the content of a pit wall
  * zone when the zone list names it. Numbers are 1-based because the companion header counts
- * "n / 21" and the plugin's toggles are `CompanionModule01`..`21`.
+ * "n / 22" and the plugin's toggles are `CompanionModule01`..`22`.
  */
 export interface ModuleMeta {
   number: number;
@@ -1505,7 +1505,7 @@ export interface ModuleMeta {
 }
 
 /**
- * The 21 modules in page order. Three are off by default because iRacing does not carry their
+ * The 22 modules in page order. Three are off by default because iRacing does not carry their
  * data: virtual energy is a Le Mans Ultimate feature, iRacing reports no damage values at all,
  * and per-segment rival timing is not a SimHub property. They ship as honest "not available"
  * pages rather than as invented numbers, so a user on another sim can still switch them on.
@@ -1513,6 +1513,9 @@ export interface ModuleMeta {
  * Module 17 draws the gear alone. The design sheet paired it with the speed, but a module shows
  * one thing: the speed has the speedo module, and the dash face settled the same question when
  * its hero became the gear alone.
+ *
+ * Module 22 came last because an added page goes at the catalogue's end (ADR 0015), so that no page
+ * leaves the index a driver's zone setting already holds (#752).
  */
 export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 1, id: 'lapTimes', name: 'Lap times', description: 'Last, session best and your best, with laps, estimate and delta.', enabled: true, needsSession: true },
@@ -1536,6 +1539,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to the session best.', enabled: true, needsSession: true },
   { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false, needsSession: false },
   { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false, needsSession: false },
+  { number: 22, id: 'engineReadings', name: 'Engine readings', description: 'Water and oil temperatures, oil and fuel pressure, voltage and manifold pressure.', enabled: true, needsSession: false },
 ];
 
 /** How many modules the companion cycles through; the header counter says "n / MODULE_COUNT". */
@@ -1554,7 +1558,7 @@ export function moduleAt(number: number): ModuleMeta {
   return meta;
 }
 
-/** `CompanionModule01` .. `CompanionModule21` for a 1-based module number. */
+/** `CompanionModule01` .. `CompanionModule22` for a 1-based module number. */
 export function moduleSettingName(number: number): string {
   moduleAt(number);
   return `CompanionModule${String(number).padStart(2, '0')}`;
@@ -1702,7 +1706,7 @@ export const COMPANION_FLAG_FORMAT_SETTING = 'CompanionFlagFormat';
 /**
  * Every property the companion owns, in the order the plugin attaches them.
  *
- * The twenty-one module switches, and then the page. The page is appended rather than inserted for
+ * The twenty-two module switches, and then the page. The page is appended rather than inserted for
  * the reason every other name is: both halves of the contract assert this group by index.
  */
 export function companionProperties(): string[] {
@@ -1716,7 +1720,7 @@ export function companionProperties(): string[] {
  * These carry a `PIT_WALL_` prefix because the dash face now has zones of its own, and the two
  * are deliberately different catalogues. A pit wall zone is chosen with a mouse by somebody who
  * is not driving, in a 607 by 158 strip, and its list includes a web view that no face would ever
- * show. A face zone is cycled with a thumb at speed and draws from the full twenty-one. Merging
+ * show. A face zone is cycled with a thumb at speed and draws from the full twenty-two. Merging
  * them would mean either offering a driver a browser page or denying a spotter one.
  */
 export interface PitWallZonePageMeta {

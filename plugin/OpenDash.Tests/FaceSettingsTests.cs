@@ -127,7 +127,7 @@ namespace OpenDashPlugin.Tests
             var face = new FaceSettings { Orders = new[] { new[] { 3, 1 }, new[] { 20, 20, 99, -1, 0 }, null, new[] { 7, 6, 5, 4, 3, 2, 1, 0 } } };
             face.Normalise();
             Assert.Equal(new[] { 3, 1, 0, 2 }, face.Order("A"));
-            Assert.Equal(new[] { 20, 0 }.Concat(Enumerable.Range(1, 19)), face.Order("B"));
+            Assert.Equal(new[] { 20, 0 }.Concat(Enumerable.Range(1, 19)).Concat(new[] { 21 }), face.Order("B"));
             Assert.Equal(Identity("C"), face.Order("C"));
             Assert.Equal(new[] { 7, 6, 5, 4, 3, 2, 1, 0 }, face.Order("D"));
 

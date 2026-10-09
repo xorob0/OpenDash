@@ -180,7 +180,7 @@ const blockHeight = (qs: readonly Quantity[]): number => qs.reduce((h, q) => h +
  */
 const KPA_PER_PSI = 6.894757;
 const PSI_PER_KPA = 0.1450377;
-const PSI_PER_BAR = 14.503774;
+export const PSI_PER_BAR = 14.503774;
 
 /**
  * The pressure read a second way, which is what makes the wide page "tyres with both units": the
