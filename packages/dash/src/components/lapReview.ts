@@ -65,11 +65,12 @@ import {
   player,
   previousLap,
   previousLapDelta,
+  secondsOf,
   sessionType,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { and, concat, eq, fmt, game, iff, isnull, lt, num, or, signed, str, sub, timespanToSeconds, ucase } = ncalc;
+const { and, concat, eq, fmt, game, iff, isnull, lt, num, or, signed, str, sub, ucase } = ncalc;
 
 /** The density the canvas draws this panel at: 116 over a 15 px label, 46, 13, and 24 between a pair. */
 const DENSITY = 'companion';
@@ -116,7 +117,7 @@ export const LAP_REVIEW_SECONDS = ds.indicator.lapReview.durationMs / 1000;
  * duration would read as though the two were one decision.
  */
 export const lapReviewAtTheLine = (): Expr =>
-  and(hasTime(lastLap()), lt(timespanToSeconds(isnull(game('CurrentLapTime'), num(0))), num(LAP_REVIEW_SECONDS)));
+  and(hasTime(lastLap()), lt(secondsOf(game('CurrentLapTime')), num(LAP_REVIEW_SECONDS)));
 
 /**
  * Whether this face wants the review in the session being driven.
@@ -165,8 +166,8 @@ const vsSessionBest = (): Expr => iff(hasTime(lastLap()), signed(isnull(previous
  * against it would be nought on every lap of every race; the lap before it is slot one, and until
  * there have been two laps there is nothing to compare and the field says so.
  */
-const previousLapSeconds = (): Expr => timespanToSeconds(isnull(previousLap(num(1)), num(0)));
-const vsPreviousSeconds = (): Expr => sub(timespanToSeconds(isnull(lastLap(), num(0))), previousLapSeconds());
+const previousLapSeconds = (): Expr => secondsOf(previousLap(num(1)));
+const vsPreviousSeconds = (): Expr => sub(secondsOf(lastLap()), previousLapSeconds());
 const vsPrevious = (): Expr => iff(and(hasTime(lastLap()), hasTime(previousLap(num(1)))), signed(vsPreviousSeconds(), '0.00'), str(NO_VALUE));
 
 /** A delta field of the panel: 46 px, coloured by the comparison rather than by a second reading of it. */
