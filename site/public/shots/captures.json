@@ -407,6 +407,17 @@
       "commit": "3720e1e",
       "date": "2026-09-22",
       "simHubVersion": "9.12.6"
+    },
+    "page-engineReadings.png": {
+      "kind": "page",
+      "page": "engineReadings",
+      "width": 850,
+      "height": 480,
+      "scenario": "green",
+      "version": "0.3.0-rc.12",
+      "commit": "705d4bcf",
+      "date": "2026-10-09",
+      "simHubVersion": "9.12.6"
     }
   }
 }

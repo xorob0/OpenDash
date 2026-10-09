@@ -18,7 +18,7 @@
  *
  * Every module screen is an in-game screen and nothing else, and the dashboard ends with one idle
  * screen (`idle.ts`). SimHub filters screens by role only when the roles differ between them, which
- * they now do, so while a game runs the twenty-one are the whole ring and the tap still pages them,
+ * they now do, so while a game runs the twenty-two are the whole ring and the tap still pages them,
  * and between sessions the ring is the idle screen alone. Before there was an idle screen the roles
  * were identical and a companion at rest drew a module full of dashes; #113.
  */
@@ -52,8 +52,8 @@ export interface CompanionSize {
 
 /** The two companion packages: the tablet in landscape and the phone stood on end. */
 export const COMPANION_SIZES: readonly CompanionSize[] = [
-  { folder: 'OpenDash Companion', width: 850, height: 480, description: '850 x 480, 21 modules' },
-  { folder: 'OpenDash Companion portrait', width: 480, height: 850, description: '480 x 850, 21 modules' },
+  { folder: 'OpenDash Companion', width: 850, height: 480, description: '850 x 480, 22 modules' },
+  { folder: 'OpenDash Companion portrait', width: 480, height: 850, description: '480 x 850, 22 modules' },
 ];
 
 /** Where each part of a companion screen goes. */

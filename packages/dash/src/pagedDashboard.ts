@@ -11,7 +11,7 @@
  *
  * What is *not* shared is the catalogue, the chrome and the setting. A pit wall zone is chosen with
  * a mouse by somebody who is not driving and its list includes a web view; a face zone is cycled
- * with a thumb at speed and draws from the twenty-one modules. Those stay where they are; only the
+ * with a thumb at speed and draws from the twenty-two modules. Those stay where they are; only the
  * shape of the file and the shape of the widget are one thing.
  *
  * Where this file finally lives is #151's question, along with the rest of what `second/` holds.
