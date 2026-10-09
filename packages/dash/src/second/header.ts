@@ -24,9 +24,9 @@ import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { charsOfText, drawnAfter, drawnFigure, textWidth, type DrawnFigure } from './drawn.ts';
 import { CHARS, LAP_TOTAL_WIDEST, LAP_WIDEST, carPosition,
-  positionLabelled, positionLabelledDrawn, currentLap, fieldSize, player, totalLaps } from './values.ts';
+  positionLabelled, positionLabelledDrawn, currentLap, fieldSize, hasLapTotal, player, totalLaps } from './values.ts';
 
-const { add, concat, str, fmt, iff, gt, num } = ncalc;
+const { add, concat, str, fmt, iff, num } = ncalc;
 
 /** Height of the companion header, and the padding either side of it. */
 export const COMPANION_HEADER = { height: 56, padX: 24, gap: 12, groupGap: 20 } as const;
@@ -132,7 +132,9 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     valueY,
     fs,
     density,
-    gt(totalLaps(), num(0)),
+    // The race's length, which `TotalLaps` is only in a race counted in laps: in a timed iRacing race
+    // it is the leader's laps, and `L12 / 14` told the driver the race ended in two (#989).
+    hasLapTotal(),
   );
   const position = pair(`${name}.position`, 'P24', 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;

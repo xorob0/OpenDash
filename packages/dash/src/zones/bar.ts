@@ -44,6 +44,7 @@ import {
   playerClass,
   sessionClock,
   simClock,
+  hasLapTotal,
   totalLaps,
   twelveHour,
   untimedMark,
@@ -100,9 +101,12 @@ interface BarFieldSpec {
   mark?: Mark;
   /**
    * A second, dimmer value after the first, as "3 / 22" and "4 / 32" are drawn. `widest` is the
-   * longest it can read, which the fit tests measure it by; `chars` has to hold it.
+   * longest it can read, which the fit tests measure it by; `chars` has to hold it. `when` is the
+   * state it means something in, where there is one: the lap's `/ 32` is the race's length only in a
+   * race counted in laps, and drawn on the slot's visibility alone it read the leader's laps as the
+   * length of a timed race and `/ 0` in an open practice (#989).
    */
-  denominator?: { sample: string; bind: string; chars: Chars; widest?: string };
+  denominator?: { sample: string; bind: string; chars: Chars; widest?: string; when?: Expr };
   /**
    * A word after the value, drawn only while `when` holds: the `AM` or `PM` of a clock the rig writes
    * to twelve hours (#324). It is set as the denominator is -- after a gap, at the denominator's size
@@ -162,7 +166,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     numeralWidest: LAP_WIDEST,
     // Five full cells: the space and the slash are not among the narrow `.,:`, so `/ 120` is five
     // cells wide and the four and a narrow one this was cut from lost its last digit. #596.
-    denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 5, specials: 0 }, widest: LAP_TOTAL_WIDEST },
+    denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 5, specials: 0 }, widest: LAP_TOTAL_WIDEST, when: hasLapTotal() },
     drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
   },
   { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
@@ -457,7 +461,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
               width: denominator,
               hAlign: align,
             }),
-            { Visible: visible, Text: spec.denominator.bind, Left: leftBind },
+            { Visible: spec.denominator.when === undefined ? visible : and(visible, spec.denominator.when), Text: spec.denominator.bind, Left: leftBind },
           ),
         );
       }

@@ -804,6 +804,23 @@ export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), le(
  */
 export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SECONDS));
 
+/**
+ * Whether `TotalLaps` is the race's length: a session that is not timed, with a lap count.
+ *
+ * Every `/ 30` and `of 30` after a lap is drawn while this holds and only then. iRacing's
+ * `TotalLaps` in a timed session is not a length at all but the leader's completed laps, so a
+ * denominator that asked only whether the total was above nought told a driver twelve laps into a
+ * forty-five minute race that it ended at fourteen, and one that asked nothing drew `4 / 0` in an
+ * open practice. The session card had the rule right and the bar, the companion header and the pit
+ * wall header each wrote their own (#989).
+ *
+ * Not timed rather than untimed, because a sim that publishes no clock at all for a lap race, a
+ * `SessionTimeLeft` of nought rather than iRacing's week, still has its laps counted. What it costs
+ * is the iRacing race given both a lap count and a time limit, which is timed and so draws the clock
+ * and no total, as the session card has always drawn it.
+ */
+export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps(), num(0)));
+
 /** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
 export const NO_CLOCK = `-:--:--`;
 

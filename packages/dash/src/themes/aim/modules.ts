@@ -34,7 +34,7 @@ import type { ModuleRegister } from '../drawing.ts';
 import { withHouseLayout } from '../moduleRegister.ts';
 import { reading, segment, segmentWidth } from './register.ts';
 
-const { concat, str, ucase } = ncalc;
+const { concat, iff, str, ucase } = ncalc;
 
 /** The canvas's row: 64 tall, four of them down 284 with the rest between, an 18 px caption and a 40 px value. */
 export const ROW = { height: 64, body: 284, count: 4, caption: 18, value: 40 } as const;
@@ -137,11 +137,16 @@ function captionOf(spec: FieldSpec): { text: string; widest: string; bind?: Expr
   const widest = join(labelWidest, afterWidest);
   const labelExpr = spec.labelBind === undefined ? undefined : ucase(shortened(spec.labelBind));
   const followerExpr = follower?.bind === undefined ? undefined : shortened(follower.bind);
-  if (labelExpr === undefined && followerExpr === undefined) return { text, widest };
+  if (labelExpr === undefined && followerExpr === undefined && follower?.visibleBind === undefined) return { text, widest };
   const parts: Expr[] = [];
   if (labelExpr !== undefined || label !== '') parts.push(labelExpr ?? str(label));
+  const alone = parts.length === 0 ? str('') : parts[0]!;
   if (follower) parts.push(...(parts.length > 0 ? [str(' ')] : []), followerExpr ?? str(after));
-  return { text, widest, bind: parts.length === 1 ? parts[0] : concat(...parts) };
+  const bind = parts.length === 1 ? parts[0]! : concat(...parts);
+  // A follower the house hides in some state is left off the caption in that state, as the house
+  // leaves it off the value: the lap's `/ 30` is the race's length only in a race counted in laps,
+  // and written in for every lap it put `LAP / 0` over an open practice (#989).
+  return { text, widest, bind: follower?.visibleBind === undefined ? bind : iff(follower.visibleBind, bind, alone) };
 }
 
 /**
