@@ -669,9 +669,14 @@ export const carClassRaceGap = (idx: Expr): Expr => {
  * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
  * behind `+0.722`. The minus is the typographic one, which `signed` substitutes for the hyphen
  * .NET's formatter writes.
+ *
+ * Three places in {@link CHARS.relativeGap}'s six cells leave two whole digits, and a car half a lap
+ * away is a hundred seconds off on a lap of three and a half minutes, which is Le Mans and the
+ * Nordschleife with a thin field. Past that the gap gives up places rather than its last digit,
+ * `−104.31`, through {@link signedToFit}, as the deltas do (#886).
  */
 export const carRelativeGap = (idx: Expr): Expr =>
-  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signed(driver('relativegaptoplayer', idx), '0.000'));
+  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signedToFit(driver('relativegaptoplayer', idx), CHARS.relativeGap, 3));
 
 /**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
