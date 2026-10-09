@@ -9,7 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts';
+import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
@@ -179,6 +179,16 @@ export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(
 export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
 
 /**
+ * The widest {@link lapTime} a proportional box in `face` has to hold: every lap under ten minutes,
+ * which is the reach of {@link CHARS.lapTime} as well.
+ *
+ * A monospaced box is measured by its cells and holds any digit in each of them; a label is measured
+ * by the string it declares, and a sample such as `1:43.234` is narrower than `1:40.000`, so a box
+ * cut to the sample clips the last digit of most of the laps it is given.
+ */
+export const lapTimeWidest = (face: MeasuredFace): string => widestFigure(face, '9:59.999');
+
+/**
  * A sector time as seconds to two decimals, `28.41`, or `--` when it was never set.
  *
  * Two decimals rather than three, because every sample drawn beside one of these -- the table's
@@ -213,6 +223,17 @@ export const minutesClock = (seconds: Expr): Expr => {
 
 /** An iRating as `2.4k`, or `--` when the sim does not report one. */
 export const ratingK = (value: Expr): Expr => iff(gt(isnull(value, num(0)), num(0)), concat(fmt(div(value, num(1000)), '0.0'), str('k')), str(NO_VALUE));
+
+/**
+ * The widest {@link ratingK} a proportional box in `face` has to hold: two whole thousands, since a
+ * few hundred drivers are rated over 10 000 and none near 100 000, which is also what
+ * {@link CHARS.rating}'s four digit cells hold.
+ *
+ * Measured rather than written as a sample, because a sample is a rating somebody holds and the box
+ * has to hold everybody's: the opponents page was cut to `iR 3.1k` and clipped the `k` of every
+ * driver rated ten thousand or more, and of a driver rated `4.0k` as well. #902.
+ */
+export const ratingWidest = (face: MeasuredFace): string => widestFigure(face, '99.9k');
 
 // --- The player's own car ------------------------------------------------------------------
 
