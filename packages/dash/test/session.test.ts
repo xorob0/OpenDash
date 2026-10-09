@@ -121,18 +121,20 @@ describe('the module reads the same setting as the card', () => {
     expect(formulaOf('lap.value')).toContain('SessionProgress');
     // The three are read as one claim rather than as two formulas compared letter by letter, because
     // the clock's own Visible now carries the mark's state too: a session with no clock draws `∞`
-    // where the clock would go, and the clock steps aside for it (#439).
+    // where the clock would go, and the clock steps aside for it (#439). The lap's `/ 20` goes with
+    // the lap: iRacing's TotalLaps in a timed race is the leader's laps, so a denominator shown on
+    // that alone drew `/ 20` with no lap before it, on top of the time left.
     const drawn = (props: Props): string[] =>
-      ['lap.value', 'timeLeft.value', 'timeLeft.mark'].filter((name) => evalNcalc(formulaOf(name), props) === true);
+      ['lap.value', 'lap.denominator', 'timeLeft.value', 'timeLeft.mark'].filter((name) => evalNcalc(formulaOf(name), props) === true);
     for (const [secs, mode, expected] of [
       [1800, 'auto', ['timeLeft.value']],
       [1800, 'time', ['timeLeft.value']],
-      [1800, 'laps', ['lap.value']],
+      [1800, 'laps', ['lap.value', 'lap.denominator']],
       [0, 'time', ['timeLeft.value']],
-      [0, 'auto', ['lap.value']],
-      [A_WEEK, 'auto', ['lap.value']],
+      [0, 'auto', ['lap.value', 'lap.denominator']],
+      [A_WEEK, 'auto', ['lap.value', 'lap.denominator']],
       [A_WEEK, 'time', ['timeLeft.mark']],
-      [A_WEEK, 'laps', ['lap.value']],
+      [A_WEEK, 'laps', ['lap.value', 'lap.denominator']],
     ] as const) {
       expect({ secs, mode, drawn: drawn(game(secs, 20, 3, mode)) }).toEqual({ secs, mode, drawn: [...expected] });
     }

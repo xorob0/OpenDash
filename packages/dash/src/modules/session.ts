@@ -37,7 +37,7 @@ import {
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
-const { fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
+const { and, fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
@@ -86,7 +86,10 @@ export const session = defineModule('session', (ctx) => {
               text: '/ 30',
               widest: LAP_TOTAL_WIDEST,
               bind: concat(str('/ '), fmt(totalLaps(), '0')),
-              visibleBind: gt(totalLaps(), num(0)),
+              // Hidden with the lap as well as without a length. iRacing's `TotalLaps` in a timed race
+              // is the leader's laps, so a denominator shown for that alone drew `/ 14` with no lap
+              // before it, and with the lap and the time left in one place, on top of the time left.
+              visibleBind: and(not(time), gt(totalLaps(), num(0))),
             },
             drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
           }, { visibleBind: not(time) }),
