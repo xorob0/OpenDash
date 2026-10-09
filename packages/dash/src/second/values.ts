@@ -860,7 +860,9 @@ export const rpm = rpms;
 // lights at, and it lives in `shift.ts` as `redlineRpm` so that the number and the bar cannot
 // disagree. ADR 0014. This file used to carry a second body for it, reading SimHub's number
 // while the bar beside it read the car's.
-export const fuelUnit = (): Expr => iff(eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons')), str('gal'), str('L'));
+/** Whether the driver has SimHub set to gallons, which is the one switch every fuel figure follows. */
+const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
+export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
 export const fuelPercent = (): Expr => isnull(game('FuelPercent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
@@ -870,7 +872,10 @@ export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'
 export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumption'), num(-1));
 export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
 
-/** Fuel to add: what the laps left will burn, less what is in the tank; never negative. */
+/**
+ * Fuel to add: what the laps left will burn, less what is in the tank; never negative. An estimate,
+ * labelled `To add`, and not the order the pit service is set to, which is {@link pitRefuel}.
+ */
 export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
 
 /**
@@ -937,9 +942,9 @@ const SECONDS_PER_MINUTE = 60;
  * whose name the sim does not give reads nothing here, which is the right way to be wrong: an absence
  * says the dash cannot tell, where a red figure says the tank will not make it.
  *
- * `Refuel` is the counter-precedent and stays as it is: it reads the race's remaining laps in
- * practice too, but it is drawn in caution amber as an instruction to the crew rather than as a
- * verdict, so a figure of no use in practice is not a figure that alarms there.
+ * The fuel page's `To add` is the counter-precedent and stays as it is: it reads the race's
+ * remaining laps in practice too, but it is drawn in caution amber as an instruction to the crew
+ * rather than as a verdict, so a figure of no use in practice is not a figure that alarms there.
  */
 const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0))));
 
@@ -1405,7 +1410,35 @@ export const PIT_SERVICE_BITS = { FrontLeft: 1, FrontRight: 2, RearLeft: 4, Rear
 const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvFlags'), num(0)), num(bit))), num(2));
 
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
-export const pitRefuelLitres = (): Expr => raw('PitSvFuel');
+
+/**
+ * SimHub's own ratio from litres to gallons, `GameManagerBase.GetFuelConvertRatio` in 9.12.6. The
+ * tank a face draws beside the pit order is converted by it, so the order is converted by the same
+ * figure rather than by a more exact one that would disagree with the tank in the last digit.
+ */
+export const LITRES_TO_GALLONS = 0.264172;
+
+/** True where the sim publishes no pit fuel order, which is every sim but iRacing. */
+export const pitRefuelIsAbsent = (): Expr => isNull(raw('PitSvFuel'));
+
+/**
+ * The fuel the pit service is set to add, in the unit the driver reads the tank in (#604).
+ *
+ * iRacing publishes `PitSvFuel` in litres whatever the display unit, as it does `FuelLevel` (the
+ * emulator's catalogue carries the var header's `l`), and SimHub passes raw telemetry through
+ * unconverted, where it converts `Fuel` to gallons on a gallons profile. Pit view used to draw the
+ * litres beside a unit bound to `FuelUnit`, so a 40 litre order read `40.0 gal`, and band D drew the
+ * same litres with no unit beside a tank in gallons. Both read this now, and the face says
+ * {@link fuelUnit} after it as it does after the tank.
+ *
+ * This is the pit service order and not {@link fuelToAdd}, the estimate of what the laps left will
+ * burn; the fuel page labels that one `To add` and the pit pages label this one `Refuel`, so the two
+ * are never drawn under the same word.
+ */
+export const pitRefuel = (): Expr => {
+  const litres = isnull(raw('PitSvFuel'), num(0));
+  return iff(fuelInGallons(), mul(litres, num(LITRES_TO_GALLONS)), litres);
+};
 export const isInPitLane = (): Expr => gt(isnull(game('IsInPitLane'), num(0)), num(0));
 export const inPitSeconds = (): Expr => isnull(game('IsInPitSince'), num(0));
 export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), num(0));

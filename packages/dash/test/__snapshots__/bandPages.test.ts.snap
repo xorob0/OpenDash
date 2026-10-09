@@ -275,7 +275,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "backgroundColor": "#00FFFFFF",
     "bindings": {
       "Text": {
-        "formula": "format(isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0), '0.00')",
+        "formula": "if(isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel]), '--', format(if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), (isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)) * (0.264172), isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)), '0.00'))",
         "mode": "formula",
       },
     },

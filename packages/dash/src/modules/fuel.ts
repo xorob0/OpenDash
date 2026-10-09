@@ -13,10 +13,17 @@
  * between corners, so it is drawn signed and coloured, green while the tank reaches the flag and red
  * once it does not, and it outranks the estimate wherever a box cannot carry both (#387).
  *
- * "Refuel" is the laps left times the average consumption, less what is in the tank, and never
+ * "To add" is the laps left times the average consumption, less what is in the tank, and never
  * negative. It is caution amber rather than the low-fuel red because it is an instruction to the
  * crew: the red belongs to the level and to the bar under it, and an instruction drawn in it reads
  * as an alarm about the tank rather than as a figure to act on.
+ *
+ * It was labelled "Refuel", which is the word pit view and band D's fuel page use for the order the
+ * pit service is set to, so a driver moving between the three read two numbers under one word: this
+ * page's estimate and iRacing's `PitSvFuel`, which is whatever the driver last typed into the pit
+ * menu (#604). The estimate takes the word the panel describes this page with, "what to add", and
+ * the page's own name stands in for the "Fuel" in front of it as it does for "Per lap" and "Last
+ * lap". Both are the same caution amber.
  */
 import { ncalc } from '../generator.ts';
 import { rect } from '../design/geometry.ts';
@@ -130,7 +137,7 @@ export const fuel = defineModule('fuel', (ctx) => {
       ),
       fieldsRow(
         [
-          fld(ctx, 'toAdd', 'Refuel', {
+          fld(ctx, 'toAdd', 'To add', {
             sample: '12.6',
             bind: iff(fuelIsSettled(), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
             chars: CHARS.fuel,

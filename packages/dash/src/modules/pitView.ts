@@ -36,7 +36,8 @@ import {
   inPitSeconds,
   isInPitLane,
   lastPitDuration,
-  pitRefuelLitres,
+  pitRefuel,
+  pitRefuelIsAbsent,
   pitServiceFlag,
   pitServiceProgress,
   pitTyreSelection,
@@ -45,7 +46,7 @@ import {
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
 
-const { fmt, iff, isNull, str, not } = ncalc;
+const { fmt, iff, str, not } = ncalc;
 
 /**
  * The catalogue's ratio between the refuel quantity and the pit time. Every drawing holds it: 116
@@ -203,7 +204,8 @@ const tyresOption = (fs: number): Option => {
 export const pitView = defineModule('pitView', (ctx) => {
   const d = densityOf(ctx.density);
   const shape = shapeIn(ctx);
-  const refuel = pitRefuelLitres();
+  const refuel = pitRefuel();
+  const absent = pitRefuelIsAbsent();
 
   // Which corners are being changed is the page's own summary, and it is what a box one column
   // wide drops: the fast repair and the tear-off stay at every shape, the tyres do not.
@@ -282,14 +284,17 @@ export const pitView = defineModule('pitView', (ctx) => {
   const columns = promotesLead(shape) ? 1 : Math.min(2, columnsAt(shape));
   const rowOptions = { lines: 'grid' as const, columns, gap: GRID_GAP, lineGap: GRID_LINE_GAP };
   const specsAt = (fs: number): FieldSpec[] => [
+    // The order the pit service is set to, in the driver's unit (#604). It is caution amber, as the
+    // fuel page's `To add` and band D's refuel are, because it is a figure to act on: the low-fuel
+    // red belongs to the tank, and drawn here it read as an alarm about a quantity the driver chose.
     fld(ctx, 'refuel', 'Refuel', {
       sample: '12.6',
-      bind: iff(isNull(refuel), str(NO_VALUE), fmt(refuel, '0.0')),
+      bind: iff(absent, str(NO_VALUE), fmt(refuel, '0.0')),
       chars: CHARS.fuel,
       fs,
-      color: ds.purpose.fuel.low,
+      color: ds.color.caution.primary,
       follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
-      drawn: drawnOr(isNull(refuel), NO_VALUE, drawnFigure({ value: refuel, digits: CHARS.fuel.digits - 1, decimals: 1 })),
+      drawn: drawnOr(absent, NO_VALUE, drawnFigure({ value: refuel, digits: CHARS.fuel.digits - 1, decimals: 1 })),
     }),
     fld(ctx, 'pitTime', 'Pit time', {
       sample: '24.3',
