@@ -963,17 +963,21 @@ function faceSizeAt(width: number, height: number): FaceSize {
  * Every theme, the default first. One entry to a line, in the shape `ContractTests.cs` reads back.
  *
  * The Porsche claims every face size, the portrait one included in the car's stacked form (#205,
- * #713). The two Cup and legacy car paths that #205 leaves to be read on the VM are left out rather
- * than guessed.
+ * #713).
  *
- * The AiM is one LCD for the three iRacing cars that carry an AiM unit (#204), at every size. The
- * MX-5 Cup's path is the one the ticket expects; the Legends' and the Cross Car's are to be read on
- * the VM with the car loaded and are left out until they are, as the Porsche's two were.
+ * The AiM is one LCD for the iRacing cars that carry an AiM unit (#204, #753), at every size. The two
+ * Caterhams arrived in iRacing in September 2026 and their paths are still to be read on a rig with the
+ * car loaded, so they are named in `cars` and left out of `iracingCarPaths` rather than guessed.
+ *
+ * Every car path comes from iRacing's support article "Filepath for active iRacing cars"
+ * (support.iracing.com, article 31000172625, modified on 1 May 2026), which writes it as a folder path
+ * such as `\mx5\mx52016`: the session YAML's CarPath is that path without its leading backslash and
+ * with the others as spaces, as the MX-5 Cup's `mx5 mx52016` and the Porsche's `porsche992rgt3` show.
  */
 export const THEME_CATALOGUE: readonly ThemeEntry[] = [
   { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES, bandPages: [] },
-  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche992cup'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
-  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car'], iracingCarPaths: ['mx5 mx52016'], sizes: FACE_SIZES, bandPages: [] },
+  { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche9922cup', 'porsche992cup', 'porsche911rgt3'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
+  { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car', 'Caterham Academy', 'Caterham 420R'], iracingCarPaths: ['mx5 mx52016', 'legends ford34c', 'legends ford34c rookie', 'crosscartn11'], sizes: FACE_SIZES, bandPages: [] },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */
