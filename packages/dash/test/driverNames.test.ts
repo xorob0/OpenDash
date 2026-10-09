@@ -398,10 +398,13 @@ describe('no list draws a three-letter code', () => {
     // earn the sim's own spelling back and nothing should have to remember to allow that.
     // The list ramp's names and no others: 15 from the 34 px row up and 13 in the narrow zone's 28 px
     // row. The opponents page used to add its own 12, and 13 in a zone, which came from the density
-    // rather than from a row; its name is a list row's now (#341). Every box of this walk has the
-    // width for 15 on every page, so 13 is not among them -- the 800 x 286 face is where it is drawn.
+    // rather than from a row; its name is a list row's now (#341). Every box of this walk but one has
+    // the width for 15 on every page. The one is the opponents page at 576 x 112 in a zone's type,
+    // which keeps the class chip a 13 px name leaves it room for, as its rule says, now that the chip
+    // holds four M (#569); the build draws that box at the compact density, where the name is 15, and
+    // the 800 x 286 face is where a list draws 13.
     const ramp = new Set(LIST_ROW_TYPES.map((type) => type.name));
-    expect({ sizes: [...sizes].sort((a, b) => a - b), onTheRamp: [...sizes].every((fs) => ramp.has(fs)) }).toEqual({ sizes: [15], onTheRamp: true });
+    expect({ sizes: [...sizes].sort((a, b) => a - b), onTheRamp: [...sizes].every((fs) => ramp.has(fs)) }).toEqual({ sizes: [13, 15], onTheRamp: true });
     expect(MIXED_CASE_NAME_SIZE).toBe(25);
   });
 

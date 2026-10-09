@@ -32,7 +32,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
-import { chip, chipText, chipWidth } from './chip.ts';
+import { CHIP_WIDEST, chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
   positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
@@ -569,8 +569,20 @@ function cellPit(ctx: CellContext): Item[] {
   ];
 }
 
-/** A compound chip holds one letter, so it is the padding and a letter's width either side of it. */
-const compoundChipWidth = (d: DensitySpec): number => Math.ceil(2 * d.chipPadding + 14);
+/**
+ * Characters the tyre chip shows: one, the compound's initial, which is the letter the canvas draws.
+ *
+ * The chip was cut for one letter and bound to `chipText`'s four, so a compound sent as `Dry 2` or
+ * `Medium` was clipped to its first letter and a sliver of the second on every row. The binding is
+ * cut to what the box holds instead, as the class chip's is, so it draws a whole `D` or `M`.
+ */
+const COMPOUND_CHARS = 1;
+
+/** The widest initial the tyre chip can draw, which is what it is sized by. */
+const COMPOUND_WIDEST = widestOf('BarlowMedium', COMPOUND_CHARS);
+
+/** A compound chip holds one letter, so it is the padding and the widest letter between. */
+const compoundChipWidth = (d: DensitySpec): number => chipWidth(d, COMPOUND_WIDEST);
 
 /** The position, which the canvas prefixes with a P: `P4`, not `4`. */
 const positionText = (idx: Expr): Expr => positionLabelled(idx);
@@ -626,12 +638,13 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
   class: {
     header: 'Class',
     align: 'left',
-    width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 34), 56),
+    width: (row) => drawnWidth(row, chipWidth(row.d), 56),
     cell: (ctx) =>
       chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carClass(ctx.idx)),
+        widest: CHIP_WIDEST,
         invertedBind: ctx.isPlayer,
-        width: Math.ceil(2 * ctx.d.chipPadding + 34),
+        width: chipWidth(ctx.d),
       }),
   },
   /**
@@ -688,7 +701,8 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
       // draws its own: the column declares `right` and a chip filling it aligns nothing.
       const width = Math.min(ctx.width, compoundChipWidth(ctx.d));
       return chip(`${ctx.name}.tyre`, 'M', ctx.x + ctx.width - width, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
-        bind: chipText(carCompound(ctx.idx)),
+        bind: chipText(carCompound(ctx.idx), COMPOUND_CHARS),
+        widest: COMPOUND_WIDEST,
         width,
       });
     },

@@ -880,10 +880,12 @@ describe('the leaderboard keeps its gap at every zone the build produces', () =>
 
   test('and gives way beyond its shape in these boxes, and no others', () => {
     // The 639 x 338 pit wall zone is `wide` and declares both lap times; it draws the last lap and not the
-    // best, which is step 2 taking the rightmost droppable column. The six narrow faces are step 3: the
-    // position, the name and the gap are all `tall narrow` declares, so the name is cut to what is left.
-    // No box takes step 4.
+    // best, which is step 2 taking the rightmost droppable column. The companion's portrait page is step 2
+    // as well: its 432 px row held a class chip cut for `LMP2` beside a name of eight, and not the chip
+    // that holds four M (#569). The six narrow faces are step 3: the position, the name and the gap are
+    // all `tall narrow` declares, so the name is cut to what is left. No box takes step 4.
     expect(moduleBoxes().flatMap(givenAt)).toEqual([
+      'OpenDash Companion portrait page: sheds class',
       'OpenDash Pit wall zone-639x338: sheds best',
       'face-274x328: cuts the name to 6',
       'face-274x366: cuts the name to 6',
