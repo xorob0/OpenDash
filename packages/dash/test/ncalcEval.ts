@@ -8,8 +8,8 @@
  * `truncate`, `in`, `prop` (a read by a computed name), `rootdashboardscreenname` (answered from
  * {@link ROOT_SCREEN}), the comparisons, `and` / `or` / `!`, and the arithmetic. A date is passed as
  * a `Date` and formatted by the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm`
- * and `m`, in en-US's colon, which is the culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
- * that evaluates half an expression proves nothing.
+ * and `m`, in en-US's colon, which is the culture SimHub sets at startup. Anything else is an error
+ * rather than a silent `undefined`: a test that evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning

@@ -679,6 +679,13 @@ export const carRelativeGap = (idx: Expr): Expr =>
   iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signedToFit(driver('relativegaptoplayer', idx), CHARS.relativeGap, 3));
 
 /**
+ * The widest reading {@link carRelativeGap} draws, which is what a box drawing it declares: the true
+ * minus and five digits around a point, the whole of {@link CHARS.relativeGap}. Past a hundred
+ * seconds the gap draws `−104.32` in the same six cells, so this is the length of every reading.
+ */
+export const RELATIVE_GAP_WIDEST = `${MINUS}99.999`;
+
+/**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
  * leader. The leader's own row is empty, there being nothing in front of it.
  *

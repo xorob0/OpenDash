@@ -79,7 +79,7 @@ import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../sec
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, listNeighbour } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, listNeighbour, RELATIVE_GAP_WIDEST } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -274,7 +274,7 @@ function measure(ctx: ModuleContext, side: Side, box: Column, type: BlockType, k
   // The canvas draws the number at the fourth size of the companion ramp and at the last of the
   // zone one, which is not the same rung of the two ladders, so the instrument says which.
   const numberSize = ctx.density === 'companion' ? d.small : d.tiny;
-  const gapSpec: FieldSpec = fld(ctx, `${side.id}.gap`, '', { sample: side.gap, bind: carRelativeGap(idx), chars: CHARS.relativeGap, fs: type.gap, color: side.colour });
+  const gapSpec: FieldSpec = fld(ctx, `${side.id}.gap`, '', { sample: side.gap, widest: RELATIVE_GAP_WIDEST, bind: carRelativeGap(idx), chars: CHARS.relativeGap, fs: type.gap, color: side.colour });
   // The hash has gone with the label it was: the canvas draws the number alone in its cell, which
   // is also what the lists do since a `#` overruns a cell cut for digits.
   const numSpec: FieldSpec = fld(ctx, `${side.id}.num`, '', { sample: '41', bind: carNumber(idx), chars: CHARS.carNumber, fs: numberSize, color: ds.color.text.label });
