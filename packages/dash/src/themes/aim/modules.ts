@@ -142,11 +142,18 @@ function captionOf(spec: FieldSpec): { text: string; widest: string; bind?: Expr
   return { text, widest, bind: parts.length === 1 ? parts[0] : concat(...parts) };
 }
 
-/** The widest string a value can draw, in as many cells as its budget declares. */
+/**
+ * The widest string a value can draw, which is what its ghost shows and what its cell is cut to: the
+ * digit positions the binding can reach, so that no dead cell stands before a reading that cannot
+ * fill it, and a reading that varies in length shows every position it can reach and right-aligns
+ * into them, as the units do. That is the field's `widest` where it declares one; a field that does
+ * not has its sample as the short end of the range and its budget as the only statement of how far it
+ * reaches, so its sample is filled out to the budget's cells.
+ */
 function widestValue(spec: FieldSpec): string {
-  const base = spec.value.widest ?? spec.value.sample;
-  const cellsIn = [...base].filter((ch) => ch !== '.' && ch !== ':').length;
-  return '8'.repeat(Math.max(0, spec.value.chars.digits - cellsIn)) + base;
+  if (spec.value.widest !== undefined) return spec.value.widest;
+  const cellsIn = [...spec.value.sample].filter((ch) => ch !== '.' && ch !== ':').length;
+  return '8'.repeat(Math.max(0, spec.value.chars.digits - cellsIn)) + spec.value.sample;
 }
 
 const captionWidth = (spec: FieldSpec, size: number): number => {
