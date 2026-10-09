@@ -206,8 +206,10 @@ describe('the fuel page keeps one order wherever it is drawn', () => {
   });
 
   test("and band D's fuel page sheds in the same order", () => {
-    // The band names its readings for the band; these are the same readings under the module's ids.
-    // It has no `thisLap`, so the comparison is over the seven they share.
+    // The band names its readings for the band; these are the same readings under the module's ids,
+    // but for the refuel, which is the pit service's order where the module's `toAdd` is the estimate
+    // (#604) and sits in the same place in the rank. It has no `thisLap`, so the comparison is over
+    // the seven they share.
     const asModule: Record<string, string> = { fuel: 'level', time: 'time', toEnd: 'toEnd', laps: 'lapsLeft', refuel: 'toAdd', perLap: 'average', lastLap: 'lastLap' };
     const band = BAND_PAGES.fuel!.map((field) => asModule[field.id] ?? `band.${field.id}`);
     expect(band).toEqual(keepsAt('fuel', 'wide')!.filter((id) => band.includes(id)));
@@ -300,7 +302,7 @@ describe('at every zone body the build produces, the ids drawn are the ids decla
     // what the page is named for, so what goes is the sectors and the rule that separates them.
     '800x286 269x194 delta': ['s1', 's2', 's3', 'rule'],
     '800x286 269x226 delta': ['s1', 's2', 's3', 'rule'],
-    // The refuel figure and the five-lap average are the last two fields of a rank the 600 x 686
+    // The fuel to add and the five-lap average are the last two fields of a rank the 600 x 686
     // face's 114 px zones have no room for: two ranks plus the level bar need about 124 px at the
     // compact ramp, so the two lead readings are what survive. The nano keeps its rank whole now
     // that fuel leads with the tank, the time and the laps rather than spreading three readings

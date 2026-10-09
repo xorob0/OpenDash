@@ -816,14 +816,14 @@ one line of prose with nothing in it to drop.
 
 ### Where the build keeps more than the drawing
 
-The table is the catalogue read off page by page, and in five places it is deliberately not what the
-catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
+The table is the catalogue read off page by page, and in the places below it is deliberately not
+what the catalogue draws. Each of them is a decision rather than a drift, so each is recorded here: a reader
 holding a drawing against a zone should find the argument rather than suspect a bug.
 
 - **Lap times at `tall narrow`.** Four values where the drawing has two, which §10 argues from the
   234 px of a real zone the drawing leaves empty. The catalogue owes the redraw.
-- **Fuel at `wide` and at `tall`.** Three consumptions under the refuel where both fuel sheets draw
-  two, the per-lap average and a five-lap one. The average is the same figure in both. The five-lap
+- **Fuel at `wide` and at `tall`.** Three consumptions under the fuel to add where both fuel sheets
+  draw two, the per-lap average and a five-lap one. The average is the same figure in both. The five-lap
   one is not built, because no property says what an earlier lap cost
   ([second-screens.md](../second-screens.md) records the datum), and the build draws the last lap
   and this lap instead, the last lap being what band D's artboard draws beside the average. The
@@ -834,7 +834,7 @@ holding a drawing against a zone should find the argument rather than suspect a 
   whether that reaches the flag and how many laps it is worth, and then what to put in at the stop
   and what a lap costs. Past the tank, a figure outranks the figures it is worked out from. The
   margin is the estimate less the session's laps left, the estimate is the tank over the per-lap
-  average, and the refuel is the laps left at that average less the tank, so the estimate goes after
+  average, and the fuel to add is the laps left at that average less the tank, so the estimate goes after
   the margin and before every consumption, and the average goes first of the three because the
   figures ahead of it are taken from it. Band D's fuel page sheds in the same order. The table used to list the estimate last, behind
   the three consumptions, on a page that draws it in the lead rank at the lead size, so the one
@@ -874,6 +874,16 @@ holding a drawing against a zone should find the argument rather than suspect a 
   separately: the target says whether the lap just done was on plan and this says whether the plan
   reaches the flag. The two shapes above are the first question to put to it, since the choice there
   is between losses and the sheets have not been asked.
+- **Fuel's `To add`, and pit view's refuel in amber.** The canvas labels two quantities `Refuel`:
+  the fuel page's estimate, the laps left at the per-lap average less the tank, and the order the
+  pit service is set to, which pit view and band D's fuel page draw from iRacing's `PitSvFuel`. A
+  driver moving between the three read two numbers under one word, so the estimate is `To add`, the
+  phrase the panel describes the page with, and `Refuel` is kept for the order. The order is drawn
+  in caution amber on pit view as it is on band D, where the zone drawing sets it in the primary
+  text colour: both are figures to act on, and the fuel page's estimate is amber on every sheet.
+  It is also converted to the unit the tank is drawn in, since iRacing publishes it in litres
+  whatever the display unit and SimHub converts the tank but not raw telemetry (#604). The canvas
+  owes the relabel.
 - **Leaderboard at `wide`.** The best and the last lap, two columns the zone drawing does not carry
   and the companion's list does. The trade runs the other way as well: the drawing gives the row a
   rating column, and neither list declares one.

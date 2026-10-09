@@ -64,6 +64,8 @@ import {
   minutesClock,
   NO_TIME,
   NO_VALUE,
+  pitRefuel,
+  pitRefuelIsAbsent,
   roadTemperature,
   sectorTime,
   settledFuelTimeLeft,
@@ -176,7 +178,10 @@ const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VA
  * D1 Fuel: what a driver checks on a straight, which is why it is the default.
  *
  * The tank and the refuel are read off the sim directly, whereas the other four are derived from
- * what a lap costs, so those four wait for a lap and answer together. Before the first crossing
+ * what a lap costs, so those four wait for a lap and answer together. The refuel is the order the
+ * pit service is set to, {@link pitRefuel}, and not the fuel module's `To add`, which is an estimate
+ * off the per-lap average: it is converted to the unit the tank beside it is drawn in, and reads
+ * the absence where the sim publishes no order rather than an order of nothing (#604). Before the first crossing
  * SimHub extrapolates `Fuel_LitersPerLap` from the lap in progress and every figure taken off it
  * moves every frame; a band that gated only some of them consequently read `EST. LAPS --` beside
  * `PER LAP 0.000` and `LAST LAP 0.000`, which is one row and one tank with two fields saying they
@@ -224,7 +229,14 @@ const fuel: readonly BandField[] = [
     afterWidest: FUEL_TO_END_UNIT_WIDEST,
   },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
-  { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
+  {
+    id: 'refuel',
+    label: 'Refuel',
+    sample: '32.67',
+    bind: iff(pitRefuelIsAbsent(), str(NO_VALUE), fmt(pitRefuel(), '0.00')),
+    chars: { digits: 5, specials: 1 },
+    color: ds.color.caution.primary,
+  },
   { id: 'perLap', label: 'Per lap', sample: '1.432', bind: settled(fmt(fuelPerLap(), '0.000')), chars: { digits: 5, specials: 1 } },
   { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: iff(fuelLastLapIsSettled(), fmt(fuelLastLap(), '0.000'), str(NO_VALUE)), chars: { digits: 5, specials: 1 } },
 ];
