@@ -107,7 +107,8 @@ export function gearGhosts(frame: Rect, size: number, ghosts: GearGhosts, name: 
   const sides = [
     { id: 'below', x: cell.left - ghosts.gap - width, step: -1 as const, visibleBind: undefined },
     // The gear above is nothing to show in the car's top gear, which the ladder cannot know: the
-    // mapping stops at the eight gears SimHub reports, and this stops at the count the car declares.
+    // mapping stops at the eight gears SimHub reports, and this stops at the car's own count, the
+    // one iRacing declares or the one SimHub has learned on every other sim (#996).
     { id: 'above', x: cell.left + cell.width + ghosts.gap, step: 1 as const, visibleBind: not(lastGear()) },
   ];
   return sides.map((side) =>

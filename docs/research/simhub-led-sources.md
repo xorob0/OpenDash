@@ -46,7 +46,7 @@ Two related facts, both verified:
 | Effect | Property | Notes |
 |---|---|---|
 | Shift ladder | `GameRawData.SessionData.DriverInfo.DriverCarSL{First,Shift,Last,Blink}RPM` | ADR 0014. One set per car, not per gear |
-| Last gear | `…DriverInfo.DriverCarGearNumForward` vs `GameRawData.Telemetry.Gear` | `[Gear]` is a string; the raw one is numeric |
+| Last gear | `GameData.Gear` vs `…DriverInfo.DriverCarGearNumForward`, else `GameData.CarSettings_MaxGears` | iRacing declares its count; every other sim has SimHub's learned one. `[Gear]` is a string, so the count is written as text to compare. #996 |
 | Shift fallback | `GameData.CarSettings_RPMShiftLight1` / `2`, `CarSettings_RPMRedLineReached` | ADR 0004, for a car publishing no ladder |
 | Brake, throttle | `GameData.Brake`, `GameData.Throttle` | 0..100 |
 | Fuel gauge | `Computed.Fuel_Percent` | 0..100. Not `GameData.FuelPercent`, which the game reader computes as the sim's litres over a `MaxFuel` already converted to the profile's unit, so it reads 189 for a half tank on a gallons profile. DataCore's divides the two converted figures. #993 |
