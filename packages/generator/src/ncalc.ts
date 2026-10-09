@@ -28,6 +28,18 @@ export const str = (s: string): Expr => `'${s.replace(/\\/g, '\\\\').replace(/'/
 
 export const num = (n: number): Expr => (Number.isFinite(n) ? String(n) : '0');
 
+/**
+ * A number literal NCalc reads as a double: `0.0` where {@link num} writes `0`.
+ *
+ * NCalc types a literal by its spelling, so `0` is an Int32 and `0.0` a double, and the two are not
+ * interchangeable wherever the type of an operand decides the type of the answer. {@link max} and
+ * {@link min} are where that bites, and a literal bound written on their left is what this is for.
+ */
+export const real = (n: number): Expr => {
+  const s = num(n);
+  return /^-?\d+$/.test(s) ? `${s}.0` : s;
+};
+
 const wrap = (e: Expr): Expr => `(${e})`;
 
 export const not = (a: Expr): Expr => `!${wrap(a)}`;
@@ -95,6 +107,12 @@ export const secondsToTimespan = (s: Expr): Expr => `secondstotimespan(${s})`;
 export const round = (value: Expr, decimals = 0): Expr => `round(${value}, ${decimals})`;
 export const truncate = (value: Expr): Expr => `truncate(${value})`;
 export const abs = (value: Expr): Expr => `abs(${value})`;
+/**
+ * `max(a, b)` and `min(a, b)`, whose answer has the **left** operand's type, the right one converted to
+ * it: NCalc 1.3.8's `Numbers.Max` and `Min`. So `max(0, 2.6)` is the Int32 3, rounded half to even by
+ * `Convert.ToInt32`, and `max(0.0, 2.6)` is the double 2.6. A literal bound on the left of a value that
+ * has a fraction is written with {@link real}, or the fraction is lost before anything reads it. #831.
+ */
 export const max = (a: Expr, b: Expr): Expr => `max(${a}, ${b})`;
 export const min = (a: Expr, b: Expr): Expr => `min(${a}, ${b})`;
 export const replace = (value: Expr, from: string, to: string): Expr => replaceWith(value, str(from), str(to));
@@ -156,9 +174,13 @@ export const isdecreasing = (ms: Expr, value: Expr): Expr => `isdecreasing(${ms}
 /**
  * Formats a number of seconds as `h:mm:ss` without relying on TimeSpan format strings,
  * whose backslash escapes are awkward inside NCalc string literals.
+ *
+ * The clamp is `max(0.0, …)` and not `max(0, …)`: with an Int32 on the left the seconds would be
+ * rounded to the nearest whole one before they are truncated, and a clock would tick over half a
+ * second early, reading `0:01:00` at 59.6 seconds.
  */
 export const hms = (seconds: Expr): Expr => {
-  const s = `max(0, ${seconds})`;
+  const s = max(real(0), seconds);
   const h = truncate(div(s, '3600'));
   const m = truncate(div(mod(s, '3600'), '60'));
   const sec = truncate(mod(s, '60'));

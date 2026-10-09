@@ -62,10 +62,10 @@ describe('ncalc helpers', () => {
 
   test('hms formats seconds as h:mm:ss without TimeSpan format strings', () => {
     const e = ncalc.hms('[S]');
-    expect(e).toContain('max(0, [S])');
+    expect(e).toContain('max(0.0, [S])');
     expect(e).toContain('/ (3600)');
-    expect(e).toContain("format(truncate(((max(0, [S])) % (3600)) / (60)), '00')");
-    expect(e).toContain("format(truncate((max(0, [S])) % (60)), '00')");
+    expect(e).toContain("format(truncate(((max(0.0, [S])) % (3600)) / (60)), '00')");
+    expect(e).toContain("format(truncate((max(0.0, [S])) % (60)), '00')");
     expect(e).not.toContain('\\');
   });
 });
