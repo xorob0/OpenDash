@@ -49,6 +49,12 @@ describe('the band D fuel clock counts the same way', () => {
     expect(js(minutesClock('[S]'), { S: 119.5 })).toBe('01:59');
     expect(js(minutesClock('[S]'), { S: 120 })).toBe('02:00');
   });
+
+  test('the cap at 999:59 is a double as well, so the seconds under it are truncated rather than rounded', () => {
+    // #899's cap sits on the left of a `min`, where an Int32 would round 6000.6 seconds to 6001.
+    expect(js(minutesClock('[S]'), { S: 6000.6 })).toBe('100:00');
+    expect(js(minutesClock('[S]'), { S: 59_999.9 })).toBe('999:59');
+  });
 });
 
 describe('the refuel figure keeps its tenths', () => {

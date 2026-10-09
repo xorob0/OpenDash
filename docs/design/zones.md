@@ -198,9 +198,9 @@ wall's zones keep the 28 px row over 16 px of padding `PitWallZones.dc.html` dra
 Band D has no header and counts no cycle, and since #708 it draws no letter either, so the band
 opens on its page. The room the `D` stood in at the band's left is still reserved, because the
 rank, the corner blocks and the shedding below are read off artboards that lay the band out around
-it; giving that room to the page would let the 850 × 480 fuel page keep the last lap and the
-600 × 686 band all twelve telltales, which is a redraw for the canvas to make rather than a
-consequence of dropping a label.
+it; giving that room to the page would let the 600 × 686 band draw all twelve telltales, which is a
+redraw for the canvas to make rather than a consequence of dropping a label. It would once have let
+the 850 × 480 fuel page keep the last lap too, which the page now does in its own room (§6, #899).
 
 ### The pit limiter
 
@@ -1058,12 +1058,13 @@ the answer. What that comes to, face by face, is what the build emits rather tha
 | Band | Keeps | Sheds | Given up for the margin |
 | --- | --- | --- | --- |
 | 1920 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
-| 1280 × 480 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
-| 1280 × 400 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 1280 × 720 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
-| 850 × 480 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 800 × 286 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 600 × 686 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 1280 × 480 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 1280 × 400 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 1280 × 720 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 850 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 800 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 800 × 286 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 600 × 686 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
 
 The last column is the change #387 made and not the shedding: 1280 × 480 and 1280 × 720 were already
 five fields and drew the same five less the margin, so the margin costs them one. 1280 × 400 and the
@@ -1071,7 +1072,22 @@ nano-portrait 600 drew all six, so the margin cost those two both consumptions �
 than the rest, which is the price of a signed figure in a band that was already full. Both have since
 had the per lap back: a field is as wide as the wider of its value and its label, and labels written in
 sentence case rather than capitals ([#422](https://github.com/xorob0/OpenDash/issues/422)) left each
-band room for a sixth. Every face keeps
+band room for a sixth.
+
+**The four quantities are whole from 10 up and to one decimal below**
+([#899](https://github.com/xorob0/OpenDash/issues/899)). The tank, the refuel, the per lap and the last
+lap read `30`, `13`, `10`, then `9.9`, `9.5`, in the driver's unit, gallons as litres; a 9.96 reads `10`
+rather than `10.0`, the test being on the figure as drawn. The fuel time had just taken a third minute
+digit for a tank that lasts `100:00`, which cost the Porsche's and the AiM's feet between one and three
+fields at 850 and 800 wide, and the author ruled that the tenths of a full tank were the cheaper thing
+to give. A tank and a refuel are cut for `999`, three digit cells where they had five and a point, and
+a lap's consumption for `9.9` where it had `99.999`. That won the feet their fields back, and gave the
+house band its last lap at every face but 1280 × 480 and 1280 × 720, and the per lap at those two.
+Only band D's fuel page draws a quantity this way; the fuel module, pit view, the pop-ups and the cards
+keep their decimals. `themeFuelPage.test.ts` pins what each theme's fuel page keeps at each size
+against what it kept before.
+
+Every face keeps
 the estimate; the margin outranks it in the declaration and no width has yet had to spend it.
 `bandPages.test.ts` pins this table, because nothing else would notice it going stale.
 
