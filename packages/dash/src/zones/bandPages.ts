@@ -62,6 +62,7 @@ import {
   localClock,
   meridiemWidest,
   minutesClock,
+  MINUTES_CLOCK_WIDEST,
   NO_TIME,
   NO_VALUE,
   roadTemperature,
@@ -209,7 +210,7 @@ const fuel: readonly BandField[] = [
     afterWidest: 'gal',
     color: ds.purpose.fuel.nominal,
   },
-  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
+  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), numeralWidest: MINUTES_CLOCK_WIDEST, chars: CHARS.minutesClock },
   {
     id: 'toEnd',
     label: 'Margin',

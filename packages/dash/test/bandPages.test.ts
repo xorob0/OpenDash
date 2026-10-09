@@ -19,7 +19,9 @@ import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } 
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
 import { textWidth } from '../src/second/drawn.ts';
-import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
+import { fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
+import { ncalcEvaluator as E } from '../src/generator.ts';
+import { widthAsDrawn } from './drawnStrings.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -283,6 +285,39 @@ describe('the fields the catalogue draws on each page', () => {
     const bind = BAND_PAGES.fuel!.find((f) => f.id === 'time')!.bind;
     expect(bind).toContain("'--:--'");
     expect(bind).not.toContain('3600');
+  });
+
+  /**
+   * #899. A full tank in a car that sips fuel lasts over 99 minutes, and the clock drew `100:00` into
+   * cells cut for `08:46`, where WPF took the last glyph off it on the band's default page. The
+   * reading is evaluated as SimHub would evaluate it and measured against the box it is drawn in, on
+   * every face, since nothing else reads a value the sample does not show.
+   */
+  test('a fuel time past 99 minutes counts on in minutes and fits its box on every face', () => {
+    const { bind } = BAND_PAGES.fuel!.find((f) => f.id === 'time')!;
+    const settledAt = (seconds: number): Record<string, unknown> => ({
+      'DataCorePlugin.GameData.CompletedLaps': 3,
+      'DataCorePlugin.Computed.Fuel_LitersPerLap': 1.4,
+      'DataCorePlugin.Computed.Fuel_RemainingTime': E.fromSeconds(seconds),
+    });
+    const at = (seconds: number): string => String(E.toJs(E.evaluate(bind, { properties: settledAt(seconds) })));
+    expect(at(526)).toBe('08:46');
+    expect(at(5999)).toBe('99:59');
+    expect(at(6000)).toBe('100:00');
+    expect(at(7265.5)).toBe('121:05');
+    // A per-lap figure a hair above zero can ask for any range at all, and the clock holds still at
+    // its widest rather than writing a fourth minute digit.
+    expect(at(60_000)).toBe(MINUTES_CLOCK_WIDEST);
+    expect(at(1e9)).toBe(MINUTES_CLOCK_WIDEST);
+    for (const face of Object.keys(BANDS) as (keyof typeof BANDS)[]) {
+      // The fuel time is the second field and every face keeps it, so it is there to be measured.
+      const value = named(pageTexts(face, 'fuel'), 'time.value');
+      for (const reading of ['100:00', MINUTES_CLOCK_WIDEST]) {
+        expect({ face, reading, fits: widthAsDrawn(value, reading) <= value.rect.width }).toEqual({ face, reading, fits: true });
+      }
+      // And the box says so, which is what the fit tests measure it by rather than by `08:46`.
+      expect(value.widest).toBe(MINUTES_CLOCK_WIDEST);
+    }
   });
 
   /**

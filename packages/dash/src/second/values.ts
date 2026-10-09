@@ -116,14 +116,19 @@ export const CHARS = {
   carNumber: { digits: 4, specials: 0 } as Chars,
   /** `0:42:15` */
   clock: { digits: 6, specials: 2 } as Chars,
-  /** `08:46` */
-  minutesClock: { digits: 4, specials: 1 } as Chars,
+  /**
+   * `08:46`, and `100:00` once a tank lasts a hundred minutes: {@link minutesClock} counts on in
+   * minutes rather than turning into an hour, so the budget is three minute digits and two of
+   * seconds, and {@link MINUTES_CLOCK_WIDEST} is what a box holding one is measured by. #899.
+   */
+  minutesClock: { digits: 5, specials: 1 } as Chars,
   /**
    * `14:32`, and `12:59` on a twelve-hour clock: the same four digits and a colon, so one budget
    * holds either format. The `AM` or `PM` after a twelve-hour clock is a word beside the value and
    * not a cell of it, `M` being a glyph no cell holds; see {@link TimeOfDay}. Its own budget rather
-   * than {@link CHARS.minutesClock}'s, which is a duration and reads `08:46` for the same cells, so
-   * that widening one cannot quietly widen the other.
+   * than {@link CHARS.minutesClock}'s, which is a duration and reads `08:46` in the same cells, so
+   * that widening one cannot quietly widen the other: the duration has since had a third minute
+   * digit for a tank that lasts `100:00`, and the time of day stayed at four.
    */
   timeOfDay: { digits: 4, specials: 1 } as Chars,
   /** `299` */
@@ -200,14 +205,31 @@ export const sectorTime = (ts: Expr, decimals = 2): Expr =>
 /** Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count. */
 export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(seconds), str('-:--:--'));
 
+/** The longest reading {@link minutesClock} draws, and so what a box holding one is measured by. */
+export const MINUTES_CLOCK_WIDEST = '999:59';
+
+/** {@link MINUTES_CLOCK_WIDEST} in seconds, the most {@link minutesClock} counts. */
+const MINUTES_CLOCK_CAP = 999 * 60 + 59;
+
 /**
  * Seconds as `mm:ss`, or `--:--` when there is nothing to count. Built the way `hms` is, minus the
  * hour term, because band D is 60 px tall and an hour that reads `0:` whenever a tank lasts under
- * one is a cell spent saying nothing. A range over 99 minutes overruns the four digits it is
- * budgeted, which no tank the sims model reaches.
+ * one is a cell spent saying nothing.
+ *
+ * Past 99 minutes the minutes count on, `100:00`, rather than turning into an hour. The budget used
+ * to be four digits on the reasoning that no tank lasts that long, and a full tank in a car that
+ * sips fuel does, at a short circuit or at the start of an endurance stint: `100:00` in a box cut
+ * for `08:46` was clipped by WPF, on the band's default page, at the moment a driver reads it.
+ * Rolling into `1:40` instead would have fitted and read as a minute and forty seconds, which is the
+ * one misreading a fuel time cannot allow, so the box has a third minute digit instead. That cell
+ * costs no house face a field. The Porsche's and the AiM's feet at 850 and 800 wide, which keep what
+ * the house page keeps in the room they give it, give up between one and three from the tail. The
+ * seconds are capped at {@link MINUTES_CLOCK_WIDEST}, over sixteen hours, which no tank lasts but a
+ * per-lap figure a hair above zero can ask for, so that even that reading stays inside the cells
+ * it is drawn in. The floor and the cap are doubles for the reason {@link hms} gives. #899.
  */
 export const minutesClock = (seconds: Expr): Expr => {
-  const s = max(real(0), seconds);
+  const s = min(real(MINUTES_CLOCK_CAP), max(real(0), seconds));
   const mmss = concat(fmt(truncate(div(s, num(60))), '00'), str(':'), fmt(truncate(mod(s, num(60))), '00'));
   return iff(gt(seconds, num(0)), mmss, str('--:--'));
 };

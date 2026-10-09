@@ -12,7 +12,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.label",
     "rect": {
       "height": 19,
-      "left": 474,
+      "left": 466,
       "top": 421,
       "width": 113,
     },
@@ -41,7 +41,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.value",
     "rect": {
       "height": 42,
-      "left": 474,
+      "left": 466,
       "top": 438,
       "width": 91,
     },
@@ -53,7 +53,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "backgroundColor": "#00FFFFFF",
     "bindings": {
       "Left": {
-        "formula": "(474) + ((((if((round(isnull([DataCorePlugin.GameData.Fuel], 0), 2)) >= (100), 3, if((round(isnull([DataCorePlugin.GameData.Fuel], 0), 2)) >= (10), 2, 1))) + (2)) * (16)) + (9)) + (5)",
+        "formula": "(466) + ((((if((round(isnull([DataCorePlugin.GameData.Fuel], 0), 2)) >= (100), 3, if((round(isnull([DataCorePlugin.GameData.Fuel], 0), 2)) >= (10), 2, 1))) + (2)) * (16)) + (9)) + (5)",
         "mode": "formula",
       },
       "Text": {
@@ -69,7 +69,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "fuel.unit",
     "rect": {
       "height": 17,
-      "left": 552,
+      "left": 544,
       "top": 461,
       "width": 19,
     },
@@ -88,9 +88,9 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "time.label",
     "rect": {
       "height": 19,
-      "left": 621,
+      "left": 613,
       "top": 421,
-      "width": 73,
+      "width": 89,
     },
     "text": "Fuel time",
     "textColor": "#5A6069",
@@ -100,7 +100,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "backgroundColor": "#00FFFFFF",
     "bindings": {
       "Text": {
-        "formula": "if((if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0)) > (0), (format(truncate((max(0.0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0))) / (60)), '00')) + (':') + (format(truncate((max(0.0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0))) % (60)), '00')), '--:--')",
+        "formula": "if((if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0)) > (0), (format(truncate((min(59999.0, max(0.0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0)))) / (60)), '00')) + (':') + (format(truncate((min(59999.0, max(0.0, if(((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0)), timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime]), 0)))) % (60)), '00')), '--:--')",
         "mode": "formula",
       },
     },
@@ -117,13 +117,14 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "time.value",
     "rect": {
       "height": 42,
-      "left": 621,
+      "left": 613,
       "top": 438,
-      "width": 75,
+      "width": 91,
     },
     "text": "08:46",
     "textColor": "#F5F7FA",
     "vAlign": "top",
+    "widest": "999:59",
   },
   {
     "backgroundColor": "#00FFFFFF",
@@ -135,7 +136,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.label",
     "rect": {
       "height": 19,
-      "left": 728,
+      "left": 736,
       "top": 421,
       "width": 120,
     },
@@ -168,7 +169,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.value",
     "rect": {
       "height": 42,
-      "left": 728,
+      "left": 736,
       "top": 438,
       "width": 91,
     },
@@ -181,7 +182,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "backgroundColor": "#00FFFFFF",
     "bindings": {
       "Left": {
-        "formula": "(728) + (if((((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0))) and (((ucase(isnull([DataCorePlugin.GameData.SessionTypeName], ''))) = ('RACE')) and (if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))), ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)), (isnull([DataCorePlugin.GameData.RemainingLaps], 0)) > (0)))), if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))), ((if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (1000), 4, if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (100), 3, if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (10), 2, 1)))) + (1)) * (16), (((if((round(abs((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) - (isnull([DataCorePlugin.GameData.RemainingLaps], 0))), 1)) >= (100), 3, if((round(abs((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) - (isnull([DataCorePlugin.GameData.RemainingLaps], 0))), 1)) >= (10), 2, 1))) + (2)) * (16)) + (9)), 32)) + (5)",
+        "formula": "(736) + (if((((isnull([DataCorePlugin.GameData.CompletedLaps], 0)) > (0)) and ((isnull([DataCorePlugin.Computed.Fuel_LitersPerLap], 0)) > (0))) and (((ucase(isnull([DataCorePlugin.GameData.SessionTypeName], ''))) = ('RACE')) and (if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))), ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)), (isnull([DataCorePlugin.GameData.RemainingLaps], 0)) > (0)))), if(((isnull([OpenDash.SessionProgress], 'auto')) = ('time')) or (((isnull([OpenDash.SessionProgress], 'auto')) = ('auto')) and (((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) > (0)) and ((timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])) <= (86400)))), ((if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (1000), 4, if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (100), 3, if((round(abs(((timespantoseconds([DataCorePlugin.Computed.Fuel_RemainingTime])) - (timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]))) / (60)), 0)) >= (10), 2, 1)))) + (1)) * (16), (((if((round(abs((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) - (isnull([DataCorePlugin.GameData.RemainingLaps], 0))), 1)) >= (100), 3, if((round(abs((isnull([DataCorePlugin.Computed.Fuel_RemainingLaps], 0)) - (isnull([DataCorePlugin.GameData.RemainingLaps], 0))), 1)) >= (10), 2, 1))) + (2)) * (16)) + (9)), 32)) + (5)",
         "mode": "formula",
       },
       "Text": {
@@ -197,7 +198,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "toEnd.unit",
     "rect": {
       "height": 17,
-      "left": 790,
+      "left": 798,
       "top": 461,
       "width": 26,
     },
@@ -216,7 +217,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "laps.label",
     "rect": {
       "height": 19,
-      "left": 882,
+      "left": 890,
       "top": 421,
       "width": 73,
     },
@@ -245,7 +246,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "laps.value",
     "rect": {
       "height": 42,
-      "left": 882,
+      "left": 890,
       "top": 438,
       "width": 75,
     },
@@ -263,7 +264,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "refuel.label",
     "rect": {
       "height": 19,
-      "left": 989,
+      "left": 997,
       "top": 421,
       "width": 89,
     },
@@ -292,7 +293,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "refuel.value",
     "rect": {
       "height": 42,
-      "left": 989,
+      "left": 997,
       "top": 438,
       "width": 91,
     },
@@ -310,7 +311,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "perLap.label",
     "rect": {
       "height": 19,
-      "left": 1112,
+      "left": 1120,
       "top": 421,
       "width": 89,
     },
@@ -339,7 +340,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "perLap.value",
     "rect": {
       "height": 42,
-      "left": 1112,
+      "left": 1120,
       "top": 438,
       "width": 91,
     },
@@ -357,7 +358,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "lastLap.label",
     "rect": {
       "height": 19,
-      "left": 1235,
+      "left": 1243,
       "top": 421,
       "width": 89,
     },
@@ -386,7 +387,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "name": "lastLap.value",
     "rect": {
       "height": 42,
-      "left": 1235,
+      "left": 1243,
       "top": 438,
       "width": 91,
     },
