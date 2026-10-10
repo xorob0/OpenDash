@@ -64,7 +64,7 @@ namespace OpenDashPlugin
             new Module(16, "opponents", "Opponents", "The car ahead and the car behind, in detail.", true),
             new Module(17, "gear", "Gear", "The gear, as large as the screen allows.", true),
             new Module(18, "stint", "Stint", "Stint laps and time, stops and the last stop.", true),
-            new Module(19, "lapHistory", "Lap history", "Your last laps with the delta to the session best.", true),
+            new Module(19, "lapHistory", "Lap history", "Your last laps with the delta to your best.", true),
             new Module(20, "damage", "Damage", "Body and suspension damage. iRacing reports none.", false),
             new Module(21, "trackRivals", "Track rivals", "How your segments compare against the field.", false),
             new Module(22, "engineReadings", "Engine readings", "Water and oil temperatures, oil and fuel pressure, voltage and manifold pressure.", true),
