@@ -22,7 +22,9 @@ import { composePackages } from '../src/build.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { expressionsIn, itemsOf, walkItems } from '../src/walk.ts';
 import type { TextItem } from '../src/generator.ts';
-import { certainlyDrawn, drawnFloors, parseNcalc, widthAsDrawn } from './drawnStrings.ts';
+import { measureText, type MeasuredFace } from '../src/design/advances.ts';
+import { SESSION_NAMES, SESSION_NAME_WIDEST, sessionType } from '../src/second/values.ts';
+import { certainlyDrawn, drawnFloors, parseNcalc, readsVocabulary, widthAsDrawn } from './drawnStrings.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
 
 const PACKAGES = composePackages({ version: '0.0.0-test', log: () => {} }, true);
@@ -58,6 +60,14 @@ describe('the reading of a binding', () => {
     // Wholly the sim's: nothing to hold a `widest` to, and nothing invented to hold it to either.
     expect(drawnFloors("format([DataCorePlugin.GameData.SpeedKmh], '0')")).toEqual([]);
     expect(drawnFloors('[DataCorePlugin.GameData.Gear]')).toEqual([]);
+  });
+
+  test('a property whose words are known draws one of them, and the session type is one', () => {
+    // A free property has no floor, which is how the session page came to measure the session's
+    // name by `Race` and draw `Lone Qualify` as `Lone Qua` with every test passing (#1029).
+    expect(drawnFloors(sessionType()).sort()).toEqual([...SESSION_NAMES].sort());
+    expect(drawnFloors(`ucase(${sessionType()})`)).toContain('OFFLINE TESTING');
+    expect(drawnFloors("('Session: ') + ([DataCorePlugin.GameData.SessionTypeName])")).toContain('Session: Offline Testing');
   });
 
   test('a number is not a string, so a sum contributes no digit', () => {
@@ -129,6 +139,48 @@ describe('every widest holds what its binding can draw', () => {
         for (const item of texts(walkItems(module.build({ frame: box.frame, density: box.density, prefix: '' })))) {
           if (item.widest === undefined) continue;
           expect({ module: module.id, item: item.name, widest: item.widest, wider: wider(item) }).toMatchObject({ wider: [] });
+        }
+      }
+    });
+  }
+});
+
+describe('a property whose words are known is measured by the widest of them', () => {
+  test('the session name declared widest is the widest session name in every face, as written and in capitals', () => {
+    const faces: MeasuredFace[] = ['BarlowMedium', 'BarlowBold', 'BarlowCondensedSemiBold', 'BarlowCondensedBold', 'BarlowCondensedLight', 'DSEG7Regular', 'DSEG7Bold', 'DSEG14Regular'];
+    expect(SESSION_NAMES).toContain(SESSION_NAME_WIDEST);
+    for (const face of faces) {
+      for (const cased of [(t: string) => t, (t: string) => t.toUpperCase()]) {
+        const widest = measureText(face, cased(SESSION_NAME_WIDEST), 100);
+        for (const name of SESSION_NAMES) {
+          expect({ face, name: cased(name), fits: measureText(face, cased(name), 100) <= widest }).toMatchObject({ fits: true });
+        }
+      }
+    }
+  });
+
+  // A bound item with no `widest` is measured by its sample, and the loop above passes it over; one
+  // that reads a property whose words are known has a widest to declare, and declaring it is what
+  // puts it in that loop. The session page's Session field declared none and was cut for `Race`.
+  const reading = PACKAGES.flatMap((composed) =>
+    composed.pkg.dashboards.flatMap((dashboard) => texts(itemsOf(dashboard)).filter(readsVocabulary).map((item) => ({ folder: composed.pkg.folderName, dashboard: dashboard.name, item }))),
+  );
+
+  test('there is something to check', () => {
+    expect(reading.length).toBeGreaterThan(0);
+  });
+
+  test('every package', () => {
+    for (const { folder, dashboard, item } of reading) {
+      expect({ folder, dashboard, item: item.name, declares: item.widest !== undefined }).toMatchObject({ declares: true });
+    }
+  });
+
+  for (const box of moduleBoxes()) {
+    test(`every module on a ${box.name}`, () => {
+      for (const module of MODULES) {
+        for (const item of texts(walkItems(module.build({ frame: box.frame, density: box.density, prefix: '' }))).filter(readsVocabulary)) {
+          expect({ module: module.id, item: item.name, declares: item.widest !== undefined }).toMatchObject({ declares: true });
         }
       }
     });

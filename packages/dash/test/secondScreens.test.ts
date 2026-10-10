@@ -1368,6 +1368,36 @@ describe('a value is drawn from its budget and not from its sample', () => {
   });
 });
 
+/**
+ * A word the sim writes is not a number, and is drawn and measured as a word (#1029).
+ *
+ * The session page cut its Session field in eight cells for `Race`, and iRacing names a qualifying
+ * session `Lone Qualify`, which was drawn `Lone Qua`. A word is set in the face's advances and its
+ * box is the widest reading the binding can draw, so the width the field asks of its row is that
+ * reading's.
+ */
+describe('a word is drawn from its widest reading, in the advances of its face', () => {
+  const word = (value: Partial<FieldSpec['value']>): FieldSpec => ({
+    name: 'probe',
+    label: 'Session',
+    value: { sample: 'Race', chars: CHARS.sessionName, fs: 46, proportional: true, ...value },
+  });
+
+  test('the box holds the widest reading and is not monospaced', () => {
+    const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.monospace).toBeUndefined();
+    expect(value.rect.width).toBeGreaterThan(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46));
+  });
+
+  test('a bound word that declares no widest is refused, since its sample is the short end', () => {
+    expect(() => field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]' }), 0, 200, 'companion')).toThrow(/probe.*declares no widest/);
+  });
+
+  test('and a word takes no follower, which is placed from the end of cells', () => {
+    expect(() => field(word({ widest: 'Offline Testing', follower: { text: 'L' } }), 0, 200, 'companion')).toThrow(/probe.*no follower/);
+  });
+});
+
 describe('the small text that follows a value', () => {
   const followerOf = (follower: Follower, fs: number): TextItem => {
     const spec = { name: 'f', label: 'Fuel', value: { sample: '38.4', chars: { digits: 3, specials: 1 }, fs, follower } };

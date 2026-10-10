@@ -30,6 +30,7 @@ import type { ModuleContext } from '../../modules/module.ts';
 import type { Density } from '../../second/density.ts';
 import type { FieldSpec } from '../../second/field.ts';
 import { stack, type StackRow } from '../../second/layout.ts';
+import { SESSION_NAMES, sessionType } from '../../second/values.ts';
 import type { ModuleRegister } from '../drawing.ts';
 import { withHouseLayout } from '../moduleRegister.ts';
 import { reading, segment, segmentWidth } from './register.ts';
@@ -81,6 +82,32 @@ export const SHORT: Readonly<Record<string, string>> = {
   'vs all-time best': 'VS ABEST',
   'vs last lap': 'VS LAST',
 };
+
+/**
+ * The words the unit writes for the session names that are wider than a column holds (#1029).
+ *
+ * A seven-segment cell is 0.816 em whatever it draws, so `Offline Testing` at the reference 40 px is
+ * 467 px, the columns the LCD lays are 360 and 440, and a name cannot be set smaller, the register
+ * having one value size per zone. So the qualifier goes, as the captions lose what the unit has no
+ * room for, and what is left is iRacing's own word for the session. `Consolation` is eleven cells
+ * and two pixels past a 360 px column, and is written as the dirt ovals that run one call it. A
+ * name not listed is written as iRacing writes it.
+ */
+export const SHORT_SESSION: Readonly<Record<string, string>> = {
+  'Offline Testing': 'Testing',
+  'Lone Qualify': 'Qualify',
+  'Open Qualify': 'Qualify',
+  'Consolation': 'Consi',
+};
+
+/** True for the session's name, which is the one reading the LCD writes in its own words. */
+const isSessionName = (spec: FieldSpec): boolean => spec.value.bind === sessionType();
+
+/** The session's name as the unit writes it, the long names replaced longest first. */
+const sessionShort = (bind: Expr): Expr =>
+  Object.entries(SHORT_SESSION)
+    .sort(([a], [b]) => b.length - a.length)
+    .reduce((expr, [long, to]) => ncalc.replace(expr, long, to), bind);
 
 const idOf = (spec: FieldSpec): string => spec.id ?? spec.name;
 
@@ -153,6 +180,7 @@ function captionOf(spec: FieldSpec): { text: string; widest: string; bind?: Expr
  * reaches, so its sample is filled out to the budget's cells.
  */
 function widestValue(spec: FieldSpec): string {
+  if (isSessionName(spec)) return widestOf(SESSION_NAMES.map((name) => SHORT_SESSION[name] ?? name));
   if (spec.value.widest !== undefined) return spec.value.widest;
   const cellsIn = [...spec.value.sample].filter((ch) => ch !== '.' && ch !== ':').length;
   return '8'.repeat(Math.max(0, spec.value.chars.digits - cellsIn)) + spec.value.sample;
@@ -199,7 +227,8 @@ function valueItems(spec: FieldSpec, right: number, row: Rect, size: number): It
   const y = Math.round(row.top + (row.height - size) / 2);
   const mark = spec.value.mark;
   const visible = unmarked(mark, spec.visibleBind);
-  const items = reading(spec.name, spec.value.sample, right, y, size, { bind: spec.value.bind, widest: widestValue(spec), visibleBind: visible });
+  const bind = spec.value.bind !== undefined && isSessionName(spec) ? sessionShort(spec.value.bind) : spec.value.bind;
+  const items = reading(spec.name, spec.value.sample, right, y, size, { bind, widest: widestValue(spec), visibleBind: visible });
   if (mark) {
     // The house's mark for a state no figure can say, the `∞` of a session with no clock, in the
     // value's place; the segment faces have no glyph for it, so WPF draws it in a face of its own.

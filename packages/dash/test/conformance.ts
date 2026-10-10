@@ -27,6 +27,7 @@ import { moduleBodyOf } from '../src/zones/pages.ts';
 import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
 import { withHouseLayout } from '../src/themes/moduleRegister.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
+import { certainlyDrawn, readsVocabulary, widthAsDrawn } from './drawnStrings.ts';
 
 /** Set to `full` to check every theme the build knows, whatever the branch touched. */
 export const MATRIX_ENV = 'OPENDASH_THEME_MATRIX';
@@ -75,6 +76,16 @@ export function clipped(themeId: string, face: ThemeFace): string[] {
       const line = LINE_SPACING * item.fontSize;
       if (line > item.rect.height) problems.push(`${where} needs a ${line.toFixed(1)} px line at ${item.fontSize}, in a box ${item.rect.height} px tall`);
       for (const o of cellOverruns(item)) problems.push(`${where} draws ${JSON.stringify(o.glyph)} ${o.advance} px wide in a ${o.cell} px cell`);
+      // The box holds the `widest`, so the `widest` has to hold what the binding draws where the
+      // words a property can carry are known, as `widest.test.ts` asks of the house's packages: a
+      // theme that writes the session's name in words of its own, as the AiM does, declares the
+      // widest of those words rather than the house's.
+      if (item.widest !== undefined && readsVocabulary(item)) {
+        const limit = widthAsDrawn(item, item.widest);
+        for (const text of certainlyDrawn(item)) {
+          if (widthAsDrawn(item, text) > limit) problems.push(`${where} can draw ${JSON.stringify(text)}, wider than the ${JSON.stringify(item.widest)} it declares`);
+        }
+      }
     }
   }
   return problems;

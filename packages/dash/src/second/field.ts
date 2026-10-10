@@ -13,7 +13,7 @@ import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { DATA_FACE, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -69,6 +69,16 @@ export interface FieldValue {
    * Declare it wherever the sample is the short end of the range rather than the long one.
    */
   widest?: string;
+  /**
+   * A word rather than a number, set in the data face's own advances rather than in cells, and
+   * measured by `widest`, which a bound word is required to declare.
+   *
+   * Rule 19 keeps out of a cell any glyph whose ink overruns it, and a word the sim writes can be
+   * made of those: the session's name can be `Warmup`. Cut in cells, a word also takes a cell per
+   * letter whatever the letter, so `Offline Testing` is a third wider in cells than it draws. `chars` is then what it would take in cells and is not what it is measured by,
+   * as on the bar's own words. A word carries no follower, which is placed from the end of cells.
+   */
+  proportional?: boolean;
   /** Font size; a density size, e.g. `d.big`. */
   fs: number;
   color?: Hex;
@@ -182,6 +192,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
  * because the sample is what the author drew.
  */
 export function valueCells(spec: FieldSpec, mono: Monospace): number {
+  if (spec.value.proportional) return wordWidth(spec);
   const budget = monoWidth(mono, spec.value.chars);
   const drawn = charsOfText(spec.value.sample, mono);
   if (monoWidth(mono, drawn) > budget) {
@@ -190,6 +201,21 @@ export function valueCells(spec: FieldSpec, mono: Monospace): number {
     );
   }
   return budget;
+}
+
+/**
+ * The width a word takes: its widest reading in the advances of the face it is drawn in, rounded up
+ * as `numeral` rounds the box it cuts from the same measurement.
+ */
+function wordWidth(spec: FieldSpec): number {
+  const value = spec.value;
+  if (value.bind !== undefined && value.widest === undefined) {
+    throw new Error(`field ${spec.name}: a bound word declares no widest; a word is measured by the widest reading its binding can draw, not by its sample`);
+  }
+  if (value.follower !== undefined) {
+    throw new Error(`field ${spec.name}: a word carries no follower; a follower is placed from the end of the cells a number is cut from`);
+  }
+  return Math.ceil(measureText(DATA_FACE[value.weight ?? 'SemiBold'], value.widest ?? value.sample, value.fs));
 }
 
 export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
@@ -312,6 +338,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   items.push(
     numeral(`${spec.name}.value`, spec.value.sample, x, valueY, spec.value.fs, spec.value.chars, {
       weight: spec.value.weight,
+      proportional: spec.value.proportional,
       bind: spec.value.bind,
       widest: spec.value.widest,
       color: spec.value.color,
