@@ -20,7 +20,7 @@ import { rect } from '../src/design/geometry.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { sessionPanel } from '../src/screens/pitwall.ts';
-import { carBehindPositionClass, classAndPlace, hasPosition, NO_VALUE, player, positionDigits, positionLabelled } from '../src/second/values.ts';
+import { carBehindPositionClass, carRankChange, classAndPlace, hasPosition, NO_VALUE, player, positionDigits, positionLabelled } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
@@ -84,6 +84,22 @@ describe('every drawing of a class place, counting in class', () => {
     }
     // The pair is the class whatever the mode, and the guard is the same counting overall.
     expect(evalNcalc(classAndPlace(player()), frame(0, 7, 'overall'))).toBe(`GT3 · P${NO_VALUE}`);
+  });
+
+  test('the places gained beside the position, which the leaderboards\' rank column draws', () => {
+    // SimHub takes the class start from the class place it numbered the first frame it saw the
+    // car and counts against it whenever the class place is above 0, which it always is: a car
+    // first in its class in the driver list and fourth once three others set times reads three
+    // places lost. Overall, `PositionGain` stays null until the car is placed.
+    const moved = (overall: number, mode: 'class' | 'overall' = 'class'): Props => ({
+      ...frame(overall, 4, mode),
+      [`driverpositiongainclass(${ROW})`]: -3,
+      [`driverpositiongain(${ROW})`]: overall > 0 ? -2 : null,
+    });
+    expect(evalNcalc(carRankChange(player()), moved(0))).toBe(0);
+    expect(evalNcalc(carRankChange(player()), moved(0, 'overall'))).toBe(0);
+    expect(evalNcalc(carRankChange(player()), moved(19))).toBe(-3);
+    expect(evalNcalc(carRankChange(player()), moved(19, 'overall'))).toBe(-2);
   });
 
   test('the blue flag band', () => {

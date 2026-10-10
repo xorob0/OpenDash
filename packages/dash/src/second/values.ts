@@ -650,9 +650,17 @@ export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
  * SimHub publishes the twin rather than leaving it to be worked out: `PositionGainClass` is
  * "driver's position gains in his own class since the start of the race/connection", registered
  * beside `PositionGain` among the opponent providers of SimHub 9.12.6.
+ *
+ * A car the sim has not placed has moved nowhere, so the count waits for {@link hasPosition}, as
+ * the place beside it does. Overall that changes nothing, since SimHub leaves `PositionGain` null
+ * until the car's `Position` is above 0. In class it does: `GameManagerBase` takes the class start
+ * from `PositionInClass` the first frame it sees the car and subtracts the current one whenever
+ * that is above 0, which it always is (#1014). In a practice a car first in its class in the driver
+ * list with no time starts first, and once three of its class set times it reads three places lost
+ * beside a place of `P--`.
  */
 export const carRankChange = (idx: Expr): Expr =>
-  iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0)));
+  iff(hasPosition(idx), iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0))), num(0));
 
 /**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
