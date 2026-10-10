@@ -1091,8 +1091,10 @@ const SECONDS_PER_MINUTE = 60;
  * Two questions, and the first one alone is not enough. A length, because a session with no end has
  * no flag for the tank to reach and the subtraction would draw the whole of the range as spare, and
  * the length asked for is the one the page is counting down -- the time in a timed session and the
- * laps remaining in a lap-counted one -- since those are the two terms of the subtraction and either
- * may be missing while the other is there.
+ * laps remaining in a lap-counted one -- since either may be missing while the other is there. A
+ * timed session asks for a lap to have been timed as well, by {@link lapsLeftIsKnown}, because its
+ * margin is counted in the laps {@link lapsLeft} predicts from that lap, and until there is one the
+ * race has a clock but no laps to measure the tank against.
  *
  * And a race, because a practice or qualifying session that *does* have a length has an end nobody
  * waves a flag at. A thirty-minute open practice with eight minutes of fuel in the tank read `−22`
@@ -1108,7 +1110,8 @@ const SECONDS_PER_MINUTE = 60;
  * practice too, but it is drawn in caution amber as an instruction to the crew rather than as a
  * verdict, so a figure of no use in practice is not a figure that alarms there.
  */
-const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0))));
+const raceHasAnEnd = (): Expr =>
+  and(eq(ucase(sessionType()), str('RACE')), iff(showsTimeLeft(), and(isTimedSession(), lapsLeftIsKnown()), gt(lapsLeft(), num(0))));
 
 /**
  * Whether there is a margin to draw: a lap has said what one costs, and the race has an end.
@@ -1119,10 +1122,26 @@ const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(
  */
 export const fuelToEndIsSettled = (): Expr => and(fuelIsSettled(), raceHasAnEnd());
 
-/** The lap-counted form: the range in the tank less the laps the session still has to run. */
+/** The margin in laps: the range in the tank less the laps the race still has to run. */
 const fuelToEndLaps = (): Expr => sub(fuelLapsLeft(), lapsLeft());
-/** The timed form, in minutes: the range in the tank less the time the session still has to run. */
-const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()), num(SECONDS_PER_MINUTE));
+
+/**
+ * The timed form: the same laps, read in minutes at the lap {@link lapsLeft} counts them at.
+ *
+ * Not the range's time less the time left, which is what it was. A timed race does not end when its
+ * clock does: the leader finishes the lap the clock runs out on, and so does every car, so the time
+ * still to run is the clock and the rest of that lap. A tank that lasted 90 s with 60 s on the clock
+ * and a 110 s lap read `+1` in the green and ran dry 20 s from the flag, and once #1017 kept the
+ * session timed after the clock, the margin over the last lap was the whole range less nothing,
+ * green whatever was in the tank (#1024).
+ *
+ * The laps are {@link lapsLeft}'s, the count Laps left draws and Refuel multiplies, and the range is
+ * `Fuel_RemainingLaps` and not `Fuel_RemainingTime`, which SimHub makes from the same laps of fuel
+ * at the average of the last three laps rather than at the lap the count is made at. So the margin
+ * is below nought exactly where {@link fuelToAdd} is above it: the two fields are one subtraction
+ * read two ways, and they cannot disagree about whether the tank makes it.
+ */
+const fuelToEndMinutes = (): Expr => div(mul(fuelToEndLaps(), timedLapSeconds()), num(SECONDS_PER_MINUTE));
 
 /**
  * Fuel to the end of the race, signed: how much more than the rest of the race the tank holds.
@@ -1132,11 +1151,11 @@ const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()),
  * page, so the driver did the arithmetic mid-corner. [ADR 0009](../../../../docs/decisions/0009-does-the-plugin-compute.md)
  * allows a subtraction of two published values in an expression, and this is that subtraction. #387.
  *
- * Two quantities rather than one, chosen the way the session page chooses which counter to draw: a
- * timed session compares `Fuel_RemainingTime` with `SessionTimeLeft` and reads in minutes, a
- * lap-counted one compares `Fuel_RemainingLaps` with {@link lapsLeft} and reads in laps. The switch
- * is {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and
- * the driver is never asked to notice that the unit changed for a reason of its own. The unit is
+ * One subtraction, `Fuel_RemainingLaps` less {@link lapsLeft}, read in one of two units chosen the
+ * way the session page chooses which counter to draw: a timed session reads it in minutes, at the
+ * lap its laps left are counted at, and a lap-counted one in laps. The switch is
+ * {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and the
+ * driver is never asked to notice that the unit changed for a reason of its own. The unit is
  * drawn beside the number by {@link fuelToEndUnit}, because a bare signed figure that means laps on
  * one grid and minutes on the next is a reading nobody can act on.
  */
@@ -1185,8 +1204,8 @@ export const fuelToEndDrawn = (): DrawnFigure =>
  * The widest reading the margin can draw, which is what its box is measured against.
  *
  * The lap form, because the decimal costs a cell the minutes do not spend: `−999.9` laps is five
- * digit cells and a special where the longest timed reading, a full day's `−1439` min, is five digit
- * cells and none. Both are inside {@link CHARS.margin}; a `widest` is declared because a monospaced
+ * digit cells and a special where the longest timed reading, a full day and the lap the clock runs
+ * out on with an empty tank, `−1443` min at a 95 s lap, is five digit cells and none. Both are inside {@link CHARS.margin}; a `widest` is declared because a monospaced
  * box is cut from its budget and the fit tests measure what the item says it draws, so a field left
  * with `+1.4` on it is a field measured at three cells for a reading that takes six.
  */
