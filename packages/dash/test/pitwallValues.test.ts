@@ -189,6 +189,20 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
     expect({ overall: lead('overall'), inClass: lead('class') }).toEqual({ overall: 'Lead', inClass: 'Lead' });
   });
 
+  test('no row claims the lead before the sim has placed anyone, under either setting (#1014)', () => {
+    // The grid, or a practice before anyone has a time: every overall place is 0, and SimHub still
+    // numbers the class places from 1 in the order of the driver list, so the first car of the class
+    // has a class place of 1 and nothing else to say. Its place reads `--`, and the word beside it
+    // waits for the same answer.
+    const GRID: readonly Car[] = [
+      car({ position: 0, classposition: 1, gaptoleader: null, ours: true }),
+      car({ position: 0, classposition: 1, gaptoleader: null }),
+      car({ position: 0, classposition: 2, gaptoleader: null, ours: true }),
+    ];
+    const first = (positionMode: 'overall' | 'class'): unknown => evaluate(carClassRaceGap(repeatIndex()), GRID, 1, positionMode);
+    expect({ overall: first('overall'), inClass: first('class') }).toEqual({ overall: '', inClass: '' });
+  });
+
   test('measured to the race leader the same column says nothing at all', () => {
     // The defect this reading exists for, and the reason it is not the one beside it: the class is
     // a lap down on the race, so every row falls into the lapped branch, no row reads Lead and the

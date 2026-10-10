@@ -800,7 +800,11 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   `Fuel`, tyre temperatures and pressures are already converted to the user's unit.
 - Class position: there is no player class position property. `[PlayerClassOpponentsCount]`
   gives the class car count and `driverclassposition(getplayerleaderboardposition())` the
-  position in class.
+  position in class. That is `PositionInClass`, which `GameManagerBase` numbers itself, from 1
+  within each class, in the order of the overall `Position` with a 0 sorted last, so a class
+  place is never 0 and whether a car is placed is asked of `driverposition` (#1014). The class
+  places gained, `driverpositiongainclass`, are counted from the class place of the first frame
+  SimHub saw the car, so a car first seen unplaced counts them from a place SimHub made up.
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

@@ -530,19 +530,32 @@ export const ellipsised = (value: Expr, chars: number): Expr =>
 
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
-/** The position a table shows, overall or in class per the plugin's PositionMode. */
 /**
- * A car's position, overall or in class, or 0 while the sim has not placed it.
+ * A car's position, overall or in class per the plugin's PositionMode.
  *
- * Zero is kept as the *number* because callers do arithmetic on it and compare it. What changed is
- * that nothing draws a zero any more: {@link hasPosition} is the guard, and every drawing that
- * prints a position asks it first. A grid of AI before the green flag has no positions at all, and
- * a column of `P0` is a row of wrong answers where an empty cell is an honest one.
+ * It is a number whether or not the sim has placed the car, and it is never drawn without asking
+ * {@link hasPosition} first: every drawing that prints a position goes through that guard. A grid
+ * of AI before the green flag has no positions at all, and a column of `P0` or of places SimHub
+ * counted out of the driver list is a row of wrong answers where an empty cell is an honest one.
+ * Overall the number is 0 until the sim places the car; in class it is never 0, for the reason
+ * {@link hasPosition} gives.
  */
 export const carPosition = (idx: Expr): Expr => iff(classMode(), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
 
-/** True once the sim has actually placed this car. Positions count from one, so zero is "not yet". */
-export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
+/**
+ * True once the sim has actually placed this car, which only its overall position says, in either
+ * mode. Positions count from one, so an overall zero is "not yet".
+ *
+ * The class place cannot answer it, because SimHub never reports a class place of 0 for a car on
+ * the leaderboard. `GameManagerBase` in 9.12.6 numbers `PositionInClass` itself, from 1 within each
+ * class over every opponent, in the order of their overall `Position` with a 0 sorted last, then
+ * their live position, then their best lap. So before iRacing has placed anyone, every car still
+ * has a class place, which is its order in the driver list within its class, and a guard asking
+ * that place drew `GT3 · P12`, `12 / 12` and a relative of P1 to P12 on a grid where the overall
+ * reading drew `--` (#1014). A car the sim has placed overall has a class place that means
+ * something, the placed cars being sorted ahead of the rest.
+ */
+export const hasPosition = (idx: Expr): Expr => gt(isnull(driver('position', idx), num(0)), num(0));
 
 /** A position as digits, or `--` before the sim has placed the car: `4`, and `--` on the grid. */
 export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(carPosition(idx), '0'), str(NO_VALUE));
@@ -565,7 +578,8 @@ export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDi
 export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P', positionDrawn(idx));
 
 /**
- * A car's place in its own class, or 0 while the sim has not placed it.
+ * A car's place in its own class, which SimHub numbers whether or not the sim has placed the car,
+ * so it is drawn only where {@link hasPosition} holds.
  *
  * Always the class, whatever `PositionMode` says, which is what sets it apart from
  * {@link carPosition}: it is the place that stands beside a class name, and with the rig counting
@@ -586,8 +600,11 @@ export const classPlace = (idx: Expr): Expr => isnull(driver('classposition', id
  *
  * So the class is cut by {@link chipText}, the cut the leaderboard's chip makes, because a header
  * reading one spelling of a class beside a chip reading another would be two answers to one
- * question; the place is drawn `--` until there is one, as {@link positionDigits} draws it; and the
- * run is set proportionally by every caller and measured from {@link CLASS_AND_PLACE_WIDEST}.
+ * question; the place is drawn `--` until there is one, under the guard {@link positionDigits} asks;
+ * and the run is set proportionally by every caller and measured from {@link CLASS_AND_PLACE_WIDEST}.
+ * The guard is the overall position and not the class place's own `> 0`, which never failed: SimHub
+ * numbers every listed car's class place from 1 before anyone is placed, and the pair read
+ * `GT3 · P12` on a grid (#1014).
  *
  * Both halves are read from the same leaderboard entry, so the class and the place cannot belong to
  * two different cars. It takes the car's index for that reason, and any car's pair can be drawn
@@ -599,7 +616,7 @@ export const classPlace = (idx: Expr): Expr => isnull(driver('classposition', id
  */
 export const classAndPlace = (idx: Expr): Expr => {
   const cut = chipText(carClass(idx));
-  const place = iff(gt(classPlace(idx), num(0)), fmt(classPlace(idx), '0'), str(NO_VALUE));
+  const place = iff(hasPosition(idx), fmt(classPlace(idx), '0'), str(NO_VALUE));
   return iff(eq(cut, str('')), concat(str('P'), place), concat(cut, str(' · P'), place));
 };
 
@@ -633,9 +650,17 @@ export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
  * SimHub publishes the twin rather than leaving it to be worked out: `PositionGainClass` is
  * "driver's position gains in his own class since the start of the race/connection", registered
  * beside `PositionGain` among the opponent providers of SimHub 9.12.6.
+ *
+ * A car the sim has not placed has moved nowhere, so the count waits for {@link hasPosition}, as
+ * the place beside it does. Overall that changes nothing, since SimHub leaves `PositionGain` null
+ * until the car's `Position` is above 0. In class it does: `GameManagerBase` takes the class start
+ * from `PositionInClass` the first frame it sees the car and subtracts the current one whenever
+ * that is above 0, which it always is (#1014). In a practice a car first in its class in the driver
+ * list with no time starts first, and once three of its class set times it reads three places lost
+ * beside a place of `P--`.
  */
 export const carRankChange = (idx: Expr): Expr =>
-  iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0)));
+  iff(hasPosition(idx), iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0))), num(0));
 
 /**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
@@ -695,6 +720,11 @@ export const carRaceGap = (idx: Expr): Expr => {
  * word is shown when that place is the first and the cell is left empty otherwise, the row having
  * nothing to measure against itself, which is what {@link carInterval} already draws in the cell
  * beside it. A class leading the race keeps the word under either setting.
+ *
+ * And the word waits for {@link hasPosition}, as the place beside it does. SimHub numbers every
+ * listed car's class place from 1 before the sim has placed anyone, so on a grid counted in class
+ * one car of each class has a class place of 1, and its row read `Lead` beside a place of `--`
+ * (#1014).
  */
 export const carClassRaceGap = (idx: Expr): Expr => {
   const here = driver('gaptoleader', idx);
@@ -702,7 +732,7 @@ export const carClassRaceGap = (idx: Expr): Expr => {
   const lapsDown = sub(driver('currentlap', classPosition(num(1))), driver('currentlap', idx));
   return iff(
     eq(isnull(driver('classposition', idx), num(0)), num(1)),
-    iff(eq(carPosition(idx), num(1)), str('Lead'), str('')),
+    iff(and(hasPosition(idx), eq(carPosition(idx), num(1))), str('Lead'), str('')),
     iff(
       ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)),
       str(NO_VALUE),
