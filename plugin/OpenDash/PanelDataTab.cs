@@ -66,8 +66,12 @@ namespace OpenDashPlugin
         /// page draw, so the row names a lap the driver has already seen a time for rather than
         /// inventing a word for it. The Settings artboard draws all three segments (#322). v0.3.0-rc.7
         /// offered only the first two, so the Settings page tags the row New for the third.
+        ///
+        /// "Your best" where the artboard writes "Session best", for the same reason: SimHub's session best
+        /// is the driver's own best lap of the session, the one Lap times draws as Your best, and every page
+        /// that draws a session best means the field's. The dashes caption the delta "vs your best" (#1030).
         /// </remarks>
-        public static readonly string[] DeltaLabels = { "Session best", "All-time best", "Last lap" };
+        public static readonly string[] DeltaLabels = { "Your best", "All-time best", "Last lap" };
 
         /// <summary>The row under the delta reference, as the Settings artboard draws it (#322).</summary>
         public const string DeltaPrecisionTitle = "Delta precision";
