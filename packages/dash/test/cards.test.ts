@@ -93,10 +93,14 @@ describe('the position card', () => {
   };
   const value = text('x.value');
   const denominator = text('x.denominator');
-  /** The player's place as SimHub reports it, overall and in class alike; null where it reports none. */
+  /**
+   * The player's place as SimHub reports it, overall and in class alike, and through the published
+   * property and the leaderboard alike, so the frame holds whichever of them the card asks whether
+   * it is placed; null where it reports none.
+   */
   const read = (place: number | null): { value: unknown; left: unknown } => {
     const props: Props = { 'getplayerleaderboardposition()': 5 };
-    if (place !== null) Object.assign(props, { 'DataCorePlugin.GameData.Position': place, 'driverclassposition(5)': place });
+    if (place !== null) Object.assign(props, { 'DataCorePlugin.GameData.Position': place, 'driverposition(5)': place, 'driverclassposition(5)': place });
     return {
       value: evalNcalc(String(value.bindings?.Text?.formula ?? ''), props),
       left: evalNcalc(String(denominator.bindings?.Left?.formula ?? ''), props),
