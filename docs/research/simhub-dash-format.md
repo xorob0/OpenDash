@@ -804,7 +804,9 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   within each class, in the order of the overall `Position` with a 0 sorted last, so a class
   place is never 0 and whether a car is placed is asked of `driverposition` (#1014). The class
   places gained, `driverpositiongainclass`, are counted from the class place of the first frame
-  SimHub saw the car, so a car first seen unplaced counts them from a place SimHub made up.
+  SimHub saw the car, so a car first seen unplaced counts them from a place SimHub made up, and no
+  package reads them. The overall `driverpositiongain` waits for the car's first real place, and
+  it is the class count too when the field is a single class (#1022).
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

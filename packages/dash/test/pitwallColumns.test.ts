@@ -16,8 +16,9 @@
 import { describe, expect, test } from 'bun:test';
 import { PORTRAIT_COLUMNS, RACE_COLUMNS, TOWER_COLUMNS, portraitPage, racePage, towerPage } from '../src/screens/pitwall.ts';
 import { columnWidths, type ColumnId } from '../src/second/table.ts';
+import { placesGainedCounted } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
-import type { ImageItem, Item, RectangleItem, TextItem } from '../src/generator.ts';
+import { ncalc, type ImageItem, type Item, type RectangleItem, type TextItem } from '../src/generator.ts';
 
 /** A column of a board's header row: its id here, and the width and alignment its artboard states. */
 interface Column {
@@ -211,14 +212,16 @@ describe('the rank cell marks the direction with a triangle', () => {
       expect({ page: b.page, box: marks[0]!.rect }).toEqual({ page: b.page, box: marks[1]!.rect });
     });
 
-    test(`${b.page}: shown by complementary tests of the one value, with the dash for neither`, () => {
+    test(`${b.page}: shown by complementary tests of the one value, with the dash for neither where there is a count`, () => {
       const [up, down] = marksOf(b);
       const gained = visible(up!);
       const change = gained.slice(0, gained.lastIndexOf('>'));
       expect({ page: b.page, gained: gained.endsWith('> (0)'), change: change.length > 0 }).toEqual({ page: b.page, gained: true, change: true });
       expect({ page: b.page, lost: visible(down!) }).toEqual({ page: b.page, lost: `${change}< (0)` });
       const dash = b.items.find((i) => i.name.endsWith('.row.rank.flat'))!;
-      expect({ page: b.page, unchanged: visible(dash) }).toEqual({ page: b.page, unchanged: `!(${change}!= (0))` });
+      // Where there is no count to give, counting in class in a field of several classes, the dash
+      // is not drawn either: it would say the car has not moved (#1022).
+      expect({ page: b.page, unchanged: visible(dash) }).toEqual({ page: b.page, unchanged: ncalc.and(placesGainedCounted(), `!(${change}!= (0))`) });
     });
 
     test(`${b.page}: with the count three pixels after it, and both inside the 36 px column`, () => {

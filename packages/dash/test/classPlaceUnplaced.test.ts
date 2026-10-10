@@ -91,15 +91,19 @@ describe('every drawing of a class place, counting in class', () => {
     // car and counts against it whenever the class place is above 0, which it always is: a car
     // first in its class in the driver list and fourth once three others set times reads three
     // places lost. Overall, `PositionGain` stays null until the car is placed.
-    const moved = (overall: number, mode: 'class' | 'overall' = 'class'): Props => ({
+    const moved = (overall: number, mode: 'class' | 'overall' = 'class', field = 24): Props => ({
       ...frame(overall, 4, mode),
+      'DataCorePlugin.GameData.OpponentsCount': field,
       [`driverpositiongainclass(${ROW})`]: -3,
       [`driverpositiongain(${ROW})`]: overall > 0 ? -2 : null,
     });
     expect(evalNcalc(carRankChange(player()), moved(0))).toBe(0);
     expect(evalNcalc(carRankChange(player()), moved(0, 'overall'))).toBe(0);
-    expect(evalNcalc(carRankChange(player()), moved(19))).toBe(-3);
     expect(evalNcalc(carRankChange(player()), moved(19, 'overall'))).toBe(-2);
+    // Placed, the class count is never read (#1022): a field of one class counts the overall
+    // places, which are its class places, and a field of two counts nothing.
+    expect(evalNcalc(carRankChange(player()), moved(19, 'class', 12))).toBe(-2);
+    expect(evalNcalc(carRankChange(player()), moved(19))).toBe(0);
   });
 
   test('the blue flag band', () => {
