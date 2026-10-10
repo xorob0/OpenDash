@@ -106,6 +106,10 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
     // with 10 s still on the clock, and one more. Twelve, where the time left alone made it eleven.
     const midLap = timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 1050, 'DataCorePlugin.GameData.CurrentLapTime': 60 });
     expect({ lapsLeft: lapsLeft(midLap), refuel: refuel(midLap) }).toEqual({ lapsLeft: '12', refuel: '13.6' });
+    // The count is whole, and the Refuel takes off the part of the lap already run, by distance,
+    // since that part is out of the tank already: 11.4 laps at 2.8, less the twenty litres (#1024).
+    const placed = { ...midLap, 'DataCorePlugin.GameData.TrackPositionPercent': 0.6 };
+    expect({ lapsLeft: lapsLeft(placed), refuel: refuel(placed) }).toEqual({ lapsLeft: '12', refuel: '11.9' });
     // 50 s to run and 40 s from the line: the line comes with 10 s on the clock, and a lap after it.
     expect(lapsLeft(timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 50, 'DataCorePlugin.GameData.CurrentLapTime': 60 }))).toBe('2');
     // At the line the lap run is nought and the count is the time left's alone.

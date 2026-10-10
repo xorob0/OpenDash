@@ -10,9 +10,10 @@
  *
  * The two forms are checked separately because they are read in two units: laps in a lap-counted
  * session and minutes in a timed one, and which of the two is drawn follows `SessionProgress` exactly
- * as the session page's own counter does. Both are the estimated laps less the laps left, and the
- * timed form reads that in minutes at the lap the laps left are counted at, so a timed race is
- * measured to the end of the lap its clock runs out on and not to the clock (#1024).
+ * as the session page's own counter does. Both are the estimated laps less the laps still to run,
+ * which are the laps left less the part of the lap already run, and the timed form reads that in
+ * minutes at the lap the laps left are counted at, so a timed race is measured to the end of the lap
+ * its clock runs out on and not to the clock (#1024).
  *
  * The last describe here is about width rather than value, and it is the one the fit tests cannot do
  * for themselves. `textFit`, `secondScreens` and `zoneFace` measure what an item says it draws, and a
@@ -70,6 +71,7 @@ const telemetry = (
     sessionLength?: number;
     bestLap?: number | null;
     lapRun?: number;
+    position?: number;
     progress?: string;
     type?: string | null;
   } = {},
@@ -85,6 +87,8 @@ const telemetry = (
   // clock runs out on: eleven in twenty minutes, as the lap-counted default is.
   'DataCorePlugin.GameData.BestLapTime': opts.bestLap === undefined ? 120 : opts.bestLap,
   'DataCorePlugin.GameData.CurrentLapTime': opts.lapRun ?? 0,
+  // At the line unless a case puts the car round the lap, so the whole lap is still to run.
+  'DataCorePlugin.GameData.TrackPositionPercent': opts.position ?? 0,
   'DataCorePlugin.GameData.SessionTypeName': opts.type === undefined ? 'Race' : opts.type,
   ...(opts.progress === undefined ? {} : { 'OpenDash.SessionProgress': opts.progress }),
 });
@@ -101,6 +105,18 @@ describe('the fuel margin on the fuel module', () => {
     expect(marginOn(fuelItems, telemetry({ fuelLaps: 8.7, lapsLeft: 11 }))).toEqual({ value: '−2.3', colour: ds.purpose.delta.slower });
     // Exactly enough counts as reaching the flag, `RemainingLaps` counting the lap you are on.
     expect(marginOn(fuelItems, telemetry({ fuelLaps: 11, lapsLeft: 11 }))).toEqual({ value: '+0.0', colour: ds.purpose.delta.faster });
+  });
+
+  test('mid-lap, the part of the lap already run comes off the laps left, as it has come out of the tank', () => {
+    // The last lap of thirty, begun with fuel for 1.3 laps and nine tenths of it run: 0.4 laps in the
+    // tank and a tenth of a lap to go. Counted with the lap whole, this read `−0.6` in red beside a
+    // Refuel asking for 0.6 laps of fuel, at the pit entry of a car that makes the flag.
+    const lastLap = {
+      ...telemetry({ lapsLeft: 1, fuelLaps: 0.4, perLap: 2.84, lapRun: 99, bestLap: 110, position: 0.9, progress: 'laps' }),
+      'DataCorePlugin.GameData.Fuel': 0.4 * 2.84,
+    };
+    const refuel = evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text'), lastLap);
+    expect({ ...marginOn(fuelItems, lastLap), refuel }).toEqual({ value: '+0.3', colour: ds.purpose.delta.faster, refuel: '0.0' });
   });
 
   test('a timed session reads the same subtraction in whole minutes, at the lap the laps left are counted at', () => {
@@ -173,6 +189,7 @@ describe('the fuel margin on the fuel module', () => {
   test('it agrees with the estimated laps and the laps left the same frame draws', () => {
     // The whole point of the field: the two terms are on the dash already, the fuel page carrying
     // the estimate and the session page the laps left, and a driver was subtracting them himself.
+    // At the line, that is; mid-lap the margin is more by the part of the lap already run.
     const props = telemetry({ fuelLaps: 9.4, lapsLeft: 7, progress: 'laps' });
     const estimate = Number(evalNcalc(formulaOf(fuelItems, 'lapsLeft.value', 'Text'), props));
     const left = Number(evalNcalc(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props));
@@ -189,21 +206,32 @@ describe('the fuel margin on the fuel module', () => {
  * time left, and read a tank that ran dry on the last lap as reaching the flag, in the green.
  */
 describe('a timed margin counts the lap the clock runs out on', () => {
-  /** SimHub's frame at the ticket's numbers: a 110 s lap, and the range its laps of fuel make at it. */
-  const lastLaps = (opts: { sessionSeconds: number; fuelSeconds: number; lapRun: number }): Props =>
-    telemetry({
-      sessionSeconds: opts.sessionSeconds,
-      sessionLength: 2700,
-      bestLap: 110,
-      lapRun: opts.lapRun,
-      fuelSeconds: opts.fuelSeconds,
-      fuelLaps: opts.fuelSeconds / 110,
-      progress: 'auto',
-    });
+  /**
+   * SimHub's frame at the ticket's numbers: a 110 s lap, the range its laps of fuel make at it, and
+   * the car as far round the lap as the time run says, unless a case puts it elsewhere.
+   */
+  const lastLaps = (opts: { sessionSeconds: number; fuelSeconds: number; lapRun: number; position?: number }): Props => {
+    const fuelLaps = opts.fuelSeconds / 110;
+    return {
+      ...telemetry({
+        sessionSeconds: opts.sessionSeconds,
+        sessionLength: 2700,
+        bestLap: 110,
+        lapRun: opts.lapRun,
+        position: opts.position ?? opts.lapRun / 110,
+        fuelSeconds: opts.fuelSeconds,
+        fuelLaps,
+        perLap: 2.84,
+        progress: 'auto',
+      }),
+      'DataCorePlugin.GameData.Fuel': fuelLaps * 2.84,
+    };
+  };
   const read = (props: Props): { value: unknown; colour: unknown } => ({
     value: evalNcalc(fuelToEndText(), props),
     colour: evalNcalc(fuelToEndColour(), props),
   });
+  const refuel = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
 
   test('a tank that lasts past the clock and not to the line reads short, in the slower colour', () => {
     // A minute on the clock and a minute and a half of fuel at the line, on a 1:50 lap: the clock
@@ -215,32 +243,59 @@ describe('a timed margin counts the lap the clock runs out on', () => {
     expect(read(lastLaps({ sessionSeconds: 60, fuelSeconds: 170, lapRun: 0 }))).toEqual({ value: '+1', colour: ds.purpose.delta.faster });
   });
 
-  test('after the clock, the margin is the range less the lap still being run', () => {
+  test('after the clock, the margin is the range less the half lap still to run', () => {
     // The clock at nought and the car half way round its last lap, #1017 keeping the session timed.
     // The margin was the whole range less nothing, green whatever was in the tank. It is now the
-    // range less the lap in progress, which is counted whole as Laps left and the Refuel count it:
-    // 275 s of fuel at 1:50 a lap is two laps and a half, a lap and a half past the flag.
-    expect(read(lastLaps({ sessionSeconds: 0, fuelSeconds: 275, lapRun: 55 }))).toEqual({ value: '+3', colour: ds.purpose.delta.faster });
+    // range less the half lap still to run: 275 s of fuel less 55 s is 220 s, nearly four minutes.
+    expect(read(lastLaps({ sessionSeconds: 0, fuelSeconds: 275, lapRun: 55 }))).toEqual({ value: '+4', colour: ds.purpose.delta.faster });
     // 44 s of fuel with 55 s still to run is a car that stops on its last lap, which read `+1`.
-    expect(read(lastLaps({ sessionSeconds: 0, fuelSeconds: 44, lapRun: 55 }))).toEqual({ value: `${MINUS}1`, colour: ds.purpose.delta.slower });
+    const dry = lastLaps({ sessionSeconds: 0, fuelSeconds: 44, lapRun: 55 });
+    expect({ ...read(dry), refuel: refuel(dry) }).toEqual({ value: `${MINUS}0`, colour: ds.purpose.delta.slower, refuel: '0.3' });
+  });
+
+  test('the part of the lap already run is not counted again, so a tank that makes the flag reads green', () => {
+    // 100 s into a 110 s last lap with 66 s of fuel: 10 s to run and the tank makes it. Counted with
+    // the lap whole, this read `−1` in red beside a Refuel of 0.8, which is a stop on the last lap.
+    const home = lastLaps({ sessionSeconds: 0, fuelSeconds: 66, lapRun: 100 });
+    expect({ ...read(home), refuel: refuel(home) }).toEqual({ value: '+1', colour: ds.purpose.delta.faster, refuel: '0.0' });
+  });
+
+  test('the part run is measured by distance, so a slow lap does not take too much off', () => {
+    // 100 s into a lap through the pit lane, a third of the way round: the time over the best lap
+    // would call it nine tenths run and the Refuel short. Two thirds of a lap is still to run, and
+    // 66 s of fuel does not cover it.
+    const pitLap = lastLaps({ sessionSeconds: 0, fuelSeconds: 66, lapRun: 100, position: 0.33 });
+    expect({ ...read(pitLap), refuel: refuel(pitLap) }).toEqual({ value: `${MINUS}0`, colour: ds.purpose.delta.slower, refuel: '0.2' });
+  });
+
+  test('where the distance and the time disagree at the line, the lap counts whole', () => {
+    // Just past the line, the lap time at nought and the distance not yet round: the lap is the one
+    // just begun, and counting the distance would take nearly a lap off it.
+    const justOver = lastLaps({ sessionSeconds: 0, fuelSeconds: 66, lapRun: 1, position: 0.99 });
+    expect(read(justOver)).toEqual({ value: `${MINUS}1`, colour: ds.purpose.delta.slower });
+    // And a game with no position, which SimHub publishes as `-1`, counts the lap whole too.
+    expect(read(lastLaps({ sessionSeconds: 0, fuelSeconds: 66, lapRun: 100, position: -1 }))).toEqual({ value: `${MINUS}1`, colour: ds.purpose.delta.slower });
   });
 
   test('it reads short exactly where the Refuel asks for fuel, so the two never disagree', () => {
     // The margin and the Refuel are one subtraction, the laps of fuel against the laps left, read
     // two ways, so the verdict and the instruction beside it agree about whether the tank makes it
-    // in every frame of a timed race: at the line, mid-lap, on a slow lap and after the clock.
-    const refuel = formulaOf(fuelItems, 'toAdd.value', 'Text');
+    // in every frame of a timed race: at the line, mid-lap, on a slow lap and after the clock, and
+    // wherever the distance round the lap stands against the time run.
     const perLap = 2.84;
     for (const sessionSeconds of [0, 30, 60, 170, 600, 1200]) {
       for (const lapRun of [0, 40, 109, 150]) {
-        for (const fuelLaps of [0.3, 0.8, 1.2, 2.5, 5.9, 11.4]) {
-          const props = {
-            ...telemetry({ sessionSeconds, sessionLength: 2700, bestLap: 110, lapRun, fuelLaps, perLap, progress: 'auto' }),
-            'DataCorePlugin.GameData.Fuel': fuelLaps * perLap,
-          };
-          const short = evalNcalc(fuelToEndColour(), props) === ds.purpose.delta.slower;
-          const toAdd = Number(evalNcalc(refuel, props));
-          expect({ sessionSeconds, lapRun, fuelLaps, short }).toEqual({ sessionSeconds, lapRun, fuelLaps, short: toAdd > 0 });
+        for (const position of [0, 0.3, 0.9, 0.99]) {
+          for (const fuelLaps of [0.3, 0.8, 1.2, 2.5, 5.9, 11.4]) {
+            const props = {
+              ...telemetry({ sessionSeconds, sessionLength: 2700, bestLap: 110, lapRun, position, fuelLaps, perLap, progress: 'auto' }),
+              'DataCorePlugin.GameData.Fuel': fuelLaps * perLap,
+            };
+            const short = evalNcalc(fuelToEndColour(), props) === ds.purpose.delta.slower;
+            // To the hundredth, not the tenth the field draws, so a shortfall under 0.05 is still one.
+            const toAdd = Number(evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text').replaceAll("'0.0'", "'0.00'"), props));
+            expect({ sessionSeconds, lapRun, position, fuelLaps, short }).toEqual({ sessionSeconds, lapRun, position, fuelLaps, short: toAdd > 0 });
+          }
         }
       }
     }
@@ -284,11 +339,13 @@ describe('every reading the margin can draw is inside the width it declares', ()
     }
     // Timed races from a ten-minute sprint to a day's endurance, less a second so the session is
     // still timed, at both ends of the tank, from a minute's lap to the Nordschleife's eight, at the
-    // line and at the end of a lap.
+    // line and at the end of a lap, with the car at the line by distance or nearly round.
     for (const sessionSeconds of [0, 600, 1200, 3600, 21600, 43200, 86399]) {
       for (const fuelLaps of [0, 1.4, 13.1, 47.8, 999.9]) {
         for (const bestLap of [60, 95, 120, 480]) {
-          for (const lapRun of [0, bestLap]) add(telemetry({ sessionSeconds, sessionLength: 86400, fuelLaps, bestLap, lapRun, progress: 'time' }));
+          for (const lapRun of [0, bestLap]) {
+            for (const position of [0, 0.99]) add(telemetry({ sessionSeconds, sessionLength: 86400, fuelLaps, bestLap, lapRun, position, progress: 'time' }));
+          }
         }
       }
     }
