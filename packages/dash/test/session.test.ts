@@ -96,6 +96,16 @@ describe('session card modes', () => {
     expect(TIME_PLACEHOLDER).toBe('-:--:--');
   });
 
+  test('a timed session whose clock has run out stays timed until it ends', () => {
+    // The clock reaches nought a lap or two before the flag, and `TotalLaps` is still the leader's
+    // laps: `auto` keeps the time left at nought rather than turning to `Lap 9 / 17`, and a lap forced
+    // on carries no total (#1017).
+    const out = (mode: string): Props => ({ ...game(0, 17, 9, mode), 'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': 900 });
+    expect(reading(out('auto'))).toEqual({ label: 'Time left', value: '0:00:00', dim: false, denominator: null });
+    expect(reading(out('time'))).toEqual({ label: 'Time left', value: '0:00:00', dim: false, denominator: null });
+    expect(reading(out('laps'))).toEqual({ label: 'Lap', value: '9', dim: false, denominator: null });
+  });
+
   test('laps shows the lap, with the total only when one is declared and the session is not timed', () => {
     // A timed session's TotalLaps is the leader's laps, not a length, and forcing the lap on does not
     // make it one: this drew `3 / 20` with an hour to run (#989).

@@ -794,7 +794,33 @@ export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLe
  * trade this constant has always made, and no property distinguishes the two cases.
  */
 export const UNTIMED_SECONDS = 86400;
-export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), le(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+
+/**
+ * The length a session declares, in seconds, where the sim says: iRacing's `SessionTimeTotal`, which
+ * is the session's own clock as set (900 for a fifteen-minute qualifying) and the same week as
+ * `SessionTimeRemain` where there is none. Nought from a sim that publishes no such thing.
+ */
+export const sessionLength = (): Expr => isnull(raw('SessionTimeTotal'), num(0));
+
+/**
+ * Whether the session is timed: its clock is running inside {@link UNTIMED_SECONDS}'s window, or it
+ * declares a length inside the same window.
+ *
+ * The length is what makes a session timed, and the clock alone stopped saying so at nought. A
+ * timed iRacing session runs a lap or two past the end of its clock, and with only the time left to
+ * go by it read as a session with no clock for those laps: `TotalLaps`, which in a timed session is
+ * the leader's laps, came back as the session's length (`L9 of 17` in a qualifying, #1017), and the
+ * clock beside it read the unset `-:--:--` of a session that has not started. `SessionTimeTotal` does
+ * not move while the session runs, so the session stays timed until it ends, and the clock reads
+ * `0:00:00` over its last laps.
+ *
+ * The clock's own test stays beside the length rather than giving way to it, because the length is
+ * iRacing's alone: every other sim, and an iRacing session from a tool that sets only the time left,
+ * is timed exactly while its clock is running, as it was before. The length is held to the same day
+ * as the clock, since iRacing writes the same week in both where a session has no limit.
+ */
+export const isTimedSession = (): Expr =>
+  ncalc.or(and(gt(sessionTimeLeft(), num(0)), le(sessionTimeLeft(), num(UNTIMED_SECONDS))), and(gt(sessionLength(), num(0)), le(sessionLength(), num(UNTIMED_SECONDS))));
 
 /**
  * A session the sim has given, which has no clock: iRacing's week of `SessionTimeLeft` in a
@@ -806,6 +832,10 @@ export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SE
 
 /**
  * Whether `TotalLaps` is the race's length: a session that is not timed, with a lap count.
+ *
+ * Timed is {@link isTimedSession}'s, which holds until the session ends and not only while its clock
+ * is above nought, so the leader's laps do not come back as a length for the laps a timed session
+ * runs after its clock (#1017).
  *
  * Every `/ 30` and `of 30` after a lap is drawn while this holds and only then. iRacing's
  * `TotalLaps` in a timed session is not a length at all but the leader's completed laps, so a
@@ -853,7 +883,9 @@ export const UNTIMED_MARK = '∞';
  * thirty-lap race that the dash has no reading where it has one.
  *
  * `hms` and not {@link clock}: `clock`'s own guard is the lower half of `isTimedSession`'s window, so
- * writing both nests the same comparison twice in a binding SimHub evaluates every frame.
+ * writing both nests the same comparison twice in a binding SimHub evaluates every frame. And `clock`
+ * would draw the unset clock over the laps a timed session runs after its clock has reached nought,
+ * where this draws `0:00:00`, and `hms` draws a time left below nought as nought (#1017).
  */
 export const sessionClock = (): Expr => iff(isTimedSession(), hms(sessionTimeLeft()), str(NO_CLOCK));
 

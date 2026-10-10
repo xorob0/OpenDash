@@ -14,6 +14,7 @@ import { composePackages, themesToBuild } from '../src/build.ts';
 import { BAR_FIELDS } from '../src/contract.ts';
 import { ncalc, type TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
+import { UNTIMED_SECONDS, hasLapTotal, isTimedSession } from '../src/second/values.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
@@ -30,6 +31,20 @@ const TIMED: Props = {
   'DataCorePlugin.GameData.CurrentLap': 12,
   'DataCorePlugin.GameData.CompletedLaps': 11,
   'DataCorePlugin.GameData.RemainingLaps': 19,
+};
+
+/**
+ * A fifteen-minute qualifying after its clock ran out, the cars on their last laps: iRacing's
+ * `SessionTimeRemain` is at nought, the session still declares its 900 s in `SessionTimeTotal`, and
+ * `TotalLaps` is the leader's seventeen laps. The pit wall read `L9 of 17` here (#1017).
+ */
+const CLOCK_OUT: Props = {
+  'DataCorePlugin.GameData.SessionTimeLeft': 0,
+  'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': 900,
+  'DataCorePlugin.GameData.TotalLaps': 17,
+  'DataCorePlugin.GameData.CurrentLap': 9,
+  'DataCorePlugin.GameData.CompletedLaps': 8,
+  'DataCorePlugin.GameData.RemainingLaps': 9,
 };
 
 /** An open practice: no clock, iRacing's week of time left, and no length. */
@@ -49,6 +64,21 @@ const LAPPED: Props = {
   'DataCorePlugin.GameData.CompletedLaps': 11,
   'DataCorePlugin.GameData.RemainingLaps': 19,
 };
+
+/**
+ * A thirty-lap race from a sim that publishes no clock for it at all: a `SessionTimeLeft` of nought
+ * and no iRacing `SessionTimeTotal`, which is still a race with a length.
+ */
+const LAPPED_NO_CLOCK: Props = {
+  'DataCorePlugin.GameData.SessionTimeLeft': 0,
+  'DataCorePlugin.GameData.TotalLaps': 30,
+  'DataCorePlugin.GameData.CurrentLap': 12,
+  'DataCorePlugin.GameData.CompletedLaps': 11,
+  'DataCorePlugin.GameData.RemainingLaps': 18,
+};
+
+/** Every frame in which `TotalLaps` is not the race's length. */
+const NO_LENGTH = [['timed', TIMED], ['clock out', CLOCK_OUT], ['open', OPEN]] as const;
 
 const LAP_FIELD = BAR_FIELDS.find((f) => f.id === 'lap')!.number;
 
@@ -112,15 +142,55 @@ const SURFACES: { name: string; sites: Site[]; total: string }[] = [
 /** Whether a reading writes a lap total: `/ 14`, `of 0` and the AiM's `LAP  /  14` alike. */
 const writesTotal = (reading: string | null): boolean => reading !== null && /(?:\/|of)\s+\d/.test(reading);
 
+describe('whether `TotalLaps` is a length', () => {
+  // The one rule every surface below draws by, read on its own (#1017). A session that had a clock
+  // is timed until it ends, and its clock reading nought does not turn the leader's laps into a
+  // length: the clock runs out a lap or two before the flag, and those are the laps a length would
+  // be read on.
+  test('a timed session whose clock has run out has none, and a lap race has one', () => {
+    expect({ frame: 'clock out', has: evalNcalc(hasLapTotal(), CLOCK_OUT) }).toEqual({ frame: 'clock out', has: false });
+    expect({ frame: 'lapped', has: evalNcalc(hasLapTotal(), LAPPED) }).toEqual({ frame: 'lapped', has: true });
+  });
+
+  test('so does every other frame, a sim with no clock for its lap race included', () => {
+    for (const [frame, props, has] of [['timed', TIMED, false], ['open', OPEN, false], ['lapped, no clock', LAPPED_NO_CLOCK, true]] as const) {
+      expect({ frame, has: evalNcalc(hasLapTotal(), props) }).toEqual({ frame, has });
+    }
+  });
+
+  test('a session is timed by the length it declares as well as by its clock', () => {
+    // iRacing's `SessionTimeTotal` is the week it writes for no limit in a lap race, and a session
+    // that declares a day is timed for the same reason a day of time left is (see UNTIMED_SECONDS).
+    const at = (total: number | undefined, left: number): Props => ({
+      'DataCorePlugin.GameData.SessionTimeLeft': left,
+      ...(total === undefined ? {} : { 'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': total }),
+    });
+    for (const [total, left, timed] of [
+      [900, 0, true],
+      [900, -1, true],
+      [UNTIMED_SECONDS, 0, true],
+      [A_WEEK, 0, false],
+      [UNTIMED_SECONDS + 1, 0, false],
+      [0, 0, false],
+      [undefined, 0, false],
+      [A_WEEK, 1800, true],
+      [undefined, 1800, true],
+      [undefined, A_WEEK, false],
+    ] as const) {
+      expect({ total, left, timed: evalNcalc(isTimedSession(), at(total, left)) }).toEqual({ total, left, timed });
+    }
+  });
+});
+
 describe('the race length after a lap', () => {
   test('every surface the ticket names is drawn somewhere', () => {
     for (const s of SURFACES) expect({ surface: s.name, found: s.sites.length > 0 }).toEqual({ surface: s.name, found: true });
   });
 
-  test('a timed race and an open practice draw no total on the bar or either header', () => {
+  test('a timed session, before or after its clock runs out, and an open practice draw no total on the bar or either header', () => {
     for (const s of SURFACES) {
       for (const { where, item } of s.sites) {
-        for (const [frame, props] of [['timed', TIMED], ['open', OPEN]] as const) {
+        for (const [frame, props] of NO_LENGTH) {
           expect({ surface: s.name, where, item: item.name, frame, reading: drawn(item, props) }).toEqual({ surface: s.name, where, item: item.name, frame, reading: null });
         }
       }
@@ -130,7 +200,9 @@ describe('the race length after a lap', () => {
   test('a race counted in laps draws its length on the bar and on both headers', () => {
     for (const s of SURFACES) {
       for (const { where, item } of s.sites) {
-        expect({ surface: s.name, where, item: item.name, reading: drawn(item, LAPPED) }).toEqual({ surface: s.name, where, item: item.name, reading: s.total });
+        for (const [frame, props] of [['lapped', LAPPED], ['lapped, no clock', LAPPED_NO_CLOCK]] as const) {
+          expect({ surface: s.name, where, item: item.name, frame, reading: drawn(item, props) }).toEqual({ surface: s.name, where, item: item.name, frame, reading: s.total });
+        }
       }
     }
   });
@@ -141,7 +213,7 @@ describe('the race length after a lap', () => {
     expect(SITES.length).toBeGreaterThan(100);
     for (const { where, item } of SITES) {
       for (const mode of ['auto', 'laps', 'time']) {
-        for (const [frame, props] of [['timed', TIMED], ['open', OPEN]] as const) {
+        for (const [frame, props] of NO_LENGTH) {
           const reading = drawn(item, props, mode);
           expect({ where, item: item.name, mode, frame, reading, total: writesTotal(reading) }).toEqual({ where, item: item.name, mode, frame, reading, total: false });
         }
@@ -189,7 +261,7 @@ describe('a right-hand lap without its length', () => {
 
   test('a timed race and an open practice draw the figure against the edge its label is drawn against', () => {
     for (const { where, value, label } of ends) {
-      for (const [frame, props] of [['timed', TIMED], ['open', OPEN]] as const) {
+      for (const [frame, props] of NO_LENGTH) {
         expect({ where, frame, right: rightEdge(value, props) }).toEqual({ where, frame, right: label.rect.left + label.rect.width });
       }
     }
