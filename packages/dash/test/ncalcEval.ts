@@ -10,7 +10,8 @@
  * `getopponentleaderboardposition_aheadbehind`, `getopponentleaderboardposition_playerclassonly`,
  * `repeatindex`, `drivercarclass`, `driverclassposition`,
  * `driverposition`, `driverpositiongain`, `driverpositiongainclass`, `drivergaptoleader`,
- * `drivergaptoleadercombined`, `drivercurrentlap` and `driveravailable` (each answered from the props
+ * `drivergaptoleadercombined`, `drivercurrentlap`, `driverlapstoleader`, `driverlapstoclassleader`
+ * and `driveravailable` (each answered from the props
  * by its own call, as `drivercarclass(3)`, and null where they leave it out), the comparisons,
  * `and` / `or` / `!`, and
  * the arithmetic. A date is passed as a `Date` and formatted by the hour and
@@ -137,6 +138,8 @@ export function evalNcalc(expression: string, props: Props): unknown {
     drivergaptoleader: (position: unknown): unknown => called(`drivergaptoleader(${String(position)})`),
     drivergaptoleadercombined: (position: unknown): unknown => called(`drivergaptoleadercombined(${String(position)})`),
     drivercurrentlap: (position: unknown): unknown => called(`drivercurrentlap(${String(position)})`),
+    driverlapstoleader: (position: unknown): unknown => called(`driverlapstoleader(${String(position)})`),
+    driverlapstoclassleader: (position: unknown): unknown => called(`driverlapstoclassleader(${String(position)})`),
     driveravailable: (position: unknown): unknown => called(`driveravailable(${String(position)})`),
     getopponentleaderboardposition_aheadbehind: (offset: unknown): unknown => called(`getopponentleaderboardposition_aheadbehind(${String(offset)})`),
     getopponentleaderboardposition_playerclassonly: (place: unknown): unknown => called(`getopponentleaderboardposition_playerclassonly(${String(place)})`),

@@ -219,10 +219,26 @@ export type DriverFunction =
   | 'positiongainclass'
   | 'bestlap'
   | 'lastlap'
+  /**
+   * The lap in progress, which goes up as the car crosses the line. Not read by any package: two cars'
+   * counters differ for the seconds between one crossing the line and the other, so they cannot say
+   * whether a car is a lap down (#1023); `lapstoleader` and `lapstoclassleader` can.
+   */
   | 'currentlap'
   | 'gaptoleader'
   | 'gaptoplayer'
+  /**
+   * Not read by any package. SimHub writes it as seconds to two decimals or as `+1 lap` and
+   * `+2 laps`, where the Gap columns draw one decimal and `+1L` (#1023).
+   */
   | 'gaptoleadercombined'
+  /**
+   * Whole laps the car is behind the leader by distance: the truncated difference of the two cars'
+   * `CurrentLapHighPrecision`, set by `GameManagerBase` in 9.12.6 and null on the leader's own row.
+   */
+  | 'lapstoleader'
+  /** The same against the first car of the player's class, which is what SimHub measures it from. */
+  | 'lapstoclassleader'
   | 'relativegaptoplayer'
   | 'iscarinpit'
   | 'iscarinpitlane'
