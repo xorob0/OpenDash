@@ -676,6 +676,37 @@ did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still d
 from the two gaps to the overall leader, for the reason its comment gives; the three names are here
 so that the next reader checks them rather than the belief.
 
+### What the leaderboard says about the race leader (2026-10-10, #1027)
+
+A timed race ends at the overall leader's first crossing after the clock, so `lapsLeft()` in
+`packages/dash/src/second/values.ts` needs to know where the leader is. Read from the 9.12.6
+decompile of `GameReaderCommon.dll`, `ICarsReader.dll` (`IRacingManager.GD_Opponents`) and the
+opponent providers of `SimHub.Plugins.dll`; none of it has been checked on iRacing itself.
+
+- **Row 1 is the overall leader.** `driver<name>(1)` reads the first opponent of the leaderboard,
+  which is sorted by position, whatever the rig's class setting.
+- **`drivertrackpositionpercent(n)`** is `Opponent.TrackPositionPercent`, which the iRacing reader
+  fills from `CarIdxLapDistPct` and `GameManagerBase` folds into 0..1, so a car out of the world
+  (-1) reads 0. `drivercurrentlaphighprecision(n)` is the lap less one plus that fraction.
+- **`driverbestlap(n)` and `driverlastlap(n)`** are the session results' `FastestTime` and
+  `LastTime`, zero until the car has one.
+- **`drivergaptoleader(n)` is SimHub's own estimate on iRacing**, since the iRacing reader sets
+  neither `GaptoLeader` nor `LapsToLeader`. Under the "basic distance to time" gap mode it is the
+  difference of the two `CurrentLapHighPrecision` times a reference best lap; under "micro sectors"
+  it is the time since the leader was at the car's distance. Both include the whole laps of a lapped
+  car, so neither can be taken modulo a lap to give the car's phase behind the leader.
+- **`Flag_Checkered`** is the `checkered` bit of iRacing's `SessionFlags`. The SDK raises it for the
+  field once the leader has finished; that it does so before the car's own crossing is not yet seen.
+- **Not reachable from a binding:** iRacing's `CarIdxEstTime` and `CarIdxF2Time` are arrays by car
+  index in the raw telemetry, with nothing to index them by the leader's car. `SessionState` is
+  there as a value, and tells the chequered flag apart from racing, as `Flag_Checkered` already does.
+
+NCalc's `ceiling` is dispatched exactly as `truncate` is: one lower-cased `switch`, the same case
+check (which SimHub runs with case ignored, or `truncate` would fail), and
+`Math.Ceiling(Convert.ToDouble(x))`. It has not been run on the VM. NCalc's `max` and `min` take the
+type of their first argument and convert the second to it, so `max(0, x)` with an Int32 nought
+rounds `x` to a whole number; the time goes first.
+
 ### Per-car playlists belong to a display device, and match the iRacing CarPath (2026-10-07, #199)
 
 SimHub switches a display's dashboard by car through a playlist that belongs to the display device and
