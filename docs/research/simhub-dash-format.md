@@ -996,11 +996,13 @@ the VM showed a new session's out lap with an average of laps from an earlier ru
   slot's lap is in `SessionLapHistory` by its `LapId`, and 0 otherwise. The lap just completed is
   added to `SessionLapHistory` before the ring is refilled for it (`RaiseNewLap` calls
   `AddLapHistoryEntry` and then `TrackNewLap`), so slot zero reads 1 from the frame it appears. A
-  session restart clears `SessionLapHistory` and resets the context, so the ring is refilled with
-  every flag 0.
+  session restart clears `SessionLapHistory` and resets the context, so every flag the refill
+  writes is 0.
 - **A slot past the laps the database holds keeps its flag.** Its time and deltas are written zero
-  and `IsCurrentSession` is left as it was, so the flag is not a gate on its own: a slot is a lap of
-  this session when it has a time and the flag is 1. `hasSessionLap` in
+  and `IsCurrentSession` is left as it was. When the database holds no laps at all for this car and
+  track, as on a combination never driven before, that is all ten slots, and slot zero can read 1
+  from the last combination with a time and a delta of nought. So the flag is not a gate on its
+  own: a slot is a lap of this session when it has a time and the flag is 1. `hasSessionLap` in
   `packages/dash/src/second/values.ts` is that gate, and every reading built on the ring asks it.
 - Beside the two the dashes read, each slot publishes `_DeltaToAllTimeBest` and a hidden
   `_DeltaToBest`, which is the same value.

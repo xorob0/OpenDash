@@ -67,7 +67,6 @@ import {
   player,
   previousLap,
   previousLapDelta,
-  previousLapIsThisSession,
   secondsOf,
   sessionType,
   signedToFit,
@@ -172,9 +171,14 @@ interface Comparison {
  * lap has a time and slot zero is a lap of this session, and the field says so otherwise: SimHub
  * fills the ring from its lap database, so until the first lap of a session is done slot zero is
  * the last lap of an earlier one, and its delta is to a session best it was never part of (#1011).
+ *
+ * A lap of this session is `hasSessionLap`, a time and the flag, as it is for every other reading
+ * of the ring. The flag alone is not enough: on a car and track the database has no laps for, SimHub
+ * writes slot zero's time and deltas to nought and leaves its flag at 1 from the last combination,
+ * and a delta of nought would be drawn as a level `0.00`.
  */
 const vsSessionBest: Comparison = {
-  shown: () => and(hasTime(lastLap()), previousLapIsThisSession(num(0))),
+  shown: () => and(hasTime(lastLap()), hasSessionLap(num(0))),
   seconds: () => isnull(previousLapDelta(num(0)), num(0)),
 };
 

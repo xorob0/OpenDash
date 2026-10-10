@@ -232,6 +232,8 @@ describe('the two deltas', () => {
 describe('the two deltas at the end of an in-lap (#886)', () => {
   const LAST = 'DataCorePlugin.GameData.LastLapTime';
   const BEFORE = 'PersistantTrackerPlugin.PreviousLap_01';
+  /** Slot zero, which is the lap just finished, so its time is the last lap's. */
+  const NOW = 'PersistantTrackerPlugin.PreviousLap_00';
   const TO_BEST = 'PersistantTrackerPlugin.PreviousLap_00_DeltaToSessionBest';
   /**
    * Slots zero and one both driven in this session, which is the frame every lap after the second of
@@ -259,7 +261,7 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
    * leaves both of them a time, since a lap with none is the placeholder and not a figure.
    */
   const SITES: readonly { name: string; frame: (seconds: number) => Props }[] = [
-    { name: 'vsBest', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [TO_BEST]: seconds }) },
+    { name: 'vsBest', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [NOW]: 2000 + seconds, [TO_BEST]: seconds }) },
     { name: 'vsPrevious', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [BEFORE]: 2000 }) },
   ];
 
@@ -302,13 +304,13 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
     }
     // Once there is a lap to compare, the figure and its colour come back together.
     expect(drawnIn('vsPrevious', { ...TODAY, [LAST]: 92.4, [BEFORE]: 92.1 })).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
-    expect(drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [TO_BEST]: -0.21 })).toEqual({ text: '−0.21', colour: ds.purpose.delta.faster });
+    expect(drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [TO_BEST]: -0.21 })).toEqual({ text: '−0.21', colour: ds.purpose.delta.faster });
   });
 
   test('a figure drawn as a hundredth is coloured as one, and only a figure drawn as zero is level (#614)', () => {
     // .NET rounds a half away from zero, so ±0.005 is drawn `±0.01`; a band that took its own edge in
     // coloured a drawn hundredth white.
-    const at = (seconds: number) => drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [TO_BEST]: seconds }).colour;
+    const at = (seconds: number) => drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [TO_BEST]: seconds }).colour;
     expect(at(0.005)).toBe(ds.purpose.delta.slower);
     expect(at(-0.005)).toBe(ds.purpose.delta.faster);
     expect(at(0.0049)).toBe(ds.purpose.delta.zero);
@@ -325,7 +327,7 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
     const FLAG_00 = 'PersistantTrackerPlugin.PreviousLap_00_IsCurrentSession';
     const FLAG_01 = 'PersistantTrackerPlugin.PreviousLap_01_IsCurrentSession';
     // A lap and the one before it, with a delta published for the lap: every figure is there to draw.
-    const LAPS: Props = { [LAST]: 92.4, [BEFORE]: 92.1, [TO_BEST]: 0.3 };
+    const LAPS: Props = { [LAST]: 92.4, [NOW]: 92.4, [BEFORE]: 92.1, [TO_BEST]: 0.3 };
 
     test('a ring of earlier laps is no lap at all, and both say nothing', () => {
       for (const { name } of SITES) {
@@ -345,6 +347,15 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
       const second: Props = { ...LAPS, [FLAG_00]: 1, [FLAG_01]: 1 };
       expect(drawnIn('vsBest', second)).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
       expect(drawnIn('vsPrevious', second)).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+    });
+
+    test('an emptied slot zero is no lap, though SimHub leaves its flag at 1', () => {
+      // On a car and track the lap database holds nothing for, SimHub writes slot zero's time and
+      // deltas to nought and leaves its flag from the last combination. A first lap there that SimHub
+      // does not add to the ring leaves the review reading that slot: a delta of nought is no reading.
+      const emptied: Props = { [LAST]: 92.4, [NOW]: 0, [TO_BEST]: 0, [FLAG_00]: 1, [FLAG_01]: 1 };
+      expect(drawnIn('vsBest', emptied)).toEqual({ text: '--', colour: ds.color.text.dim });
+      expect(drawnIn('vsPrevious', emptied)).toEqual({ text: '--', colour: ds.color.text.dim });
     });
   });
 });
