@@ -33,7 +33,7 @@ import { stack, type StackRow } from '../../second/layout.ts';
 import { SESSION_NAMES, sessionType } from '../../second/values.ts';
 import type { ModuleRegister } from '../drawing.ts';
 import { withHouseLayout } from '../moduleRegister.ts';
-import { reading, segment, segmentWidth } from './register.ts';
+import { BLANK_CELL, reading, segment, segmentWidth } from './register.ts';
 
 const { concat, str, ucase } = ncalc;
 
@@ -105,11 +105,22 @@ export const SHORT_SESSION: Readonly<Record<string, string>> = {
 /** True for the session's name, which is the one reading the LCD writes in its own words. */
 const isSessionName = (spec: FieldSpec): boolean => spec.value.bind === sessionType();
 
-/** The session's name as the unit writes it, the long names replaced longest first. */
+/**
+ * The session's name as the unit writes it, the long names replaced longest first and the words of a
+ * name that keeps two, `Time Trial`, a blank cell apart rather than a space, so that its letters sit
+ * on the cells of the ghost.
+ */
 const sessionShort = (bind: Expr): Expr =>
-  Object.entries(SHORT_SESSION)
-    .sort(([a], [b]) => b.length - a.length)
-    .reduce((expr, [long, to]) => ncalc.replace(expr, long, to), bind);
+  ncalc.replace(
+    Object.entries(SHORT_SESSION)
+      .sort(([a], [b]) => b.length - a.length)
+      .reduce((expr, [long, to]) => ncalc.replace(expr, long, to), bind),
+    ' ',
+    BLANK_CELL,
+  );
+
+/** Each session name as the unit writes it, which is what the field's ghost is the widest of. */
+const SESSION_WRITTEN: readonly string[] = SESSION_NAMES.map((name) => (SHORT_SESSION[name] ?? name).replaceAll(' ', BLANK_CELL));
 
 const idOf = (spec: FieldSpec): string => spec.id ?? spec.name;
 
@@ -182,7 +193,7 @@ function captionOf(spec: FieldSpec): { text: string; widest: string; bind?: Expr
  * reaches, so its sample is filled out to the budget's cells.
  */
 function widestValue(spec: FieldSpec): string {
-  if (isSessionName(spec)) return widestOf(SESSION_NAMES.map((name) => SHORT_SESSION[name] ?? name));
+  if (isSessionName(spec)) return widestOf(SESSION_WRITTEN);
   if (spec.value.widest !== undefined) return spec.value.widest;
   const cellsIn = [...spec.value.sample].filter((ch) => ch !== '.' && ch !== ':').length;
   return '8'.repeat(Math.max(0, spec.value.chars.digits - cellsIn)) + spec.value.sample;

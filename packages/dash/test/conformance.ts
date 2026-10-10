@@ -8,6 +8,9 @@
  * "nothing the face draws is clipped", escaping is `moduleBoxes()` in `secondScreens.test.ts` asked
  * of the rectangles a theme hands its modules rather than of the house faces', and disappearing is
  * the catalogue check of `anatomy.test.ts` carried down to the fields of each page.
+ *
+ * A fourth belongs to the themes alone, since only a theme draws a reading over a ghost of its
+ * cells: nothing lights off its unlit cell (#1029).
  */
 import { FACE_ZONE_LETTERS, pagesForZone, type FaceZone } from '../src/contract.ts';
 import { measureText } from '../src/design/advances.ts';
@@ -27,7 +30,7 @@ import { moduleBodyOf } from '../src/zones/pages.ts';
 import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
 import { withHouseLayout } from '../src/themes/moduleRegister.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
-import { certainlyDrawn, readsVocabulary, widthAsDrawn } from './drawnStrings.ts';
+import { certainlyDrawn, exactlyDrawn, readsVocabulary, widthAsDrawn } from './drawnStrings.ts';
 
 /** Set to `full` to check every theme the build knows, whatever the branch touched. */
 export const MATRIX_ENV = 'OPENDASH_THEME_MATRIX';
@@ -85,6 +88,62 @@ export function clipped(themeId: string, face: ThemeFace): string[] {
         for (const text of certainlyDrawn(item)) {
           if (widthAsDrawn(item, text) > limit) problems.push(`${where} can draw ${JSON.stringify(text)}, wider than the ${JSON.stringify(item.widest)} it declares`);
         }
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * Where the cells of a run start, in em from the point its alignment holds still: its left edge, its
+ * right edge or its centre. A glyph a cell wide is a cell; a point adds nothing, a colon or a space
+ * the fraction of a cell it takes, and so does a glyph the face does not carry, drawn in a face of
+ * its own.
+ */
+function cellStarts(face: ReturnType<typeof faceOf>, text: string, align: TextItem['hAlign']): number[] {
+  const cell = measureText(face, '8', 1);
+  const total = measureText(face, text, 1);
+  let x = align === 'right' ? -total : align === 'center' ? -total / 2 : 0;
+  const starts: number[] = [];
+  for (const ch of text) {
+    const advance = measureText(face, ch, 1);
+    if (advance === cell) starts.push(Math.round(x * 1000) / 1000);
+    x += advance;
+  }
+  return starts;
+}
+
+/**
+ * Nothing lights off its unlit cell: a reading drawn over a ghost of its cells, as the AiM's are,
+ * draws every cell of every string it can be certain of on a cell of the ghost. A space is a quarter
+ * of a cell in the segment faces, so a ghost cut from a widest with a space in it laid every cell
+ * left of the space a fraction off the grid, and `QUALIFY` stood with a sliver of an unlit `8` beside
+ * its Q and its U on the VM, while every fit test passed (#1029).
+ *
+ * A pair is a `.ghost` drawn at an opacity and the `.value` of the same name, set in the same box,
+ * face, size and alignment. A value SimHub lays in cells of its own, monospaced, is not set by its
+ * advances and is left to the fit checks, and a reading whose text is the sim's to say has no string
+ * to hold.
+ */
+export function offGrid(themeId: string, face: ThemeFace): string[] {
+  const at = `${themeId} ${named(face)}`;
+  const problems: string[] = [];
+  for (const { dashboard, screen, items } of screensOf(face)) {
+    const texts = items.filter((item): item is TextItem => item.kind === 'text');
+    for (const ghost of texts) {
+      if (!ghost.name.endsWith('.ghost') || ghost.opacity === undefined) continue;
+      const value = texts.find((t) => t.name === `${ghost.name.slice(0, -'.ghost'.length)}.value`);
+      if (!value || value.monospace) continue;
+      const where = `${at} ${dashboard.name} ${screen}: ${value.name}`;
+      const set = (t: TextItem) => JSON.stringify([t.rect.left, t.rect.width, faceOf(t), t.fontSize, t.hAlign ?? 'left']);
+      if (set(value) !== set(ghost)) {
+        problems.push(`${where} is set ${set(value)} over a ghost set ${set(ghost)}`);
+        continue;
+      }
+      const unlit = new Set(cellStarts(faceOf(ghost), ghost.text, ghost.hAlign));
+      for (const text of exactlyDrawn(value)) {
+        const off = cellStarts(faceOf(value), text, value.hAlign).filter((x) => !unlit.has(x));
+        if (off.length > 0) problems.push(`${where} draws ${JSON.stringify(text)} with ${off.length} cell(s) off the cells of its ghost ${JSON.stringify(ghost.text)}`);
       }
     }
   }

@@ -353,6 +353,19 @@ export function certainlyDrawn(item: TextItem): string[] {
 }
 
 /**
+ * What an item draws in full where that is known: its exact floors where it is bound, each an output
+ * as written, and its own text where it is not. A binding that writes anything the sim chooses has
+ * none, and the strings returned are drawn as they are, character for character.
+ */
+export function exactlyDrawn(item: TextItem): string[] {
+  const expression = bindingExpression(item, 'Text');
+  if (expression === '') return [item.text];
+  return floorsOf(parseNcalc(expression))
+    .filter((f) => f.exact && f.text !== '')
+    .map((f) => f.text);
+}
+
+/**
  * Width of a text the way the fit tests measure the item: its cells when it is monospaced, its
  * advances in the face it is drawn in otherwise. The same rule as `drawnWidth` in the fit tests,
  * so that a floor and a `widest` are compared on the scale the box is cut on.
