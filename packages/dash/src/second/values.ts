@@ -157,8 +157,11 @@ export const CHARS = {
   setting: { digits: 4, specials: 1 } as Chars,
   /** `GT3 · P12` and `GT3 · #12`: a class or car name, a separator and a number. */
   classPosition: { digits: 10, specials: 0 } as Chars,
-  /** A short word: `Race`, `Dry`, `M`. */
-  word: { digits: 8, specials: 0 } as Chars,
+  /**
+   * `Offline Testing`: a session's name, in the cells it would take. The name is a word and is drawn
+   * proportionally, so this is not what its box is cut from; {@link SESSION_NAME_WIDEST} is.
+   */
+  sessionName: { digits: 15, specials: 0 } as Chars,
   /** `12 / 43`, and `142 / 350` in an endurance race: the two spaces and the slash are the specials. */
   lapOfTotal: { digits: 6, specials: 3 } as Chars,
 };
@@ -1196,6 +1199,44 @@ export const GRIP_WIDEST = 'Moderate';
 /** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
 export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
+
+/**
+ * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
+ *
+ * SimHub passes iRacing's own words through. Its `IRacingManager.GD_SessionTypeName` (ICarsReader,
+ * decompiled) answers the `SessionType` of the entry in `SessionInfo.Sessions` the telemetry's
+ * `SessionNum` points at, and falls back to the weekend's `EventType` where there is none, so the
+ * list is both: the session types an iRacing weekend is made of, as the pit wall header listed them
+ * before this list existed, and the event types a weekend can be. They are written in iRacing's
+ * case, which is the case they are drawn in.
+ *
+ * `Open Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029
+ * rather than of a recording, which has only ever shown `Lone Qualify` and `Race`. A name missing
+ * from this list is not measured by anything that cuts its box from the list, the AiM's above all,
+ * so a name that might be written is listed rather than left out.
+ */
+export const SESSION_NAMES: readonly string[] = [
+  'Offline Testing',
+  'Practice',
+  'Open Practice',
+  'Lone Practice',
+  'Open Qualify',
+  'Lone Qualify',
+  'Qualify',
+  'Warmup',
+  'Heat',
+  'Consolation',
+  'Race',
+  'Test',
+  'Time Trial',
+];
+
+/**
+ * The widest of {@link SESSION_NAMES}, in every face the name is drawn in and in capitals too, which
+ * is what every text bound to {@link sessionType} declares as its `widest`. A session field cut to
+ * `Race` drew `Lone Qualify` as `Lone Qua` (#1029).
+ */
+export const SESSION_NAME_WIDEST = 'Offline Testing';
 
 /**
  * Whether SimHub is connected to a running game.

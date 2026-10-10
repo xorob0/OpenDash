@@ -95,9 +95,18 @@ export function segment(name: string, face: SegmentFace, text: string, x: number
 }
 
 /**
+ * The seven-segment faces' blank cell: `!` lights no segment and is a cell wide, where the space is
+ * a quarter of one. A reading of words is written with it between them, so that every letter after
+ * the first word stays on the cells its ghost lays; with a space, every cell left of it sits a
+ * fraction of a cell off its unlit `8` (#1029).
+ */
+export const BLANK_CELL = '!';
+
+/**
  * The unlit segments of a reading: every cell of its widest string as an `8`, the points and the
  * colons where they fall, and blank where the reading is a space. What a seven-segment cell cannot
- * draw (a sign it has no glyph for, a letter) is a cell all the same and is ghosted as one.
+ * draw (a sign it has no glyph for, a letter) is a cell all the same and is ghosted as one, and so is
+ * the {@link BLANK_CELL}.
  */
 export const ghostOf = (widest: string): string => [...widest].map((ch) => (ch === '.' || ch === ':' || ch === ' ' ? ch : '8')).join('');
 
