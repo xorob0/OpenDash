@@ -951,6 +951,9 @@ export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumpti
 export const timedLapSeconds = (): Expr =>
   iff(hasTime(bestLap()), timespanToSeconds(bestLap()), iff(hasTime(lastLap()), timespanToSeconds(lastLap()), num(0)));
 
+/** The time run in the lap in progress, in seconds, which a timed count adds to the time left. */
+const lapTimeRun = (): Expr => timespanToSeconds(isnull(game('CurrentLapTime'), num(0)));
+
 /**
  * Whether there is a count of laps left: always in a session counted in laps, and in a timed one
  * once a lap has been timed to divide the time left by.
@@ -970,12 +973,20 @@ export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(ti
  * (#1008). Timed is {@link isTimedSession}'s, the test {@link hasLapTotal} draws a race's length by,
  * so a race whose length is not drawn is a race whose laps are predicted.
  *
- * A timed race ends when the leader crosses the line after the clock has reached nought, so a car
- * on the lead lap runs the laps that fit in the time left and the one in progress when it runs out:
- * the whole laps of the time left, and one. At the line that is exact, and mid-lap it is a lap over
- * at the most and never under, since the lap in progress has already spent some of the time left;
- * it counts the lap you are on, as `RemainingLaps` does. After the clock it is the lap in progress,
- * which is one and not nought: #1017 keeps such a session timed until it ends.
+ * A timed race ends when the leader crosses the line after the clock has reached nought, so the
+ * leader runs the lap it is on and every lap it starts before the clock runs out. Counted at the
+ * line that is the whole laps of the time left, and one. Mid-lap the time already run in the lap
+ * is added to the time left first, since the lap in progress is a whole lap of which only the rest
+ * is still to come: 60 s into a 100 s lap with 1050 s to run, the car is at the line with 1010 s
+ * left and runs eleven laps more, twelve in all, where the time left alone made it eleven. The time
+ * run is taken at most a lap, so a lap through the pit lane counts as one about to end rather than
+ * as two. It counts the lap you are on, as `RemainingLaps` does. After the clock it is the lap in
+ * progress, which is one and not nought: #1017 keeps such a session timed until it ends.
+ *
+ * That is the leader's count, and the car's own. A car behind the leader on track finishes at its
+ * first crossing after the leader's last, not after the clock, so where the clock runs out between
+ * the leader's crossing and its own it runs a lap more than this. Counting that lap would read the
+ * gap to the leader on track, and nothing here does yet.
  *
  * Nought in a timed session until a lap has been timed, which no reading draws as a count: the
  * session page and the fuel page draw {@link NO_VALUE} by {@link lapsLeftIsKnown} instead, and the
@@ -989,7 +1000,11 @@ export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(ti
 export const lapsLeft = (): Expr =>
   iff(
     isTimedSession(),
-    iff(gt(timedLapSeconds(), num(0)), add(truncate(div(max(num(0), sessionTimeLeft()), timedLapSeconds())), num(1)), num(0)),
+    iff(
+      gt(timedLapSeconds(), num(0)),
+      iff(gt(sessionTimeLeft(), num(0)), add(truncate(div(add(sessionTimeLeft(), min(lapTimeRun(), timedLapSeconds())), timedLapSeconds())), num(1)), num(1)),
+      num(0),
+    ),
     isnull(game('RemainingLaps'), num(0)),
   );
 

@@ -94,9 +94,30 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
     expect({ lapsLeft: lapsLeft(timed(14)), refuel: refuel(timed(14)) }).toEqual({ lapsLeft: '19', refuel: '33.2' });
   });
 
-  test('a lapped car is told the same, rather than its laps behind the leader', () => {
-    // `RemainingLaps` is 3 here, and drew `3` as the laps left with half an hour to run.
+  test('a lapped car is counted from the clock too, rather than by its laps behind the leader', () => {
+    // `RemainingLaps` is 3 here, and drew `3` as the laps left with half an hour to run. The count
+    // is the car's own laps to its first crossing after the clock; a car behind the leader on track
+    // can run a lap more, where the clock runs out between the leader's crossing and its own.
     expect({ lapsLeft: lapsLeft(timed(11)), refuel: refuel(timed(11)) }).toEqual({ lapsLeft: '19', refuel: '33.2' });
+  });
+
+  test('mid-lap, the time already run in the lap counts, so the count is not a lap short', () => {
+    // 1050 s to run and 60 s into a 100 s lap: at the line in 40 s with 1010 s left, ten laps on
+    // with 10 s still on the clock, and one more. Twelve, where the time left alone made it eleven.
+    const midLap = timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 1050, 'DataCorePlugin.GameData.CurrentLapTime': 60 });
+    expect({ lapsLeft: lapsLeft(midLap), refuel: refuel(midLap) }).toEqual({ lapsLeft: '12', refuel: '13.6' });
+    // 50 s to run and 40 s from the line: the line comes with 10 s on the clock, and a lap after it.
+    expect(lapsLeft(timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 50, 'DataCorePlugin.GameData.CurrentLapTime': 60 }))).toBe('2');
+    // At the line the lap run is nought and the count is the time left's alone.
+    expect(lapsLeft(timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 1050, 'DataCorePlugin.GameData.CurrentLapTime': 0 }))).toBe('11');
+  });
+
+  test('a lap slower than the best counts as one about to end, not as two', () => {
+    // 150 s into the pit lap with 1050 s to run: taken as a full lap run, so the car is counted at
+    // the line, with the eleven whole laps of the time left still to come after it.
+    expect(lapsLeft(timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 1050, 'DataCorePlugin.GameData.CurrentLapTime': 150 }))).toBe('12');
+    // After the clock the slow lap is still the last one.
+    expect(lapsLeft(timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 0, 'DataCorePlugin.GameData.CurrentLapTime': 150 }))).toBe('1');
   });
 
   test('the count is the best lap where there is one, and the last lap until there is', () => {
@@ -109,7 +130,7 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
   test('the lap the clock runs out on is still a lap to run', () => {
     // The clock at nought, the session still timed by its declared length (#1017): the lap in
     // progress is the last, and it is one lap rather than none.
-    const atNought = timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 0 });
+    const atNought = timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 0, 'DataCorePlugin.GameData.CurrentLapTime': 40 });
     expect({ lapsLeft: lapsLeft(atNought), refuel: refuel(atNought) }).toEqual({ lapsLeft: '1', refuel: '0.0' });
   });
 
