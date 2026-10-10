@@ -806,7 +806,10 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   places gained, `driverpositiongainclass`, are counted from the class place of the first frame
   SimHub saw the car, so a car first seen unplaced counts them from a place SimHub made up, and no
   package reads them. The overall `driverpositiongain` waits for the car's first real place, and
-  it is the class count too when the field is a single class (#1022).
+  it is the class count too when the field is a single class (#1022). `drivergaptoleader` does not
+  wait: before the sim has placed anyone it is published for every car, measured from the first
+  car of the driver list and negative for some, as seen on the test VM with every iRacing position
+  at 0, so the Gap and Int columns ask `driverposition` of both cars as well (#1028).
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

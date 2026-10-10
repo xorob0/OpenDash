@@ -9,8 +9,10 @@
  * (answered from {@link ROOT_SCREEN}), the leaderboard reads `getplayerleaderboardposition`,
  * `getopponentleaderboardposition_aheadbehind`, `getopponentleaderboardposition_playerclassonly`,
  * `repeatindex`, `drivercarclass`, `driverclassposition`,
- * `driverposition`, `driverpositiongain`, `driverpositiongainclass` and `driveravailable` (each answered from the props by its own call, as
- * `drivercarclass(3)`, and null where they leave it out), the comparisons, `and` / `or` / `!`, and
+ * `driverposition`, `driverpositiongain`, `driverpositiongainclass`, `drivergaptoleader`,
+ * `drivergaptoleadercombined`, `drivercurrentlap` and `driveravailable` (each answered from the props
+ * by its own call, as `drivercarclass(3)`, and null where they leave it out), the comparisons,
+ * `and` / `or` / `!`, and
  * the arithmetic. A date is passed as a `Date` and formatted by the hour and
  * minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the
  * culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
@@ -132,6 +134,9 @@ export function evalNcalc(expression: string, props: Props): unknown {
     driverposition: (position: unknown): unknown => called(`driverposition(${String(position)})`),
     driverpositiongain: (position: unknown): unknown => called(`driverpositiongain(${String(position)})`),
     driverpositiongainclass: (position: unknown): unknown => called(`driverpositiongainclass(${String(position)})`),
+    drivergaptoleader: (position: unknown): unknown => called(`drivergaptoleader(${String(position)})`),
+    drivergaptoleadercombined: (position: unknown): unknown => called(`drivergaptoleadercombined(${String(position)})`),
+    drivercurrentlap: (position: unknown): unknown => called(`drivercurrentlap(${String(position)})`),
     driveravailable: (position: unknown): unknown => called(`driveravailable(${String(position)})`),
     getopponentleaderboardposition_aheadbehind: (offset: unknown): unknown => called(`getopponentleaderboardposition_aheadbehind(${String(offset)})`),
     getopponentleaderboardposition_playerclassonly: (place: unknown): unknown => called(`getopponentleaderboardposition_playerclassonly(${String(place)})`),
