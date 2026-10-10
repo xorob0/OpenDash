@@ -18,7 +18,8 @@ import { rect } from '../src/design/geometry.ts';
 import { MINUS } from '../src/design/metrics.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { LAP_WIDEST, NO_VALUE } from '../src/second/values.ts';
+import { charsOfText } from '../src/second/drawn.ts';
+import { CHARS, LAP_WIDEST, NO_VALUE } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
@@ -143,6 +144,32 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
     const daytona = timed(0, { 'DataCorePlugin.GameData.SessionTimeLeft': 86400, 'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': 86400, 'DataCorePlugin.GameData.BestLapTime': 95 });
     expect(lapsLeft(daytona)).toBe('910');
     expect(String(lapsLeft(daytona)).length).toBeLessThanOrEqual(LAP_WIDEST.length);
+  });
+
+  test('a refuel past a thousand is drawn whole, so it stays inside the four cells and the point', () => {
+    // 910 laps at 3.5 a lap, less a full hundred-litre tank: `3085.0` was five digit cells in a
+    // field cut for four, and WPF drew `3085.` with the last glyph gone.
+    const daytona = (perLap: number, tank: number): Props =>
+      timed(1, {
+        'DataCorePlugin.GameData.SessionTimeLeft': 86400,
+        'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': 86400,
+        'DataCorePlugin.GameData.BestLapTime': 95,
+        'DataCorePlugin.Computed.Fuel_LitersPerLap': perLap,
+        'DataCorePlugin.GameData.Fuel': tank,
+      });
+    expect(refuel(daytona(3.5, 100))).toBe('3085');
+    // Under a thousand it keeps its tenth, and the step sits where `0.0` would write a fourth digit.
+    expect(refuel(daytona(1.1, 1.0))).toBe('1000');
+    expect(refuel(daytona(1.1, 1.06))).toBe('999.9');
+    // Every reading from a sprint to a day, at a light and a thirsty car, is inside the budget.
+    const mono = { charWidth: 10, specialCharsWidth: 5, specialChars: '.,:' };
+    for (const seconds of [600, 2700, 21600, 43200, 86400]) {
+      for (const perLap of [0.4, 2.8, 4.5, 9.9]) {
+        const text = String(refuel(timed(1, { 'DataCorePlugin.GameData.SessionTimeLeft': seconds, 'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': seconds, 'DataCorePlugin.GameData.BestLapTime': 95, 'DataCorePlugin.Computed.Fuel_LitersPerLap': perLap, 'DataCorePlugin.GameData.Fuel': 0 })));
+        const drawn = charsOfText(text, mono);
+        expect({ seconds, perLap, text, fits: drawn.digits <= CHARS.fuel.digits && drawn.digits + drawn.specials <= CHARS.fuel.digits + CHARS.fuel.specials }).toMatchObject({ fits: true });
+      }
+    }
   });
 });
 

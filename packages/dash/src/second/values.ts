@@ -1013,6 +1013,19 @@ export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap(
 export const fuelToAddIsSettled = (): Expr => and(fuelIsSettled(), lapsLeftIsKnown());
 
 /**
+ * The fuel to add as the fuel page draws it: to a tenth up to `999.9`, in whole units above that,
+ * and {@link NO_VALUE} until {@link fuelToAddIsSettled}.
+ *
+ * Whole units above a thousand, because the field is cut for {@link CHARS.fuel}, four digit cells
+ * and the point, and a timed race's laps left reach that early in a long one: a day at Daytona is
+ * 910 laps, and at three litres and a half a lap the first stint was told to add `3085.0`, which WPF
+ * drew as `3085.` with the last glyph cut. Nobody fills a tank to a tenth of a figure that size, and
+ * `3085` keeps the field inside its cells up to 9999.
+ */
+export const fuelToAddText = (): Expr =>
+  iff(fuelToAddIsSettled(), iff(lt(fuelToAdd(), num(999.95)), fmt(fuelToAdd(), '0.0'), fmt(fuelToAdd(), '0')), str(NO_VALUE));
+
+/**
  * Whether a fuel figure derived from a lap's consumption means anything yet.
  *
  * **A lap has to have been completed, not merely begun.** SimHub publishes `Fuel_LitersPerLap`

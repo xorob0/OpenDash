@@ -36,8 +36,7 @@ import {
   fuelIsSettled,
   fuelPerLap,
   fuelThisLap,
-  fuelToAdd,
-  fuelToAddIsSettled,
+  fuelToAddText,
   fuelToEndColour,
   fuelToEndDrawn,
   fuelToEndText,
@@ -134,7 +133,7 @@ export const fuel = defineModule('fuel', (ctx) => {
         [
           fld(ctx, 'toAdd', 'Refuel', {
             sample: '12.6',
-            bind: iff(fuelToAddIsSettled(), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
+            bind: fuelToAddText(),
             chars: CHARS.fuel,
             fs: d.mid,
             color: ds.color.caution.primary,
