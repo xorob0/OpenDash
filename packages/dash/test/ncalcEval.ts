@@ -137,7 +137,8 @@ function kindOf(node: E.Node, props: Props): Kind {
       if (!['+', '-', '*', '/', '%'].includes(node.op)) return 'other';
       const a = kindOf(node.left, props);
       const b = kindOf(node.right, props);
-      // `/` converts its left operand to a double when neither side is real, so 7 / 2 is 3.5.
+      // `/` converts its left operand to a double when neither side is real, so 7 / 2 is 3.5: so the
+      // EvaluationVisitor of the NCalc.dll on the test VM's share reads, decompiled for #1046.
       if (node.op === '/' && !REAL.has(a) && !REAL.has(b)) return promote('double', b);
       return promote(a, b);
     }

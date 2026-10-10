@@ -1556,9 +1556,8 @@ describe('the inputs page', () => {
     expect(left).toContain('sin(');
     expect(top).toContain('cos(');
     // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is full lock
-    // and not a mark that has come round past the top again.
-    expect(left).toContain('min(max(');
-    expect(left).toContain('3.5');
+    // and not a mark that has come round past the top again, with the bounds on the left (#1046).
+    expect(left).toContain('max(-3.5, min(3.5, ');
     // Where the two formulas put the mark on a wheel that is straight is expressions.test.ts.
     expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('Steer');
   });

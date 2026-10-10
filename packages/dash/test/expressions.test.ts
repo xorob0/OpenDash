@@ -311,7 +311,9 @@ describe('hero expressions', () => {
   const CAR_OWN_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
   // The two derived flashes and the choice between them, which is what the measured bar falls back to
   // for a car whose table carries no flash -- 47 of the 85. Spelled out here too, for the same reason.
-  const MIRROR_FLASH = `((${RPMS}) >= (max(${SL('Blink')}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
+  // The blink's fallback is the double 0.0, so the max keeps the last light's own type (#1046).
+  const BLINK = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0.0)';
+  const MIRROR_FLASH = `((${RPMS}) >= (max(${BLINK}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
   const SIMHUB_FLASH = `((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)) and (!(${LAST_GEAR}))`;
   const EITHER_FLASH = `((${MIRROR}) and (${MIRROR_FLASH})) or ((!(${MIRROR})) and (${SIMHUB_FLASH}))`;
   const FLASHES = `(isnull([OpenDash.CarLadderFlashes], false)) = (true)`;
@@ -431,7 +433,7 @@ describe('hero expressions', () => {
       `if(((${RPMS}) > (${SL('First')})) and ((((${RPMS}) - (${SL('First')})) * (5)) > ((4) * ((${SL('Shift')}) - (${SL('First')})))), '#00D96A', '#33383F')`,
     ]);
     // The last band lights together at the last light, and flashes above the blink RPM rather than at redline.
-    const blink = `max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), ${SL('Last')})`;
+    const blink = `max(${BLINK}, ${SL('Last')})`;
     expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if((${RPMS}) >= (${SL('Last')}), '#FF2D46', '#33383F')` });
     expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `((${RPMS}) >= (${blink})) and (!(${LAST_GEAR}))` });
     expect(seg(14).blink).toEqual({ delayMs: 62 });
