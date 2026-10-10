@@ -1753,7 +1753,7 @@ export const PIT_WALL_WIDE_ZONE_PAGES: readonly PitWallZonePageMeta[] = [
   // The three wide pages the sheet names by what the extra width buys: the lap history gains the
   // delta column, the opponents page the best lap beside the last, and the tyres page the second
   // pressure unit. The standard zone keeps the bare module name and draws the narrower page.
-  { number: 2, id: 'lapHistory', name: 'Lap history · delta to best' },
+  { number: 2, id: 'lapHistory', name: 'Lap history · delta to your best' },
   { number: 3, id: 'opponents', name: 'Opponents · best and last' },
   { number: 4, id: 'tyres', name: 'Tyres · psi and kPa' },
   { number: 5, id: 'carTelemetry', name: 'Car telemetry' },

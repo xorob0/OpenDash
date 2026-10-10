@@ -120,7 +120,7 @@ who moves it, and it is the reason the two catalogues have stayed apart: a pit w
 with a mouse by somebody who is not driving, and a face zone is cycled with a thumb mid-lap.
 
 **A wide zone names what the extra width buys.** Three of its six pages draw more than the standard
-zone's rather than the same thing larger, so the catalogue calls them "Lap history · delta to best",
+zone's rather than the same thing larger, so the catalogue calls them "Lap history · delta to your best",
 "Opponents · best and last" and "Tyres · psi and kPa", where the standard zone keeps the bare module
 name. A page that gains nothing from the width, the inputs trace and the web view, keeps its own
 name in both catalogues.
