@@ -190,7 +190,7 @@ namespace OpenDashPlugin
         /// single-class field reads the same either way. A saved value is kept as it is. #432.</summary>
         public const string DefaultPositionMode = "class";
 
-        /// <summary>The session best, the all-time best, or the lap before this one. The last is iRacing's own
+        /// <summary>Your best of the session, which SimHub calls its session best, the all-time best, or the lap before this one. The last is iRacing's own
         /// live delta rather than SimHub's, which publishes none against the last lap; the dash reads it
         /// in the expression and this side only carries the choice. #322.</summary>
         public static readonly string[] DeltaReferences = { "session", "alltime", "lastlap" };

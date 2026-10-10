@@ -77,7 +77,7 @@ export const SHORT: Readonly<Record<string, string>> = {
   'Laps completed': 'LAPS',
   'Delta to your best': 'DELTA BEST',
   'Delta to last lap': 'DELTA LAST',
-  'vs session best': 'VS SBEST',
+  'vs your best': 'VS PBEST',
   'vs all-time best': 'VS ABEST',
   'vs last lap': 'VS LAST',
 };

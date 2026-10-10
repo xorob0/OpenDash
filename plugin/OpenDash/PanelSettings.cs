@@ -649,7 +649,7 @@ namespace OpenDashPlugin
         {
             new PanelSearch.Entry(PanelDataTab.SectionTitle, PanelPage.Settings, AnchorRaceData),
             new PanelSearch.Entry(PanelDataTab.PositionTitle, PanelPage.Settings, AnchorPosition, "overall", "class"),
-            new PanelSearch.Entry(PanelDataTab.DeltaTitle, PanelPage.Settings, AnchorDelta, "session best", "all-time best", "last lap"),
+            new PanelSearch.Entry(PanelDataTab.DeltaTitle, PanelPage.Settings, AnchorDelta, "your best", "session best", "all-time best", "last lap"),
             new PanelSearch.Entry(PanelDataTab.DeltaPrecisionTitle, PanelPage.Settings, AnchorDeltaPrecision, "hundredths", "thousandths", "decimals"),
             new PanelSearch.Entry(PanelDataTab.SessionTitle, PanelPage.Settings, AnchorSession, "laps", "time"),
             new PanelSearch.Entry(PanelDataTab.DriverNameTitle, PanelPage.Settings, AnchorDriverNames, "name format", "surname"),

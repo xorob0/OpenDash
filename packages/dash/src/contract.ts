@@ -1537,7 +1537,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 16, id: 'opponents', name: 'Opponents', description: 'The car ahead and the car behind, in detail.', enabled: true, needsSession: true },
   { number: 17, id: 'gear', name: 'Gear', description: 'The gear, as large as the screen allows.', enabled: true, needsSession: false },
   { number: 18, id: 'stint', name: 'Stint', description: 'Stint laps and time, stops and the last stop.', enabled: true, needsSession: true },
-  { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to the session best.', enabled: true, needsSession: true },
+  { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to your best.', enabled: true, needsSession: true },
   { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false, needsSession: false },
   { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false, needsSession: false },
   { number: 22, id: 'engineReadings', name: 'Engine readings', description: 'Water and oil temperatures, oil and fuel pressure, voltage and manifold pressure.', enabled: true, needsSession: false },
@@ -1753,7 +1753,7 @@ export const PIT_WALL_WIDE_ZONE_PAGES: readonly PitWallZonePageMeta[] = [
   // The three wide pages the sheet names by what the extra width buys: the lap history gains the
   // delta column, the opponents page the best lap beside the last, and the tyres page the second
   // pressure unit. The standard zone keeps the bare module name and draws the narrower page.
-  { number: 2, id: 'lapHistory', name: 'Lap history · delta to best' },
+  { number: 2, id: 'lapHistory', name: 'Lap history · vs your best' },
   { number: 3, id: 'opponents', name: 'Opponents · best and last' },
   { number: 4, id: 'tyres', name: 'Tyres · psi and kPa' },
   { number: 5, id: 'carTelemetry', name: 'Car telemetry' },

@@ -75,7 +75,6 @@ export const SHORT: Readonly<Record<string, string>> = {
   'Laps completed': 'Laps done',
   'Delta to your best': 'Delta best',
   'Delta to last lap': 'Delta last',
-  'vs session best': 'vs sess best',
   'vs all-time best': 'vs all best',
   'vs last lap': 'vs last',
 };
@@ -87,14 +86,24 @@ const textOf = (spec: FieldSpec): string => SHORT[spec.label] ?? spec.label;
 /** A bound label written short wherever it draws one of the long forms, which is what a binding that names its reference draws. */
 const shortBind = (bind: string | undefined): string | undefined =>
   bind === undefined ? undefined : Object.entries(SHORT).reduce((expr, [long, short]) => (bind.includes(long) ? ncalc.replace(expr, long, short) : expr), bind);
+
+/** A string as the car writes it: every long form in it replaced by its short one, in the order {@link shortBind} replaces them. */
+const shortOf = (text: string): string => Object.entries(SHORT).reduce((t, [long, short]) => t.split(long).join(short), text);
+
+/** The string literals of an NCalc expression, unescaped. */
+const literalsOf = (expr: string): string[] => [...expr.matchAll(/'((?:[^'\\]|\\.)*)'/g)].map((m) => m[1]!.replace(/\\(.)/g, '$1'));
+
 /**
- * The widest label a field draws in its short forms: its declared widest, or, for a bound label that
- * writes one of the long forms, the widest short form it can write, which a declaration written for the
- * long forms does not name.
+ * The widest label a field draws in its short forms: its declared widest, written short, or for a
+ * bound label any string its binding writes, with the long forms in it written short. A declaration
+ * written for the long forms names the widest of those, and once they are short a string the car
+ * leaves long can be the wider: the default delta caption, "vs your best", is wider than the "vs all
+ * best" that "vs all-time best" becomes (#1030). Every literal is a candidate, the ones a condition
+ * compares against too, which can only make the box wider than it needs to be and never narrower.
  */
 function widestLabelOf(spec: FieldSpec): string {
   const own = spec.labelWidest === undefined ? textOf(spec) : (SHORT[spec.labelWidest] ?? spec.labelWidest);
-  const written = Object.entries(SHORT).filter(([long]) => spec.labelBind?.includes(long)).map(([, short]) => short);
+  const written = literalsOf(spec.labelBind ?? '').map(shortOf);
   return [own, ...written].reduce((a, b) => (measureText('BarlowMedium', b, type.label) > measureText('BarlowMedium', a, type.label) ? b : a));
 }
 

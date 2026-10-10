@@ -219,11 +219,11 @@ describe('the delta reference (#322)', () => {
 
   test('the caption names the reference, and "vs last lap" is not the lap review\'s "vs previous"', () => {
     const caption = (reference: string | undefined): unknown => evalNcalc(referenceLabel(), frame(reference, {}));
-    expect(caption(undefined)).toBe('vs session best');
-    expect(caption('session')).toBe('vs session best');
+    expect(caption(undefined)).toBe('vs your best');
+    expect(caption('session')).toBe('vs your best');
     expect(caption('alltime')).toBe('vs all-time best');
     expect(caption('lastlap')).toBe('vs last lap');
-    expect(caption('previous')).toBe('vs session best');
+    expect(caption('previous')).toBe('vs your best');
   });
 
   test('every caption fits the one widest the delta module and the pit wall are measured by', () => {

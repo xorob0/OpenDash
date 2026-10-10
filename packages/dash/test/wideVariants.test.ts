@@ -2,7 +2,7 @@
  * The wide zone pages that are variants of their module rather than the plain drawing.
  *
  * Three of the six are named on the canvas for something the standard zone does not draw: lap
- * history carries the delta to the session best, opponents carries the best lap beside the last,
+ * history carries the delta to your best, opponents carries the best lap beside the last,
  * and tyres carries the pressure in both units. The other three are the module as it stands.
  *
  * `secondScreens.test.ts` already measures every text of these pages against its box, which is the
@@ -103,10 +103,10 @@ describe('tyres · both pressure units', () => {
   });
 });
 
-describe('lap history · delta to best', () => {
-  test('the wide page gives its third column to the delta to the session best', () => {
+describe('lap history · vs your best', () => {
+  test('the wide page gives its third column to the delta to your best', () => {
     for (const { zone, items } of pages('wide', 'lapHistory')) {
-      expect({ zone, head: named(items, 'lapHistory.head.delta')?.text }).toMatchObject({ head: 'Δ best' });
+      expect({ zone, head: named(items, 'lapHistory.head.delta')?.text }).toMatchObject({ head: 'Δ your best' });
       expect({ zone, drawn: drawn(named(items, 'lapHistory.row.delta')) }).toMatchObject({ drawn: expect.stringContaining('DeltaToSessionBest') });
     }
   });
