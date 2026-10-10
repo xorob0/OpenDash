@@ -60,6 +60,7 @@ import {
   fuelLastLap,
   fuelLastLapIsSettled,
   fuelUnit,
+  hasSessionLap,
   hasTime,
   lapTime,
   lastLap,
@@ -167,9 +168,19 @@ interface Comparison {
  * `PersistantTrackerPlugin.PreviousLap_00_DeltaToSessionBest` is the delta of the lap in slot zero,
  * and slot zero is the lap just completed -- the same reading `modules/lapHistory.ts` draws its
  * first row from, and the reason `average5` starts at zero rather than at one. It is read while the
- * lap has a time, and the field says so otherwise.
+ * lap has a time and slot zero is a lap of this session, and the field says so otherwise: SimHub
+ * fills the ring from its lap database, so until the first lap of a session is done slot zero is
+ * the last lap of an earlier one, and its delta is to a session best it was never part of (#1011).
+ *
+ * A lap of this session is `hasSessionLap`, a time and the flag, as it is for every other reading
+ * of the ring. The flag alone is not enough: on a car and track the database has no laps for, SimHub
+ * writes slot zero's time and deltas to nought and leaves its flag at 1 from the last combination,
+ * and a delta of nought would be drawn as a level `0.00`.
  */
-const vsSessionBest: Comparison = { shown: () => hasTime(lastLap()), seconds: () => isnull(previousLapDelta(num(0)), num(0)) };
+const vsSessionBest: Comparison = {
+  shown: () => and(hasTime(lastLap()), hasSessionLap(num(0))),
+  seconds: () => isnull(previousLapDelta(num(0)), num(0)),
+};
 
 /**
  * The lap just finished against the one before it: arithmetic over two published properties, which
@@ -178,9 +189,13 @@ const vsSessionBest: Comparison = { shown: () => hasTime(lastLap()), seconds: ()
  * Slot one and not slot zero. Slot zero is the lap this panel is reporting, so the difference
  * against it would be nought on every lap of every race; the lap before it is slot one, and until
  * there have been two laps there is nothing to compare and the field says so.
+ *
+ * Two laps of this session. SimHub fills the ring from its lap database, so at the first crossing of
+ * a session slot one holds the last lap of an earlier one, driven on another day or in another
+ * session's conditions, and a difference against it is not the lap before this one (#1011).
  */
 const vsPrevious: Comparison = {
-  shown: () => and(hasTime(lastLap()), hasTime(previousLap(num(1)))),
+  shown: () => and(hasTime(lastLap()), hasSessionLap(num(1))),
   seconds: () => sub(secondsOf(lastLap()), secondsOf(previousLap(num(1)))),
 };
 
