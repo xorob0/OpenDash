@@ -35,6 +35,7 @@ import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE }
 import { buildFlagBoxProfile, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
 import { ds } from '../src/tokens.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 /** Every colour `ds` resolves, so "is this a token" is a question about tokens.json rather than
  * about one branch of it. */
@@ -68,22 +69,14 @@ const litOf = (colorBind: string | undefined): string => {
  * `and` / `or` / `!` and arithmetic -- and throws on anything wider rather than guessing.
  */
 const evaluateShift = (expression: string, telemetry: Record<string, number | boolean>): boolean => {
-  const js = expression
-    .replace(/\[([A-Za-z0-9_.]+)\]/g, (_, name: string) => `P(${JSON.stringify(name)})`)
-    .replace(/\bisnull\(/g, 'nz(')
-    .replace(/\bmax\(/g, 'Math.max(')
-    .replace(/\band\b/g, '&&')
-    .replace(/\bor\b/g, '||')
-    .replace(/ = /g, ' === ');
-  const words = js.replace(/P\("[^"]*"\)/g, '0').match(/[A-Za-z_][A-Za-z_.]*/g) ?? [];
-  // `true` and `false` are the isnull() fallbacks of the panel's own switches, which read as
-  // literals once the property reads have been replaced. They are JavaScript as they stand.
-  const unknown = words.filter((w) => w !== 'nz' && w !== 'Math.max' && w !== 'true' && w !== 'false');
+  const words = expression.replace(/\[[A-Za-z0-9_.]+\]/g, '0').match(/[A-Za-z_][A-Za-z_.]*/g) ?? [];
+  // `true` and `false` are the isnull() fallbacks of the panel's own switches.
+  const unknown = words.filter((w) => !['isnull', 'max', 'and', 'or', 'true', 'false'].includes(w));
   if (unknown.length > 0) throw new Error(`evaluateShift does not cover ${unknown.join(', ')} in ${expression}`);
   // Booleans as well as numbers, because two of the properties the car's own bar is read through are
-  // published as booleans and `1` is not `true` to the comparison the expression makes.
-  const read = (name: string): number | boolean | null => telemetry[name] ?? null;
-  const result: unknown = new Function('P', 'nz', `return (${js});`)(read, (v: number | boolean | null, d: number | boolean) => v ?? d);
+  // published as booleans and `1` is not `true` to the comparison the expression makes. The shared
+  // evaluator reads a missing property as null and answers `max` in its left operand's type (#1046).
+  const result = evalNcalc(expression, telemetry);
   if (typeof result !== 'boolean') throw new Error(`not a condition: ${expression}`);
   return result;
 };

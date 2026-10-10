@@ -5,11 +5,11 @@
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, `timespantoseconds` (seconds are passed as
  * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `abs`, `round`,
- * `truncate`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the comparisons,
- * `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by the hour and
- * minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the
- * culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
- * that evaluates half an expression proves nothing.
+ * `truncate`, `sin`, `cos`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the
+ * comparisons, `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by
+ * the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon,
+ * which is the culture SimHub sets at startup. Anything else is an error rather than a silent
+ * `undefined`: a test that evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning
@@ -158,6 +158,8 @@ function kindOf(node: E.Node, props: Props): Kind {
           return 'decimal';
         case 'round':
         case 'truncate':
+        case 'sin':
+        case 'cos':
         case 'timespantoseconds':
           return 'double';
         default:
@@ -267,6 +269,8 @@ export function evalNcalc(expression: string, props: Props): unknown {
       return Math.round(value * scale) / scale;
     },
     truncate: Math.trunc,
+    sin: Math.sin,
+    cos: Math.cos,
     rootdashboardscreenname: (): unknown => (ROOT_SCREEN in props ? props[ROOT_SCREEN] : null),
   };
   return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));

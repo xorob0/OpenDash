@@ -21,6 +21,7 @@ import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -32,15 +33,13 @@ const textItem = (id: string, name: string): TextItem => {
  * A numeric NCalc formula evaluated in JavaScript, every property read standing for `value`.
  *
  * A formula that is arithmetic rather than a string is worth what it computes, and the dial's two
- * are the whole of its movement. `isnull` is NCalc's and the rest are the maths library, which is
- * .NET's and therefore JavaScript's to six decimals.
+ * are the whole of its movement. The sine and cosine are .NET's and therefore JavaScript's to six
+ * decimals, and the clamp's `min` and `max` answer in their left operand's type as NCalc's do, which
+ * the shared evaluator models (#1046).
  */
 const evaluateNumber = (formula: string, value: number): number => {
-  const js = formula
-    .replace(/\[[^\]]+\]/g, String(value))
-    .replace(/\bisnull\(/g, 'nz(')
-    .replace(/\b(sin|cos|min|max)\(/g, 'Math.$1(');
-  return Number(new Function('nz', `return ${js};`)((v: number, fallback: number) => v ?? fallback));
+  const props = Object.fromEntries([...formula.matchAll(/\[([^\]]+)\]/g)].map(([, name]) => [name, value]));
+  return Number(evalNcalc(formula, props));
 };
 
 const formulaOf = (item: TextItem, target: 'Text' | 'TextColor' | 'Left' | 'Visible'): string => {
