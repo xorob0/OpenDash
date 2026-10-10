@@ -28,6 +28,18 @@ export const str = (s: string): Expr => `'${s.replace(/\\/g, '\\\\').replace(/'/
 
 export const num = (n: number): Expr => (Number.isFinite(n) ? String(n) : '0');
 
+/**
+ * A number literal NCalc reads as a double: `0.0` where {@link num} writes `0`.
+ *
+ * NCalc types a literal by its spelling, so `0` is an Int32 and `0.0` a double, and the two are not
+ * interchangeable wherever the type of an operand decides the type of the answer. {@link max} and
+ * {@link min} are where that bites, and a literal bound written on their left is what this is for.
+ */
+export const real = (n: number): Expr => {
+  const s = num(n);
+  return /^-?\d+$/.test(s) ? `${s}.0` : s;
+};
+
 const wrap = (e: Expr): Expr => `(${e})`;
 
 export const not = (a: Expr): Expr => `!${wrap(a)}`;

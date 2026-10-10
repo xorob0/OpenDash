@@ -25,6 +25,7 @@ const {
   prop,
   str,
   num,
+  real,
   iff,
   eq,
   gt,
@@ -1100,11 +1101,17 @@ export const lapsLeftShown = (): Expr => ncalc.or(gt(lapsLeft(), num(0)), not(la
  * can read the start where the time reads the end, and the smaller of the two, nought there, counts
  * the lap whole, which is the side a fuel figure can afford to be wrong on. A game that publishes no
  * position gives SimHub's `-1`, read as nought for the same reason.
+ *
+ * The bounds are the double `0.0`, here and in {@link lapsToRun}. NCalc's `max` and `min` answer in
+ * the type of their left operand, so with the Int32 `0` there the fraction was rounded to nought
+ * below half a lap and to a whole lap above it. On the VM, a car half way round its last lap after
+ * the clock with 0.71 laps of fuel read `−0` in red with Refuel 1.0, and a lap-counted margin
+ * stepped by a whole lap at half distance.
  */
 const lapFractionRun = (): Expr =>
   iff(
     gt(timedLapSeconds(), num(0)),
-    max(num(0), min(isnull(game('TrackPositionPercent'), num(0)), div(lapTimeRun(), timedLapSeconds()))),
+    max(real(0), min(isnull(game('TrackPositionPercent'), real(0)), div(lapTimeRun(), timedLapSeconds()))),
     num(0),
   );
 
@@ -1119,10 +1126,17 @@ const lapFractionRun = (): Expr =>
  * flag told in red to stop for it. After a timed race's clock, half way round the last lap, the
  * half lap still to run is what the tank has to cover, and not the whole lap (#1024).
  */
-const lapsToRun = (): Expr => max(num(0), sub(lapsLeft(), lapFractionRun()));
+const lapsToRun = (): Expr => max(real(0), sub(lapsLeft(), lapFractionRun()));
 
-/** Fuel to add: what the {@link lapsToRun} will burn, less what is in the tank; never negative. */
-export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsToRun(), fuelPerLap()), fuel()));
+/**
+ * Fuel to add: what the {@link lapsToRun} will burn, less what is in the tank; never negative.
+ *
+ * The floor is the double `0.0`, as it is in the two clamps above: NCalc's `max` answers in its left
+ * operand's type, so `max(0, …)` rounds the litres to a whole one and the reading ends in `.0` under a
+ * format that draws tenths, and a shortfall under half a litre draws `0.0` beside a margin in red.
+ * #831.
+ */
+export const fuelToAdd = (): Expr => max(real(0), sub(mul(lapsToRun(), fuelPerLap()), fuel()));
 
 /**
  * Whether there is a fuel to add: a lap has said what one costs, which is {@link fuelIsSettled}, and

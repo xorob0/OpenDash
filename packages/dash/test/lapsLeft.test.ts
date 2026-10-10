@@ -8,8 +8,9 @@
  * and the session page's Laps left both multiplied or drew it, and told a car on the lead lap with
  * half an hour to run that it needed no fuel.
  *
- * These tests evaluate the NCalc the build emits for the fuel module and the session module, on the
- * frames SimHub publishes: a timed race for a car on the lead lap and for a lapped car, the same race
+ * These tests evaluate the NCalc the build emits for the fuel module and the session module, with
+ * the generator's own evaluator and the properties in the types SimHub gives them, on the frames
+ * SimHub publishes: a timed race for a car on the lead lap and for a lapped car, the same race
  * before a lap has been timed, its laps after the clock, and a race counted in laps, where both
  * readings still come from `RemainingLaps`.
  */
@@ -21,7 +22,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { CHARS, LAP_WIDEST, NO_VALUE } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { evalTyped, type Props } from './ncalcEval.ts';
 
 /** A wide zone body, which is the shape that keeps every field of the page. */
 const pageItems = (id: string): TextItem[] => {
@@ -57,6 +58,10 @@ const frame = (session: Props, car: Props = {}): Props => ({
   'DataCorePlugin.Computed.Fuel_RemainingTime': 720,
   'DataCorePlugin.GameData.BestLapTime': 100,
   'DataCorePlugin.GameData.LastLapTime': 102.4,
+  // At the line unless a case puts the car round the lap. SimHub publishes the lap time on every
+  // frame of a running game, and `timespantoseconds` of a missing one is null.
+  'DataCorePlugin.GameData.CurrentLapTime': 0,
+  'DataCorePlugin.GameData.TrackPositionPercent': 0,
   ...session,
   ...car,
 });
@@ -98,10 +103,10 @@ const lapRace = (extra: Props = {}): Props =>
     ...extra,
   });
 
-const refuel = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
+const refuel = (props: Props): unknown => evalTyped(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
 const lapsLeft = (props: Props): unknown =>
-  evalNcalc(formulaOf(sessionItems, 'lapsLeft.value', 'Visible'), props) === true ? evalNcalc(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props) : null;
-const margin = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toEnd.value', 'Text'), { ...props, 'OpenDash.SessionProgress': 'laps' });
+  evalTyped(formulaOf(sessionItems, 'lapsLeft.value', 'Visible'), props) === true ? evalTyped(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props) : null;
+const margin = (props: Props): unknown => evalTyped(formulaOf(fuelItems, 'toEnd.value', 'Text'), { ...props, 'OpenDash.SessionProgress': 'laps' });
 
 describe('a timed race counts its laps left from the time left and a lap', () => {
   test('a car on the lead lap is told what to add, and how many laps are left', () => {
