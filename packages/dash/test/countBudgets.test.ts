@@ -20,7 +20,7 @@ import type { TextItem } from '../src/generator.ts';
 import { ncalc } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { BIAS_WIDEST, LEVEL_WIDEST, TRACKED_VALUES } from '../src/second/tracked.ts';
-import { CHARS, INCIDENTS_WIDEST, LAP_TOTAL_WIDEST, LAP_WIDEST } from '../src/second/values.ts';
+import { CHARS, INCIDENTS_WIDEST, LAP_TOTAL_WIDEST, LAP_WIDEST, lapsLeftText } from '../src/second/values.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
@@ -83,6 +83,9 @@ const READINGS: { name: string; pattern: RegExp; widest: string }[] = [
     pattern: /^\('\/ '\) \+ \(format\((?:isnull\(\[DataCorePlugin\.GameData\.TotalLaps\], 0\)|\[DataCorePlugin\.GameData\.TotalLaps\]), '0'\)\)$/,
     widest: LAP_TOTAL_WIDEST,
   },
+  // The session page's laps left, which in a timed race is predicted from the time left and is
+  // `--` until a lap has been timed (#1008); at the long end of a lap race it is `RemainingLaps`.
+  { name: 'the laps left', pattern: new RegExp(`^${lapsLeftText().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), widest: LAP_WIDEST },
   {
     name: 'the incident count',
     pattern: /^\(format\(isnull\(\[DataCorePlugin\.GameRawData\.Telemetry\.PlayerCarMyIncidentCount\], 0\), '0'\)\) \+ \('x'\)$/,

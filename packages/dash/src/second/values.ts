@@ -937,10 +937,80 @@ export const fuelLapsLeft = (): Expr => isnull(computed('Fuel_RemainingLaps'), n
 export const fuelTimeLeft = (): Expr => timespanToSeconds(computed('Fuel_RemainingTime'));
 export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'), num(0));
 export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumption'), num(-1));
-export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
+
+/**
+ * The lap a timed session's laps left are counted in, in seconds: the session's best lap, the last
+ * lap where there is no best yet, and nought until a lap has been timed.
+ *
+ * The best rather than the last, because the count is a fuel figure's first term and the slow laps
+ * are the ones a race is not run at. A lap through the pit lane or behind the safety car counted
+ * from would make the race shorter than it is and put too little in the tank, where the best lap
+ * makes it a lap long at the worst and the tank a lap's fuel heavy. The last is there for a session
+ * whose sim has not set a best, and the nought is what {@link lapsLeftIsKnown} reads.
+ */
+export const timedLapSeconds = (): Expr =>
+  iff(hasTime(bestLap()), timespanToSeconds(bestLap()), iff(hasTime(lastLap()), timespanToSeconds(lastLap()), num(0)));
+
+/**
+ * Whether there is a count of laps left: always in a session counted in laps, and in a timed one
+ * once a lap has been timed to divide the time left by.
+ */
+export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(timedLapSeconds(), num(0)));
+
+/**
+ * The laps the car still has to run, the one it is on included: `RemainingLaps` in a session counted
+ * in laps, and in a timed session the whole laps the time left holds at {@link timedLapSeconds}, and
+ * the lap the clock runs out on.
+ *
+ * Two quantities, because SimHub makes only the first. It sets `RemainingLaps` for every game to
+ * `TotalLaps` less `CompletedLaps`, never below nought (GameReaderCommon 9.12.6, `GameManagerBase`),
+ * and in a timed iRacing race `TotalLaps` is the leader's completed laps, so `RemainingLaps` there is
+ * how many laps the car is behind the leader: nought on the lead lap with half an hour to run, which
+ * the fuel page multiplied into nothing to add, and `3` as the laps left for a car three laps down
+ * (#1008). Timed is {@link isTimedSession}'s, the test {@link hasLapTotal} draws a race's length by,
+ * so a race whose length is not drawn is a race whose laps are predicted.
+ *
+ * A timed race ends when the leader crosses the line after the clock has reached nought, so a car
+ * on the lead lap runs the laps that fit in the time left and the one in progress when it runs out:
+ * the whole laps of the time left, and one. At the line that is exact, and mid-lap it is a lap over
+ * at the most and never under, since the lap in progress has already spent some of the time left;
+ * it counts the lap you are on, as `RemainingLaps` does. After the clock it is the lap in progress,
+ * which is one and not nought: #1017 keeps such a session timed until it ends.
+ *
+ * Nought in a timed session until a lap has been timed, which no reading draws as a count: the
+ * session page and the fuel page draw {@link NO_VALUE} by {@link lapsLeftIsKnown} instead, and the
+ * margin forced onto laps has no end to measure against, as in a race with no laps left.
+ *
+ * What the timed form costs is the iRacing race given both a lap count and a time limit, which
+ * {@link isTimedSession} calls timed, and which now counts its laps from the clock rather than from
+ * its count: more laps than it has where the count ends it first, which is the side a fuel figure
+ * can afford to be wrong on. Nothing OpenDash reads today tells the two apart.
+ */
+export const lapsLeft = (): Expr =>
+  iff(
+    isTimedSession(),
+    iff(gt(timedLapSeconds(), num(0)), add(truncate(div(max(num(0), sessionTimeLeft()), timedLapSeconds())), num(1)), num(0)),
+    isnull(game('RemainingLaps'), num(0)),
+  );
+
+/** {@link lapsLeft} as the session page draws it: the count, or {@link NO_VALUE} until there is one. */
+export const lapsLeftText = (): Expr => iff(lapsLeftIsKnown(), fmt(lapsLeft(), '0'), str(NO_VALUE));
+
+/**
+ * Whether the session page draws its laps left: while there are laps left, and in a timed session
+ * before the first lap has been timed, where the field says it has no count yet rather than going.
+ */
+export const lapsLeftShown = (): Expr => ncalc.or(gt(lapsLeft(), num(0)), not(lapsLeftIsKnown()));
 
 /** Fuel to add: what the laps left will burn, less what is in the tank; never negative. */
 export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
+
+/**
+ * Whether there is a fuel to add: a lap has said what one costs, which is {@link fuelIsSettled}, and
+ * there is a count of laps to multiply it by. Without the second, a timed race whose first lap the
+ * sim gave no time for drew `0.0` to add from a count of nought.
+ */
+export const fuelToAddIsSettled = (): Expr => and(fuelIsSettled(), lapsLeftIsKnown());
 
 /**
  * Whether a fuel figure derived from a lap's consumption means anything yet.
@@ -1036,7 +1106,7 @@ const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()),
  *
  * Two quantities rather than one, chosen the way the session page chooses which counter to draw: a
  * timed session compares `Fuel_RemainingTime` with `SessionTimeLeft` and reads in minutes, a
- * lap-counted one compares `Fuel_RemainingLaps` with `RemainingLaps` and reads in laps. The switch
+ * lap-counted one compares `Fuel_RemainingLaps` with {@link lapsLeft} and reads in laps. The switch
  * is {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and
  * the driver is never asked to notice that the unit changed for a reason of its own. The unit is
  * drawn beside the number by {@link fuelToEndUnit}, because a bare signed figure that means laps on
@@ -1109,7 +1179,7 @@ export const FUEL_TO_END_UNIT_WIDEST = 'laps';
  * middle band, unlike {@link deltaColour}: a margin of a tenth of a lap is not a lap in hand, and
  * the question this answers has two answers.
  *
- * Zero counts as reaching the flag, since `RemainingLaps` counts the lap you are on, and the
+ * Zero counts as reaching the flag, since {@link lapsLeft} counts the lap you are on, and the
  * absence is drawn in the primary text: a green `--` claims the tank makes it before anything knows.
  */
 export const fuelToEndColour = (): Expr =>
