@@ -823,7 +823,13 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   it is the class count too when the field is a single class (#1022). `drivergaptoleader` does not
   wait: before the sim has placed anyone it is published for every car, measured from the first
   car of the driver list and negative for some, as seen on the test VM with every iRacing position
-  at 0, so the Gap and Int columns ask `driverposition` of both cars as well (#1028).
+  at 0, so the Gap and Int columns ask `driverposition` of both cars as well (#1028). Nor is it
+  published for the car every gap is measured from: `ComputeOpponentsData` in 9.12.6 calls
+  `UpdateGapToLeader` for every car but the first of `Opponents`, which is `driver*(1)`, and sets
+  that first car's `GaptoLeaderSimHub` to 0 only when it is the player. So `drivergaptoleader(1)` is
+  null whenever somebody else leads, as seen on the test VM in the `green` scenario, and a difference
+  taken from it is null too. SimHub's own `GaptoClassLeader` subtracts 0 in that case, and the Gap
+  and Int columns read it as 0 the same way, on that car only (#1041).
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

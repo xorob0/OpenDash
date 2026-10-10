@@ -203,6 +203,15 @@ reads `+1L` on every row and `Lead` on none, which is a column carrying no gap a
 in both columns are differences of the two gaps to the overall leader, which for a car of the
 player's class is what SimHub's own `gaptoclassleader` is.
 
+The car every gap is measured from, the first of SimHub's leaderboard, has no gap of its own unless
+it is the player's, so both differences take its gap as 0 where SimHub leaves it null. Before that,
+counting in class, every classmate of the race leader read `--`, which is every car of a
+single-class race, and the second row's Int was empty under either setting (#1041). Where the
+class leader leads the race the class gap is then exact. Where another class leads, both gaps are
+measured on the race leader's running, so their difference is the time the race leader took
+between the two cars and not the time the class leader took, which is also what SimHub's own figure
+is. Any other car with no gap still reads `--`, being a car SimHub has not measured.
+
 Whether a row reads seconds or laps is asked of distance, through SimHub's `lapstoleader` on a list
 of the whole field and `lapstoclassleader` on a list of one class: each is the whole laps a car is
 behind, counted from the two cars' laps and fractions of a lap. The lap counters cannot answer it,
@@ -239,7 +248,8 @@ the build writes against a six-car, three-class grid and reads the position colu
 it reads the race board's own ± cell beside it on a grid whose starting order is not its running
 order. `packages/dash/test/classPlacesGained.test.ts` reads the same cell for one car over a
 sequence of frames, from unplaced to placed. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
-against a board whose class is interleaved with another and a lap behind it.
+against a board whose class is interleaved with another and a lap behind it, and in
+`packages/dash/test/gapLeader.test.ts` against a race whose leader SimHub gives no gap.
 
 ## What is not drawn, and why
 

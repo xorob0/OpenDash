@@ -225,6 +225,11 @@ export type DriverFunction =
    * whether a car is a lap down (#1023); `lapstoleader` and `lapstoclassleader` can.
    */
   | 'currentlap'
+  /**
+   * Seconds behind the first car of the leaderboard, which every gap is measured from. Null on that
+   * car's own row unless it is the player's, `GameManagerBase` in 9.12.6 setting it to 0 only then
+   * (#1041).
+   */
   | 'gaptoleader'
   | 'gaptoplayer'
   /**
