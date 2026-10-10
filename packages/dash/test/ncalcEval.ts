@@ -5,11 +5,14 @@
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, `timespantoseconds` (seconds are passed as
  * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `abs`, `round`,
- * `truncate`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the comparisons,
- * `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by the hour and
- * minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the
- * culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
- * that evaluates half an expression proves nothing.
+ * `truncate`, `ceiling`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the
+ * comparisons, `and` / `or` / `!`, and the arithmetic, `%` included. A `driver<name>(position)` call
+ * is answered from the key its canonical text spells, `drivertrackpositionpercent(1)`, as a recorded
+ * trace names its column (`opponentCalls.ts` in the generator), and is null where the frame has
+ * none, as SimHub answers for a row that is not there. A date is passed as a `Date` and formatted by
+ * the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon,
+ * which is the culture SimHub sets at startup. Anything else is an error rather than a silent
+ * `undefined`: a test that evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning
@@ -18,6 +21,8 @@
  * Every number is a JavaScript double, except one passed as a {@link Single}, which is how a raw
  * iRacing float reaches a binding.
  */
+import { callText } from '@opendash/generator';
+
 export type Props = Record<string, unknown>;
 
 /**
@@ -97,6 +102,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
         ? part
         : part
             .replace(/\[([A-Za-z0-9_.]+)\]/g, (_, name: string) => `P(${JSON.stringify(name)})`)
+            .replace(/\b(driver[a-z_]+)\(/g, (_, name: string) => `DRIVER(${JSON.stringify(name)}, `)
             .replace(/\bif\(/g, 'IF(')
             .replace(/\bin\(/g, 'IN(')
             .replace(/\band\b/g, '&&')
@@ -107,6 +113,10 @@ export function evalNcalc(expression: string, props: Props): unknown {
     .join('');
   const fns = {
     P: (name: string): unknown => (name in props ? props[name] : null),
+    DRIVER: (name: string, ...args: unknown[]): unknown => {
+      const text = callText(name, args);
+      return text !== undefined && text in props ? props[text] : null;
+    },
     IF: (c: unknown, a: unknown, b: unknown): unknown => (c ? a : b),
     isnull: (v: unknown, d?: unknown): unknown => (d === undefined ? v === null || v === undefined : (v ?? d)),
     format: (value: unknown, pattern: string, addSign = false): string =>
@@ -130,6 +140,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
       return Math.round(value * scale) / scale;
     },
     truncate: Math.trunc,
+    ceiling: Math.ceil,
     rootdashboardscreenname: (): unknown => (ROOT_SCREEN in props ? props[ROOT_SCREEN] : null),
   };
   return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));

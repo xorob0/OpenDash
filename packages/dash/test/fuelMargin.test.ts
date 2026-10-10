@@ -90,6 +90,9 @@ const telemetry = (
   // At the line unless a case puts the car round the lap, so the whole lap is still to run.
   'DataCorePlugin.GameData.TrackPositionPercent': opts.position ?? 0,
   'DataCorePlugin.GameData.SessionTypeName': opts.type === undefined ? 'Race' : opts.type,
+  // The car leads, so a timed race ends at its own first crossing after the clock; a car behind the
+  // leader is `lapsLeft.test.ts`'s case (#1027).
+  'driverisplayer(1)': true,
   ...(opts.progress === undefined ? {} : { 'OpenDash.SessionProgress': opts.progress }),
 });
 
