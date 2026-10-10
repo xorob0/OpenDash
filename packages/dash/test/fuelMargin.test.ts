@@ -6,7 +6,8 @@
  * estimated laps and the session page the laps left, and the margin has to be the difference between
  * those two or it is a third opinion. These tests therefore evaluate the NCalc the build emits, for
  * the fuel module and for band D's fuel page, and compare the margin against the two fields the same
- * frame draws.
+ * frame draws. They evaluate it with the generator's own evaluator, which keeps NCalc's types, since
+ * a clamp with an Int32 on its left rounds what it clamps in SimHub and not in a doubles-only one.
  *
  * The two forms are checked separately because they are read in two units: laps in a lap-counted
  * session and minutes in a timed one, and which of the two is drawn follows `SessionProgress` exactly
@@ -31,7 +32,7 @@ import { ds } from '../src/tokens.ts';
 import { expressionsOf, walkItems } from '../src/walk.ts';
 import { CHARS, FUEL_TO_END_WIDEST, fuelToEndColour, fuelToEndText, NO_VALUE, tankIsLow } from '../src/second/values.ts';
 import { BAND_PAGES, bandPageItems } from '../src/zones/bandPages.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { evalTyped, type Props } from './ncalcEval.ts';
 
 /** A wide zone body, which is the shape that keeps every field of the page. */
 const pageItems = (id: string): TextItem[] => {
@@ -94,8 +95,8 @@ const telemetry = (
 });
 
 const marginOn = (items: readonly TextItem[], props: Props): { value: unknown; colour: unknown } => ({
-  value: evalNcalc(formulaOf(items, 'toEnd.value', 'Text'), props),
-  colour: evalNcalc(formulaOf(items, 'toEnd.value', 'TextColor'), props),
+  value: evalTyped(formulaOf(items, 'toEnd.value', 'Text'), props),
+  colour: evalTyped(formulaOf(items, 'toEnd.value', 'TextColor'), props),
 });
 
 describe('the fuel margin on the fuel module', () => {
@@ -115,7 +116,7 @@ describe('the fuel margin on the fuel module', () => {
       ...telemetry({ lapsLeft: 1, fuelLaps: 0.4, perLap: 2.84, lapRun: 99, bestLap: 110, position: 0.9, progress: 'laps' }),
       'DataCorePlugin.GameData.Fuel': 0.4 * 2.84,
     };
-    const refuel = evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text'), lastLap);
+    const refuel = evalTyped(formulaOf(fuelItems, 'toAdd.value', 'Text'), lastLap);
     expect({ ...marginOn(fuelItems, lastLap), refuel }).toEqual({ value: '+0.3', colour: ds.purpose.delta.faster, refuel: '0.0' });
   });
 
@@ -147,7 +148,7 @@ describe('the fuel margin on the fuel module', () => {
     expect(marginOn(fuelItems, telemetry({ ...both, progress: 'time' })).value).toBe('+4');
     expect(marginOn(fuelItems, telemetry({ ...both, sessionSeconds: A_WEEK, progress: 'time' })).value).toBe(NO_VALUE);
     // The unit says which, since the same box means laps on one grid and minutes on the next.
-    const unit = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toEnd.unit', 'Text'), props);
+    const unit = (props: Props): unknown => evalTyped(formulaOf(fuelItems, 'toEnd.unit', 'Text'), props);
     expect(unit(telemetry({ progress: 'laps' }))).toBe('laps');
     expect(unit(telemetry({ sessionSeconds: 1200, progress: 'auto' }))).toBe('min');
   });
@@ -191,8 +192,8 @@ describe('the fuel margin on the fuel module', () => {
     // the estimate and the session page the laps left, and a driver was subtracting them himself.
     // At the line, that is; mid-lap the margin is more by the part of the lap already run.
     const props = telemetry({ fuelLaps: 9.4, lapsLeft: 7, progress: 'laps' });
-    const estimate = Number(evalNcalc(formulaOf(fuelItems, 'lapsLeft.value', 'Text'), props));
-    const left = Number(evalNcalc(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props));
+    const estimate = Number(evalTyped(formulaOf(fuelItems, 'lapsLeft.value', 'Text'), props));
+    const left = Number(evalTyped(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props));
     expect({ estimate, left }).toEqual({ estimate: 9.4, left: 7 });
     expect(marginOn(fuelItems, props).value).toBe(`+${(estimate - left).toFixed(1)}`);
   });
@@ -228,10 +229,10 @@ describe('a timed margin counts the lap the clock runs out on', () => {
     };
   };
   const read = (props: Props): { value: unknown; colour: unknown } => ({
-    value: evalNcalc(fuelToEndText(), props),
-    colour: evalNcalc(fuelToEndColour(), props),
+    value: evalTyped(fuelToEndText(), props),
+    colour: evalTyped(fuelToEndColour(), props),
   });
-  const refuel = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
+  const refuel = (props: Props): unknown => evalTyped(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
 
   test('a tank that lasts past the clock and not to the line reads short, in the slower colour', () => {
     // A minute on the clock and a minute and a half of fuel at the line, on a 1:50 lap: the clock
@@ -291,13 +292,62 @@ describe('a timed margin counts the lap the clock runs out on', () => {
               ...telemetry({ sessionSeconds, sessionLength: 2700, bestLap: 110, lapRun, position, fuelLaps, perLap, progress: 'auto' }),
               'DataCorePlugin.GameData.Fuel': fuelLaps * perLap,
             };
-            const short = evalNcalc(fuelToEndColour(), props) === ds.purpose.delta.slower;
+            const short = evalTyped(fuelToEndColour(), props) === ds.purpose.delta.slower;
             // To the hundredth, not the tenth the field draws, so a shortfall under 0.05 is still one.
-            const toAdd = Number(evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text').replaceAll("'0.0'", "'0.00'"), props));
+            const toAdd = Number(evalTyped(formulaOf(fuelItems, 'toAdd.value', 'Text').replaceAll("'0.0'", "'0.00'"), props));
             expect({ sessionSeconds, lapRun, position, fuelLaps, short }).toEqual({ sessionSeconds, lapRun, position, fuelLaps, short: toAdd > 0 });
           }
         }
       }
+    }
+  });
+});
+
+/**
+ * The frames the VM photographed, at the values SimHub reported for them, in the types it reports.
+ *
+ * Every test in this file goes through the generator's evaluator, which keeps NCalc's types. The
+ * doubles-only one passed all of the above while SimHub rounded the part of the lap already run to
+ * nought or a whole lap, because its `max(0, …)` answered in the Int32 of the `0`.
+ */
+describe('the part of the lap already run keeps its fraction in SimHub', () => {
+  /** A 98 s lap at 2.90 L, the car `position` of the way round and as far by the time run. */
+  const frame = (opts: { sessionSeconds: number; fuelLaps: number; position: number; lapsLeft?: number; progress?: string }): Props => ({
+    ...telemetry({
+      sessionSeconds: opts.sessionSeconds,
+      sessionLength: opts.progress === 'laps' ? undefined : 2700,
+      bestLap: 98,
+      lapRun: opts.position * 98,
+      position: opts.position,
+      fuelLaps: opts.fuelLaps,
+      perLap: 2.9,
+      lapsLeft: opts.lapsLeft,
+      progress: opts.progress ?? 'auto',
+    }),
+    'DataCorePlugin.GameData.Fuel': opts.fuelLaps * 2.9,
+  });
+  const read = (props: Props): { value: unknown; colour: unknown; refuel: unknown } => ({
+    value: evalTyped(formulaOf(fuelItems, 'toEnd.value', 'Text'), props),
+    colour: evalTyped(formulaOf(fuelItems, 'toEnd.value', 'TextColor'), props),
+    refuel: evalTyped(formulaOf(fuelItems, 'toAdd.value', 'Text'), props),
+  });
+
+  test('past the clock half way round, the tank is measured against the half lap still to run', () => {
+    // Fuel for 0.71 laps with 0.5 still to run makes the flag. SimHub drew `−0` in red with Refuel
+    // 1.0, the half lap run rounded down to none.
+    expect(read(frame({ sessionSeconds: 0, fuelLaps: 0.71, position: 0.4998 }))).toEqual({ value: '+0', colour: ds.purpose.delta.faster, refuel: '0.0' });
+    // 2.23 laps less the half is 1.73 laps of 98 s, nearly three minutes. SimHub drew `+2`.
+    expect(read(frame({ sessionSeconds: 0, fuelLaps: 2.23, position: 0.4998 }))).toEqual({ value: '+3', colour: ds.purpose.delta.faster, refuel: '0.0' });
+    // 0.36 laps is 0.14 short, 0.4 L. SimHub drew `−1` and Refuel 2.0.
+    expect(read(frame({ sessionSeconds: 0, fuelLaps: 0.36, position: 0.4998 }))).toEqual({ value: `${MINUS}0`, colour: ds.purpose.delta.slower, refuel: '0.4' });
+  });
+
+  test('a lap-counted margin holds still through the lap, as the tank and the laps to run fall together', () => {
+    // Ten laps left and fuel for 5.6 at the line: 4.4 laps short all the way round, 12.76 L. SimHub
+    // drew −4.8, −3.9 and −4.1, with Refuel 14.0, 11.0 and 12.0.
+    for (const position of [0.38, 0.54, 0.69]) {
+      const props = frame({ sessionSeconds: A_WEEK, fuelLaps: 5.6 - position, position, lapsLeft: 10, progress: 'laps' });
+      expect({ position, ...read(props) }).toEqual({ position, value: `${MINUS}4.4`, colour: ds.purpose.delta.slower, refuel: '12.8' });
     }
   });
 });
@@ -311,7 +361,7 @@ describe('the same reading on band D', () => {
   });
 
   test('and its absence sits in the cells the field is cut for, so no column moves at the first lap', () => {
-    expect(evalNcalc(margin.bind, telemetry({ lapsDone: 0 }))).toBe(NO_VALUE);
+    expect(evalTyped(margin.bind, telemetry({ lapsDone: 0 }))).toBe(NO_VALUE);
     expect(NO_VALUE.length).toBeLessThanOrEqual(margin.chars.digits);
   });
 });
@@ -331,7 +381,7 @@ describe('every reading the margin can draw is inside the width it declares', ()
   const readings = (): Set<string> => {
     const seen = new Set<string>();
     const add = (props: Props): void => {
-      seen.add(String(evalNcalc(margin.bind, props)));
+      seen.add(String(evalTyped(margin.bind, props)));
     };
     // Lap-counted races from a sprint to the longest oval, at both ends of the tank.
     for (const lapsLeft of [1, 5, 11, 50, 78, 199, 367, 999]) {
@@ -425,9 +475,9 @@ describe('the margin carries its unit beside the figure, not at the end of the b
       const text = formulaOf(surface.items, 'toEnd.value', 'Text');
       const left = formulaOf(surface.items, 'toEnd.unit', 'Left');
       const placed = READINGS.map((reading) => {
-        const figure = String(evalNcalc(text, reading.props));
+        const figure = String(evalTyped(text, reading.props));
         // Rounded to the pixel: an item's own rect is snapped to whole pixels and a binding is not.
-        const gap = Math.round(Number(evalNcalc(left, reading.props)) - (drawn.rect.left + cellsOf(figure, mono)));
+        const gap = Math.round(Number(evalTyped(left, reading.props)) - (drawn.rect.left + cellsOf(figure, mono)));
         return { reading: reading.name, figure, gap };
       });
       for (const each of placed) expect(each).toMatchObject({ gap: surface.gap });
