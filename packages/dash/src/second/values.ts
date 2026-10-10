@@ -639,7 +639,8 @@ export const classAndPlace = (idx: Expr): Expr => {
 export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
 
 /**
- * Places gained since the start, signed; 0 when the sim does not track it.
+ * Places gained since the start, signed; 0 when the sim does not track it, and 0 where there is no
+ * honest count to give, which {@link placesGainedCounted} says.
  *
  * Counted in the field the position beside it is counted in, which is {@link carPosition}'s own
  * question and is why the two read the same setting: a triangle counting the whole race next to a
@@ -647,20 +648,37 @@ export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
  * place answered from different fields. A car that started eighth overall and third in class and
  * now runs fifth and first drew `P1` with three places gained beside it.
  *
- * SimHub publishes the twin rather than leaving it to be worked out: `PositionGainClass` is
- * "driver's position gains in his own class since the start of the race/connection", registered
- * beside `PositionGain` among the opponent providers of SimHub 9.12.6.
+ * It is SimHub's `PositionGain` in both modes, and never `PositionGainClass`, because only the first
+ * counts from a place the sim gave. `GameManagerBase` in 9.12.6 keeps a car's overall start while it
+ * is 0 or less and replaces it with the car's `Position`, so the overall start is the first place
+ * the sim gave the car, and `PositionGain` stays null until then. The class start is kept the same
+ * way but taken from `PositionInClass`, which SimHub numbers from 1 for every listed car whether or
+ * not the sim has placed it (#1014), so it is set once, on the first frame SimHub sees the car, from
+ * the car's order in the driver list within its class. In a practice a GT3 first in that list starts
+ * first in class, and once three GT3s have set times and it sets one fourth in class it reads three
+ * places lost that it never lost, for the rest of the session (#1022). A race whose first frame
+ * has nobody placed would carry the same made-up start to the flag.
+ *
+ * Counting in class, the overall count is the class count when the field is a single class, every
+ * car's class place then being its overall place, and that is where it is drawn. In a field of
+ * several classes nothing SimHub publishes says where a car first stood in its class, so the cell
+ * draws nothing at all rather than a count measured from a place SimHub made up.
  *
  * A car the sim has not placed has moved nowhere, so the count waits for {@link hasPosition}, as
- * the place beside it does. Overall that changes nothing, since SimHub leaves `PositionGain` null
- * until the car's `Position` is above 0. In class it does: `GameManagerBase` takes the class start
- * from `PositionInClass` the first frame it sees the car and subtracts the current one whenever
- * that is above 0, which it always is (#1014). In a practice a car first in its class in the driver
- * list with no time starts first, and once three of its class set times it reads three places lost
- * beside a place of `P--`.
+ * the place beside it does (#1014).
  */
 export const carRankChange = (idx: Expr): Expr =>
-  iff(hasPosition(idx), iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0))), num(0));
+  iff(and(hasPosition(idx), placesGainedCounted()), isnull(driver('positiongain', idx), num(0)), num(0));
+
+/**
+ * Whether {@link carRankChange} has a count to give: always counting overall, and counting in class
+ * only while every car on the leaderboard is in the player's class, which is when SimHub's
+ * `PlayerClassOpponentsCount` is its `OpponentsCount`.
+ *
+ * Read by the rank column, which draws nothing, not even the dash that says a car has not moved,
+ * where this is false.
+ */
+export const placesGainedCounted = (): Expr => ncalc.or(ncalc.not(classMode()), eq(classOpponentCount(), opponentCount()));
 
 /**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and

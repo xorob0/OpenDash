@@ -300,12 +300,21 @@ describe('a list numbers the field it is drawn from', () => {
     // that class having started in a different order; a cell reading the first beside a column
     // showing the second draws P2 with three places gained against it, which is this ticket a
     // column to the right. The race board is the one page that heads the column.
-    const count = flat(racePage(1920, 1080).items).find((i) => i.name.endsWith('.row.rank.count'))!;
+    //
+    // Counting in class, this field of three classes draws no count at all. SimHub's class count
+    // starts from a class place it numbered before the sim placed the car, and nothing it publishes
+    // says where a car first stood in its class (#1022), so the cell draws neither the class count
+    // nor the overall one in its place.
+    const items = flat(racePage(1920, 1080).items);
+    const count = items.find((i) => i.name.endsWith('.row.rank.count'))!;
+    const marks = items.filter((i) => /\.row\.rank\.(up|down|flat)$/.test(i.name));
     const drawn = (settings: Settings, row: number): unknown => evaluate(formulaOf(count, 'Text'), settings, row);
+    const shown = (settings: Settings, row: number): unknown[] => [count, ...marks].map((i) => evaluate(formulaOf(i, 'Visible'), settings, row));
     expect({
       overall: drawn({ positionMode: 'overall' }, PLAYER_ROW),
       inClass: drawn({ positionMode: 'class' }, classPositionOf(PLAYER_ROW)),
-    }).toEqual({ overall: '3', inClass: '1' });
+    }).toEqual({ overall: '3', inClass: '' });
+    expect(shown({ positionMode: 'class' }, classPositionOf(PLAYER_ROW))).toEqual([false, false, false, false]);
   });
 });
 

@@ -211,6 +211,11 @@ export type DriverFunction =
   | 'position'
   | 'classposition'
   | 'positiongain'
+  /**
+   * Not read by any package. SimHub counts it from the class place it numbered the first frame it
+   * saw the car, which for a car the sim had not placed yet is the car's order in the driver list,
+   * so it can count places a car never lost (#1022). `positiongain` counts from the first real place.
+   */
   | 'positiongainclass'
   | 'bestlap'
   | 'lastlap'
