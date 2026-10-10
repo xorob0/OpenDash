@@ -1497,6 +1497,33 @@ export const previousLapDelta = (slotExpr: Expr): Expr =>
   propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_DeltaToSessionBest')));
 
 /**
+ * Whether the lap in a slot was driven in this session, by SimHub's own word for it.
+ *
+ * The ring is the lap database's and not the session's. `PersistantTrackerPlugin` fills its ten
+ * slots from `DBManager.GetLastLaps(track, car, 10)`, which is the last ten laps of this car at this
+ * track from any day, and reloads them whenever SimHub or the game starts or a session restarts.
+ * So a driver back at the same track in the same car finds yesterday's laps in the ring before the
+ * first lap of today is done, and every reading built from the ring would be built from them
+ * (#1011). `PreviousLap_NN_IsCurrentSession` is 1 only for a lap found in this session's own lap
+ * history, and it is written with the slot's time whenever the ring is filled.
+ *
+ * An unpublished flag reads as an earlier session's lap, because a lap that cannot be placed in
+ * this session is the one thing the readings built on the ring must not count.
+ */
+export const previousLapIsThisSession = (slotExpr: Expr): Expr =>
+  gt(isnull(propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_IsCurrentSession'))), num(0)), num(0));
+
+/**
+ * Whether a slot holds a lap of this session: a time, and SimHub's word that it was driven in it.
+ *
+ * Both, because neither says it alone. A slot the database has no lap for is written `00:00:00`,
+ * but its flag is left at whatever the last lap in it was, so the flag of an emptied slot can
+ * still read 1; and a slot with a time may hold a lap of another session. Every reading built on
+ * the ring asks this rather than `hasTime` of the slot.
+ */
+export const hasSessionLap = (slotExpr: Expr): Expr => and(previousLapIsThisSession(slotExpr), hasTime(previousLap(slotExpr)));
+
+/**
  * A signed delta to `places` decimals where `chars` holds it, and to fewer where it does not:
  * `+1.03`, `+123.5` and `+1234` in {@link CHARS.delta}'s five cells at two places.
  *
@@ -1552,16 +1579,19 @@ export const AVERAGE_LAPS = 5;
  * slots read as seconds, summed and divided. A slot that has not been driven yet holds `00:00:00`
  * rather than null, which would average in as a nought and read as a lap two seconds quicker than
  * anything on the track, so every one of the five is required to hold a time before any of them
- * is shown.
+ * is shown. And every one of the five is required to be a lap of this session, because the ring
+ * starts a session full of the laps the database kept from earlier ones
+ * ({@link previousLapIsThisSession}): the average waits for the fifth lap of today rather than
+ * reading yesterday's.
  */
 export const average5 = (): Expr => {
   // From slot zero, which is the lap just completed. Starting at one averaged laps two to six and
   // left the newest out, so the number moved a lap late; `modules/lapHistory.ts` reads the same
   // slots and says so where it draws row one.
-  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i)));
-  const seconds = slots.map((slot) => secondsOf(slot));
+  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => num(i));
+  const seconds = slots.map((slot) => secondsOf(previousLap(slot)));
   return iff(
-    and(...slots.map((slot) => hasTime(slot))),
+    and(...slots.map((slot) => hasSessionLap(slot))),
     toShortTime(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS))), 3, false, true),
     str(NO_TIME),
   );

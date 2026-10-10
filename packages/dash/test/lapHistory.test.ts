@@ -10,6 +10,7 @@
 import { describe, expect, test } from 'bun:test';
 import { rect } from '../src/design/geometry.ts';
 import type { Item, LayerItem, Rect, TextItem } from '../src/generator.ts';
+import { ncalcEvaluator as E } from '../src/generator.ts';
 import { DELTA_THRESHOLDS, lapHistory } from '../src/modules/lapHistory.ts';
 import { densityOf, type Density } from '../src/second/density.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
@@ -273,5 +274,74 @@ describe('the delta keeps every reading inside its column, giving up places rath
     for (const seconds of [9.876, 98.765, 987.65, 9876.5]) {
       expect({ seconds, fits: widthAsDrawn(delta, String(drawn(seconds))) <= widthAsDrawn(delta, HISTORY_DELTA_WIDEST) }).toEqual({ seconds, fits: true });
     }
+  });
+});
+
+/**
+ * #1011: SimHub fills its ten previous laps from its lap database, the last ten laps of this car at
+ * this track from any session, and says which of them were driven in this one by
+ * `PreviousLap_NN_IsCurrentSession`. A driver back at the same track the next day found yesterday's
+ * laps listed on the out lap, in purple where one had been that day's best.
+ */
+describe('the rows list the laps of this session and no other', () => {
+  const items = built(600, 280);
+  const row = rowsLayer(items)!.children[0] as LayerItem;
+  const slot = (index: number): string => `PersistantTrackerPlugin.PreviousLap_${String(index - 1).padStart(2, '0')}`;
+  const flag = (index: number): string => `${slot(index)}_IsCurrentSession`;
+
+  /** A lap in every slot, the newest first as SimHub orders them, the first `today` of them driven in this session. */
+  const ring = (today: number): Record<string, E.Value> => {
+    const frame: Record<string, E.Value> = {};
+    for (let index = 1; index <= 10; index++) {
+      frame[slot(index)] = E.fromSeconds(90 + index / 10);
+      frame[flag(index)] = E.int(index <= today ? 1 : 0);
+    }
+    return frame;
+  };
+
+  /** What a binding of row `index` answers in a frame. */
+  const at = (formula: string, index: number, frame: Record<string, E.Value>): unknown =>
+    E.toJs(
+      E.evaluate(formula, {
+        properties: (name: string) => (Object.hasOwn(frame, name) ? frame[name] : undefined),
+        repeat: [index],
+        state: new E.CallState(),
+        now: 0,
+        rootScreenName: '',
+      }),
+    );
+
+  /** Which rows a frame draws, by the row's own Visible binding, row one being slot zero. */
+  const drawnRows = (frame: Record<string, E.Value>): number[] => {
+    const visible = row.bindings?.Visible;
+    const formula = visible && visible.mode === 'formula' && typeof visible.formula === 'string' ? visible.formula : '';
+    expect(formula).not.toBe('');
+    return Array.from({ length: rowsDrawn(items) }, (_, i) => i + 1).filter((index) => at(formula, index, frame) === true);
+  };
+
+  test('a ring of earlier laps lists nothing, as an out lap with no laps behind it does', () => {
+    expect(drawnRows(ring(0))).toEqual([]);
+    // And a ring SimHub publishes no flag for is not taken for one of this session.
+    const unflagged = ring(0);
+    for (let index = 1; index <= 10; index++) delete unflagged[flag(index)];
+    expect(drawnRows(unflagged)).toEqual([]);
+  });
+
+  test('two laps into the session it lists two, whatever the database holds behind them', () => {
+    expect(drawnRows(ring(2))).toEqual([1, 2]);
+  });
+
+  test('a ring of this session lists every row, each with the time its slot holds', () => {
+    expect(drawnRows(ring(10))).toEqual([1, 2, 3, 4, 5, 6]);
+    const text = bound(named(items, 'row.time')!, 'Text')!;
+    expect([1, 2, 6].map((index) => at(text, index, ring(10)))).toEqual(['1:30.100', '1:30.200', '1:30.600']);
+  });
+
+  test('a slot SimHub emptied keeps its flag, and is still no lap', () => {
+    // SimHub writes `00:00:00` into a slot past the laps its database holds and leaves the flag as
+    // the last lap in it set it.
+    const frame = ring(10);
+    frame[slot(2)] = E.fromSeconds(0);
+    expect(drawnRows(frame)).toEqual([1, 3, 4, 5, 6]);
   });
 });
