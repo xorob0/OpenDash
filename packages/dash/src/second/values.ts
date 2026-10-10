@@ -681,6 +681,23 @@ export const carRankChange = (idx: Expr): Expr =>
 export const placesGainedCounted = (): Expr => ncalc.or(ncalc.not(classMode()), eq(classOpponentCount(), opponentCount()));
 
 /**
+ * Whether a gap between a car and the car it is measured from means anything: only once the sim has
+ * placed both, which {@link hasPosition} says of each.
+ *
+ * SimHub publishes a `GapToLeader` for every car on the leaderboard whether or not the sim has placed
+ * it, and before anyone is placed it measures them from whichever car is first in its driver list.
+ * In a practice before anyone had set a time, counting overall, the Gap column read `+33.4`, `−20.8`
+ * and `+9.2` down a column of `P--`, gaps to a leader that leads nothing and some of them negative,
+ * and the Int column the differences of those (#1028). The car is asked because its own figure is
+ * the one drawn, and the car it is measured from because a gap to a car with no place is a gap to
+ * nothing in particular, whatever the figure says.
+ *
+ * Every Gap and Int cell of a board asks it, counted overall or in class, so an unplaced car reads
+ * `--` beside its `P--` under either setting.
+ */
+export const gapIsMeasured = (idx: Expr, from: Expr): Expr => and(hasPosition(idx), hasPosition(from));
+
+/**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
  * SimHub's own `+1L` once a car is a lap or more down.
  *
@@ -697,6 +714,8 @@ export const placesGainedCounted = (): Expr => ncalc.or(ncalc.not(classMode()), 
  *
  * This is the reading of a list drawn from the whole field. A list drawn from one class measures to
  * the leader of that class instead, which is {@link carClassRaceGap}.
+ *
+ * A gap is drawn only between two cars the sim has placed, which {@link gapIsMeasured} asks.
  */
 export const carRaceGap = (idx: Expr): Expr => {
   const gap = driver('gaptoleader', idx);
@@ -705,7 +724,7 @@ export const carRaceGap = (idx: Expr): Expr => {
     eq(isnull(driver('position', idx), num(0)), num(1)),
     str('Lead'),
     iff(
-      ncalc.isNull(gap),
+      ncalc.or(not(gapIsMeasured(idx, num(1))), ncalc.isNull(gap)),
       str(NO_VALUE),
       iff(gt(lapsDown, num(0)), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)), signed(gap, '0.0')),
     ),
@@ -742,7 +761,7 @@ export const carRaceGap = (idx: Expr): Expr => {
  * And the word waits for {@link hasPosition}, as the place beside it does. SimHub numbers every
  * listed car's class place from 1 before the sim has placed anyone, so on a grid counted in class
  * one car of each class has a class place of 1, and its row read `Lead` beside a place of `--`
- * (#1014).
+ * (#1014). Every other row waits for {@link gapIsMeasured}, as the overall column does (#1028).
  */
 export const carClassRaceGap = (idx: Expr): Expr => {
   const here = driver('gaptoleader', idx);
@@ -752,7 +771,7 @@ export const carClassRaceGap = (idx: Expr): Expr => {
     eq(isnull(driver('classposition', idx), num(0)), num(1)),
     iff(and(hasPosition(idx), eq(carPosition(idx), num(1))), str('Lead'), str('')),
     iff(
-      ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)),
+      ncalc.or(not(gapIsMeasured(idx, classPosition(num(1)))), ncalc.isNull(here), ncalc.isNull(lead)),
       str(NO_VALUE),
       iff(gt(lapsDown, num(0)), concat(str('+'), fmt(lapsDown, '0'), str('L')), signed(sub(here, lead), '0.0')),
     ),
@@ -775,11 +794,19 @@ export const carRelativeGap = (idx: Expr): Expr =>
  * {@link carClassInterval} instead. The two are one decision with the gap column beside them: Int
  * is the difference of two neighbouring Gaps, and a board counting the one from the class leader
  * while the other counted between leaderboard neighbours would draw two columns that do not add up.
+ *
+ * Below the first row it reads `--` until {@link gapIsMeasured} holds for the car and the car in
+ * front, as the Gap beside it does (#1028).
  */
 export const carInterval = (idx: Expr): Expr => {
-  const ahead = driver('gaptoleader', sub(idx, num(1)));
+  const above = sub(idx, num(1));
+  const ahead = driver('gaptoleader', above);
   const here = driver('gaptoleader', idx);
-  return iff(and(gt(idx, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
+  return iff(
+    gt(idx, num(1)),
+    iff(gapIsMeasured(idx, above), iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str('')), str(NO_VALUE)),
+    str(''),
+  );
 };
 
 /**
@@ -790,12 +817,20 @@ export const carInterval = (idx: Expr): Expr => {
  * the only thing a cell is given: one off a car's own `classposition` and back through SimHub's
  * class-only lookup is the car the list draws above it, whatever leaderboard rows fall between the
  * two.
+ *
+ * Below the class's first row it reads `--` until {@link gapIsMeasured} holds, as
+ * {@link carInterval} does (#1028).
  */
 export const carClassInterval = (idx: Expr): Expr => {
   const place = isnull(driver('classposition', idx), num(0));
-  const ahead = driver('gaptoleader', classPosition(sub(place, num(1))));
+  const above = classPosition(sub(place, num(1)));
+  const ahead = driver('gaptoleader', above);
   const here = driver('gaptoleader', idx);
-  return iff(and(gt(place, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
+  return iff(
+    gt(place, num(1)),
+    iff(gapIsMeasured(idx, above), iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str('')), str(NO_VALUE)),
+    str(''),
+  );
 };
 
 export const carLastLap = (idx: Expr): Expr => lapTime(driver('lastlap', idx));
