@@ -195,7 +195,7 @@ export function faceItems(
   // The limiter banner is above the review rather than under it on every face but the nano, where
   // the body is 194 px and a 160 px panel leaves it seventeen either side. That is the same trade
   // the pop-ups already make on that face and is why the pit alerts are pushed before this.
-  items.push(...restyled([lapReview(lapReviewFrame(hero, layout.width), lapReviewOut(face), 'lapReview')], 'outline'));
+  items.push(...restyled([lapReview(lapReviewFrame(hero, regionRect(regions, 'flagBody')), lapReviewOut(face), 'lapReview')], 'outline'));
 
   return items;
 }

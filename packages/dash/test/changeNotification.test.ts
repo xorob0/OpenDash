@@ -20,6 +20,8 @@ import {
   CHANGE_NOTIFICATION_WIDTH,
   TREND_GAP,
   TREND_SIZE,
+  changeNotification,
+  changeNotificationFit,
   changeNotificationFrame,
   changeNotificationVisible,
   changeNotifications,
@@ -27,7 +29,7 @@ import {
 import { POP_UPS, popUpFrame } from '../src/components/popUp.ts';
 import { assetPath, imageOf, RANK_UP, TREND_DOWN, TREND_UP } from '../src/design/assets.ts';
 import { measureText } from '../src/design/advances.ts';
-import { rect } from '../src/design/geometry.ts';
+import { contains, rect } from '../src/design/geometry.ts';
 import { STRIP_CELLS } from '../src/zones/bar.ts';
 import { TRACKED_VALUES, trackedValue } from '../src/second/tracked.ts';
 import { ds } from '../src/tokens.ts';
@@ -35,7 +37,8 @@ import type { ImageItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, rectOf } from '../src/zones/index.ts';
 
-const HERO = rect(824, 141, 272, 200);
+/** A hero with room for the sheet's box, so that what is measured here is the sheet's anatomy. */
+const HERO = rect(680, 141, 560, 200);
 const items = [...walkItems(changeNotifications(HERO))];
 const named = (id: string, part: string): (typeof items)[number] => items.find((i) => i.name === `notice.${id}.${part}`)!;
 
@@ -231,15 +234,61 @@ describe('the trend mark wears the colour the canvas gives it', () => {
   });
 });
 
+describe('a hero narrower than the sheet', () => {
+  /** Every width a hero is drawn at by a theme that ships, the 1920's 380 down to the AiM's 151, and a guard below it. */
+  const WIDTHS = [380, 340, 300, 277, 260, 240, 202, 162, 151, 120];
+
+  test('the box is the hero\'s width and the reading steps down beside the name, which never gives', () => {
+    for (const width of WIDTHS) {
+      const hero = rect(100, 100, width, 200);
+      const frame = changeNotificationFrame(hero);
+      expect({ width, frame: frame.width, inside: contains(hero, frame) }).toEqual({ width, frame: width, inside: true });
+      for (const value of TRACKED_VALUES) {
+        const fit = changeNotificationFit(frame, value);
+        const fs = fit.valueFs;
+        expect({ width, id: value.id, floor: fs >= 12, most: fs <= CHANGE_NOTIFICATION_VALUE_SIZE }).toMatchObject({ floor: true, most: true });
+        const drawn = [...walkItems([changeNotification(frame, value)])];
+        for (const item of drawn) {
+          if (item.kind === 'layer') continue;
+          expect({ width, item: item.name, rect: item.rect, inside: contains(frame, item.rect) }).toMatchObject({ inside: true });
+        }
+        const label = drawn.find((i) => i.name === `notice.${value.id}.label`) as TextItem;
+        const reading = drawn.find((i) => i.name === `notice.${value.id}.value`) as TextItem;
+        expect(label.text).toBe(value.notice);
+        expect(measureText('BarlowMedium', label.text, label.fontSize)).toBeLessThanOrEqual(label.rect.width);
+        // The name and the reading side by side, or the name on the line above the reading's; never
+        // one drawn over the other.
+        const apart = fit.stacked ? reading.rect.top >= label.rect.top + label.fontSize : label.rect.left + label.rect.width <= reading.rect.left;
+        expect({ width, id: value.id, stacked: fit.stacked, apart }).toMatchObject({ apart: true });
+        expect(reading.fontSize).toBe(fs);
+      }
+    }
+  });
+
+  test('the sheet\'s 64 beside the name is kept wherever there is room for it', () => {
+    for (const value of TRACKED_VALUES) expect(changeNotificationFit(changeNotificationFrame(HERO), value)).toEqual({ valueFs: CHANGE_NOTIFICATION_VALUE_SIZE, stacked: false });
+  });
+
+  test('the name goes over the reading only where the two cannot share a line at the ladder\'s last step', () => {
+    // The 1920's 380 and the 1280's 340 keep the sheet's row, and the AiM's 162 px gear at 850 x 480
+    // is too narrow for "Brake bias" beside a reading of four cells at any size worth drawing.
+    const bias = trackedValue('bias');
+    expect(changeNotificationFit(changeNotificationFrame(rect(0, 0, 380, 200)), bias).stacked).toBe(false);
+    expect(changeNotificationFit(changeNotificationFrame(rect(0, 0, 340, 200)), bias).stacked).toBe(false);
+    expect(changeNotificationFit(changeNotificationFrame(rect(0, 0, 162, 200)), bias).stacked).toBe(true);
+  });
+});
+
 describe('every face draws it', () => {
-  test('the notification is over zone A on all eight, and takes no room of its own', () => {
+  test('the notification is over zone A on all eight, no larger than the zone, and takes no room of its own', () => {
     for (const layout of ZONE_FACES) {
       const zoneA = rectOf(layout, 'A');
       const frame = changeNotificationFrame(zoneA);
-      expect({ face: layout.folder, width: frame.width, height: frame.height }).toEqual({
+      expect({ face: layout.folder, width: frame.width, height: frame.height, inside: contains(zoneA, frame) }).toEqual({
         face: layout.folder,
-        width: CHANGE_NOTIFICATION_WIDTH,
-        height: CHANGE_NOTIFICATION_HEIGHT,
+        width: Math.min(CHANGE_NOTIFICATION_WIDTH, zoneA.width),
+        height: Math.min(CHANGE_NOTIFICATION_HEIGHT, zoneA.height),
+        inside: true,
       });
       // Inside the pop-up's own box, which is what carries over everything popUp.test.ts holds the
       // pop-up to: it clears the rev bar, the bar of settled values, the limiter banner and band D,

@@ -33,17 +33,12 @@ afterAll(() => {
  * other problems still fail, and a pin whose fault has been put right fails too, so that putting it
  * right is a line taken out here.
  *
- * The test theme puts the hero in the gear's place at the left edge, and the pop-ups and the change
- * notifications are centred on the hero and wider than it, so they start left of the face: a pop-up
- * by 110 px at 1280 and 90 px at 1920, a notification by 30 px and 10 px. Its regions are valid, every zone's dashboard is one
- * the house faces build, and #196 had no check that looked at the face's own items, which is why
- * this is the harness's first finding rather than the anatomy test's. Whether the centring should
- * keep a pop-up on the face or an anatomy should be refused a hero that cannot hold one is a
- * question for the machinery, which #200 reports and does not answer.
+ * Empty since #1047. The test theme puts the hero in the gear's place at the left edge, and the
+ * pop-ups and the change notifications were centred on the hero and wider than it, so they started
+ * left of the face; they are no larger than the hero now, which answers the question this pin left
+ * to the machinery, and `popUpRegions.test.ts` holds every theme's family to its region.
  */
-const KNOWN: Record<string, Partial<Record<'clipped' | 'escaped' | 'disappeared', RegExp>>> = {
-  [GEAR_LEFT_THEME_ID]: { escaped: /^test-gear-left \d+x480 OpenDash[^:]*: (popUp|notice)\.\w+\.\w+ at \{.*\} leaves the \d+ x 480 dashboard$/ },
-};
+const KNOWN: Record<string, Partial<Record<'clipped' | 'escaped' | 'disappeared', RegExp>>> = {};
 
 /** The problems a property finds, less the ones pinned for this theme, of which there must still be some. */
 function unknown(id: string, property: 'clipped' | 'escaped' | 'disappeared', problems: string[]): string[] {

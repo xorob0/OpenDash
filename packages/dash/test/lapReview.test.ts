@@ -26,8 +26,8 @@ import {
   lapReviewOut,
   lapReviewWanted,
 } from '../src/components/lapReview.ts';
-import { CHANGE_NOTIFICATION_HEIGHT, CHANGE_NOTIFICATION_WIDTH, changeNotificationFrame } from '../src/components/changeNotification.ts';
-import { POP_UP_HEIGHT, POP_UP_WIDTH, popUpFrame } from '../src/components/popUp.ts';
+import { CHANGE_NOTIFICATION_HEIGHT, changeNotificationFrame } from '../src/components/changeNotification.ts';
+import { POP_UP_HEIGHT, popUpFrame } from '../src/components/popUp.ts';
 import { DEFAULT_LAP_REVIEW, FACE_SIZES, LAP_REVIEW_MODES, facePropertyNames, lapReviewSettingName, zone as zoneSetting } from '../src/contract.ts';
 import { contains, overlaps, rect } from '../src/design/geometry.ts';
 import { measureText } from '../src/design/advances.ts';
@@ -38,7 +38,8 @@ import { CHARS, DELTA_DEADBAND, deltaColour } from '../src/second/values.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
-import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, type ZoneLayout } from '../src/zones/index.ts';
+import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, zoneRegions, type ZoneLayout } from '../src/zones/index.ts';
+import { regionRect } from '../src/themes/anatomy.ts';
 
 const D = densityOf('companion');
 
@@ -74,8 +75,11 @@ const token = (name: string): unknown => {
   return node !== null && typeof node === 'object' && 'value' in (node as object) ? (node as { value: unknown }).value : node;
 };
 
+/** The body of a house face, zones B, A and C together, which is what the panel is clamped to. */
+const bodyOf = (layout: ZoneLayout): Rect => regionRect(zoneRegions(layout), 'flagBody');
+
 const reference = arrangements[0]!;
-const REFERENCE_FRAME = lapReviewFrame(reference.layout.zones.zoneA, reference.layout.width);
+const REFERENCE_FRAME = lapReviewFrame(reference.layout.zones.zoneA, bodyOf(reference.layout));
 
 describe('the panel the artboard draws', () => {
   test('is 1200 by 160 in the pop-up surface with a 2 px rule on top, 32 px of side padding and 40 px between groups', () => {
@@ -229,10 +233,10 @@ describe('the two deltas', () => {
 
 describe('what the panel may cover', () => {
   for (const { name, layout, items } of arrangements) {
-    test(`${name} draws it over the hero, inside the face, and clear of the settled parts`, () => {
+    test(`${name} draws it over the hero, inside the body, and clear of the settled parts`, () => {
       const z = layout.zones;
-      const frame = lapReviewFrame(z.zoneA, layout.width);
-      expect({ name, inside: contains(rect(0, 0, layout.width, layout.height), frame) }).toMatchObject({ inside: true });
+      const frame = lapReviewFrame(z.zoneA, bodyOf(layout));
+      expect({ name, inside: contains(bodyOf(layout), frame) }).toMatchObject({ inside: true });
       // The rev bar, the bar of settled values and band D are outside it, for the reason they are
       // outside a pop-up: a flag has the better claim on those sixty pixels, and a lap review is not
       // an answer to the question band D is answering.
@@ -257,12 +261,11 @@ describe('what the panel may cover', () => {
       // same moment, so the review is larger than both in both directions over the same centre and
       // is pushed after them, which is what makes "one at a time" true here without an exclusion
       // chain reaching into `popUp.ts`, whose conditions know nothing of a face.
-      const frame = lapReviewFrame(layout.zones.zoneA, layout.width);
+      const frame = lapReviewFrame(layout.zones.zoneA, bodyOf(layout));
       expect({ name, covers: contains(frame, popUpFrame(layout.zones.zoneA)) }).toMatchObject({ covers: true });
       expect({ name, covers: contains(frame, changeNotificationFrame(layout.zones.zoneA)) }).toMatchObject({ covers: true });
       expect(LAP_REVIEW_HEIGHT).toBeGreaterThan(POP_UP_HEIGHT);
       expect(LAP_REVIEW_HEIGHT).toBeGreaterThan(CHANGE_NOTIFICATION_HEIGHT);
-      expect(Math.min(LAP_REVIEW_WIDTH, layout.width)).toBeGreaterThanOrEqual(Math.max(POP_UP_WIDTH, CHANGE_NOTIFICATION_WIDTH));
       const names = items.map((i) => i.name);
       expect(names.indexOf('lapReview')).toBeGreaterThan(names.indexOf('popUp.lap'));
       expect(names.indexOf('lapReview')).toBeGreaterThan(names.indexOf('notice.tc'));
@@ -281,8 +284,8 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
 
   test('shrinks the lap time rather than shedding the deltas, which is the floor', () => {
     // The panel covers the lap-time pop-up while it is out, and that pop-up already carries the lap
-    // and one delta in 560 px. A review shed down to a lap time alone would be four seconds of the
-    // gear spent saying less than the box it replaced, so the portrait face's 600 keeps both deltas
+    // time in the hero. A review shed down to a lap time alone would be four seconds of the zones
+    // spent saying no more than the box it replaced, so the portrait face's 600 keeps both deltas
     // and steps the lap time down the density's own ramp instead.
     const portrait = lapReviewFit(rect(0, 0, 600, LAP_REVIEW_HEIGHT));
     expect(portrait).toEqual({ lapFs: D.big, strip: false, deltas: true, fuel: false });
@@ -297,7 +300,7 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
 
   test('every face that ships keeps the lap time and both deltas', () => {
     for (const { name, layout } of arrangements) {
-      const fit = lapReviewFit(lapReviewFrame(layout.zones.zoneA, layout.width));
+      const fit = lapReviewFit(lapReviewFrame(layout.zones.zoneA, bodyOf(layout)));
       expect({ name, deltas: fit.deltas }).toMatchObject({ deltas: true });
     }
   });
@@ -311,6 +314,21 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
       if (item.kind === 'layer') continue;
       expect({ item: item.name, inside: contains(tiny, item.rect) }).toMatchObject({ inside: true });
     }
+  });
+
+  test('a panel shorter than the artboard steps the lap time down and sheds the driver line rather than drawing above itself', () => {
+    // The Porsche's 800 x 286 has a body 142 px tall, and the panel is clamped to the body (#1047).
+    // Height is measured the way width is: the lap time steps down before anything is drawn outside.
+    for (const height of [142, 120, 100]) {
+      const short = rect(0, 0, LAP_REVIEW_WIDTH, height);
+      const fit = lapReviewFit(short);
+      expect({ height, lapFs: fit.lapFs, deltas: fit.deltas }).toEqual({ height, lapFs: D.big, deltas: true });
+      for (const item of [...walkItems([lapReview(short, 'true')])]) {
+        if (item.kind === 'layer') continue;
+        expect({ height, item: item.name, inside: contains(short, item.rect) }).toMatchObject({ inside: true });
+      }
+    }
+    expect(lapReviewFit(rect(0, 0, LAP_REVIEW_WIDTH, 100)).strip).toBe(false);
   });
 
   test('the driver line is measured from the widest it can draw, not from its sample', () => {

@@ -7,11 +7,13 @@
  * second opinion about the design rather than a check on the code. Where tokens.json carries the
  * same figure the literal is held against the token instead, so the two cannot drift.
  *
- * What a pop-up covers is the hero, which on a zone face is zone A, and 560 px is wider than any
- * zone A the artboards draw, so a landscape face has a pop-up reaching into the inner edge of zones
- * B and C. That is what "centred over the hero" means on this face. What it may not touch is
- * anything carrying a state of its own: the rev bar in its well, the bar of settled values, the
- * limiter banner and band D, where a flag has the better claim on the same sixty pixels.
+ * What a pop-up covers is the hero, which on a zone face is zone A, and nothing else. 560 px is
+ * wider than every landscape zone A the artboards draw, and a box of that width reached into zones
+ * B and C and hid the session name and the time left while low fuel was flagged (#1047), which the
+ * sheet's own "it never covers a slot" rules out; so the box is the hero's width where the hero is
+ * narrower, and its runs give ground inside it. What it may not touch either is anything carrying
+ * a state of its own: the rev bar in its well, the bar of settled values, the limiter banner and
+ * band D, where a flag has the better claim on the same sixty pixels.
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
@@ -228,6 +230,52 @@ describe('nothing a pop-up draws is wider than the box it is drawn in', () => {
   });
 });
 
+describe('a box narrower than the artboard gives ground inside itself', () => {
+  /**
+   * Every width a hero is drawn at by a theme that ships, from the AiM's 151 px gear at 800 x 480 to
+   * the portrait face's 600, and a box narrower than any of them, which is the guard.
+   */
+  const WIDTHS = [600, 380, 340, 300, 277, 260, 240, 202, 162, 151, 120];
+  /** The shortest a hero is, the Porsche's 102 px gear at 800 x 286, and one shorter still. */
+  const HEIGHTS = [POP_UP_HEIGHT, 102, 90];
+
+  test('the 1920 hero sheds the lap pop-up\'s delta and keeps the lap time at 64', () => {
+    expect(popUpFit(LAP_POP_UP, rect(0, 0, 380, POP_UP_HEIGHT))).toEqual({ valueFs: POP_UP_VALUE_SIZE, secondary: false });
+    expect(popUpFit(FUEL_POP_UP, rect(0, 0, 380, POP_UP_HEIGHT))).toEqual({ valueFs: POP_UP_VALUE_SIZE, secondary: false });
+  });
+
+  for (const spec of POP_UPS) {
+    test(`${spec.id} draws nothing outside a box of any width or height a hero gives it`, () => {
+      for (const width of WIDTHS) {
+        for (const height of HEIGHTS) {
+          const frame = rect(10, 10, width, height);
+          const fit = popUpFit(spec, frame);
+          for (const item of walkItems([popUp(frame, spec)])) {
+            if (item.kind === 'layer') continue;
+            expect({ id: spec.id, width, height, item: item.name, rect: item.rect, inside: contains(frame, item.rect) }).toMatchObject({ inside: true });
+            if (item.kind !== 'text') continue;
+            const drawn = drawnWidth(item);
+            expect({ id: spec.id, width, item: item.name, drawn, box: item.rect.width, fits: drawn <= item.rect.width }).toMatchObject({ fits: true });
+          }
+          const value = [...walkItems([popUp(frame, spec)])].find((i) => i.name === `popUp.${spec.id}.value`);
+          expect(value?.kind === 'text' ? value.fontSize : undefined).toBe(fit.valueFs);
+        }
+      }
+    });
+  }
+
+  test('the value only shrinks where the box is narrower than the run, and never below 12', () => {
+    for (const spec of POP_UPS) {
+      let last = POP_UP_VALUE_SIZE;
+      for (const width of WIDTHS) {
+        const { valueFs } = popUpFit(spec, rect(0, 0, width, POP_UP_HEIGHT));
+        expect({ id: spec.id, width, monotonic: valueFs <= last, floor: valueFs >= 12 }).toMatchObject({ monotonic: true, floor: true });
+        last = valueFs;
+      }
+    }
+  });
+});
+
 describe('the box covers the hero and nothing that carries a state of its own', () => {
   /** Both arrangements of every face: the one with the rev bar and the one that gives its room back. */
   const arrangements: { name: string; layout: ZoneLayout; items: Item[] }[] = ZONE_FACES.flatMap((face) => [
@@ -236,10 +284,11 @@ describe('the box covers the hero and nothing that carries a state of its own', 
   ]);
 
   for (const { name, layout, items } of arrangements) {
-    test(`${name} centres the box on zone A`, () => {
+    test(`${name} centres the box on zone A, no larger than the zone`, () => {
       const frame = popUpFrame(layout.zones.zoneA);
-      expect(frame.width).toBe(POP_UP_WIDTH);
-      expect(frame.height).toBe(POP_UP_HEIGHT);
+      expect(frame.width).toBe(Math.min(POP_UP_WIDTH, layout.zones.zoneA.width));
+      expect(frame.height).toBe(Math.min(POP_UP_HEIGHT, layout.zones.zoneA.height));
+      expect({ name, frame, inside: contains(layout.zones.zoneA, frame) }).toMatchObject({ inside: true });
       // Within the half pixel a whole-pixel rect costs on a zone of odd height.
       const zone = centre(layout.zones.zoneA);
       const off = centre(frame);
@@ -248,16 +297,17 @@ describe('the box covers the hero and nothing that carries a state of its own', 
       expect(box?.kind === 'rect' ? box.rect : undefined).toEqual(frame);
     });
 
-    test(`${name} draws every pop-up inside the face and clear of the settled parts`, () => {
+    test(`${name} draws every pop-up inside zone A and clear of the other zones and the settled parts`, () => {
       const z = layout.zones;
       const frame = popUpFrame(z.zoneA);
-      const face: Rect = rect(0, 0, layout.width, layout.height);
-      expect({ name, frame, inside: contains(face, frame) }).toMatchObject({ inside: true });
+      expect({ name, frame, inside: contains(z.zoneA, frame) }).toMatchObject({ inside: true });
       const untouchable: [string, Rect | undefined][] = [
         ['the rev bar well', name.endsWith('rev bar off') ? undefined : z.revBarWell],
         ['the bar', z.bar],
         ['the limiter banner', z.pitLimiter],
         ['band D', z.band],
+        ['zone B', z.zoneB],
+        ['zone C', z.zoneC],
       ];
       for (const [what, box] of untouchable) {
         if (!box) continue;
