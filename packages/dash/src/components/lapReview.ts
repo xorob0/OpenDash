@@ -90,6 +90,13 @@ export const LAP_REVIEW_RULE = 2;
 export const LAP_REVIEW_PAD_X = ds.space[6];
 
 /**
+ * The side padding of a panel that would otherwise give up its deltas: the step of the `space` scale
+ * under the artboard's, and the one place the panel departs from the sheet's own spacing. See
+ * `lapReviewFit` for when it is taken.
+ */
+export const LAP_REVIEW_PAD_X_NARROW = ds.space[5];
+
+/**
  * Between two groups of the panel. Forty is off the `space` scale, which goes 24 then 32 then 48,
  * so the literal stays here with the artboard as its citation, the way the change notification's
  * 28 px padding does.
@@ -274,12 +281,18 @@ const rowWidth = (specs: readonly FieldSpec[], gap: number): number =>
  * than the box it replaced. So
  * where the deltas will not fit beside a 116 px lap time, the lap time steps down the density's own
  * ramp to 64 rather than the deltas being dropped, which is what the portrait face at 600 px asks
- * for. The last line below is a guard and not a case: no face that ships is narrower than a 64 px
- * lap time and two deltas.
+ * for. Where even that does not fit, the side padding tightens from the sheet's 32 to the 24 under
+ * it on the `space` scale, and only then do the deltas go. The Porsche's portrait body is 582 px,
+ * ten short of a 64 px lap time and two deltas inside the sheet's padding, and is the one face that
+ * ships which takes that step. The last line below is a guard and not a case: no face that ships is
+ * narrower than a 64 px lap time and two deltas inside the tighter padding, and the test that walks
+ * every theme's faces says so.
  */
 export interface LapReviewFit {
   /** The size the lap time is set at: the density's `hero`, or its `big` on a narrow panel. */
   lapFs: number;
+  /** The side padding: the sheet's `LAP_REVIEW_PAD_X`, or `LAP_REVIEW_PAD_X_NARROW` where the deltas need it. */
+  padX: number;
   /** The driver line and the sector strip above the deltas. */
   strip: boolean;
   deltas: boolean;
@@ -289,11 +302,12 @@ export interface LapReviewFit {
 export function lapReviewFit(frame: Rect): LapReviewFit {
   const prefix = 'fit';
   const d = densityOf(DENSITY);
-  const room = frame.width - 2 * LAP_REVIEW_PAD_X;
   const deltas = rowWidth(deltaFields(prefix), d.gapX);
   const group = Math.max(deltas, LAP_REVIEW_STRIP_WIDTH);
   const fuel = rowWidth(fuelFields(prefix), d.gapX);
-  const fits = (parts: readonly number[]): boolean => parts.reduce((sum, w) => sum + w, 0) + LAP_REVIEW_GROUP_GAP * (parts.length - 1) <= room;
+  const fits = (parts: readonly number[], padX = LAP_REVIEW_PAD_X): boolean =>
+    parts.reduce((sum, w) => sum + w, 0) + LAP_REVIEW_GROUP_GAP * (parts.length - 1) <= frame.width - 2 * padX;
+  const padX = LAP_REVIEW_PAD_X;
   // The same test in height, for a body shorter than the sheet's 160: a lap time whose boxes would
   // start above the panel steps down as a narrow panel's does, and a driver line that would is shed.
   for (const lapFs of [d.hero, d.big]) {
@@ -303,11 +317,15 @@ export function lapReviewFit(frame: Rect): LapReviewFit {
     if (lapTop < frame.top && lapFs !== d.big) continue;
     const strip = driverLineTop(bottom) >= frame.top;
     const lap = fieldWidth(spec, DENSITY);
-    if (strip && fits([lap, group, fuel])) return { lapFs, strip: true, deltas: true, fuel: true };
-    if (strip && fits([lap, group])) return { lapFs, strip: true, deltas: true, fuel: false };
-    if (fits([lap, deltas])) return { lapFs, strip: false, deltas: true, fuel: false };
+    if (strip && fits([lap, group, fuel])) return { lapFs, padX, strip: true, deltas: true, fuel: true };
+    if (strip && fits([lap, group])) return { lapFs, padX, strip: true, deltas: true, fuel: false };
+    if (fits([lap, deltas])) return { lapFs, padX, strip: false, deltas: true, fuel: false };
   }
-  return { lapFs: d.big, strip: false, deltas: false, fuel: false };
+  // The last step before the floor gives way: the padding tightens rather than the deltas going.
+  if (fits([fieldWidth(lapField(prefix, d.big), DENSITY), deltas], LAP_REVIEW_PAD_X_NARROW)) {
+    return { lapFs: d.big, padX: LAP_REVIEW_PAD_X_NARROW, strip: false, deltas: true, fuel: false };
+  }
+  return { lapFs: d.big, padX, strip: false, deltas: false, fuel: false };
 }
 
 /**
@@ -367,8 +385,8 @@ export function lapReviewItems(frame: Rect, prefix = 'lapReview'): Item[] {
   const lap = lapField(prefix, fit.lapFs);
   // The tallest group decides the baseline, and the lap time is always the tallest.
   const bottom = lapRowBottom(frame, lap);
-  const left = frame.left + LAP_REVIEW_PAD_X;
-  const right = frame.left + frame.width - LAP_REVIEW_PAD_X;
+  const left = frame.left + fit.padX;
+  const right = frame.left + frame.width - fit.padX;
   const lapWidth = fieldWidth(lap, DENSITY);
   const items: Item[] = [
     band(`${prefix}.box`, frame, ds.purpose.popUp.surface),

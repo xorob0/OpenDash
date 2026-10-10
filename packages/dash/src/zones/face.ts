@@ -186,9 +186,10 @@ export function faceItems(
   // finished, for the four seconds after the line.
   //
   // It is ranked by geometry rather than by an exclusion chain, which is the one place this face
-  // does that and is worth saying why. The pop-up and the notification are 560 by 120 and 400 by 96
-  // centred on this same zone, and the review is larger than both in both directions and is drawn
-  // over them, so the two conditions that are true at the same moment -- a lap time at the line and
+  // does that and is worth saying why. The pop-up and the notification are centred on this same
+  // zone and are no larger than it, the sheet's 560 by 120 and 400 by 96 where it has the room and
+  // its width or height where it does not (#1047), and the review is larger than both in both
+  // directions and is drawn over them, so the two conditions that are true at the same moment -- a lap time at the line and
   // a review of that lap -- cannot both be read. A chain would have to reach into `popUp.ts`, whose
   // three conditions know nothing of a face and so could not ask which face's setting is on.
   //

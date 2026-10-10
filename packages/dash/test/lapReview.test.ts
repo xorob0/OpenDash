@@ -16,6 +16,7 @@ import {
   LAP_REVIEW_GROUP_GAP,
   LAP_REVIEW_HEIGHT,
   LAP_REVIEW_PAD_X,
+  LAP_REVIEW_PAD_X_NARROW,
   LAP_REVIEW_RULE,
   LAP_REVIEW_SECONDS,
   LAP_REVIEW_STRIP_HEIGHT,
@@ -38,8 +39,9 @@ import { CHARS, DELTA_DEADBAND, deltaColour } from '../src/second/values.ts';
 import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
-import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, zoneRegions, type ZoneLayout } from '../src/zones/index.ts';
+import { ZONE_FACES, faceItems, layoutWithoutRevBar, regionsWithoutRevBar, sizeOf, zoneRegions, type ZoneLayout } from '../src/zones/index.ts';
 import { regionRect } from '../src/themes/anatomy.ts';
+import { THEMES } from '../src/themes/index.ts';
 
 const D = densityOf('companion');
 
@@ -278,7 +280,7 @@ describe('what the panel may cover', () => {
 
 describe('a panel narrower than the artboard sheds rather than drawing outside', () => {
   test('keeps everything at 1200 and drops the fuel pair before anything else', () => {
-    expect(lapReviewFit(rect(0, 0, LAP_REVIEW_WIDTH, LAP_REVIEW_HEIGHT))).toEqual({ lapFs: D.hero, strip: true, deltas: true, fuel: true });
+    expect(lapReviewFit(rect(0, 0, LAP_REVIEW_WIDTH, LAP_REVIEW_HEIGHT))).toEqual({ lapFs: D.hero, padX: LAP_REVIEW_PAD_X, strip: true, deltas: true, fuel: true });
     expect(lapReviewFit(rect(0, 0, 850, LAP_REVIEW_HEIGHT))).toMatchObject({ lapFs: D.hero, fuel: false });
   });
 
@@ -288,7 +290,7 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
     // spent saying no more than the box it replaced, so the portrait face's 600 keeps both deltas
     // and steps the lap time down the density's own ramp instead.
     const portrait = lapReviewFit(rect(0, 0, 600, LAP_REVIEW_HEIGHT));
-    expect(portrait).toEqual({ lapFs: D.big, strip: false, deltas: true, fuel: false });
+    expect(portrait).toEqual({ lapFs: D.big, padX: LAP_REVIEW_PAD_X, strip: false, deltas: true, fuel: false });
     const items = [...walkItems([lapReview(rect(0, 0, 600, LAP_REVIEW_HEIGHT), 'true')])];
     expect(items.some((i) => i.name === 'lapReview.vsBest.value')).toBe(true);
     expect(items.some((i) => i.name === 'lapReview.sectors.strip1')).toBe(false);
@@ -298,10 +300,36 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
     }
   });
 
-  test('every face that ships keeps the lap time and both deltas', () => {
-    for (const { name, layout } of arrangements) {
-      const fit = lapReviewFit(lapReviewFrame(layout.zones.zoneA, bodyOf(layout)));
-      expect({ name, deltas: fit.deltas }).toMatchObject({ deltas: true });
+  test('tightens its side padding before it gives up the deltas', () => {
+    // The Porsche's portrait body is 582 wide, ten pixels short of a 64 px lap time and two deltas
+    // inside the sheet's 32 px padding. The padding steps down the `space` scale to 24 before the
+    // floor gives way, and the panel still draws nothing outside itself.
+    const porsche = rect(0, 0, 582, LAP_REVIEW_HEIGHT);
+    expect(LAP_REVIEW_PAD_X_NARROW).toBe(ds.space[5]);
+    expect(lapReviewFit(porsche)).toEqual({ lapFs: D.big, padX: LAP_REVIEW_PAD_X_NARROW, strip: false, deltas: true, fuel: false });
+    const items = [...walkItems([lapReview(porsche, 'true')])];
+    const lap = items.find((i): i is TextItem => i.kind === 'text' && i.name === 'lapReview.lap.value');
+    expect(lap?.rect.left).toBe(LAP_REVIEW_PAD_X_NARROW);
+    expect(items.some((i) => i.name === 'lapReview.vsPrevious.value')).toBe(true);
+    for (const item of items) {
+      if (item.kind === 'layer') continue;
+      expect({ item: item.name, inside: contains(porsche, item.rect) }).toMatchObject({ inside: true });
+    }
+  });
+
+  test('every face of every theme that ships keeps the lap time and both deltas', () => {
+    // Every theme's faces and not only the house's: the release builds them all, and the body a
+    // theme's anatomy gives the panel is narrower than the house's on the Porsche.
+    for (const [id, theme] of Object.entries(THEMES)) {
+      for (const size of theme.anatomy.sizes) {
+        const layout = ZONE_FACES.find((face) => face.width === size.width && face.height === size.height)!;
+        const on = theme.anatomy.regions(layout);
+        for (const [arrangement, regions] of [['', on], [', rev bar off', regionsWithoutRevBar(on)]] as const) {
+          const name = `${id} ${size.width}x${size.height}${arrangement}`;
+          const fit = lapReviewFit(lapReviewFrame(regionRect(regions, 'hero'), regionRect(regions, 'flagBody')));
+          expect({ name, deltas: fit.deltas }).toMatchObject({ deltas: true });
+        }
+      }
     }
   });
 
@@ -309,7 +337,7 @@ describe('a panel narrower than the artboard sheds rather than drawing outside',
     // A guard rather than a case: nothing that ships is this narrow. What it promises is that the
     // panel sheds rather than drawing past its own edge, whatever rectangle it is handed.
     const tiny = rect(0, 0, 320, LAP_REVIEW_HEIGHT);
-    expect(lapReviewFit(tiny)).toEqual({ lapFs: D.big, strip: false, deltas: false, fuel: false });
+    expect(lapReviewFit(tiny)).toEqual({ lapFs: D.big, padX: LAP_REVIEW_PAD_X, strip: false, deltas: false, fuel: false });
     for (const item of [...walkItems([lapReview(tiny, 'true')])]) {
       if (item.kind === 'layer') continue;
       expect({ item: item.name, inside: contains(tiny, item.rect) }).toMatchObject({ inside: true });
