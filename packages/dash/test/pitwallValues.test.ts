@@ -46,6 +46,9 @@ const car = (fields: Partial<Car>): Car =>
  * row the Gap column counts from is a claim about a place and follows the places the board draws.
  * The default is the mode such a board is normally drawn under, and the cases that turn on the
  * other one say so.
+ *
+ * The session is a race, whose gaps are measured on the road. Outside one the two columns measure
+ * best laps instead, which `gapOutsideRace.test.ts` evaluates (#1040).
  */
 function evaluate(formula: string, board: readonly Car[], row: number, positionMode: 'overall' | 'class' = 'class'): unknown {
   const js = formula
@@ -59,6 +62,8 @@ function evaluate(formula: string, board: readonly Car[], row: number, positionM
     .replace(/\btimespantoseconds\(/g, 'secs(')
     .replace(/\bformat\(/g, 'fmtOf(')
     .replace(/\breplace\(/g, 'rep(')
+    .replace(/\bin\(/g, 'isIn(')
+    .replace(/\bucase\(/g, 'upper(')
     .replace(/ = /g, ' === ')
     .replace(/ and /g, ' && ')
     .replace(/ or /g, ' || ');
@@ -71,9 +76,12 @@ function evaluate(formula: string, board: readonly Car[], row: number, positionM
     field: (name: keyof Car, index: number): unknown => board[index - 1]?.[name] ?? null,
     classRow: (place: number): number => ourRows[place - 1] ?? -1,
     P: (name: string): string => {
-      if (name !== 'OpenDash.PositionMode') throw new Error(`the evaluator publishes one property, not ${name}`);
+      if (name === 'DataCorePlugin.GameData.SessionTypeName') return 'Race';
+      if (name !== 'OpenDash.PositionMode') throw new Error(`the evaluator publishes two properties, not ${name}`);
       return positionMode;
     },
+    isIn: (value: unknown, ...options: unknown[]): boolean => options.includes(value),
+    upper: (value: unknown): string => String(value).toUpperCase(),
     sector: (index: number, sector: number): number | null => board[index - 1]?.sectors[sector - 1] ?? null,
     // .NET's `format(x, '0.0', true)`: the pattern's decimals, and a sign on a positive value too.
     // A null formats to nothing, as NCalc's does. NCalc's `if` takes only the branch it needs and

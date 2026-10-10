@@ -222,6 +222,17 @@ of one, and the class column read `+1L` on a classmate seconds behind its class 
 Neither column reads SimHub's combined strings, which write two decimals and `+1 lap`; both spell
 a lapped car `+1L`.
 
+All of that is a race. SimHub's gaps measure distance run in every session, and in practice and
+qualifying the leaderboard is ordered by best lap, so its first car is the fastest rather than the
+furthest round and the distance between two cars says only how long each has been out: a car 0.4 s
+off the best lap read `+5L`, and one 0.6 s off it that had run more laps a negative three-digit gap.
+Outside a race both columns therefore measure best laps, the Gap a car's best lap less that of the
+row it counts from and the Int less that of the row above, and a car with no best lap reads `--`
+in the Gap and nothing in the Int (#1040). Which sessions those are is a list of the names iRacing
+gives practice, qualifying, testing and warmup; a session named anything else, or nothing, is
+measured as a race, because best-lap gaps in a race would be small and believable and false, where
+distance gaps in a practice are plainly nonsense.
+
 The word on the row a Gap column counts from is the one cell of the two that follows the numbering
 instead, `Lead` being a claim about a place rather than a measurement. A zone filtered to one class
 while the rig counts overall heads such a list with a row reading `P3`, and `Lead` beside it would
@@ -249,7 +260,8 @@ it reads the race board's own ± cell beside it on a grid whose starting order i
 order. `packages/dash/test/classPlacesGained.test.ts` reads the same cell for one car over a
 sequence of frames, from unplaced to placed. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
 against a board whose class is interleaved with another and a lap behind it, and in
-`packages/dash/test/gapLeader.test.ts` against a race whose leader SimHub gives no gap.
+`packages/dash/test/gapLeader.test.ts` against a race whose leader SimHub gives no gap, and in
+`packages/dash/test/gapOutsideRace.test.ts` against a practice ordered by best lap.
 
 ## What is not drawn, and why
 
