@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { charsThatFit, measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
+import { LINE_SPACING, boxSlack, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   COMPANION_PAGE_SETTING,
   MODULE_CATALOGUE,
@@ -1387,6 +1387,14 @@ describe('a word is drawn from its widest reading, in the advances of its face',
     const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
     expect(value.monospace).toBeUndefined();
     expect(value.rect.width).toBeGreaterThan(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46));
+  });
+
+  // The field's width caps the value's box, so a word measured to its last advance and handed on as
+  // that width took `numeral`'s slack back off: the companion's Session box held `Offline Testing`
+  // with 0.06 px to spare, and WPF clips a box cut to the exact text.
+  test('and keeps the slack every measured box is given past it', () => {
+    const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46)) + boxSlack(46));
   });
 
   test('a bound word that declares no widest is refused, since its sample is the short end', () => {

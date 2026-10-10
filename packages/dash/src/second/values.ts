@@ -1209,10 +1209,17 @@ export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
  * list is both: the session types an iRacing weekend is made of, as the pit wall header listed them
  * before this list existed, and the event types a weekend can be. They are written in iRacing's
  * case, which is the case they are drawn in.
+ *
+ * `Open Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029
+ * rather than of a recording, which has only ever shown `Lone Qualify` and `Race`. A name missing
+ * from this list is not measured by anything that cuts its box from the list, the AiM's above all,
+ * so a name that might be written is listed rather than left out.
  */
 export const SESSION_NAMES: readonly string[] = [
   'Offline Testing',
   'Practice',
+  'Open Practice',
+  'Lone Practice',
   'Open Qualify',
   'Lone Qualify',
   'Qualify',

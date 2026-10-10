@@ -95,6 +95,8 @@ export const SHORT: Readonly<Record<string, string>> = {
  */
 export const SHORT_SESSION: Readonly<Record<string, string>> = {
   'Offline Testing': 'Testing',
+  'Open Practice': 'Practice',
+  'Lone Practice': 'Practice',
   'Lone Qualify': 'Qualify',
   'Open Qualify': 'Qualify',
   'Consolation': 'Consi',

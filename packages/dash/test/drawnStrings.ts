@@ -14,9 +14,9 @@
  * string that is. So this reads the expression as a tree and works out what the tree can draw.
  *
  * It cannot know everything -- a `[Property]` or a `format(...)` is whatever the sim sends, short of
- * the few properties `VOCABULARIES` lists the words of -- and it does not pretend to. Every string it returns is a **floor**: a string some output of the binding
- * is certain to be at least as wide as, in any face, because it is that output with the unknowable
- * parts left out. A floor wider than `widest` is therefore a real defect and never a false alarm,
+ * the few properties `VOCABULARIES` lists the words of -- and it does not pretend to. Every string
+ * it returns is a **floor**: a string some output of the binding is certain to be at least as wide
+ * as, in any face, because it is that output with the unknowable parts left out. A floor wider than `widest` is therefore a real defect and never a false alarm,
  * and a binding whose output is entirely unknowable has no floors and nothing to say, which is the
  * honest answer rather than a guess. A floor built from literals alone is also *exact* -- an
  * output as written -- and the readings that need a whole string, `left` and `replace`, act only on

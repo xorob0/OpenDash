@@ -13,7 +13,7 @@ import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { DATA_FACE, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { DATA_FACE, boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -75,8 +75,9 @@ export interface FieldValue {
    *
    * Rule 19 keeps out of a cell any glyph whose ink overruns it, and a word the sim writes can be
    * made of those: the session's name can be `Warmup`. Cut in cells, a word also takes a cell per
-   * letter whatever the letter, so `Offline Testing` is a third wider in cells than it draws. `chars` is then what it would take in cells and is not what it is measured by,
-   * as on the bar's own words. A word carries no follower, which is placed from the end of cells.
+   * letter whatever the letter, so `Offline Testing` is a third wider in cells than it draws.
+   * `chars` is then what it would take in cells and is not what it is measured by, as on the bar's
+   * own words. A word carries no follower, which is placed from the end of cells.
    */
   proportional?: boolean;
   /** Font size; a density size, e.g. `d.big`. */
@@ -205,7 +206,9 @@ export function valueCells(spec: FieldSpec, mono: Monospace): number {
 
 /**
  * The width a word takes: its widest reading in the advances of the face it is drawn in, rounded up
- * as `numeral` rounds the box it cuts from the same measurement.
+ * and given the slack every measured box gets. A cell is cut wider than the digit it holds, so a
+ * number in cells has its room already; a word measured to its last advance has none, and WPF would
+ * clip its last glyph, which `field` would otherwise do by capping `numeral`'s own slack to this.
  */
 function wordWidth(spec: FieldSpec): number {
   const value = spec.value;
@@ -215,7 +218,7 @@ function wordWidth(spec: FieldSpec): number {
   if (value.follower !== undefined) {
     throw new Error(`field ${spec.name}: a word carries no follower; a follower is placed from the end of the cells a number is cut from`);
   }
-  return Math.ceil(measureText(DATA_FACE[value.weight ?? 'SemiBold'], value.widest ?? value.sample, value.fs));
+  return Math.ceil(measureText(DATA_FACE[value.weight ?? 'SemiBold'], value.widest ?? value.sample, value.fs)) + boxSlack(value.fs);
 }
 
 export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
