@@ -103,7 +103,7 @@ describe('tyres · both pressure units', () => {
   });
 });
 
-describe('lap history · delta to your best', () => {
+describe('lap history · vs your best', () => {
   test('the wide page gives its third column to the delta to your best', () => {
     for (const { zone, items } of pages('wide', 'lapHistory')) {
       expect({ zone, head: named(items, 'lapHistory.head.delta')?.text }).toMatchObject({ head: 'Δ your best' });

@@ -2074,6 +2074,54 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PanelRigMap.PitWallPlanPage(Contract.PitWallPageNames.Length));
         }
 
+        /// <summary>
+        /// A pit wall cell trims its name (CharacterEllipsis), so a page name has to fit the cell it is drawn
+        /// in or the Rig page cuts it short. Every wide page is measured in the face the cell draws it in,
+        /// Barlow Regular at PanelRigMap.ZoneTextSize, against the Tower page's wide cell on a 1920 x 1080 pit
+        /// wall less the cell's padding: "Lap history · delta to your best" drew as "Lap history · delta to
+        /// you…" there (#1030), where the canvas's "delta to best" had fitted.
+        /// </summary>
+        [Fact]
+        public void Every_wide_page_name_fits_the_pit_wall_tile_whole()
+        {
+            var font = TrueTypeAdvances.Of(Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-Regular.ttf"));
+            var wall = Screen(Contract.KindPitWall, "PitWall", "Pit wall", 1920, 1080);
+            double tileWidth, tileHeight;
+            PanelRigMap.SecondScreenTileSize(false, wall.Width, wall.Height, out tileWidth, out tileHeight);
+            var inner = PanelRigMap.ScreenInner(tileWidth);
+            var measured = 0;
+            for (var i = 0; i < Contract.PitWallPageNames.Length; i++)
+            {
+                wall.PitWallPage = i;
+                var panels = PanelRigMap.PitWallPlanPage(i).Panels;
+                for (var at = 0; at < panels.Count; at++)
+                {
+                    if (!panels[at].Configurable) continue;
+                    var key = Contract.PitWallPageNames[i] + panels[at].Name;
+                    if (!Contract.PitWallZoneSlotByKey(key).Wide) continue;
+                    foreach (var page in ZonePages.Wide)
+                    {
+                        wall.SetZonePage(key, page.Number);
+                        var cell = PanelRigMap.PitWallCells(wall)[at];
+                        Assert.Equal(page.Name, cell.Text);
+                        var room = Math.Floor(cell.Width * inner) - 2 * PanelRigMap.PitWallCellPadding;
+                        var width = font.Width(cell.Text, PanelRigMap.ZoneTextSize);
+                        Assert.True(width < room, "\"" + cell.Text + "\" is " + width.ToString("0.0") + " px in a " + key + " cell of " + room);
+                        measured++;
+                    }
+                }
+            }
+            Assert.Equal(ZonePages.Wide.Count, measured);
+            // The geometry measured is the geometry drawn: the cell's size, weight and padding, and its body
+            // as wide as the tile's inside.
+            var wallCode = RigMethod("private FrameworkElement RigPitWall(");
+            Assert.Contains("var inner = PanelRigMap.ScreenInner(tile.Width);", wallCode);
+            Assert.Contains("var bodyWidth = inner;", wallCode);
+            Assert.Contains("var text = Ui.Text(cell.Text, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);", wallCode);
+            Assert.Contains("Width = Math.Max(0, Math.Floor(cell.Width * bodyWidth)),", wallCode);
+            Assert.Contains("Padding = new Thickness(PanelRigMap.PitWallCellPadding),", wallCode);
+        }
+
         [Fact]
         public void A_pit_wall_tile_follows_the_quick_glance_on_the_clock()
         {

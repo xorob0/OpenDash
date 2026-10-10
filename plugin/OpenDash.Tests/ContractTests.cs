@@ -412,6 +412,10 @@ namespace OpenDashPlugin.Tests
 
             Assert.Equal(ZonePages.Standard.Select(p => p.Id), PageIdsOf(source, "export const PIT_WALL_ZONE_PAGES"));
             Assert.Equal(ZonePages.Wide.Select(p => p.Id), PageIdsOf(source, "export const PIT_WALL_WIDE_ZONE_PAGES"));
+            // The names too: the panel offers a page by the name the catalogue gives it, and a wide page's
+            // name was renamed on one side before it was on the other (#1030).
+            Assert.Equal(ZonePages.Standard.Select(p => p.Name), PageNamesOf(source, "export const PIT_WALL_ZONE_PAGES"));
+            Assert.Equal(ZonePages.Wide.Select(p => p.Name), PageNamesOf(source, "export const PIT_WALL_WIDE_ZONE_PAGES"));
             foreach (var slot in Contract.PitWallZoneSlots)
             {
                 Assert.Contains("{ slot: '" + slot.Slot + "', kind: '" + (slot.Wide ? "wide" : "standard") + "', fallback: " + slot.Fallback + " }", source);
