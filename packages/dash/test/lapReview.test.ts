@@ -219,8 +219,8 @@ describe('the two deltas', () => {
   test('keep deltaColour’s third state, which the canvas does not state', () => {
     // The canvas gives the review a two-colour rule. The code has three: a delta inside the deadband
     // is `purpose.delta.zero`, and the reason it is kept for a finished lap as well as a live one is
-    // written beside DELTA_DEADBAND. What this pins is that the decision was made once: every
-    // surface that draws a delta goes through the same expression.
+    // written beside DELTA_DEADBAND. What this pins is that the decision was made once: both of the
+    // review's deltas go through the same expression.
     expect(DELTA_DEADBAND).toBeGreaterThan(0);
     expect(deltaColour('0')).toContain(ds.purpose.delta.zero);
     for (const name of ['vsBest', 'vsPrevious']) {
@@ -278,6 +278,53 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
       const formula = String(textNamed(reference.items, `${name}.value`).bindings?.Text?.formula);
       expect({ name, drawn: evalNcalc(formula, { [LAST]: 0, [TO_BEST]: 123.45, [BEFORE]: 100 }) }).toEqual({ name, drawn: '--' });
     }
+  });
+
+  /** What a delta field draws, its figure and its colour, in one frame. */
+  const drawnIn = (name: string, props: Props): { text: unknown; colour: unknown } => {
+    const value = textNamed(reference.items, `${name}.value`);
+    return { text: evalNcalc(String(value.bindings?.Text?.formula), props), colour: evalNcalc(String(value.bindings?.TextColor?.formula), props) };
+  };
+
+  test('the placeholder is dim, not the colour of a comparison that was never made (#614)', () => {
+    // The first lap of a session: a last lap and nothing in slot one. The difference against an empty
+    // slot is the whole lap, so the ungated colour drew the `--` in the slower red.
+    expect(drawnIn('vsPrevious', { [LAST]: 92.4, [TO_BEST]: 0 })).toEqual({ text: '--', colour: ds.color.text.dim });
+    // And no last lap at all, with a stale delta still published for slot zero.
+    for (const { name } of SITES) {
+      expect({ name, ...drawnIn(name, { [LAST]: 0, [TO_BEST]: 1.5, [BEFORE]: 90 }) }).toEqual({ name, text: '--', colour: ds.color.text.dim });
+    }
+    // Once there is a lap to compare, the figure and its colour come back together.
+    expect(drawnIn('vsPrevious', { [LAST]: 92.4, [BEFORE]: 92.1 })).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+    expect(drawnIn('vsBest', { [LAST]: 92.4, [TO_BEST]: -0.21 })).toEqual({ text: '−0.21', colour: ds.purpose.delta.faster });
+  });
+
+  test('a figure drawn as a hundredth is coloured as one, and only a figure drawn as zero is level (#614)', () => {
+    // .NET rounds a half away from zero, so ±0.005 is drawn `±0.01`; a band that took its own edge in
+    // coloured a drawn hundredth white.
+    const at = (seconds: number) => drawnIn('vsBest', { [LAST]: 92.4, [TO_BEST]: seconds }).colour;
+    expect(at(0.005)).toBe(ds.purpose.delta.slower);
+    expect(at(-0.005)).toBe(ds.purpose.delta.faster);
+    expect(at(0.0049)).toBe(ds.purpose.delta.zero);
+    expect(at(-0.0049)).toBe(ds.purpose.delta.zero);
+    expect(at(0)).toBe(ds.purpose.delta.zero);
+  });
+});
+
+describe('deltaColour at the edge of its band (#614)', () => {
+  const colour = (seconds: number): unknown => evalNcalc(deltaColour('[X]'), { X: seconds });
+
+  test('is strict: exactly half a hundredth either way is a reading and is coloured', () => {
+    expect(colour(DELTA_DEADBAND)).toBe(ds.purpose.delta.slower);
+    expect(colour(-DELTA_DEADBAND)).toBe(ds.purpose.delta.faster);
+  });
+
+  test('is level strictly inside the band, and green or red past it', () => {
+    expect(colour(0)).toBe(ds.purpose.delta.zero);
+    expect(colour(0.0049)).toBe(ds.purpose.delta.zero);
+    expect(colour(-0.0049)).toBe(ds.purpose.delta.zero);
+    expect(colour(0.21)).toBe(ds.purpose.delta.slower);
+    expect(colour(-0.21)).toBe(ds.purpose.delta.faster);
   });
 });
 

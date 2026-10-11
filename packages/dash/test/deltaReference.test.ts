@@ -57,21 +57,19 @@ const moduleItems = (id: string, density: Density, width: number, height: number
 /** A site that draws the live delta: what it writes, and how it colours it where it colours it. */
 interface Site {
   name: string;
-  /** The card alone draws a level delta as a bare "0.00"; everywhere else keeps the sign `format` writes. */
-  bareAtRest: boolean;
   text: string;
   colour?: string;
 }
 
-const site = (name: string, item: TextItem, bareAtRest = false): Site => {
+const site = (name: string, item: TextItem): Site => {
   const t = formula(item, 'Text');
   if (t === undefined) throw new Error(`${name} has no Text formula`);
-  return { name, bareAtRest, text: t, colour: formula(item, 'TextColor') };
+  return { name, text: t, colour: formula(item, 'TextColor') };
 };
 
 const wide = SHAPE_ARCHETYPES.wide;
 const SITES: readonly Site[] = [
-  site('card 3', text(deltaCard.build(rect(0, 0, 255, 187), 'delta.'), 'delta.value'), true),
+  site('card 3', text(deltaCard.build(rect(0, 0, 255, 187), 'delta.'), 'delta.value')),
   site('delta module', text(moduleItems('delta', 'zone', wide.width, wide.height), 'delta.delta.value')),
   site('Lap times', text(moduleItems('lapTimes', 'zone', wide.width, wide.height), 'lapTimes.delta.value')),
   site('lap pop-up', text([popUp(rect(0, 0, POP_UP_WIDTH, POP_UP_HEIGHT), LAP_POP_UP)], 'popUp.lap.secondary')),
@@ -83,13 +81,13 @@ const drawn = (s: Site, props: Props) => ({ text: evalNcalc(s.text, props), colo
 
 /**
  * The figure a reading draws at two decimals, written independently of the evaluator's `format`:
- * a true minus, a plus for anything not negative, and the card's bare "0.00" inside its deadband,
- * which is strictly under half a hundredth. The readings used are chosen away from a half-cent, so no
+ * a true minus, a plus for anything not negative, and a bare "0.00" inside the deadband, which is
+ * strictly under half a hundredth. Every site draws the bare zero, card 3 no longer alone (#614). The readings used are chosen away from a half-cent, so no
  * rounding rule is being tested here; `deltaPrecision.test.ts` tests the band's edge, at both
  * precisions.
  */
-const figure = (seconds: number, bareAtRest: boolean): string => {
-  if (bareAtRest && Math.abs(seconds) < 0.005) return '0.00';
+const figure = (seconds: number): string => {
+  if (Math.abs(seconds) < 0.005) return '0.00';
   return `${seconds < 0 ? '−' : '+'}${Math.abs(seconds).toFixed(2)}`;
 };
 
@@ -157,7 +155,7 @@ describe('the delta reference (#322)', () => {
             ok: true,
           });
           // The last lap's reading is iRacing's float, so its figure is the float's.
-          const expected = figure(reads === 'last' ? Math.fround(reading) : reading, s.bareAtRest);
+          const expected = figure(reads === 'last' ? Math.fround(reading) : reading);
           const got = drawn(s, props);
           expect({ site: s.name, reference, reading, text: got.text }).toEqual({ site: s.name, reference, reading, text: expected });
           if (got.colour !== undefined) expect({ site: s.name, reference, reading, colour: got.colour }).toEqual({ site: s.name, reference, reading, colour: colourOf(expected) });
@@ -179,10 +177,10 @@ describe('the delta reference (#322)', () => {
       { last: undefined, ok: undefined },
     ] as const;
     for (const s of SITES) {
-      expect(drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, last: -0.4, ok: true })).text).toBe(figure(Math.fround(-0.4), s.bareAtRest));
+      expect(drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, last: -0.4, ok: true })).text).toBe(figure(Math.fround(-0.4)));
       for (const values of level) {
         const got = drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, ...values }));
-        expect({ site: s.name, values, text: got.text }).toEqual({ site: s.name, values, text: figure(0, s.bareAtRest) });
+        expect({ site: s.name, values, text: got.text }).toEqual({ site: s.name, values, text: figure(0) });
         if (got.colour !== undefined) expect({ site: s.name, values, colour: got.colour }).toEqual({ site: s.name, values, colour: ds.purpose.delta.zero });
       }
     }
@@ -214,7 +212,7 @@ describe('the delta reference (#322)', () => {
     for (const s of SITES) {
       for (const reference of [undefined, 'session', 'alltime']) {
         const got = drawn(s, frame(reference, { session: -0.21, alltime: -0.21, last: 5.55, ok: true }));
-        expect({ site: s.name, reference, text: got.text }).toEqual({ site: s.name, reference, text: figure(-0.21, s.bareAtRest) });
+        expect({ site: s.name, reference, text: got.text }).toEqual({ site: s.name, reference, text: figure(-0.21) });
       }
     }
   });
