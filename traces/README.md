@@ -162,9 +162,10 @@ The emulator is a function of its tick, so the telemetry at a given tick is the 
 Four things are not. SimHub publishes the wall clock, which the pit wall draws. The delta and fuel
 properties are computed from a history SimHub builds after it connects, so they depend on how long
 it had been running. `PersistantTrackerPlugin.PreviousLap_NN` is a store the plugin keeps between
-sessions, so the lap history in a trace is the test VM's own rather than the scenario's. And SimHub
-polls at its own rate, so a frame is taken at the first tick at or after the one asked for, which is
-occasionally a tick later than last time.
+sessions, so the lap history in a trace is the test VM's own rather than the scenario's; the dashes
+draw only the slots whose `_IsCurrentSession` is 1, which are the laps of the session the trace
+records (#1011). And SimHub polls at its own rate, so a frame is taken at the first tick at or after
+the one asked for, which is occasionally a tick later than last time.
 
 None of that stops a trace from being reproducible in the sense that matters, which is that
 re-recording an unchanged scenario produces the same picture. It does mean that a trace diff is

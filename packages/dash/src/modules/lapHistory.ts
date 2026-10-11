@@ -3,7 +3,10 @@
  *
  * SimHub keeps ten previous laps as numbered properties, so the rows are a repeated layer that
  * builds its property name from its own repeat index. A row whose lap has no time is hidden, which
- * is what a driver on lap two should see: one row, not six empty ones.
+ * is what a driver on lap two should see: one row, not six empty ones. So is a row whose lap was
+ * driven in an earlier session: SimHub fills the ten from its lap database, so a new session starts
+ * with the last session's laps in them, and a list of them on the out lap would be a history of
+ * another day (#1011, `previousLapIsThisSession`).
  *
  * The catalogue's third column is the fuel each lap cost, under a header carrying the target for
  * it. No previous-lap property publishes a consumption beside the time, and keeping one per lap
@@ -28,7 +31,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf, type DensitySpec } from '../second/density.ts';
 import { rowCapacity, tableRowHeight } from '../second/table.ts';
-import { CHARS, HISTORY_DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
+import { CHARS, HISTORY_DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasSessionLap, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, pageKeeps, type ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
@@ -214,7 +217,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
         ]
       : []),
   ];
-  const row: LayerItem = withMoreBindings({ kind: 'layer', name: `${ctx.prefix}row`, children }, { Visible: hasTime(time) });
+  const row: LayerItem = withMoreBindings({ kind: 'layer', name: `${ctx.prefix}row`, children }, { Visible: hasSessionLap(slot) });
   const heading = (name: string, text: string, column: { left: number; width: number }, hAlign?: 'right'): Item =>
     label(`${ctx.prefix}head.${name}`, text, column.left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, column.width, { size: d.labelSm, hAlign });
   return [
