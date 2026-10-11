@@ -49,6 +49,9 @@ const cos = (a: Expr): Expr => `cos(${a})`;
  * A square mark of `size` riding on `face`, its position bound to `angle` radians clockwise from
  * the top. It is drawn at top dead centre, which is where a zero angle puts it and therefore what
  * Dash Studio shows against a sim that is not running.
+ *
+ * Clockwise is the driver's, and it is the opposite of iRacing's: `SteeringWheelAngle` is positive
+ * to the left, and `steering()` turns it round before it gets here (#1057).
  */
 function markOnCircle(name: string, face: Circle, size: number, color: Hex, angle: Expr): RectangleItem {
   return withMoreBindings(band(name, onCircle(face, 0, { width: size, height: size }), color), {
