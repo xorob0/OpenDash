@@ -830,6 +830,23 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   null whenever somebody else leads, as seen on the test VM in the `green` scenario, and a difference
   taken from it is null too. SimHub's own `GaptoClassLeader` subtracts 0 in that case, and the Gap
   and Int columns read it as 0 the same way, on that car only (#1041).
+- `drivergaptoleader` and `driverlapstoleader` are distance in every session. `UpdateGapToLeader`
+  in `GameManagerBaseGapHelpers` takes the first car's `CurrentLapHighPrecision` less the car's,
+  times the reference best lap or through the first car's delta store, and `LapsToLeader` truncates
+  the same difference; the iRacing reader sets neither itself, and nothing asks the session type. In
+  a race that is the gap. In practice and qualifying `Opponents` is sorted by `Position` (the iRacing
+  reader sets no `LivePosition`), which it takes from the session results in best-lap order, so the first car is the fastest and the
+  distance says how long each car has been out: a car tenths off the best lap reads `+5L` or a
+  negative three-digit gap. Per car SimHub publishes `driverdeltatobest`, the car's best lap less the
+  fastest of the whole field, floored at 0, which no class list or interval can use; `driverbestlap`
+  is a TimeSpan from the results' `FastestTime`, left at zero for a car with none. So outside a race
+  the Gap and Int columns subtract two best laps themselves (#1040). `SessionTypeName` is iRacing's
+  `SessionType` verbatim. The Gap and Int columns read best laps in a session named `Practice`,
+  `Open Practice`, `Lone Practice`, `Qualify`, `Open Qualify`, `Lone Qualify`, `Offline Testing` or
+  `Warmup`, compared in capitals, and distance in `Race` and in any other name or none. `Qualify` is
+  the word the Porsche's strip already reads as qualifying, and `Open Practice` and `Lone Practice`
+  come from the fuel margin's tests and #1029 rather than a recording, which has only shown
+  `Lone Qualify` and `Race`. How another sim spells them has not been read.
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

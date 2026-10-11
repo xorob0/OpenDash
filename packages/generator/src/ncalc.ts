@@ -217,6 +217,11 @@ export type DriverFunction =
    * so it can count places a car never lost (#1022). `positiongain` counts from the first real place.
    */
   | 'positiongainclass'
+  /**
+   * A TimeSpan, which the iRacing reader takes from the session results' `FastestTime` and
+   * `GameManagerBase` leaves at zero for a car with none. Outside a race the Gap and Int columns
+   * measure the difference of two of these, SimHub publishing no best-lap gap a list can use (#1040).
+   */
   | 'bestlap'
   | 'lastlap'
   /**
@@ -228,7 +233,8 @@ export type DriverFunction =
   /**
    * Seconds behind the first car of the leaderboard, which every gap is measured from. Null on that
    * car's own row unless it is the player's, `GameManagerBase` in 9.12.6 setting it to 0 only then
-   * (#1041).
+   * (#1041). It is distance run in every session, so outside a race, where the first car is the
+   * fastest rather than the furthest round, it is not read (#1040).
    */
   | 'gaptoleader'
   | 'gaptoplayer'
