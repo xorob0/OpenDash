@@ -1568,9 +1568,9 @@ namespace OpenDashPlugin
         public static readonly string[] LapReviewModes = { "off", "race", "all" };
 
         /// <summary>Off: the panel covers the gear for four seconds of every lap, and the lap-time
-        /// pop-up already gives a driver the two figures they wait for at the line in a third of the
-        /// room. What takes the face is asked for, which is why the flag format defaults to the band
-        /// as well.</summary>
+        /// pop-up already gives a driver the figure they wait for at the line in the gear's own room.
+        /// What takes the face is asked for, which is why the flag format defaults to the band as
+        /// well.</summary>
         public const string DefaultLapReview = "off";
 
         /// <summary>

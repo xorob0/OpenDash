@@ -13,10 +13,14 @@
  *
  * **It covers the hero and nothing else.** The box is placed from the hero rectangle each layout
  * gives it rather than at a coordinate, so it is centred on the gear on a face of any size, and it
- * is short enough and narrow enough to leave the rev bar, the bar of settled values, the limiter
- * banner and band D uncovered. A flag takes band D over for its first three seconds and keeps the
- * block at each end of it for as long as it is out, and a pop-up must not be the thing that hides
- * either.
+ * is no wider and no taller than that rectangle, which leaves zones B and C, the rev bar, the bar of
+ * settled values and band D uncovered. The artboard's 560 is the width where the hero has it, which
+ * only the portrait face does: every landscape zone A is narrower, and a box of the artboard's width
+ * centred on one hid the session name and the time left in zone C for as long as low fuel was
+ * flagged (#1047), which the sheet's own "it never covers a slot" rules out. Where the box is
+ * narrower its runs give ground the way a module's fields do, by `popUpFit`. A flag takes band D
+ * over for its first three seconds and keeps the block at each end of it for as long as it is out,
+ * and a pop-up must not be the thing that hides either.
  *
  * **One at a time**, by the exclusion chain the flags use: a pop-up is visible when its own
  * condition holds and no higher one's does. An invisible layer's other bindings are never
@@ -33,7 +37,7 @@ import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
-import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, type Chars } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -46,11 +50,12 @@ import { FLAG_BLINK_MS } from './flagStrip.ts';
 const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, str, timespanToSeconds } = ncalc;
 
 /**
- * The box the pagesandalerts artboard draws.
+ * The box the pagesandalerts artboard draws, which is the largest a pop-up is ever drawn.
  *
  * The height is `indicator.popUp.height`; the width is the one figure of this component that
  * tokens.json does not carry, so it is read off the artboard the way every rectangle in `zones/`
- * is, with the sheet as its citation rather than a ratio.
+ * is, with the sheet as its citation rather than a ratio. A hero smaller than either gets a box its
+ * own size, `popUpFrame`.
  */
 export const POP_UP_WIDTH = 560;
 export const POP_UP_HEIGHT = ds.indicator.popUp.height;
@@ -121,8 +126,25 @@ const labelText = (spec: PopUpLabel): string => (spec.bind ? (spec.widest ?? spe
 const runWidth = (text: PopUpText, fs: number): number =>
   text.chars ? monoWidth(cells('SemiBold', fs), text.chars) : Math.ceil(measureText(DATA_FACE.SemiBold, text.widest ?? text.sample, fs));
 
-/** The room the two runs share. */
-const innerWidth = (): number => POP_UP_WIDTH - 2 * POP_UP_PAD_X;
+/** The room the two runs share in a box of this width. */
+const innerWidth = (width: number): number => width - 2 * POP_UP_PAD_X;
+
+/**
+ * Where the label and the value are set in a box: the two line boxes stacked 4 px apart and the
+ * stack centred in what the rule leaves, which is the artboard's `align-items: center`.
+ */
+function popUpStack(frame: Rect, valueFs: number): { labelY: number; valueY: number } {
+  const labelY = frame.top + POP_UP_RULE + (frame.height - POP_UP_RULE - (ds.size.label + POP_UP_GAP + valueFs)) / 2;
+  return { labelY, valueY: labelY + ds.size.label + POP_UP_GAP };
+}
+
+/** Whether a value of this size, under its label, is drawn inside the box from top to bottom. */
+function stackFits(frame: Rect, valueFs: number): boolean {
+  const { labelY, valueY } = popUpStack(frame, valueFs);
+  const label = textBox(labelY, ds.size.label);
+  const value = textBox(valueY, valueFs);
+  return Math.round(label.top) >= frame.top + POP_UP_RULE && Math.round(value.top) + value.height <= frame.top + frame.height;
+}
 
 /** How a pop-up whose runs are wider than its box gives ground. */
 export interface PopUpFit {
@@ -131,41 +153,56 @@ export interface PopUpFit {
   secondary: boolean;
 }
 
+/** The smallest a value is ever set, which is the floor every fitted run on the face shares. */
+const LEAST_VALUE_SIZE = 12;
+
 /**
- * The size the value is drawn at, and whether the secondary survives.
+ * The size the value is drawn at in a box, and whether the secondary survives.
  *
  * Rule 17 in the small, and the same order `fitFields` takes: the least important run is shed
  * before the most important one is shrunk, so the secondary goes first and only a value that still
- * does not fit the box on its own is scaled down. A bound run draws its binding rather than its
- * sample, so all of this is measured from `widest`.
+ * does not fit the box on its own is scaled down, by the ladder's steps and then, in a box narrower
+ * than the ladder reaches, to the size that fills it. A bound run draws its binding rather than its
+ * sample, so all of this is measured from `widest`. The box is the one `popUpFrame` gives the face's
+ * hero, so a narrow hero is answered here rather than by a box wider than the hero.
  */
-export function popUpFit(spec: PopUpSpec): PopUpFit {
-  const room = innerWidth();
+export function popUpFit(spec: PopUpSpec, frame: Rect = rect(0, 0, POP_UP_WIDTH, POP_UP_HEIGHT)): PopUpFit {
+  const room = innerWidth(frame.width);
+  const fits = (fs: number): boolean => runWidth(spec.value, fs) <= room && stackFits(frame, fs);
   const after = spec.secondary ? runWidth(spec.secondary, POP_UP_SECONDARY_SIZE) + POP_UP_PAD_X : 0;
-  if (runWidth(spec.value, POP_UP_VALUE_SIZE) + after <= room) return { valueFs: POP_UP_VALUE_SIZE, secondary: spec.secondary !== undefined };
-  for (const factor of FIT_LADDER) {
-    const fs = Math.max(12, Math.round(POP_UP_VALUE_SIZE * factor));
-    if (runWidth(spec.value, fs) <= room) return { valueFs: fs, secondary: false };
+  if (runWidth(spec.value, POP_UP_VALUE_SIZE) + after <= room && stackFits(frame, POP_UP_VALUE_SIZE)) {
+    return { valueFs: POP_UP_VALUE_SIZE, secondary: spec.secondary !== undefined };
   }
-  return { valueFs: Math.max(12, Math.round(POP_UP_VALUE_SIZE * FIT_LADDER[FIT_LADDER.length - 1]!)), secondary: false };
+  for (const factor of FIT_LADDER) {
+    const fs = Math.max(LEAST_VALUE_SIZE, Math.round(POP_UP_VALUE_SIZE * factor));
+    if (fits(fs)) return { valueFs: fs, secondary: false };
+  }
+  for (let fs = Math.round(POP_UP_VALUE_SIZE * FIT_LADDER[FIT_LADDER.length - 1]!) - 1; fs > LEAST_VALUE_SIZE; fs--) {
+    if (fits(fs)) return { valueFs: fs, secondary: false };
+  }
+  return { valueFs: LEAST_VALUE_SIZE, secondary: false };
 }
 
 /**
- * The box, centred on the rectangle the face calls its hero.
+ * The box, centred on the rectangle the face calls its hero, and no larger than it.
  *
  * Placed rather than fixed, so the same component sits over the gear on the 1920 reference face and
- * on the 600 portrait one without either of them stating a coordinate.
+ * on the 600 portrait one without either of them stating a coordinate. The artboard's 560 by 120 is
+ * the most it takes: a hero narrower or shorter than that gets a box of its own width or height, so
+ * that the pop-up hides the gear and not the zones either side of it.
  */
-export const popUpFrame = (hero: Rect): Rect =>
-  roundRect({ left: hero.left + (hero.width - POP_UP_WIDTH) / 2, top: hero.top + (hero.height - POP_UP_HEIGHT) / 2, width: POP_UP_WIDTH, height: POP_UP_HEIGHT });
+export function popUpFrame(hero: Rect): Rect {
+  const width = Math.min(POP_UP_WIDTH, hero.width);
+  const height = Math.min(POP_UP_HEIGHT, hero.height);
+  return roundRect({ left: hero.left + (hero.width - width) / 2, top: hero.top + (hero.height - height) / 2, width, height });
+}
 
 /** The items of one pop-up, behind the Visible expression that ranks it against the others. */
 export function popUp(frame: Rect, spec: PopUpSpec, prefix = 'popUp'): LayerItem {
   const name = `${prefix}.${spec.id}`;
-  const fit = popUpFit(spec);
+  const fit = popUpFit(spec, frame);
   const x = frame.left + POP_UP_PAD_X;
-  const labelY = frame.top + POP_UP_RULE + (frame.height - POP_UP_RULE - (ds.size.label + POP_UP_GAP + fit.valueFs)) / 2;
-  const valueY = labelY + ds.size.label + POP_UP_GAP;
+  const { labelY, valueY } = popUpStack(frame, fit.valueFs);
   const labelWidth = Math.ceil(measureText('BarlowMedium', labelText(spec.label), ds.size.label)) + boxSlack(ds.size.label);
   const children: Item[] = [
     band(`${name}.box`, frame, ds.purpose.popUp.surface),

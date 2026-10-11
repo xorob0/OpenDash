@@ -186,16 +186,17 @@ export function faceItems(
   // finished, for the four seconds after the line.
   //
   // It is ranked by geometry rather than by an exclusion chain, which is the one place this face
-  // does that and is worth saying why. The pop-up and the notification are 560 by 120 and 400 by 96
-  // centred on this same zone, and the review is larger than both in both directions and is drawn
-  // over them, so the two conditions that are true at the same moment -- a lap time at the line and
+  // does that and is worth saying why. The pop-up and the notification are centred on this same
+  // zone and are no larger than it, the sheet's 560 by 120 and 400 by 96 where it has the room and
+  // its width or height where it does not (#1047), and the review is larger than both in both
+  // directions and is drawn over them, so the two conditions that are true at the same moment -- a lap time at the line and
   // a review of that lap -- cannot both be read. A chain would have to reach into `popUp.ts`, whose
   // three conditions know nothing of a face and so could not ask which face's setting is on.
   //
   // The limiter banner is above the review rather than under it on every face but the nano, where
   // the body is 194 px and a 160 px panel leaves it seventeen either side. That is the same trade
   // the pop-ups already make on that face and is why the pit alerts are pushed before this.
-  items.push(...restyled([lapReview(lapReviewFrame(hero, layout.width), lapReviewOut(face), 'lapReview')], 'outline'));
+  items.push(...restyled([lapReview(lapReviewFrame(hero, regionRect(regions, 'flagBody')), lapReviewOut(face), 'lapReview')], 'outline'));
 
   return items;
 }

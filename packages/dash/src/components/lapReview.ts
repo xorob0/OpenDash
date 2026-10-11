@@ -5,7 +5,7 @@
  * notification and the pit alerts, and it is the only one a driver has to be given rather than
  * one they are simply shown: `<Face>LapReview` is off until somebody asks for it, because a
  * 1200 by 160 panel takes the gear with it every single lap and the lap-time pop-up already gives
- * the two figures a driver waits for at the line in a third of the room. That is the same reasoning
+ * the figure a driver waits for at the line in the gear's own room. That is the same reasoning
  * `DEFAULT_FLAG_FORMAT` is `band` for.
  *
  * **Four seconds without a clock of our own**, which is the constraint every box on this face is
@@ -40,6 +40,7 @@ import type { Item, LayerItem, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { rect, roundRect } from '../design/geometry.ts';
+import { textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { zone as zoneSetting, type FaceSize } from '../contract.ts';
@@ -87,6 +88,13 @@ export const LAP_REVIEW_RULE = 2;
 
 /** Side padding: the artboard's 32, which is `space[6]`. */
 export const LAP_REVIEW_PAD_X = ds.space[6];
+
+/**
+ * The side padding of a panel that would otherwise give up its deltas: the step of the `space` scale
+ * under the artboard's, and the one place the panel departs from the sheet's own spacing. See
+ * `lapReviewFit` for when it is taken.
+ */
+export const LAP_REVIEW_PAD_X_NARROW = ds.space[5];
 
 /**
  * Between two groups of the panel. Forty is off the `space` scale, which goes 24 then 32 then 48,
@@ -226,18 +234,31 @@ const fuelFields = (prefix: string): FieldSpec[] => [
 ];
 
 /**
- * The panel, centred on the rectangle the face calls its hero, clamped to the face it is drawn on.
+ * The panel, centred on the rectangle the face calls its hero, clamped to the body of the face.
  *
  * Centred rather than placed, so that the same component sits over the gear on the 1920 reference
- * face and on the 600 portrait one without either of them stating a coordinate; clamped in width,
- * because the artboard's 1200 is wider than five of the eight faces and a panel is a function of
- * the rectangle it is given rather than a fixed picture. Everything inside it is measured against
- * whatever width that leaves.
+ * face and on the 600 portrait one without either of them stating a coordinate; clamped, because
+ * the artboard's 1200 is wider than five of the eight faces and a panel is a function of the
+ * rectangle it is given rather than a fixed picture. Everything inside it is measured against
+ * whatever that leaves.
+ *
+ * The body is zones B, A and C together, the rectangle a full-screen flag takes, and it is what this
+ * panel is allowed to cover: unlike the pop-up and the change notification, which keep to the hero,
+ * the review is the one box of the family a driver asks for, and the sheet draws it 1200 wide on
+ * purpose. What it may not cover is what lies outside the body, which on the house face is the rev
+ * bar, the bar and band D and on the Porsche's is also the settings column and the telltales either
+ * side of the zones, and on the Porsche's 800 x 286, whose body is 142 px tall, the foot (#1047).
  */
-export function lapReviewFrame(hero: Rect, faceWidth: number): Rect {
-  const width = Math.min(LAP_REVIEW_WIDTH, faceWidth);
-  const left = Math.max(0, Math.min(faceWidth - width, hero.left + (hero.width - width) / 2));
-  return roundRect({ left, top: hero.top + (hero.height - LAP_REVIEW_HEIGHT) / 2, width, height: LAP_REVIEW_HEIGHT });
+export function lapReviewFrame(hero: Rect, body: Rect): Rect {
+  const width = Math.min(LAP_REVIEW_WIDTH, body.width);
+  const height = Math.min(LAP_REVIEW_HEIGHT, body.height);
+  const within = (start: number, room: number, size: number, wanted: number): number => Math.max(start, Math.min(start + room - size, wanted));
+  return roundRect({
+    left: within(body.left, body.width, width, hero.left + (hero.width - width) / 2),
+    top: within(body.top, body.height, height, hero.top + (hero.height - height) / 2),
+    width,
+    height,
+  });
 }
 
 /** How wide a row of fields is at this density, gaps included. */
@@ -255,16 +276,23 @@ const rowWidth = (specs: readonly FieldSpec[], gap: number): number =>
  * instead. So the fuel goes first, then the line and the strip, and the lap time never goes at all.
  *
  * **The deltas are the floor.** The panel covers the lap-time pop-up while it is out, and that
- * pop-up already carries the lap and one delta in 560 px; a review that had shed its way down to a
- * lap time alone would be four seconds of the gear spent saying less than the box it replaced. So
+ * pop-up already carries the lap time, and one delta where its hero has room for it; a review that
+ * had shed its way down to a lap time alone would be four seconds of the zones spent saying no more
+ * than the box it replaced. So
  * where the deltas will not fit beside a 116 px lap time, the lap time steps down the density's own
  * ramp to 64 rather than the deltas being dropped, which is what the portrait face at 600 px asks
- * for. The last line below is a guard and not a case: no face that ships is narrower than a 64 px
- * lap time and two deltas.
+ * for. Where even that does not fit, the side padding tightens from the sheet's 32 to the 24 under
+ * it on the `space` scale, and only then do the deltas go. The Porsche's portrait body is 582 px,
+ * ten short of a 64 px lap time and two deltas inside the sheet's padding, and is the one face that
+ * ships which takes that step. The last line below is a guard and not a case: no face that ships is
+ * narrower than a 64 px lap time and two deltas inside the tighter padding, and the test that walks
+ * every theme's faces says so.
  */
 export interface LapReviewFit {
   /** The size the lap time is set at: the density's `hero`, or its `big` on a narrow panel. */
   lapFs: number;
+  /** The side padding: the sheet's `LAP_REVIEW_PAD_X`, or `LAP_REVIEW_PAD_X_NARROW` where the deltas need it. */
+  padX: number;
   /** The driver line and the sector strip above the deltas. */
   strip: boolean;
   deltas: boolean;
@@ -274,18 +302,50 @@ export interface LapReviewFit {
 export function lapReviewFit(frame: Rect): LapReviewFit {
   const prefix = 'fit';
   const d = densityOf(DENSITY);
-  const room = frame.width - 2 * LAP_REVIEW_PAD_X;
   const deltas = rowWidth(deltaFields(prefix), d.gapX);
   const group = Math.max(deltas, LAP_REVIEW_STRIP_WIDTH);
   const fuel = rowWidth(fuelFields(prefix), d.gapX);
-  const fits = (parts: readonly number[]): boolean => parts.reduce((sum, w) => sum + w, 0) + LAP_REVIEW_GROUP_GAP * (parts.length - 1) <= room;
+  const fits = (parts: readonly number[], padX = LAP_REVIEW_PAD_X): boolean =>
+    parts.reduce((sum, w) => sum + w, 0) + LAP_REVIEW_GROUP_GAP * (parts.length - 1) <= frame.width - 2 * padX;
+  const padX = LAP_REVIEW_PAD_X;
+  // The same test in height, for a body shorter than the sheet's 160: a lap time whose boxes would
+  // start above the panel steps down as a narrow panel's does, and a driver line that would is shed.
   for (const lapFs of [d.hero, d.big]) {
-    const lap = fieldWidth(lapField(prefix, lapFs), DENSITY);
-    if (fits([lap, group, fuel])) return { lapFs, strip: true, deltas: true, fuel: true };
-    if (fits([lap, group])) return { lapFs, strip: true, deltas: true, fuel: false };
-    if (fits([lap, deltas])) return { lapFs, strip: false, deltas: true, fuel: false };
+    const spec = lapField(prefix, lapFs);
+    const bottom = lapRowBottom(frame, spec);
+    const lapTop = Math.min(...fieldRowFitted([spec], frame.left, bottom, frame.width, DENSITY).items.flatMap((item) => (item.kind === 'layer' ? [] : [item.rect.top])));
+    if (lapTop < frame.top && lapFs !== d.big) continue;
+    const strip = driverLineTop(bottom) >= frame.top;
+    const lap = fieldWidth(spec, DENSITY);
+    if (strip && fits([lap, group, fuel])) return { lapFs, padX, strip: true, deltas: true, fuel: true };
+    if (strip && fits([lap, group])) return { lapFs, padX, strip: true, deltas: true, fuel: false };
+    if (fits([lap, deltas])) return { lapFs, padX, strip: false, deltas: true, fuel: false };
   }
-  return { lapFs: d.big, strip: false, deltas: false, fuel: false };
+  // The last step before the floor gives way: the padding tightens rather than the deltas going.
+  if (fits([fieldWidth(lapField(prefix, d.big), DENSITY), deltas], LAP_REVIEW_PAD_X_NARROW)) {
+    return { lapFs: d.big, padX: LAP_REVIEW_PAD_X_NARROW, strip: false, deltas: true, fuel: false };
+  }
+  return { lapFs: d.big, padX, strip: false, deltas: false, fuel: false };
+}
+
+/**
+ * The baseline row the three groups share: the block centred in what the rule leaves, and then
+ * pushed up by however far the WPF box of the lap time hangs below the line it is placed on.
+ * Without that last term the box of the one run the panel exists for ends eight pixels past the
+ * panel's own bottom edge, which is a box drawn outside its frame even though the glyphs inside it
+ * are not.
+ */
+function lapRowBottom(frame: Rect, lap: FieldSpec): number {
+  const inner = frame.top + LAP_REVIEW_RULE;
+  const height = frame.height - LAP_REVIEW_RULE;
+  return Math.min(inner + (height + rowHeight([lap], DENSITY)) / 2, frame.top + frame.height - fieldTail(lap, DENSITY));
+}
+
+/** Where the driver line's box starts, stacked over the strip over the deltas on that row. */
+function driverLineTop(bottom: number): number {
+  const d = densityOf(DENSITY);
+  const stripTop = bottom - rowHeight(deltaFields('fit'), DENSITY) - LAP_REVIEW_STACK_GAP - LAP_REVIEW_STRIP_HEIGHT;
+  return Math.round(textBox(stripTop - LAP_REVIEW_STACK_GAP - d.label, d.label).top);
 }
 
 /**
@@ -323,16 +383,10 @@ export function lapReviewItems(frame: Rect, prefix = 'lapReview'): Item[] {
   const d = densityOf(DENSITY);
   const fit = lapReviewFit(frame);
   const lap = lapField(prefix, fit.lapFs);
-  const inner = frame.top + LAP_REVIEW_RULE;
-  const height = frame.height - LAP_REVIEW_RULE;
-  // The tallest group decides the baseline, and the lap time is always the tallest: the block is
-  // centred in what the rule leaves, and then pushed up by however far the WPF box of a 116 px run
-  // hangs below the line it is placed on. Without that last term the box of the one run the panel
-  // exists for ends eight pixels past the panel's own bottom edge, which is a box drawn outside its
-  // frame even though the glyphs inside it are not.
-  const bottom = Math.min(inner + (height + rowHeight([lap], DENSITY)) / 2, frame.top + frame.height - fieldTail(lap, DENSITY));
-  const left = frame.left + LAP_REVIEW_PAD_X;
-  const right = frame.left + frame.width - LAP_REVIEW_PAD_X;
+  // The tallest group decides the baseline, and the lap time is always the tallest.
+  const bottom = lapRowBottom(frame, lap);
+  const left = frame.left + fit.padX;
+  const right = frame.left + frame.width - fit.padX;
   const lapWidth = fieldWidth(lap, DENSITY);
   const items: Item[] = [
     band(`${prefix}.box`, frame, ds.purpose.popUp.surface),
