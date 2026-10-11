@@ -21,6 +21,7 @@ import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import type { TextItem } from '../src/generator.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -32,15 +33,13 @@ const textItem = (id: string, name: string): TextItem => {
  * A numeric NCalc formula evaluated in JavaScript, every property read standing for `value`.
  *
  * A formula that is arithmetic rather than a string is worth what it computes, and the dial's two
- * are the whole of its movement. `isnull` is NCalc's and the rest are the maths library, which is
- * .NET's and therefore JavaScript's to six decimals.
+ * are the whole of its movement. The sine and cosine are .NET's and therefore JavaScript's to six
+ * decimals, and the clamp's `min` and `max` answer in their left operand's type as NCalc's do, which
+ * the shared evaluator models (#1046).
  */
 const evaluateNumber = (formula: string, value: number): number => {
-  const js = formula
-    .replace(/\[[^\]]+\]/g, String(value))
-    .replace(/\bisnull\(/g, 'nz(')
-    .replace(/\b(sin|cos|min|max)\(/g, 'Math.$1(');
-  return Number(new Function('nz', `return ${js};`)((v: number, fallback: number) => v ?? fallback));
+  const props = Object.fromEntries([...formula.matchAll(/\[([^\]]+)\]/g)].map(([, name]) => [name, value]));
+  return Number(evalNcalc(formula, props));
 };
 
 const formulaOf = (item: TextItem, target: 'Text' | 'TextColor' | 'Left' | 'Visible'): string => {
@@ -312,7 +311,9 @@ describe('hero expressions', () => {
   const CAR_OWN_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
   // The two derived flashes and the choice between them, which is what the measured bar falls back to
   // for a car whose table carries no flash -- 47 of the 85. Spelled out here too, for the same reason.
-  const MIRROR_FLASH = `((${RPMS}) >= (max(${SL('Blink')}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
+  // The blink's fallback is the double 0.0, so the max keeps the last light's own type (#1046).
+  const BLINK = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0.0)';
+  const MIRROR_FLASH = `((${RPMS}) >= (max(${BLINK}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
   const SIMHUB_FLASH = `((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)) and (!(${LAST_GEAR}))`;
   const EITHER_FLASH = `((${MIRROR}) and (${MIRROR_FLASH})) or ((!(${MIRROR})) and (${SIMHUB_FLASH}))`;
   const FLASHES = `(isnull([OpenDash.CarLadderFlashes], false)) = (true)`;
@@ -432,7 +433,7 @@ describe('hero expressions', () => {
       `if(((${RPMS}) > (${SL('First')})) and ((((${RPMS}) - (${SL('First')})) * (5)) > ((4) * ((${SL('Shift')}) - (${SL('First')})))), '#00D96A', '#33383F')`,
     ]);
     // The last band lights together at the last light, and flashes above the blink RPM rather than at redline.
-    const blink = `max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), ${SL('Last')})`;
+    const blink = `max(${BLINK}, ${SL('Last')})`;
     expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if((${RPMS}) >= (${SL('Last')}), '#FF2D46', '#33383F')` });
     expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `((${RPMS}) >= (${blink})) and (!(${LAST_GEAR}))` });
     expect(seg(14).blink).toEqual({ delayMs: 62 });

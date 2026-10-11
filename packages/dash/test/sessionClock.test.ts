@@ -70,6 +70,15 @@ describe('the clock the surfaces bind', () => {
     }
   });
 
+  test('it counts whole seconds down, so a clock a few tenths past the second still reads that second', () => {
+    // SimHub's clock is never a whole number of seconds. With an Int32 clamp in front of it the
+    // seconds were rounded before they were truncated, and the clock ticked over half a second early
+    // (#831), which this evaluator could see only once its `max` answered as NCalc's does (#1046).
+    for (const [secs, reading] of [[59.6, '0:00:59'], [3599.5, '0:59:59'], [5025.9, '1:23:45'], [0.6, '0:00:00']] as const) {
+      expect({ secs, reading: evalNcalc(sessionClock(), game(secs)) }).toEqual({ secs, reading });
+    }
+  });
+
   test('a day exactly is a clock and not the mark, and it is the six cells every clock is cut for', () => {
     // The boundary on purpose rather than in passing. Daytona, Le Mans and the Nurburgring are 86400 s
     // exactly, and `SessionTimeRemain` sits on `SessionTimeTotal` until the clock starts, so a

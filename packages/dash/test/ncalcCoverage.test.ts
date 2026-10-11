@@ -28,7 +28,11 @@
 import { describe, expect, test } from 'bun:test';
 import { readTrace } from '../../../scripts/trace.ts';
 import { composePackages, themesToBuild } from '../src/build.ts';
-import { ncalcEvaluator as E, type Dashboard, type Formula, type Item } from '../src/generator.ts';
+import { ncalcEvaluator as E, stableGuid, type Dashboard, type Formula, type Item } from '../src/generator.ts';
+import { buildFlagBoxProfile } from '../src/leds/index.ts';
+import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
+import { ALL_SHAPES } from '../src/leds/strip.ts';
+import { roundingBounds } from './int32Bounds.ts';
 
 interface Site {
   /** Where the expression lives, for a message a reader can find it by. */
@@ -121,25 +125,45 @@ describe('every expression in a full build, held to the browser evaluator', () =
     expect(failures).toEqual([]);
   });
 
-  test('no max or min has an Int32 literal on its left unless what it bounds is already whole', () => {
-    // Let through: a truncate, which is whole by construction, and another max or min. Those are the
-    // two the build writes on purpose, the tacho's scale in thousands and the split list's first row,
-    // both counts. A max or min on the right is let through because whether it is whole depends on
-    // its own operands, which a walk of the tree cannot type; an inner one with a literal on its left
-    // is still held here in its own turn. Anything else wants `real` on the left, as #831 explains.
-    const whole = (node: E.Node): boolean => node.type === 'call' && ['truncate', 'max', 'min'].includes(node.name.toLowerCase());
+  test('no max or min has a left operand that may be an Int32 against a right one that may have a fraction', () => {
+    // `int32Bounds.ts` says what "may" means. Let through are the bounds that are whole on both
+    // sides, the tacho's scale in thousands (a truncate) and the rev bar's clamp in whole RPM among
+    // them. Anything else wants `real` on the left, as #831 explains, and #1046 is why a nested or
+    // fallen-back Int32 counts as much as a bare literal.
     const failures: string[] = [];
     const seen = new Set<string>();
     for (const site of sites) {
       if (seen.has(site.expression)) continue;
       seen.add(site.expression);
-      for (const node of E.nodesOf(E.parseCached(site.expression).root)) {
-        if (node.type !== 'call' || !['max', 'min'].includes(node.name.toLowerCase())) continue;
-        const [bound, value] = node.args;
-        if (bound?.type !== 'literal' || typeof bound.value !== 'object' || bound.value?.kind !== 'int' || value === undefined || whole(value)) continue;
-        failures.push(describeFailure(site, `${E.print(node)} rounds its right operand to an Int32`));
+      for (const node of roundingBounds(E.parseCached(site.expression).root)) {
+        failures.push(describeFailure(site, `${E.print(node)} may round its right operand to an Int32`));
       }
     }
+    expect(failures).toEqual([]);
+  });
+
+  test('nor does any max or min in the LED profiles, which share the shift lights with the dashes', () => {
+    // A profile's expressions sit in fields of several names, so every string that calls max or min
+    // is taken for one; each has to parse, which is the check that it was an expression after all.
+    const profiles: [string, unknown][] = [
+      ['the flag box', buildFlagBoxProfile('0.0.0-test')],
+      ...ALL_SHAPES.map((shape): [string, unknown] => [`the ${shape.id} strip`, rpmStripProfile(shape, stableGuid(`OpenDash/leds/${shape.id}`), '0.0.0-test')]),
+    ];
+    const failures: string[] = [];
+    const seen = new Set<string>();
+    let found = 0;
+    const visit = (where: string, value: unknown): void => {
+      if (typeof value === 'string') {
+        if (!/\b(max|min)\(/.test(value) || seen.has(value)) return;
+        seen.add(value);
+        found += 1;
+        for (const node of roundingBounds(E.parseCached(value).root)) failures.push(`${where}\n  ${E.print(node)} may round its right operand to an Int32\n  in ${value}`);
+      } else if (value !== null && typeof value === 'object') {
+        for (const child of Object.values(value)) visit(where, child);
+      }
+    };
+    for (const [where, profile] of profiles) visit(where, profile);
+    expect(found).toBeGreaterThan(0);
     expect(failures).toEqual([]);
   });
 

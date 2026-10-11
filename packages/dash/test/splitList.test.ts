@@ -17,6 +17,7 @@ import { opponentCount } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'gap', 'last'];
 
@@ -57,18 +58,20 @@ const FIELD = 24;
  * An NCalc expression of the split, evaluated for a player at `position` in a field of `field` cars,
  * on row `k` of a repeated layer. Nothing in the repository evaluates a binding, so what is
  * evaluated here is only what the split emits: two functions over three readings.
+ *
+ * The three readings are Int32s in SimHub and are written in as whole literals, which NCalc reads as
+ * Int32s too, and the two functions are left to the shared evaluator, whose `max` and `min` answer
+ * in their left operand's type as NCalc's do (#1046).
  */
 const evaluate = (expression: string, position: number, { k = 1, field = FIELD }: { k?: number; field?: number } = {}): number => {
-  const js = expression
+  const ncalc = expression
     .replaceAll(opponentCount(), String(field))
     .replaceAll('getplayerleaderboardposition()', String(position))
-    .replaceAll('repeatindex()', String(k))
-    .replaceAll('max(', 'Math.max(')
-    .replaceAll('min(', 'Math.min(');
+    .replaceAll('repeatindex()', String(k));
   // Whatever is left once the two calls are taken out has to be arithmetic, or the split is emitting
   // something this is quietly reading as a number.
-  if (!/^[\d\s().,+\-*/]+$/.test(js.replaceAll('Math.max', '').replaceAll('Math.min', ''))) throw new Error(`the expression holds something this cannot evaluate: ${js}`);
-  return Number(new Function(`return ${js};`)());
+  if (!/^[\d\s().,+\-*/]+$/.test(ncalc.replace(/\b(max|min)\(/g, '('))) throw new Error(`the expression holds something this cannot evaluate: ${ncalc}`);
+  return Number(evalNcalc(ncalc, {}));
 };
 
 const formula = (item: Item, target: 'Text' | 'Visible'): string => {
