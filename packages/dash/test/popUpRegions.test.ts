@@ -13,17 +13,27 @@
  * never covers the rev bar, the bar of settled values or band D.
  *
  * The faces are built from each theme's anatomy with the house's drawing, which is how the
- * conformance harness builds a test theme: a theme's colours can only be drawn in a process of their
- * own, and the colours move no rectangle. A theme's own drawing that moves a member of the family
+ * conformance harness builds a test theme. A theme's own drawing that moves a member of the family
  * elsewhere, as the Porsche's change notification is drawn in zone C's panel, is checked by the
  * harness against its frame; what is checked here is the house's family over the theme's regions,
  * which is the stricter question, since it asks it of every theme's hero.
+ *
+ * **Each theme is measured in a process of its own.** The family's rectangles are the theme's
+ * regions, but what is drawn inside them is measured, and a theme's overlay changes the face the
+ * figures are set in: the Porsche's are Barlow at normal width and the AiM's are the seven-segment
+ * face, both wider than the house's condensed figures. A fit taken in the default process is one
+ * the theme's package never draws, which is how the Porsche's portrait review was once said to keep
+ * both deltas that its own build sheds (#1047). So the default process checks the themes that draw
+ * in its fonts and starts this file again once for each of the others, as `conformance.test.ts` does.
  */
 import { afterAll, describe, expect, test } from 'bun:test';
-import type { Item, Rect } from '../src/generator.ts';
+import { LAP_REVIEW_PAD_X, LAP_REVIEW_PAD_X_NARROW } from '../src/components/lapReview.ts';
+import type { Item, LayerItem, Rect } from '../src/generator.ts';
 import { contains, overlaps } from '../src/design/geometry.ts';
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
-import { THEMES } from '../src/themes/index.ts';
+import { drawsInThisProcess } from '../src/themes/faces.ts';
+import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
+import { THEME_ID } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, regionsWithoutRevBar, type ZoneLayout } from '../src/zones/index.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme } from './fixtures/gearLeftTheme.ts';
@@ -37,22 +47,29 @@ afterAll(() => {
 
 interface Face {
   name: string;
+  theme: string;
+  /** `1920x480`, the key the tables below are written in. */
+  size: string;
   layout: ZoneLayout;
   regions: Regions;
   revBar: boolean;
   items: Item[];
 }
 
-/** Every face of every theme, in both arrangements. */
-const faces: Face[] = Object.entries(THEMES).flatMap(([id, theme]) =>
-  theme.anatomy.sizes.flatMap((size) => {
+/** The themes this process draws in their own fonts: the others are checked by a process of their own. */
+const here = Object.keys(THEMES).filter(drawsInThisProcess);
+
+/** Every face of every theme this process draws, in both arrangements. */
+const faces: Face[] = here.flatMap((id) =>
+  THEMES[id]!.anatomy.sizes.flatMap((size) => {
     const layout = ZONE_FACES.find((face) => face.width === size.width && face.height === size.height)!;
-    const on = theme.anatomy.regions(layout);
+    const on = THEMES[id]!.anatomy.regions(layout);
     const off = regionsWithoutRevBar(on);
     const offLayout = layoutWithoutRevBar(layout);
+    const key = `${size.width}x${size.height}`;
     return [
-      { name: `${id} ${size.width}x${size.height}`, layout, regions: on, revBar: true, items: faceItems(layout, { regions: on }) },
-      { name: `${id} ${size.width}x${size.height}, rev bar off`, layout: offLayout, regions: off, revBar: false, items: faceItems(offLayout, { regions: off, revBar: false }) },
+      { name: `${id} ${key}`, theme: id, size: key, layout, regions: on, revBar: true, items: faceItems(layout, { regions: on }) },
+      { name: `${id} ${key}, rev bar off`, theme: id, size: key, layout: offLayout, regions: off, revBar: false, items: faceItems(offLayout, { regions: off, revBar: false }) },
     ];
   }),
 );
@@ -107,3 +124,62 @@ describe('the lap review keeps to the body, and says so', () => {
     });
   }
 });
+
+/**
+ * The faces whose lap review draws the lap time alone, by theme, measured in the theme's own fonts.
+ *
+ * Pinned rather than tolerated, the way `conformance.test.ts` pins what a theme gets wrong: a face
+ * listed here that comes to keep its deltas fails, and so does one left out that loses them. The
+ * deltas are the review's floor (`lapReviewFit`), and the house's condensed figures keep it on every
+ * face. A 64 px lap time and two 46 px deltas are 680 px of Barlow at normal width and 808 of the
+ * seven-segment face, and these bodies are narrower than that inside even the tighter padding: the
+ * Porsche's 694, 705 and 582, the AiM's 850, 800 and 600. The Porsche's 800 x 480 and 800 x 286
+ * kept their deltas while the review was clamped to the face rather than to the body, and gave them
+ * up for not covering the settings column and the telltales (#1047).
+ */
+const LAP_TIME_ALONE: Record<string, readonly string[]> = {
+  porsche: ['800x480', '800x286', '600x686'],
+  aim: ['850x480', '800x480', '800x286', '600x686'],
+};
+
+/**
+ * The faces whose review tightens its side padding from the sheet's 32 to 24 to keep its deltas: the
+ * Porsche's 850 x 480, whose 743 px body is one pixel short of them inside the sheet's padding.
+ */
+const NARROW_PADDING: Record<string, readonly string[]> = {
+  porsche: ['850x480'],
+};
+
+describe('the lap review keeps its deltas wherever the face it is drawn in holds them', () => {
+  for (const face of faces) {
+    test(`${face.name}`, () => {
+      const parts = partsOf(face.items, 'lapReview.');
+      const has = (id: string): boolean => parts.some((item) => item.name === `lapReview.${id}.value`);
+      const alone = LAP_TIME_ALONE[face.theme]?.includes(face.size) ?? false;
+      expect({ face: face.name, lap: has('lap'), vsBest: has('vsBest'), vsPrevious: has('vsPrevious') }).toEqual({
+        face: face.name,
+        lap: true,
+        vsBest: !alone,
+        vsPrevious: !alone,
+      });
+      const box = parts.find((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer' && item.name === 'lapReview.box')!;
+      const lap = parts.find((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer' && item.name === 'lapReview.lap.value')!;
+      const narrow = NARROW_PADDING[face.theme]?.includes(face.size) ?? false;
+      expect({ face: face.name, padX: lap.rect.left - box.rect.left }).toEqual({ face: face.name, padX: narrow ? LAP_REVIEW_PAD_X_NARROW : LAP_REVIEW_PAD_X });
+    });
+  }
+});
+
+if (THEME_ID === DEFAULT_THEME_ID) {
+  for (const id of Object.keys(THEMES).filter((each) => !drawsInThisProcess(each))) {
+    test(
+      `the ${id} theme, in a process drawing its fonts`,
+      () => {
+        const run = Bun.spawnSync([process.execPath, 'test', import.meta.path], { env: { ...process.env, [THEME_ENV]: id }, stdout: 'pipe', stderr: 'pipe' });
+        const output = run.exitCode === 0 ? '' : `${run.stdout.toString()}${run.stderr.toString()}`;
+        expect({ theme: id, exit: run.exitCode, output }).toEqual({ theme: id, exit: 0, output: '' });
+      },
+      120_000,
+    );
+  }
+}

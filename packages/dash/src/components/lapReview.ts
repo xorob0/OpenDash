@@ -282,11 +282,17 @@ const rowWidth = (specs: readonly FieldSpec[], gap: number): number =>
  * where the deltas will not fit beside a 116 px lap time, the lap time steps down the density's own
  * ramp to 64 rather than the deltas being dropped, which is what the portrait face at 600 px asks
  * for. Where even that does not fit, the side padding tightens from the sheet's 32 to the 24 under
- * it on the `space` scale, and only then do the deltas go. The Porsche's portrait body is 582 px,
- * ten short of a 64 px lap time and two deltas inside the sheet's padding, and is the one face that
- * ships which takes that step. The last line below is a guard and not a case: no face that ships is
- * narrower than a 64 px lap time and two deltas inside the tighter padding, and the test that walks
- * every theme's faces says so.
+ * it on the `space` scale, and only then do the deltas go.
+ *
+ * How wide those runs are depends on the face a theme sets its figures in, so which faces reach each
+ * step does too. In the house's condensed figures every face keeps the deltas at the sheet's
+ * padding. In the Porsche's Barlow at normal width a 64 px lap time and two deltas are 680 px: its
+ * 850 x 480 body, 743 px, is one pixel short of them inside the sheet's padding and is the one face
+ * that ships which takes the tighter step, and its 800 x 480, 800 x 286 and 600 x 686 bodies are
+ * narrower than them inside either padding and come to the last line below, the lap time alone. So
+ * do the AiM's 850 x 480, 800 x 480, 800 x 286 and 600 x 686, in the seven-segment face. The floor is
+ * the house's; `popUpRegions.test.ts` measures every theme's faces in that theme's own process and
+ * names each face that falls below it.
  */
 export interface LapReviewFit {
   /** The size the lap time is set at: the density's `hero`, or its `big` on a narrow panel. */
