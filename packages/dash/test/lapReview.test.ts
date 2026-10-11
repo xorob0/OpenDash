@@ -36,7 +36,8 @@ import { densityOf } from '../src/second/density.ts';
 import { UNIT_GAP } from '../src/second/field.ts';
 import { monoWidth } from '../src/design/metrics.ts';
 import { CHARS, DELTA_DEADBAND, deltaColour } from '../src/second/values.ts';
-import type { Item, LayerItem, Rect, RectangleItem, TextItem } from '../src/generator.ts';
+import { ncalc, type Item, type LayerItem, type Rect, type RectangleItem, type TextItem } from '../src/generator.ts';
+import { pitAlertOut } from '../src/components/pitAlerts.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, zoneRegions, type ZoneLayout } from '../src/zones/index.ts';
@@ -270,9 +271,16 @@ describe('what the panel may cover', () => {
       const names = items.map((i) => i.name);
       expect(names.indexOf('lapReview')).toBeGreaterThan(names.indexOf('popUp.lap'));
       expect(names.indexOf('lapReview')).toBeGreaterThan(names.indexOf('notice.tc'));
-      // The limiter banner is pushed before the whole family and so is the one thing over a zone
-      // that the review does not take: a driver serving a stop still has to know the limiter is on.
       expect(names.indexOf('lapReview')).toBeGreaterThan(names.indexOf('pitAlert.limiter'));
+    });
+
+    test(`${name} gives way to the pit family rather than covering it`, () => {
+      // The pit family is ranked by condition: the review is pushed after the banner, and on the
+      // nano its 160 px reach it, so it does not open while any state of the family is out. A
+      // driver serving a stop still has to know whether the limiter is on (#1053).
+      // `popUpRegions.test.ts` evaluates it on every face of every theme as each ships.
+      const when = String(reviewOf(items).bindings?.Visible?.formula);
+      expect(when).toContain(ncalc.not(pitAlertOut()));
     });
   }
 });

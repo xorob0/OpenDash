@@ -28,6 +28,9 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test';
 import { LAP_REVIEW_PAD_X, LAP_REVIEW_PAD_X_NARROW } from '../src/components/lapReview.ts';
+import { PIT_ALERTS, pitAlertVisible } from '../src/components/pitAlerts.ts';
+import { FACE_SIZES, lapReviewSettingName } from '../src/contract.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 import type { Item, LayerItem, Rect } from '../src/generator.ts';
 import { contains, overlaps } from '../src/design/geometry.ts';
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
@@ -215,6 +218,86 @@ describe('the lap review keeps its deltas wherever the face it is drawn in holds
       const narrow = NARROW_PADDING[face.theme]?.includes(face.size) ?? false;
       expect({ face: face.name, padX: lap.rect.left - box.rect.left }).toEqual({ face: face.name, padX: narrow ? LAP_REVIEW_PAD_X_NARROW : LAP_REVIEW_PAD_X });
     });
+  }
+});
+
+/**
+ * The lap review gives way to the pit family, on every face as each theme ships it (#1053).
+ *
+ * The review is clamped to the body, and the body is where a theme draws the limiter state of its
+ * own: the Porsche colours the whole of it green or red round the pit speed and the limit, and the
+ * AiM writes `Pit Speed` over zone C. A review pushed after them hid both for its four seconds at the
+ * line, which most pit lanes cross, and on the Porsche's faces and the house's nano its 160 px reach
+ * the banner at the top of the hero as well. So the face is built as the theme ships it and its
+ * conditions are evaluated at a crossing with the review set to `all`, once on the circuit and once
+ * in each state of the family: wherever a layer drawing a state of the family is out, the review is
+ * hidden, drawn under it, or clear of it. Every layer whose Visible is one of the family's states is
+ * asked, which is the house's banner and a theme's own drawing of the limiter alike.
+ */
+describe('as each theme ships, the lap review never covers a state of the pit family', () => {
+  const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
+  const G = 'DataCorePlugin.GameData';
+  /** What a car is doing, as the properties the family reads; the in-car limiter control is present. */
+  const car = (lane: boolean, limiter: boolean, ignition = true, started = ignition): Props => ({
+    [`${G}.IsInPitLane`]: lane ? 1 : 0,
+    [`${G}.PitLimiterOn`]: limiter ? 1 : 0,
+    [`${G}.EngineIgnitionOn`]: ignition ? 1 : 0,
+    [`${G}.EngineStarted`]: started ? 1 : 0,
+    'DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle': 1,
+  });
+  const MOMENTS: { state?: string; car: Props }[] = [
+    { car: car(false, false) },
+    { state: 'ignition', car: car(true, false, false) },
+    { state: 'engine', car: car(true, false, true, false) },
+    { state: 'engage', car: car(true, false) },
+    { state: 'disengage', car: car(false, true) },
+    { state: 'limiter', car: car(true, true) },
+  ];
+  const familyStates = new Map(PIT_ALERTS.map((spec) => [pitAlertVisible(spec.id), spec.id]));
+  const shown = (layer: LayerItem, frame: Props): boolean => Boolean(evalNcalc(String(layer.bindings?.Visible?.formula), frame));
+  const drawnParts = (layer: LayerItem): Exclude<Item, LayerItem>[] => [...walkItems(layer.children)].filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer');
+
+  for (const id of here) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const faceSize = FACE_SIZES.find((f) => f.width === size.width && f.height === size.height)!;
+        const atTheLine: Props = {
+          [`OpenDash.${lapReviewSettingName(faceSize)}`]: 'all',
+          [`${G}.SessionTypeName`]: 'Race',
+          [`${G}.CurrentLapTime`]: 1,
+          [`${G}.LastLapTime`]: 98.4,
+        };
+        const screens = buildThemeFace(id, size, OPTS).built.main.screens.filter((screen) => screen.name.startsWith('Main'));
+        expect(screens.length).toBeGreaterThanOrEqual(2);
+        for (const screen of screens) {
+          const layers = [...walkItems(screen.items)].filter((item): item is LayerItem => item.kind === 'layer');
+          const review = layers.find((layer) => layer.name === 'lapReview')!;
+          const family = layers.filter((layer) => familyStates.has(String(layer.bindings?.Visible?.formula)));
+          // The house's five banners at the least, and a theme's limiter where it draws one.
+          expect(family.length).toBeGreaterThanOrEqual(PIT_ALERTS.length);
+          const reviewParts = drawnParts(review);
+          for (const moment of MOMENTS) {
+            const frame = { ...atTheLine, ...moment.car };
+            const out = family.filter((layer) => shown(layer, frame)).map((layer) => familyStates.get(String(layer.bindings?.Visible?.formula)));
+            const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, state: moment.state ?? 'none' };
+            // The moment is the state it is named for, and only that one.
+            expect({ ...where, out: [...new Set(out)] }).toEqual({ ...where, out: moment.state ? [moment.state] : [] });
+            // On the circuit the crossing opens the review, so the moments in the lane are asking a
+            // question the face would otherwise answer with the review out.
+            if (!moment.state) {
+              expect({ ...where, review: shown(review, frame) }).toEqual({ ...where, review: true });
+              continue;
+            }
+            for (const layer of family.filter((each) => shown(each, frame))) {
+              const hidden = !shown(review, frame);
+              const over = layers.indexOf(layer) > layers.indexOf(review);
+              const clear = drawnParts(layer).every((part) => reviewParts.every((r) => !overlaps(part.rect, r.rect)));
+              expect({ ...where, layer: layer.name, covered: !(hidden || over || clear) }).toEqual({ ...where, layer: layer.name, covered: false });
+            }
+          }
+        }
+      });
+    }
   }
 });
 
