@@ -14,7 +14,9 @@
  * once it does not, and it outranks the estimate wherever a box cannot carry both (#387).
  *
  * "Refuel" is the laps left times the average consumption, less what is in the tank, and never
- * negative. It is caution amber rather than the low-fuel red because it is an instruction to the
+ * negative. In a timed race the laps left are predicted from the time left and the best lap, and
+ * until a lap has been timed there is nothing to multiply, so it draws `--` rather than `0.0`
+ * (#1008). It is caution amber rather than the low-fuel red because it is an instruction to the
  * crew: the red belongs to the level and to the bar under it, and an instruction drawn in it reads
  * as an alarm about the tank rather than as a figure to act on.
  */
@@ -35,7 +37,7 @@ import {
   fuelIsSettled,
   fuelPerLap,
   fuelThisLap,
-  fuelToAdd,
+  fuelToAddText,
   fuelToEndColour,
   fuelToEndDrawn,
   fuelToEndText,
@@ -132,7 +134,7 @@ export const fuel = defineModule('fuel', (ctx) => {
         [
           fld(ctx, 'toAdd', 'Refuel', {
             sample: '12.6',
-            bind: iff(fuelIsSettled(), fmt(fuelToAdd(), '0.0'), str(NO_VALUE)),
+            bind: fuelToAddText(),
             chars: CHARS.fuel,
             fs: d.mid,
             color: ds.color.caution.primary,
