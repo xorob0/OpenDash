@@ -214,9 +214,14 @@ there, as the Int cell of the same row already is, and it carries the word where
 row draws is the first. A class that leads the race keeps it under either setting.
 
 The ± column follows the numbering for the same reason, a places-gained figure being the movement
-of the place the column beside it shows. Counting in class it reads SimHub's `PositionGainClass`
-instead of its `PositionGain`, so that a car which has climbed three places overall and one within
-its own class does not draw the one figure against the other number.
+of the place the column beside it shows, so that a car which has climbed three places overall and
+one within its own class does not draw the one figure against the other number. SimHub publishes a
+class figure, `PositionGainClass`, but counts it from the class place of the first frame it saw the
+car, which for a car the sim had not placed yet is a place SimHub numbered from the driver list, so
+in a practice a car placed fourth in class reads places it never lost (#1022). The column therefore
+reads `PositionGain` alone, which waits for the car's first real place. Counting in class it draws
+that figure where the field is a single class, every class place then being the overall place, and
+in a field of several classes it draws nothing, not even the dash that says a car has not moved.
 
 The round faces read the same setting from `cards/position.ts` and are unaffected, there being no
 rows on a card to filter: the position and the count it is shown out of are both in class, which is
@@ -225,7 +230,8 @@ the reading that setting has always given.
 `packages/dash/test/positionMode.test.ts` holds the two to each other. It evaluates the formulas
 the build writes against a six-car, three-class grid and reads the position column downwards, and
 it reads the race board's own ± cell beside it on a grid whose starting order is not its running
-order. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
+order. `packages/dash/test/classPlacesGained.test.ts` reads the same cell for one car over a
+sequence of frames, from unplaced to placed. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
 against a board whose class is interleaved with another and a lap behind it.
 
 ## What is not drawn, and why

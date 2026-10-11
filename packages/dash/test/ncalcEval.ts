@@ -7,7 +7,8 @@
  * count)`, `timespantoseconds` (seconds are passed as numbers, which is how SimHub's own TimeSpans
  * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `in`, `rootdashboardscreenname`
  * (answered from {@link ROOT_SCREEN}), the leaderboard reads `getplayerleaderboardposition`,
- * `getopponentleaderboardposition_aheadbehind`, `drivercarclass`, `driverclassposition`,
+ * `getopponentleaderboardposition_aheadbehind`, `getopponentleaderboardposition_playerclassonly`,
+ * `repeatindex`, `drivercarclass`, `driverclassposition`,
  * `driverposition`, `driverpositiongain`, `driverpositiongainclass` and `driveravailable` (each answered from the props by its own call, as
  * `drivercarclass(3)`, and null where they leave it out), the comparisons, `and` / `or` / `!`, and
  * the arithmetic. A date is passed as a `Date` and formatted by the hour and
@@ -133,6 +134,8 @@ export function evalNcalc(expression: string, props: Props): unknown {
     driverpositiongainclass: (position: unknown): unknown => called(`driverpositiongainclass(${String(position)})`),
     driveravailable: (position: unknown): unknown => called(`driveravailable(${String(position)})`),
     getopponentleaderboardposition_aheadbehind: (offset: unknown): unknown => called(`getopponentleaderboardposition_aheadbehind(${String(offset)})`),
+    getopponentleaderboardposition_playerclassonly: (place: unknown): unknown => called(`getopponentleaderboardposition_playerclassonly(${String(place)})`),
+    repeatindex: (): unknown => called('repeatindex()'),
     timespantoseconds: (v: unknown): number => Number(v),
     max: Math.max,
     min: Math.min,
