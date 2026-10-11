@@ -841,8 +841,12 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   fastest of the whole field, floored at 0, which no class list or interval can use; `driverbestlap`
   is a TimeSpan from the results' `FastestTime`, left at zero for a car with none. So outside a race
   the Gap and Int columns subtract two best laps themselves (#1040). `SessionTypeName` is iRacing's
-  `SessionType` verbatim: `Practice`, `Open Qualify`, `Lone Qualify`, `Offline Testing`, `Warmup`
-  and `Race` are the names the dash knows; how another sim spells them has not been read.
+  `SessionType` verbatim. The Gap and Int columns read best laps in a session named `Practice`,
+  `Open Practice`, `Lone Practice`, `Qualify`, `Open Qualify`, `Lone Qualify`, `Offline Testing` or
+  `Warmup`, compared in capitals, and distance in `Race` and in any other name or none. `Qualify` is
+  the word the Porsche's strip already reads as qualifying, and `Open Practice` and `Lone Practice`
+  come from the fuel margin's tests and #1029 rather than a recording, which has only shown
+  `Lone Qualify` and `Race`. How another sim spells them has not been read.
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

@@ -145,7 +145,17 @@ describe('a practice, which is ordered by best lap', () => {
 });
 
 describe('every session that is not a race reads the same', () => {
-  for (const session of ['Practice', 'Open Qualify', 'Lone Qualify', 'Qualify', 'Offline Testing', 'Warmup', 'PRACTICE']) {
+  for (const session of [
+    'Practice',
+    'Open Practice',
+    'Lone Practice',
+    'Open Qualify',
+    'Lone Qualify',
+    'Qualify',
+    'Offline Testing',
+    'Warmup',
+    'PRACTICE',
+  ]) {
     test(session, () => {
       expect(gaps(session, 'overall', [2, 3])).toEqual(['+0.4', '+0.6']);
     });

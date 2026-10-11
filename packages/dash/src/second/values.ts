@@ -722,8 +722,10 @@ export const referenceGap = (idx: Expr): Expr => iff(eq(idx, num(1)), isnull(dri
 /**
  * The sessions whose leaderboard is ordered by best lap rather than on the road, in the words
  * iRacing names them: SimHub's `SessionTypeName` passes iRacing's `SessionType` through unchanged.
- * `Qualify` is the word the Porsche's strip already reads as qualifying. They are compared in capitals,
- * so a sim that writes `PRACTICE` reads the same; no committed trace carries another sim's spelling.
+ * `Qualify` is the word the Porsche's strip already reads as qualifying, and `Open Practice` and
+ * `Lone Practice` are here on the word of the fuel margin's tests and of #1029, which treat them as
+ * names iRacing writes, rather than of a recording. They are compared in capitals, so a sim that
+ * writes `PRACTICE` reads the same; no committed trace carries another sim's spelling.
  *
  * A list of the sessions that are not races, and not the one word `Race`, because the two ways of
  * being wrong are not alike. A race measured by best lap would draw small, believable gaps that are
@@ -732,7 +734,16 @@ export const referenceGap = (idx: Expr): Expr => iff(eq(idx, num(1)), isnull(dri
  * which is the reading the columns always gave and is right in every race. iRacing's heat events
  * are among those words.
  */
-export const BEST_LAP_SESSIONS = ['Practice', 'Qualify', 'Open Qualify', 'Lone Qualify', 'Offline Testing', 'Warmup'] as const;
+export const BEST_LAP_SESSIONS = [
+  'Practice',
+  'Open Practice',
+  'Lone Practice',
+  'Qualify',
+  'Open Qualify',
+  'Lone Qualify',
+  'Offline Testing',
+  'Warmup',
+] as const;
 
 /**
  * Whether the session's leaderboard is ordered by best lap, which {@link BEST_LAP_SESSIONS} lists,
