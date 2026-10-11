@@ -29,7 +29,7 @@ import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, LAP_OF_TOTAL_WIDEST, average5, clock, lapOfTotal, player, settledFuelTimeLeft } from '../second/values.ts';
+import { CHARS, LAP_OF_TOTAL_WIDEST, LAP_WIDEST, average5, clock, lapOfTotal, player, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, isnull, num, driver, timespanToSeconds, game } = ncalc;
@@ -60,8 +60,8 @@ export const stint = defineModule('stint', (ctx) => {
       ),
       fieldsRow(
         [
-          fld(ctx, 'stintLaps', 'Stint laps', { sample: '12', bind: fmt(stintLaps, '0'), chars: CHARS.position, fs: d.mid }),
-          fld(ctx, 'completed', 'Laps completed', { sample: '12', bind: fmt(completed, '0'), chars: CHARS.position, fs: d.mid }),
+          fld(ctx, 'stintLaps', 'Stint laps', { sample: '12', widest: LAP_WIDEST, bind: fmt(stintLaps, '0'), chars: CHARS.lap, fs: d.mid }),
+          fld(ctx, 'completed', 'Laps completed', { sample: '12', widest: LAP_WIDEST, bind: fmt(completed, '0'), chars: CHARS.lap, fs: d.mid }),
           fld(ctx, 'stops', 'Stops', { sample: '1', bind: fmt(stops, '0'), chars: CHARS.position, fs: d.mid }),
           fld(ctx, 'lastStop', 'Last stop', {
             sample: '24.3',

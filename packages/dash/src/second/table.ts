@@ -676,8 +676,11 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
   s1: { header: 'S1', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's1', '28.41', carSector(ctx.idx, 1), CHARS.sector, { fs: ctx.type.minor }) },
   s2: { header: 'S2', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's2', '41.07', carSector(ctx.idx, 2), CHARS.sector, { fs: ctx.type.minor }) },
   s3: { header: 'S3', align: 'right', width: (row) => cellColumn(drawnWidth(row, 72, 58), row.type.minor, CHARS.sector), cell: (ctx) => cellValue(ctx, 's3', '33.42', carSector(ctx.idx, 3), CHARS.sector, { fs: ctx.type.minor }) },
-  /** No board draws it: the canvas's three pages spend the room on Nat, Licence and iRating instead. */
-  stint: { header: 'Stint', align: 'right', width: ({ type }) => cellColumn(52, type.minor, { digits: 2, specials: 0 }), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor }) },
+  /**
+   * No board draws it: the canvas's three pages spend the room on Nat, Licence and iRating instead.
+   * Cut for a lap count all the same, so the board that adds it does not clip a stint of 100 laps. #596.
+   */
+  stint: { header: 'Stint', align: 'right', width: ({ type }) => cellColumn(52, type.minor, CHARS.lap), cell: (ctx) => cellValue(ctx, 'stint', '12', carStintLaps(ctx.idx), CHARS.lap, { fs: ctx.type.minor }) },
   pit: { header: 'Pit', align: 'right', width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 26), 44), cell: cellPit },
   tyre: {
     header: 'Tyre',

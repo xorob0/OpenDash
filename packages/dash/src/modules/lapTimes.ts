@@ -18,6 +18,7 @@ import { densityOf } from '../second/density.ts';
 import { SECTORS, sectorColour } from '../second/sectors.ts';
 import {
   CHARS,
+  LAP_WIDEST,
   average5,
   bestLap,
   carPosition,
@@ -83,7 +84,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
     fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: lead, color: ds.purpose.lap.sessionBest }),
     fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: lead }),
   ];
-  const laps = fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid });
+  const laps = fld(ctx, 'laps', 'Laps', { sample: '12', widest: LAP_WIDEST, bind: fmt(currentLap(), '0'), chars: CHARS.lap, fs: d.mid });
   const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid });
   /**
    * The canvas's "Delta to your best" is true of two of the three references, the session best and
@@ -128,7 +129,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
             drawn: positionDrawn(player()),
           }),
-          fld(ctx, 'stintLap', 'Stint lap', { sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', player()), num(0)), '0'), chars: CHARS.position, fs: d.mid }),
+          fld(ctx, 'stintLap', 'Stint lap', { sample: '12', widest: LAP_WIDEST, bind: fmt(isnull(driver('lapsdonesincelastpitout', player()), num(0)), '0'), chars: CHARS.lap, fs: d.mid }),
         ],
         ctx,
         columns,

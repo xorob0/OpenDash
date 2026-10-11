@@ -69383,7 +69383,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "TextWrapping": "NoWrap",
           "Left": 52,
           "Top": 44,
-          "Width": 60,
+          "Width": 66,
           "Height": 42,
           "Visible": true,
           "BackgroundColor": "#00FFFFFF",

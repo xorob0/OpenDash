@@ -149,6 +149,18 @@ export const CHARS = {
   pressure: { digits: 4, specials: 1 } as Chars,
   /** `999` */
   count: { digits: 3, specials: 0 } as Chars,
+  /**
+   * `142`: a lap count, whether the lap you are on, the laps done, the laps left or the laps of a
+   * stint. Three digits, because a hundred-lap oval and a day-long race both run past 99, and the
+   * position's two cells, which these fields used to borrow, cut the last digit of lap 100. #596.
+   */
+  lap: { digits: 3, specials: 0 } as Chars,
+  /**
+   * `999x`: the incident count and the `x` after it, which takes a full cell of its own. The count's
+   * three cells left the `x` nowhere to go, and band D's corner, which was cut from them, clipped
+   * from the hundredth incident of a long race. #596.
+   */
+  incidents: { digits: 4, specials: 0 } as Chars,
   /** `2.4k` */
   rating: { digits: 4, specials: 1 } as Chars,
   /** `100` per cent, and the input readouts. */
@@ -1074,6 +1086,18 @@ export const estimatedRaceLaps = (): Expr => iff(gt(totalLaps(), num(0)), totalL
  * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
  */
 export const LAP_OF_TOTAL_WIDEST = '999 / 999';
+
+/**
+ * The widest lap count {@link CHARS.lap} is budgeted for, and what a lap field declares as its
+ * `widest` so the fit tests measure the long end rather than the `12` of its sample. #596.
+ */
+export const LAP_WIDEST = '999';
+
+/** The widest `/ 30` a lap count is followed by: the race's length, in three digits. #596. */
+export const LAP_TOTAL_WIDEST = '/ 999';
+
+/** The widest incident count, `x` and all, that {@link CHARS.incidents} is budgeted for. #596. */
+export const INCIDENTS_WIDEST = '999x';
 
 /**
  * `12 / 43`: the lap you are on, out of the race's estimated length.
