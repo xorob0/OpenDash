@@ -20,6 +20,7 @@ import { CHIP_CHARS, CHIP_WIDEST } from '../src/second/chip.ts';
 import { CLASS_AND_PLACE_WIDEST, classAndPlace, NO_VALUE, player } from '../src/second/values.ts';
 import { expressionsIn, walkItems } from '../src/walk.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
+import { CLASS_CUTS } from './classNames.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const { num } = ncalc;
@@ -64,36 +65,13 @@ describe('the helper', () => {
   });
 });
 
-/**
- * Class names a driver meets, as a sim reports them: iRacing's multiclass classes, the single-make
- * series that race as a class named after the car, and the classes Assetto Corsa and ACC report.
- * The helper keeps the first four letters of whichever it is handed, so this list, and not the
- * chip's `LMP2`, is what the widest has to hold. A class found on a rig that the list lacks belongs
- * here, and the test then says whether the declaration still holds it.
- */
-const CLASS_NAMES = [
-  // Multiclass classes.
-  'GTP', 'LMP2', 'LMP3', 'LMDh', 'Hypercar', 'GTE', 'GTD', 'GT3', 'GT3 Class', 'GT4', 'GT4 Class', 'TCR', 'IMSA',
-  // Single-make classes, named after the car or its series.
-  'Porsche 911 Cup', 'PCup', 'Mustang', 'Ford GT', 'Mercedes W13', 'Mercedes-AMG', 'McLaren MP4-30', 'BMW M4 GT4',
-  'BMW M Hybrid V8', 'Lamborghini', 'Ferrari 296 GT3', 'Aston Martin', 'Audi RS 3 LMS', 'Cadillac V-Series.R',
-  'Acura ARX-06', 'Toyota GR86', 'Mazda MX-5 Cup', 'Global Mazda MX-5 Cup', 'MX-5 Cup', 'Chevrolet Camaro',
-  'Supercars', 'Formula Vee', 'Formula Renault', 'Super Formula', 'Dallara IR18', 'Dallara P217', 'Skip Barber',
-  'Ray FF1600', 'Williams FW31', 'Lotus 79', 'Radical SR8', 'Ligier JS P320', 'Porsche 963', 'Kia Optima',
-  'Renault Clio', 'Volkswagen Jetta', 'VW Beetle', 'Mini Cooper', 'NASCAR Cup', 'Xfinity', 'ARCA Menards',
-  'Legends', 'Late Model', 'Street Stock', 'Modified', 'Sprint Car', 'Silver Crown', 'Midget', 'Pro Mazda',
-  'Indy Pro 2000', 'USF 2000', 'HPD',
-  // Assetto Corsa's and ACC's classes.
-  'Race', 'Street', 'Drift', 'Vintage', 'Touring', 'Prototype', 'GT2', 'CUP', 'ST', 'CHL', 'TCX',
-];
-
 describe('the widest it declares', () => {
-  // The cut the helper makes, so a class longer than four letters is measured as it is drawn.
-  const cuts = [...new Set(CLASS_NAMES.map((name) => name.slice(0, CHIP_CHARS).toUpperCase()))];
   // The face is proportional, so the widest place is not the longest-looking one: its `4` is the
   // widest digit Barlow Condensed has, which is why the bar's `LMP2 · P24` was a pixel short.
   const places = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE];
-  const readings = cuts.flatMap((cut) => places.map((place) => `${cut} · P${place}`));
+  // Every class name a driver meets, as the helper cuts it, so a class longer than four letters is
+  // measured as it is drawn. The list is `classNames.ts`'s, which the blue flag band reads as well.
+  const readings = CLASS_CUTS.flatMap((cut) => places.map((place) => `${cut} · P${place}`));
 
   test('is a reading the helper draws for a real class, not a made-up bound', () => {
     expect(readings).toContain(CLASS_AND_PLACE_WIDEST);

@@ -13,7 +13,7 @@ import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts'
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
-import { CHIP_WIDEST, chipText } from './chip.ts';
+import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
@@ -801,14 +801,45 @@ export const carBehind = (): Expr => neighbour(1);
 export const carBehindClass = (): Expr => iff(carAvailable(carBehind()), chipText(carClass(carBehind())), str(''));
 
 /**
- * `P4 LMP2`: the position of the car behind and its class, or the empty string when there is
- * nothing behind. The position honours PositionMode, as every position OpenDash draws does.
+ * `P4 LMP2`: the position of the car behind and its class, `P-- LMP2` before the sim has placed
+ * it, or the empty string when there is nothing behind. The position honours PositionMode, as
+ * every position OpenDash draws does.
+ *
+ * The place is {@link positionLabelled}'s and not a second formatting of {@link carPosition}. It
+ * was one, and it asked nothing first, so on the formation lap and in a practice session before
+ * anyone had a time, which is where a blue flag is most often waved for nothing, the band read
+ * `BLUE · P0 GT3` while every other position on the face read `P--` (#931).
+ *
+ * A car with no class name reads its place alone, `P4`, as {@link classAndPlace} does, rather than
+ * a place with a space after it that a centred band would set half a space off its middle.
  */
-export const carBehindPositionClass = (): Expr =>
-  iff(carAvailable(carBehind()), concat(str('P'), fmt(carPosition(carBehind()), '0'), str(' '), chipText(carClass(carBehind()))), str(''));
+export const carBehindPositionClass = (): Expr => {
+  const car = carBehind();
+  const cut = chipText(carClass(car));
+  return iff(carAvailable(car), concat(positionLabelled(car), iff(eq(cut, str('')), str(''), concat(str(' '), cut))), str(''));
+};
 
-/** The widest `carBehindPositionClass` can draw: a two-digit place and the widest chip. */
-export const WIDEST_BEHIND_POSITION_CLASS = `P99 ${CHIP_WIDEST}`;
+/**
+ * The widest class cut the blue flag band draws for the car behind: `LAMB`, from Lamborghini.
+ *
+ * Not the chip's `LMP2`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: {@link chipText}
+ * keeps whatever four letters a class name starts with, and in the band's Barlow Bold fourteen real
+ * cuts are wider than LMP2's, `LAMB`, `MCLA`, `ARCA` and `MAZD` the widest of them (#931). It is not
+ * `MUST` either, which is the widest in the data face {@link classAndPlace} is set in and not in
+ * this one. `alertBand.test.ts` measures every cut of `classNames.ts` against it.
+ */
+export const WIDEST_BEHIND_CLASS = 'LAMB';
+
+/**
+ * The widest `carBehindPositionClass` can draw: a two-digit place and the widest class cut.
+ *
+ * `44` and not `99`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: the band is set in a
+ * proportional face, whose `4` is the widest digit it has. The placeholder `--` is narrower than
+ * either, so the place before a car is placed draws inside the same box. The class is
+ * {@link WIDEST_BEHIND_CLASS} and not the chip's `LMP2`, which a Lamborghini or a McLaren behind
+ * drew past.
+ */
+export const WIDEST_BEHIND_POSITION_CLASS = `P44 ${WIDEST_BEHIND_CLASS}`;
 
 // --- Session, car and environment -----------------------------------------------------------
 
