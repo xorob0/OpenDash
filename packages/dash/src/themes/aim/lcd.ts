@@ -8,7 +8,8 @@
  *     already carries.
  *   - A figure is already in the seven-segment face, the overlay having made it the data face, so its
  *     cells are the house's own; a figure laid in cells gets its ghost behind it, every cell of its
- *     widest string as an `8`.
+ *     widest string as an `8`, and stands on it cell for cell, right-aligned where that widest has
+ *     another shape than its sample.
  *   - A text in the house's label face is set in the 14-segment face in capitals, at four fifths of the
  *     house's size, which is the height its capitals take, and smaller only where the box asks for it.
  *     A name the house cut to its cell stays cut there: the segment cell is narrower than the widest
@@ -121,6 +122,19 @@ function captionOf(item: TextItem): TextItem {
   return text === undefined ? set : withMoreBindings(set, { Text: spaced ? spacedWordsExpr('DSEG14Regular', bound(text)) : bound(text) });
 }
 
+/**
+ * A figure that declares a widest of another shape than its sample, as a delta does that is cut for
+ * `−99.99` and ordinarily draws `+1.03`, is set right-aligned, and its ghost with it. Left-aligned,
+ * the ordinary reading starts at the ghost's first cell and its point lands a cell short of the
+ * ghost's; right-aligned, every reading to the places of the sample stands on its ghost cell for
+ * cell, as the readings of the modules do (`themes/aim/modules.ts`). The house cuts such a box to
+ * its widest, so the ghost fills it either way and nothing moves but the reading inside it (#886).
+ */
+function onItsGhost(item: TextItem): TextItem {
+  if (!item.monospace || item.widest === undefined || item.hAlign === 'right' || ghostOf(item.widest) === ghostOf(item.text)) return item;
+  return { ...item, hAlign: 'right' };
+}
+
 function ghostFor(item: TextItem): TextItem | undefined {
   if (!item.monospace) return undefined;
   const ghost = ghostOf(item.widest ?? item.text);
@@ -157,8 +171,9 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
           },
           { TextColor: lit?.when === undefined ? undefined : iff(lit.when, str(ground), str(ink)) },
         );
-        const ghost = lit ? undefined : ghostFor(coloured);
-        return ghost ? [ghost, coloured] : [coloured];
+        const standing = lit ? coloured : onItsGhost(coloured);
+        const ghost = lit ? undefined : ghostFor(standing);
+        return ghost ? [ghost, standing] : [coloured];
       }
       case 'rect': {
         const border = plain.border ? { ...plain.border, color: ink, colorBinding: undefined } : undefined;
