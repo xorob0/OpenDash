@@ -28,7 +28,10 @@ pit alerts are drawn in, the hero the pop-ups, the change notifications and the 
 centred on, and the body a full-screen flag takes. The default theme returns the rectangles of
 `packages/dash/src/zones/faces/*.ts` as they are, so the tables of this section remain its data,
 whereas another theme may move a region or go without the bar while every zone keeps its whole
-catalogue (ADR 0015).
+catalogue (ADR 0015). The pit alerts' rectangle is inside the hero on the house's faces and the
+Porsche's, and the pop-ups and the change notifications keep clear of it: where a box centred on a
+theme's short hero would cover the banner, as on the Porsche's 1280 × 400 and 600 × 686, it is
+centred on the part of the hero the banner leaves instead (#1052).
 
 Under the default theme, the same five parts are on every rectangular face, and only their sizes
 change.

@@ -31,7 +31,7 @@ import { LAP_REVIEW_PAD_X, LAP_REVIEW_PAD_X_NARROW } from '../src/components/lap
 import type { Item, LayerItem, Rect } from '../src/generator.ts';
 import { contains, overlaps } from '../src/design/geometry.ts';
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
-import { drawsInThisProcess } from '../src/themes/faces.ts';
+import { buildThemeFace, drawsInThisProcess } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -104,6 +104,54 @@ describe('the pop-ups and the change notifications keep to the hero', () => {
         }
       }
     });
+  }
+});
+
+/**
+ * The pit banner is inside the hero on every face, at the top of zone A on the house's and of the
+ * gear's tile on the Porsche's, and it is the one thing there with a state of its own: a pop-up
+ * centred on a short hero once covered its bottom on the Porsche's 1280 x 400 and 600 x 686, and on
+ * the portrait face the lower half of `Engage limiter` with it (#1052). Asked of the family over the
+ * theme's regions, and again of the face as the theme ships it, where the banner is the one the face
+ * draws and a theme's own notifications are drawn where the theme puts them.
+ */
+describe('the pop-ups and the change notifications keep clear of the pit banner', () => {
+  for (const face of faces) {
+    test(`${face.name}`, () => {
+      const banner = regionRect(face.regions, 'pitAlert');
+      const parts = [...partsOf(face.items, 'popUp.'), ...partsOf(face.items, 'notice.')];
+      expect(parts.length).toBeGreaterThan(0);
+      for (const item of parts) {
+        if (item.kind === 'layer') continue;
+        expect({ face: face.name, item: item.name, rect: item.rect, banner, covered: overlaps(banner, item.rect) }).toMatchObject({ covered: false });
+      }
+    });
+  }
+});
+
+describe('as each theme ships, no pop-up or change notification covers the pit banner the face draws', () => {
+  const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
+  for (const id of here) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const built = buildThemeFace(id, size, OPTS).built.main;
+        const screens = built.screens
+          .map((screen) => ({ screen: screen.name, items: [...walkItems(screen.items)].filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer') }))
+          .filter(({ items }) => items.some((item) => item.name.startsWith('pitAlert.')));
+        // Both arrangements, the rev bar on and off, each with its own banner.
+        expect(screens.length).toBeGreaterThanOrEqual(2);
+        for (const { screen, items } of screens) {
+          const banners = items.filter((item) => item.name.startsWith('pitAlert.'));
+          const family = items.filter((item) => /^(popUp|notice)\./.test(item.name));
+          expect(family.length).toBeGreaterThan(0);
+          for (const item of family) {
+            for (const banner of banners) {
+              expect({ face: `${id} ${size.width}x${size.height}`, screen, item: item.name, rect: item.rect, banner: banner.name, covered: overlaps(banner.rect, item.rect) }).toMatchObject({ covered: false });
+            }
+          }
+        }
+      });
+    }
   }
 });
 

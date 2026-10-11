@@ -23,7 +23,7 @@ import { rule } from '../elements/rule.ts';
 import { flagCorners, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { pitAlerts } from '../components/pitAlerts.ts';
-import { popUps } from '../components/popUp.ts';
+import { popUpRoom, popUps } from '../components/popUp.ts';
 import { changeNotifications } from '../components/changeNotification.ts';
 import { rect } from '../design/geometry.ts';
 import { idleScreen } from '../idle.ts';
@@ -171,16 +171,19 @@ export function faceItems(
 
   // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
   // driver can give up for the three seconds a lap time is worth more than either. The box is
-  // centred on that rectangle rather than placed, so it clears the limiter banner at the top of the
-  // column, the bar of settled values above it and band D below, where a flag has the better claim
-  // on the same sixty pixels. Drawn after the limiter, which is the only other thing over a zone.
+  // centred on that rectangle rather than placed, which keeps it off the bar of settled values above
+  // it and band D below, where a flag has the better claim on the same sixty pixels. The limiter
+  // banner is inside the hero, and a theme whose hero is short brings a centred box up over it, so
+  // the box is centred on the part of the hero the banner leaves wherever that happens (#1052).
+  // Drawn after the limiter, which is the only other thing over a zone.
   const hero = regionRect(regions, 'hero');
-  items.push(...restyled(popUps(hero, 'popUp'), 'outline'));
+  const room = popUpRoom(hero, regionRect(regions, 'pitAlert'));
+  items.push(...restyled(popUps(room, 'popUp'), 'outline'));
 
   // And the smaller box of the same family, on the same rectangle: a car setting that has just
   // moved, for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up
   // inside the component, so a lap time at the line is never covered by a click of traction control.
-  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(hero, 'notice'), 'outline')));
+  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(room, 'notice'), 'outline')));
 
   // The largest of the family, last, and on the same rectangle again: the debrief of the lap just
   // finished, for the four seconds after the line.

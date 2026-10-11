@@ -34,6 +34,7 @@ import {
   popUp,
   popUpFit,
   popUpFrame,
+  popUpRoom,
   popUpVisible,
   popUps,
   type PopUpSpec,
@@ -319,6 +320,35 @@ describe('the box covers the hero and nothing that carries a state of its own', 
       }
     });
   }
+
+  test('every house face centres the family on zone A itself, the banner being clear of it there', () => {
+    for (const face of ZONE_FACES) {
+      for (const layout of [face, layoutWithoutRevBar(face)]) {
+        expect({ face: face.folder, room: popUpRoom(layout.zones.zoneA, layout.zones.pitLimiter) }).toEqual({ face: face.folder, room: layout.zones.zoneA });
+      }
+    }
+  });
+
+  test('a hero too short to clear the banner centres the box on what the banner leaves of it (#1052)', () => {
+    // The Porsche's 600 x 686 gear tile and its banner: centred on the tile the box began at 117,
+    // over the banner's last 12 px.
+    const hero = rect(12, 95, 576, 164);
+    const banner = rect(15, 99, 570, 30);
+    expect(overlaps(popUpFrame(hero), banner)).toBe(true);
+    const room = popUpRoom(hero, banner);
+    expect(room).toEqual(rect(12, 129, 576, 130));
+    const frame = popUpFrame(room);
+    expect(frame).toEqual(rect(20, 134, 560, 120));
+    expect({ inside: contains(hero, frame), covered: overlaps(frame, banner) }).toEqual({ inside: true, covered: false });
+  });
+
+  test('where the banner leaves less than the box, the box takes what it leaves, and the taller side', () => {
+    const hero = rect(0, 0, 300, 140);
+    // Below the banner 90 px, above it 20: the box goes below and is 90 tall.
+    expect(popUpFrame(popUpRoom(hero, rect(0, 20, 300, 30)))).toEqual(rect(0, 50, 300, 90));
+    // A banner at the foot of the hero puts the room above it.
+    expect(popUpFrame(popUpRoom(hero, rect(0, 110, 300, 30)))).toEqual(rect(0, 0, 300, 110));
+  });
 
   test('every face draws the whole catalogue, each behind its own Visible', () => {
     for (const face of ZONE_FACES) {

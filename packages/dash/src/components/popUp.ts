@@ -36,7 +36,7 @@ import type { Hex, Item, LayerItem, Rect, TextItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { rect, roundRect } from '../design/geometry.ts';
+import { overlaps, rect, roundRect } from '../design/geometry.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -195,6 +195,29 @@ export function popUpFrame(hero: Rect): Rect {
   const width = Math.min(POP_UP_WIDTH, hero.width);
   const height = Math.min(POP_UP_HEIGHT, hero.height);
   return roundRect({ left: hero.left + (hero.width - width) / 2, top: hero.top + (hero.height - height) / 2, width, height });
+}
+
+/**
+ * The rectangle the family is centred on: the hero, or the part of it the pit banner leaves where
+ * a box centred on the whole hero would cover the banner.
+ *
+ * The banner is the one thing inside the hero with a state of its own. On the house face it sits at
+ * the top of zone A and a box centred on the zone clears it on every face, so the hero is the room
+ * there and nothing moves. A theme can put it where a short hero brings the box up over it: the
+ * Porsche draws it inside the gear's tile, and on its 1280 x 400 and 600 x 686 faces a pop-up
+ * centred on the tile covered the banner's bottom, on the portrait face the lower half of
+ * `Engage limiter` with it, for as long as low fuel was flagged in the pit lane (#1052). Where that
+ * happens the room is the hero below the banner, or above it where that is the taller, and the box
+ * is centred there and no taller than it. The pop-up's frame decides for the change notification
+ * too, so the two are centred on one rectangle and the notification stays inside the pop-up's frame.
+ */
+export function popUpRoom(hero: Rect, banner: Rect): Rect {
+  if (!overlaps(popUpFrame(hero), banner)) return hero;
+  const heroBottom = hero.top + hero.height;
+  const bannerBottom = banner.top + banner.height;
+  const below = rect(hero.left, bannerBottom, hero.width, Math.max(0, heroBottom - bannerBottom));
+  const above = rect(hero.left, hero.top, hero.width, Math.max(0, banner.top - hero.top));
+  return below.height >= above.height ? below : above;
 }
 
 /** The items of one pop-up, behind the Visible expression that ranks it against the others. */
