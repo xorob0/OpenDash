@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { charsThatFit, measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { DATA_FACE, LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
+import { DATA_FACE, LINE_SPACING, boxSlack, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   COMPANION_PAGE_SETTING,
   MODULE_CATALOGUE,
@@ -35,7 +35,7 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox, densityOf, grownAtMost } from '../src/second/density.ts';
-import { CHARS, CORNERS, type Corner } from '../src/second/values.ts';
+import { CHARS, CORNERS, classAndPlace, player, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
@@ -1383,11 +1383,49 @@ describe('a value is drawn from its budget and not from its sample', () => {
       expect(value.rect.width).toBeLessThan(monoWidth(cells('SemiBold', 46), CHARS.classPosition));
     });
 
-    test('and is refused without a widest, with a follower, or with a sample wider than its widest', () => {
-      expect(() => field(run({}), 0, 200, 'companion')).toThrow(/probe.*proportional.*declares none/);
+    test('and is refused bound without a widest, with a follower, or with a sample wider than its widest', () => {
+      expect(() => field(run({ bind: classAndPlace(player()) }), 0, 200, 'companion')).toThrow(/probe.*declares no widest/);
       expect(() => field(run({ widest: 'LMP2 · P44', follower: { text: 'L' } }), 0, 200, 'companion')).toThrow(/probe.*follower/);
       expect(() => field(run({ sample: 'WWWW · P44', widest: 'LMP2 · P44' }), 0, 200, 'companion')).toThrow(/probe.*WWWW.*wider/);
     });
+  });
+});
+
+/**
+ * A word the sim writes is not a number, and is drawn and measured as a word (#1029).
+ *
+ * The session page cut its Session field in eight cells for `Race`, and iRacing names a qualifying
+ * session `Lone Qualify`, which was drawn `Lone Qua`. A word is set in the face's advances and its
+ * box is the widest reading the binding can draw, so the width the field asks of its row is that
+ * reading's.
+ */
+describe('a word is drawn from its widest reading, in the advances of its face', () => {
+  const word = (value: Partial<FieldSpec['value']>): FieldSpec => ({
+    name: 'probe',
+    label: 'Session',
+    value: { sample: 'Race', chars: CHARS.sessionName, fs: 46, proportional: true, ...value },
+  });
+
+  test('the box holds the widest reading and is not monospaced', () => {
+    const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.monospace).toBeUndefined();
+    expect(value.rect.width).toBeGreaterThan(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46));
+  });
+
+  // The field's width caps the value's box, so a word measured to its last advance and handed on as
+  // that width took `numeral`'s slack back off: the companion's Session box held `Offline Testing`
+  // with 0.06 px to spare, and WPF clips a box cut to the exact text.
+  test('and keeps the slack every measured box is given past it', () => {
+    const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46)) + boxSlack(46));
+  });
+
+  test('a bound word that declares no widest is refused, since its sample is the short end', () => {
+    expect(() => field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]' }), 0, 200, 'companion')).toThrow(/probe.*declares no widest/);
+  });
+
+  test('and a word takes no follower, which is placed from the end of cells', () => {
+    expect(() => field(word({ widest: 'Offline Testing', follower: { text: 'L' } }), 0, 200, 'companion')).toThrow(/probe.*no follower/);
   });
 });
 

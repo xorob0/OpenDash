@@ -13,7 +13,7 @@ import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { DATA_FACE, boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -70,14 +70,16 @@ export interface FieldValue {
    */
   widest?: string;
   /**
-   * Set in the face's own advances rather than in cells, for the one kind of value that is a run of
-   * text and not a number: a class and the place after it, `LMP2 · P4`. The letters of a class name
-   * are not digits, and `M` and `W` overrun a digit cell (`font.cell.excluded`), so a run that holds
-   * them cannot be drawn in cells at all.
+   * A word rather than a number, set in the data face's own advances rather than in cells, and
+   * measured by `widest`, which a bound word is required to declare.
    *
-   * The box is then cut from {@link FieldValue.widest}, which a proportional value has to declare,
-   * and `chars` is not what it is measured by. It takes no follower: a follower is placed after the
-   * figure by counting cells, and a proportional run has none to count.
+   * Rule 19 keeps out of a cell any glyph whose ink overruns it, and a word the sim writes can be
+   * made of those: the session's name can be `Warmup`, and a class name can be `LMP2`, whose `M`
+   * overruns a digit cell (`font.cell.excluded`), so a class and the place after it, `LMP2 · P4`,
+   * is set this way too. Cut in cells, a word also takes a cell per letter whatever the letter, so
+   * `Offline Testing` is a third wider in cells than it draws. `chars` is then what it would take in
+   * cells and is not what it is measured by, as on the bar's own words. A word carries no follower,
+   * which is placed from the end of cells.
    */
   proportional?: boolean;
   /** Font size; a density size, e.g. `d.big`. */
@@ -193,6 +195,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
  * because the sample is what the author drew.
  */
 export function valueCells(spec: FieldSpec, mono: Monospace): number {
+  if (spec.value.proportional) return wordWidth(spec);
   const budget = monoWidth(mono, spec.value.chars);
   const drawn = charsOfText(spec.value.sample, mono);
   if (monoWidth(mono, drawn) > budget) {
@@ -204,24 +207,35 @@ export function valueCells(spec: FieldSpec, mono: Monospace): number {
 }
 
 /**
- * The width a value's box is cut from: its cells, or for a proportional value the advances of the
- * widest string it declares.
- *
- * A proportional value is refused without a `widest`, with a follower, or with a sample wider than
- * what it declares, each for the reason `valueCells` refuses a sample past its budget: the box is a
- * declaration, and a value that cannot say how wide it draws has nothing to cut one from.
+ * The width a value's box is cut from: its cells, or for a word the advances of the widest reading
+ * it declares.
  */
 export function valueBudget(spec: FieldSpec): number {
-  const weight = spec.value.weight ?? 'SemiBold';
-  if (!spec.value.proportional) return valueCells(spec, cells(weight, spec.value.fs));
-  const { sample, widest, follower, fs } = spec.value;
-  if (widest === undefined) throw new Error(`field ${spec.name}: a proportional value is measured by its widest and declares none`);
-  if (follower) throw new Error(`field ${spec.name}: a proportional value has no cells to place a follower after`);
-  const face = DATA_FACE[weight];
-  if (measureText(face, sample, fs) > measureText(face, widest, fs)) {
-    throw new Error(`field ${spec.name}: the sample ${JSON.stringify(sample)} is wider than the widest ${JSON.stringify(widest)} it declares`);
+  return valueCells(spec, cells(spec.value.weight ?? 'SemiBold', spec.value.fs));
+}
+
+/**
+ * The width a word takes: its widest reading in the advances of the face it is drawn in, rounded up
+ * and given the slack every measured box gets. A cell is cut wider than the digit it holds, so a
+ * number in cells has its room already; a word measured to its last advance has none, and WPF would
+ * clip its last glyph, which `field` would otherwise do by capping `numeral`'s own slack to this.
+ *
+ * A sample wider than the widest it declares is refused for the reason `valueCells` refuses a sample
+ * past its budget: the box is a declaration, and the sample is what the author drew.
+ */
+function wordWidth(spec: FieldSpec): number {
+  const value = spec.value;
+  if (value.bind !== undefined && value.widest === undefined) {
+    throw new Error(`field ${spec.name}: a bound word declares no widest; a word is measured by the widest reading its binding can draw, not by its sample`);
   }
-  return Math.ceil(measureText(face, widest, fs));
+  if (value.follower !== undefined) {
+    throw new Error(`field ${spec.name}: a word carries no follower; a follower is placed from the end of the cells a number is cut from`);
+  }
+  const face = DATA_FACE[value.weight ?? 'SemiBold'];
+  if (value.widest !== undefined && measureText(face, value.sample, value.fs) > measureText(face, value.widest, value.fs)) {
+    throw new Error(`field ${spec.name}: the sample ${JSON.stringify(value.sample)} is wider than the widest ${JSON.stringify(value.widest)} it declares`);
+  }
+  return Math.ceil(measureText(face, value.widest ?? value.sample, value.fs)) + boxSlack(value.fs);
 }
 
 export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
@@ -343,9 +357,9 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   items.push(
     numeral(`${spec.name}.value`, spec.value.sample, x, valueY, spec.value.fs, spec.value.chars, {
       weight: spec.value.weight,
+      proportional: spec.value.proportional,
       bind: spec.value.bind,
       widest: spec.value.widest,
-      proportional: spec.value.proportional,
       color: spec.value.color,
       colorBind: spec.value.colorBind,
       visibleBind: unmarked(spec.value.mark, spec.visibleBind),
