@@ -113,13 +113,23 @@ describe('the site image', () => {
       return { from, sources: paths.slice(0, -1) };
     });
 
-  test('names every image it builds from by its exact version, never a tag that moves under it', () => {
+  test('names the line of every image it uses, and the Debian release of every stage', () => {
+    // A tag floats on patches, as the rest of the repository's toolchain does, but never on its line:
+    // no `latest`, no bare name, and a stage says which Debian it is so that a publisher moving the
+    // default release cannot change the openssl the Prisma engine was chosen for. A digest is the
+    // strongest pin there is and passes both.
+    const digest = /@sha256:[0-9a-f]{64}$/;
     const images = [
       ...froms.map(({ image }) => image),
       ...copies.flatMap(({ from }) => (from !== undefined && !stages.includes(from) ? [from] : [])),
     ];
     expect(images.length).toBeGreaterThan(0);
-    for (const image of images) expect([image, /:\d+\.\d+\.\d+(-[a-z0-9.-]+)?$/.test(image)]).toEqual([image, true]);
+    for (const image of images) {
+      expect([image, digest.test(image) || /:\d+(\.\d+)*(-[a-z0-9.-]+)?$/.test(image)]).toEqual([image, true]);
+    }
+    const releases = froms.map(({ image }) => (digest.test(image) ? 'digest' : image.match(/[:-](bullseye|bookworm|trixie)(-|$)/)?.[1]));
+    for (const [i, release] of releases.entries()) expect([froms[i]?.image, release]).not.toEqual([froms[i]?.image, undefined]);
+    expect(new Set(releases.filter((release) => release !== 'digest')).size).toBeLessThanOrEqual(1);
   });
 
   test('compiles the plugin with an SDK global.json accepts, and with global.json beside it', () => {
@@ -141,16 +151,22 @@ describe('the site image', () => {
       const [major = NaN, minor = NaN, patch = NaN] = version.split('.').map(Number);
       return [major, minor, Math.floor(patch / 100), patch % 100];
     };
-    const tag = artifacts.image.match(/:(\d+\.\d+\.\d+)/)?.[1];
+    const tag = artifacts.image.match(/:(\d+\.\d+(?:\.\d+)?)/)?.[1];
     if (tag === undefined) throw new Error(`${artifacts.image} names no SDK version`);
-    const have = parts(tag);
+    // A floating tag such as `8.0` names the major and minor and leaves the feature band and patch to
+    // the publisher, so those count as unknown: the policy must not fix them, and the pin must ask for
+    // no more than the lowest of them, or only an exact tag can show the image satisfies it.
+    const named = tag.split('.').length === 2 ? 2 : 4;
+    const have = parts(tag).slice(0, named);
     const want = parts(sdk.version);
     const same = { disable: 4, patch: 3, latestPatch: 3, feature: 2, latestFeature: 2, minor: 1, latestMinor: 1, major: 0, latestMajor: 0 }[
       sdk.rollForward ?? 'latestPatch'
     ];
     expect(same).toBeDefined();
+    expect(named).toBeGreaterThanOrEqual(same ?? 4);
     expect(have.slice(0, same)).toEqual(want.slice(0, same));
-    expect(have.map((n, i) => n - (want[i] ?? NaN)).find((d) => d !== 0) ?? 0).toBeGreaterThanOrEqual(0);
+    const floor = [...have, ...want.slice(named).map(() => 0)];
+    expect(floor.map((n, i) => n - (want[i] ?? NaN)).find((d) => d !== 0) ?? 0).toBeGreaterThanOrEqual(0);
   });
 
   test('is rebuilt by CI on every push that changes something it copies', () => {

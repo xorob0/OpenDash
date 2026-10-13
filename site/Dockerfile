@@ -24,12 +24,14 @@
 # .github/workflows/site-image.yml. A stage that stops copying something the site needs fails there,
 # on the branch that changed it, rather than in front of somebody pressing Redeploy.
 #
-# Every image below is named by its exact version, because the first one compiles the zip the site
-# hands out and the last two pick the Prisma engine the survey runs. A tag such as `sdk:8.0` or
-# `node:22-slim` is a different compiler or a different Debian whenever its publisher moves it, and
-# nothing in this repository would say so: the build would simply produce something else (#915). A
-# version that moves is a commit here, and the site image job builds it before anyone redeploys.
-# scripts/workflows.test.ts holds every FROM and COPY --from to that.
+# Every image below names its line and its Debian release and floats on patches within them, as the
+# rest of the repository does: global.json takes any 8.0 SDK, CI installs 8.0.x, and a redeploy picks
+# up the security releases of node and Debian without a commit here. What a tag must not do is change
+# the line under the build. `sdk:8.0` cannot carry an SDK that global.json refuses, as stage 1 says,
+# and the node stages say bookworm because the Prisma engine depends on it (stage 4).
+# bun is the 1.4 line, which is the one place the image pins bun where CI does not (CONTRIBUTING.md):
+# a lockfile written by a newer bun stops `bun install --frozen-lockfile` here, loudly, and the fix
+# is to raise this tag. scripts/workflows.test.ts holds every FROM and COPY --from to this (#915).
 
 # ---------------------------------------------------------------- 1. everything the site hands out
 # `bun run package` is the repository's own release command: it builds every .simhubdash and LED
@@ -46,11 +48,11 @@
 # The SDK is the repository's as well as the image's: global.json is copied in with the manifests, so
 # the dotnet that runs here reads the same pin and roll-forward policy a local build and the CI runner
 # read, and a pin this image's SDK no longer satisfies fails the build rather than being ignored. The
-# image's own version is a feature band global.json accepts, which scripts/workflows.test.ts checks;
-# raising one is a reason to look at the other. plugin/Directory.Build.props explains why the pin is
-# there at all: a newer compiler than the pinned one has cost this repository three fixes.
-FROM mcr.microsoft.com/dotnet/sdk:8.0.425-bookworm-slim AS artifacts
-COPY --from=oven/bun:1.4.3-debian /usr/local/bin/bun /usr/local/bin/bun
+# image's own line is one global.json accepts, which scripts/workflows.test.ts checks; raising one is
+# a reason to look at the other. plugin/Directory.Build.props explains why the pin is there at all: a
+# newer compiler than the pinned one has cost this repository three fixes.
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS artifacts
+COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
 RUN apt-get update \
  && apt-get install -y --no-install-recommends zip unzip \
  && rm -rf /var/lib/apt/lists/*
@@ -68,11 +70,11 @@ RUN bun install --frozen-lockfile
 RUN bun run package
 
 # ---------------------------------------------------------------- 3. the site
-FROM node:22.23.3-bookworm-slim AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /repo
 # The site's generators read design/tokens.json, packages/dash/src/contract.ts, scripts/changelog.ts,
 # VERSION and CHANGELOG.md, so those parts of the tree have to be here too.
-COPY --from=oven/bun:1.4.3-debian /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
 COPY design ./design
 COPY packages ./packages
 COPY scripts ./scripts
@@ -125,8 +127,9 @@ RUN node node_modules/.bin/next build
 # ---------------------------------------------------------------- 4. what runs
 # On the same Debian as the build stage, bookworm, by name: Prisma picks its query engine by the
 # system's openssl, and bookworm's is the 3.0 that the debian-openssl-3.0.x target in schema.prisma
-# was written for. A slim tag without the release in it moves to the next Debian when node does.
-FROM node:22.23.3-bookworm-slim AS runtime
+# was written for. A slim tag without the release in it moves to the next Debian when node does, and
+# this one moves only with node 22's patches and bookworm's.
+FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
@@ -169,7 +172,7 @@ EXPOSE 3000
 
 # Without this the orchestrator has only the existence of the process to go on, and the process
 # exists about a second before Next answers anything; a rolling update would hand readers over to a
-# container that is not serving yet. node:22-slim carries neither curl nor wget, so the probe is
+# container that is not serving yet. The slim node image carries neither curl nor wget, so the probe is
 # node's own fetch against the home page, which is prerendered and costs a file read.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
