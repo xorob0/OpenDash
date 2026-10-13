@@ -15,10 +15,11 @@
  *
  * "To add" is the laps left times the average consumption, less what is in the tank, and never
  * negative. In a timed race the laps left are predicted from the time left and the best lap, and
- * until a lap has been timed there is nothing to multiply, so it draws `--` rather than `0.0`
- * (#1008). It is caution amber rather than the low-fuel red because it is an instruction to the
- * crew: the red belongs to the level and to the bar under it, and an instruction drawn in it reads
- * as an alarm about the tank rather than as a figure to act on.
+ * from where the overall leader is on its lap, whose flag a car behind it waits for (#1027); until
+ * a lap has been timed there is nothing to multiply, so it draws `--` rather than `0.0` (#1008).
+ * It is caution amber rather than the low-fuel red because it is an instruction to the crew: the
+ * red belongs to the level and to the bar under it, and an instruction drawn in it reads as an
+ * alarm about the tank rather than as a figure to act on.
  *
  * It was labelled "Refuel", which is the word pit view and band D's fuel page use for the order the
  * pit service is set to, so a driver moving between the three read two numbers under one word: this

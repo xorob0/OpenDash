@@ -5,15 +5,19 @@
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, SimHub's three-argument `left(value, start,
  * count)`, `timespantoseconds` (seconds are passed as numbers, which is how SimHub's own TimeSpans
- * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `sin`, `cos`, `in`, `prop` (a read by
- * a computed name), `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the leaderboard
- * reads `getplayerleaderboardposition`, `getopponentleaderboardposition_aheadbehind`,
+ * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `ceiling`, `sin`, `cos`, `in`, `prop`
+ * (a read by a computed name), `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the
+ * leaderboard reads `getplayerleaderboardposition`, `getopponentleaderboardposition_aheadbehind`,
  * `drivercarclass`, `driverclassposition`, `driverposition` and `driveravailable` (each answered from
  * the props by its own call, as `drivercarclass(3)`, and null where they leave it out), the
- * comparisons, `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by
- * the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon,
- * which is the culture SimHub sets at startup. Anything else is an error rather than a silent
- * `undefined`: a test that evaluates half an expression proves nothing.
+ * comparisons, `and` / `or` / `!`, and the arithmetic, `%` included. Any other `driver<name>(position)`
+ * call is answered from the key its canonical text spells, `drivertrackpositionpercent(1)`, as a
+ * recorded trace names its column (`opponentCalls.ts` in the generator), and is null where the frame
+ * has none, as SimHub answers for a row that is not there; a call the test answers itself, in its
+ * {@link Calls}, is left to it. A date is passed as a `Date` and formatted by the hour and minute
+ * specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the culture
+ * SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test that
+ * evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning
@@ -28,7 +32,10 @@
  * (#831). So each of them is handed the parsed tree of its left operand and types it before it picks,
  * and `max(0, 0.5002)` is 1 here as it is on the dash. Until #1046 they were `Math.max` and
  * `Math.min`, which let a reading SimHub rounds pass every test that drew it.
+ * {@link evalTyped} goes a step further and hands the expression to the generator's own evaluator,
+ * with every property in the CLR type SimHub publishes it in.
  */
+import { callText } from '@opendash/generator';
 import { ncalcEvaluator as E } from '../src/generator.ts';
 
 export type Props = Record<string, unknown>;
@@ -163,6 +170,7 @@ function kindOf(node: E.Node, props: Props): Kind {
           return 'decimal';
         case 'round':
         case 'truncate':
+        case 'ceiling':
         case 'sin':
         case 'cos':
         case 'timespantoseconds':
@@ -229,6 +237,9 @@ function extremesOf(expression: string): { name: 'max' | 'min'; left: E.Node; na
  */
 export type Calls = Record<string, (...args: never[]) => unknown>;
 
+/** The `driver*` reads {@link evalNcalc} answers by a function of its own rather than by {@link callText}. */
+const NAMED_DRIVER_READS: ReadonlySet<string> = new Set(['drivercarclass', 'driverclassposition', 'driverposition', 'driveravailable']);
+
 export function evalNcalc(expression: string, props: Props, calls: Calls = {}): unknown {
   // Each max and min becomes `EXTREME(i, a, b)`, which knows the tree of its left operand. Rewritten
   // from the end, so that the offsets of the calls before each one still hold.
@@ -246,6 +257,9 @@ export function evalNcalc(expression: string, props: Props, calls: Calls = {}): 
         ? part
         : part
             .replace(/\[([A-Za-z0-9_.]+)\]/g, (_, name: string) => `P(${JSON.stringify(name)})`)
+            .replace(/\b(driver[a-z_]+)\(/g, (whole, name: string) =>
+              name in calls || NAMED_DRIVER_READS.has(name) ? whole : `DRIVER(${JSON.stringify(name)}, `,
+            )
             .replace(/\bif\(/g, 'IF(')
             .replace(/\bin\(/g, 'IN(')
             .replace(/\band\b/g, '&&')
@@ -259,6 +273,10 @@ export function evalNcalc(expression: string, props: Props, calls: Calls = {}): 
     P: (name: string): unknown => (name in props ? props[name] : null),
     // SimHub's `prop(name)`, a property whose name is itself an expression, as `[name]` is one written out.
     prop: (name: string): unknown => (name in props ? props[name] : null),
+    DRIVER: (name: string, ...args: unknown[]): unknown => {
+      const text = callText(name, args);
+      return text !== undefined && text in props ? props[text] : null;
+    },
     IF: (c: unknown, a: unknown, b: unknown): unknown => (c ? a : b),
     isnull: (v: unknown, d?: unknown): unknown => (d === undefined ? v === null || v === undefined : (v ?? d)),
     format: (value: unknown, pattern: string, addSign = false): string =>
@@ -291,10 +309,54 @@ export function evalNcalc(expression: string, props: Props, calls: Calls = {}): 
       return Math.round(value * scale) / scale;
     },
     truncate: Math.trunc,
+    ceiling: Math.ceil,
     sin: Math.sin,
     cos: Math.cos,
     rootdashboardscreenname: (): unknown => (ROOT_SCREEN in props ? props[ROOT_SCREEN] : null),
     ...calls,
   };
   return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));
+}
+
+/**
+ * The properties {@link evalTyped} hands the generator's evaluator in the CLR types SimHub publishes
+ * them in, by name. A TimeSpan is given in seconds, and a double that happens to be whole on a frame
+ * is still a double. A name not listed is read as `toValue` reads a JavaScript value, a whole number
+ * as an Int32, which is what `CompletedLaps` and `RemainingLaps` are. A row's lap times and its
+ * position round the lap, by the call text that spells them, are typed the same way.
+ */
+const TIMESPANS = new Set([
+  'DataCorePlugin.GameData.SessionTimeLeft',
+  'DataCorePlugin.GameData.BestLapTime',
+  'DataCorePlugin.GameData.LastLapTime',
+  'DataCorePlugin.GameData.CurrentLapTime',
+  'DataCorePlugin.Computed.Fuel_RemainingTime',
+]);
+const DOUBLES = new Set([
+  'DataCorePlugin.GameData.TrackPositionPercent',
+  'DataCorePlugin.GameData.Fuel',
+  'DataCorePlugin.Computed.Fuel_LitersPerLap',
+  'DataCorePlugin.Computed.Fuel_RemainingLaps',
+  'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal',
+]);
+
+/**
+ * An expression evaluated by the generator's own evaluator, which keeps NCalc's types, and answered
+ * as plain JavaScript.
+ *
+ * {@link evalNcalc} reads every property as a double, and types only what `max` and `min` turn on,
+ * where SimHub answers in their left operand's type: #1024's fuel margin rounded the part of the lap
+ * already run to nought or a whole lap that way on the VM, and passed every test read as doubles.
+ * This one reads each property in the type SimHub publishes it in.
+ */
+export function evalTyped(expression: string, props: Props): unknown {
+  const properties: Record<string, unknown> = {};
+  for (const [name, value] of Object.entries(props)) {
+    if (typeof value === 'number' && (TIMESPANS.has(name) || /^driver(best|last)lap\(/.test(name))) properties[name] = E.fromSeconds(value);
+    else if (typeof value === 'number' && (DOUBLES.has(name) || name.startsWith('drivertrackpositionpercent('))) properties[name] = E.double(value);
+    else properties[name] = value;
+  }
+  // A `driver<name>(position)` call is answered from the key its canonical text spells, as in
+  // {@link evalNcalc}; the evaluator looks those up in `calls`, and a property is never named so.
+  return E.toJs(E.evaluate(expression, { properties, calls: properties }));
 }

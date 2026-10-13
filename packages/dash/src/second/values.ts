@@ -49,6 +49,7 @@ const {
   repeatIndex,
   propByName,
   truncate,
+  ceiling,
   mod,
   div,
   add,
@@ -1267,6 +1268,70 @@ const lapTimeRun = (): Expr => isnull(timespanToSeconds(game('CurrentLapTime')),
  */
 export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(timedLapSeconds(), num(0)));
 
+/** Whether the session is a race, the one session name OpenDash matches with certainty. */
+const isRace = (): Expr => eq(ucase(sessionType()), str('RACE'));
+
+/** The overall leader's row on SimHub's leaderboard, which is sorted by live position. */
+const RACE_LEADER = num(1);
+
+/**
+ * The overall leader's lap in seconds: its best, and the car's own {@link timedLapSeconds} until
+ * the leader has one, which is the reading the count would have made without it.
+ *
+ * The leader's own lap rather than the car's, because in a race of several classes the two differ
+ * by tens of seconds, and when the leader reaches the line turns on the leader's pace. Taken as the
+ * car's own instead, in a model of a race whose leader laps a tenth quicker than the car, the count
+ * in the last two minutes missed the extra lap on about one reading in twenty and asked for one that
+ * is not run on about one in ten; with the leader's own lap it was right on every one.
+ */
+const leaderLapSeconds = (): Expr =>
+  iff(hasTime(driver('bestlap', RACE_LEADER)), timespanToSeconds(driver('bestlap', RACE_LEADER)), timedLapSeconds());
+
+/**
+ * How long after the clock reaches nought the overall leader takes the chequered flag, in seconds,
+ * or after now once the clock has reached it: the wait {@link lapsLeft} adds to the time left.
+ *
+ * The leader is the one car whose crossing ends a timed race, and it is on the leaderboard with how
+ * far round its lap it is, `drivertrackpositionpercent(1)`. Run on at its own lap for the time left,
+ * that says how far round it will be when the clock reaches nought, the whole laps dropped, and the
+ * flag falls when it has run the rest of that lap: the wait is that rest at its lap. A leader
+ * exactly at the line as the clock reaches nought is read as having just crossed it, and waited for
+ * a whole lap, the side a fuel figure can afford to be wrong on. The position is a distance and the
+ * lap a time, so a leader running slower than its best reaches the line a little later than this
+ * says; near the flag that moves the answer only for a car within those seconds of it on the road.
+ *
+ * Nought where nothing is waited for: outside a race, where a practice or a qualifying session ends
+ * for each car at its own first crossing after the clock; for the leader itself, whose crossing is
+ * the flag; and once the chequered flag is out, `Flag_Checkered`, which SimHub takes from iRacing's
+ * session flag and which the SDK raises for the field once the leader has crossed. That has not been
+ * seen on iRacing itself. Were the flag raised only at the car's own crossing, the wait would run on
+ * to the leader's next crossing and the car's last lap would read two, a lap too many. A whole lap
+ * where the leader's position is not published, which is the most the wait can be.
+ *
+ * Nothing sharper is published. iRacing's `CarIdxEstTime`, the leader's time round its lap, reaches
+ * SimHub's raw telemetry as an array by car index, which a binding has no way to index by the
+ * leader's; iRacing's `SessionState` is there as well, and says no more than the chequered flag; and
+ * `gaptoleader` is SimHub's own estimate, the iRacing reader setting none, which for a lapped car
+ * includes its whole laps, timed at a reference lap or at the leader's own as a SimHub setting
+ * chooses, and so cannot be taken modulo a lap into the phase this needs.
+ */
+const leaderWait = (): Expr => {
+  const lap = leaderLapSeconds();
+  const position = driver('trackpositionpercent', RACE_LEADER);
+  const roundAtTheClock = mod(add(div(clockLeft(), lap), position), num(1));
+  const awaited = and(isRace(), not(gt(isnull(game('Flag_Checkered'), num(0)), num(0))), not(carIsPlayer(RACE_LEADER)));
+  return iff(awaited, mul(lap, iff(isNull(position), num(1), sub(num(1), roundAtTheClock))), num(0));
+};
+
+/**
+ * The time left, never below nought. The time comes first in the `max`, because NCalc's `max` takes
+ * the type of its first argument, and an Int32 nought there would round the time to a whole second.
+ */
+const clockLeft = (): Expr => max(sessionTimeLeft(), num(0));
+
+/** The time from now until the overall leader takes the flag: {@link clockLeft} and {@link leaderWait}. */
+const flagIn = (): Expr => add(clockLeft(), leaderWait());
+
 /**
  * The laps the car still has to run, the one it is on included: `RemainingLaps` in a session counted
  * in laps, and in a timed session the whole laps the time left holds at {@link timedLapSeconds}, and
@@ -1290,10 +1355,16 @@ export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(ti
  * as two. It counts the lap you are on, as `RemainingLaps` does. After the clock it is the lap in
  * progress, which is one and not nought: #1017 keeps such a session timed until it ends.
  *
- * That is the leader's count, and the car's own. A car behind the leader on track finishes at its
- * first crossing after the leader's last, not after the clock, so where the clock runs out between
- * the leader's crossing and its own it runs a lap more than this. Counting that lap would read the
- * gap to the leader on track, and nothing here does yet.
+ * That is the leader's count. Every other car finishes at its first crossing after the leader's,
+ * not after the clock, so a car that crosses between the clock reaching nought and the leader taking
+ * the flag runs a lap more (#1027). So the count is also taken to the flag, {@link flagIn}: the laps
+ * until the car's first crossing at or after it, which is the time to the flag and the time already
+ * run in the lap over a lap, rounded up. A crossing level with the leader's is the car's last, the
+ * car being just behind it on the road, which is what the rounding up says and what the clock's
+ * truncation and one would not. The count is the larger of the two, so the flag never takes a lap
+ * away, and adds none to the leader's own count or to any car's once the chequered flag is out. After
+ * the clock it is what keeps a car that will reach the line ahead of the leader from being told the
+ * lap it is on is its last.
  *
  * Nought in a timed session until a lap has been timed, which no reading draws as a count: the
  * session page and the fuel page draw {@link NO_VALUE} by {@link lapsLeftIsKnown} instead, and the
@@ -1304,16 +1375,13 @@ export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(ti
  * its count: more laps than it has where the count ends it first, which is the side a fuel figure
  * can afford to be wrong on. Nothing OpenDash reads today tells the two apart.
  */
-export const lapsLeft = (): Expr =>
-  iff(
-    isTimedSession(),
-    iff(
-      gt(timedLapSeconds(), num(0)),
-      iff(gt(sessionTimeLeft(), num(0)), add(truncate(div(add(sessionTimeLeft(), min(lapTimeRun(), timedLapSeconds())), timedLapSeconds())), num(1)), num(1)),
-      num(0),
-    ),
-    isnull(game('RemainingLaps'), num(0)),
-  );
+export const lapsLeft = (): Expr => {
+  const lap = timedLapSeconds();
+  const run = min(lapTimeRun(), lap);
+  const toClock = iff(gt(sessionTimeLeft(), num(0)), add(truncate(div(add(sessionTimeLeft(), run), lap)), num(1)), num(1));
+  const toFlag = ceiling(div(add(flagIn(), run), lap));
+  return iff(isTimedSession(), iff(gt(lap, num(0)), max(toFlag, toClock), num(0)), isnull(game('RemainingLaps'), num(0)));
+};
 
 /** {@link lapsLeft} as the session page draws it: the count, or {@link NO_VALUE} until there is one. */
 export const lapsLeftText = (): Expr => iff(lapsLeftIsKnown(), fmt(lapsLeft(), '0'), str(NO_VALUE));
@@ -1325,14 +1393,58 @@ export const lapsLeftText = (): Expr => iff(lapsLeftIsKnown(), fmt(lapsLeft(), '
 export const lapsLeftShown = (): Expr => ncalc.or(gt(lapsLeft(), num(0)), not(lapsLeftIsKnown()));
 
 /**
- * Fuel to add: what the laps left will burn, less what is in the tank; never negative. An estimate,
- * labelled `To add`, and not the order the pit service is set to, which is {@link pitRefuel}.
+ * How much of the lap in progress the car has already run, from nought at the line to one at the
+ * next crossing, and nought where nothing says.
  *
- * The floor is the double `0.0`: NCalc's `max` answers in its left operand's type, so `max(0, …)`
- * would round the litres to a whole one and the reading would end in `.0` under a format that draws
- * tenths. #831.
+ * Measured by distance, `TrackPositionPercent`, because a lap through the pit lane or behind the
+ * safety car takes longer than the best lap to cover the same ground, and the time run over the
+ * best lap would call it further round than it is and take too much off the laps a fuel figure
+ * counts. The time run over the lap is a bound on it all the same, the smaller of the two being
+ * taken: the lap count and the lap time go back to nought at the line together, and the distance
+ * need not arrive there on the same frame, which in Assetto Corsa, whose spline can start a little
+ * way off the timing line, can be some way round. Just past the line the distance can still read
+ * the end of the lap before, where the time already reads its start; just before it the distance
+ * can read the start where the time reads the end, and the smaller of the two, nought there, counts
+ * the lap whole, which is the side a fuel figure can afford to be wrong on. A game that publishes no
+ * position gives SimHub's `-1`, read as nought for the same reason.
+ *
+ * The bounds are the double `0.0`, here and in {@link lapsToRun}. NCalc's `max` and `min` answer in
+ * the type of their left operand, so with the Int32 `0` there the fraction was rounded to nought
+ * below half a lap and to a whole lap above it. On the VM, a car half way round its last lap after
+ * the clock with 0.71 laps of fuel read `−0` in red with Refuel 1.0, and a lap-counted margin
+ * stepped by a whole lap at half distance.
  */
-export const fuelToAdd = (): Expr => max(real(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
+const lapFractionRun = (): Expr =>
+  iff(
+    gt(timedLapSeconds(), num(0)),
+    max(real(0), min(isnull(game('TrackPositionPercent'), real(0)), div(lapTimeRun(), timedLapSeconds()))),
+    num(0),
+  );
+
+/**
+ * The laps the car still has to run as a fuel figure counts them: {@link lapsLeft} less the part of
+ * the lap in progress already run, never below nought.
+ *
+ * {@link lapsLeft} is a count, and counts the lap the car is on whole, as Laps left draws it. The
+ * tank is read as it is now, with that part of the lap already burnt, so a fuel figure that counted
+ * the lap whole as well asked for the part already run a second time: at pit entry, the end of a
+ * lap, nearly a lap's fuel more than the race needs, and a car with less than a lap to spare at the
+ * flag told in red to stop for it. After a timed race's clock, half way round the last lap, the
+ * half lap still to run is what the tank has to cover, and not the whole lap (#1024).
+ */
+const lapsToRun = (): Expr => max(real(0), sub(lapsLeft(), lapFractionRun()));
+
+/**
+ * Fuel to add: what the {@link lapsToRun} will burn, less what is in the tank; never negative. An
+ * estimate, labelled `To add`, and not the order the pit service is set to, which is
+ * {@link pitRefuel}.
+ *
+ * The floor is the double `0.0`, as it is in the two clamps above: NCalc's `max` answers in its left
+ * operand's type, so `max(0, …)` rounds the litres to a whole one and the reading ends in `.0` under a
+ * format that draws tenths, and a shortfall under half a litre draws `0.0` beside a margin in red.
+ * #831.
+ */
+export const fuelToAdd = (): Expr => max(real(0), sub(mul(lapsToRun(), fuelPerLap()), fuel()));
 
 /**
  * Whether there is a fuel to add: a lap has said what one costs, which is {@link fuelIsSettled}, and
@@ -1458,8 +1570,10 @@ const SECONDS_PER_MINUTE = 60;
  * Two questions, and the first one alone is not enough. A length, because a session with no end has
  * no flag for the tank to reach and the subtraction would draw the whole of the range as spare, and
  * the length asked for is the one the page is counting down -- the time in a timed session and the
- * laps remaining in a lap-counted one -- since those are the two terms of the subtraction and either
- * may be missing while the other is there.
+ * laps remaining in a lap-counted one -- since either may be missing while the other is there. A
+ * timed session asks for a lap to have been timed as well, by {@link lapsLeftIsKnown}, because its
+ * margin is counted in the laps {@link lapsLeft} predicts from that lap, and until there is one the
+ * race has a clock but no laps to measure the tank against.
  *
  * And a race, because a practice or qualifying session that *does* have a length has an end nobody
  * waves a flag at. A thirty-minute open practice with eight minutes of fuel in the tank read `−22`
@@ -1475,7 +1589,8 @@ const SECONDS_PER_MINUTE = 60;
  * remaining laps in practice too, but it is drawn in caution amber as an instruction to the crew
  * rather than as a verdict, so a figure of no use in practice is not a figure that alarms there.
  */
-const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0))));
+const raceHasAnEnd = (): Expr =>
+  and(isRace(), iff(showsTimeLeft(), and(isTimedSession(), lapsLeftIsKnown()), gt(lapsLeft(), num(0))));
 
 /**
  * Whether there is a margin to draw: a lap has said what one costs, and the race has an end.
@@ -1486,10 +1601,38 @@ const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(
  */
 export const fuelToEndIsSettled = (): Expr => and(fuelIsSettled(), raceHasAnEnd());
 
-/** The lap-counted form: the range in the tank less the laps the session still has to run. */
-const fuelToEndLaps = (): Expr => sub(fuelLapsLeft(), lapsLeft());
-/** The timed form, in minutes: the range in the tank less the time the session still has to run. */
-const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()), num(SECONDS_PER_MINUTE));
+/**
+ * The margin in laps: the range in the tank less the laps the race still has to run, which are
+ * {@link lapsToRun}, the laps the Refuel counts, and not the whole laps Laps left draws. At the line
+ * the two are the same; mid-lap the margin is more than the estimate less the laps left by the part
+ * of the lap already run, because that part has already been burnt out of the range.
+ */
+const fuelToEndLaps = (): Expr => sub(fuelLapsLeft(), lapsToRun());
+
+/**
+ * The timed form: the same laps, read in minutes at the lap {@link lapsLeft} counts them at.
+ *
+ * Not the range's time less the time left, which is what it was. A timed race does not end when its
+ * clock does: the leader finishes the lap the clock runs out on, and every other car at its first
+ * crossing after the leader's, so the time still to run is the clock and the rest of that lap, and
+ * a lap more for a car that reaches the line between the clock and the leader (#1027). A tank that
+ * lasted 90 s with 60 s on the clock and a 110 s lap read `+1` in the green and ran dry 20 s from
+ * the flag, and once #1017 kept the session timed after the clock, the margin over the last lap was
+ * the whole range less nothing, green whatever was in the tank (#1024).
+ *
+ * The laps are {@link lapsToRun}, the laps {@link lapsLeft} counts less the part of the lap already
+ * run, which Refuel multiplies, and the range is `Fuel_RemainingLaps` and not `Fuel_RemainingTime`,
+ * which SimHub makes from the same laps of fuel at the average of the last three laps rather than
+ * at the lap the count is made at. With the clock at nought and half a lap still to run, the margin
+ * is the range less that half lap.
+ *
+ * The two fields are one subtraction read two ways, and agree about whether the tank makes it
+ * wherever SimHub computes the laps of fuel itself, as `Fuel` over `Fuel_LitersPerLap`, which is
+ * every game reader that publishes no estimate of its own (`DataCorePlugin` 9.12.6 prefers a
+ * reader's estimate where there is one). The Refuel is drawn to a tenth, so a shortfall under
+ * 0.05 draws `0.0` beside a margin in the slower colour.
+ */
+const fuelToEndMinutes = (): Expr => div(mul(fuelToEndLaps(), timedLapSeconds()), num(SECONDS_PER_MINUTE));
 
 /**
  * Fuel to the end of the race, signed: how much more than the rest of the race the tank holds.
@@ -1499,11 +1642,11 @@ const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()),
  * page, so the driver did the arithmetic mid-corner. [ADR 0009](../../../../docs/decisions/0009-does-the-plugin-compute.md)
  * allows a subtraction of two published values in an expression, and this is that subtraction. #387.
  *
- * Two quantities rather than one, chosen the way the session page chooses which counter to draw: a
- * timed session compares `Fuel_RemainingTime` with `SessionTimeLeft` and reads in minutes, a
- * lap-counted one compares `Fuel_RemainingLaps` with {@link lapsLeft} and reads in laps. The switch
- * is {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and
- * the driver is never asked to notice that the unit changed for a reason of its own. The unit is
+ * One subtraction, `Fuel_RemainingLaps` less {@link lapsToRun}, read in one of two units chosen the
+ * way the session page chooses which counter to draw: a timed session reads it in minutes, at the
+ * lap its laps left are counted at, and a lap-counted one in laps. The switch is
+ * {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and the
+ * driver is never asked to notice that the unit changed for a reason of its own. The unit is
  * drawn beside the number by {@link fuelToEndUnit}, because a bare signed figure that means laps on
  * one grid and minutes on the next is a reading nobody can act on.
  */
@@ -1552,10 +1695,12 @@ export const fuelToEndDrawn = (): DrawnFigure =>
  * The widest reading the margin can draw, which is what its box is measured against.
  *
  * The lap form, because the decimal costs a cell the minutes do not spend: `−999.9` laps is five
- * digit cells and a special where the longest timed reading, a full day's `−1439` min, is five digit
- * cells and none. Both are inside {@link CHARS.margin}; a `widest` is declared because a monospaced
- * box is cut from its budget and the fit tests measure what the item says it draws, so a field left
- * with `+1.4` on it is a field measured at three cells for a reading that takes six.
+ * digit cells and a special, where the longest timed reading, an empty tank against a full day, is
+ * about the clock and up to three laps, the third the one a car behind the leader can run while it
+ * waits for the flag (#1027), `−14xx` min at any lap a race is run at and five cells with the sign.
+ * Both are inside {@link CHARS.margin}; a `widest` is declared because a monospaced box is cut from
+ * its budget and the fit tests measure what the item says it draws, so a field left with `+1.4` on
+ * it is a field measured at three cells for a reading that takes six.
  */
 export const FUEL_TO_END_WIDEST = `${MINUS}999.9`;
 
@@ -1574,8 +1719,8 @@ export const FUEL_TO_END_UNIT_WIDEST = 'laps';
  * middle band, unlike {@link deltaColour}: a margin of a tenth of a lap is not a lap in hand, and
  * the question this answers has two answers.
  *
- * Zero counts as reaching the flag, since {@link lapsLeft} counts the lap you are on, and the
- * absence is drawn in the primary text: a green `--` claims the tank makes it before anything knows.
+ * Zero counts as reaching the flag, a tank that holds exactly the rest of the race, and the absence
+ * is drawn in the primary text: a green `--` claims the tank makes it before anything knows.
  */
 export const fuelToEndColour = (): Expr =>
   iff(
