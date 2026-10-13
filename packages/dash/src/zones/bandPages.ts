@@ -44,6 +44,7 @@ import {
   carPosition,
   positionLabelled,
   carRelativeGap,
+  RELATIVE_GAP_WIDEST,
   CHARS,
   clock,
   currentLap,
@@ -62,16 +63,16 @@ import {
   fuelUnit,
   incidents,
   LAP_TIME_WIDEST,
-  lapReading,
+  lapTime,
   lastLap,
   listNeighbour,
   localClock,
   meridiemWidest,
   minutesClock,
   MINUTES_CLOCK_WIDEST,
-  NO_TIME,
   NO_VALUE,
   roadTemperature,
+  secondsOf,
   sectorTime,
   settledFuelTimeLeft,
   simClock,
@@ -81,7 +82,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -169,8 +170,6 @@ export interface BandField {
    */
   numeralWidest?: string;
 }
-
-const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), lapReading(expr));
 
 /**
  * A reading derived from what a lap costs, drawn only once a lap has cost something.
@@ -281,14 +280,14 @@ const energy: readonly BandField[] = [
 /** D3 Stint. The pit window needs a strategy the plugin does not compute; see ADR 0009. */
 const stint: readonly BandField[] = [
   { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.position },
-  { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(timespanToSeconds(isnull(driver('timesincelastpitout', playerPosition()), num(0)))), chars: CHARS.clock },
+  { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(secondsOf(driver('timesincelastpitout', playerPosition()))), chars: CHARS.clock },
   { id: 'stops', label: 'Stops', sample: '1', bind: fmt(isnull(driver('pitcount', playerPosition()), num(0)), '0'), chars: CHARS.position },
   {
     id: 'lastStop',
     label: 'Last stop',
     sample: '24.3',
-    bind: fmt(timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), '0.0'),
-    drawn: drawnFigure({ value: timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), digits: CHARS.consumption.digits - 1, decimals: 1 }),
+    bind: fmt(secondsOf(driver('pitlastduration', playerPosition())), '0.0'),
+    drawn: drawnFigure({ value: secondsOf(driver('pitlastduration', playerPosition())), digits: CHARS.consumption.digits - 1, decimals: 1 }),
     chars: CHARS.consumption,
     after: 's',
   },
@@ -399,6 +398,7 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
     labelWidest: 'P99',
     sample: '-1.342',
     bind: carRelativeGap(listNeighbour(-1, classOnly)),
+    numeralWidest: RELATIVE_GAP_WIDEST,
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -419,6 +419,7 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
     labelWidest: 'P99',
     sample: '+0.722',
     bind: carRelativeGap(listNeighbour(1, classOnly)),
+    numeralWidest: RELATIVE_GAP_WIDEST,
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },

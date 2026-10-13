@@ -81,7 +81,8 @@ describe('card expressions', () => {
 
   test('session resolves its mode from the setting and the 0 < time left <= 86400 guard', () => {
     const mode = "isnull([OpenDash.SessionProgress], 'auto')";
-    const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
+    // Guarded outside the conversion, so a frame with no session reads as untimed rather than throwing (#586).
+    const secs = 'isnull(timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]), 0)';
     const timed = `((${secs}) > (0)) and ((${secs}) <= (86400))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
@@ -132,7 +133,7 @@ describe('card expressions', () => {
 
   test('lap times use toshorttime with forced minutes and dim no-data glyphs', () => {
     expect(formulaOf(textItem('currentLap', 'value'), 'Text')).toBe(
-      "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
+      "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.CurrentLapTime]), 0)) > (0)), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
     );
     // One spelling of the placeholder, shared with the module pages, and a true minus in every
     // cell: the cards wrote theirs with hyphens and one glyph fewer than the time it stands in for.
@@ -214,6 +215,25 @@ describe('second-screen values', () => {
     expect(gap).toContain("'-', '−'");
   });
 
+  test('a relative gap past a hundred seconds gives up a place rather than its last digit (#886)', () => {
+    // Half a lap of Le Mans: `−104.315` is seven digit cells of six, and WPF drew it `−104.31`
+    // only by cutting the last one off; rounded, it is the figure.
+    const gap = values.carRelativeGap('1').replaceAll('driverrelativegaptoplayer(1)', '[GAP]');
+    const READINGS: readonly [number | null, string][] = [
+      [-5.886, '−5.886'],
+      [0.722, '+0.722'],
+      [-45.678, '−45.678'],
+      [-104.317, '−104.32'],
+      [241.567, '+241.57'],
+      [null, '--'],
+    ];
+    for (const [seconds, text] of READINGS) {
+      const drawn = String(evalNcalc(gap, { GAP: seconds }));
+      // The point is the one narrow cell; every other character takes a digit cell.
+      expect({ seconds, drawn, fits: drawn.replace('.', '').length <= values.CHARS.relativeGap.digits }).toEqual({ seconds, drawn: text, fits: true });
+    }
+  });
+
   test('the no-data lap time is one placeholder of the same shape as the time it stands in for', () => {
     expect(values.NO_TIME).toBe('−:−−.−−−');
     expect(values.NO_TIME).toHaveLength('1:42.905'.length);
@@ -224,6 +244,7 @@ describe('second-screen values', () => {
   test('a missing lap time draws the placeholder rather than throwing (#454)', () => {
     // SimHub's timespantoseconds answers null for the number 0, and NCalc's `null > 0` throws, which
     // SimHub draws as an empty field. So the null guard wraps the conversion and never sits inside it.
+    expect(values.secondsOf('[T]')).toBe('isnull(timespantoseconds([T]), 0)');
     expect(values.hasTime('[T]')).toBe('(isnull(timespantoseconds([T]), 0)) > (0)');
     expect(values.lapTime('[T]')).not.toContain('timespantoseconds(isnull(');
     expect(values.sectorTime('[T]')).not.toContain('timespantoseconds(isnull(');
