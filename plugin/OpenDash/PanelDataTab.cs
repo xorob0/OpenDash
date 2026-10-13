@@ -52,6 +52,12 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PositionCaption = "Class also shows only your own class in lists. A zone can ask for that on its own.";
 
+        public const string LivePositionsTitle = "Live positions";
+
+        /// <summary>The one thing the switch cannot show: what changes when it is on. iRacing is named because
+        /// it is the one sim whose place waits for the line, and the switch does nothing anywhere else. #1063.</summary>
+        public const string LivePositionsCaption = "On iRacing, places and lists change as cars pass, not when they next cross the line.";
+
         /// <summary>One label per mode, in the contract's order. "Class" rather than the artboard's "In class":
         /// the caption begins with the word, and a value in a chooser is a name.</summary>
         public static readonly string[] PositionLabels = { "Overall", "Class" };

@@ -13,7 +13,8 @@ import { describe, expect, test } from 'bun:test';
 import { measureText } from '../src/design/advances.ts';
 import { rect } from '../src/design/geometry.ts';
 import { table, type ColumnId, type TableSpec } from '../src/second/table.ts';
-import { opponentCount } from '../src/second/values.ts';
+import { LIVE_ORDER, PROPERTY_PREFIX } from '../src/contract.ts';
+import { carOverallPosition, opponentCount, player, rowIndex } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
@@ -65,12 +66,19 @@ const FIELD = 24;
  */
 const evaluate = (expression: string, position: number, { k = 1, field = FIELD }: { k?: number; field?: number } = {}): number => {
   const ncalc = expression
+    // The player's place, which is the live one with the sim's behind it, is the place this is asked for.
+    .replaceAll(carOverallPosition(player()), String(position))
     .replaceAll(opponentCount(), String(field))
     .replaceAll('getplayerleaderboardposition()', String(position))
     .replaceAll('repeatindex()', String(k));
-  // Whatever is left once the two calls are taken out has to be arithmetic, or the split is emitting
-  // something this is quietly reading as a number.
-  if (!/^[\d\s().,+\-*/]+$/.test(ncalc.replace(/\b(max|min)\(/g, '('))) throw new Error(`the expression holds something this cannot evaluate: ${ncalc}`);
+  // Whatever is left once the calls are taken out has to be arithmetic, or the split is emitting
+  // something this is quietly reading as a number. A row read through the live order with nothing
+  // published is the row itself: the evaluator reads the unpublished `prop(...)` as null and
+  // `isnull` hands on the row.
+  const bare = ncalc
+    .replace(/\b(max|min|isnull|prop)\(/g, '(')
+    .replaceAll(`('${PROPERTY_PREFIX}.${LIVE_ORDER}')`, '');
+  if (!/^[\d\s().,+\-*/]+$/.test(bare)) throw new Error(`the expression holds something this cannot evaluate: ${ncalc}`);
   return Number(evalNcalc(ncalc, {}));
 };
 
@@ -122,7 +130,11 @@ describe('the split keeps the top of the field and follows the player', () => {
   });
 
   test('the rows above the line are the leaderboard from the top, whatever the player does', () => {
-    expect(rowIndexOf(list, 'row')).toBe('repeatindex()');
+    // The top of the order on the road where the plugin publishes one (#1063), and the leaderboard's own
+    // rows otherwise, which is what is evaluated here.
+    const idx = rowIndexOf(list, 'row');
+    expect(idx).toBe(rowIndex.full());
+    for (const position of [-1, 1, 16]) for (const k of [1, 2, KEPT]) expect(evaluate(idx, position, { k })).toBe(k);
   });
 
   test('a player inside the budget splits nothing: the window carries on from the kept rows', () => {
