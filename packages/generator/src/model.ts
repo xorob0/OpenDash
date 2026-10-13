@@ -98,7 +98,13 @@ export type BindingTarget =
   /** Image from file: the path of an image outside the package. */
   | 'ImagePath'
   /** Layer: the total number of rows a repeated layer stamps. */
-  | 'Repetitions';
+  | 'Repetitions'
+  /**
+   * `DrawableItem.Rotation`, in degrees clockwise about the item's centre; the kinds in
+   * `ROTATABLE_KINDS` only. A plain `double` with change notification, which the renderer's
+   * `ControlHost` turns into a live `RotateTransform`, so a formula turns the item frame by frame.
+   */
+  | 'Rotation';
 
 export type Bindings = Partial<Record<BindingTarget, Binding>>;
 
