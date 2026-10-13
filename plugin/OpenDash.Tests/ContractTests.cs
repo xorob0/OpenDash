@@ -69,7 +69,8 @@ namespace OpenDashPlugin.Tests
             // every zone of every pit wall page, the page it opens on and the page it is showing,
             // the URL, the pit wall's class filter, its flag format, and the flag box. And, since #791,
             // whether a flag shows in the pit lane, and where each zone's page sits in its own order. And,
-            // since #714, the Porsche crest's path. And, since #715, each theme's own settings.
+            // since #714, the Porsche crest's path. And, since #715, each theme's own settings. And, since
+            // #1063, the race as it stands on the road: four families of a place or a row per car.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             // Eight global flag box names and thirteen per matrix, the way every face carries its own
             // group, and then the three the strips read. It was nine and six until critical flags
@@ -84,7 +85,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + 4 * LivePosition.Slots + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -124,7 +125,9 @@ namespace OpenDashPlugin.Tests
             // before the Porsche's badge could draw the crest the plugin fetches into the user's own
             // folder (#714). And 404 before the AiM's backlight became the driver's choice (#715), and
             // 405 before the catalogue gained the engine readings, and with them a companion switch (#752).
-            Assert.Equal(406, names.Count);
+            // And 406 before the plugin had to publish the race as it stands on the road, a place and a row in
+            // each of two counts for sixty-four cars, because iRacing moves it only at the line (#1063).
+            Assert.Equal(662, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -176,7 +179,11 @@ namespace OpenDashPlugin.Tests
             // And each theme's own settings after it, the AiM's backlight first, shared because a backlight is
             // the driver's taste and a rig in auto mode shows whichever theme the car picks. #715.
             Assert.Equal("ThemeAimBacklight", names[27]);
-            Assert.Equal(28, Contract.SharedPropertyNames().Count());
+            // And the race as it stands on the road after them, four families of sixty-four, published rather
+            // than chosen and shared because every screen that draws a place, a list or a gap reads them. #1063.
+            Assert.Equal("LivePosition1", names[28]);
+            Assert.Equal("LiveClassOrder64", names[28 + 4 * LivePosition.Slots - 1]);
+            Assert.Equal(28 + 4 * LivePosition.Slots, Contract.SharedPropertyNames().Count());
             Assert.True(Contract.DefaultFlagsInPitLane);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a
@@ -459,6 +466,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PageNamesOf(source, "export const ZONE_A_PAGES"), FacePages.ZoneA.Select(p => p.Name));
             Assert.Equal(PageIdsOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Id));
             Assert.Equal(PageNamesOf(source, "export const BAND_D_PAGES"), FacePages.BandD.Select(p => p.Name));
+            // And the pages held back from it, which both halves leave out of every cycle (#969).
+            Assert.Equal(ListOf(source, "export const HELD_BACK_BAND_PAGES"), FacePages.HeldBack);
             Assert.Equal(PageIdsOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Id));
             Assert.Equal(PageNamesOf(source, "export const BAR_FIELDS"), FacePages.BarFields.Select(p => p.Name));
 
@@ -478,15 +487,17 @@ namespace OpenDashPlugin.Tests
         public void Zone_defaults_are_every_page_enabled()
         {
             // A driver turns off what they do not want rather than turning on what they do, so every
-            // bit of the mask is set and the cycle starts at its longest.
+            // bit of the mask is set and the cycle starts at its longest: every bit but a held-back
+            // page's, band D's car page (#969).
             for (var i = 0; i < Contract.FaceZoneLetters.Length; i++)
             {
                 var mask = Contract.DefaultZoneMask(i);
                 var pages = Contract.FaceZonePageCounts[i];
-                Assert.Equal((1 << pages) - 1, mask);
-                for (var page = 0; page < pages; page++) Assert.True((mask & (1 << page)) != 0);
+                var letter = Contract.FaceZoneLetters[i];
+                for (var page = 0; page < pages; page++) Assert.Equal(!FacePages.IsHeldBack(letter, page, null), (mask & (1 << page)) != 0);
                 Assert.Equal(0, mask >> pages);
             }
+            Assert.Equal(new[] { 15, (1 << Modules.Count) - 1, (1 << Modules.Count) - 1, 127 }, Contract.DefaultFaceZoneMasks());
             Assert.Equal(new[] { 0, 0, 14, 0 }, Contract.DefaultFaceZones());
             Assert.Equal(new[] { 0, 1, 5, 6 }, Contract.DefaultBarSlots());
         }

@@ -13,7 +13,7 @@ import type { Expr } from './bind.ts';
 import { ALL_SHAPES } from './leds/strip.ts';
 import aimSettings from './themes/aim/settings.json';
 
-const { add, and, concat, div, eq, fmt, iff, isnull, isNull, left, lt, min, mod, num, or, prop, str, truncate } = ncalc;
+const { add, and, concat, div, eq, fmt, iff, isnull, isNull, left, lt, min, mod, num, or, prop, propByName, str, truncate } = ncalc;
 
 export const PROPERTY_PREFIX = 'OpenDash';
 
@@ -255,6 +255,47 @@ export const FLAGS_IN_PIT_LANE_SETTING = 'FlagsInPitLane';
  */
 export const PORSCHE_CREST = 'PorscheCrest';
 
+/**
+ * The race as it stands on the road, which the plugin publishes during an iRacing race because the sim
+ * moves a car's place only when it crosses the start/finish line (#1063).
+ *
+ * SimHub passes iRacing's place on as it is, and every `driver*` function takes an index into a
+ * leaderboard sorted by that place, so a pass in the first corner reached every place, every list and
+ * every gap a lap later. The plugin ranks the field on SimHub's `CurrentLapHighPrecision`, the laps
+ * each car has covered, and publishes four families of {@link LIVE_SLOTS} numbers each, counted from
+ * one and unpadded so an expression can name one by `+` alone, `OpenDash.LiveOrder3`:
+ *
+ * - `LivePosition<row>` and `LiveClassPosition<row>`: the place of the car on leaderboard row `row`,
+ *   over the field and in its own class.
+ * - `LiveOrder<place>`: the leaderboard row of the car in that place over the field.
+ * - `LiveClassOrder<place>`: the leaderboard row of the car in that place of the player's own class.
+ *
+ * Every one is null wherever the sim's own answer is the one to draw, which is while the driver has
+ * Live positions switched off on the panel (on by default), outside a race, after the chequered flag,
+ * before the sim has placed anybody, and on a row the field does not have:
+ * `plugin/OpenDash/LivePosition.cs` says how. So each is read through {@link setting.live} with
+ * SimHub's own answer as the fallback, and a package with no plugin draws what it always drew.
+ * `second/values.ts` is where they are read.
+ */
+export const LIVE_POSITION = 'LivePosition';
+/** See {@link LIVE_POSITION}. */
+export const LIVE_CLASS_POSITION = 'LiveClassPosition';
+/** See {@link LIVE_POSITION}. */
+export const LIVE_ORDER = 'LiveOrder';
+/** See {@link LIVE_POSITION}. */
+export const LIVE_CLASS_ORDER = 'LiveClassOrder';
+
+/** The four families of {@link LIVE_POSITION}, in the order the plugin attaches them. */
+export const LIVE_FAMILIES = [LIVE_POSITION, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_CLASS_ORDER] as const;
+export type LiveFamily = (typeof LIVE_FAMILIES)[number];
+
+/** How many rows and places each family carries: iRacing's largest field. */
+export const LIVE_SLOTS = 64;
+
+/** Every live property's name without the prefix, family by family and one to {@link LIVE_SLOTS} within each. */
+export const liveSettingNames = (): string[] =>
+  LIVE_FAMILIES.flatMap((family) => Array.from({ length: LIVE_SLOTS }, (_, i) => `${family}${i + 1}`));
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -406,6 +447,10 @@ export function dashProperties(): string[] {
     // And every theme's own settings after that, the AiM's backlight first: shared because they are the
     // driver's taste rather than a screen's, and a rig in auto mode shows whichever theme the car picks. #715.
     ...themeSettingNames(),
+    // And the race as it stands on the road after that, four families of a place or a row for each of
+    // sixty-four cars: published rather than chosen and shared because every screen that draws a place,
+    // a list or a gap reads them. #1063.
+    ...liveSettingNames(),
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -796,6 +841,11 @@ export const setting = {
   updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
   /** `isnull([OpenDash.PorscheCrest], '')`: the crest's file, or `''` for the empty shield. #714. */
   porscheCrest: (): Expr => isnull(prop(propertyName(PORSCHE_CREST)), str('')),
+  /**
+   * `isnull(prop('OpenDash.LiveOrder' + <n>), <fallback>)`: one live number, by a row or a place that is
+   * itself an expression, or SimHub's own answer where the plugin publishes none. See {@link LIVE_POSITION}.
+   */
+  live: (family: LiveFamily, n: Expr, fallback: Expr): Expr => isnull(propByName(concat(str(propertyName(family)), n)), fallback),
   /** `isnull([OpenDash.ThemeAimBacklight], 'white')`: the id of the choice the driver made of a theme's setting, or its default. #715. */
   themeSetting: (themeId: string, settingId: string): Expr => isnull(prop(propertyName(themeSettingName(themeId, settingId))), str(themeSetting(themeId, settingId).default)),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
@@ -1081,8 +1131,8 @@ export const ZONE_A_PAGES: readonly FaceZonePageMeta[] = [
  *
  * The catalogue artboard is headed "seven pages" and draws D1 through D8; the drawings are more
  * specific than the caption, so eight is taken and the disagreement is recorded in
- * docs/design/zones.md. The car page needs the telltale pictograms and arrives with #148; the
- * mask is sized for eight from the start so that adding it costs nothing.
+ * docs/design/zones.md. The car page, D8, is held back from 1.0 by {@link HELD_BACK_BAND_PAGES}: it
+ * keeps its place here, so that every page keeps its index, and is offered nowhere.
  *
  * These are the house's. A theme may add pages after them, which {@link bandDPages} appends: on a
  * Porsche face band D has nine and opens on the ninth.
@@ -1097,6 +1147,34 @@ export const BAND_D_PAGES: readonly FaceZonePageMeta[] = [
   { number: 6, id: 'relative', name: 'Relative' },
   { number: 7, id: 'car', name: 'Car' },
 ];
+
+/**
+ * Band D's pages that are in the catalogue and offered nowhere: never in a cycle, never a start or a
+ * glance, never listed by the panel or the site, and never drawn by a built package. This list is the
+ * one switch, and the plugin's `FacePages.HeldBack` mirrors it.
+ *
+ * Held back rather than taken out, because a page's number is the setting: the pages after it keep
+ * theirs, so a saved page, mask or order of a driver who never chose it still means what it meant, and
+ * a theme's band page is still the ninth on a Porsche face. A rig that had chosen it is moved forward
+ * in its own order when the plugin normalises its settings, which on a band nobody reordered is fuel.
+ *
+ * D8 Car, the twelve-lamp telltale rank of `zones/telltales.ts`, is held back from 1.0 (#969). It
+ * draws twelve outlined boxes with no pictogram in any of them, because the artwork is not in the
+ * repository, and nine of the twelve lamps have nothing in iRacing to light them; a page of empty
+ * boxes reads as broken. The rank, its fit tests and its snapshot stay, and #148 re-enables it by
+ * taking `car` out of this list once its pictograms land.
+ */
+export const HELD_BACK_BAND_PAGES: readonly string[] = ['car'];
+
+/** Whether a page of a zone is held back: band D's {@link HELD_BACK_BAND_PAGES}, and nothing in any other zone. */
+export const isHeldBack = (zone: FaceZone, id: string): boolean => zone === 'D' && HELD_BACK_BAND_PAGES.includes(id);
+
+/**
+ * The pages of a zone a driver can reach, on a face of the theme given: its catalogue less what is held
+ * back, each still under its own number. What the site lists and what a cycle, a start or a glance may
+ * land on.
+ */
+export const offeredPages = (zone: FaceZone, theme?: ThemeEntry): readonly FaceZonePageMeta[] => pagesForZone(zone, theme).filter((page) => !isHeldBack(zone, page.id));
 
 /**
  * Band D's catalogue on a face of a theme: the house's eight, then the theme's own, numbered on from
@@ -1165,8 +1243,11 @@ export const defaultZonePage = (zone: FaceZone, theme?: ThemeEntry): number =>
 /**
  * Which pages are enabled, as a bit mask, which is what sets the length of a zone's cycle. All of
  * them by default: a driver turns off what they do not want rather than turning on what they do.
+ *
+ * All of the {@link offeredPages}, that is: a held-back page's bit is never set, which is also the
+ * mask the plugin trims a stored one to, so a rig that had the page in its cycle loses it there.
  */
-export const defaultZoneMask = (zone: FaceZone, theme?: ThemeEntry): number => (1 << pagesForZone(zone, theme).length) - 1;
+export const defaultZoneMask = (zone: FaceZone, theme?: ThemeEntry): number => offeredPages(zone, theme).reduce((mask, page) => mask | (1 << page.number), 0);
 
 export const zonePageSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}`;
 export const zoneMaskSettingName = (face: FaceSize, zone: FaceZone): string => `${facePrefix(face)}Zone${zone}Pages`;
