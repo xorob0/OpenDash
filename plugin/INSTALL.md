@@ -77,9 +77,10 @@ A face is **five parts**, and every rectangular size is the same five.
 
 **Each zone shows one page at a time and a wheel button cycles it.** That is the whole idea, and
 it is what replaced the twelve fixed slots of 0.1.x. Zone A chooses among four pages built around
-the gear; zones B and C choose among the same twenty-one pages the companion has; band D chooses
-among eight that suit a wide, short strip. The bar is not a zone and does not cycle: carrying what
-stays still is what earns it the space.
+the gear; zones B and C choose among the same pages the companion has; band D chooses
+among seven that suit a wide, short strip. Its eighth, the telltale row, is held back from 1.0 until
+its pictograms exist. The bar is not a zone and does not cycle: carrying what stays still is what
+earns it the space.
 
 A page is never scaled to fit. It is laid out for the shape of the box it is given and sheds its
 secondary rows before it shrinks its numerals, so a bigger screen shows more in each zone rather
@@ -121,7 +122,7 @@ Four more dashboards are not faces for the wheel but second screens, described b
 | OpenDash Pit wall portrait | 1080 x 1920 | the same in one page, for a screen on its side |
 
 **The two round faces are still the twelve-slot design, on purpose.** A round face becomes zones on
-a ring before 1.0 (#487) -- the rev arc it already has, one zone in the middle of the disc, its card
+a ring after 1.0 (#487) -- the rev arc it already has, one zone in the middle of the disc, its card
 rectangles as small zones of their own, and the flag on the ring -- and until that work is done the
 two ship as they are. Of the dashboards the plugin installs they are the only ones set up on the
 Screens page in cards rather than in zones, Card 1 to Card 12, numbered the left side first, then the
@@ -180,9 +181,9 @@ zone keeps at least one page.
 ## The companion
 
 The companion shows one module at a time: a big, calm page for a phone or a tablet beside the
-wheel. There are twenty-one modules, listed under Modules when the companion is selected on the
-Screens page, and each has its own tick. A module that is off is skipped entirely. First module is
-the one a session opens on.
+wheel. The modules are listed under Modules when the companion is selected on the Screens page,
+and each has its own tick. A module that is off is skipped entirely. First module is the one a
+session opens on.
 
 Paging is SimHub's, not OpenDash's. Tap the left or right half of the screen to change module. For
 a wheel button, open the device or window the companion runs on in SimHub, go to its "Controls and
@@ -303,7 +304,7 @@ press Save.
 | Screens, a face | Quick glance | the zone and page a held button shows |
 | Screens, a round screen | Card 1 to Card 12 | any of the thirteen cards, shared by every round screen |
 | Screens, a round screen | Rev ring | On, Off, for every round screen, the speedo wherever it is shown and any face whose own Rev bar you have not set; a rectangular card face calls the same row Rev bar |
-| Screens, a companion | Modules | each of the twenty-one on or off; an off module is skipped when you page |
+| Screens, a companion | Modules | each module on or off; an off module is skipped when you page |
 | Screens, a companion | First module | the module a session opens on |
 | Screens, a companion | Flag display | Off, Bar, Full screen |
 | Screens, a companion | Quick glance | the module a held button shows |

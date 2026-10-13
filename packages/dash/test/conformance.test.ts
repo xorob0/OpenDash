@@ -1,8 +1,9 @@
 /**
  * Every theme still shows everything (#200): at every size a theme claims, nothing it draws clips,
- * nothing escapes its frame, and nothing disappears. `conformance.ts` holds the three properties;
- * this file asks them of every theme the run selects, which is how a theme added to the registry is
- * held to them without a line written here.
+ * nothing escapes its frame, and nothing disappears; and a reading drawn over its unlit cells lights
+ * no cell off them (#1029). `conformance.ts` holds the four properties; this file asks them of
+ * every theme the run selects, which is how a theme added to the registry is held to them without a
+ * line written here.
  *
  * A theme with colours of its own cannot be built in a process drawing another theme's, so the
  * default process starts this file again in one drawing them, once per such theme. The colours move
@@ -16,7 +17,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { buildThemeFace, drawsInThisProcess, type ThemeFace } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
-import { clipped, disappeared, escaped, themesToCheck } from './conformance.ts';
+import { clipped, disappeared, escaped, offGrid, themesToCheck } from './conformance.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme } from './fixtures/gearLeftTheme.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -28,6 +29,9 @@ afterAll(() => {
   delete THEMES[GEAR_LEFT_THEME_ID];
 });
 
+/** The properties a theme is held to, each a function of `conformance.ts`. */
+type Property = 'clipped' | 'escaped' | 'disappeared' | 'offGrid';
+
 /**
  * What a theme is known to get wrong, by property, pinned rather than tolerated: the property's
  * other problems still fail, and a pin whose fault has been put right fails too, so that putting it
@@ -38,10 +42,10 @@ afterAll(() => {
  * left of the face; they are no larger than the hero now, which answers the question this pin left
  * to the machinery, and `popUpRegions.test.ts` holds every theme's family to its region.
  */
-const KNOWN: Record<string, Partial<Record<'clipped' | 'escaped' | 'disappeared', RegExp>>> = {};
+const KNOWN: Record<string, Partial<Record<Property, RegExp>>> = {};
 
 /** The problems a property finds, less the ones pinned for this theme, of which there must still be some. */
-function unknown(id: string, property: 'clipped' | 'escaped' | 'disappeared', problems: string[]): string[] {
+function unknown(id: string, property: Property, problems: string[]): string[] {
   const pin = KNOWN[id]?.[property];
   if (!pin) return problems;
   expect({ theme: id, property, stillPinned: problems.some((p) => pin.test(p)) }).toEqual({ theme: id, property, stillPinned: true });
@@ -63,6 +67,10 @@ for (const id of here) {
 
       test('nothing clips', () => {
         expect(unknown(id, 'clipped', clipped(id, face))).toEqual([]);
+      });
+
+      test('nothing lights off its unlit cell', () => {
+        expect(unknown(id, 'offGrid', offGrid(id, face))).toEqual([]);
       });
 
       test('nothing escapes its frame', () => {

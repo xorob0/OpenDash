@@ -12,8 +12,8 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { CLASS_BEST_LAP, flagBox, propertyName, setting } from '../contract.ts';
-import { CHIP_WIDEST, chipText } from './chip.ts';
+import { CLASS_BEST_LAP, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, propertyName, setting } from '../contract.ts';
+import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
 import { ds as dsTokens } from '../tokens.ts';
@@ -81,9 +81,52 @@ export const noTime = (decimals = 3): string => `${MINUS}:${MINUS}${MINUS}.${MIN
 /** The three-decimal form, which is what a lap time is drawn to unless it asks for fewer. */
 export const NO_TIME = noTime();
 
+/**
+ * The places a lap of ten minutes or more is drawn to, which is one fewer than a shorter lap's.
+ *
+ * `toshorttime` does not pad the minutes, so a lap that reaches ten minutes gains a digit: the
+ * Nordschleife's 24h and Tourist layouts lap in ten to eleven minutes in the MX-5 Cup, the Legends
+ * and the Cross Car, the three cars the AiM theme was built for, and `10:30.123` is seven digits in
+ * a box cut for the six of `1:42.905`. WPF clips at the box, so the lap pop-up, the lap review and
+ * every other lap-time box drew `10:30.12` and a sliver of the last digit (#883).
+ *
+ * The lap drops its thousandth rather than every box gaining a cell, which is the trade
+ * {@link sectorTime} makes for the same track. A seventh cell is wider than a rung L card's slot at
+ * 64 px, and on the faces and the pit wall it costs columns on every lap of every track: the
+ * 800 x 286 lap-times zone sheds Your best, the pit wall boards draw their Last and Best wider than
+ * the artboard heads them, the leaderboard gives its lap columns up sooner. A thousandth of a ten
+ * minute lap is noise, and `toshorttime` truncates as the clip did, so what is lost is what was
+ * already not drawn, and what is gained is the digit that was cut. An hour is not a lap.
+ */
+export const LONG_LAP_DECIMALS = 2;
+
+/** Ten minutes, in the seconds `timespantoseconds` reads a lap in: the first lap with two minute digits. */
+export const LONG_LAP_SECONDS = 600;
+
+/**
+ * The widest reading a lap time draws at `decimals` places, which every box that draws one declares
+ * as its `widest` so that the fit tests measure the budget and not the sample.
+ *
+ * Every digit is a 4, the widest digit of Barlow and Barlow Condensed in every weight a lap time is
+ * drawn in (Light alone draws its 0 wider, and draws no lap), so the one string is the widest a
+ * proportional reading can be as well as the cell count of a monospaced one.
+ *
+ * At three places it is in the shape of a lap under ten minutes, `4:44.444`. A ten-minute lap,
+ * `10:30.12`, takes the same cells and draws no wider, but the shape is not only a width: the AiM
+ * theme draws its LCD ghost from the `widest`, and a ghost of `88:88.88` behind `1:42.905` puts the
+ * lit colon and point a cell away from the unlit ones on every ordinary lap. The ten-minute lap is
+ * the rare one, so it is the one drawn over a ghost of the other shape. At fewer places the ten
+ * minute form keeps its places and has the one more cell, so it is the widest, `44:44.4`.
+ */
+export const lapTimeWidest = (decimals = 3): string =>
+  decimals > LONG_LAP_DECIMALS ? `4:44.${'4'.repeat(decimals)}` : `44:44.${'4'.repeat(decimals)}`;
+
+/** The three-decimal form, which is what a lap time is drawn to unless it asks for fewer. */
+export const LAP_TIME_WIDEST = lapTimeWidest();
+
 /** Character budgets of the values the second screens draw. */
 export const CHARS = {
-  /** `1:42.905` */
+  /** `1:42.905`, and `10:42.90`: a lap of ten minutes is drawn to {@link LONG_LAP_DECIMALS} places to fit. */
   lapTime: { digits: 6, specials: 2 } as Chars,
   /**
    * `-0.21`: a signed delta in five digit cells and a point, the sign taking one of the cells. The
@@ -155,12 +198,27 @@ export const CHARS = {
   percent: { digits: 3, specials: 0 } as Chars,
   /** `54.2` brake bias, `3` assist levels. */
   setting: { digits: 4, specials: 1 } as Chars,
-  /** `GT3 · P12` and `GT3 · #12`: a class or car name, a separator and a number. */
+  /**
+   * `LMP2 · P12`, as it would be counted in cells. Nothing measures it by them: the run holds
+   * letters a cell cannot, so every surface sets it proportionally and measures it from
+   * {@link CLASS_AND_PLACE_WIDEST}, and this is only the budget a field has to carry.
+   */
   classPosition: { digits: 10, specials: 0 } as Chars,
-  /** A short word: `Race`, `Dry`, `M`. */
-  word: { digits: 8, specials: 0 } as Chars,
-  /** `12 / 43`, and `142 / 350` in an endurance race: the two spaces and the slash are the specials. */
-  lapOfTotal: { digits: 6, specials: 3 } as Chars,
+  /**
+   * `Offline Testing`: a session's name, in the cells it would take. The name is a word and is drawn
+   * proportionally, so this is not what its box is cut from; {@link SESSION_NAME_WIDEST} is.
+   */
+  sessionName: { digits: 15, specials: 0 } as Chars,
+  /**
+   * `12 / 43`, and `142 / 350` in an endurance race: nine digit cells and no special.
+   *
+   * The two spaces and the slash take the full cell, since the narrow one is given only to `.,:`,
+   * so the reading is as many cells as it has characters. Three digits either side of the slash is
+   * every oval race of a hundred laps and more and every day-long race. The budget used to count the
+   * spaces and the slash as specials, which at 46 px is a box of 168 px for a `12 / 120` of 176, and
+   * WPF cut the last digit of the total from the first lap of any race that long. #921.
+   */
+  lapOfTotal: { digits: 9, specials: 0 } as Chars,
 };
 
 /**
@@ -175,8 +233,22 @@ export const CHARS = {
  */
 export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(0)), num(0));
 
-/** A lap time as `m:ss.fff`, or the placeholder of the same shape when it was never set. */
-export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), toShortTime(ts, decimals, false, true), str(noTime(decimals)));
+/**
+ * A lap time as `toshorttime` writes it, `m:ss.fff`, and to {@link LONG_LAP_DECIMALS} places once
+ * the lap reaches ten minutes, `10:42.90`, so that every lap fits the cells cut for `1:42.905`.
+ *
+ * With no guard of its own: a lap that may be unset goes through {@link lapTime}, which reads this
+ * only once {@link hasTime} has said there is a time to read. `timespantoseconds` of a TimeSpan is
+ * never null, and NCalc's `if` evaluates the branch it takes and not the other.
+ */
+export const lapReading = (ts: Expr, decimals = 3): Expr => {
+  const long = Math.min(decimals, LONG_LAP_DECIMALS);
+  if (long === decimals) return toShortTime(ts, decimals, false, true);
+  return iff(lt(timespanToSeconds(ts), num(LONG_LAP_SECONDS)), toShortTime(ts, decimals, false, true), toShortTime(ts, long, false, true));
+};
+
+/** A lap time as {@link lapReading} draws it, or the placeholder of the same shape when it was never set. */
+export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), lapReading(ts, decimals), str(noTime(decimals)));
 
 /**
  * A sector time as seconds to two decimals, `28.41`, or `--` when it was never set.
@@ -262,7 +334,8 @@ export const listNeighbour = (offset: number, zoneFilter?: Expr): Expr =>
  * The `topRows` at the head of the field are kept whatever the player does, so the window opens
  * directly under them for as long as the player is still inside it, and follows the player down
  * once the player is past it, the player sitting in the middle of its `rows` as in a relative
- * table. The max is also the guard: `getplayerleaderboardposition()` answers -1 before the sim has
+ * table. The player's place is the live one, the window being a run of live places that
+ * {@link rowIndex.split} turns into rows. The max is also the guard: the place is 0 before the sim has
  * placed the player, and a window pinned against the kept rows is the plain list the table drew
  * before there was a split.
  *
@@ -272,14 +345,14 @@ export const listNeighbour = (offset: number, zoneFilter?: Expr): Expr =>
  * line.
  */
 const splitWindowTop = (topRows: number, rows: number): Expr =>
-  max(num(topRows + 1), min(sub(playerPosition(), num(Math.ceil(rows / 2) - 1)), sub(opponentCount(), num(rows - 1))));
+  max(num(topRows + 1), min(sub(carOverallPosition(player()), num(Math.ceil(rows / 2) - 1)), sub(opponentCount(), num(rows - 1))));
 
 /** The row a table's Nth line shows, given its mode. */
 export const rowIndex = {
-  /** The leaderboard in order. */
-  full: (): Expr => repeatIndex(),
-  /** The player's class only, in leaderboard order. */
-  inClass: (): Expr => classPosition(repeatIndex()),
+  /** The leaderboard in order, as it stands on the road where the plugin publishes the order (#1063). */
+  full: (): Expr => liveRow(repeatIndex()),
+  /** The player's class only, in the same order. */
+  inClass: (): Expr => liveClassRow(repeatIndex()),
   /** Relative to the player on track, the player on row `centre`. */
   relative: (centre: number): Expr => aheadBehind(sub(repeatIndex(), num(centre))),
   /** The same, counting only the player's own class. */
@@ -291,7 +364,7 @@ export const rowIndex = {
    * player's own class while the rows above the limit line draw overall positions, so the two
    * blocks of one list would be counting different fields.
    */
-  split: (topRows: number, rows: number): Expr => sub(add(splitWindowTop(topRows, rows), repeatIndex()), num(1)),
+  split: (topRows: number, rows: number): Expr => liveRow(sub(add(splitWindowTop(topRows, rows), repeatIndex()), num(1))),
 };
 
 /** How many cars a split list leaves out: the run between the rows it keeps and the window. */
@@ -526,16 +599,50 @@ export const ellipsised = (value: Expr, chars: number): Expr =>
 
 export const carClass = (idx: Expr): Expr => driver('carclass', idx);
 
-/** The position a table shows, overall or in class per the plugin's PositionMode. */
 /**
- * A car's position, overall or in class, or 0 while the sim has not placed it.
+ * The place of the car on leaderboard row `idx` over the whole field, as it stands on the road where
+ * the plugin publishes it and the sim's own place otherwise, or 0 while nobody has placed it.
+ *
+ * iRacing moves a car's place only when it crosses the start/finish line, and SimHub's `driverposition`
+ * is that place, so a pass in the first corner reached the dash a lap later (#1063). The plugin works the
+ * place out from the distance every car has covered and publishes it per leaderboard row;
+ * `LIVE_POSITION` in `contract.ts` says when it publishes nothing, and then this is the sim's place,
+ * which is also what a package with no plugin draws.
+ */
+export const carOverallPosition = (idx: Expr): Expr => isnull(setting.live(LIVE_POSITION, idx, driver('position', idx)), num(0));
+
+/** The same in the car's own class: the live class place, else `driverclassposition`, else 0. */
+export const carClassPosition = (idx: Expr): Expr => isnull(setting.live(LIVE_CLASS_POSITION, idx, driver('classposition', idx)), num(0));
+
+/**
+ * The leaderboard row of the car in place `place` over the whole field, as it stands on the road.
+ *
+ * SimHub's leaderboard is sorted by the sim's place, so with no live order the row is the place itself,
+ * which is what every list drew before the plugin published one. A place past the field is a row the
+ * plugin does not fill and the fallback runs past the leaderboard too, so `driveravailable` still hides it.
+ */
+export const liveRow = (place: Expr): Expr => setting.live(LIVE_ORDER, place, place);
+
+/**
+ * The leaderboard row of the car in place `place` of the player's own class, as it stands on the road,
+ * or SimHub's `getopponentleaderboardposition_playerclassonly`, which counts the sim's order.
+ */
+export const liveClassRow = (place: Expr): Expr => setting.live(LIVE_CLASS_ORDER, place, classPosition(place));
+
+/**
+ * A car's position, overall or in class per the plugin's PositionMode, or 0 while the sim has not
+ * placed it.
  *
  * Zero is kept as the *number* because callers do arithmetic on it and compare it. What changed is
  * that nothing draws a zero any more: {@link hasPosition} is the guard, and every drawing that
  * prints a position asks it first. A grid of AI before the green flag has no positions at all, and
  * a column of `P0` is a row of wrong answers where an empty cell is an honest one.
+ *
+ * Live, through {@link carOverallPosition} and {@link carClassPosition}: every list is drawn in the
+ * live order as well ({@link liveRow}), so a column of these counts down one at a time whichever of the
+ * two the plugin is publishing.
  */
-export const carPosition = (idx: Expr): Expr => iff(classMode(), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
+export const carPosition = (idx: Expr): Expr => iff(classMode(), carClassPosition(idx), carOverallPosition(idx));
 
 /** True once the sim has actually placed this car. Positions count from one, so zero is "not yet". */
 export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
@@ -561,6 +668,64 @@ export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDi
 export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P', positionDrawn(idx));
 
 /**
+ * A car's place in its own class, or 0 while nobody has placed it: {@link carClassPosition}, so it
+ * follows the race on the road as every other place does.
+ *
+ * Always the class, whatever `PositionMode` says, which is what sets it apart from
+ * {@link carPosition}: it is the place that stands beside a class name, and with the rig counting
+ * overall it is the one reading left that says where a car stands among its own.
+ */
+export const classPlace = (idx: Expr): Expr => carClassPosition(idx);
+
+/**
+ * `LMP2 · P4`: a car's class and its place in that class, or `LMP2 · P--` before the sim has placed
+ * it. Every surface that draws the pair binds this, and no other binding spells `' · P'`.
+ *
+ * It was written out three times, as the player's `CarClass` and a formatted `classposition`, and
+ * each copy had the same three faults. The grid read `GT3 · P0`, where every other position on the
+ * face reads `--` until {@link hasPosition} holds. The class went in whole, so a box measured for
+ * four letters drew `Ferrari 296` into itself and WPF cut it wherever it ran out. And two of the
+ * three drew it in digit cells, where the `M` of LMP2 and of BMW overruns its cell
+ * (`font.cell.excluded`).
+ *
+ * So the class is cut by {@link chipText}, the cut the leaderboard's chip makes, because a header
+ * reading one spelling of a class beside a chip reading another would be two answers to one
+ * question; the place is drawn `--` until there is one, as {@link positionDigits} draws it; and the
+ * run is set proportionally by every caller and measured from {@link CLASS_AND_PLACE_WIDEST}.
+ *
+ * Both halves are read from the same leaderboard entry, so the class and the place cannot belong to
+ * two different cars. It takes the car's index for that reason, and any car's pair can be drawn
+ * from it.
+ *
+ * A car with no class name reads its place alone, `P4`, rather than a separator with nothing before
+ * it. The evaluator reads ` · P4` for an empty or null class, and an entry can carry one: the
+ * emulator's pace car does, and a session whose cars carry no class may.
+ */
+export const classAndPlace = (idx: Expr): Expr => {
+  const cut = chipText(carClass(idx));
+  const place = iff(gt(classPlace(idx), num(0)), fmt(classPlace(idx), '0'), str(NO_VALUE));
+  return iff(eq(cut, str('')), concat(str('P'), place), concat(cut, str(' · P'), place));
+};
+
+/**
+ * The widest {@link classAndPlace} draws: the widest four capitals a real class name is cut to, and
+ * the widest of the ninety-nine places and the placeholder.
+ *
+ * `MUST`, from Mustang, and not the chip's `LMP2`: the cut keeps whatever four letters a class starts
+ * with, and four letters with an `M` among them are wider than LMP2's, so a Mustang, a Mercedes or a
+ * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit.
+ * `LMDH` draws exactly as wide in SemiBold and is a hair narrower in Bold. `44` and not `99` or
+ * `24`, because the face is proportional and its `4` is the widest digit it has.
+ * `classAndPlace.test.ts` holds a list of class names from iRacing, Assetto Corsa and ACC and
+ * measures every cut of them at every place against this, in SemiBold and in Bold.
+ *
+ * It also sets the width of the bar's ends, and at 600 x 686 the strip's five cells now fill what
+ * the ends leave to the pixel. A class wider than `MUST` added to that list is therefore a decision
+ * about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`, would cost it.
+ */
+export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
+
+/**
  * Places gained since the start, signed; 0 when the sim does not track it.
  *
  * Counted in the field the position beside it is counted in, which is {@link carPosition}'s own
@@ -572,9 +737,18 @@ export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P',
  * SimHub publishes the twin rather than leaving it to be worked out: `PositionGainClass` is
  * "driver's position gains in his own class since the start of the race/connection", registered
  * beside `PositionGain` among the opponent providers of SimHub 9.12.6.
+ *
+ * Both are the start less the sim's place (`RacePositionGain = StartPosition - Position` in
+ * `GameManagerBase`), so they move at the line with it. The live gain is the start less the live place,
+ * which is SimHub's gain plus the places the live count is ahead of the sim's: the same arithmetic,
+ * and nothing where the plugin publishes no live place, the two places then being one. #1063.
  */
 export const carRankChange = (idx: Expr): Expr =>
-  iff(classMode(), isnull(driver('positiongainclass', idx), num(0)), isnull(driver('positiongain', idx), num(0)));
+  iff(
+    classMode(),
+    add(isnull(driver('positiongainclass', idx), num(0)), sub(isnull(driver('classposition', idx), num(0)), carClassPosition(idx))),
+    add(isnull(driver('positiongain', idx), num(0)), sub(isnull(driver('position', idx), num(0)), carOverallPosition(idx))),
+  );
 
 /**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and
@@ -587,23 +761,31 @@ export const carRankChange = (idx: Expr): Expr =>
  * typographic minus, so the value is not formatted again on top of it.
  *
  * Lapped is asked of the laps rather than inferred from the string, since the string is the answer
- * and not the question. The leader is leaderboard row 1, the board being sorted by live position;
- * where either lap is missing the difference is null, the test is false, and the row falls back to
- * seconds, which is the reading that is always true.
+ * and not the question. Where either lap is missing the difference is null, the test is false, and the
+ * row falls back to seconds, which is the reading that is always true.
+ *
+ * The leader is the car in first place as it stands on the road, {@link liveRow} of 1, and the gap is
+ * measured to it as the difference of the two gaps SimHub measures to its own leader, which is the
+ * shape {@link carClassRaceGap} already has. SimHub's leader is the sim's, which iRacing changes only
+ * at the line (#1063); where the two are the same car its own gap is zero and nothing moves. The lapped
+ * case is written `+1L` from the laps for the same reason rather than read from `gaptoleadercombined`,
+ * which counts from SimHub's leader.
  *
  * This is the reading of a list drawn from the whole field. A list drawn from one class measures to
  * the leader of that class instead, which is {@link carClassRaceGap}.
  */
 export const carRaceGap = (idx: Expr): Expr => {
-  const gap = driver('gaptoleader', idx);
-  const lapsDown = sub(driver('currentlap', num(1)), driver('currentlap', idx));
+  const leader = liveRow(num(1));
+  const here = driver('gaptoleader', idx);
+  const lead = driver('gaptoleader', leader);
+  const lapsDown = sub(driver('currentlap', leader), driver('currentlap', idx));
   return iff(
-    eq(isnull(driver('position', idx), num(0)), num(1)),
+    eq(carOverallPosition(idx), num(1)),
     str('Lead'),
     iff(
-      ncalc.isNull(gap),
+      ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)),
       str(NO_VALUE),
-      iff(gt(lapsDown, num(0)), isnull(driver('gaptoleadercombined', idx), str(NO_VALUE)), signed(gap, '0.0')),
+      iff(gt(lapsDown, num(0)), concat(str('+'), fmt(lapsDown, '0'), str('L')), signed(sub(here, lead), '0.0')),
     ),
   );
 };
@@ -637,10 +819,10 @@ export const carRaceGap = (idx: Expr): Expr => {
  */
 export const carClassRaceGap = (idx: Expr): Expr => {
   const here = driver('gaptoleader', idx);
-  const lead = driver('gaptoleader', classPosition(num(1)));
-  const lapsDown = sub(driver('currentlap', classPosition(num(1))), driver('currentlap', idx));
+  const lead = driver('gaptoleader', liveClassRow(num(1)));
+  const lapsDown = sub(driver('currentlap', liveClassRow(num(1))), driver('currentlap', idx));
   return iff(
-    eq(isnull(driver('classposition', idx), num(0)), num(1)),
+    eq(carClassPosition(idx), num(1)),
     iff(eq(carPosition(idx), num(1)), str('Lead'), str('')),
     iff(
       ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)),
@@ -662,15 +844,18 @@ export const carRelativeGap = (idx: Expr): Expr =>
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
  * leader. The leader's own row is empty, there being nothing in front of it.
  *
- * The car in front is the row above on the list this is drawn in, so a list of one class takes
+ * The car in front is the one a place ahead as it stands on the road, found through the car's own
+ * place and {@link liveRow} rather than the row number, `idx` being a leaderboard row: with no live
+ * order the two are the same row above, which is what this drew before #1063. So a list of one class takes
  * {@link carClassInterval} instead. The two are one decision with the gap column beside them: Int
  * is the difference of two neighbouring Gaps, and a board counting the one from the class leader
  * while the other counted between leaderboard neighbours would draw two columns that do not add up.
  */
 export const carInterval = (idx: Expr): Expr => {
-  const ahead = driver('gaptoleader', sub(idx, num(1)));
+  const place = carOverallPosition(idx);
+  const ahead = driver('gaptoleader', liveRow(sub(place, num(1))));
   const here = driver('gaptoleader', idx);
-  return iff(and(gt(idx, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
+  return iff(and(gt(place, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
 };
 
 /**
@@ -683,8 +868,8 @@ export const carInterval = (idx: Expr): Expr => {
  * two.
  */
 export const carClassInterval = (idx: Expr): Expr => {
-  const place = isnull(driver('classposition', idx), num(0));
-  const ahead = driver('gaptoleader', classPosition(sub(place, num(1))));
+  const place = carClassPosition(idx);
+  const ahead = driver('gaptoleader', liveClassRow(sub(place, num(1))));
   const here = driver('gaptoleader', idx);
   return iff(and(gt(place, num(1)), ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
 };
@@ -740,14 +925,45 @@ export const carBehind = (): Expr => neighbour(1);
 export const carBehindClass = (): Expr => iff(carAvailable(carBehind()), chipText(carClass(carBehind())), str(''));
 
 /**
- * `P4 LMP2`: the position of the car behind and its class, or the empty string when there is
- * nothing behind. The position honours PositionMode, as every position OpenDash draws does.
+ * `P4 LMP2`: the position of the car behind and its class, `P-- LMP2` before the sim has placed
+ * it, or the empty string when there is nothing behind. The position honours PositionMode, as
+ * every position OpenDash draws does.
+ *
+ * The place is {@link positionLabelled}'s and not a second formatting of {@link carPosition}. It
+ * was one, and it asked nothing first, so on the formation lap and in a practice session before
+ * anyone had a time, which is where a blue flag is most often waved for nothing, the band read
+ * `BLUE · P0 GT3` while every other position on the face read `P--` (#931).
+ *
+ * A car with no class name reads its place alone, `P4`, as {@link classAndPlace} does, rather than
+ * a place with a space after it that a centred band would set half a space off its middle.
  */
-export const carBehindPositionClass = (): Expr =>
-  iff(carAvailable(carBehind()), concat(str('P'), fmt(carPosition(carBehind()), '0'), str(' '), chipText(carClass(carBehind()))), str(''));
+export const carBehindPositionClass = (): Expr => {
+  const car = carBehind();
+  const cut = chipText(carClass(car));
+  return iff(carAvailable(car), concat(positionLabelled(car), iff(eq(cut, str('')), str(''), concat(str(' '), cut))), str(''));
+};
 
-/** The widest `carBehindPositionClass` can draw: a two-digit place and the widest chip. */
-export const WIDEST_BEHIND_POSITION_CLASS = `P99 ${CHIP_WIDEST}`;
+/**
+ * The widest class cut the blue flag band draws for the car behind: `LAMB`, from Lamborghini.
+ *
+ * Not the chip's `LMP2`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: {@link chipText}
+ * keeps whatever four letters a class name starts with, and in the band's Barlow Bold fourteen real
+ * cuts are wider than LMP2's, `LAMB`, `MCLA`, `ARCA` and `MAZD` the widest of them (#931). It is not
+ * `MUST` either, which is the widest in the data face {@link classAndPlace} is set in and not in
+ * this one. `alertBand.test.ts` measures every cut of `classNames.ts` against it.
+ */
+export const WIDEST_BEHIND_CLASS = 'LAMB';
+
+/**
+ * The widest `carBehindPositionClass` can draw: a two-digit place and the widest class cut.
+ *
+ * `44` and not `99`, for the reason {@link CLASS_AND_PLACE_WIDEST} gives: the band is set in a
+ * proportional face, whose `4` is the widest digit it has. The placeholder `--` is narrower than
+ * either, so the place before a car is placed draws inside the same box. The class is
+ * {@link WIDEST_BEHIND_CLASS} and not the chip's `LMP2`, which a Lamborghini or a McLaren behind
+ * drew past.
+ */
+export const WIDEST_BEHIND_POSITION_CLASS = `P44 ${WIDEST_BEHIND_CLASS}`;
 
 // --- Session, car and environment -----------------------------------------------------------
 
@@ -1061,6 +1277,13 @@ export const fuelToEndColour = (): Expr =>
 export const estimatedRaceLaps = (): Expr => iff(gt(totalLaps(), num(0)), totalLaps(), add(completedLaps(), lapsLeft()));
 
 /**
+ * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
+ * three-digit lap of a three-digit race. Its sample is the short end, and a field measured by
+ * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
+ */
+export const LAP_OF_TOTAL_WIDEST = '999 / 999';
+
+/**
  * `12 / 43`: the lap you are on, out of the race's estimated length.
  *
  * The lap you are *on* and not the lap you have finished, because that is the number a driver says
@@ -1198,6 +1421,44 @@ export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALU
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**
+ * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
+ *
+ * SimHub passes iRacing's own words through. Its `IRacingManager.GD_SessionTypeName` (ICarsReader,
+ * decompiled) answers the `SessionType` of the entry in `SessionInfo.Sessions` the telemetry's
+ * `SessionNum` points at, and falls back to the weekend's `EventType` where there is none, so the
+ * list is both: the session types an iRacing weekend is made of, as the pit wall header listed them
+ * before this list existed, and the event types a weekend can be. They are written in iRacing's
+ * case, which is the case they are drawn in.
+ *
+ * `Open Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029
+ * rather than of a recording, which has only ever shown `Lone Qualify` and `Race`. A name missing
+ * from this list is not measured by anything that cuts its box from the list, the AiM's above all,
+ * so a name that might be written is listed rather than left out.
+ */
+export const SESSION_NAMES: readonly string[] = [
+  'Offline Testing',
+  'Practice',
+  'Open Practice',
+  'Lone Practice',
+  'Open Qualify',
+  'Lone Qualify',
+  'Qualify',
+  'Warmup',
+  'Heat',
+  'Consolation',
+  'Race',
+  'Test',
+  'Time Trial',
+];
+
+/**
+ * The widest of {@link SESSION_NAMES}, in every face the name is drawn in and in capitals too, which
+ * is what every text bound to {@link sessionType} declares as its `widest`. A session field cut to
+ * `Race` drew `Lone Qualify` as `Lone Qua` (#1029).
+ */
+export const SESSION_NAME_WIDEST = 'Offline Testing';
+
+/**
  * Whether SimHub is connected to a running game.
  *
  * `DataCorePlugin.GameRunning` is an `AttachedProperty<int>` and not a bool -- 1 or 0, written on
@@ -1240,7 +1501,6 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
  */
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
-export const playerClass = (): Expr => isnull(game('CarClass'), str(''));
 
 /** Wind speed in km/h, from the raw metres per second iRacing publishes. */
 export const windKmh = (): Expr => mul(isnull(raw('WindVel'), num(0)), num(3.6));
@@ -1373,6 +1633,12 @@ export const tyreWearMin = (corner: Corner): Expr => {
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**
+ * One of three values by the driver's temperature unit, read through {@link temperatureUnit} so that
+ * a unit SimHub does not say is Celsius. The tyre thresholds on the cards and on the second screens
+ * both pick by this; each read `TemperatureUnit` bare before.
+ */
+export const perTemperatureUnit = (f: Expr, k: Expr, c: Expr): Expr => iff(eq(temperatureUnit(), str('Fahrenheit')), f, iff(eq(temperatureUnit(), str('Kelvin')), k, c));
+/**
  * `°C`, `°F` or `K`, which is the temperature unit as a reading draws it rather than as SimHub
  * spells it: `TemperatureUnit` publishes the enum name, `Celcius` included with its own spelling,
  * and a driver reads the mark and not the enum. Kelvin takes no degree sign.
@@ -1407,6 +1673,57 @@ const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvF
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
 export const pitRefuelLitres = (): Expr => raw('PitSvFuel');
 export const isInPitLane = (): Expr => gt(isnull(game('IsInPitLane'), num(0)), num(0));
+
+// --- The pit lane and the spotter, one body each for the faces, the strips and the box -----------
+
+/** The limiter is engaged. Null-safe, so a sim that publishes nothing draws no limiter anywhere. */
+export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
+
+/** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
+export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
+
+/**
+ * What {@link pitLimit} reads when the sim publishes no limit: a speed nothing reaches in either
+ * unit, so the comparison below never fires on it and a readout can tell it from a real limit.
+ */
+export const NO_PIT_LIMIT = 999;
+
+/**
+ * The pit lane limit, in the driver's own unit.
+ *
+ * `PitLimiterSpeed` is published through `KmhToLocalSpeedUnit` (GameManagerBase.cs:1339), and
+ * `SpeedLocal` is `SpeedKmh` or `SpeedMph` by the same setting (GameManagerBase.cs:1492), so the two
+ * are always in one unit and are compared as they are. The metres-per-second twin,
+ * `PitLimiterSpeedMs`, carries `[DoNotExpose]` and DataCorePlugin skips it, so it is not a property
+ * at all: the box compared against it, read the null as "no limit" and never lit its speeding
+ * picture, while the strip compared the local pair and did.
+ */
+export const pitLimit = (): Expr => isnull(game('PitLimiterSpeed'), num(NO_PIT_LIMIT));
+
+/** The limit as the faces write it: the number, or the house's no-data dashes where there is none. */
+export const pitLimitText = (): Expr => iff(lt(pitLimit(), num(NO_PIT_LIMIT)), fmt(pitLimit(), '0'), str(NO_VALUE));
+
+/**
+ * How far over the limit, in the driver's unit, before it counts. A limiter holds the car a
+ * fraction over its figure, and this is what stops a light strobing as it settles. One unit in
+ * either: a mile an hour lets the imperial driver by 1.6 km/h where the metric one gets 1, which is
+ * the same order as the limiter's own settling and is not worth a second spelling.
+ */
+export const PIT_SPEEDING_MARGIN = 1;
+
+/**
+ * Over the pit lane limit, wherever the car is. A limit of zero or none is never exceeded, so a
+ * track whose limit the sim does not say reads as "not speeding" rather than "always speeding".
+ */
+export const overPitLimit = (): Expr => and(gt(pitLimit(), num(0)), gt(speed(), add(pitLimit(), num(PIT_SPEEDING_MARGIN))));
+
+/**
+ * Speeding in the pit lane. SimHub publishes no speeding property of any kind, so it is composed:
+ * in the lane and over the limit. The strip's effect and the box's picture both read this one
+ * expression, so the two cannot light at different speeds.
+ */
+export const pitSpeeding = (): Expr => and(isInPitLane(), overPitLimit());
+
 export const inPitSeconds = (): Expr => isnull(game('IsInPitSince'), num(0));
 export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), num(0));
 
@@ -1483,7 +1800,7 @@ export const average5 = (): Expr => {
   const seconds = slots.map((slot) => timespanToSeconds(slot));
   return iff(
     and(...slots.map((slot) => hasTime(slot))),
-    toShortTime(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS))), 3, false, true),
+    lapReading(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS)))),
     str(NO_TIME),
   );
 };

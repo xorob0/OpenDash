@@ -18,7 +18,8 @@
  *
  * Seven of the eight pages are that. The eighth, D8 Car, is the twelve-lamp telltale rank, which is
  * a rank of boxes rather than of fields and lives in `telltales.ts`; this file hands it the same
- * room it gives a page of fields and otherwise leaves it alone.
+ * room it gives a page of fields and otherwise leaves it alone. It is held back from 1.0 (#969), so
+ * no built band reaches it, and is drawn here still for the tests and for #148.
  */
 import type { HAlign, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -57,6 +58,8 @@ import {
   FUEL_TO_END_WIDEST,
   fuelUnit,
   incidents,
+  LAP_TIME_WIDEST,
+  lapReading,
   lastLap,
   listNeighbour,
   localClock,
@@ -68,12 +71,13 @@ import {
   sectorTime,
   settledFuelTimeLeft,
   simClock,
+  spotterCar,
   twelveHour,
   windKmh,
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -162,7 +166,7 @@ export interface BandField {
   numeralWidest?: string;
 }
 
-const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), toShortTime(expr, 3));
+const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), lapReading(expr));
 
 /**
  * A reading derived from what a lap costs, drawn only once a lap has cost something.
@@ -320,8 +324,8 @@ const sectors: readonly BandField[] = [
   { id: 's1', label: 'S1', sample: '28.41', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 1)), chars: CHARS.sector },
   { id: 's2', label: 'S2', sample: '41.07', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 2)), chars: CHARS.sector },
   { id: 's3', label: 'S3', sample: '32.83', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 3)), chars: CHARS.sector },
-  { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime },
-  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, color: ds.purpose.lap.sessionBest },
+  { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST },
+  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST, color: ds.purpose.lap.sessionBest },
 ];
 
 /**
@@ -883,7 +887,7 @@ const cornerLamps = (): { id: string; text: string; on: string; colour: `#${stri
   {
     id: 'spt',
     text: 'SPT',
-    on: ncalc.or(gt(isnull(game('SpotterCarLeft'), num(0)), num(0)), gt(isnull(game('SpotterCarRight'), num(0)), num(0))),
+    on: ncalc.or(spotterCar('Left'), spotterCar('Right')),
     colour: ds.color.caution.primary,
   },
 ];
@@ -1077,5 +1081,9 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   return items;
 }
 
-/** Every page id band D can show, in cycle order, for a test that wants to walk them. */
+/**
+ * Every page id band D can draw, in catalogue order, for a test that wants to walk them. The car page
+ * is among them although it is held back from 1.0 (`HELD_BACK_BAND_PAGES` in `contract.ts`, #969):
+ * the rank is still built and measured, so that #148 re-enables it rather than rewriting it.
+ */
 export const BAND_PAGE_IDS: readonly string[] = [...Object.keys(BAND_PAGES), TELLTALE_PAGE];
