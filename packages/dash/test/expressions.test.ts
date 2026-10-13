@@ -1,9 +1,9 @@
 /** The NCalc that reaches the file: digit counts, h:mm:ss, the shift lights and the card rules. */
 import { describe, expect, test } from 'bun:test';
-import { leds, ncalc, stableGuid } from '../src/generator.ts';
+import { leds, ncalc, ncalcEvaluator, stableGuid } from '../src/generator.ts';
 import { revBar, REDLINE_BLINK_MS } from '../src/components/revBar.ts';
 import { stageOf } from '../src/components/revSegments.ts';
-import { GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, carLadderSegmentLit, lastGear, redlineRpm } from '../src/shift.ts';
+import { GEAR_COUNT_PROPERTY, LEARNED_GEAR_COUNT_PROPERTY, SHIFT_RPM_PROPERTIES, carLadderSegmentLit, lastGear, redlineRpm } from '../src/shift.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { readFileSync } from 'node:fs';
@@ -300,8 +300,9 @@ describe('hero expressions', () => {
   const SL = (n: string) => `isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSL${n}RPM], 0)`;
   const MIRROR = `((${SL('First')}) > (0)) and ((${SL('Last')}) > (${SL('First')})) and ((${SL('Shift')}) >= (${SL('First')})) and ((${SL('Last')}) >= (${SL('Shift')}))`;
   const ON = setting.revBarIs('shift');
-  const GEARS = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)';
-  const LAST_GEAR = `((${GEARS}) > (0)) and ((isnull([DataCorePlugin.GameRawData.Telemetry.Gear], 0)) >= (${GEARS}))`;
+  const DECLARED = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward], 0)';
+  const GEARS = `if((${DECLARED}) > (0), ${DECLARED}, isnull([DataCorePlugin.GameData.CarSettings_MaxGears], 0))`;
+  const LAST_GEAR = `(isnull([DataCorePlugin.GameData.Gear], '')) = (('') + (${GEARS}))`;
   // The car's own measured bar, as the plugin publishes it: the gate a screen draws it behind, the
   // two numbers it draws it from, the RPM it reddens at, and its flash. Spelled out rather than
   // called, for the reason MIRROR is: a shared helper name would pass with the bar and the readout
@@ -482,9 +483,11 @@ describe('hero expressions', () => {
     expect(segOf(shift, 14).bindings?.BlinkEnabled?.formula).toContain(`!(${LAST_GEAR})`);
     expect(segOf(shift, 14).bindings?.BackgroundColor?.formula).not.toContain('GearNumForward');
 
-    // The gear count comes from the same DriverInfo block as the four RPMs, so there is no new source...
+    // The gear count comes from the same DriverInfo block as the four RPMs where iRacing declares
+    // one, and from the count SimHub learns for every sim where it does not (#996)...
     expect(GEAR_COUNT_PROPERTY).toBe('DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward');
-    // ...and a car that does not publish one keeps flashing, because the guard is count > 0.
+    expect(LEARNED_GEAR_COUNT_PROPERTY).toBe('DataCorePlugin.GameData.CarSettings_MaxGears');
+    // ...and a car with neither keeps flashing, because a count of zero is written "0" and names no gear.
     expect(lastGear()).toBe(LAST_GEAR);
 
     // The bands themselves are gear-independent: no gear appears in any segment's colour.
@@ -494,6 +497,42 @@ describe('hero expressions', () => {
     // whether there is a shift to ask for. Its band is still gear-independent, as above.
     expect(segOf(simhub, 14).bindings?.BlinkEnabled?.formula).toContain(`!(${LAST_GEAR})`);
     expect(segOf(simhub, 14).bindings?.BackgroundColor?.formula).not.toContain('Gear');
+  });
+
+  test('the last gear is found on Assetto Corsa as on iRacing, from the gear every sim publishes (#996)', () => {
+    // Evaluated with NCalc's own types rather than JavaScript's, because the types are the point:
+    // `[Gear]` is text, iRacing's count is the session string's text, and SimHub's learned count is
+    // an Int32. A comparison that only works for one of those works on one sim.
+    const { evaluate, int } = ncalcEvaluator;
+    const isLast = (properties: Record<string, unknown>): unknown => evaluate(lastGear(), { properties });
+    const GEAR = 'DataCorePlugin.GameData.Gear';
+
+    // Assetto Corsa publishes no DriverInfo block and no `Telemetry.Gear`; SimHub publishes the gear
+    // as text and the count it has learned for the car. Before #996 neither frame was the last gear.
+    const ac = (gear: string): Record<string, unknown> => ({ [GEAR]: gear, [LEARNED_GEAR_COUNT_PROPERTY]: int(6) });
+    expect(isLast(ac('6'))).toBe(true);
+    expect(isLast(ac('5'))).toBe(false);
+    expect(isLast(ac('N'))).toBe(false);
+    expect(isLast(ac('R'))).toBe(false);
+
+    // iRacing declares its count, and the declared count wins over a learned one, which on a car's
+    // first drive is only the highest gear reached so far.
+    const iracing = (gear: string, learned: number): Record<string, unknown> => ({
+      [GEAR]: gear,
+      [GEAR_COUNT_PROPERTY]: '6',
+      [LEARNED_GEAR_COUNT_PROPERTY]: int(learned),
+    });
+    expect(isLast(iracing('6', 6))).toBe(true);
+    expect(isLast(iracing('5', 6))).toBe(false);
+    expect(isLast(iracing('5', 5))).toBe(false);
+    expect(isLast(iracing('6', 0))).toBe(true);
+    // A count published as a number rather than as text gives the same answer.
+    expect(isLast({ [GEAR]: '6', [GEAR_COUNT_PROPERTY]: int(6) })).toBe(true);
+
+    // With no count anywhere, and before anything is published, no gear is the last one.
+    expect(isLast({ [GEAR]: '6' })).toBe(false);
+    expect(isLast({ [GEAR]: 'N' })).toBe(false);
+    expect(isLast({})).toBe(false);
   });
 
   test("the speedo's Redline prints the RPM the rev bar's top band lights at", () => {
