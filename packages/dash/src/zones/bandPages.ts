@@ -58,6 +58,7 @@ import {
   FUEL_TO_END_WIDEST,
   fuelUnit,
   incidents,
+  LAP_TIME_WIDEST,
   lapTime,
   lastLap,
   listNeighbour,
@@ -320,8 +321,8 @@ const sectors: readonly BandField[] = [
   { id: 's1', label: 'S1', sample: '28.41', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 1)), chars: CHARS.sector },
   { id: 's2', label: 'S2', sample: '41.07', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 2)), chars: CHARS.sector },
   { id: 's3', label: 'S3', sample: '32.83', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 3)), chars: CHARS.sector },
-  { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime },
-  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, color: ds.purpose.lap.sessionBest },
+  { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST },
+  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST, color: ds.purpose.lap.sessionBest },
 ];
 
 /**

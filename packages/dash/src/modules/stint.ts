@@ -29,7 +29,7 @@ import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, LAP_OF_TOTAL_WIDEST, average5, clock, lapOfTotal, player, secondsOf, settledFuelTimeLeft } from '../second/values.ts';
+import { CHARS, LAP_OF_TOTAL_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, isnull, num, driver, game } = ncalc;
@@ -75,7 +75,7 @@ export const stint = defineModule('stint', (ctx) => {
         ctx,
       ),
       fieldsRow(
-        [fld(ctx, 'avgLap', 'Avg lap', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.small })],
+        [fld(ctx, 'avgLap', 'Avg lap', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.small })],
         ctx,
       ),
     ],
