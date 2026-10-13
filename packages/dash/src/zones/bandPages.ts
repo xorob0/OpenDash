@@ -36,6 +36,9 @@ import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
   airTemperature,
+  bandFuelQuantity,
+  bandFuelQuantityDrawn,
+  bandFuelQuantityWidest,
   bestLap,
   carPosition,
   positionLabelled,
@@ -62,6 +65,7 @@ import {
   localClock,
   meridiemWidest,
   minutesClock,
+  MINUTES_CLOCK_WIDEST,
   NO_TIME,
   NO_VALUE,
   roadTemperature,
@@ -173,6 +177,22 @@ const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)
 const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VALUE));
 
 /**
+ * Whole digits a tank or a refuel can take, `999` in either unit, which is the three the page has
+ * always budgeted for them; and a lap's consumption, `99`, the two it always budgeted for that.
+ */
+const TANK_DIGITS = 3;
+const LAP_DIGITS = 2;
+
+/**
+ * A fuel quantity's cells and the reading they are measured by, for a figure drawn through
+ * {@link bandFuelQuantity}: the whole form's widest against the `9.9` of the decimal one. #899.
+ */
+const quantity = (digits: number): Pick<BandField, 'chars' | 'numeralWidest'> => {
+  const { widest, chars } = bandFuelQuantityWidest(digits);
+  return { chars, numeralWidest: widest };
+};
+
+/**
  * D1 Fuel: what a driver checks on a straight, which is why it is the default.
  *
  * The tank and the refuel are read off the sim directly, whereas the other four are derived from
@@ -195,21 +215,28 @@ const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VA
  * saying whether the tank reaches the flag rather than the estimate a driver would have to subtract
  * the laps left from himself. It is the one field of this page the canvas draws on neither fuel
  * sheet, and `docs/design/zones.md` §5 records that. #387.
+ *
+ * The four quantities, the tank, the refuel, the per lap and the last lap, are drawn whole from 10
+ * up and to one decimal below, through {@link bandFuelQuantity}, in the driver's unit. That is the
+ * author's ruling on #899: the fuel time's third minute digit cost the Porsche's and the AiM's feet
+ * fields at 850 and 800 wide, and the tenths of a tank are worth less than a field. The cells are
+ * cut for the longer of the two forms, so a tank is three digit cells and a lap's consumption two
+ * and a point, where both used to be five and a point.
  */
 const fuel: readonly BandField[] = [
   {
     id: 'fuel',
     label: 'Fuel',
-    sample: '15.12',
-    bind: fmt(fuelLevel(), '0.00'),
-    chars: { digits: 5, specials: 1 },
-    drawn: drawnFigure({ value: fuelLevel(), digits: 3, decimals: 2 }),
+    sample: '15',
+    bind: bandFuelQuantity(fuelLevel()),
+    ...quantity(TANK_DIGITS),
+    drawn: bandFuelQuantityDrawn(fuelLevel(), TANK_DIGITS),
     after: 'L',
     afterBind: fuelUnit(),
     afterWidest: 'gal',
     color: ds.purpose.fuel.nominal,
   },
-  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
+  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), numeralWidest: MINUTES_CLOCK_WIDEST, chars: CHARS.minutesClock },
   {
     id: 'toEnd',
     label: 'Margin',
@@ -224,9 +251,9 @@ const fuel: readonly BandField[] = [
     afterWidest: FUEL_TO_END_UNIT_WIDEST,
   },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
-  { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
-  { id: 'perLap', label: 'Per lap', sample: '1.432', bind: settled(fmt(fuelPerLap(), '0.000')), chars: { digits: 5, specials: 1 } },
-  { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: iff(fuelLastLapIsSettled(), fmt(fuelLastLap(), '0.000'), str(NO_VALUE)), chars: { digits: 5, specials: 1 } },
+  { id: 'refuel', label: 'Refuel', sample: '33', bind: bandFuelQuantity(isnull(raw('PitSvFuel'), num(0))), ...quantity(TANK_DIGITS), color: ds.color.caution.primary },
+  { id: 'perLap', label: 'Per lap', sample: '1.4', bind: settled(bandFuelQuantity(fuelPerLap())), ...quantity(LAP_DIGITS) },
+  { id: 'lastLap', label: 'Last lap', sample: '1.3', bind: iff(fuelLastLapIsSettled(), bandFuelQuantity(fuelLastLap()), str(NO_VALUE)), ...quantity(LAP_DIGITS) },
 ];
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */
@@ -836,8 +863,10 @@ interface BlockGeometry {
  *
  * Kept because the rank, the corner block and the shedding are read off artboards that still lay the
  * band out around a `D`: giving the room to the page moves the rank and the left corner inboard and
- * lets the 850 x 480 fuel page keep the last lap and the 600 x 686 band all twelve telltales, which is a
- * redraw of the band and the canvas's to make rather than a consequence of dropping a label.
+ * lets the 600 x 686 band draw all twelve telltales, which is a redraw of the band and the canvas's to
+ * make rather than a consequence of dropping a label. (It used to let the 850 x 480 fuel page keep the
+ * last lap as well, which that page now does in its own room since its quantities lost their tenths,
+ * #899.)
  */
 const letterRoom = (frame: Rect): number => {
   const m = bandMetrics(frame);

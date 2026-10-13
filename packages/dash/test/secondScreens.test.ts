@@ -407,7 +407,7 @@ describe('the companion', () => {
       sim.tap();
       seen.push(sim.frame());
     }
-    // Eighteen of the twenty-one are on by default, and the ring comes back round to the first.
+    // All but three are on by default, and the ring comes back round to the first.
     expect(new Set(seen).size).toBe(MODULE_COUNT - 3);
     expect(seen).not.toContain(idOf(5));
   });
@@ -415,7 +415,7 @@ describe('the companion', () => {
   test('every module is an in-game screen and the idle screen is the only idle one', () => {
     // `Dashboard.GetActiveScreens` compares "{PitScreen};{InGameScreen};{IdleScreen}" across the
     // enabled screens and filters by role only when they differ, which they now do: while a game runs
-    // the ring is the twenty-one modules and the tap still pages them, and between sessions it is the
+    // the ring is the modules that are on and the tap still pages them, and between sessions it is the
     // idle screen alone. Identical roles are what used to leave a companion at rest on a module full
     // of dashes (#763).
     expect([...new Set(modules(main).map((s) => `${s.inGame};${s.idle};${s.pit}`))]).toEqual(['true;false;false']);
