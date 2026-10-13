@@ -318,14 +318,19 @@ namespace OpenDashPlugin
         /// took one out of DashTemplates (#861, #588).
         /// </summary>
         /// <remarks>
-        /// Named by its file, because nothing on the panel offers it back: Put mine back reads the rig's folders, and
-        /// the folder this copy is of is no longer one of them.
+        /// Said, because nothing on the panel offers it back: Put mine back reads the rig's folders, and the folder
+        /// this copy is of is no longer one of them. Not named, because a file under DashTemplates is a name from
+        /// inside the code (voice.md), and the line points at SimHub's log, which names it, as a failure points there
+        /// for its detail.
         /// </remarks>
         public static string WithEditsKept(string line, string keptCopy)
         {
             if (string.IsNullOrEmpty(keptCopy)) return line;
-            return line + " Your edited dashboard is kept in DashTemplates as " + System.IO.Path.GetFileName(keptCopy) + ".";
+            return line + " " + EditsKept;
         }
+
+        /// <summary>The sentence <see cref="WithEditsKept"/> adds.</summary>
+        public const string EditsKept = "A copy of your edited dashboard is kept, and SimHub's log says where.";
 
         // --- A face's rows ------------------------------------------------------------------------------
 

@@ -427,8 +427,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove it", PanelScreens.RemoveItButton);
             Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio.", PanelScreens.Removed("Rim"));
             Assert.Equal("Could not remove Rim. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
-            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio. Your edited dashboard is kept in DashTemplates as OpenDash Rim_yours_20261014-103000Z.zip.",
+            // The copy is said and not named: a file under DashTemplates is a name from inside the code (voice.md).
+            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio. A copy of your edited dashboard is kept, and SimHub's log says where.",
                 PanelScreens.Removed("Rim", System.IO.Path.Combine("DashTemplates", "OpenDash Rim_yours_20261014-103000Z.zip")));
+            Assert.DoesNotContain("DashTemplates", PanelScreens.EditsKept);
         }
 
         /// <summary>A face's rows, in voice.md's words where the artboard's differ, which voice.md wins (#791).</summary>
