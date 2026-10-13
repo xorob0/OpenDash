@@ -46,8 +46,8 @@ exports[`the theme a process builds the default theme builds the zone faces it b
   "OpenDash 850x480/zoneface-zoneA-300x366.djson": "71f4c678b9594e2c1d9aae982482f91a391f451d1c2b2505a8731a57d7eae477",
   "OpenDash/OpenDash.djson": "1a26cfd5aa3dbce33a844db97b313fd953a58a875839600ff5abd498fd0b6a91",
   "OpenDash/zoneface-band-1920x60.djson": "2a4e5c60b298647f1cef086a076498710ef37cdef46cde29b6ff1fc1cebe628e",
-  "OpenDash/zoneface-module-769x314.djson": "c65639a9bed335d857af57e06922261da63a1fb1171b7577e2e12cb9a6dd43c5",
-  "OpenDash/zoneface-module-769x358.djson": "f3a22e7db6d81ff069ecd810a10b13aaa4a0561f55c8cd35d1b93518ef7b2aab",
+  "OpenDash/zoneface-module-769x314.djson": "88db41a93478bcf5f14638916622e6c02933d82827ddebd540ac2085e11ad4b1",
+  "OpenDash/zoneface-module-769x358.djson": "7864f78f6b672d8d035f19cf9625017cea8777e54b402e802a37bc521eff3ed0",
   "OpenDash/zoneface-zoneA-380x314.djson": "b0ca365849054d9542429b0d6a346f341210581f02fb6a051d1cb8a940a10d52",
   "OpenDash/zoneface-zoneA-380x358.djson": "565484a0a225d3465164c488ae30e4e343e1952195753f3b16dec81ba8c4f959",
 }
