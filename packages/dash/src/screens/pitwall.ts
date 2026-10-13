@@ -29,7 +29,7 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { assistField } from '../modules/carSettings.ts';
-import { airTemperature, bestLap, brake, brakeBias, carPosition,
+import { airTemperature, bestLap, brake, brakeBias, carClassPosition, carPosition,
   positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
@@ -79,7 +79,7 @@ function panelRow(body: Rect, specs: readonly FieldSpec[], gap?: number): Item[]
 export function sessionPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Session' });
-  const classPosition = isnull(driver('classposition', player()), num(0));
+  const classPosition = carClassPosition(player());
   return [
     ...items,
     ...panelRow(body, [

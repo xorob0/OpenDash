@@ -15,7 +15,7 @@ import { drawnFigure } from '../second/drawn.ts';
 import { stack } from '../second/layout.ts';
 import {
   CHARS,
-  carPosition,
+  carClassPosition, carPosition,
   positionDigits,
   classOpponentCount,
   currentLap,
@@ -39,7 +39,7 @@ const { fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
-  const classPosition = isnull(driver('classposition', player()), num(0));
+  const classPosition = carClassPosition(player());
   const taken = isnull(incidents(), num(0));
   // The Session progress setting was read by the legacy card alone, so a zone drew the lap and the
   // time left side by side whatever the driver had chosen. One of the two answers the question and

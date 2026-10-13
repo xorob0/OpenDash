@@ -34,6 +34,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
             // A flag shows in the pit lane, which is what every surface drew before it was a choice. #791.
             Assert.True(settings.FlagsInPitLane);
+            // The race as it stands on the road, on unless a driver turns it off. #1063.
+            Assert.True(settings.LivePositions);
             // The rig's thresholds are unanswered until Normalise reads them off matrix 1, and a new
             // install's matrix 1 has none, so they come back as zero: the profile's own default.
             Assert.Null(settings.LightsOilTemp);
@@ -1201,6 +1203,7 @@ namespace OpenDashPlugin.Tests
                 LedRpmStyle = "leftToRight",
                 LedFlagAnimation = false,
                 FlagsInPitLane = false,
+                LivePositions = false,
             };
             source.Normalise();
             source.SetMatrixRest(2, "gear");
@@ -1230,6 +1233,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(115, copy.LightsWaterTemp);
             Assert.Equal(130, copy.MatrixOilTemp(4));
             Assert.False(copy.FlagsInPitLane);
+            Assert.False(copy.LivePositions);
             Assert.Equal("gear", copy.MatrixRest(2));
             Assert.Equal("left", copy.MatrixSide(1));
             Assert.True(copy.MatrixFlags(4));
@@ -1452,12 +1456,14 @@ namespace OpenDashPlugin.Tests
 
             // And what this version writes, it reads back.
             settings.FlagsInPitLane = false;
+            settings.LivePositions = false;
             settings.SetLightsWaterTemp(230);
             settings.SetBarBrightness("LedMLD", 40);
             settings.SetBarEffect("LedMLD", "drs", false);
             var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
             back.Normalise();
             Assert.False(back.FlagsInPitLane);
+            Assert.False(back.LivePositions);
             Assert.Equal(120, back.LightsOilTemp);
             Assert.Equal(230, back.MatrixWaterTemp(3));
             Assert.Equal(40, back.BarBrightness("LedMLD"));
@@ -1612,11 +1618,11 @@ namespace OpenDashPlugin.Tests
             // the rig was. What it attaches now is the four modes, the twelve slots, the rev bar, the
             // blue flag detail, the two that say how a driver is named, the idle screen's two, the class
             // best, the clock format, the delta's precision, whether a flag shows in the pit lane and the
-            // Porsche crest's path and the AiM's backlight, which every screen shares, and one group per
-            // screen the rig holds.
+            // Porsche crest's path, the AiM's backlight and the race as it stands on the road, which every
+            // screen shares, and one group per screen the rig holds.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(28, shared);
+            Assert.Equal(28 + 4 * LivePosition.Slots, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and a hundred and nine names is still
             // fewer than the screens' two hundred and sixty-four, which are what was worth narrowing.

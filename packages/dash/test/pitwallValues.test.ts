@@ -45,12 +45,19 @@ const car = (fields: Partial<Car>): Car =>
  * The default is the mode such a board is normally drawn under, and the cases that turn on the
  * other one say so.
  */
-function evaluate(formula: string, board: readonly Car[], row: number, positionMode: 'overall' | 'class' = 'class'): unknown {
+function evaluate(
+  formula: string,
+  board: readonly Car[],
+  row: number,
+  positionMode: 'overall' | 'class' = 'class',
+  live?: Readonly<Record<string, number>>,
+): unknown {
   const js = formula
     .replace(/\bdriversector[a-z]+\(/g, 'sector(')
     .replace(/\bdriver([a-z]+)\(/g, "field('$1', ")
     .replace(/\bgetopponentleaderboardposition_playerclassonly\(/g, 'classRow(')
     .replace(/\[([A-Za-z0-9_.]+)\]/g, "P('$1')")
+    .replace(/\bprop\(/g, 'PROP(')
     .replace(/\brepeatindex\(\)/g, 'ROW')
     .replace(/\bif\(/g, 'iff(')
     .replace(/\bisnull\(/g, 'nz(')
@@ -72,6 +79,8 @@ function evaluate(formula: string, board: readonly Car[], row: number, positionM
       if (name !== 'OpenDash.PositionMode') throw new Error(`the evaluator publishes one property, not ${name}`);
       return positionMode;
     },
+    // The plugin's live places and rows, by the name the formula builds; none unless the case publishes some.
+    PROP: (name: string): unknown => live?.[name] ?? null,
     sector: (index: number, sector: number): number | null => board[index - 1]?.sectors[sector - 1] ?? null,
     // .NET's `format(x, '0.0', true)`: the pattern's decimals, and a sign on a positive value too.
     // A null formats to nothing, as NCalc's does. NCalc's `if` takes only the branch it needs and
@@ -118,13 +127,29 @@ describe('the Gap column', () => {
     expect(gapOf(4)).toBe('--');
   });
 
-  test('the combined string is reached only once the lapped test has said so', () => {
-    // It is one string for both cases and the dash has no say in its sign or its decimals, so a
-    // row that is not lapped must never fall through to it.
-    const formula = carRaceGap(repeatIndex());
-    const lapped = formula.indexOf('drivercurrentlap');
-    expect(lapped).toBeGreaterThan(-1);
-    expect(formula.indexOf('drivergaptoleadercombined')).toBeGreaterThan(lapped);
+  test("a lapped car counts its laps to the leader on the road, not SimHub's string", () => {
+    // `gaptoleadercombined` counts from SimHub's leader, which on iRacing is the sim's and changes only
+    // at the line, so the lap count is the dash's own arithmetic, as the class column's is (#1063).
+    expect(carRaceGap(repeatIndex())).not.toContain('drivergaptoleadercombined');
+  });
+
+  test('the leader on the road reads Lead and the gaps are measured to it (#1063)', () => {
+    // Row 2 has passed row 1 since the line: SimHub still has row 1 as its leader, and measures row 2
+    // half a second ahead of it. The plugin has the order on the road as rows 2, 1, 3, 4.
+    const PASSED: readonly Car[] = [
+      car({ position: 1, gaptoleader: 0, currentlap: 24 }),
+      car({ position: 2, gaptoleader: -0.5, currentlap: 24 }),
+      car({ position: 3, gaptoleader: 142.35, currentlap: 23 }),
+      car({ position: 4, gaptoleader: null, currentlap: 23 }),
+    ];
+    const live = {
+      'OpenDash.LiveOrder1': 2, 'OpenDash.LiveOrder2': 1, 'OpenDash.LiveOrder3': 3, 'OpenDash.LiveOrder4': 4,
+      'OpenDash.LivePosition1': 2, 'OpenDash.LivePosition2': 1, 'OpenDash.LivePosition3': 3, 'OpenDash.LivePosition4': 4,
+    };
+    const gap = (row: number): unknown => evaluate(carRaceGap(repeatIndex()), PASSED, row, 'overall', live);
+    const interval = (row: number): unknown => evaluate(carInterval(repeatIndex()), PASSED, row, 'overall', live);
+    expect([gap(2), gap(1), gap(3), gap(4)]).toEqual(['Lead', '+0.5', '+1L', '--']);
+    expect([interval(2), interval(1)]).toEqual(['', '+0.5']);
   });
 
   test('the widest gap a lead-lap car can show fits the budget it is drawn in', () => {
