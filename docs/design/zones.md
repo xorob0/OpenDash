@@ -198,9 +198,9 @@ wall's zones keep the 28 px row over 16 px of padding `PitWallZones.dc.html` dra
 Band D has no header and counts no cycle, and since #708 it draws no letter either, so the band
 opens on its page. The room the `D` stood in at the band's left is still reserved, because the
 rank, the corner blocks and the shedding below are read off artboards that lay the band out around
-it; giving that room to the page would let the 850 × 480 fuel page keep the last lap and the
-600 × 686 band all twelve telltales, which is a redraw for the canvas to make rather than a
-consequence of dropping a label.
+it; giving that room to the page would let the 600 × 686 band draw all twelve telltales, which is a
+redraw for the canvas to make rather than a consequence of dropping a label. It would once have let
+the 850 × 480 fuel page keep the last lap too, which the page now does in its own room (§6, #899).
 
 ### The pit limiter
 
@@ -1072,12 +1072,13 @@ the answer. What that comes to, face by face, is what the build emits rather tha
 | Band | Keeps | Sheds | Given up for the margin |
 | --- | --- | --- | --- |
 | 1920 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
-| 1280 × 480 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
-| 1280 × 400 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 1280 × 720 | tank, fuel time, margin, estimate, refuel | per lap, last lap | per lap |
-| 850 × 480 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 800 × 286 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
-| 600 × 686 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 1280 × 480 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 1280 × 400 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 1280 × 720 | tank, fuel time, margin, estimate, refuel, per lap | last lap | last lap |
+| 850 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 800 × 480 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 800 × 286 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
+| 600 × 686 | tank, fuel time, margin, estimate, refuel, per lap, last lap | — | nothing |
 
 The last column is the change #387 made and not the shedding: 1280 × 480 and 1280 × 720 were already
 five fields and drew the same five less the margin, so the margin costs them one. 1280 × 400 and the
@@ -1085,7 +1086,22 @@ nano-portrait 600 drew all six, so the margin cost those two both consumptions �
 than the rest, which is the price of a signed figure in a band that was already full. Both have since
 had the per lap back: a field is as wide as the wider of its value and its label, and labels written in
 sentence case rather than capitals ([#422](https://github.com/xorob0/OpenDash/issues/422)) left each
-band room for a sixth. Every face keeps
+band room for a sixth.
+
+**The four quantities are whole from 10 up and to one decimal below**
+([#899](https://github.com/xorob0/OpenDash/issues/899)). The tank, the refuel, the per lap and the last
+lap read `30`, `13`, `10`, then `9.9`, `9.5`, in the driver's unit, gallons as litres; a 9.96 reads `10`
+rather than `10.0`, the test being on the figure as drawn. The fuel time had just taken a third minute
+digit for a tank that lasts `100:00`, which cost the Porsche's and the AiM's feet between one and three
+fields at 850 and 800 wide, and the author ruled that the tenths of a full tank were the cheaper thing
+to give. A tank and a refuel are cut for `999`, three digit cells where they had five and a point, and
+a lap's consumption for `9.9` where it had `99.999`. That won the feet their fields back, and gave the
+house band its last lap at every face but 1280 × 480 and 1280 × 720, and the per lap at those two.
+Only band D's fuel page draws a quantity this way; the fuel module, pit view, the pop-ups and the cards
+keep their decimals. `themeFuelPage.test.ts` pins what each theme's fuel page keeps at each size
+against what it kept before.
+
+Every face keeps
 the estimate; the margin outranks it in the declaration and no width has yet had to spend it.
 `bandPages.test.ts` pins this table, because nothing else would notice it going stale.
 
@@ -1437,7 +1453,7 @@ a mistake in this document.
 | The sector deltas' size | The companion draws the delta page's S1/S2/S3 rank at 34 px and the catalogue draws it at 34 as well, which is `small` on one ramp and `mid` on the other; the page therefore names the ramp rung by density rather than by one token. The same question decides the recap under the sectors: 34 on the companion and 24 in a zone are both `small`, and a compact zone's `small` is 18 where the 800 × 480 sheet chips 24. |
 | Three sector columns in a narrow zone | The catalogue draws the sectors page as three columns at every shape, including `tall narrow`, where three 34 px sector times and their gaps need 286 px of a 274 px zone. The build used to reach three columns by stepping the rank down to 18 px, which is the page shrinking the reading it exists for. **The rank now keeps 34 and wraps to two lines and one**, per rule 17; the canvas owes the redraw, as it does for lap times at the same shape. |
 | Spreading or centring | Whether a page spreads its ranks over the full height or centres them as one block is decided page by page on the catalogue and not by shape: sectors, fuel, session, stint, the speedo and car settings spread at all four shapes, lap times spreads at three and centres at `tall narrow`, the delta centres at three and spreads at `tall`, and the lists, the drawings and the pit view centre everywhere. The engine therefore takes it from the page (`justify: 'spaceBetween'` on `stack`) and centres by default. |
-| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely a full course yellow written over an unreadable fuel page for the length of the caution. On the four faces with corner blocks the addition is nearly a rectangle the canvas does draw, though not exactly one: it covers what a corner block holds and, the corner width being those two fields plus the band's side padding plus the room the zone letter stood in, the padding and that room as well, which before [#708](https://github.com/xorob0/OpenDash/issues/708) meant that band D had no **D** for as long as a flag was out; §6 says why that was the cheaper of the two prices available. The block writes the flag's name there, and the blue flag's detail as well, BLUE · P4 GT3 as `BlueFlagDetail` asks ([#497](https://github.com/xorob0/OpenDash/issues/497)), since the widest it can draw, BLUE · P99 LMP2, is about 110 px against blocks of 228 and 350; the incident's count against its limit is the one run left to the three seconds of the takeover. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. **The word is what a colour cannot carry**, so on those four faces a settled flag names a family and not a member: DISQUALIFIED and BLACK are one outlined sliver. DEBRIS is not YELLOW there, its stripes being drawn at any width since [#498](https://github.com/xorob0/OpenDash/issues/498). Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that colour alone is enough once the name has had its three seconds. |
+| The flag once it has settled | No artboard draws a flag anywhere but across the whole band, so the block at each end that [§6](#6-band-d--eight-pages) describes is an addition rather than a reading of a drawing. **It is taken** because the alternative is the case [#380](https://github.com/xorob0/OpenDash/issues/380) opens with, namely a full course yellow written over an unreadable fuel page for the length of the caution. On the four faces with corner blocks the addition is nearly a rectangle the canvas does draw, though not exactly one: it covers what a corner block holds and, the corner width being those two fields plus the band's side padding plus the room the zone letter stood in, the padding and that room as well, which before [#708](https://github.com/xorob0/OpenDash/issues/708) meant that band D had no **D** for as long as a flag was out; §6 says why that was the cheaper of the two prices available. The block writes the flag's name there, and the blue flag's detail as well, BLUE · P4 GT3 as `BlueFlagDetail` asks ([#497](https://github.com/xorob0/OpenDash/issues/497)), since the widest it can draw, BLUE · P44 LAMB, is about 114 px against blocks of 228 and 350; the incident's count against its limit is the one run left to the three seconds of the takeover. On 850 × 480, 800 × 480, 800 × 286 and 600 × 686 there is no such rectangle and the flag keeps the side padding, which is 16 px of colour at each end and 12 in portrait: enough to say a flag is still out and not enough for a word. **The word is what a colour cannot carry**, so on those four faces a settled flag names a family and not a member: DISQUALIFIED and BLACK are one outlined sliver. DEBRIS is not YELLOW there, its stripes being drawn at any width since [#498](https://github.com/xorob0/OpenDash/issues/498). Widening it there means taking room from the page, and the 600 × 686 fuel page has 6 px of slack, so the canvas owes either a drawn settled form for those four faces or the judgement that colour alone is enough once the name has had its three seconds. |
 | The whole-track caution's name | PagesAndAlerts calls iRacing's `caution` Safety car (7 · SafetyCar), and the build used to call it three things: SAFETY CAR on the band, SAFETY on the full-screen block, and "Full-course caution" on the LED row, the site and the flag table. **Full course yellow is taken** ([#497](https://github.com/xorob0/OpenDash/issues/497)) on every surface that writes a name, the 8x8 box aside, which writes SC for want of columns ([#499](https://github.com/xorob0/OpenDash/issues/499)), and its name is as long as the room: FULL COURSE YELLOW on band D and its corner blocks, and on every full-screen block where it stays legible at a size of its own, which the author ruled is half the size the one-word names set or more, FCY on the others, which are the portrait screens'. The colour stays `purpose.alert.safetyCar`, which resolves to the flag yellow, and the token keeps its name. The canvas owes the rename, and [flag-box.md](flag-box.md#where-the-names-depart-from-the-canvas) says which block writes which form. |
 | Every flag's name | The face artboards and DashComponents write "Yellow flag", "Blue flag", "Green flag" and "Black flag" on band D, and PagesAndAlerts adds "Red flag", "Black flag · furled" and "Blue flag · GT3 behind". **No flag's name says FLAG** ([#497](https://github.com/xorob0/OpenDash/issues/497)): band D, its corner blocks and the pit wall's band write RED, BLACK, YELLOW, BLUE and GREEN, the blue flag's detail reads BLUE · P4 GT3, and the furled black reads BLACK as the black flag does, so that on the band and on the full-screen block the two are one drawing. The canvas owes the rename, and [flag-box.md](flag-box.md#where-the-names-depart-from-the-canvas) lists the drawings concerned. |
 | The debris flag's stripes | PagesAndAlerts draws 19 · Debris as `repeating-linear-gradient(135deg, #FFD400 0 20px, #FF2D46 20px 32px)`, with the name written straight over the stripes. **Vertical stripes are taken** ([#498](https://github.com/xorob0/OpenDash/issues/498)): a diagonal stripe is a rotated rectangle clipped to the band, and [simhub-dash-format.md](../research/simhub-dash-format.md) establishes neither, whereas the real flag's stripes are vertical and need nothing SimHub is not known to draw. They are equal and an odd count, so the flag opens and closes on its yellow, never fewer than three, so that a sixteen-pixel settled block still holds a red one, and as wide as the chequer's check on the same rectangle: half the band high on the band and the nano, and the full-screen chequer's column on the block, which is three columns and a single red stripe on the portrait face, the portrait companion and the portrait pit wall. The name is written on a plate of the yellow, which the sheet does not draw, since a stripe half the band high is narrower than DEBRIS and the word would straddle an edge. The canvas owes the vertical drawing and the plate, or the ruling that a rotated rectangle is worth establishing for a diagonal. The 8x8 box keeps its diagonal stripes, which are pixels rather than rectangles. |

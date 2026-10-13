@@ -32,7 +32,7 @@ import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName } from './contract.ts';
 
-const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, or, not, max, iff } = ncalc;
+const { prop, game, raw, gt, ge, eq, mul, sub, num, real, isnull, and, or, not, max, iff } = ncalc;
 
 /** Where the session string puts the driver's own car. The same nested path `incidentLimit` reads. */
 const DRIVER_INFO = 'DataCorePlugin.GameRawData.SessionData.DriverInfo.';
@@ -69,8 +69,14 @@ export const lastRpm = (): Expr => read(SHIFT_RPM_PROPERTIES.last);
 /** Shift now. Between `first` and `last` for every car that passes `mirrorAvailable`. */
 export const shiftRpm = (): Expr => read(SHIFT_RPM_PROPERTIES.shift);
 
-/** Over-rev, never below the last light, because a car may publish a ladder and no blink RPM. */
-export const blinkRpm = (): Expr => max(read(SHIFT_RPM_PROPERTIES.blink), lastRpm());
+/**
+ * Over-rev, never below the last light, because a car may publish a ladder and no blink RPM.
+ *
+ * The blink RPM's fallback is the double `0.0`: NCalc's `max` answers in its left operand's type, so
+ * an Int32 `0` there would round the last light to a whole RPM on a car that publishes no blink.
+ * #1046.
+ */
+export const blinkRpm = (): Expr => max(isnull(prop(SHIFT_RPM_PROPERTIES.blink), real(0)), lastRpm());
 
 /**
  * Whether the car published a usable ladder this frame, which is also what makes every expression
