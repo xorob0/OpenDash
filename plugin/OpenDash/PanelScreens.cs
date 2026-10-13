@@ -423,7 +423,7 @@ namespace OpenDashPlugin
             return FacePages.EndLabel(first, FacePages.FieldName(settings.BarField(left ? "Left2" : "Right2")));
         }
 
-        /// <summary>"4 of 21": the pages a zone cycles, of the pages it could.</summary>
+        /// <summary>"4 of 22": the pages a zone cycles, of the pages it could.</summary>
         public static string ZoneCount(FaceSettings settings, string letter)
         {
             var pages = FacePages.For(letter, settings?.ThemeId());
@@ -719,7 +719,7 @@ namespace OpenDashPlugin
             return hover;
         }
 
-        /// <summary>The count at the head of a zone aside and of the companion's modules ("4 of 21").</summary>
+        /// <summary>The count at the head of a zone aside and of the companion's modules ("4 of 22").</summary>
         public const double HeadCountSize = 15;
 
         // --- The quick glance ---------------------------------------------------------------------------
@@ -876,7 +876,7 @@ namespace OpenDashPlugin
         public const string FirstModuleTitle = "First module";
         public const string NextModuleTitle = "Next module";
 
-        /// <summary>"18 of 21": the modules in the rotation.</summary>
+        /// <summary>"19 of 22": the modules in the rotation.</summary>
         public static string ModuleCount(bool[] modules)
         {
             var on = modules == null ? 0 : modules.Take(Modules.Count).Count(m => m);

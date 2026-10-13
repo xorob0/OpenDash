@@ -4,7 +4,7 @@
  *
  * Two things are proved here. That the band model expresses the four shapes the catalogue actually
  * draws — a single ratio cannot, which is why shape is a pair — and that every one of the
- * twenty-one pages fits every one of them. The zone face gives a page whichever of the four its
+ * pages fits every one of them. The zone face gives a page whichever of the four its
  * layout produces, so a page that only fits the wide one is a page that breaks a face.
  */
 import { describe, expect, test } from 'bun:test';
