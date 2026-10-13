@@ -470,8 +470,11 @@ namespace OpenDashPlugin
             // edited in Dash Studio while the question is open is one the question did not name, and the second press
             // has to see it in order to ask again.
             plugin.Installer.Refresh();
-            var edited = plugin.Installer.EditedFolders;
-            var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited), onRestart: release.PluginAsset() != null);
+            // Which edited folders the run replaces and when, read from the plan the run itself follows: a release
+            // that publishes a dashboard replaces it on the second press, not at the restart (#673).
+            var replacing = UpdatePlan.Edited(plugin.Installer.Packages, release);
+            var edited = replacing.All;
+            var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(replacing.Now), UpdatesNames(replacing.OnRestart));
             var press = confirmation.Press(ReplacingAction.Update, edited, question, updatesCardLine == null ? null : updatesCardLine.Text);
             if (press == PressOutcome.Ask)
             {

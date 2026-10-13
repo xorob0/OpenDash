@@ -88,6 +88,62 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("OpenDash.Pit.wall.portrait.simhubdash", plan.Items.Single().Asset.Name);
         }
 
+        // When an edited folder is replaced (#673)
+
+        private static ReleaseInfo WithPlugin(ReleaseInfo release)
+        {
+            release.Assets = release.Assets.Concat(new[]
+            {
+                new ReleaseAsset { Name = PluginUpdate.AssetName, DownloadUrl = "https://example.invalid/plugin", Size = 1 },
+            }).ToArray();
+            return release;
+        }
+
+        private static PackageStatus Edited(string folder) =>
+            new PackageStatus { FolderName = folder, InstalledVersion = "0.1.0", Edited = true };
+
+        /// <summary>
+        /// The run installs what the release publishes and leaves the rest to the plugin it stages, so an edited
+        /// folder is replaced on the press when its package is published beside the plugin, which v0.3.0-rc.7 and
+        /// every release before #438 did, and at the restart when only the plugin is.
+        /// </summary>
+        [Fact]
+        public void An_edited_folder_is_replaced_by_whichever_half_of_the_run_carries_it()
+        {
+            var rig = new[] { Edited("OpenDash"), Installed("OpenDash 1280x480"), Edited("OpenDash Phone") };
+
+            var pluginOnly = UpdatePlan.Edited(rig, WithPlugin(ReleaseWith()));
+            Assert.Empty(pluginOnly.Now);
+            Assert.Equal(new[] { "OpenDash", "OpenDash Phone" }, pluginOnly.OnRestart);
+
+            var everything = UpdatePlan.Edited(rig, WithPlugin(ReleaseWith("OpenDash", "OpenDash 1280x480", "OpenDash Phone")));
+            Assert.Equal(new[] { "OpenDash", "OpenDash Phone" }, everything.Now);
+            Assert.Empty(everything.OnRestart);
+
+            var some = UpdatePlan.Edited(rig, WithPlugin(ReleaseWith("OpenDash Phone")));
+            Assert.Equal(new[] { "OpenDash Phone" }, some.Now);
+            Assert.Equal(new[] { "OpenDash" }, some.OnRestart);
+            Assert.Equal(new[] { "OpenDash Phone", "OpenDash" }, some.All);
+        }
+
+        /// <summary>
+        /// Without a plugin to follow, a folder the release does not publish is one nothing in the update writes, so
+        /// it is not among those the question asks about.
+        /// </summary>
+        [Fact]
+        public void An_edited_folder_neither_half_carries_is_not_replaced()
+        {
+            var rig = new[] { Edited("OpenDash"), Edited("OpenDash Phone") };
+
+            var packagesOnly = UpdatePlan.Edited(rig, ReleaseWith("OpenDash"));
+            Assert.Equal(new[] { "OpenDash" }, packagesOnly.Now);
+            Assert.Empty(packagesOnly.OnRestart);
+
+            Assert.Empty(UpdatePlan.Edited(rig, ReleaseWith()).All);
+            Assert.Empty(UpdatePlan.Edited(null, ReleaseWith("OpenDash")).All);
+            Assert.Empty(UpdatePlan.Edited(rig, null).All);
+        }
+
         // The digest
 
         [Fact]

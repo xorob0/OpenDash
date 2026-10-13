@@ -84,16 +84,29 @@ namespace OpenDashPlugin
         /// What the Update button says before it replaces a dashboard somebody has edited.
         /// </summary>
         /// <remarks>
-        /// When the release carries the plugin the replacing happens on the next start and not on this press, since
-        /// that start is what writes the dashboards; the sentence says when so that a driver who looks at their
-        /// dashboard straight after pressing does not conclude that the answer was ignored.
+        /// Says when, from the plan (<see cref="UpdatePlan.Edited"/>): a dashboard the release publishes is replaced by
+        /// the update itself, straight away, and one that comes inside the plugin is replaced by the plugin's next
+        /// start. Saying when lets a driver who looks at their dashboard straight after pressing see that the answer
+        /// was not ignored, and a driver who is told they have until the restart has to actually have it: the
+        /// sentence used to be decided from whether the release carried the plugin, and promised the restart to a
+        /// release that replaced its published dashboards on the press (#673).
         /// </remarks>
-        public static string ReplaceEditedQuestion(IReadOnlyCollection<string> edited, bool onRestart)
+        /// <param name="now">The names of the edited dashboards the update replaces in its own run.</param>
+        /// <param name="onRestart">The names of those the staged plugin replaces as SimHub starts again.</param>
+        public static string ReplaceEditedQuestion(IReadOnlyCollection<string> now, IReadOnlyCollection<string> onRestart)
         {
-            var count = edited == null ? 0 : edited.Count;
+            now = now ?? new string[0];
+            onRestart = onRestart ?? new string[0];
+            var count = now.Count + onRestart.Count;
+            var names = new List<string>(now);
+            names.AddRange(onRestart);
+            string replaces;
+            if (now.Count == 0) replaces = "your version when SimHub restarts";
+            else if (onRestart.Count == 0) replaces = "your version straight away";
+            else replaces = string.Join(", ", now) + " straight away and " + string.Join(", ", onRestart) + " when SimHub restarts";
             return "You have edited " + (count == 1 ? "1 dashboard" : count + " dashboards")
-                + ": " + string.Join(", ", edited ?? new string[0])
-                + ". Updating replaces your version" + (onRestart ? " when SimHub restarts" : string.Empty)
+                + ": " + string.Join(", ", names)
+                + ". Updating replaces " + replaces
                 + ". A copy is kept, and \"Put mine back\" restores it.";
         }
 

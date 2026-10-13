@@ -57,6 +57,46 @@ namespace OpenDashPlugin
             }
             return new UpdatePlan { Items = items, NotCarried = missing };
         }
+
+        /// <summary>
+        /// Of the dashboards somebody has edited, which an update to this release replaces in its own run and which
+        /// the plugin it stages replaces as SimHub starts again.
+        /// </summary>
+        /// <remarks>
+        /// The two halves of <see cref="UpdateService"/>'s run, read the way it reads them: a folder the release
+        /// publishes is installed by the run itself, the moment the second press lands, and one it does not publish
+        /// follows the plugin, when there is a plugin to follow. The question before an update used to decide "when
+        /// SimHub restarts" from the plugin alone, which a release publishing its packages beside the plugin made
+        /// false: those were replaced straight away (#673). A folder in neither half is one the update does not
+        /// touch, so it is not asked about either.
+        /// </remarks>
+        public static EditedReplacing Edited(IEnumerable<PackageStatus> installed, ReleaseInfo release)
+        {
+            if (installed == null || release == null) return new EditedReplacing();
+            var packages = installed.Where(p => p != null).ToList();
+            var plan = For(packages, release);
+            var edited = packages.Where(p => p.Edited && !string.IsNullOrEmpty(p.FolderName)).Select(p => p.FolderName).ToList();
+            var published = plan.Items.Select(i => i.FolderName).ToList();
+            var following = release.PluginAsset() == null ? new string[0] : plan.NotCarried;
+            return new EditedReplacing
+            {
+                Now = edited.Where(f => published.Contains(f, StringComparer.OrdinalIgnoreCase)).ToList(),
+                OnRestart = edited.Where(f => following.Contains(f, StringComparer.OrdinalIgnoreCase)).ToList(),
+            };
+        }
+    }
+
+    /// <summary>The edited folders an update replaces, split by when (<see cref="UpdatePlan.Edited"/>).</summary>
+    public sealed class EditedReplacing
+    {
+        /// <summary>Replaced by the update's own run, from the packages the release publishes.</summary>
+        public IReadOnlyList<string> Now { get; set; } = new string[0];
+
+        /// <summary>Replaced by the staged plugin's first start, which is what writes the folders it carries.</summary>
+        public IReadOnlyList<string> OnRestart { get; set; } = new string[0];
+
+        /// <summary>Every edited folder the update replaces, those of its own run first.</summary>
+        public IReadOnlyList<string> All => Now.Concat(OnRestart).ToList();
     }
 
     /// <summary>

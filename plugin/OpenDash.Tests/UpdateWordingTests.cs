@@ -1,5 +1,6 @@
 // UpdateWordingTests.cs: the copy, as a table. The sentence a driver reads is the deliverable of #82 as much
 // as the request is, so it is pinned rather than left to drift.
+using System.Linq;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -133,10 +134,50 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Put mine back", UpdateWording.RestartWithDashboards(3, 2, true));
             Assert.Contains("The 2 you edited are left alone", UpdateWording.RestartWithDashboards(3, 2, false));
 
-            var asked = UpdateWording.ReplaceEditedQuestion(new[] { "OpenDash" }, onRestart: true);
-            Assert.Contains("You have edited 1 dashboard: OpenDash", asked);
-            Assert.Contains("when SimHub restarts", asked);
-            Assert.DoesNotContain("restarts", UpdateWording.ReplaceEditedQuestion(new[] { "OpenDash", "OpenDash 1280x480" }, onRestart: false));
+            Assert.Equal(
+                "You have edited 1 dashboard: OpenDash. Updating replaces your version when SimHub restarts. A copy is kept, and \"Put mine back\" restores it.",
+                UpdateWording.ReplaceEditedQuestion(new string[0], new[] { "OpenDash" }));
+        }
+
+        /// <summary>
+        /// The question before an update says when the edited dashboards are replaced, and that is decided by the
+        /// plan the run follows rather than by whether the release carries the plugin (#673). A release that publishes
+        /// its packages beside the plugin, as v0.3.0-rc.7 did, installs them on the second press, and the question
+        /// used to promise the driver the restart all the same.
+        /// </summary>
+        [Fact]
+        public void The_question_before_an_update_says_when_from_the_plan()
+        {
+            Assert.Equal(
+                "You have edited 2 dashboards: Main dash, Phone. Updating replaces your version straight away. A copy is kept, and \"Put mine back\" restores it.",
+                UpdateWording.ReplaceEditedQuestion(new[] { "Main dash", "Phone" }, new string[0]));
+            Assert.Equal(
+                "You have edited 2 dashboards: Main dash, Phone. Updating replaces your version when SimHub restarts. A copy is kept, and \"Put mine back\" restores it.",
+                UpdateWording.ReplaceEditedQuestion(new string[0], new[] { "Main dash", "Phone" }));
+            Assert.Equal(
+                "You have edited 3 dashboards: Phone, Main dash, Rim. Updating replaces Phone straight away and Main dash, Rim when SimHub restarts. A copy is kept, and \"Put mine back\" restores it.",
+                UpdateWording.ReplaceEditedQuestion(new[] { "Phone" }, new[] { "Main dash", "Rim" }));
+
+            // The rc.7 shape: the plugin and every package. Nothing waits for the restart.
+            var rig = new[]
+            {
+                new PackageStatus { FolderName = "OpenDash", InstalledVersion = "0.3.0-rc.6", Edited = true },
+                new PackageStatus { FolderName = "OpenDash Phone", InstalledVersion = "0.3.0-rc.6", Edited = true },
+            };
+            var assets = new[] { PluginUpdate.AssetName, "OpenDash.simhubdash", "OpenDash.Phone.simhubdash" }
+                .Select(name => new ReleaseAsset { Name = name, DownloadUrl = "https://example.invalid/" + name, Size = 1 })
+                .ToArray();
+            var publishing = new ReleaseInfo { Tag = "v0.3.0-rc.7", Assets = assets };
+            var replacing = UpdatePlan.Edited(rig, publishing);
+            var asked = UpdateWording.ReplaceEditedQuestion(replacing.Now, replacing.OnRestart);
+            Assert.Contains("You have edited 2 dashboards: OpenDash, OpenDash Phone.", asked);
+            Assert.Contains("straight away", asked);
+            Assert.DoesNotContain("restarts", asked);
+
+            // Every release since #438: the plugin alone, and the dashboards inside it.
+            var pluginOnly = new ReleaseInfo { Tag = "v0.3.0-rc.8", Assets = assets.Take(1).ToArray() };
+            replacing = UpdatePlan.Edited(rig, pluginOnly);
+            Assert.Contains("Updating replaces your version when SimHub restarts.", UpdateWording.ReplaceEditedQuestion(replacing.Now, replacing.OnRestart));
         }
 
         /// <summary>
