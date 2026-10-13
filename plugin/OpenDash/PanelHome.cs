@@ -137,11 +137,10 @@ namespace OpenDashPlugin
         // --- The attention card ----------------------------------------------------------------------------
 
         /// <summary>The icon in an issue's well, by the issue's rule: the device's own page icon for a strip or a
-        /// matrix, the restart arrow for what waits on SimHub, and the warning for a dashboard that is gone.</summary>
+        /// matrix, the restart arrow for an update that waits on SimHub, and the warning for a dashboard that is gone.</summary>
         public static string IssueIcon(PanelIssue issue)
         {
             var id = issue == null ? string.Empty : issue.Id ?? string.Empty;
-            if (id.StartsWith(PanelAttention.ScreenRestart, StringComparison.Ordinal)) return PanelIcons.Restart;
             if (id.StartsWith(PanelAttention.StripUnselected, StringComparison.Ordinal)) return PanelIcons.Leds;
             if (id.StartsWith(PanelAttention.StripOutdated, StringComparison.Ordinal)) return PanelIcons.Leds;
             if (id.StartsWith(PanelAttention.MatrixDark, StringComparison.Ordinal)) return PanelIcons.Matrix;
@@ -318,11 +317,9 @@ namespace OpenDashPlugin
         /// otherwise what the screen shows now.
         /// </summary>
         /// <param name="installed">Whether its dashboard is in SimHub, or null when the disk could not be asked.</param>
-        /// <param name="waitsForRestart">Whether SimHub has not loaded it yet (PanelAttention.ScreenRestart).</param>
-        public static HomeLine ScreenLine(OpenDashSettings settings, ScreenInstance screen, bool? installed, bool waitsForRestart)
+        public static HomeLine ScreenLine(OpenDashSettings settings, ScreenInstance screen, bool? installed)
         {
             if (installed == false) return new HomeLine(PanelScreens.Missing, Theme.StatusFailed, Theme.StatusFailed);
-            if (waitsForRestart) return new HomeLine(PanelCopy.RestartToLoad, Theme.Caution, Theme.Caution);
             return new HomeLine(ScreenShows(settings, screen), Theme.TextSecondary, installed == true ? Theme.StatusUpToDate : null);
         }
 

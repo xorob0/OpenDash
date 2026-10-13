@@ -5,13 +5,10 @@
 // no issue: a panel that guessed would put a warning on a rig that is fine. It runs on Go and on "Check
 // again", never on the tick, because it reads SimHub's device settings and the disk.
 //
-// Two facts are read that nothing read before #791. Whether a screen's dashboard waits for a restart is
-// whether its folder is in DashTemplates now and was not in the list the plugin took when Init finished
-// (OpenDash.TemplatesAtStart): SimHub reads its template list once at startup (docs/dev-loop.md), so a folder
-// this session created is one SimHub has not loaded, and one it loaded stays loaded however often Dash Studio,
-// Reinstall or Edit rewrites it. And whether a strip's profile is
-// selected on its device is SimHub's own CurrentProfile on that device's LED settings, which is public. Which
-// matrix device shows which content slot is not reachable, so that rule never fires yet.
+// Whether a strip's profile is selected on its device is SimHub's own CurrentProfile on that device's LED
+// settings, which is public, a fact nothing read before #791. Which matrix device shows which content slot is not
+// reachable, so that rule never fires yet. Whether SimHub has loaded a screen's dashboard is not asked: it watches
+// DashTemplates and lists a folder two seconds after it is written (#664), so a folder that is there is listed.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +50,7 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>What was last read about one screen -- Installed, AddedSinceStart, Unclaimed -- or null
+        /// <summary>What was last read about one screen -- Installed, Unclaimed -- or null
         /// when the rig has no such screen. Read while building, never on the tick.</summary>
         private AttentionScreen ScreenFacts(string ns)
         {
@@ -94,8 +91,6 @@ namespace OpenDashPlugin
         private AttentionInput Attention()
         {
             var input = new AttentionInput();
-            var atStart = plugin.TemplatesAtStart;
-
             foreach (var screen in Settings.RigScreens())
             {
                 if (screen == null) continue;
@@ -105,7 +100,6 @@ namespace OpenDashPlugin
                     Name = screen.Name,
                     Namespace = screen.Namespace,
                     Installed = installed,
-                    AddedSinceStart = PackageExtractor.WaitsForRestart(atStart, screen.Folder, installed),
                     Unclaimed = screen.Unclaimed == true,
                 });
             }

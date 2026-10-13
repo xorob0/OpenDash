@@ -168,15 +168,59 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(new[] { CarPlaylistChangeKind.Remove }, notCarried.Changes.Select(c => c.Kind));
         }
 
-        /// <summary>A screen added in this session is written to DashTemplates, but SimHub lists it only from its next
-        /// start, and an entry naming it before then would blank the display in the car. It is bound at that start.</summary>
+        /// <summary>A screen just added is written to DashTemplates, and SimHub lists it two seconds later (#664); an
+        /// entry naming it before then would blank the display in the car, so the panel's own sync after the add binds
+        /// nothing, and the line says what it waits for, which is not a restart.</summary>
         [Fact]
-        public void A_screen_simhub_does_not_list_yet_is_bound_at_the_next_start_and_not_before()
+        public void A_screen_simhub_does_not_list_yet_is_not_bound_until_it_does()
         {
             var plan = PanelCarPlaylist.Plan(new[] { Rim, Porsche }, s => true, Contract.Themes, d => d != Themed, new[] { Device(Default) });
             Assert.Empty(plan.Changes);
-            Assert.True(plan.Screens["Porsche"].WaitsForRestart);
-            Assert.Equal(new[] { PanelCarPlaylist.WaitsForRestart }, PanelCarPlaylist.Lines(plan.Screens["Porsche"], Porsche));
+            Assert.True(plan.Screens["Porsche"].WaitsForListing);
+            Assert.False(plan.Screens["Porsche"].Listed);
+            Assert.Equal(new[] { PanelCarPlaylist.WaitsForListing }, PanelCarPlaylist.Lines(plan.Screens["Porsche"], Porsche));
+            Assert.Equal("Your displays switch to this screen by car once SimHub lists its dashboard.", PanelCarPlaylist.WaitsForListing);
+            Assert.DoesNotContain("Restart", PanelCarPlaylist.WaitsForListing);
+
+            // Once SimHub lists it, the plan binds it.
+            var listed = PanelCarPlaylist.Plan(new[] { Rim, Porsche }, s => true, Contract.Themes, d => true, new[] { Device(Default) });
+            Assert.False(listed.Screens["Porsche"].WaitsForListing);
+            Assert.True(listed.Screens["Porsche"].Listed);
+            Assert.Equal(PorscheCars.Length, listed.Changes.Count);
+        }
+
+        /// <summary>
+        /// The sync that follows SimHub's list runs when the list moved under a themed screen since the last plan, and
+        /// only then: SimHub reads DashTemplates again after every save in Dash Studio as well, and a list that moved
+        /// under nothing themed is not worth reading every display for (#664).
+        /// </summary>
+        [Fact]
+        public void The_list_moving_under_a_themed_screen_and_nothing_else_asks_for_a_second_sync()
+        {
+            var rig = new[] { Rim, Porsche };
+            var before = PanelCarPlaylist.Plan(rig, s => true, Contract.Themes, d => d != Themed, new[] { Device(Default) });
+
+            // SimHub has listed the themed folder since: moved.
+            Assert.True(PanelCarPlaylist.ListingMoved(before, rig, d => true));
+            // A save in Dash Studio, or Rim's folder coming and going, moves nothing themed.
+            Assert.False(PanelCarPlaylist.ListingMoved(before, rig, d => d != Themed));
+            Assert.False(PanelCarPlaylist.ListingMoved(before, rig, d => d != Themed && d != Default));
+
+            // After the second sync, the same list is not a move.
+            var after = PanelCarPlaylist.Plan(rig, s => true, Contract.Themes, d => true, new[] { Device(Default) });
+            Assert.False(PanelCarPlaylist.ListingMoved(after, rig, d => true));
+            // A themed folder that has gone from SimHub's list is a move the other way, which takes our entries out.
+            Assert.True(PanelCarPlaylist.ListingMoved(after, rig, d => d != Themed));
+
+            // A themed screen the plan does not know is a move; a rig with no themed screen never is.
+            var unplanned = PanelCarPlaylist.Plan(new[] { Rim }, s => true, Contract.Themes, d => true, new[] { Device(Default) });
+            Assert.True(PanelCarPlaylist.ListingMoved(unplanned, rig, d => true));
+            Assert.False(PanelCarPlaylist.ListingMoved(unplanned, new[] { Rim }, d => false));
+
+            // No plan yet, or one that failed, is never moved: the first frame owns the first sync.
+            Assert.False(PanelCarPlaylist.ListingMoved(null, rig, d => true));
+            Assert.False(PanelCarPlaylist.ListingMoved(before, null, d => true));
+            Assert.False(PanelCarPlaylist.ListingMoved(before, rig, null));
         }
 
         [Fact]

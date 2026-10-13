@@ -107,7 +107,6 @@ issues, most urgent first, in the order a driver has to act:
 |---|---|---|---|
 | the settings file is there and SimHub could not read it | "OpenDash could not read its settings", then where the file is kept and the steps | Home | Open the folder |
 | a screen's folder is gone | "Rim's dashboard is missing from SimHub" | Screens | Install it again |
-| a screen written since SimHub started | "Rim is not in SimHub yet", then "Restart SimHub to load it." and the Dash Studio step | Screens | Open Rim |
 | a strip's profile installed and not selected | "Dash brow's profile is not selected", then the steps in SimHub's menus | LEDs | Check again |
 | a matrix no device shows | "Left pillar is not shown in SimHub" | Matrix | Open Left pillar |
 | screens an older OpenDash made | "1 screen came with an older OpenDash" | Screens | Open Screens |
@@ -129,9 +128,13 @@ earlier one taken from `_Backups`, and saved under the settings file's name, the
 press opens Explorer on the copy, or on `_Backups`. Home's own sidebar item wears the dot, since the
 fix is in no page of the panel.
 
-A missing folder comes before a restart, because restarting will not bring it back. Both come before
-the lights, because a screen is what most rigs have. The out-of-date profile and the waiting update
-come last, because the rig works while they wait.
+A missing folder comes before the lights, because a screen is what most rigs have. The out-of-date
+profile and the waiting update come last, because the rig works while they wait.
+
+There is no rule for a screen written since SimHub started. There was one, "Rim is not in SimHub yet",
+on the belief that SimHub reads its dashboard list once at startup; it watches `DashTemplates` and
+lists a new folder two seconds after it is written (#664), so the rule sent drivers to a restart they
+did not need.
 
 **A fact the panel could not read produces no issue.** SimHub calls can fail. A panel that guessed
 would put a warning on a rig that is fine, which is worse than saying nothing about one that is not.
@@ -153,7 +156,6 @@ Home's line under a device reads the same constant as the card.
 | card | state | ink | constant |
 |---|---|---|---|
 | screen | In SimHub | green | `PanelScreens.InSimHub` |
-| screen | Restart SimHub to load it | amber | `PanelCopy.RestartToLoad` |
 | screen | Missing | red | `PanelScreens.Missing` |
 | strip | Showing | green | `PanelLeds.Showing` |
 | strip | Not selected in SimHub | amber | `PanelLeds.NotSelected` |
@@ -280,10 +282,11 @@ the disc and the Rev ring; its cards are shared by every round screen.
 is there because [ADR 0017](../decisions/0017-a-screen-is-an-instance.md) freezes it at creation and a
 rename does not move it, so a screen called "Rim" whose properties say `MainDash` can say so.
 
-**Adding.** Kind, size, orientation and name, as steps. Then once: "Added Rim. Restart SimHub, then
-assign "Rim" to this display in Dash Studio." SimHub reads its template list once at startup
-([dev-loop.md](../dev-loop.md)), so this cannot happen live, and the assignment is in another part of
-SimHub entirely. The name is prefilled from the size, and from the size and a numeral when the rig
+**Adding.** Kind, size, orientation and name, as steps. Then once: "Added Rim. Assign "Rim" to this
+display in Dash Studio." SimHub lists the new folder by itself two seconds after it is written (#664),
+and the assignment is in another part of SimHub entirely. A restart is asked for only when the add
+wrote a font into `DashFonts`, which a running SimHub does not draw (#441): "Added Rim. Restart SimHub
+to load its fonts, then assign "Rim" to this display in Dash Studio." The name is prefilled from the size, and from the size and a numeral when the rig
 already has one.
 
 **Removing** says first that it removes the screen, its dashboard and its settings, and that any wheel
@@ -639,8 +642,8 @@ row names is in its built column.
 | Main: "Car-specific · Porsche table" | "Car's own rev lights" · Porsche 911 GT3 R | the #369 switch's own noun; "table" is internal vocabulary. `PanelHome.CarLightsLine` |
 | Main: "Profile not selected" | "Not selected in SimHub" | the LEDs card's word. `PanelHome.StripNotSelected` |
 | Main: "Matrix 1 · gear" | Matrix 1 · "Gear" | the Idle display control's own case. `PanelLights.RestLabels` |
-| Main: "send "openDash Rim" … from Dash Studio" | "Then assign "Rim" to its display in Dash Studio." | the dashboard is listed under the screen's name; one phrasing on Screens, Home and Updates. `PanelScreens.RestartDetail` |
-| Main, Screens, Updates: "Rim isn't in SimHub yet", "Not in SimHub yet", "Waiting for a restart" | "Restart SimHub to load it" on the Screens card and fix box, Home's line and step, and the Updates row; Home's title still names the screen, "Rim is not in SimHub yet" | one phrase for one state; a card too narrow for it wraps it, never trims it (*ruling 1*). `PanelCopy.RestartToLoad`; Home's title, `PanelAttention.Find` |
+| Main: "send "openDash Rim" … from Dash Studio" | "Assign "Rim" to this display in Dash Studio.", said once, when the screen is added | the dashboard is listed under the screen's name. `PanelAddScreen.NextStep` |
+| Main, Screens, Updates: "Rim isn't in SimHub yet", "Not in SimHub yet", "Waiting for a restart" | "In SimHub" as soon as the folder is written; no page draws a waiting state | SimHub lists a new folder two seconds after it is written (#664), so there is nothing to wait for. *Ruling 1* chose one phrase, "Restart SimHub to load it", for a state that turned out not to exist. `PanelScreens.InSimHub` |
 | Updates: "Unknown" for a strip whose profile the build does not ship | "Not installed", as the LEDs card and Home say it | one word for one state; the flag box's row, and any row while SimHub cannot be read, keep "Unknown" (*ruling 2*). `PanelLeds.NotInstalled` |
 | LEDs, Updates, Main: "strip" and "LED profile" side by side | both stay: a *strip* is the device ("Add an LED strip", "No strips yet."), an *LED profile* is the file SimHub loads ("This build ships no LED profiles.") | two things, two nouns (*ruling 3*). `PanelUpdates.StripKind`, `PanelLights.AddBar`, `PanelLeds.NoStrips`, `PanelLightRows.NoProfiles` |
 | Updates: "Your edited Rim was kept" as the card's title | heading "Kept copy" or "Kept copies", and "Your edited Rim was kept." as the first line under it | a heading is a noun (*ruling 4*). `PanelUpdates.KeptClause` |

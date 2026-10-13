@@ -45,7 +45,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, result.WroteFonts) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
             });
         }
 

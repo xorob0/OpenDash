@@ -274,21 +274,34 @@ namespace OpenDashPlugin
         public const string NextStepsTitle = "Next steps";
 
         /// <summary>The foot's step, built from the name the screen will be added under (<see cref="NameFor"/>):
-        /// SimHub lists the dashboard under it.</summary>
+        /// SimHub lists the dashboard under it, by itself, two seconds after the folder is written (#664).</summary>
         public static string NextStep(string name)
         {
-            return "Restart SimHub, then assign \"" + (name ?? string.Empty).Trim() + "\" to this display in Dash Studio.";
+            return "Assign \"" + (name ?? string.Empty).Trim() + "\" to this display in Dash Studio.";
         }
 
         /// <summary>
         /// The foot's step for <paramref name="entry"/>: a themed screen is not assigned by hand, since the plugin
-        /// binds it to its cars on every display showing a face of its size once SimHub lists it (PanelCarPlaylist).
+        /// binds it to its cars on every display showing a face of its size once SimHub lists it (PanelCarPlaylist),
+        /// and a display takes a playlist entry at the next car it loads.
         /// </summary>
         public static string NextStep(string name, PackageEntry entry)
         {
             if (entry == null || entry.Theme == null) return NextStep(name);
-            return "Restart SimHub. A display showing a " + entry.SizeLabel + " face then switches to \"" + (name ?? string.Empty).Trim() + "\" in the cars it is drawn for.";
+            return "A display showing a " + entry.SizeLabel + " face switches to \"" + (name ?? string.Empty).Trim() + "\" " + NextCar + ".";
         }
+
+        /// <summary>When a display takes a themed screen's playlist entry: at the next car it loads, since the plugin
+        /// does not make a running display weigh its car again (docs/research/simhub-dash-format.md, "Per-car
+        /// playlists").</summary>
+        public const string NextCar = "when you next load a car it is drawn for";
+
+        /// <summary>
+        /// The one restart a screen's write still asks for: a font it put into DashFonts, which a running SimHub does
+        /// not draw until it starts again (#441, ScreenInstallResult.WroteFonts). Said only when a font was written,
+        /// since SimHub lists the dashboard itself without one (#664).
+        /// </summary>
+        public const string RestartForFonts = "Restart SimHub to load its fonts";
 
         /// <summary>
         /// The name Add gives the screen for what is in the box: the box trimmed, or the size when it is empty,
@@ -568,19 +581,22 @@ namespace OpenDashPlugin
             return rig.Any(screen => screen != null && string.Equals(screen.Namespace, stock, StringComparison.Ordinal));
         }
 
-        /// <summary>What the panel says once the screen exists, which is the two steps SimHub does not
-        /// take for you.</summary>
-        public static string Added(string name, string title)
+        /// <summary>What the panel says once the screen exists, which is the step SimHub does not take for you:
+        /// assigning it to a display. SimHub lists it by itself (#664); a restart comes first only when the add
+        /// wrote a font (<see cref="RestartForFonts"/>).</summary>
+        public static string Added(string name, string title, bool wroteFonts)
         {
-            return "Added " + name + ". Restart SimHub, then assign \"" + title + "\" to this display in Dash Studio.";
+            return "Added " + name + ". " + (wroteFonts ? RestartForFonts + ", then assign" : "Assign") + " \"" + title + "\" to this display in Dash Studio.";
         }
 
-        /// <summary><see cref="Added(string, string)"/> for a themed screen, whose remaining step is the restart alone.</summary>
-        public static string Added(ScreenInstance screen)
+        /// <summary><see cref="Added(string, string, bool)"/> for a themed screen, which nobody assigns by hand: what
+        /// is left is the next car, after a restart when the add wrote a font.</summary>
+        public static string Added(ScreenInstance screen, bool wroteFonts)
         {
             if (screen == null) return string.Empty;
-            if (screen.Theme == null) return Added(screen.Name, screen.Name);
-            return "Added " + screen.Name + ". Restart SimHub, and a display showing a " + screen.SizeLabel + " face switches to it in the cars it is drawn for.";
+            if (screen.Theme == null) return Added(screen.Name, screen.Name, wroteFonts);
+            if (wroteFonts) return "Added " + screen.Name + ". " + RestartForFonts + ", and a display showing a " + screen.SizeLabel + " face switches to it in the cars it is drawn for.";
+            return "Added " + screen.Name + ". A display showing a " + screen.SizeLabel + " face switches to it " + NextCar + ".";
         }
 
         /// <summary>An add whose dashboard was not written: the screen is on the rig, and the reason is in
@@ -590,9 +606,11 @@ namespace OpenDashPlugin
             return "Added " + name + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
-        public static string Resized(string name, string size, string title)
+        /// <summary>A resize writes a dashboard of another folder, so the display is assigned again; a restart comes
+        /// first only when the write put a font into DashFonts.</summary>
+        public static string Resized(string name, string size, string title, bool wroteFonts)
         {
-            return name + " is now " + size + ". Restart SimHub, then assign \"" + title + "\" to this display again in Dash Studio.";
+            return name + " is now " + size + ". " + (wroteFonts ? RestartForFonts + ", then assign" : "Assign") + " \"" + title + "\" to this display again in Dash Studio.";
         }
 
         /// <summary>A resize whose dashboard was not installed. The resize itself happened -- the old folder is
@@ -662,16 +680,17 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What a rename says, which is that it reached SimHub and when SimHub will read it.
+        /// What a rename says, which is that it reached SimHub.
         /// </summary>
         /// <remarks>
         /// A rename used to change the card and nothing else, while its own tooltip promised SimHub's
-        /// dashboard list as well. It writes the dashboard now, so the promise is kept -- but SimHub
-        /// reads that list once, at startup, so the line has to say what the driver is waiting for.
+        /// dashboard list as well. It writes the dashboard now, so the promise is kept, and SimHub reads the new
+        /// title by itself two seconds after the write (#664). A rename puts a font into DashFonts only where one
+        /// had gone from it, and then says so as an add does.
         /// </remarks>
-        public static string Renamed(string title)
+        public static string Renamed(string title, bool wroteFonts)
         {
-            return "Renamed to " + title + ". Restart SimHub to see the new name in Dash Studio.";
+            return "Renamed to " + title + ". " + (wroteFonts ? RestartForFonts + "." : "Dash Studio lists it under the new name.");
         }
 
         /// <summary>A rename whose dashboard was not installed, from the name the screen now has, as
@@ -681,9 +700,11 @@ namespace OpenDashPlugin
             return "Renamed to " + title + ", but its dashboard could not be installed. See SimHub's log.";
         }
 
-        public static string Reinstalled(string name)
+        /// <summary>A dashboard written again over itself: SimHub lists it (#664), and what is left is the step an
+        /// update leaves, reopening it or, when a font was written, the restart (UpdateWording.ToSee).</summary>
+        public static string Reinstalled(string name, bool wroteFonts)
         {
-            return "Installed " + name + "'s dashboard again. Restart SimHub to load it.";
+            return "Installed " + name + "'s dashboard again. " + UpdateWording.ToSee(wroteFonts);
         }
 
         /// <summary>

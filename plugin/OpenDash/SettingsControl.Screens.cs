@@ -161,7 +161,7 @@ namespace OpenDashPlugin
                     () =>
                     {
                         // A selection, not a change to the rig: nothing needs asking again, and the line a
-                        // press left (Added Rim. Restart SimHub...) stays.
+                        // press left (Added Rim. Assign...) stays.
                         Select(PanelPage.Screens, captured.Namespace);
                         RebuildPage();
                     });
@@ -178,11 +178,11 @@ namespace OpenDashPlugin
             return Ui.VStack(12, Ui.Prose(PanelScreens.NoScreens, Theme.SizeBody), grid);
         }
 
-        /// <summary>Whether SimHub has the screen: its folder, then whether it was written after SimHub started
-        /// (the answer from the last Go, Redraw or Check again).</summary>
+        /// <summary>Whether SimHub has the screen: whether its folder is there, which SimHub lists within seconds
+        /// of its being written (#664).</summary>
         private ScreenState ScreensStateOf(ScreenInstance screen)
         {
-            return PanelScreens.StateOf(Installed(screen), PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace));
+            return PanelScreens.StateOf(Installed(screen));
         }
 
         private bool Installed(ScreenInstance screen)
@@ -293,8 +293,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What is wrong with this screen, as a fix box: its folder is gone, or it was written after SimHub
-        /// started and SimHub has not read it. Null when nothing is.
+        /// What is wrong with this screen, as a fix box: its folder is gone. Null when nothing is.
         /// </summary>
         private FrameworkElement BuildScreenFix(ScreenInstance screen)
         {
@@ -305,9 +304,6 @@ namespace OpenDashPlugin
                     write.ToolTip = PanelScreens.InstallAgainTooltip;
                     write.Click += (sender, args) => InstallScreenAgain(screen);
                     return Ui.FixBox(PanelScreens.MissingTitle, PanelScreens.MissingDetailFor(screen), null, write);
-                case ScreenState.Restart:
-                    // The card above says this state in the same words: one phrase for one state.
-                    return Ui.FixBox(PanelCopy.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);
                 default:
                     return null;
             }
@@ -1082,7 +1078,7 @@ namespace OpenDashPlugin
                         Select(PanelPage.Screens, screen.Namespace);
                         Redraw();
                         if (!result.Ok) Log.Warn("Writing " + screen.Name + " after a rename failed: " + result.Error);
-                        Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
+                        Say(result.Ok ? PanelAddScreen.Renamed(screen.Name, result.WroteFonts) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
                     });
                     return;
                 default:
@@ -1114,7 +1110,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Reinstalling " + screen.Name + " failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, result.WroteFonts) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
             });
         }
 
@@ -1145,7 +1141,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name, result.WroteFonts) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
             });
         }
 
@@ -1161,11 +1157,12 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
 
-                // Said at the moment it becomes true rather than left to be found: SimHub reads its template list
-                // once, at startup, and assigning a dashboard to a display is in another part of SimHub entirely.
-                // The dashboard is listed under its title, which is the name the driver just chose.
+                // Said at the moment it becomes true rather than left to be found: assigning a dashboard to a display
+                // is in another part of SimHub entirely. SimHub lists the new folder by itself two seconds after it
+                // is written (#664), under its title, which is the name the driver just chose; only a font the add
+                // put into DashFonts waits for a restart (#441).
                 if (!result.Ok) Log.Warn("Installing " + screen.Name + " failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Added(screen) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Added(screen, result.WroteFonts) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
             });
         }
 
@@ -1192,7 +1189,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, copy.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Added(copy) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Added(copy, result.WroteFonts) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
             });
         }
 

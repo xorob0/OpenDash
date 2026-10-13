@@ -1564,7 +1564,7 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelRigMap.Warns(tiles["MainDash"], issues));
             Assert.True(PanelRigMap.Warns(tiles["led:LedWheelRim"], new[] { Issue(PanelAttention.StripOutdated, "LedWheelRim") }));
             Assert.True(PanelRigMap.Warns(tiles["matrix:2"], new[] { Issue(PanelAttention.FlagBoxOutdated, null) }));
-            Assert.True(PanelRigMap.Warns(tiles["MainDash"], new[] { Issue(PanelAttention.ScreenRestart, "MainDash") }));
+            Assert.True(PanelRigMap.Warns(tiles["MainDash"], new[] { Issue(PanelAttention.ScreenMissing, "MainDash") }));
             Assert.False(PanelRigMap.Warns(tiles["MainDash"], null));
         }
 

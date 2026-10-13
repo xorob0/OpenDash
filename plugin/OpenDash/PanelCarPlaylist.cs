@@ -101,8 +101,13 @@ namespace OpenDashPlugin
         /// <summary>Display and car pairs left to an entry the driver made, which the plugin does not touch.</summary>
         public IList<KeyValuePair<string, string>> LeftToTheDriver { get; } = new List<KeyValuePair<string, string>>();
 
-        /// <summary>Whether SimHub does not list the screen's dashboard yet, so nothing can switch to it before a restart.</summary>
-        public bool WaitsForRestart { get; set; }
+        /// <summary>Whether SimHub listed the screen's dashboard when the plan was made, which is what
+        /// <see cref="PanelCarPlaylist.ListingMoved"/> compares SimHub's list with later.</summary>
+        public bool Listed { get; set; }
+
+        /// <summary>Whether the screen would be bound but SimHub does not list its dashboard yet, so nothing can switch
+        /// to it until SimHub does, a couple of seconds after the folder is written (#664).</summary>
+        public bool WaitsForListing { get; set; }
     }
 
     /// <summary>Every change a sync makes, and what each themed screen comes to.</summary>
@@ -189,8 +194,9 @@ namespace OpenDashPlugin
         ///
         /// <para>A themed screen is wanted while its package is carried (<paramref name="carried"/>), its theme is
         /// catalogued and SimHub lists its dashboard (<paramref name="listed"/>). An entry naming a dashboard SimHub
-        /// does not list blanks the display when the car loads, so a screen added since SimHub started, whose folder
-        /// SimHub reads only at the next start, is bound at that start rather than now.</para>
+        /// does not list blanks the display when the car loads, so a screen whose folder was written a moment ago,
+        /// which SimHub lists two seconds after the write (#664), is bound by the sync that follows SimHub's list
+        /// (<see cref="ListingMoved"/>) rather than now.</para>
         ///
         /// <para>Our entry for a car is removed whenever the driver has one of their own for it, since SimHub takes
         /// the first entry naming a car and ours would hide theirs.</para>
@@ -215,13 +221,13 @@ namespace OpenDashPlugin
             foreach (var screen in screens)
             {
                 if (string.IsNullOrEmpty(screen.Theme) || screen.Namespace == null) continue;
-                var report = new CarPlaylistScreenReport();
+                var report = new CarPlaylistScreenReport { Listed = listed != null && listed(screen.Folder) };
                 plan.Screens[screen.Namespace] = report;
                 var theme = catalogue.FirstOrDefault(t => !t.IsDefault && string.Equals(t.Id, screen.Theme, StringComparison.Ordinal));
                 if (theme == null || carried == null || !carried(screen)) continue;
-                if (listed == null || !listed(screen.Folder))
+                if (!report.Listed)
                 {
-                    report.WaitsForRestart = true;
+                    report.WaitsForListing = true;
                     continue;
                 }
                 themed.Add(new KeyValuePair<ScreenInstance, Contract.ThemeEntry>(screen, theme));
@@ -408,9 +414,9 @@ namespace OpenDashPlugin
         {
             var lines = new List<string>();
             if (report == null || screen == null) return lines;
-            if (report.WaitsForRestart)
+            if (report.WaitsForListing)
             {
-                lines.Add(WaitsForRestart);
+                lines.Add(WaitsForListing);
                 return lines;
             }
             if (report.Devices.Count == 0 && report.LeftToTheDriver.Count == 0)
@@ -430,7 +436,34 @@ namespace OpenDashPlugin
             return plan != null && screenNamespace != null && plan.Screens.TryGetValue(screenNamespace, out report) ? report : null;
         }
 
-        public const string WaitsForRestart = "Restart SimHub to switch your displays to this screen by car.";
+        /// <summary>
+        /// A themed screen whose dashboard SimHub has not listed yet. Said only for the moment between the write and
+        /// SimHub's list, since the sync that follows the list (<see cref="ListingMoved"/>) redraws the page.
+        /// </summary>
+        public const string WaitsForListing = "Your displays switch to this screen by car once SimHub lists its dashboard.";
+
+        /// <summary>
+        /// Whether SimHub's dashboard list has moved under one of the rig's themed screens since <paramref name="plan"/>
+        /// was made: a screen the plan does not know, or one whose dashboard SimHub lists now and did not then, or
+        /// the other way round.
+        /// </summary>
+        /// <remarks>
+        /// SimHub reads DashTemplates again two seconds after any change in it (#664), and says so for a save in Dash
+        /// Studio as much as for a folder the panel wrote; only a change to what the plan was made from is worth
+        /// reading every display again for. A null plan is never moved: before the first sync of a start there is
+        /// nothing to compare, and after one that could not reach SimHub a second attempt would fail the same way.
+        /// </remarks>
+        public static bool ListingMoved(CarPlaylistPlan plan, IEnumerable<ScreenInstance> rig, Func<string, bool> listed)
+        {
+            if (plan == null || rig == null || listed == null) return false;
+            foreach (var screen in rig)
+            {
+                if (screen == null || string.IsNullOrEmpty(screen.Theme) || screen.Namespace == null || string.IsNullOrEmpty(screen.Folder)) continue;
+                var report = ReportFor(plan, screen.Namespace);
+                if (report == null || report.Listed != listed(screen.Folder)) return true;
+            }
+            return false;
+        }
 
         /// <summary>No display shows a face of the screen's size, so none is bound: the install happened, and the
         /// step left is the driver's.</summary>

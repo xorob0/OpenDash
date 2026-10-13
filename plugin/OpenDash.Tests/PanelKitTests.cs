@@ -77,8 +77,8 @@ namespace OpenDashPlugin.Tests
 
         /// <summary>A state that does not fit a card at the grid's narrowest wraps to a second line rather than
         /// being trimmed or clipped, since a state is a step a driver follows, and its dot stays on the first line.
-        /// The screen, strip and matrix cards share the one layout, so "Not shown in SimHub" on a narrow Matrix card
-        /// wraps as "Restart SimHub to load it" does on a Screens card (#541).</summary>
+        /// The screen, strip and matrix cards share the one layout, so "Not shown in SimHub" wraps on a narrow Matrix
+        /// card as "Not selected in SimHub" does on a strip's (#541).</summary>
         [Fact]
         public void A_cards_state_line_wraps_and_is_never_trimmed()
         {

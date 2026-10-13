@@ -305,7 +305,6 @@ namespace OpenDashPlugin
         {
             public string Namespace;
             public bool? Installed;
-            public bool Restart;
             public TextBlock Line;
             public Ellipse Dot;
             public string Painted;
@@ -332,12 +331,10 @@ namespace OpenDashPlugin
         private KeyValuePair<HomeScreen, Button> HomeScreenRow(ScreenInstance screen)
         {
             var facts = ScreenFacts(screen.Namespace);
-            var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace);
             var row = new HomeScreen
             {
                 Namespace = screen.Namespace,
                 Installed = facts == null ? null : facts.Installed,
-                Restart = restart,
                 Line = HomeLineText(false),
                 Dot = HomeDot(null),
             };
@@ -358,7 +355,7 @@ namespace OpenDashPlugin
         {
             var screen = Settings.ScreenByNamespace(row.Namespace);
             if (screen == null) return;
-            var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);
+            var line = PanelHome.ScreenLine(Settings, screen, row.Installed);
             var painted = line.Text + "|" + line.TextHex + "|" + line.DotHex;
             if (painted == row.Painted) return;
             row.Painted = painted;
