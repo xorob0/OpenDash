@@ -720,6 +720,62 @@ export const gapIsMeasured = (idx: Expr, from: Expr): Expr => and(hasPosition(id
 export const referenceGap = (idx: Expr): Expr => iff(eq(idx, num(1)), isnull(driver('gaptoleader', num(1)), num(0)), driver('gaptoleader', idx));
 
 /**
+ * The sessions whose leaderboard is ordered by best lap rather than on the road, in the words
+ * iRacing names them: SimHub's `SessionTypeName` passes iRacing's `SessionType` through unchanged.
+ * `Qualify` is the word the Porsche's strip already reads as qualifying, and `Open Practice` and
+ * `Lone Practice` are here on the word of the fuel margin's tests and of #1029, which treat them as
+ * names iRacing writes, rather than of a recording. They are compared in capitals, so a sim that
+ * writes `PRACTICE` reads the same; no committed trace carries another sim's spelling.
+ *
+ * A list of the sessions that are not races, and not the one word `Race`, because the two ways of
+ * being wrong are not alike. A race measured by best lap would draw small, believable gaps that are
+ * false, where a practice measured by distance draws `+5L` and three-digit negatives that nobody
+ * mistakes for a gap. So a session named in any other word, or in none, keeps the distance gap,
+ * which is the reading the columns always gave and is right in every race. iRacing's heat events
+ * are among those words.
+ */
+export const BEST_LAP_SESSIONS = [
+  'Practice',
+  'Open Practice',
+  'Lone Practice',
+  'Qualify',
+  'Open Qualify',
+  'Lone Qualify',
+  'Offline Testing',
+  'Warmup',
+] as const;
+
+/**
+ * Whether the session's leaderboard is ordered by best lap, which {@link BEST_LAP_SESSIONS} lists,
+ * and so whether the Gap and Int columns measure best laps rather than distance (#1040).
+ */
+export const rankedByBestLap = (): Expr => isIn(ucase(sessionType()), ...BEST_LAP_SESSIONS.map((name) => str(name.toUpperCase())));
+
+/**
+ * The gap outside a race: a car's best lap less the best lap of the car it is measured from, signed
+ * to one decimal as the race gap is, or `missing` where either car has no best lap yet.
+ *
+ * SimHub publishes no such gap. Every `GaptoLeader` it computes, in every session, is the first car's
+ * `CurrentLapHighPrecision` less the car's, times a reference lap, and `LapsToLeader` the truncated
+ * difference of the same two distances (`GameManagerBase.ComputeOpponentsData` and
+ * `GameManagerBaseGapHelpers.UpdateGapToLeader` in 9.12.6). In a race that is the gap, the order being
+ * the order on the road. In practice and qualifying iRacing orders its results by best lap, so the
+ * first car is the fastest rather than the furthest round, and the distance says only how long each
+ * car has been out: a car 0.4 s off the best lap that had run five laps fewer read `+5L`, and one
+ * 0.6 s off that had run five more read `−432.0`. Its `DeltaToBest` is a best-lap difference, but
+ * taken from the fastest car of the whole field whatever the list, and floored at 0, so the class
+ * column and the interval could not read it. So the two best laps are read and subtracted here.
+ *
+ * A best lap is a TimeSpan SimHub leaves at zero for a car with none, which {@link hasTime} tells
+ * apart, and the guard stands outside the subtraction for the reason it gives.
+ */
+const bestLapGap = (idx: Expr, from: Expr, missing: string): Expr => {
+  const here = driver('bestlap', idx);
+  const there = driver('bestlap', from);
+  return iff(and(hasTime(here), hasTime(there)), signed(sub(timespanToSeconds(here), timespanToSeconds(there)), '0.0'), str(missing));
+};
+
+/**
  * The gap to the leader: `Lead` on the leader's own row, `+2.6` on a car on the lead lap, and `+1L`
  * once a car is a lap or more down.
  *
@@ -745,6 +801,11 @@ export const referenceGap = (idx: Expr): Expr => iff(eq(idx, num(1)), isnull(dri
  * the leader of that class instead, which is {@link carClassRaceGap}.
  *
  * A gap is drawn only between two cars the sim has placed, which {@link gapIsMeasured} asks.
+ *
+ * All of that is a race. Outside one, where {@link rankedByBestLap} holds, the list is ordered by
+ * best lap and a distance says nothing about pace, so the row reads its best lap less the first
+ * car's through {@link bestLapGap}, and `--` while either has none. No car is lapped in a practice,
+ * so `lapstoleader` is not asked there (#1040).
  */
 export const carRaceGap = (idx: Expr): Expr => {
   const gap = driver('gaptoleader', idx);
@@ -753,9 +814,13 @@ export const carRaceGap = (idx: Expr): Expr => {
     eq(isnull(driver('position', idx), num(0)), num(1)),
     str('Lead'),
     iff(
-      ncalc.or(not(gapIsMeasured(idx, num(1))), ncalc.isNull(gap)),
+      not(gapIsMeasured(idx, num(1))),
       str(NO_VALUE),
-      iff(gt(laps, num(0)), lapsDown(laps), signed(gap, '0.0')),
+      iff(
+        rankedByBestLap(),
+        bestLapGap(idx, num(1), NO_VALUE),
+        iff(ncalc.isNull(gap), str(NO_VALUE), iff(gt(laps, num(0)), lapsDown(laps), signed(gap, '0.0'))),
+      ),
     ),
   );
 };
@@ -804,18 +869,27 @@ const lapsDown = (laps: Expr): Expr => concat(str('+'), fmt(laps, '0'), str('L')
  * listed car's class place from 1 before the sim has placed anyone, so on a grid counted in class
  * one car of each class has a class place of 1, and its row read `Lead` beside a place of `--`
  * (#1014). Every other row waits for {@link gapIsMeasured}, as the overall column does (#1028).
+ *
+ * Outside a race the row reads its best lap less the class leader's, as the overall column reads it
+ * less the first car's and for the same reason (#1040). The class leader is the class's first car
+ * by place, which in practice and qualifying is its fastest.
  */
 export const carClassRaceGap = (idx: Expr): Expr => {
+  const leader = classPosition(num(1));
   const here = driver('gaptoleader', idx);
-  const lead = referenceGap(classPosition(num(1)));
+  const lead = referenceGap(leader);
   const laps = isnull(driver('lapstoclassleader', idx), num(0));
   return iff(
     eq(isnull(driver('classposition', idx), num(0)), num(1)),
     iff(and(hasPosition(idx), eq(carPosition(idx), num(1))), str('Lead'), str('')),
     iff(
-      ncalc.or(not(gapIsMeasured(idx, classPosition(num(1)))), ncalc.isNull(here), ncalc.isNull(lead)),
+      not(gapIsMeasured(idx, leader)),
       str(NO_VALUE),
-      iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, lead), '0.0')),
+      iff(
+        rankedByBestLap(),
+        bestLapGap(idx, leader, NO_VALUE),
+        iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)), str(NO_VALUE), iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, lead), '0.0'))),
+      ),
     ),
   );
 };
@@ -827,6 +901,10 @@ export const carClassRaceGap = (idx: Expr): Expr => {
  */
 export const carRelativeGap = (idx: Expr): Expr =>
   iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signed(driver('relativegaptoplayer', idx), '0.000'));
+
+/** The difference of two gaps to the leader, or nothing where SimHub has not measured either. */
+const raceInterval = (here: Expr, ahead: Expr): Expr =>
+  iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
 
 /**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
@@ -841,6 +919,10 @@ export const carRelativeGap = (idx: Expr): Expr =>
  * front, as the Gap beside it does (#1028). The second row's car in front is the first car of the
  * leaderboard, which SimHub gives no gap unless it is the player's, so it is read through
  * {@link referenceGap}; P2's cell was empty in every race the player did not lead (#1041).
+ *
+ * Outside a race it is the car's best lap less the best lap of the car in front, which is the
+ * difference of the two best-lap gaps beside it, and empty where either car has no best lap, as it is
+ * beside a gap SimHub has not measured (#1040).
  */
 export const carInterval = (idx: Expr): Expr => {
   const above = sub(idx, num(1));
@@ -848,7 +930,7 @@ export const carInterval = (idx: Expr): Expr => {
   const here = driver('gaptoleader', idx);
   return iff(
     gt(idx, num(1)),
-    iff(gapIsMeasured(idx, above), iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str('')), str(NO_VALUE)),
+    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
     str(''),
   );
 };
@@ -864,7 +946,8 @@ export const carInterval = (idx: Expr): Expr => {
  *
  * Below the class's first row it reads `--` until {@link gapIsMeasured} holds, as
  * {@link carInterval} does (#1028), and the car in front is read through {@link referenceGap}, as
- * it is there: the class leader is the race leader in every single-class race (#1041).
+ * it is there: the class leader is the race leader in every single-class race (#1041). Outside a
+ * race it measures best laps, as {@link carInterval} does (#1040).
  */
 export const carClassInterval = (idx: Expr): Expr => {
   const place = isnull(driver('classposition', idx), num(0));
@@ -873,7 +956,7 @@ export const carClassInterval = (idx: Expr): Expr => {
   const here = driver('gaptoleader', idx);
   return iff(
     gt(place, num(1)),
-    iff(gapIsMeasured(idx, above), iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str('')), str(NO_VALUE)),
+    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
     str(''),
   );
 };
