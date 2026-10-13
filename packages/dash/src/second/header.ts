@@ -24,7 +24,7 @@ import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { drawnAfter, drawnFigure, type DrawnFigure } from './drawn.ts';
 import { CHARS, carPosition,
-  positionLabelled, positionLabelledDrawn, currentLap, fieldSize, player, totalLaps } from './values.ts';
+  playerPositionLabelled, playerPositionLabelledDrawn, currentLap, fieldSize, totalLaps } from './values.ts';
 
 const { add, concat, str, fmt, iff, gt, num } = ncalc;
 
@@ -128,7 +128,7 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     density,
     gt(totalLaps(), num(0)),
   );
-  const position = pair(`${name}.position`, 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
+  const position = pair(`${name}.position`, 'P24', playerPositionLabelled(), playerPositionLabelledDrawn(), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;

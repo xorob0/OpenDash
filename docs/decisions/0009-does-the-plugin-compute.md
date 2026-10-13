@@ -136,6 +136,30 @@ publishes it as `Face<size>Zone<X>Position`; the face reads it with the catalogu
 `isnull` fallback, so a package with no plugin still counts, in the catalogue's order, which is the
 order it cycles in without one. The length of the cycle stays a popcount in the expression.
 
+### A place the sim scores only at the line
+
+Added 2026-10-13 for #1063. iRacing moves a car's place when it crosses the start/finish line and at
+no other time, SimHub passes that place on as it is, and a driver who passes a car in the first corner
+reads the old place for the rest of the lap. The place as it stands on the road is the number of cars
+of the field, or of the class, that have covered more distance, and SimHub publishes every car's
+distance as `drivercurrentlaphighprecision()`.
+
+An expression could count them, and this record would ask for that first. It would be one comparison
+per car of the field, up to 64 of them, in every item that draws the player's place, which is about
+ten on a rig, each evaluated per frame; and every term reads the frame SimHub is still building, so a
+dashboard rendering mid-build would find no cars to count and draw nothing for a frame. That is the
+"same derivation in more than about three items" condition above, and a JavaScript binding would pay
+the same per-item cost and read the same half-built frame. The plugin ranks the finished frame once in
+`DataUpdate` and publishes the player's place as `OpenDash.LivePosition` and
+`OpenDash.LiveClassPosition`, which every surface reads with the sim's place as its `isnull` fallback,
+so a package with no plugin draws what it always drew.
+
+It is a computation, and the record does not pretend otherwise; it is the narrow one. The plugin
+publishes nothing outside an iRacing race, after the chequered flag, or before the sim has placed the
+player, and where two cars cannot both be compared on distance it keeps the sim's order between them.
+The leaderboard's rows are not reordered: they come from SimHub's list, whose order is the sim's, and
+a live order published by the plugin would be one frame behind the list it reorders.
+
 ## What would reopen this
 
 An expression is not a good place for arithmetic that is long, shared between many items, or

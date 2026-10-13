@@ -84,6 +84,22 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PorscheCrest = "PorscheCrest";
 
+        /// <summary>
+        /// The player's place in an iRacing race as it stands on the road, counted from the cars ahead of
+        /// them, or null wherever the sim's own place is the one to draw. Published rather than chosen.
+        /// </summary>
+        /// <remarks>
+        /// iRacing moves a car's place only when it crosses the start/finish line, and SimHub passes that
+        /// place on as it is, so a pass in the first corner reached the dashboard a lap later (#1063). The
+        /// plugin ranks the field on SimHub's CurrentLapHighPrecision instead; LivePosition.cs says how,
+        /// and when it publishes nothing. A dashboard reads it with the sim's place as its isnull()
+        /// fallback, which is also what it draws with no plugin.
+        /// </remarks>
+        public const string LivePosition = "LivePosition";
+
+        /// <summary>The same in the player's own class. See <see cref="LivePosition"/>.</summary>
+        public const string LiveClassPosition = "LiveClassPosition";
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1492,6 +1508,10 @@ namespace OpenDashPlugin
             // And every theme's own settings, appended for the same reason and shared because a backlight
             // is the driver's taste and a rig in auto mode shows whichever theme the car picks. #715.
             foreach (var setting in ThemeSettings) yield return setting.Property;
+            // And the player's live place, overall and in class, appended for the same reason, published
+            // rather than chosen and shared because every screen that draws a place reads it. #1063.
+            yield return LivePosition;
+            yield return LiveClassPosition;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

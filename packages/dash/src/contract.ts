@@ -255,6 +255,24 @@ export const FLAGS_IN_PIT_LANE_SETTING = 'FlagsInPitLane';
  */
 export const PORSCHE_CREST = 'PorscheCrest';
 
+/**
+ * The player's place in an iRacing race as it stands on the road, or null wherever the sim's own
+ * place is the one to draw. Published rather than chosen, like {@link CLASS_BEST_LAP}.
+ *
+ * iRacing moves a car's place only when it crosses the start/finish line, and SimHub passes that place
+ * on as it is: `driverposition()` of the player's row read fifth for the rest of a lap in which the
+ * driver had passed the car in fourth (#1063). The plugin ranks the field on SimHub's
+ * `CurrentLapHighPrecision`, the laps each car has covered, and publishes the player's place from the
+ * frame SimHub finished; `plugin/OpenDash/LivePosition.cs` says how, and why it publishes nothing
+ * outside a race, after the chequered flag and before the sim has placed the car. Read through
+ * `playerCarPosition` in `second/values.ts`, with the sim's place as the fallback, which is also what a
+ * package draws with no plugin.
+ */
+export const LIVE_POSITION = 'LivePosition';
+
+/** The same in the player's own class. See {@link LIVE_POSITION}. */
+export const LIVE_CLASS_POSITION = 'LiveClassPosition';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -406,6 +424,10 @@ export function dashProperties(): string[] {
     // And every theme's own settings after that, the AiM's backlight first: shared because they are the
     // driver's taste rather than a screen's, and a rig in auto mode shows whichever theme the car picks. #715.
     ...themeSettingNames(),
+    // And the player's live place, overall and in class, after that: published rather than chosen and
+    // shared because every screen that draws a place reads it. #1063.
+    LIVE_POSITION,
+    LIVE_CLASS_POSITION,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -796,6 +818,13 @@ export const setting = {
   updateVersion: (): Expr => isnull(prop(propertyName(UPDATE_VERSION)), str('')),
   /** `isnull([OpenDash.PorscheCrest], '')`: the crest's file, or `''` for the empty shield. #714. */
   porscheCrest: (): Expr => isnull(prop(propertyName(PORSCHE_CREST)), str('')),
+  /**
+   * `isnull([OpenDash.LivePosition], <fallback>)`: the player's place as it stands on the road where
+   * the plugin publishes one, and the sim's own place everywhere else. See {@link LIVE_POSITION}.
+   */
+  livePosition: (fallback: Expr): Expr => isnull(prop(propertyName(LIVE_POSITION)), fallback),
+  /** The same in class, `isnull([OpenDash.LiveClassPosition], <fallback>)`. */
+  liveClassPosition: (fallback: Expr): Expr => isnull(prop(propertyName(LIVE_CLASS_POSITION)), fallback),
   /** `isnull([OpenDash.ThemeAimBacklight], 'white')`: the id of the choice the driver made of a theme's setting, or its default. #715. */
   themeSetting: (themeId: string, settingId: string): Expr => isnull(prop(propertyName(themeSettingName(themeId, settingId))), str(themeSetting(themeId, settingId).default)),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */

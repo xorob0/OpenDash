@@ -29,7 +29,7 @@ import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { airTemperature, bestLap, brake, carPosition,
-  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  playerPositionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, playerClassPosition, playerPositionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { assistPresent } from '../second/tracked.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
@@ -86,7 +86,7 @@ const WIDEST_SESSION_LABEL = 'Offline Testing';
 export function sessionPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Session' });
-  const classPosition = isnull(driver('classposition', player()), num(0));
+  const classPosition = playerClassPosition();
   return [
     ...items,
     ...panelRow(body, [
@@ -99,13 +99,13 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
       ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {
         sample: '4',
-        bind: positionDigits(player()),
+        bind: playerPositionDigits(),
         chars: CHARS.position,
         fs: d.mid,
         // A denominator rather than a unit: the sheet scales "/ 24" with the value it follows -- 23
         // beside 34, 32 beside the landscape sheet's 46 -- where a unit is the density's 13 px.
         follower: { text: '/ 24', kind: 'denominator', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
-        drawn: positionDrawn(player()),
+        drawn: playerPositionDrawn(),
       }),
       fld(
         ctxOf(body, `${name}.`),

@@ -22,7 +22,19 @@ import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { racePage } from '../src/screens/pitwall.ts';
 import { sectorColour } from '../src/second/sectors.ts';
-import { carIsSessionBest, carPosition, fieldSize, player, rowsInClass, sessionBestLap, sessionBestRow } from '../src/second/values.ts';
+import {
+  carIsSessionBest,
+  carPosition,
+  fieldSize,
+  player,
+  playerCarPosition,
+  playerClassPosition,
+  playerPositionDigits,
+  playerPositionLabelled,
+  rowsInClass,
+  sessionBestLap,
+  sessionBestRow,
+} from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
 import { walkItems } from '../src/walk.ts';
@@ -109,6 +121,12 @@ interface Settings {
    * being built, finds no leaderboard and answers nothing. #454.
    */
   midBuild?: boolean;
+  /**
+   * The player's place as it stands on the road, which the plugin publishes during an iRacing race
+   * because the sim's own moves only at the line (#1063). Unset is a frame it publishes nothing for,
+   * or no plugin at all.
+   */
+  live?: { overall: number; class: number };
 }
 
 /** SimHub's leaderboard functions, answered from {@link GRID}. A row that is not there is null. */
@@ -130,6 +148,7 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
     // The player's own best of the sector, slower than either session best so that only the
     // purple branch can tell the two references apart.
     'DataCorePlugin.GameData.Sector1BestTime': 29.0,
+    ...(settings.live === undefined ? {} : { 'OpenDash.LivePosition': settings.live.overall, 'OpenDash.LiveClassPosition': settings.live.class }),
   };
   const classRowAt = (place: number): number => CLASS_ROWS[place - 1] ?? -1;
   return {
@@ -495,6 +514,44 @@ describe("the bar's two position cells cannot contradict each other", () => {
       // counting overall it is where the class place still reads. With the rig counting in class the
       // two cells say the same place, which is agreement rather than contradiction.
       expect(evaluate(cell('classPosition').bind, { positionMode })).toBe(`${PLAYER_CLASS} · P${classPositionOf(PLAYER_ROW)}`);
+    });
+  }
+});
+
+describe("the player's own place moves when they pass, not when they next cross the line (#1063)", () => {
+  // Third overall and second in GT3 by the sim's count, which is where they stood at the line; since
+  // then they have passed the LMP2 ahead and the GT3 leader, and the plugin has them second and first.
+  const LIVE = { overall: 2, class: 1 } as const;
+
+  for (const positionMode of ['overall', 'class', undefined] as const) {
+    const inClass = positionMode !== 'overall';
+    const sim = inClass ? classPositionOf(PLAYER_ROW) : PLAYER_ROW;
+    const live = inClass ? LIVE.class : LIVE.overall;
+
+    test(`the place reads the live one where the plugin publishes it, counting ${positionMode ?? 'by default'}`, () => {
+      expect(evaluate(playerCarPosition(), { positionMode, live: LIVE })).toBe(live);
+      expect(evaluate(playerPositionDigits(), { positionMode, live: LIVE })).toBe(String(live));
+      expect(evaluate(playerPositionLabelled(), { positionMode, live: LIVE })).toBe(`P${live}`);
+      const bar = BAR_FIELD_SPECS.find((f) => f.id === 'position')!;
+      expect(evaluate(bar.bind, { positionMode, live: LIVE })).toBe(String(live));
+    });
+
+    test(`and the sim's own where it publishes nothing, which is also a package with no plugin, counting ${positionMode ?? 'by default'}`, () => {
+      expect(evaluate(playerCarPosition(), { positionMode })).toBe(sim);
+      expect(evaluate(playerCarPosition(), { positionMode })).toBe(evaluate(carPosition(player()), { positionMode }));
+    });
+
+    test(`the class cell is the live class place whatever the rig counts, counting ${positionMode ?? 'by default'}`, () => {
+      expect(evaluate(playerClassPosition(), { positionMode, live: LIVE })).toBe(LIVE.class);
+      const cell = BAR_FIELD_SPECS.find((f) => f.id === 'classPosition')!;
+      expect(evaluate(cell.bind, { positionMode, live: LIVE })).toBe(`${PLAYER_CLASS} · P${LIVE.class}`);
+    });
+
+    test(`a leaderboard keeps the sim's count, which is the order its rows are in, counting ${positionMode ?? 'by default'}`, () => {
+      // The rows are SimHub's leaderboard in the sim's order. Numbering the player's row from the live
+      // count would put two cars on one place, or a gap in the column, for the rest of the lap.
+      const page = build('leaderboard', PAGE.width, PAGE.height);
+      expect(column(page, { positionMode, live: LIVE })).toEqual(column(page, { positionMode }));
     });
   }
 });

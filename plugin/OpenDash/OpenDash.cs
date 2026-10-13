@@ -607,6 +607,46 @@ namespace OpenDashPlugin
         private volatile object classBestLap;
 
         /// <summary>
+        /// The player's live place over the field and in class, or null: what <see cref="Contract.LivePosition"/>
+        /// and <see cref="Contract.LiveClassPosition"/> publish. Written and read as <see cref="classBestLap"/> is.
+        /// </summary>
+        private volatile object livePosition, liveClassPosition;
+
+        /// <summary>The leaderboard handed to <see cref="LivePosition"/>, kept between frames so a frame allocates nothing but its growth.</summary>
+        private readonly List<LiveCar> liveField = new List<LiveCar>();
+
+        /// <summary>
+        /// Fills <see cref="livePosition"/> and <see cref="liveClassPosition"/> from the frame SimHub has
+        /// finished, or empties them where the sim's own place is the one to draw. See LivePosition.cs.
+        /// </summary>
+        private void UpdateLivePosition(GameData data)
+        {
+            var frame = data != null && data.GameRunning ? data.NewData : null;
+            var opponents = frame == null ? null : frame.Opponents;
+            if (opponents == null || !OpenDashPlugin.LivePosition.Applies(data.GameName, frame.SessionTypeName, frame.Flag_Checkered != 0))
+            {
+                livePosition = null;
+                liveClassPosition = null;
+                return;
+            }
+            while (liveField.Count < opponents.Count) liveField.Add(new LiveCar());
+            if (liveField.Count > opponents.Count) liveField.RemoveRange(opponents.Count, liveField.Count - opponents.Count);
+            for (var i = 0; i < opponents.Count; i++)
+            {
+                var opponent = opponents[i];
+                var car = liveField[i];
+                car.Progress = opponent == null ? null : opponent.CurrentLapHighPrecision;
+                car.Position = opponent == null ? 0 : opponent.Position;
+                car.ClassPosition = opponent == null ? 0 : opponent.PositionInClass;
+                car.CarClass = opponent == null ? null : opponent.CarClass;
+                car.IsPlayer = opponent != null && opponent.IsPlayer;
+                car.IsConnected = opponent != null && opponent.IsConnected;
+            }
+            livePosition = OpenDashPlugin.LivePosition.Overall(liveField);
+            liveClassPosition = OpenDashPlugin.LivePosition.InClass(liveField);
+        }
+
+        /// <summary>
         /// The game, car, track and session SimHub last reported, for the settings panel. Written on the
         /// data thread only when one of them changed, and read on the interface thread as one reference.
         /// </summary>
@@ -677,6 +717,9 @@ namespace OpenDashPlugin
                 classBestLap = data != null && data.GameRunning && data.NewData != null
                     ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
                     : null;
+
+                // And the live place, from the same finished frame and before anything below can throw.
+                UpdateLivePosition(data);
 
                 // What the panel names, compared before anything is built and replaced only when
                 // something in it moved, so a frame in which nothing did allocates nothing for the
@@ -964,6 +1007,10 @@ namespace OpenDashPlugin
                 var declared = themeSetting;
                 this.AttachDelegate(declared.Property, () => Settings.ThemeSetting(declared));
             }
+            // And the player's live place, filled by DataUpdate from the frame SimHub has finished and null
+            // wherever the sim's own place stands. Not a setting: see Contract.LivePosition. #1063.
+            this.AttachDelegate(Contract.LivePosition, () => livePosition);
+            this.AttachDelegate(Contract.LiveClassPosition, () => liveClassPosition);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

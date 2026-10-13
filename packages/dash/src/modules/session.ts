@@ -16,20 +16,20 @@ import { stack } from '../second/layout.ts';
 import {
   CHARS,
   carPosition,
-  positionDigits,
   classOpponentCount,
   currentLap,
   fieldSize,
   incidents,
   lapsLeft,
-  player,
   playerClass,
-  positionDrawn,
   sessionClock,
   sessionType,
   showsTimeLeft,
   totalLaps,
   untimedMark,
+  playerPositionDigits,
+  playerPositionDrawn,
+  playerClassPosition,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
@@ -38,7 +38,7 @@ const { fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
-  const classPosition = isnull(driver('classposition', player()), num(0));
+  const classPosition = playerClassPosition();
   const taken = isnull(incidents(), num(0));
   // The Session progress setting was read by the legacy card alone, so a zone drew the lap and the
   // time left side by side whatever the driver had chosen. One of the two answers the question and
@@ -55,11 +55,11 @@ export const session = defineModule('session', (ctx) => {
           fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: lead }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
-            bind: positionDigits(player()),
+            bind: playerPositionDigits(),
             chars: CHARS.position,
             fs: lead,
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
-            drawn: positionDrawn(player()),
+            drawn: playerPositionDrawn(),
           }),
           fld(ctx, 'class', 'Class', {
             sample: 'GT3 · P4',

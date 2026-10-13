@@ -170,3 +170,15 @@ None of that stops a trace from being reproducible in the sense that matters, wh
 re-recording an unchanged scenario produces the same picture. It does mean that a trace diff is
 never empty, and that the lines worth reading in it are the ones belonging to properties the
 scenario actually touches.
+
+#1063 asserts two in each, typed on top of that recording because the plugin it was taken with did not
+publish them yet: `OpenDash.LivePosition` and `OpenDash.LiveClassPosition`, the player's place as it
+stands on the road, which the plugin works out because iRacing moves its own only at the line. In the
+seven race scenarios that hold their chequered flag back they are the place the emulator gives the
+player for the whole of the recording, read off its dry run: 3 and 2, 9 and 5 in the two pit
+scenarios, 6 and 4 under the yellow. They are null in qualifying, where a place is a lap time and the
+plugin publishes none, and null in `notc`, whose chequered flag falls 132 frames in: the plugin
+publishes the place before the flag and nothing after it, which a constant cannot say, and the place
+it publishes is the one the dashboards fall back to without it, the emulator ranking its field by
+distance. The replay draws the same place either way; the next `bun run record` reads them from the
+plugin and drops the entries.

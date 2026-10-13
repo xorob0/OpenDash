@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79681,6],"recorded":"2026-10-09","simHub":"unknown"}
+{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79681,6],"recorded":"2026-10-09","simHub":"unknown","asserted":["OpenDash.LivePosition","OpenDash.LiveClassPosition"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -323,6 +323,8 @@
 {"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
 {"p":"OpenDash.FlagsInPitLane","v":true}
 {"p":"OpenDash.LightsLowFuelLaps","v":2}
+{"p":"OpenDash.LiveClassPosition","v":2}
+{"p":"OpenDash.LivePosition","v":3}
 {"p":"OpenDash.PitWallClassOnly","v":false}
 {"p":"OpenDash.PitWallFlagFormat","v":"band"}
 {"p":"OpenDash.PitWallPage","v":0}

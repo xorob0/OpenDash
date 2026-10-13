@@ -542,14 +542,46 @@ export const carClass = (idx: Expr): Expr => driver('carclass', idx);
  * that nothing draws a zero any more: {@link hasPosition} is the guard, and every drawing that
  * prints a position asks it first. A grid of AI before the green flag has no positions at all, and
  * a column of `P0` is a row of wrong answers where an empty cell is an honest one.
+ *
+ * The sim's own place, which iRacing moves only at the start/finish line. The player's place as a
+ * driver reads it is {@link playerCarPosition}.
  */
 export const carPosition = (idx: Expr): Expr => iff(classMode(), isnull(driver('classposition', idx), num(0)), isnull(driver('position', idx), num(0)));
+
+/** The player's place in their own class: the live one where the plugin publishes it, else the sim's. */
+export const playerClassPosition = (): Expr => setting.liveClassPosition(isnull(driver('classposition', player()), num(0)));
+
+/**
+ * The player's own place, overall or in class per PositionMode, as {@link carPosition} counts it but
+ * live: where the plugin publishes the place as it stands on the road, that, and the sim's place
+ * otherwise.
+ *
+ * iRacing moves a car's place only when it crosses the line, so a pass in the first corner reached
+ * every place a driver reads about themselves a lap later (#1063). The plugin works the place out from
+ * the distance every car has covered and publishes it as `OpenDash.LivePosition`; `LIVE_POSITION` in
+ * `contract.ts` says when it publishes nothing and the sim's place is drawn, which is also what a
+ * package draws with no plugin. A leaderboard row, and band D's relative with its neighbours either
+ * side, still draw {@link carPosition}: the rows are in SimHub's order, which is the sim's, and a row
+ * numbered from a different count than the rows around it would be a column out of order.
+ */
+export const playerCarPosition = (): Expr =>
+  iff(classMode(), playerClassPosition(), setting.livePosition(isnull(driver('position', player()), num(0))));
 
 /** True once the sim has actually placed this car. Positions count from one, so zero is "not yet". */
 export const hasPosition = (idx: Expr): Expr => gt(carPosition(idx), num(0));
 
+/** A place as digits, or `--` while it is zero. */
+const placeDigits = (place: Expr): Expr => iff(gt(place, num(0)), fmt(place, '0'), str(NO_VALUE));
+
+/** How wide {@link placeDigits} draws. */
+const placeDrawn = (place: Expr): DrawnFigure =>
+  drawnEither(gt(place, num(0)), drawnFigure({ value: place, digits: CHARS.position.digits }), drawnText(NO_VALUE));
+
 /** A position as digits, or `--` before the sim has placed the car: `4`, and `--` on the grid. */
-export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(carPosition(idx), '0'), str(NO_VALUE));
+export const positionDigits = (idx: Expr): Expr => placeDigits(carPosition(idx));
+
+/** The player's own place as digits, live where the plugin says so; see {@link playerCarPosition}. */
+export const playerPositionDigits = (): Expr => placeDigits(playerCarPosition());
 
 /**
  * How wide {@link positionDigits} draws, for the "/ 24" that follows it on three surfaces.
@@ -559,14 +591,22 @@ export const positionDigits = (idx: Expr): Expr => iff(hasPosition(idx), fmt(car
  * is the fault {@link DrawnWidth} exists to prevent, and it would be a fault nobody could see in
  * the page that declared it.
  */
-export const positionDrawn = (idx: Expr): DrawnFigure =>
-  drawnEither(hasPosition(idx), drawnFigure({ value: carPosition(idx), digits: CHARS.position.digits }), drawnText(NO_VALUE));
+export const positionDrawn = (idx: Expr): DrawnFigure => placeDrawn(carPosition(idx));
+
+/** How wide {@link playerPositionDigits} draws. */
+export const playerPositionDrawn = (): DrawnFigure => placeDrawn(playerCarPosition());
 
 /** A position with the P the drawings prefix it with, or `P--` before the sim has placed the car. */
 export const positionLabelled = (idx: Expr): Expr => concat(str('P'), positionDigits(idx));
 
+/** The player's own place with its P. */
+export const playerPositionLabelled = (): Expr => concat(str('P'), playerPositionDigits());
+
 /** How wide {@link positionLabelled} draws: the P, and then the digits or the placeholder. */
 export const positionLabelledDrawn = (idx: Expr): DrawnFigure => drawnAfter('P', positionDrawn(idx));
+
+/** How wide {@link playerPositionLabelled} draws. */
+export const playerPositionLabelledDrawn = (): DrawnFigure => drawnAfter('P', playerPositionDrawn());
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it.
