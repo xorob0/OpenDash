@@ -91,6 +91,16 @@ base fixture's running clock, so no scenario committed here publishes the placeh
 [docs/dev-loop.md](../../../docs/dev-loop.md)'s list of silent failures says the same, since that is
 where somebody looking at a surprising capture looks.
 
+## The wheel turned one way
+
+`steerleft` is `green`'s held lap with the wheel pinned a quarter turn to the left, a
+`SteeringWheelAngle` of +1.5708. iRacing's angle is positive to the left, counter-clockwise as the
+driver sees it, which is the opposite of the clockwise the dial draws in, and the sine every other
+scenario drives it with is symmetric, so nothing else shows which way the dial turns. With it the
+inputs module's mark sits at nine o'clock and the pit wall's steering trace runs under its centre
+line (#1057). It has no trace: it is looked at, and a trace of it would be `green`'s with one value
+held.
+
 ## The other scenarios
 
 `race.json` is the base: a GT3/GT4 race at Spa, 24 cars, 30 laps with 12 done, the player at

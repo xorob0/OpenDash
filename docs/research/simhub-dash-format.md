@@ -1008,6 +1008,61 @@ yet measured on the VM.
   the dash tests' own evaluator, `packages/dash/test/ncalcEval.ts`, answers `max` and `min` by the
   same rule, so a reading that rounds on the dash rounds in its test too.
 
+### iRacing's steering angle is positive to the left (2026-10-11, #1057)
+
+Established from SimHub 9.12.6's decompiled iRacing reader and from three iRacing tools that read the
+same variable; not yet seen on a real wheel, which is still the check to make: turn left in a session
+with SimHub's property list open and read `SteeringWheelAngle` going positive.
+
+- **SimHub passes the angle through untouched.** `iRacingSDK.Telemetry.SteeringWheelAngle` is
+  `GetSingleValueOrDefault("SteeringWheelAngle")`, a boxed Single in radians, and `IRacingManager`
+  neither inverts nor normalises it, nor maps it into any `GameData` property. So
+  `[DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle]` is iRacing's own number with iRacing's
+  own sign, and the only steering a dash can read on iRacing.
+- **iRacing publishes it counter-clockwise, positive when the wheel is turned to the left.** iRacing's
+  own description is only "Steering wheel angle", so the sign comes from the code that depends on it:
+  - Marvin's AIRA, a force feedback app that drives a real wheel's soft lock and damping from this
+    angle, writes iRacing's convention down as "CCW/left-positive for steering, torque, lateral
+    velocity, and yaw", and its bridges for rFactor 2, RaceRoom and Assetto Corsa negate those games'
+    right-positive steering into it after checking each against a capture by correlation with yaw rate
+    and lateral acceleration (`GameBridges/*Bridge.cs` in mherbold/MarvinsAIRARefactored).
+  - An open-source iRacing overlay turns its drawn wheel by the negated angle, because CSS rotates
+    clockwise.
+  - An open-source telemetry tool normalises steering to negative-left and negates iRacing's angle
+    for it, with the comment that captured iRacing angles have the opposite sign.
+- **One community page says the opposite.** sajax/irsdkdocs describes positive as right of centre,
+  without a source; the three above are code that a wrong sign would visibly break, so they are taken
+  over it.
+- **The dash draws it clockwise.** `steering()` in `packages/dash/src/second/values.ts` negates the
+  reading once, so the dial's mark goes left when the wheel does and the pit wall's steering trace puts
+  a right turn above its centre line and a left turn below. The emulator's catalogue line for the
+  variable says the sign, and `tools/irsdk-emulator/scenarios/steerleft.json` holds a left turn at it.
+  The emulator scenarios that sweep the angle do so symmetrically, so none of the committed traces
+  could have shown the sign either way.
+
+### `Rotation` binds, and turns an item about its own centre (2026-10-13, #1057)
+
+Read from the decompiled `plugin/lib/SimHub.Plugins.dll` (9.12.6); not yet seen on the VM, which is
+the check still owed: a bound wheel turning in a live session.
+
+- **It is a `double`, and a `double` binds.** `DrawableItem.Rotation` is a public virtual `double`
+  with an auto-property setter that raises `PropertyChanged`, and carries no `[NoBinding]`. The rule
+  above, a CLR property found by `GetProperty` and set by `Applybindings` when its type is one of the
+  six, therefore covers it, as it covers `Left` and `Top`. `Layer` overrides it as well.
+- **The renderer turns it live.** `ControlHost` binds its own `Rotation` dependency property one way
+  to `DataContext.Rotation`, and `rotationChanged` sets a `RotateTransform` of that angle as the
+  host's `RenderTransform`, or clears it at 0. Degrees, clockwise, as WPF's are.
+- **About the item's centre, by inference.** The transform is built with `CenterX` and `CenterY` of
+  0.5, which is the centre only if the host's template sets `RenderTransformOrigin` to the middle,
+  and the template is BAML this decompile does not show. The rev arc already relies on the centre:
+  its segments are placed on a circle by their centres and turned by a written `Rotation`
+  (`packages/dash/src/components/revArc.ts`). The wheel relies on it the same way, and the VM check
+  above is what settles it.
+- The steering dial was built on the opposite belief, that `Rotation` is a number written into the
+  package and nothing a formula can drive, and drew a mark running round a still ring. It is a wheel
+  that turns now (`packages/dash/src/second/steering.ts`), and the generator offers `Rotation` as a
+  binding target on the kinds a written rotation is verified on: text, rectangle and ellipse.
+
 ### iRacing's place moves only at the line, and SimHub keeps it that way (2026-10-13, #1063)
 
 Established by decompiling `GameReaderCommon.dll` from SimHub 9.12.6 (`GameManagerBase.PreParseDataBase`

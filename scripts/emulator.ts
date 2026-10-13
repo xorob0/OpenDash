@@ -67,6 +67,9 @@ export const UNTRACED_SCENARIOS: readonly string[] = [
   // cars changes the player's car for SimHub's per-car playlists (#199), whose switch is a device's and is
   // watched on the VM; a twenty-second trace would hold no car change at all.
   'cars',
+  // steerleft holds the wheel a quarter turn to the left so the steering dial's direction can be
+  // seen (#1057); it is looked at on the VM, and its trace would be green's with one value held.
+  'steerleft',
 ];
 
 /** Every scenario a run may name. */

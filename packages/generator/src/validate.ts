@@ -54,11 +54,11 @@ const DRAWABLE_TARGETS: BindingTarget[] = [...GEOMETRY_TARGETS, 'Visible', 'Back
 /** Ellipse fill and stroke. `BackgroundColor` on an ellipse is the DrawableItem background, not the fill. */
 const ELLIPSE_TARGETS: BindingTarget[] = ['FillColor', 'EllipseColor'];
 
-/** Which `Bindings` keys each item kind accepts. */
+/** Which `Bindings` keys each item kind accepts. `Rotation` goes to the kinds `rotation` is verified on, `ROTATABLE_KINDS`. */
 export const ALLOWED_BINDING_TARGETS: Record<Item['kind'], readonly BindingTarget[]> = {
-  text: [...DRAWABLE_TARGETS, 'Text', 'TextColor', 'FontSize'],
-  rect: DRAWABLE_TARGETS,
-  ellipse: [...DRAWABLE_TARGETS, ...ELLIPSE_TARGETS],
+  text: [...DRAWABLE_TARGETS, 'Text', 'TextColor', 'FontSize', 'Rotation'],
+  rect: [...DRAWABLE_TARGETS, 'Rotation'],
+  ellipse: [...DRAWABLE_TARGETS, ...ELLIPSE_TARGETS, 'Rotation'],
   layer: ['Visible', 'Opacity', 'BlinkEnabled', 'Repetitions'],
   widget: [...GEOMETRY_TARGETS, 'Visible', 'InitialScreenIndex'],
   chart: [...DRAWABLE_TARGETS, 'CurrentValue', 'ChartEnabled', 'LineColor', 'Minimum', 'Maximum'],

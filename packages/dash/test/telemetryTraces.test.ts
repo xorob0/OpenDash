@@ -16,6 +16,7 @@ import { describe, expect, test } from 'bun:test';
 import type { ChartItem, Item, Rect, TextItem } from '../src/generator.ts';
 import { TELEMETRY_TRACES, telemetryPage } from '../src/screens/pitwall.ts';
 import { ds } from '../src/tokens.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const PAGE = telemetryPage(1920, 1080);
 
@@ -70,6 +71,20 @@ describe('the telemetry traces', () => {
     // Reverse below neutral, and the forward gears as themselves.
     expect(formula).toContain("'R'");
     for (const g of [1, 8]) expect(formula).toContain(`'${g}'`);
+  });
+
+  test('traces the steering the way the dial turns, a right turn above the line and a left one below', () => {
+    // iRacing's `SteeringWheelAngle` is positive to the left. The dial reads it clockwise, so the trace
+    // does too: one convention for the two drawings of one reading, and a left turn here sits where a
+    // left turn sits on the dial's own scale, under nought (#1057).
+    const chart = chartsOf('steering')[0]!;
+    const formula = chart.bindings?.CurrentValue?.formula as string;
+    expect(formula).toContain('[DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle]');
+    const sampled = (angle: number): number => Number(evalNcalc(formula, { 'DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle': angle }));
+    expect(sampled(0.5)).toBe(-0.5);
+    expect(sampled(-0.5)).toBe(0.5);
+    expect(Number(evalNcalc(formula, {}))).toBe(0);
+    expect({ minimum: chart.minimum, maximum: chart.maximum }).toEqual({ minimum: -3.5, maximum: 3.5 });
   });
 
   test('labels the pedals in the canvas order and keeps the legend inside the panel', () => {

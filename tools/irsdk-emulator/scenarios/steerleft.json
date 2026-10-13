@@ -1,0 +1,13 @@
+{
+  // The green lap with the wheel held a quarter turn to the left, at iRacing's sign: SteeringWheelAngle
+  // is positive when the wheel is turned to the left, counter-clockwise as the driver sees it. Every
+  // other scenario sweeps it with a symmetric sine or holds it at nought, and neither says which way
+  // a dial turns. This one is the VM check of #1057: the inputs module's mark sits at nine o'clock,
+  // level with the centre on the left of the rim, and the pit wall's steering trace runs under its
+  // centre line.
+  "extends": "green.json",
+  "name": "Green flag race lap, wheel held a quarter turn to the left",
+  "variables": [
+    {"name": "SteeringWheelAngle", "value": 1.5708, "pin": true}
+  ]
+}

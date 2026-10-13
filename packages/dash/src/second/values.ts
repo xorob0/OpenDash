@@ -1725,7 +1725,15 @@ export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifU
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
 export const clutch = (): Expr => isnull(game('Clutch'), num(0));
-export const steering = (): Expr => isnull(raw('SteeringWheelAngle'), num(0));
+/**
+ * The wheel angle in radians, clockwise as the driver sees it, so that a right turn is positive.
+ *
+ * iRacing publishes `SteeringWheelAngle` the other way round: positive is a left turn, counter-clockwise,
+ * and SimHub's reader passes the raw value through without touching it. The reading is turned round here
+ * and only here, so the dial's mark and the pit wall's trace take the same convention from one place.
+ * `docs/research/simhub-dash-format.md` records how the sign was established (#1057).
+ */
+export const steering = (): Expr => sub(num(0), isnull(raw('SteeringWheelAngle'), num(0)));
 /** Radians of wheel angle either side of centre a full-lock reading is drawn to. */
 export const STEERING_RANGE = 3.5;
 export const brakeBias = (): Expr => isnull(game('BrakeBias'), num(0));

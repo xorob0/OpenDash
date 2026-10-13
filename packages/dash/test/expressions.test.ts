@@ -22,7 +22,7 @@ import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
-import type { TextItem } from '../src/generator.ts';
+import type { EllipseItem, RectangleItem, TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -748,13 +748,14 @@ describe('module expressions', () => {
   });
 
   /**
-   * The steering mark, which is a position rather than a rotation because a rotation does not bind.
+   * The steering wheel's mark, carried round the hub by its position and turned by its rotation.
    *
-   * The two formulas are the whole of the dial's movement, so what they are worth is where they put
-   * the mark: at the top of the rim on a wheel that is straight, at the right of it a quarter turn
-   * clockwise, and at the left a quarter turn the other way. Evaluating them is the only way to
+   * The formulas are the whole of the dial's movement, so what they are worth is where they put the
+   * mark: at the top of the rim on a wheel that is straight, at the left of it a quarter turn to the
+   * left, and at the right a quarter turn the other way, turned by the same quarter. Evaluating them is the only way to
    * catch a sine and a cosine that have been exchanged, which reads as a dial that is right at the
-   * two locks and wrong everywhere between them.
+   * two locks and wrong everywhere between them, and the only way to catch the sign of iRacing's
+   * angle, which is positive to the left, being read the other way round (#1057).
    */
   test('the steering mark rides the rim at the wheel angle, top dead centre when the wheel is straight', () => {
     const module = MODULES.find((m) => m.id === 'inputs')!;
@@ -768,19 +769,56 @@ describe('module expressions', () => {
       top: place(evaluateNumber(mark.bindings!.Top!.formula as string, angle)),
     });
     expect(at(0)).toEqual({ left: mark.rect.left, top: mark.rect.top });
-    // A quarter turn clockwise puts it at the right of the rim, level with the centre, and the same
-    // turn the other way puts it at the left, the two being the radius either side of top dead
-    // centre. The radius is what the drop from the top gives.
-    const right = at(Math.PI / 2);
-    const left = at(-Math.PI / 2);
-    const radius = right.top - mark.rect.top;
+    // The angle is iRacing's `SteeringWheelAngle`, which is positive when the wheel is turned to the
+    // left. A quarter turn to the left therefore puts the mark at the left of the rim, level with the
+    // centre, which is where the top of a real rim has gone, and the same turn the other way puts it
+    // at the right, the two being the radius either side of top dead centre. The radius is what the
+    // drop from the top gives.
+    const left = at(Math.PI / 2);
+    const right = at(-Math.PI / 2);
+    const radius = left.top - mark.rect.top;
     expect(radius).toBeGreaterThan(0);
-    expect(right).toEqual({ left: mark.rect.left + radius, top: mark.rect.top + radius });
     expect(left).toEqual({ left: mark.rect.left - radius, top: mark.rect.top + radius });
+    expect(right).toEqual({ left: mark.rect.left + radius, top: mark.rect.top + radius });
+    // A small turn to the left is a mark a little left of the top, not a little right of it.
+    expect(at(0.2).left).toBeLessThan(mark.rect.left);
     expect(at(Math.PI)).toEqual({ left: mark.rect.left, top: mark.rect.top + 2 * radius });
     // Past full lock the mark stops rather than coming round again, which would read as a smaller
-    // angle than the wheel is actually at.
+    // angle than the wheel is actually at, and it stops at either lock.
     expect(at(10)).toEqual(at(values.STEERING_RANGE));
+    expect(at(-10)).toEqual(at(-values.STEERING_RANGE));
+  });
+
+  test('the wheel turns as one: every part goes round the hub and turns by the wheel angle on top of its own', () => {
+    const module = MODULES.find((m) => m.id === 'inputs')!;
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const items = [...walkItems(module.build({ frame: box, density: 'zone', prefix: 'inputs.' }))];
+    const turned = items.filter((i): i is RectangleItem => i.kind === 'rect' && i.name.startsWith('inputs.steer.') && i.bindings?.Rotation !== undefined);
+    expect(turned.map((i) => i.name)).toContain('inputs.steer.spokeDown');
+    const rim = items.find((i) => i.name === 'inputs.steer.rim') as EllipseItem;
+    const hub = { x: rim.rect.left + rim.rect.width / 2, y: rim.rect.top + rim.rect.height / 2 };
+    const place = (n: number): number => Math.round(n * 1e4) / 1e4 + 0;
+    const pose = (item: RectangleItem, angle: number): { x: number; y: number; turn: number } => ({
+      x: place(evaluateNumber(item.bindings!.Left!.formula as string, angle) + item.rect.width / 2 - hub.x),
+      y: place(evaluateNumber(item.bindings!.Top!.formula as string, angle) + item.rect.height / 2 - hub.y),
+      turn: place(evaluateNumber(item.bindings!.Rotation!.formula as string, angle)),
+    });
+    for (const item of turned) {
+      const straight = pose(item, 0);
+      // A straight wheel draws every part where the package writes it, at the rotation it writes.
+      expect({ name: item.name, ...straight }).toEqual({ name: item.name, x: place(item.rect.left + item.rect.width / 2 - hub.x), y: place(item.rect.top + item.rect.height / 2 - hub.y), turn: place(item.rotation ?? 0) });
+      // Rotation is clockwise degrees, and iRacing's angle is positive to the left, so a quarter turn
+      // to the left takes every part a quarter turn anticlockwise round the hub, (x, y) to (y, -x),
+      // and turns it by the same quarter, and the other way round for a turn to the right.
+      expect({ name: item.name, ...pose(item, Math.PI / 2) }).toEqual({ name: item.name, x: straight.y, y: place(-straight.x), turn: place(straight.turn - 90) });
+      expect({ name: item.name, ...pose(item, -Math.PI / 2) }).toEqual({ name: item.name, x: place(-straight.y), y: straight.x, turn: place(straight.turn + 90) });
+    }
+    // The spoke down sits opposite the stripe, and the two side spokes are lifted the same way.
+    const centre = (name: string): { x: number; y: number; turn: number } => pose(turned.find((i) => i.name === `inputs.steer.${name}`)!, 0);
+    expect(centre('spokeDown').x).toBe(0);
+    expect(centre('spokeDown').y).toBeGreaterThan(0);
+    expect(centre('spokeLeft').y).toBeLessThan(0);
+    expect(centre('spokeLeft')).toEqual({ x: place(-centre('spokeRight').x), y: centre('spokeRight').y, turn: place(-centre('spokeRight').turn) });
   });
 });
 
