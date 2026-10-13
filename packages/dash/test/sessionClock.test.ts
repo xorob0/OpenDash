@@ -89,6 +89,16 @@ describe('the clock the surfaces bind', () => {
     expect({ marked: evalNcalc(isUntimedSession(), game(UNTIMED_SECONDS + 1)) }).toEqual({ marked: true });
   });
 
+  test('a timed session whose clock has run out reads nought until it ends, not the unset clock', () => {
+    // iRacing's `SessionTimeTotal` is the length the session was set to and does not move, so the
+    // laps run after the clock are still a timed session's: `-:--:--` there said there was no session
+    // at all, and the lap total beside it came back as the leader's laps (#1017).
+    for (const secs of [0, -1]) {
+      const props = { ...game(secs), 'DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal': 900 };
+      expect({ secs, reading: evalNcalc(sessionClock(), props), marked: evalNcalc(isUntimedSession(), props) }).toEqual({ secs, reading: '0:00:00', marked: false });
+    }
+  });
+
   test('it is the unset clock where there is no session, and the mark takes the untimed one', () => {
     for (const secs of [0, -1]) {
       expect({ secs, reading: evalNcalc(sessionClock(), game(secs)), marked: evalNcalc(isUntimedSession(), game(secs)) }).toEqual({

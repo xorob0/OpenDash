@@ -78,10 +78,12 @@ describe('card expressions', () => {
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
 
-  test('session resolves its mode from the setting and the 0 < time left <= 86400 guard', () => {
+  test('session resolves its mode from the setting and the 0 < time left <= 86400 guard, or the same of the declared length', () => {
     const mode = "isnull([OpenDash.SessionProgress], 'auto')";
     const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
-    const timed = `((${secs}) > (0)) and ((${secs}) <= (86400))`;
+    // iRacing's declared length keeps a timed session timed once its clock reads nought (#1017).
+    const length = 'isnull([DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal], 0)';
+    const timed = `(((${secs}) > (0)) and ((${secs}) <= (86400))) or (((${length}) > (0)) and ((${length}) <= (86400)))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
     const value = formulaOf(textItem('session', 'value'), 'Text');

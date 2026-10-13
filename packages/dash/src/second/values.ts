@@ -794,7 +794,33 @@ export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLe
  * trade this constant has always made, and no property distinguishes the two cases.
  */
 export const UNTIMED_SECONDS = 86400;
-export const isTimedSession = (): Expr => and(gt(sessionTimeLeft(), num(0)), le(sessionTimeLeft(), num(UNTIMED_SECONDS)));
+
+/**
+ * The length a session declares, in seconds, where the sim says: iRacing's `SessionTimeTotal`, which
+ * is the session's own clock as set (900 for a fifteen-minute qualifying) and the same week as
+ * `SessionTimeRemain` where there is none. Nought from a sim that publishes no such thing.
+ */
+export const sessionLength = (): Expr => isnull(raw('SessionTimeTotal'), num(0));
+
+/**
+ * Whether the session is timed: its clock is running inside {@link UNTIMED_SECONDS}'s window, or it
+ * declares a length inside the same window.
+ *
+ * The length is what makes a session timed, and the clock alone stopped saying so at nought. A
+ * timed iRacing session runs a lap or two past the end of its clock, and with only the time left to
+ * go by it read as a session with no clock for those laps: `TotalLaps`, which in a timed session is
+ * the leader's laps, came back as the session's length (`L9 of 17` in a qualifying, #1017), and the
+ * clock beside it read the unset `-:--:--` of a session that has not started. `SessionTimeTotal` does
+ * not move while the session runs, so the session stays timed until it ends, and the clock reads
+ * `0:00:00` over its last laps.
+ *
+ * The clock's own test stays beside the length rather than giving way to it, because the length is
+ * iRacing's alone: every other sim, and an iRacing session from a tool that sets only the time left,
+ * is timed exactly while its clock is running, as it was before. The length is held to the same day
+ * as the clock, since iRacing writes the same week in both where a session has no limit.
+ */
+export const isTimedSession = (): Expr =>
+  ncalc.or(and(gt(sessionTimeLeft(), num(0)), le(sessionTimeLeft(), num(UNTIMED_SECONDS))), and(gt(sessionLength(), num(0)), le(sessionLength(), num(UNTIMED_SECONDS))));
 
 /**
  * A session the sim has given, which has no clock: iRacing's week of `SessionTimeLeft` in a
@@ -806,6 +832,10 @@ export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SE
 
 /**
  * Whether `TotalLaps` is the race's length: a session that is not timed, with a lap count.
+ *
+ * Timed is {@link isTimedSession}'s, which holds until the session ends and not only while its clock
+ * is above nought, so the leader's laps do not come back as a length for the laps a timed session
+ * runs after its clock (#1017).
  *
  * Every `/ 30` and `of 30` after a lap is drawn while this holds and only then. iRacing's
  * `TotalLaps` in a timed session is not a length at all but the leader's completed laps, so a
@@ -853,7 +883,9 @@ export const UNTIMED_MARK = '∞';
  * thirty-lap race that the dash has no reading where it has one.
  *
  * `hms` and not {@link clock}: `clock`'s own guard is the lower half of `isTimedSession`'s window, so
- * writing both nests the same comparison twice in a binding SimHub evaluates every frame.
+ * writing both nests the same comparison twice in a binding SimHub evaluates every frame. And `clock`
+ * would draw the unset clock over the laps a timed session runs after its clock has reached nought,
+ * where this draws `0:00:00`, and `hms` draws a time left below nought as nought (#1017).
  */
 export const sessionClock = (): Expr => iff(isTimedSession(), hms(sessionTimeLeft()), str(NO_CLOCK));
 
@@ -905,10 +937,108 @@ export const fuelLapsLeft = (): Expr => isnull(computed('Fuel_RemainingLaps'), n
 export const fuelTimeLeft = (): Expr => timespanToSeconds(computed('Fuel_RemainingTime'));
 export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'), num(0));
 export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumption'), num(-1));
-export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
+
+/**
+ * The lap a timed session's laps left are counted in, in seconds: the session's best lap, the last
+ * lap where there is no best yet, and nought until a lap has been timed.
+ *
+ * The best rather than the last, because the count is a fuel figure's first term and the slow laps
+ * are the ones a race is not run at. A lap through the pit lane or behind the safety car counted
+ * from would make the race shorter than it is and put too little in the tank, where the best lap
+ * makes it a lap long at the worst and the tank a lap's fuel heavy. The last is there for a session
+ * whose sim has not set a best, and the nought is what {@link lapsLeftIsKnown} reads.
+ */
+export const timedLapSeconds = (): Expr =>
+  iff(hasTime(bestLap()), timespanToSeconds(bestLap()), iff(hasTime(lastLap()), timespanToSeconds(lastLap()), num(0)));
+
+/** The time run in the lap in progress, in seconds, which a timed count adds to the time left. */
+const lapTimeRun = (): Expr => timespanToSeconds(isnull(game('CurrentLapTime'), num(0)));
+
+/**
+ * Whether there is a count of laps left: always in a session counted in laps, and in a timed one
+ * once a lap has been timed to divide the time left by.
+ */
+export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(timedLapSeconds(), num(0)));
+
+/**
+ * The laps the car still has to run, the one it is on included: `RemainingLaps` in a session counted
+ * in laps, and in a timed session the whole laps the time left holds at {@link timedLapSeconds}, and
+ * the lap the clock runs out on.
+ *
+ * Two quantities, because SimHub makes only the first. It sets `RemainingLaps` for every game to
+ * `TotalLaps` less `CompletedLaps`, never below nought (GameReaderCommon 9.12.6, `GameManagerBase`),
+ * and in a timed iRacing race `TotalLaps` is the leader's completed laps, so `RemainingLaps` there is
+ * how many laps the car is behind the leader: nought on the lead lap with half an hour to run, which
+ * the fuel page multiplied into nothing to add, and `3` as the laps left for a car three laps down
+ * (#1008). Timed is {@link isTimedSession}'s, the test {@link hasLapTotal} draws a race's length by,
+ * so a race whose length is not drawn is a race whose laps are predicted.
+ *
+ * A timed race ends when the leader crosses the line after the clock has reached nought, so the
+ * leader runs the lap it is on and every lap it starts before the clock runs out. Counted at the
+ * line that is the whole laps of the time left, and one. Mid-lap the time already run in the lap
+ * is added to the time left first, since the lap in progress is a whole lap of which only the rest
+ * is still to come: 60 s into a 100 s lap with 1050 s to run, the car is at the line with 1010 s
+ * left and runs eleven laps more, twelve in all, where the time left alone made it eleven. The time
+ * run is taken at most a lap, so a lap through the pit lane counts as one about to end rather than
+ * as two. It counts the lap you are on, as `RemainingLaps` does. After the clock it is the lap in
+ * progress, which is one and not nought: #1017 keeps such a session timed until it ends.
+ *
+ * That is the leader's count, and the car's own. A car behind the leader on track finishes at its
+ * first crossing after the leader's last, not after the clock, so where the clock runs out between
+ * the leader's crossing and its own it runs a lap more than this. Counting that lap would read the
+ * gap to the leader on track, and nothing here does yet.
+ *
+ * Nought in a timed session until a lap has been timed, which no reading draws as a count: the
+ * session page and the fuel page draw {@link NO_VALUE} by {@link lapsLeftIsKnown} instead, and the
+ * margin forced onto laps has no end to measure against, as in a race with no laps left.
+ *
+ * What the timed form costs is the iRacing race given both a lap count and a time limit, which
+ * {@link isTimedSession} calls timed, and which now counts its laps from the clock rather than from
+ * its count: more laps than it has where the count ends it first, which is the side a fuel figure
+ * can afford to be wrong on. Nothing OpenDash reads today tells the two apart.
+ */
+export const lapsLeft = (): Expr =>
+  iff(
+    isTimedSession(),
+    iff(
+      gt(timedLapSeconds(), num(0)),
+      iff(gt(sessionTimeLeft(), num(0)), add(truncate(div(add(sessionTimeLeft(), min(lapTimeRun(), timedLapSeconds())), timedLapSeconds())), num(1)), num(1)),
+      num(0),
+    ),
+    isnull(game('RemainingLaps'), num(0)),
+  );
+
+/** {@link lapsLeft} as the session page draws it: the count, or {@link NO_VALUE} until there is one. */
+export const lapsLeftText = (): Expr => iff(lapsLeftIsKnown(), fmt(lapsLeft(), '0'), str(NO_VALUE));
+
+/**
+ * Whether the session page draws its laps left: while there are laps left, and in a timed session
+ * before the first lap has been timed, where the field says it has no count yet rather than going.
+ */
+export const lapsLeftShown = (): Expr => ncalc.or(gt(lapsLeft(), num(0)), not(lapsLeftIsKnown()));
 
 /** Fuel to add: what the laps left will burn, less what is in the tank; never negative. */
 export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
+
+/**
+ * Whether there is a fuel to add: a lap has said what one costs, which is {@link fuelIsSettled}, and
+ * there is a count of laps to multiply it by. Without the second, a timed race whose first lap the
+ * sim gave no time for drew `0.0` to add from a count of nought.
+ */
+export const fuelToAddIsSettled = (): Expr => and(fuelIsSettled(), lapsLeftIsKnown());
+
+/**
+ * The fuel to add as the fuel page draws it: to a tenth up to `999.9`, in whole units above that,
+ * and {@link NO_VALUE} until {@link fuelToAddIsSettled}.
+ *
+ * Whole units above a thousand, because the field is cut for {@link CHARS.fuel}, four digit cells
+ * and the point, and a timed race's laps left reach that early in a long one: a day at Daytona is
+ * 910 laps, and at three litres and a half a lap the first stint was told to add `3085.0`, which WPF
+ * drew as `3085.` with the last glyph cut. Nobody fills a tank to a tenth of a figure that size, and
+ * `3085` keeps the field inside its cells up to 9999.
+ */
+export const fuelToAddText = (): Expr =>
+  iff(fuelToAddIsSettled(), iff(lt(fuelToAdd(), num(999.95)), fmt(fuelToAdd(), '0.0'), fmt(fuelToAdd(), '0')), str(NO_VALUE));
 
 /**
  * Whether a fuel figure derived from a lap's consumption means anything yet.
@@ -1004,7 +1134,7 @@ const fuelToEndMinutes = (): Expr => div(sub(fuelTimeLeft(), sessionTimeLeft()),
  *
  * Two quantities rather than one, chosen the way the session page chooses which counter to draw: a
  * timed session compares `Fuel_RemainingTime` with `SessionTimeLeft` and reads in minutes, a
- * lap-counted one compares `Fuel_RemainingLaps` with `RemainingLaps` and reads in laps. The switch
+ * lap-counted one compares `Fuel_RemainingLaps` with {@link lapsLeft} and reads in laps. The switch
  * is {@link showsTimeLeft}, so the margin counts in whatever the face beside it is counting in and
  * the driver is never asked to notice that the unit changed for a reason of its own. The unit is
  * drawn beside the number by {@link fuelToEndUnit}, because a bare signed figure that means laps on
@@ -1077,7 +1207,7 @@ export const FUEL_TO_END_UNIT_WIDEST = 'laps';
  * middle band, unlike {@link deltaColour}: a margin of a tenth of a lap is not a lap in hand, and
  * the question this answers has two answers.
  *
- * Zero counts as reaching the flag, since `RemainingLaps` counts the lap you are on, and the
+ * Zero counts as reaching the flag, since {@link lapsLeft} counts the lap you are on, and the
  * absence is drawn in the primary text: a green `--` claims the tank makes it before anything knows.
  */
 export const fuelToEndColour = (): Expr =>

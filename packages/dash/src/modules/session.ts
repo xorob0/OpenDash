@@ -25,7 +25,8 @@ import {
   fieldSize,
   hasLapTotal,
   incidents,
-  lapsLeft,
+  lapsLeftShown,
+  lapsLeftText,
   player,
   playerClass,
   positionDrawn,
@@ -103,7 +104,9 @@ export const session = defineModule('session', (ctx) => {
             chars: CHARS.clock,
             fs: d.mid,
           }, { visibleBind: time }),
-          fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', widest: LAP_WIDEST, bind: fmt(lapsLeft(), '0'), chars: CHARS.lap, fs: d.mid }, { visibleBind: gt(lapsLeft(), num(0)) }),
+          // A timed race's laps left are predicted from the time left and a lap, and `--` until a lap has
+          // been timed; `RemainingLaps` there is the car's laps behind the leader (#1008).
+          fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', widest: LAP_WIDEST, bind: lapsLeftText(), chars: CHARS.lap, fs: d.mid }, { visibleBind: lapsLeftShown() }),
         ],
         ctx,
         // The lap and the time left are never shown together, so a zone too narrow for the two side
