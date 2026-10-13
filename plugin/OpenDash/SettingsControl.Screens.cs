@@ -1078,7 +1078,7 @@ namespace OpenDashPlugin
                         Select(PanelPage.Screens, screen.Namespace);
                         Redraw();
                         if (!result.Ok) Log.Warn("Writing " + screen.Name + " after a rename failed: " + result.Error);
-                        Say(result.Ok ? PanelAddScreen.Renamed(screen.Name, result.WroteFonts) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
+                        Say(result.Ok ? PanelAddScreen.Renamed(screen.Name, RestartOwed(result)) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);
                     });
                     return;
                 default:
@@ -1110,7 +1110,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Reinstalling " + screen.Name + " failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, result.WroteFonts) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, RestartOwed(result)) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
             });
         }
 
@@ -1141,7 +1141,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Resized(screen, result.WroteFonts) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Resized(screen, RestartOwed(result)) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
             });
         }
 
@@ -1162,7 +1162,7 @@ namespace OpenDashPlugin
                 // is written (#664), under its title, which is the name the driver just chose; only a font the add
                 // put into DashFonts waits for a restart (#441).
                 if (!result.Ok) Log.Warn("Installing " + screen.Name + " failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Added(screen, result.WroteFonts) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Added(screen, RestartOwed(result)) : PanelAddScreen.AddFailed(screen.Name), result.Ok);
             });
         }
 
@@ -1189,7 +1189,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, copy.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Installing " + copy.Name + ", a copy of " + screen.Name + ", failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Added(copy, result.WroteFonts) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Added(copy, RestartOwed(result)) : PanelAddScreen.AddFailed(copy.Name), result.Ok);
             });
         }
 

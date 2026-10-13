@@ -103,6 +103,13 @@ namespace OpenDashPlugin
         public event Action CarPlaylistsResynced;
 
         /// <summary>
+        /// Whether a screen the panel wrote in this run put a face into DashFonts. SimHub draws no such face until
+        /// it restarts (#441), so every screen written after it waits for that restart too, not only the one that
+        /// brought the face. Held here rather than on the panel, which SimHub builds again, and gone with the run.
+        /// </summary>
+        internal bool FontsAwaitRestart { get; set; }
+
+        /// <summary>
         /// SimHub's dashboard list changed: it watches DashTemplates and reads it again two seconds after a write
         /// (docs/research/simhub-dash-format.md, #664).
         /// </summary>
