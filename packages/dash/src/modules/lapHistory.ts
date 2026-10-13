@@ -1,5 +1,10 @@
 /**
- * Module 19, Lap history: your last laps with the delta to the session best.
+ * Module 19, Lap history: your last laps with the delta to your best.
+ *
+ * **Your best, which SimHub calls the session best.** The delta is SimHub's per-slot
+ * `_DeltaToSessionBest`, which is the slot's time less `BestLapTime`, the player's own best lap of
+ * the session and the time Lap times draws as `Your best`; Lap times' `Session best` is the field's.
+ * So the column is headed, and the catalogue describes the page, by your best (#1030).
  *
  * SimHub keeps ten previous laps as numbered properties, so the rows are a repeated layer that
  * builds its property name from its own repeat index. A row whose lap has no time is hidden, which
@@ -10,14 +15,14 @@
  *
  * The catalogue's third column is the fuel each lap cost, under a header carrying the target for
  * it. No previous-lap property publishes a consumption beside the time, and keeping one per lap
- * would be the plugin remembering between frames, which ADR 0009 refuses; the delta to the session
- * best takes that column instead, and only on the wide page, which is the shape the pit wall draws
+ * would be the plugin remembering between frames, which ADR 0009 refuses; the delta to your best
+ * takes that column instead, and only on the wide page, which is the shape the pit wall draws
  * it at. second-screens.md records the refusal.
  *
  * **The fuel target is refused with its column** (#343). The catalogue writes it into the fuel
  * column's heading, `Fuel · target 2.85` at `wide` and the bare `Fuel` at `grid`, so it is a
  * heading's value rather than a heading of its own: with no fuel column there is nothing for it to
- * head, and a target beside `Δ best` would read as a target for the delta. It is also a number a
+ * head, and a target beside `Δ your best` would read as a target for the delta. It is also a number a
  * driver sets, which no setting holds; #326 is that setting and the colouring it drives, and it
  * needs the column before it needs the heading.
  */
@@ -39,7 +44,7 @@ import type { Archetype } from './shedding.ts';
 const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = ncalc;
 
 /**
- * A delta this far behind the session best is drawn in caution, and twice that in danger.
+ * A delta this far behind your best is drawn in caution, and twice that in danger.
  *
  * The caution band used to read `purpose.fuel.low`, which resolves to the danger red, so a lap half
  * a second off the best and a lap a full second off were the same colour and the ladder said
@@ -47,6 +52,12 @@ const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = nc
  * zones.md records that the ladder is kept.
  */
 export const DELTA_THRESHOLDS = { caution: 0.5, danger: 1 } as const;
+
+/**
+ * The delta column's heading. The canvas writes `Δ best`, and a best with no owner on a page that
+ * sits beside Lap times' two is either of them; this one is yours (#1030).
+ */
+export const DELTA_HEADING = 'Δ your best';
 
 /**
  * How many laps each shape lists, read off the catalogue rather than off the box.
@@ -222,7 +233,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
     label(`${ctx.prefix}head.${name}`, text, column.left, ctx.frame.top + (d.headerHeight - d.labelSm) / 2, column.width, { size: d.labelSm, hAlign });
   return [
     ...(head ? [heading('lap', 'Lap', columns.lap), heading('time', 'Time', columns.time)] : []),
-    ...(head && columns.delta ? [heading('delta', 'Δ best', columns.delta, 'right')] : []),
+    ...(head && columns.delta ? [heading('delta', DELTA_HEADING, columns.delta, 'right')] : []),
     { kind: 'layer', name: `${ctx.prefix}rows`, children: [row], repetitions: rows - 1, repeatTopOffset: rowHeight, repeatLeftOffset: 0 },
   ];
 });

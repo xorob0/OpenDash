@@ -26,6 +26,7 @@ import { FACE_SCREEN_NAME, FACE_SCREEN_NAME_NO_REV_BAR } from '../src/zones/inde
 import { moduleBodyOf } from '../src/zones/pages.ts';
 import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
 import { withHouseLayout } from '../src/themes/moduleRegister.ts';
+import { certainlyDrawn, widthAsDrawn } from './drawnStrings.ts';
 import { cellOverruns, faceOf } from './monoGlyphs.ts';
 
 /** Set to `full` to check every theme the build knows, whatever the branch touched. */
@@ -75,6 +76,31 @@ export function clipped(themeId: string, face: ThemeFace): string[] {
       const line = LINE_SPACING * item.fontSize;
       if (line > item.rect.height) problems.push(`${where} needs a ${line.toFixed(1)} px line at ${item.fontSize}, in a box ${item.rect.height} px tall`);
       for (const o of cellOverruns(item)) problems.push(`${where} draws ${JSON.stringify(o.glyph)} ${o.advance} px wide in a ${o.cell} px cell`);
+    }
+  }
+  return problems;
+}
+
+/**
+ * Every `widest` holds what its binding can draw, which is `widest.test.ts`'s rule asked of a
+ * theme's face. {@link clipped} measures a bound text by its `widest`, so a theme that writes a
+ * label its own way and declares less than it draws passes it with a box that is fitted, and laid
+ * out, to the wrong string. The Porsche's delta caption did this when its short forms lost the one
+ * for the default caption (#1030), and only the house face was read against its bindings then.
+ */
+export function underDeclared(themeId: string, face: ThemeFace): string[] {
+  const at = `${themeId} ${named(face)}`;
+  const problems: string[] = [];
+  for (const { dashboard, screen, items } of screensOf(face)) {
+    for (const item of items) {
+      if (item.kind !== 'text' || item.widest === undefined) continue;
+      const limit = widthAsDrawn(item, item.widest);
+      for (const text of certainlyDrawn(item)) {
+        const width = widthAsDrawn(item, text);
+        if (width > limit) {
+          problems.push(`${at} ${dashboard.name} ${screen}: ${item.name} declares ${JSON.stringify(item.widest)} (${limit.toFixed(1)} px) and its binding draws ${JSON.stringify(text)} (${width.toFixed(1)} px)`);
+        }
+      }
     }
   }
   return problems;

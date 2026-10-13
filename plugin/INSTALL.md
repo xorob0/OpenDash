@@ -317,7 +317,7 @@ press Save.
 | Shortcuts, a screen's card | Each zone's next page and previous page, and Quick glance | the wheel button, button box or key bound to it |
 | Shortcuts, Lights | Night mode, Brightness up, Brightness down | the wheel button, button box or key bound to it |
 | Settings, Race data | Position | Overall, Class |
-| Settings, Race data | Delta reference | Session best, All-time best, Last lap (iRacing's own delta to the lap before this one; level until a lap has been completed) |
+| Settings, Race data | Delta reference | Your best, All-time best, Last lap (iRacing's own delta to the lap before this one; level until a lap has been completed) |
 | Settings, Race data | Delta precision | Hundredths, Thousandths; the delta takes the same room either way |
 | Settings, Race data | Session progress | Auto, Laps, Time |
 | Settings, Race data | Driver names | Liam Byrne, L. Byrne, B. Liam, Byrne Liam |

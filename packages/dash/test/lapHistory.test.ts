@@ -185,7 +185,7 @@ describe('the columns the catalogue draws', () => {
   });
 
   test('the header names the columns the row draws, and no more', () => {
-    expect(textsIn(items).filter((i) => i.name.startsWith('head.')).map((i) => i.text)).toEqual(['Lap', 'Time', 'Δ best']);
+    expect(textsIn(items).filter((i) => i.name.startsWith('head.')).map((i) => i.text)).toEqual(['Lap', 'Time', 'Δ your best']);
   });
 
   test('each heading stands over its column', () => {
@@ -220,7 +220,7 @@ describe('the fuel target is refused with its column', () => {
   }
 });
 
-describe('the delta to the session best is coloured in three bands', () => {
+describe('the delta to your best is coloured in three bands', () => {
   const delta = named(built(600, 280), 'row.delta')!;
   const formula = bound(delta, 'TextColor')!;
 
@@ -232,7 +232,7 @@ describe('the delta to the session best is coloured in three bands', () => {
     expect(formula).toContain(ds.purpose.delta.slower);
   });
 
-  test('the session best is purple, and the thresholds are the ones the module declares', () => {
+  test('your best is purple, and the thresholds are the ones the module declares', () => {
     expect(formula).toContain(ds.purpose.lap.sessionBest);
     expect(formula).toContain(String(DELTA_THRESHOLDS.caution));
     expect(formula).toContain(String(DELTA_THRESHOLDS.danger));
@@ -245,7 +245,7 @@ describe('the delta to the session best is coloured in three bands', () => {
 
 /**
  * #886: the column is cut for `+0.594`, five digit cells and a point, which leaves one whole digit at
- * three places. A lap ten seconds off the session best is common and the in-lap after a stop is a
+ * three places. A lap ten seconds off your best is common and the in-lap after a stop is a
  * minute or three off it, and the row keeps that lap for ten laps; drawn to three places regardless,
  * `+12.594` lost its last digit and `+123.456` its last two.
  */

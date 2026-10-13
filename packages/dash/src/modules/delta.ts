@@ -33,6 +33,7 @@ import {
   referenceDeltaDrawn,
   referenceDeltaText,
   referenceLabel,
+  YOUR_BEST_CAPTION,
 } from '../second/values.ts';
 
 /** Seconds either side of zero the bar covers. */
@@ -78,8 +79,8 @@ export const delta = defineModule('delta', (ctx) => {
     colorBind: referenceDeltaColour(value),
     drawn: referenceDeltaDrawn(value),
   };
-  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: 'vs session best', widest: REFERENCE_LABEL_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
-  const below = fld(ctx, 'delta', 'vs session best', number, { labelBind: referenceLabel(), labelWidest: REFERENCE_LABEL_WIDEST, labelBelow: true });
+  const beside = fld(ctx, 'delta', '', { ...number, follower: { text: YOUR_BEST_CAPTION, widest: REFERENCE_LABEL_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
+  const below = fld(ctx, 'delta', YOUR_BEST_CAPTION, number, { labelBind: referenceLabel(), labelWidest: REFERENCE_LABEL_WIDEST, labelBelow: true });
   const captionBelow = ctx.density === 'compact' || fieldWidth(beside, ctx.density) > ctx.frame.width;
   // 34 px on both of the canvas's ramps, which is the small rank of the companion and the middle
   // one of a zone; a compact zone steps the pair down together.

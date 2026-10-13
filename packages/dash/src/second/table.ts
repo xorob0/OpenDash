@@ -480,6 +480,9 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
   ];
 }
 
+/** What the own row's name cell says in place of the driver's name. */
+const OWN_ROW_NAME = 'YOU';
+
 /**
  * A proportional text cell: the driver name, which is Barlow Medium and never monospaced.
  *
@@ -500,14 +503,17 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
 function cellName(ctx: CellContext): Item[] {
   const fs = ctx.type.name;
   const chars = charsThatFit(NAME_FACE, fs, ctx.width);
-  const bind = iff(ctx.isPlayer, str('YOU'), nameText(ctx.idx, chars, fs));
+  const bind = iff(ctx.isPlayer, str(OWN_ROW_NAME), nameText(ctx.idx, chars, fs));
+  // A column cut to two characters declares WW, which is narrower than the own row's YOU.
+  const budget = widestOf(NAME_FACE, chars);
+  const widest = measureText(NAME_FACE, OWN_ROW_NAME, fs) > measureText(NAME_FACE, budget, fs) ? OWN_ROW_NAME : budget;
   return [
     withMoreBindings(
       label(`${ctx.name}.name`, nameSampleAt(fs), ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
-        widest: widestOf(NAME_FACE, chars),
+        widest,
       }),
       { TextColor: liftBind(ctx, inkBind(ctx)) },
     ),

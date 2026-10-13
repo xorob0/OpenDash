@@ -16,7 +16,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { buildThemeFace, drawsInThisProcess, type ThemeFace } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
-import { clipped, disappeared, escaped, themesToCheck } from './conformance.ts';
+import { clipped, disappeared, escaped, themesToCheck, underDeclared } from './conformance.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme } from './fixtures/gearLeftTheme.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -41,12 +41,12 @@ afterAll(() => {
  * keep a pop-up on the face or an anatomy should be refused a hero that cannot hold one is a
  * question for the machinery, which #200 reports and does not answer.
  */
-const KNOWN: Record<string, Partial<Record<'clipped' | 'escaped' | 'disappeared', RegExp>>> = {
+const KNOWN: Record<string, Partial<Record<'clipped' | 'underDeclared' | 'escaped' | 'disappeared', RegExp>>> = {
   [GEAR_LEFT_THEME_ID]: { escaped: /^test-gear-left \d+x480 OpenDash[^:]*: (popUp|notice)\.\w+\.\w+ at \{.*\} leaves the \d+ x 480 dashboard$/ },
 };
 
 /** The problems a property finds, less the ones pinned for this theme, of which there must still be some. */
-function unknown(id: string, property: 'clipped' | 'escaped' | 'disappeared', problems: string[]): string[] {
+function unknown(id: string, property: 'clipped' | 'underDeclared' | 'escaped' | 'disappeared', problems: string[]): string[] {
   const pin = KNOWN[id]?.[property];
   if (!pin) return problems;
   expect({ theme: id, property, stillPinned: problems.some((p) => pin.test(p)) }).toEqual({ theme: id, property, stillPinned: true });
@@ -68,6 +68,10 @@ for (const id of here) {
 
       test('nothing clips', () => {
         expect(unknown(id, 'clipped', clipped(id, face))).toEqual([]);
+      });
+
+      test('every widest holds what its binding draws', () => {
+        expect(unknown(id, 'underDeclared', underDeclared(id, face))).toEqual([]);
       });
 
       test('nothing escapes its frame', () => {

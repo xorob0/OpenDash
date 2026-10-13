@@ -177,7 +177,7 @@ describe('the fields, left to right', () => {
     expect(bound('lap.label')).toContain('CompletedLaps');
     expect(bound('lap.value')).toContain('LastLapTime');
     expect(bound('driver')).toContain('drivercarnumber');
-    // Slot zero's delta to the session best, addressed the way the lap history addresses its rows.
+    // Slot zero's delta to your best, addressed the way the lap history addresses its rows.
     expect(bound('vsBest.value')).toContain("'PersistantTrackerPlugin.PreviousLap_') + (format(0, '00')) + ('_DeltaToSessionBest'");
     // The lap before the one being reported, not the one being reported: slot zero is this lap, so
     // a difference against it would be nought on every lap of every race.

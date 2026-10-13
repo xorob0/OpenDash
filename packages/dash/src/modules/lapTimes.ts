@@ -86,9 +86,11 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
   const laps = fld(ctx, 'laps', 'Laps', { sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.position, fs: d.mid });
   const estimated = fld(ctx, 'estimated', 'Estimated', { sample: '1:42.1', bind: lapTime(estimatedLap(), 1), chars: CHARS.lapTime, fs: d.mid });
   /**
-   * The canvas's "Delta to your best" is true of two of the three references, the session best and
-   * the all-time best both being the driver's own, and false of the third. So the label follows the
-   * setting the value does, and the canvas's words stay for the two it was drawn for. #322.
+   * The canvas's "Delta to your best" is true of two of the three references, SimHub's session best
+   * and all-time best both being the driver's own, and false of the third. So the label follows the
+   * setting the value does, and the canvas's words stay for the two it was drawn for. #322. The
+   * session best drawn above it is the field's and not the delta's reference, which is why every
+   * other caption of this delta says `vs your best` as well (#1030).
    */
   const toYourBest = fld(
     ctx,

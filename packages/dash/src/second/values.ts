@@ -1492,7 +1492,15 @@ export const pitServiceProgress = (): Expr =>
 export const PREVIOUS_LAP_SLOTS = 10;
 /** `PersistantTrackerPlugin.PreviousLap_NN`, addressed by the row's repeat index. */
 export const previousLap = (slotExpr: Expr): Expr => propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00')));
-/** The same lap's delta to the session best, in seconds. */
+/**
+ * The same lap's delta to your best, in seconds.
+ *
+ * SimHub names the property `_DeltaToSessionBest`, and it means the player's own best lap of the
+ * session: the tracker writes it as the slot's time less `BestLapTime` (`PersistantTrackerPlugin`,
+ * 9.12.6), which is the time Lap times draws as `Your best`. The field's best, which Lap times and
+ * every other page call the session best, is {@link sessionBestLap} and a different number, so a
+ * reading of this is labelled against your best and never against the session best (#1030).
+ */
 export const previousLapDelta = (slotExpr: Expr): Expr =>
   propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_DeltaToSessionBest')));
 
@@ -1530,7 +1538,7 @@ export const hasSessionLap = (slotExpr: Expr): Expr => and(previousLapIsThisSess
  * A box cannot change its cells at runtime, so a delta whose whole part grows past what its cells
  * were cut for loses its last digit to WPF instead, and `+123.45` in five cells is drawn `+123.4`,
  * a figure the sim never published. The lap that carried a stop, a tow or a repair is a minute or
- * three off the session best and off the lap before it, and its sectors with it, so the deltas that
+ * three off your best and off the lap before it, and its sectors with it, so the deltas that
  * are cut for an ordinary lap meet that reading once a stint, on the lap they are most looked at
  * (#886). Each place given up buys a whole digit, which is the trade
  * {@link referenceDeltaText} already makes past 100 s: a figure rounded to the tenth is still the
@@ -1638,19 +1646,32 @@ export const lastLapDelta = (): Expr =>
 /**
  * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
  * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
- * different laps. An unknown value reads the session best, which is the default.
+ * different laps. An unknown value reads the `session` reference, which is the default.
+ *
+ * The `session` reference is SimHub's live delta to its session best, which is the player's own best
+ * lap of this session and not the field's: SimHub's lap tracker follows the player's laps and nobody
+ * else's. So it is drawn as the delta to your best, the lap Lap times draws under that name, and the
+ * session best a page draws beside it in purple is the field's (#1030).
  */
 export const referenceDelta = (): Expr =>
   iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+
+/** The caption of a delta to the player's own best lap of the session, which is what SimHub's session best is. */
+export const YOUR_BEST_CAPTION = 'vs your best';
 
 /**
  * The label that says which reference the delta is against.
  *
  * "vs last lap" rather than "vs previous": the lap review already uses "vs previous" for a finished
  * lap against the one before it, which is a different comparison drawn at a different moment.
+ *
+ * "vs your best" rather than the canvas's "vs session best", because the reference is the player's
+ * own best lap of the session (see {@link referenceDelta}), and "session best" is what Lap times,
+ * Sectors and the pit wall call the field's. On a face that drew both, the same two words named two
+ * laps most of a second apart (#1030).
  */
 export const referenceLabel = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str('vs session best')));
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str(YOUR_BEST_CAPTION)));
 
 /**
  * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is

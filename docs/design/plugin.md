@@ -677,6 +677,7 @@ row names is in its built column.
 | Shortcuts: "Devices › Phone" | "Controls and events › NextScreen" | the card's name is OpenDash's, not a device SimHub lists. `PanelShortcuts.ControlsAndEventsCrumb`, `PanelShortcuts.NextScreenCrumb` |
 | Settings: "Delta against" | "Delta reference" | a label is a noun phrase. `PanelDataTab.DeltaTitle` |
 | Settings: "Delta decimals · 0.00 \| 0.000" | "Delta precision · Hundredths \| Thousandths" | the values are words, with no digits. `PanelDataTab.DeltaPrecisionTitle`, `PanelDataTab.DeltaPrecisionLabels` |
+| Settings: the delta reference's "Session best" | "Your best \| All-time best \| Last lap" | SimHub's session best is the driver's own best lap of the session, the lap Lap times draws as Your best, and every page that draws a session best means the field's; the dashes caption the delta "vs your best" ([#1030](https://github.com/xorob0/OpenDash/issues/1030)). `PanelDataTab.DeltaLabels` |
 | Settings: "Show team names" | "Team names" | a switch names the thing. `PanelDataTab.TeamNameTitle` |
 | Settings: "Next to a blue flag" | "Blue flag detail" | a noun phrase, not a prepositional fragment. `PanelDataTab.BlueFlagTitle` |
 | Settings: the oil and water captions | "In SimHub's unit.", the default as the placeholder | the row says which unit to type. `PanelSettings.TemperatureCaption` |

@@ -116,7 +116,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Delta reference", PanelDataTab.DeltaTitle);
             // Still true of three references: each of them is a lap.
             Assert.Equal("Which lap the delta compares against.", PanelDataTab.DeltaCaption);
-            Assert.Equal(new[] { "Session best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
+            Assert.Equal(new[] { "Your best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
             Assert.Equal(Contract.DeltaReferences.Length, PanelDataTab.DeltaLabels.Length);
             var source = string.Concat(RepoPaths.SettingsControlCode());
             Assert.Contains("BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels,", source);

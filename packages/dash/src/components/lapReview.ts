@@ -70,6 +70,7 @@ import {
   secondsOf,
   sessionType,
   signedToFit,
+  YOUR_BEST_CAPTION,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
@@ -162,22 +163,29 @@ interface Comparison {
 }
 
 /**
- * The lap just finished against the best of the session, which the lap-history plugin publishes per
- * slot rather than being worked out here.
+ * The lap just finished against your best, which the lap-history plugin publishes per slot rather
+ * than being worked out here.
+ *
+ * **Your best and not the session best**, though SimHub calls it that and the canvas captions it
+ * `vs session best`. SimHub writes the slot's delta as its time less `BestLapTime`, which is the
+ * player's own best lap of the session and the time Lap times draws as `Your best`. Lap times'
+ * `Session best` is the field's, a different lap, and six tenths faster in the VM's green scenario.
+ * So the caption is renamed rather than the figure recomputed: this figure is the one the live delta
+ * under its default reference, also drawn `vs your best`, has been heading towards all lap (#1030).
  *
  * `PersistantTrackerPlugin.PreviousLap_00_DeltaToSessionBest` is the delta of the lap in slot zero,
  * and slot zero is the lap just completed -- the same reading `modules/lapHistory.ts` draws its
  * first row from, and the reason `average5` starts at zero rather than at one. It is read while the
  * lap has a time and slot zero is a lap of this session, and the field says so otherwise: SimHub
  * fills the ring from its lap database, so until the first lap of a session is done slot zero is
- * the last lap of an earlier one, and its delta is to a session best it was never part of (#1011).
+ * the last lap of an earlier one, and its delta is to a best it was never part of (#1011).
  *
  * A lap of this session is `hasSessionLap`, a time and the flag, as it is for every other reading
  * of the ring. The flag alone is not enough: on a car and track the database has no laps for, SimHub
  * writes slot zero's time and deltas to nought and leaves its flag at 1 from the last combination,
  * and a delta of nought would be drawn as a level `0.00`.
  */
-const vsSessionBest: Comparison = {
+const vsYourBest: Comparison = {
   shown: () => and(hasTime(lastLap()), hasSessionLap(num(0))),
   seconds: () => isnull(previousLapDelta(num(0)), num(0)),
 };
@@ -267,7 +275,7 @@ const lapField = (prefix: string, fs: number = densityOf(DENSITY).hero): FieldSp
 });
 
 const deltaFields = (prefix: string): FieldSpec[] => [
-  deltaField(prefix, 'vsBest', 'vs session best', vsSessionBest, '+1.03'),
+  deltaField(prefix, 'vsBest', YOUR_BEST_CAPTION, vsYourBest, '+1.03'),
   deltaField(prefix, 'vsPrevious', 'vs previous', vsPrevious, '−0.21'),
 ];
 
