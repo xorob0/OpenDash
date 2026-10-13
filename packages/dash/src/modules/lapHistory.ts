@@ -28,7 +28,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf, type DensitySpec } from '../second/density.ts';
 import { rowCapacity, tableRowHeight } from '../second/table.ts';
-import { CHARS, PREVIOUS_LAP_SLOTS, currentLap, hasTime, lapTime, previousLap, previousLapDelta } from '../second/values.ts';
+import { CHARS, PREVIOUS_LAP_SLOTS, currentLap, hasTime, LAP_TIME_WIDEST, lapTime, previousLap, previousLapDelta } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, pageKeeps, type ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
@@ -197,6 +197,7 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
     }),
     numeral(`${ctx.prefix}row.time`, '1:42.905', columns.time.left, centred(type.value), type.value, CHARS.lapTime, {
       bind: lapTime(time),
+      widest: LAP_TIME_WIDEST,
       colorBind: iff(isBest, str(ds.purpose.lap.sessionBest), str(ds.color.text.primary)),
       width: columns.time.width,
     }),

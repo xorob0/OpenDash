@@ -78,8 +78,8 @@ import { chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
-import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition, lapTimeWidest,
-  positionLabelled, carRating, carRelativeGap, listNeighbour, ratingWidest } from '../second/values.ts';
+import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
+  positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour, ratingWidest } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -216,10 +216,11 @@ const DETAIL_FACE = 'BarlowMedium';
 /** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
 const detailWidth = (text: string, fs: number): number => Math.ceil(measureText(DETAIL_FACE, text, fs)) + 1;
 
-/** One of the labels that follow the gap: its sample, the widest string its binding draws, and the binding. */
+/** One of the labels that follow the gap: its sample, the widest its binding draws, and the binding. */
 interface Detail {
   id: string;
   text: string;
+  /** What the label is measured by, which for a lap time is a lap of ten minutes and not the sample. #883. */
   widest: string;
   bind: Expr;
 }
@@ -234,7 +235,9 @@ interface Detail {
  * Each is measured by the widest string its binding draws and not by its sample. The two readings
  * are the sim's, a lap time and a rating, drawn in a proportional face, so the sample is one reading
  * among many and not the widest: `iR 3.1k` is ten pixels short of a driver rated 10 000 at 15 px, and
- * `1:43.234` leaves no room for a lap of `1:40.000` or of `2:04.404`. #902.
+ * `1:43.234` leaves no room for a lap of `1:40.000` or of `2:04.404`. #902. The lap is measured by
+ * {@link LAP_TIME_WIDEST}, whose fours are Barlow Medium's widest digit and whose cells a lap of ten
+ * minutes, drawn to the hundredth, fills too (#883).
  */
 function details(ctx: ModuleContext, side: Side, keep: readonly string[]): Detail[] {
   const idx = listNeighbour(side.offset, ctx.classOnly);
@@ -243,14 +246,13 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): Detai
   // the reader; the times say it themselves, 1:42.994 being the faster, so the best is drawn first.
   const best = ctx.density === 'wide';
   const named = best || drawnAt(ctx) === 'wide';
-  const lap = lapTimeWidest(DETAIL_FACE);
   return [
     ...(keep.includes('lastLap')
       ? [
           {
             id: 'lastLap',
             text: best ? 'Last Best 1:42.994 · 1:43.234' : named ? 'Last 1:43.234' : '1:43.234',
-            widest: best ? `Last Best ${lap} · ${lap}` : named ? `Last ${lap}` : lap,
+            widest: best ? `Last Best ${LAP_TIME_WIDEST} · ${LAP_TIME_WIDEST}` : named ? `Last ${LAP_TIME_WIDEST}` : LAP_TIME_WIDEST,
             bind: best ? concat(str('Last Best '), carBestLap(idx), str(' · '), carLastLap(idx)) : named ? concat(str('Last '), carLastLap(idx)) : carLastLap(idx),
           },
         ]
