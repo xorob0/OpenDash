@@ -28,6 +28,7 @@ import { TRACKED_VALUES, hasSetting } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
+  carClassPosition,
   airTemperature,
   antiRollFront,
   fieldSize,
@@ -181,7 +182,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     id: 'classPosition',
     label: 'Class',
     sample: 'GT3 · P4',
-    bind: concat(playerClass(), str(' · P'), fmt(isnull(driver('classposition', playerPosition()), num(0)), '0')),
+    bind: concat(playerClass(), str(' · P'), fmt(carClassPosition(player()), '0')),
     chars: CHARS.classPosition,
     widest: WIDEST_CLASS,
   },
