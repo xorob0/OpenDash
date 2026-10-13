@@ -65,7 +65,7 @@ namespace OpenDashPlugin.Tests
             // how a driver is named, the idle screen's two, the class best, the clock format, the delta's
             // precision, the zone face of every face that ships
             // (four pages, four masks, four starts, four class filters, four bar fields, the glance,
-            // the flag format, the lap review and its own rev bar), twenty-one companion modules,
+            // the flag format, the lap review and its own rev bar), the companion modules,
             // every zone of every pit wall page, the page it opens on and the page it is showing,
             // the URL, the pit wall's class filter, its flag format, and the flag box. And, since #791,
             // whether a flag shows in the pit lane, and where each zone's page sits in its own order. And,
@@ -253,7 +253,7 @@ namespace OpenDashPlugin.Tests
             // The web view address is the pit wall's although its name carries no prefix: it was named
             // before the idiom, and no other screen has a browser page to point anywhere.
             Assert.Contains(Contract.WebViewUrl, Contract.ScreenPropertyNames(Contract.PitWallPrefix));
-            // The twenty-one switches, the page and the flag format. The start module and the glance
+            // The module switches, the page and the flag format. The start module and the glance
             // module are the plugin's own state and not properties, because nothing on the screen reads
             // either of them.
             Assert.Equal(Modules.Count + 3, Contract.ScreenPropertyNames(Contract.CompanionPrefix).Count());

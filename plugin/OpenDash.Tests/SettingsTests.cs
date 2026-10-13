@@ -424,7 +424,7 @@ namespace OpenDashPlugin.Tests
             var settings = new OpenDashSettings();
             settings.Face(Face).Masks = new[] { 0xFF, 0, -1, 1 << 9 };
             settings.Normalise();
-            // Zone A keeps its four bits, the empty zone B is refilled, zone C is trimmed to twenty-one,
+            // Zone A keeps its four bits, the empty zone B is refilled, zone C is trimmed to the catalogue,
             // and zone D's mask names only a page it does not have, so it is empty and refilled too.
             Assert.Equal(0xF, settings.Face(Face).Masks[0]);
             Assert.Equal(Contract.DefaultZoneMask(1), settings.Face(Face).Masks[1]);
@@ -661,7 +661,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_mask_of_any_length_cycles_through_exactly_the_pages_it_leaves_on()
         {
-            // Zone B cycles twenty-one, which is where a mask can be any of two million shapes. What
+            // Zone B cycles the whole catalogue, which is where a mask can be any of millions of shapes. What
             // has to hold for every one of them is that the cycle visits the enabled pages, in order,
             // and returns to where it started after as many presses as there are pages enabled.
             var masks = new[]

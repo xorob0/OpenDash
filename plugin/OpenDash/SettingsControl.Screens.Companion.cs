@@ -80,7 +80,7 @@ namespace OpenDashPlugin
             return Ui.VStack(16, Ui.Anchor(Ui.VStack(16, head, BuildModuleGrid(screen, redraw)), PanelScreens.AnchorModules), rows);
         }
 
-        /// <summary>The twenty-one modules as ticks, three to a row where they fit, fewer where they do not;
+        /// <summary>The modules as ticks, three to a row where they fit, fewer where they do not;
         /// a tick redraws the editor, so the count and the First module follow it.</summary>
         /// <remarks>
         /// The kit's card grid, as the artboard's repeat(3, minmax(0, 1fr)) at a 6 px gap is: it decides its
