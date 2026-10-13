@@ -26,12 +26,12 @@ import { inset, rect } from '../design/geometry.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
-import { CHARS, speed, speedUnit } from '../second/values.ts';
+import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 
-const { game, fmt, isnull, num } = ncalc;
+const { game, fmt } = ncalc;
 
 /**
  * The weight the speed page draws its one big value in, and the weight it is measured in.
@@ -244,7 +244,8 @@ const revsRuns = (prefix: string, fs: number, unitFs: number, gap?: number): Run
     fs,
     chars: CHARS.rpm,
     color: ds.color.text.secondary,
-    bind: fmt(isnull(game('Rpms'), num(0)), '#,##0'),
+    // `rpm`, the one body engine speed has (ADR 0014), in the pattern the speedo and gear pages print it in.
+    bind: fmt(rpm(), '#,0'),
     gap,
   },
   { kind: 'label', name: `${prefix}revs.unit`, text: 'RPM', fs: unitFs, widest: 'RPM' },

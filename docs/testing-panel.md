@@ -66,7 +66,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | SC-06 | Duplicate | RF | Click on Main dash | new card, own namespace/folder, settings copied, restart line | U DuplicateScreen tests; J; V |
 | SC-07 | Remove | RF | Remove Round | sheet "Remove Round": "Removes the screen and its dashboard." (a face also names its settings and "Any wheel button you bound to it stops working."); Remove it / Keep it; card and folder gone, the shared Cards kept | U PanelConfirmationTests; V; J |
 | SC-08 | Click zones and bar | Main dash | Click each | accent border; aside switches | U PanelFacePlanTests; V ×5 |
-| SC-09 | Zone page list | zone C | Observe | ticked first in order, First tag, "4 of 21", Show all reveals unticked + Not in iRacing + Soon Circle tracker #320 / Launch #741 | U; V |
+| SC-09 | Zone page list | zone C | Observe | ticked first in order, First tag, "4 of 22", Show all reveals unticked + Not in iRacing + Soon Circle tracker #320 / Launch #741 | U; V |
 | SC-10 | Tick/untick | zone C | Untick Track | mask bit cleared; count; ZoneCPages property | J; V |
 | SC-11 | Last page stays | zone A one page | Untick | refused; hover "A zone keeps at least one page." | U; J unchanged |
 | SC-12 | Untick the shown page | zone C on Track | Untick | zone snaps forward in order | J ZoneC |
@@ -87,7 +87,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | SC-27 | Web view address | Pit wall | set via JSON; observe | shown; `ftp://` ignored; empty hover "Sets what the web view shows, from an http or https address." | J; U |
 | SC-28 | Pit: My class only / Flag display / Quick glance | Pit wall | Each | properties | J |
 | SC-29 | Portrait layout A–D | RF + 1080×1920 | Set | four zone settings read by the portrait package | J; V |
-| SC-30 | Phone: Modules | Phone | Untick Sectors | Modules[i]; "17 of 21"; Not in iRacing beside three | J; V |
+| SC-30 | Phone: Modules | Phone | Untick Sectors | Modules[i]; "18 of 22"; Not in iRacing beside three | J; V |
 | SC-31 | Phone: First module | Phone | Pick Delta | CompanionStart; forced at once | J |
 | SC-32 | Phone: Flag display | Phone, E:yellow | Full screen | CompanionFlagFormat; companion shows it | J; V |
 | SC-33 | Phone: Quick glance + Next module | Phone | Observe | CompanionQuickGlance select; PanelCopy.CompanionPaging verbatim + crumbs Controls and events › NextScreen | U PanelCopyTests |

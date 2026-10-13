@@ -29,18 +29,18 @@ import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, average5, clock, lapOfTotal, player, settledFuelTimeLeft } from '../second/values.ts';
+import { CHARS, LAP_OF_TOTAL_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
-const { fmt, isnull, num, driver, timespanToSeconds, game } = ncalc;
+const { fmt, isnull, num, driver, game } = ncalc;
 
 export const stint = defineModule('stint', (ctx) => {
   const d = densityOf(ctx.density);
   const me = player();
   const stintLaps = isnull(driver('lapsdonesincelastpitout', me), num(0));
-  const stintSeconds = timespanToSeconds(isnull(driver('timesincelastpitout', me), num(0)));
+  const stintSeconds = secondsOf(driver('timesincelastpitout', me));
   const stops = isnull(driver('pitcount', me), num(0));
-  const lastStop = timespanToSeconds(isnull(driver('pitlastduration', me), num(0)));
+  const lastStop = secondsOf(driver('pitlastduration', me));
   const completed = isnull(game('CompletedLaps'), num(0));
   const lead = leadRankSize(ctx);
   return stack(
@@ -48,7 +48,7 @@ export const stint = defineModule('stint', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: lead }),
+          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', widest: LAP_OF_TOTAL_WIDEST, bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: lead }),
           // Gated on a completed lap for the reason `fuelIsSettled` gives: before one, SimHub is
           // extrapolating a partial lap and this clock runs backwards and forwards as you drive.
           // The gate is on the seconds, so an unsettled range reads `-:--:--` as the stint time
@@ -75,7 +75,7 @@ export const stint = defineModule('stint', (ctx) => {
         ctx,
       ),
       fieldsRow(
-        [fld(ctx, 'avgLap', 'Avg lap', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.small })],
+        [fld(ctx, 'avgLap', 'Avg lap', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.small })],
         ctx,
       ),
     ],
