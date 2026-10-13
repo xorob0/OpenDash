@@ -28,6 +28,7 @@ import { TRACKED_VALUES, hasSetting } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
+  carClassPosition,
   airTemperature,
   antiRollFront,
   fieldSize,
@@ -35,6 +36,9 @@ import {
   incidents,
   localClock,
   meridiemWidest,
+  player,
+  positionDigits,
+  positionDrawn,
   playerClass,
   sessionClock,
   simClock,
@@ -43,9 +47,6 @@ import {
   untimedMark,
   roadTemperature,
   type TimeOfDay,
-  playerPositionDigits,
-  playerPositionDrawn,
-  playerClassPosition,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
@@ -155,7 +156,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
   // `position` is the place the rig counts, which is `PositionMode`: in class by default, over the
   // whole field when the rig asks for that, with the count it is out of following it. It is the
   // same reading the session module, the pit wall and the companion header draw, through the same
-  // `playerPositionDigits` and `fieldSize`, so the bar is not the one surface where a rig set to class
+  // `positionDigits` and `fieldSize`, so the bar is not the one surface where a rig set to class
   // still reads the whole field. It used to bind `Position` and `OpponentsCount` with no reference
   // to the mode, which drew `16 / 40` beside `GT3 · P2`. #432.
   //
@@ -169,10 +170,10 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     label: 'Position',
     short: 'Pos',
     sample: '3',
-    bind: playerPositionDigits(),
+    bind: positionDigits(player()),
     chars: CHARS.position,
     denominator: { sample: '/ 22', bind: concat(str('/ '), fmt(fieldSize(), '0')), chars: { digits: 4, specials: 1 } },
-    drawn: playerPositionDrawn(),
+    drawn: positionDrawn(player()),
   },
   // The position through the leaderboard function every other class reading uses, not a GameData
   // property of that name: SimHub publishes none, so the old read fell through to its own default,
@@ -181,7 +182,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     id: 'classPosition',
     label: 'Class',
     sample: 'GT3 · P4',
-    bind: concat(playerClass(), str(' · P'), fmt(playerClassPosition(), '0')),
+    bind: concat(playerClass(), str(' · P'), fmt(carClassPosition(player()), '0')),
     chars: CHARS.classPosition,
     widest: WIDEST_CLASS,
   },

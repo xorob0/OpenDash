@@ -85,20 +85,38 @@ namespace OpenDashPlugin
         public const string PorscheCrest = "PorscheCrest";
 
         /// <summary>
-        /// The player's place in an iRacing race as it stands on the road, counted from the cars ahead of
-        /// them, or null wherever the sim's own place is the one to draw. Published rather than chosen.
+        /// The race as it stands on the road during an iRacing race: <c>LivePosition&lt;row&gt;</c> is the place
+        /// over the field of the car on SimHub's leaderboard row, counted from one and unpadded. Published
+        /// rather than chosen, and null wherever the sim's own order is the one to draw.
         /// </summary>
         /// <remarks>
-        /// iRacing moves a car's place only when it crosses the start/finish line, and SimHub passes that
-        /// place on as it is, so a pass in the first corner reached the dashboard a lap later (#1063). The
-        /// plugin ranks the field on SimHub's CurrentLapHighPrecision instead; LivePosition.cs says how,
-        /// and when it publishes nothing. A dashboard reads it with the sim's place as its isnull()
-        /// fallback, which is also what it draws with no plugin.
+        /// iRacing moves a car's place only when it crosses the start/finish line, SimHub passes that place on
+        /// as it is and sorts its leaderboard on it, so every place, list and gap on a dashboard moved a lap
+        /// after the pass that changed it (#1063). The plugin ranks the field on SimHub's
+        /// CurrentLapHighPrecision instead; LivePosition.cs says how, and when it publishes nothing. A
+        /// dashboard reads each of the four families with SimHub's own answer as its isnull() fallback, which
+        /// is also what it draws with no plugin. Unpadded so an expression can name one with + alone.
         /// </remarks>
         public const string LivePosition = "LivePosition";
 
-        /// <summary>The same in the player's own class. See <see cref="LivePosition"/>.</summary>
+        /// <summary><c>LiveClassPosition&lt;row&gt;</c>: the place in its own class of the car on that row. See <see cref="LivePosition"/>.</summary>
         public const string LiveClassPosition = "LiveClassPosition";
+
+        /// <summary><c>LiveOrder&lt;place&gt;</c>: the leaderboard row of the car in that place over the field. See <see cref="LivePosition"/>.</summary>
+        public const string LiveOrder = "LiveOrder";
+
+        /// <summary><c>LiveClassOrder&lt;place&gt;</c>: the leaderboard row of the car in that place of the player's class. See <see cref="LivePosition"/>.</summary>
+        public const string LiveClassOrder = "LiveClassOrder";
+
+        /// <summary>The four families, in the order they are attached.</summary>
+        public static readonly string[] LiveFamilies = { LivePosition, LiveClassPosition, LiveOrder, LiveClassOrder };
+
+        /// <summary>Every live property, family by family and from one to <see cref="OpenDashPlugin.LivePosition.Slots"/> within each.</summary>
+        public static IEnumerable<string> LivePropertyNames()
+        {
+            foreach (var family in LiveFamilies)
+                for (var n = 1; n <= OpenDashPlugin.LivePosition.Slots; n++) yield return family + n;
+        }
 
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
@@ -1508,10 +1526,9 @@ namespace OpenDashPlugin
             // And every theme's own settings, appended for the same reason and shared because a backlight
             // is the driver's taste and a rig in auto mode shows whichever theme the car picks. #715.
             foreach (var setting in ThemeSettings) yield return setting.Property;
-            // And the player's live place, overall and in class, appended for the same reason, published
-            // rather than chosen and shared because every screen that draws a place reads it. #1063.
-            yield return LivePosition;
-            yield return LiveClassPosition;
+            // And the race as it stands on the road, appended for the same reason, published rather than chosen
+            // and shared because every screen that draws a place, a list or a gap reads it. #1063.
+            foreach (var live in LivePropertyNames()) yield return live;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

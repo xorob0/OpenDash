@@ -998,8 +998,13 @@ what it fills is inferred from the symptom and from what iRacing documents, not 
   `CurrentLap - 1 + TrackPositionPercent` unless the reader set it, and where it jumps by more than
   half a lap within 1% of the line SimHub adds or takes away the lap that was counted early or late.
   It is published per car as `drivercurrentlaphighprecision()`, and it is what the plugin ranks the
-  field on to publish `OpenDash.LivePosition` and `OpenDash.LiveClassPosition`
-  (`plugin/OpenDash/LivePosition.cs`).
+  field on to publish the race as it stands on the road: each row's place over the field and in its
+  class, `OpenDash.LivePosition<row>` and `LiveClassPosition<row>`, and the row in each place,
+  `LiveOrder<place>` and `LiveClassOrder<place>` (`plugin/OpenDash/LivePosition.cs`).
+- **A property name can be built in the expression.** `prop('OpenDash.LiveOrder' + 3)` reads
+  `OpenDash.LiveOrder3`: NCalc's `+` writes a number into a string, and SimHub's `prop` takes the
+  name as an expression, as the lap history's `PreviousLap_NN` already relies on. The live names are
+  unpadded so a row or a place goes in with `+` alone, without a `format`.
 - The emulator ranks its field by distance on every tick (`tools/irsdk-emulator/Drivers.cs`), so on
   the VM the sim's place is already live and this never showed. It is the emulator that is
   generous, not iRacing.

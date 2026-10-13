@@ -4,6 +4,12 @@
 **Status:** Accepted. Refines [ADR 0003](0003-plugin-settings-through-properties.md) and moves the
 "computed telemetry of our own" line in [scope.md](../scope.md).
 
+Amended on 2026-10-13 for [#1063](https://github.com/xorob0/OpenDash/issues/1063): **the refusal is
+now a rule with one way through it.** The plugin does not compute, unless a feature needs a value
+that cannot be had any other way. The exceptions this record had been collecting one at a time, and
+ADR 0018's, are that rule applied; the Decision below says it, and the section on the race as it
+stands on the road is the case that made it a rule rather than a fourth exception.
+
 ## Context
 
 [ADR 0003](0003-plugin-settings-through-properties.md) made the plugin deliberately inert: it
@@ -56,12 +62,29 @@ ours could compute either, because the datum is not there to compute from.
 
 ## Decision
 
-**The plugin does not compute. The refusal stands, and it is cheap to keep.**
+**The plugin does not compute, unless a feature needs a value that cannot be had any other way.**
 
-Where a value needs deriving, it is derived **in the expression**, from properties SimHub already
-publishes. The scene graph stays a pure function of properties, the package stays complete without
+The default is the refusal, and it is cheap to keep. Where a value needs deriving, it is derived
+**in the expression**, from properties SimHub already publishes. The scene graph stays a pure function of properties, the package stays complete without
 the plugin — a derived value falls back exactly as a read one does — and there is no second place
 where a number can be wrong.
+
+The way through is narrow, and all three of its conditions hold before the plugin computes anything:
+
+1. **A feature needs the value.** Something a driver asked for cannot be drawn correctly without it.
+   Computing a number because it would be tidier to have one is not that.
+2. **Nothing else can provide it.** SimHub does not publish it, the sim does not publish it, and it
+   cannot be derived where it is drawn: no expression and no JavaScript binding can produce it
+   correctly, because what it is derived from is not published, or because deriving it needs memory
+   between frames, or because it has to be one answer that many items agree on and an expression
+   reads the frame SimHub is still building.
+3. **The package stays complete without it.** The plugin publishes the value as a property, and
+   every dashboard reads it with SimHub's own answer, or the placeholder, as its `isnull` fallback.
+   A package installed without the plugin draws what it drew before the value existed.
+
+A computation that passes is written in a pure class the net8.0 tests compile, fed from the frame
+SimHub has finished in `DataUpdate`, and recorded below or in its own ADR with the reason each
+condition holds. One that fails any of the three is refused however useful it looks.
 
 Two consequences follow for the catalogue:
 
@@ -136,34 +159,49 @@ publishes it as `Face<size>Zone<X>Position`; the face reads it with the catalogu
 `isnull` fallback, so a package with no plugin still counts, in the catalogue's order, which is the
 order it cycles in without one. The length of the cycle stays a popcount in the expression.
 
-### A place the sim scores only at the line
+### The race as it stands on the road
 
-Added 2026-10-13 for #1063. iRacing moves a car's place when it crosses the start/finish line and at
-no other time, SimHub passes that place on as it is, and a driver who passes a car in the first corner
-reads the old place for the rest of the lap. The place as it stands on the road is the number of cars
-of the field, or of the class, that have covered more distance, and SimHub publishes every car's
-distance as `drivercurrentlaphighprecision()`.
+Added 2026-10-13 for #1063, and the case that turned this record's exceptions into its rule. iRacing
+moves a car's place when it crosses the start/finish line and at no other time. SimHub passes that
+place on as it is and sorts its leaderboard on it, and every `driver*` function takes an index into
+that leaderboard, so a pass in the first corner reached every place, every list and every gap on a
+dashboard a lap later. The place as it stands on the road is the order of the distances the cars
+have covered, and SimHub publishes every car's distance as `drivercurrentlaphighprecision()`.
 
-An expression could count them, and this record would ask for that first. It would be one comparison
-per car of the field, up to 64 of them, in every item that draws the player's place, which is about
-ten on a rig, each evaluated per frame; and every term reads the frame SimHub is still building, so a
-dashboard rendering mid-build would find no cars to count and draw nothing for a frame. That is the
-"same derivation in more than about three items" condition above, and a JavaScript binding would pay
-the same per-item cost and read the same half-built frame. The plugin ranks the finished frame once in
-`DataUpdate` and publishes the player's place as `OpenDash.LivePosition` and
-`OpenDash.LiveClassPosition`, which every surface reads with the sim's place as its `isnull` fallback,
-so a package with no plugin draws what it always drew.
+The three conditions, one by one:
 
-It is a computation, and the record does not pretend otherwise; it is the narrow one. The plugin
-publishes nothing outside an iRacing race, after the chequered flag, or before the sim has placed the
-player, and where two cars cannot both be compared on distance it keeps the sim's order between them.
-The leaderboard's rows are not reordered: they come from SimHub's list, whose order is the sim's, and
-a live order published by the plugin would be one frame behind the list it reorders.
+1. **A feature needs it.** The ticket is the feature: the place, and the lists and gaps beside it,
+   have to move when a car is passed.
+2. **Nothing else can provide it.** SimHub does not publish a live order for iRacing: its leaderboard
+   would sort on `Opponent.LivePosition`, and the iRacing reader leaves it empty. An expression could
+   count the cars ahead of one car, one comparison per car of the field, up to sixty-four, but a list
+   needs the inverse, the car in each place, which is a sort, and no expression sorts. A JavaScript
+   binding could sort, but it would sort again in every cell of every row of every list, each reading
+   the frame SimHub is still building, and two cells of one row could disagree about which car the row
+   is. One ranking of the finished frame, read by every item, is the only way the numbers agree.
+3. **The package stays complete.** Every one of the four families is read with SimHub's own answer
+   as its fallback, so a package with no plugin, and every frame on which the plugin publishes
+   nothing, draws the sim's order exactly as before.
 
-## What would reopen this
+So the plugin ranks the finished frame once in `DataUpdate` (`plugin/OpenDash/LivePosition.cs`) and
+publishes, for sixty-four rows and places, each leaderboard row's place over the field and in its
+class, the row in each place over the field, and the row in each place of the player's class. Every
+place a dashboard draws, the order every list is drawn in, the leader the gap is measured from and the
+car ahead the interval is measured to are read through them. It publishes nothing outside an iRacing
+race, after the chequered flag, or before the sim has placed anybody, and where a car cannot be
+compared on distance it keeps the sim's order for it.
+
+The cost is a frame. The rows the plugin publishes are SimHub's rows on the frame it finished, and a
+dashboard hands them to `driver*` functions that read the frame being built. The two are the same list
+except on the frame on which a car crosses the line and the sim reorders it, and on that frame a row
+can name its neighbour's car; the next frame puts it right. A list a lap behind is the defect; a row
+wrong for a frame at a line crossing is the price of mending it, and it is accepted here.
+
+## Where the line falls in practice
 
 An expression is not a good place for arithmetic that is long, shared between many items, or
-stateful, and the first two will happen before the third.
+stateful, and the first two will happen before the third. Neither is, on its own, the second
+condition of the Decision: each has a move to try first.
 
 - **When the same derivation appears in more than about three items**, it belongs behind one name.
   The first move then is a JavaScript binding (`"Interpreter": 1`, which the second screens already
@@ -175,15 +213,16 @@ stateful, and the first two will happen before the third.
   strongest argument this record could ever be reopened with. If a binding cannot, the plugin is
   the only place such a thing can live, and four alert tickets change shape with it.
 
-Until one of those is true, a plugin that computes buys nothing and costs the guarantee that a
-`.simhubdash` on its own is a complete product.
+Until the three conditions of the Decision hold, a plugin that computes buys nothing and costs the
+guarantee that a `.simhubdash` on its own is a complete product.
 
 ## Consequences
 
 ### Good
 
 Zones B and C can be built now, and every page of the catalogue has a real source. ADR 0003 holds
-unchanged, so the standalone promise holds. No number has two implementations.
+unchanged, so the standalone promise holds. No number has two implementations: where the plugin
+computes one, the expression reads it and falls back to SimHub's, and does not compute it again.
 
 ### Bad
 

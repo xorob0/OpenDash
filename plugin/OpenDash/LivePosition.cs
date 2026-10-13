@@ -1,20 +1,19 @@
-// LivePosition.cs: the player's place in a race as it stands on the road, for the sim whose own place
-// moves only at the line.
+// LivePosition.cs: the race as it stands on the road, for the sim whose own order moves only at the line.
 //
 // iRacing scores a race at the start/finish line: CarIdxPosition and CarIdxClassPosition change when a
 // car crosses it, and SimHub hands both on unchanged as Opponent.Position and Opponent.PositionInClass.
-// A driver who passes a car in the first corner reads the old place for the rest of the lap (#1063).
-// SimHub's leaderboard would sort on Opponent.LivePosition if the reader filled it, and iRacing's does
-// not. So the plugin works the place out from what SimHub does publish for every car,
-// CurrentLapHighPrecision -- the lap and the fraction of it covered, which SimHub already keeps
-// continuous across the line -- and publishes it as OpenDash.LivePosition and LiveClassPosition.
+// Its leaderboard is sorted on them, so every place, every list and every gap on a dashboard moved a lap
+// after the pass that changed it (#1063). SimHub would sort on Opponent.LivePosition if the reader filled
+// it, and iRacing's does not. So the plugin ranks the field on what SimHub does publish for every car,
+// CurrentLapHighPrecision -- the lap and the fraction of it covered, which SimHub already keeps continuous
+// across the line -- and publishes each leaderboard row's place and each place's row (Contract.LivePosition).
 // Pure: no SimHub types, so the net8.0 tests compile it.
 using System;
 using System.Collections.Generic;
 
 namespace OpenDashPlugin
 {
-    /// <summary>One car of the leaderboard, as much of it as a live place needs.</summary>
+    /// <summary>One row of SimHub's leaderboard, as much of it as a live order needs.</summary>
     public sealed class LiveCar
     {
         /// <summary>Laps covered, the current one as a fraction: SimHub's CurrentLapHighPrecision. Null where SimHub has none.</summary>
@@ -22,9 +21,6 @@ namespace OpenDashPlugin
 
         /// <summary>The sim's own place, 0 while it has not placed the car.</summary>
         public int Position { get; set; }
-
-        /// <summary>The sim's own place in the car's class, 0 while it has not placed the car.</summary>
-        public int ClassPosition { get; set; }
 
         /// <summary>The car's class, compared as written.</summary>
         public string CarClass { get; set; }
@@ -35,34 +31,70 @@ namespace OpenDashPlugin
         public bool IsConnected { get; set; }
     }
 
-    /// <summary>The player's place counted from the cars ahead on the road.</summary>
+    /// <summary>
+    /// What the plugin publishes for one frame: four lists of <see cref="LivePosition.Slots"/>, each counted
+    /// from one at index 0, and null wherever there is nothing to say.
+    /// </summary>
+    public sealed class LiveRace
+    {
+        /// <summary>The place over the field of the car on each leaderboard row.</summary>
+        public int?[] Place { get; } = new int?[LivePosition.Slots];
+
+        /// <summary>The place in its own class of the car on each leaderboard row.</summary>
+        public int?[] ClassPlace { get; } = new int?[LivePosition.Slots];
+
+        /// <summary>The leaderboard row of the car in each place over the field.</summary>
+        public int?[] Order { get; } = new int?[LivePosition.Slots];
+
+        /// <summary>The leaderboard row of the car in each place of the player's own class.</summary>
+        public int?[] ClassOrder { get; } = new int?[LivePosition.Slots];
+
+        /// <summary>One of the four, by <see cref="Contract.LiveFamilies"/> name, at a one-based row or place; null past the end.</summary>
+        public int? Read(string family, int n)
+        {
+            if (n < 1 || n > LivePosition.Slots) return null;
+            switch (family)
+            {
+                case Contract.LivePosition: return Place[n - 1];
+                case Contract.LiveClassPosition: return ClassPlace[n - 1];
+                case Contract.LiveOrder: return Order[n - 1];
+                case Contract.LiveClassOrder: return ClassOrder[n - 1];
+                default: return null;
+            }
+        }
+    }
+
+    /// <summary>The field ranked by the distance each car has covered.</summary>
     /// <remarks>
     /// <para>
-    /// Two cars that are both on the road with a distance are put in the order of that distance. Every
-    /// other pair keeps the sim's order: a car that has disconnected, or that SimHub has no distance for,
-    /// is ahead of the player exactly when the sim says it is. That is what stops a car that left the
-    /// server from dropping to last while it is still classified ahead, and it costs nothing when every
-    /// car is running, which is the case the ticket is about. A tie in distance also keeps the sim's
-    /// order.
+    /// The cars that are running, connected and with a distance, are ranked on that distance, a tie going
+    /// to the sim's order. Every other car keeps the place the sim gives it among them: it goes in ahead of
+    /// the first running car the sim has behind it. That is what stops a car that left the server from
+    /// dropping to last while it is still classified ahead, and it costs nothing when every car is
+    /// running, which is the case the ticket is about. It is a merge rather than a sort on a comparison
+    /// because a comparison mixing the two orders is not transitive: a running car ahead of a second on
+    /// the road can be behind a stopped car the second is ahead of, and a sort on that throws or loops.
+    /// A car the sim has not placed is behind every car it has, and is drawn in its row with no place.
     /// </para>
     /// <para>
-    /// The answer is null whenever the sim's own place is the right one or the only one: outside a race,
-    /// where a place is a lap time rather than a distance; once the chequered flag is out, when cars stop
-    /// racing and their distances stop meaning anything; and before the sim has placed the player, so
-    /// that the grid still reads <c>--</c> (#992). Null rather than the sim's place, because the
-    /// dashboards read this with <c>isnull()</c> and fall back to the sim's place themselves, which is
-    /// also what they draw with no plugin at all.
+    /// Nothing is published -- the dashboards then draw the sim's own order, which is also what they draw
+    /// with no plugin -- outside a race, where a place is a lap time rather than a distance; once the
+    /// chequered flag is out, when cars stop racing and their distances stop meaning anything; and before
+    /// the sim has placed anybody, so that the grid still reads <c>--</c> (#992).
     /// </para>
     /// </remarks>
     public static class LivePosition
     {
+        /// <summary>How many rows and places are published: iRacing's largest field.</summary>
+        public const int Slots = 64;
+
         /// <summary>The session name SimHub reports for a race; every other session is ranked on lap time.</summary>
         public const string RaceSession = "Race";
 
-        /// <summary>The game SimHub names iRacing by, the one sim whose place waits for the line.</summary>
+        /// <summary>The game SimHub names iRacing by, the one sim whose order waits for the line.</summary>
         public const string IRacing = "IRacing";
 
-        /// <summary>Whether the live place applies to this frame at all.</summary>
+        /// <summary>Whether the live order applies to this frame at all.</summary>
         /// <param name="gameName">SimHub's name for the running game.</param>
         /// <param name="sessionType">SimHub's SessionTypeName.</param>
         /// <param name="chequered">Whether the chequered flag is out.</param>
@@ -73,63 +105,100 @@ namespace OpenDashPlugin
                 && !chequered;
         }
 
-        /// <summary>The player's place over the whole field, or null where the sim's own place stands.</summary>
-        public static int? Overall(IList<LiveCar> field)
+        /// <summary>The leaderboard as it stands on the road, or null where the sim's own order stands.</summary>
+        /// <param name="field">SimHub's leaderboard, in its order: entry 0 is row 1.</param>
+        public static LiveRace Rank(IList<LiveCar> field)
         {
-            return Place(field, false);
-        }
+            if (field == null || field.Count == 0) return null;
+            var placed = false;
+            for (var i = 0; i < field.Count; i++) placed |= field[i] != null && field[i].Position > 0;
+            if (!placed) return null;
 
-        /// <summary>The player's place in their own class, or null where the sim's own place stands.</summary>
-        public static int? InClass(IList<LiveCar> field)
-        {
-            return Place(field, true);
-        }
-
-        private static int? Place(IList<LiveCar> field, bool inClass)
-        {
-            if (field == null) return null;
-            var me = -1;
+            var order = Order(field);
+            var race = new LiveRace();
+            LiveCar player = null;
             for (var i = 0; i < field.Count; i++)
             {
                 if (field[i] != null && field[i].IsPlayer)
                 {
-                    me = i;
+                    player = field[i];
                     break;
                 }
             }
-            if (me < 0) return null;
-            var player = field[me];
-            var playerPlace = SimPlace(player, inClass);
-            if (playerPlace <= 0 || !Running(player)) return null;
 
-            var place = 1;
-            for (var i = 0; i < field.Count; i++)
+            var inClass = new Dictionary<string, int>(StringComparer.Ordinal);
+            for (var place = 1; place <= order.Count; place++)
             {
-                var car = field[i];
-                if (i == me || car == null) continue;
-                if (inClass && !string.Equals(car.CarClass ?? "", player.CarClass ?? "", StringComparison.Ordinal)) continue;
-                if (Ahead(car, SimPlace(car, inClass), player, playerPlace)) place++;
+                var row = order[place - 1];
+                var car = field[row];
+                var carClass = car.CarClass ?? "";
+                int classPlace;
+                inClass.TryGetValue(carClass, out classPlace);
+                inClass[carClass] = ++classPlace;
+
+                if (place <= Slots) race.Order[place - 1] = row + 1;
+                if (row < Slots && car.Position > 0)
+                {
+                    race.Place[row] = place;
+                    race.ClassPlace[row] = classPlace;
+                }
+                if (player != null && classPlace <= Slots && string.Equals(carClass, player.CarClass ?? "", StringComparison.Ordinal))
+                    race.ClassOrder[classPlace - 1] = row + 1;
             }
-            return place;
+            return race;
         }
 
-        /// <summary>Whether <paramref name="car"/> is ahead of the player.</summary>
-        private static bool Ahead(LiveCar car, int carPlace, LiveCar player, int playerPlace)
+        /// <summary>The rows of the field, zero-based, from first place to last.</summary>
+        private static List<int> Order(IList<LiveCar> field)
         {
-            if (Running(car) && car.Progress.Value != player.Progress.Value) return car.Progress.Value > player.Progress.Value;
-            // The sim's order, where one of the two has no distance to compare or the distances tie. A car
-            // the sim has not placed is behind every car it has.
-            return carPlace > 0 && carPlace < playerPlace;
+            var running = new List<int>();
+            var stopped = new List<int>();
+            for (var i = 0; i < field.Count; i++)
+            {
+                if (field[i] == null) continue;
+                (Running(field[i]) ? running : stopped).Add(i);
+            }
+            running.Sort((a, b) =>
+            {
+                var byDistance = field[b].Progress.Value.CompareTo(field[a].Progress.Value);
+                return byDistance != 0 ? byDistance : BySim(field, a, b);
+            });
+            stopped.Sort((a, b) => BySim(field, a, b));
+
+            // Each stopped car in ahead of the first car the sim has behind it. The stopped cars go in in the
+            // sim's order, so one never goes in ahead of a stopped car the sim has ahead of it.
+            var order = new List<int>(running);
+            foreach (var car in stopped)
+            {
+                var at = order.Count;
+                for (var j = 0; j < order.Count; j++)
+                {
+                    if (SimKey(field[order[j]]) > SimKey(field[car]))
+                    {
+                        at = j;
+                        break;
+                    }
+                }
+                order.Insert(at, car);
+            }
+            return order;
+        }
+
+        /// <summary>The sim's order, a car it has not placed behind every car it has, then the leaderboard's.</summary>
+        private static int BySim(IList<LiveCar> field, int a, int b)
+        {
+            var bySim = SimKey(field[a]).CompareTo(SimKey(field[b]));
+            return bySim != 0 ? bySim : a.CompareTo(b);
+        }
+
+        private static int SimKey(LiveCar car)
+        {
+            return car.Position > 0 ? car.Position : int.MaxValue;
         }
 
         private static bool Running(LiveCar car)
         {
-            return car.IsConnected && car.Progress.HasValue && !double.IsNaN(car.Progress.Value);
-        }
-
-        private static int SimPlace(LiveCar car, bool inClass)
-        {
-            return inClass ? car.ClassPosition : car.Position;
+            return car.IsConnected && car.Progress.HasValue && !double.IsNaN(car.Progress.Value) && !double.IsInfinity(car.Progress.Value);
         }
     }
 }

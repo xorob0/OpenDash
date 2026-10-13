@@ -21,12 +21,14 @@ import {
   average5,
   bestLap,
   carPosition,
+  positionDigits,
   currentLap,
   estimatedLap,
   fieldSize,
   lapTime,
   lastLap,
   player,
+  positionDrawn,
   REFERENCE_DELTA_WIDEST,
   referenceDelta,
   referenceDeltaColour,
@@ -34,8 +36,6 @@ import {
   sectorLast,
   sectorTime,
   sessionBestLap,
-  playerPositionDigits,
-  playerPositionDrawn,
 } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize, shapeIn } from './module.ts';
 
@@ -119,14 +119,14 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
           fld(ctx, 'average5', 'Average 5', { sample: '1:43.055', bind: average5(), chars: CHARS.lapTime, fs: d.mid }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
-            bind: playerPositionDigits(),
+            bind: positionDigits(player()),
             chars: CHARS.position,
             fs: d.mid,
             // The field total is a proportion of the position beside it rather than a label size:
             // 32 px beside 46 on the companion and 23 beside 34 in a zone, which is what the
             // denominator follower already computes.
             follower: { kind: 'denominator', text: '/ 24', bind: concat(str('/ '), fmt(fieldSize(), '0')) },
-            drawn: playerPositionDrawn(),
+            drawn: positionDrawn(player()),
           }),
           fld(ctx, 'stintLap', 'Stint lap', { sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', player()), num(0)), '0'), chars: CHARS.position, fs: d.mid }),
         ],

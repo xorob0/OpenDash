@@ -52,6 +52,7 @@ import {
   NO_VALUE,
   carNumber,
   carPosition,
+  positionLabelled,
   completedLaps,
   deltaColour,
   fuel,
@@ -65,7 +66,6 @@ import {
   previousLap,
   previousLapDelta,
   sessionType,
-  playerPositionLabelled,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
@@ -142,7 +142,7 @@ const lapNumber = (): Expr => concat(str('Lap '), fmt(completedLaps(), '0'));
  * `You` is written rather than bound to the driver's own name, which is what the artboard draws:
  * the panel is over your own gear and the one thing it cannot be about is somebody else.
  */
-const driverLine = (): Expr => concat(str('You · #'), carNumber(player()), str(' · '), playerPositionLabelled());
+const driverLine = (): Expr => concat(str('You · #'), carNumber(player()), str(' · '), positionLabelled(player()));
 
 /** The widest the driver line can draw: `CHARS.carNumber`'s four digits and a two-digit place. */
 export const WIDEST_DRIVER_LINE = 'You · #9999 · P99';

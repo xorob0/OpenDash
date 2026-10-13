@@ -607,26 +607,32 @@ namespace OpenDashPlugin
         private volatile object classBestLap;
 
         /// <summary>
-        /// The player's live place over the field and in class, or null: what <see cref="Contract.LivePosition"/>
-        /// and <see cref="Contract.LiveClassPosition"/> publish. Written and read as <see cref="classBestLap"/> is.
+        /// The race as it stands on the road, or null: what the <see cref="Contract.LivePosition"/> families
+        /// publish. Replaced whole on SimHub's data thread and read whole by each delegate, so a reader sees
+        /// one frame's ranking or the next one's, never a mixture of the two.
         /// </summary>
-        private volatile object livePosition, liveClassPosition;
+        private volatile LiveRace liveRace;
 
         /// <summary>The leaderboard handed to <see cref="LivePosition"/>, kept between frames so a frame allocates nothing but its growth.</summary>
         private readonly List<LiveCar> liveField = new List<LiveCar>();
 
         /// <summary>
-        /// Fills <see cref="livePosition"/> and <see cref="liveClassPosition"/> from the frame SimHub has
-        /// finished, or empties them where the sim's own place is the one to draw. See LivePosition.cs.
+        /// Fills <see cref="liveRace"/> from the frame SimHub has finished, or empties it where the sim's own
+        /// order is the one to draw. See LivePosition.cs.
         /// </summary>
+        /// <remarks>
+        /// The rows are SimHub's leaderboard rows on that frame, and a dashboard hands them to driver*()
+        /// functions that read the frame SimHub is building next. The two lists are the same list except on
+        /// the frame on which a car crosses the line and the sim reorders it, so a row can name the car next
+        /// to the one meant for that frame, and the next frame puts it right.
+        /// </remarks>
         private void UpdateLivePosition(GameData data)
         {
             var frame = data != null && data.GameRunning ? data.NewData : null;
             var opponents = frame == null ? null : frame.Opponents;
             if (opponents == null || !OpenDashPlugin.LivePosition.Applies(data.GameName, frame.SessionTypeName, frame.Flag_Checkered != 0))
             {
-                livePosition = null;
-                liveClassPosition = null;
+                liveRace = null;
                 return;
             }
             while (liveField.Count < opponents.Count) liveField.Add(new LiveCar());
@@ -637,13 +643,11 @@ namespace OpenDashPlugin
                 var car = liveField[i];
                 car.Progress = opponent == null ? null : opponent.CurrentLapHighPrecision;
                 car.Position = opponent == null ? 0 : opponent.Position;
-                car.ClassPosition = opponent == null ? 0 : opponent.PositionInClass;
                 car.CarClass = opponent == null ? null : opponent.CarClass;
                 car.IsPlayer = opponent != null && opponent.IsPlayer;
                 car.IsConnected = opponent != null && opponent.IsConnected;
             }
-            livePosition = OpenDashPlugin.LivePosition.Overall(liveField);
-            liveClassPosition = OpenDashPlugin.LivePosition.InClass(liveField);
+            liveRace = OpenDashPlugin.LivePosition.Rank(liveField);
         }
 
         /// <summary>
@@ -1007,10 +1011,21 @@ namespace OpenDashPlugin
                 var declared = themeSetting;
                 this.AttachDelegate(declared.Property, () => Settings.ThemeSetting(declared));
             }
-            // And the player's live place, filled by DataUpdate from the frame SimHub has finished and null
-            // wherever the sim's own place stands. Not a setting: see Contract.LivePosition. #1063.
-            this.AttachDelegate(Contract.LivePosition, () => livePosition);
-            this.AttachDelegate(Contract.LiveClassPosition, () => liveClassPosition);
+            // And the race as it stands on the road, filled by DataUpdate from the frame SimHub has finished and
+            // null wherever the sim's own order stands. Not a setting: see Contract.LivePosition. #1063.
+            foreach (var family in Contract.LiveFamilies)
+            {
+                for (var n = 1; n <= OpenDashPlugin.LivePosition.Slots; n++)
+                {
+                    var name = family;
+                    var at = n;
+                    this.AttachDelegate(name + at, () =>
+                    {
+                        var race = liveRace;
+                        return race == null ? null : race.Read(name, at);
+                    });
+                }
+            }
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so
