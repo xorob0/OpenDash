@@ -118,9 +118,9 @@ Expand-Archive -LiteralPath $src -DestinationPath $dst -Force
 Get-ChildItem "$dst\OpenDash"
 ```
 
-Then `simhub_start` (or `simhub_stop` + `simhub_start` if it was already running so the
-template list refreshes), `screenshot`, navigate **Dash Studio** in the left menu, and open the
-dash. Parse errors show up in `simhub_logs` immediately after the template list is scanned.
+Then `simhub_start` if it is not running (a running SimHub lists the folder by itself two seconds
+after it is written, #664, though a dash already open keeps what it parsed and a new font waits for a
+restart), `screenshot`, navigate **Dash Studio** in the left menu, and open the dash. Parse errors show up in `simhub_logs` immediately after the template list is scanned.
 
 GUI path (what a user does): `run_in_desktop('C:\Temp\OpenDash.simhubdash')` triggers
 SimHub's importer through the file association, then click through the prompt.

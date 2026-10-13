@@ -137,6 +137,32 @@ a stock screen that is the package's own, which the installer writes whatever th
 Whether a display assigned to a hardware device is lost in the same way was not tested, since the VM
 has none.
 
+### A folder written into a running SimHub is listed two seconds later (2026-10-14, #664)
+
+One could think that SimHub reads its dashboard list once, at startup, so that a folder written into
+`DashTemplates` while it runs waits for a restart; this repository said so in `docs/dev-loop.md`, and
+the panel asked a driver to restart after every add, resize, rename and reinstall. In reality SimHub
+watches the folder. In the 9.12.6 decompile, `GraphicalDashPlugin.Init` builds the one
+`GraphicalDashPluginList` there is (`GetWPFSettingsControl` hands the same one out later), and that
+control's constructor reads the list (`RefreshList` → `GetModelList` → `AddModels`) and then takes
+`new ChangeNotifier("DashTemplates").Changed`. `ChangeNotifier` is a `FileSystemWatcher` on the folder
+with `IncludeSubdirectories` and file name, directory name, size and last write as its filters, raising
+on created, changed, deleted and renamed. Each event outside `_Backups` restarts a two-second
+`DispatcherTimer`, whose tick runs `RefreshList` again. That pass refreshes the items whose folder
+changed (`GraphicalDashItem.Refresh`, which reads the `.djson.metadata` and so the title again), drops
+every item whose `.djson` is gone, adds every subfolder whose `<folder>/<folder>.djson` exists and is
+not listed, and ends in `GraphicalDashPluginListModel.RefreshList`, which raises
+`PluginManager.DashboardListUpdated`, a public event.
+
+So a new folder is listed two seconds after the last write into it, a removed one leaves the list as
+fast, and a rewritten one is listed under its new title. The ticket's reproduction on the VM agrees: with
+Dash Studio open, a screen added from the panel at 04:30:26 wrote `OpenDash Rim (2)`, and a search for
+"rim" at 04:32 listed it with no restart. What does still need a restart is a font, which SimHub reads
+once per run (the next section); the panel asks for one only when a write put a face into `DashFonts`
+(`ScreenInstallResult.WroteFonts`). A per-car playlist entry the plugin writes after SimHub lists a
+themed screen is taken at the next car a display loads (see "Per-car playlists" below), and the plugin
+writes it on `DashboardListUpdated`, so that needs no restart either.
+
 ### The `.djson` is plain JSON, and modern exports carry no reference tracking
 
 Exports from SimHub 9.9 and later have no `$id` or `$ref` keys and no `$values` wrappers;
@@ -732,8 +758,10 @@ A new entry is built with Newtonsoft from the JSON shape above, as `DevicesPlugi
 reads, because `DashPlaylist.Id`, `PlaylistItem.Id` and `CarSelection.CarId` have private setters marked
 `[JsonProperty]`. `DashPlaylistManager.ReapplyCarSettings()`, which would make a running display
 re-evaluate the car at once, is internal and is not called: a new entry takes effect at the next car
-change or the next start, and a themed screen is only bound once SimHub lists it, which is the next
-start in any case.
+change or the next start. A themed screen is only bound once SimHub lists it, which is two seconds after
+its folder is written (see "A folder written into a running SimHub is listed two seconds later"), so the
+plugin synchronises the playlists again on `PluginManager.DashboardListUpdated` when the list has moved
+under a themed screen (#664); before #664 that waited for the next start.
 
 **Verified on the VM on 2026-10-07**, on SimHub 9.12.6 with the Sim-Lab Dash SD43-LED (a
 `BitmapDisplayDevice`, not connected) and the emulator's `cars` scenario. The entries the plugin wrote

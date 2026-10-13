@@ -288,8 +288,12 @@ face and fills the timing pages with `… · Go into a session` (#406); the word
 no game at all. `bun run dev --scenario nosession` is how to reach the first, and stopping the
 emulator is how to reach the second.
 
-**SimHub reads its template list once**, at startup, so a package has to be installed before SimHub
-starts rather than after.
+**SimHub reads its fonts once**, at startup, so a package that brings a face SimHub does not have yet
+has to be installed before SimHub starts rather than after: a face written into `DashFonts` while it
+runs is drawn by no dashboard, reopened or not, until the next start (#441). Its dashboard list is the
+other way round, which is easy to get wrong in the opposite direction: SimHub watches `DashTemplates`
+and lists a folder written while it runs two seconds later, drops a removed one as fast, and reads a
+rewritten one's title again (#664, docs/research/simhub-dash-format.md).
 
 **SimHub's process exists long before its window does.** `bun run vm install` reports "started" as
 soon as `SimHubWPF.exe` is running, which is about a second after launch; the window you can click
