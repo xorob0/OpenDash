@@ -14,6 +14,10 @@
  *     house's size, which is the height its capitals take, and smaller only where the box asks for it.
  *     A name the house cut to its cell stays cut there: the segment cell is narrower than the widest
  *     letter the house cut it for, so it fits at that size.
+ *   - A word that stands in a figure's place, shown exactly while the figure is hidden, as a list's
+ *     PIT stands in a pitting car's gap, is a reading and not a caption: it is set as the figure is,
+ *     in its face, weight and size, in its box and against the edge its figures keep, so that it reads
+ *     as the peer of the figure it replaces and not as the chip's small print (#388).
  *   - A filled box holding text on a page is either a chip, a class or a licence, which loses its fill
  *     and keeps its text, or a highlight, the driver's own row, which becomes inverse video: the box in
  *     the ink, its text in the ground. Over the face, the pit family's one-line banners are inverse
@@ -35,9 +39,10 @@ import { withMoreBindings, withoutBindings, type Expr } from '../../bind.ts';
 import { measureText } from '../../design/advances.ts';
 import { BOX_SLACK, LINE_SPACING } from '../../design/metrics.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
-import { ghostOf, GHOST_OPACITY, lcdColour, SEGMENT_FAMILY, spacedWords, spacedWordsExpr } from './register.ts';
+import type { SegmentFace } from '../../design/advances.ts';
+import { ghostOf, GHOST_OPACITY, lcdColour, SEGMENT_FAMILY, segmentWidth, spacedWords, spacedWordsExpr } from './register.ts';
 
-const { iff, str, ucase } = ncalc;
+const { iff, not, str, ucase } = ncalc;
 
 /** The 14-segment capitals fill the em where Barlow's take 0.7 of it, so four fifths reads as the same height. */
 const CAPTION_SCALE = 0.8;
@@ -122,6 +127,47 @@ function captionOf(item: TextItem): TextItem {
   return text === undefined ? set : withMoreBindings(set, { Text: spaced ? spacedWordsExpr('DSEG14Regular', bound(text)) : bound(text) });
 }
 
+/** The seven-segment face a figure is drawn in, or undefined for one that is not in it. */
+const figureFace = (item: TextItem): SegmentFace | undefined =>
+  item.font === SEGMENT_FAMILY.DSEG7Regular ? (item.fontWeight === 'Bold' ? 'DSEG7Bold' : 'DSEG7Regular') : undefined;
+
+/**
+ * The figure a word in the label face stands in for, if it does: a figure in the seven-segment face
+ * shown exactly while the word is not (its Visible is the word's, negated, as `gapOrPit` in
+ * `second/table.ts` binds the two), whose box the word sits in, and which the word fits set as the
+ * figure is. The house draws such a word as a chip in the figure's cell, which the LCD would set as a
+ * caption at the chip's own size, a fifth of the figure's; set in the figure's place instead, it
+ * reads as what it is, the value of that cell while the figure has none (#388).
+ */
+function standingInFor(word: TextItem, figures: readonly TextItem[]): TextItem | undefined {
+  const when = expressionOf(word.bindings?.Visible);
+  if (when === undefined) return undefined;
+  const hidden = not(when);
+  return figures.find((figure) => {
+    const face = figureFace(figure);
+    return face !== undefined && expressionOf(figure.bindings?.Visible) === hidden && centreIn(word.rect, figure.rect) && segmentWidth(face, (word.widest ?? word.text).toUpperCase(), figure.fontSize) <= figure.rect.width;
+  });
+}
+
+/** The word set in the figure's place: its face, weight, size, box and alignment, in capitals; its own Visible kept. */
+function inPlaceOf(word: TextItem, figure: TextItem): TextItem {
+  const text = expressionOf(word.bindings?.Text);
+  const { monospace: _monospace, widest: _widest, ...rest } = withoutBindings(word, ['Text']);
+  const set: TextItem = {
+    ...rest,
+    font: figure.font,
+    fontWeight: figure.fontWeight,
+    fontSize: figure.fontSize,
+    rect: figure.rect,
+    hAlign: figure.hAlign,
+    vAlign: figure.vAlign,
+    ...(figure.padding ? { padding: figure.padding } : {}),
+    text: word.text.toUpperCase(),
+    ...(word.widest === undefined ? {} : { widest: word.widest.toUpperCase() }),
+  };
+  return text === undefined ? set : withMoreBindings(set, { Text: ucase(text) });
+}
+
 /**
  * A figure that declares a widest of another shape than its sample, as a delta does that is cut for
  * `−99.99` and ordinarily draws `+1.03`, is set right-aligned, and its ghost with it. Left-aligned,
@@ -148,6 +194,7 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
   const ink = lcdColour('ink');
   const ground = lcdColour('ground');
   const texts = flat(items).filter((item): item is TextItem => item.kind === 'text');
+  const figures = texts.filter((t) => t.monospace !== undefined && t.bindings?.Visible !== undefined);
   const holdsText = (r: Rect): boolean => texts.some((t) => centreIn(t.rect, r));
   const highlights: Highlight[] = flat(items)
     .filter((item) => item.kind === 'rect' && opts.boxes !== 'outline' && holdsText(item.rect) && (opts.boxes === 'inverse' ? filled(item.backgroundColor) || item.border !== undefined : filled(item.backgroundColor) && !isChip(item.rect)))
@@ -160,7 +207,8 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
     const plain = withoutColourBindings(item);
     switch (plain.kind) {
       case 'text': {
-        const set = plain.font === ds.font.label ? captionOf(plain) : plain;
+        const figure = plain.font === ds.font.label ? standingInFor(plain, figures) : undefined;
+        const set = figure ? inPlaceOf(plain, figure) : plain.font === ds.font.label ? captionOf(plain) : plain;
         const lit = onHighlight(plain);
         const coloured = withMoreBindings<'text'>(
           {
