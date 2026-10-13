@@ -22,7 +22,7 @@ import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { gameRunning } from '../../second/values.ts';
 import { walkItems } from '../../walk.ts';
-import { BAND_PAGES, bandFlagBlocks, bandPageItems, relativeFields, type BandField } from '../../zones/bandPages.ts';
+import { BAND_PAGES, bandMetrics, bandPageItems, relativeFields, type BandField } from '../../zones/bandPages.ts';
 import { TELLTALE_PAGE, TELLTALES } from '../../zones/telltales.ts';
 import { ghostOf, lcdColour, reading, segment, segmentWidth } from './register.ts';
 
@@ -38,8 +38,8 @@ const GAP_STEPS: readonly number[] = [56, 32, 20];
 
 const STATUS = { good: 'GPS: GOOD', lost: 'GPS: LOST' } as const;
 
-/** Between a flag's end block and the page. */
-const FLAG_GAP = 6;
+/** Between the band's side padding and the page. */
+const END_GAP = 6;
 
 /** What a field's caption says: its label in capitals and its unit after it, as `FUEL L`, its words spaced as every caption's are. */
 function captionOf(f: BandField): { text: string; widest: string; bind?: Expr } {
@@ -173,12 +173,13 @@ function lampWords(frame: Rect, prefix: string): Item[] {
 }
 
 /**
- * The room a page has: the band less the blocks at its two ends, which a flag settles into after it
- * has taken the whole band, so that a flag never covers the status line or the last cell.
+ * The room a page has: the band less its side padding and a few pixels more at each end, which is the
+ * room a settled flag used to keep at the ends of the band before it had one rectangle of its own
+ * (#731), and which is kept so that the foot did not move when the flag did.
  */
 function pageRoom(frame: Rect): Rect {
-  const { left, right } = bandFlagBlocks(frame, false);
-  return { left: frame.left + left.width + FLAG_GAP, top: frame.top, width: frame.width - left.width - right.width - 2 * FLAG_GAP, height: frame.height };
+  const pad = bandMetrics(frame).padX;
+  return { left: frame.left + pad + END_GAP, top: frame.top, width: frame.width - 2 * pad - 2 * END_GAP, height: frame.height };
 }
 
 /** One of band D's pages on the LCD; see the file comment. */

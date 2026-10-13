@@ -5,9 +5,9 @@
  *
  * A flag takes band D over when it comes out, because an alert outranks fuel, so whatever the band
  * does in that moment it has to leave nothing of the page showing. It takes it for a few seconds and
- * then settles into the block at each end, #380, and the second half of this file is that: the same
- * fifteen conditions in the same order, in two smaller rectangles, with the page a driver was reading
- * back between them. Every artboard fills the chequered
+ * then settles, #380, into one rectangle in zone C's title line on the house faces, #731, and the second
+ * half of this file is that: the same twenty conditions in the same order, in one smaller rectangle,
+ * with the page a driver was reading back on the band. Every artboard fills the chequered
  * state with `repeating-conic-gradient(#F5F7FA 0 25%, #0A0B0D 0 50%)` over a tile the height of the
  * band, which sweeps clockwise from twelve o'clock, so the band opens dark at its left edge and the
  * first light square begins one square in; the round faces draw the same board as marks around the
@@ -18,20 +18,19 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
-import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagTakingBand } from '../src/components/flagStrip.ts';
+import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagSettledWidth, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
-import { BLUE_FLAG_DETAILS, THEME_CATALOGUE } from '../src/contract.ts';
+import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
 import { ALERT_CATALOGUE, bandNames, bandRaised, conditionRaised, FLAG_CATALOGUE, raisedRank } from '../src/flags.ts';
 import { contains, rect } from '../src/design/geometry.ts';
-import type { Item, LayerItem, RectangleItem, TextItem, WidgetItem } from '../src/generator.ts';
-import { composeTheme } from '../src/build.ts';
+import type { Item, LayerItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { hero } from '../src/hero/hero.ts';
 import { layout480round, layout800round, type Layout } from '../src/layouts/index.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { measureText } from '../src/design/advances.ts';
-import { bandCornerWidths, bandFlagBlocks, bandMetrics, bandPageRoom } from '../src/zones/bandPages.ts';
-import { ZONE_FACES, faceItems, type ZoneLayout } from '../src/zones/index.ts';
+import { ZONE_FACES, faceItems, zoneRegions, type ZoneLayout } from '../src/zones/index.ts';
+import { houseFlagSettled } from '../src/zones/face.ts';
 
 /** The two colours every artboard quotes for the chequer. */
 const CHEQUER = '#F5F7FA';
@@ -257,25 +256,21 @@ describe('the waved yellow flash', () => {
 });
 
 /**
- * What the flag does once its few seconds are up: it settles into the block at each end of the band
- * and gives the page back, #380.
+ * What the flag does once its few seconds are up: it settles into one rectangle of the face and gives
+ * the band's page back, #380 and #731.
  *
  * The ticket's own case is a full course yellow on the 850 x 480 face with 2.1 litres in the tank: the
  * band read SAFETY CAR then, and nothing on the face said fuel, for as long as the caution lasted,
  * which is several minutes, and a caution is exactly when a driver decides whether to pit. The flag
  * has said everything it has to say after two seconds.
  *
- * The blocks are the band's own, not the flag's: `bandFlagBlocks` hands back the corner blocks on the
- * four faces that draw them and the side padding on the four that do not, so a settled flag can
- * never be laid into room a page is using. That is what the first test below measures, against the
- * room the page is actually given.
- *
- * What it does take, besides a corner block's two fields, is the band's side padding and the room the
- * zone letter stood in before #708, both being inside the width `bandCornerWidths` reserves. No face
- * draws the letter any more, so there is nothing for a settled flag to cover or to leave showing, and
- * that is measured below so that a letter cannot come back under the flag without being noticed.
+ * It settled into a block at each end of the band until #731, and the author ruled that out: with the
+ * takeover that was the flag's colour in three places, the blocks covered band D's corner fields on four
+ * faces and were sixteen nameless pixels on the other four. On the house faces the rectangle is in zone
+ * C's title line, against the counter, `houseFlagSettled`; `flagSettled.test.ts` holds it, and every
+ * theme's, to a part of the face no reading uses. What is held here is how the condition is drawn in it.
  */
-const cornerLayers = (face: ZoneLayout): Map<string, LayerItem> =>
+const settledLayers = (face: ZoneLayout): Map<string, LayerItem> =>
   new Map(
     faceItems(face)
       .filter((i): i is LayerItem => i.kind === 'layer' && i.name === 'flagCorner')
@@ -283,192 +278,120 @@ const cornerLayers = (face: ZoneLayout): Map<string, LayerItem> =>
       .map((l) => [l.name.slice('flagCorner.'.length), l]),
   );
 
-const cornerLayerOf = (face: ZoneLayout, id: string): LayerItem => {
-  const layer = cornerLayers(face).get(id);
+const settledLayerOf = (face: ZoneLayout, id: string): LayerItem => {
+  const layer = settledLayers(face).get(id);
   if (!layer) throw new Error(`no settled ${id} flag on ${face.folder}`);
   return layer;
 };
 
-describe('the flag settles into the blocks at the ends of the band', () => {
+describe('the flag settles into one rectangle in zone C’s title line', () => {
   for (const face of ZONE_FACES) {
-    const band = face.zones.band;
-    const blocks = bandFlagBlocks(band, face.bandCorners);
+    const one = houseFlagSettled(zoneRegions(face));
+    const zoneC = face.zones.zoneC;
 
-    test(`${face.folder} keeps its two blocks at the band's ends and clear of the page`, () => {
-      // Full height and hard against each end: a settled flag is the end of the band, not a chip
-      // floating in it.
-      expect(blocks.left.top).toBe(band.top);
-      expect(blocks.right.top).toBe(band.top);
-      expect({ left: blocks.left.height, right: blocks.right.height }).toEqual({ left: band.height, right: band.height });
-      expect(blocks.left.left).toBe(band.left);
-      expect(blocks.right.left + blocks.right.width).toBe(band.left + band.width);
-
-      // And clear of the room the page is laid into, which is the one thing a band must never take.
-      const room = bandPageRoom(band, face.bandCorners);
-      expect(blocks.left.left + blocks.left.width).toBeLessThanOrEqual(room.left);
-      expect(blocks.right.left).toBeGreaterThanOrEqual(room.left + room.width);
+    test(`${face.folder} keeps it in zone C's title line, against the counter`, () => {
+      // The title line is the 22 px under the zone's 6 px of top padding; the rectangle is that line's
+      // height, and ends a few pixels short of the counter's widest reading.
+      expect({ face: face.folder, top: one.top - zoneC.top, height: one.height }).toEqual({ face: face.folder, top: 6, height: 22 });
+      expect({ face: face.folder, inZone: contains(zoneC, one) }).toEqual({ face: face.folder, inZone: true });
+      // No wider than the longest name asks, and on every face wide enough for every condition's shortest.
+      expect(one.width).toBeLessThanOrEqual(flagSettledWidth());
+      const shortest = Math.max(...ALERT_CATALOGUE.map((c) => bandNames(c.band).at(-1)).filter((n): n is string => n !== undefined).map((n) => measureText('BarlowBold', n, ds.size.label)));
+      expect({ face: face.folder, width: one.width, fits: shortest + 2 * BLACK_FLAG_BORDER < one.width }).toEqual({ face: face.folder, width: one.width, fits: true });
     });
 
-    test(`${face.folder} takes ${face.bandCorners ? 'the corner blocks' : 'the side padding, there being no corner block'}`, () => {
-      // The two answers, and which one a face gets is the layout's `bandCorners` rather than a
-      // threshold this file re-derives. Where there are corner blocks the flag takes them whole,
-      // incidents and track state at one end, lamps and clocks at the other, and the page is what
-      // comes back. Where there are none there is nothing to take, so the flag keeps the padding:
-      // sixteen pixels of colour at each end, which is all the room no page is ever laid into.
-      const padX = bandMetrics(band).padX;
-      const widths = face.bandCorners ? bandCornerWidths(band) : { left: padX, right: padX };
-      expect({ left: blocks.left.width, right: blocks.right.width }).toEqual(widths);
-    });
-
-    test(`${face.folder} has no band D letter for a settled flag to cover or to leave showing`, () => {
-      // Before #708 the face drew a `D` at `padX` and pushed the flag groups after it, so a corner
-      // taken whole covered the letter and the side padding stopped short of it. The letter is gone
-      // from every face, and the left block still starts at the band's own edge either way.
-      const letter = [...walkItems(faceItems(face))].find((i): i is TextItem => i.kind === 'text' && i.name === 'zoneD.letter');
-      expect({ face: face.folder, letter }).toEqual({ face: face.folder, letter: undefined });
-      expect({ face: face.folder, left: blocks.left.left }).toEqual({ face: face.folder, left: band.left });
-    });
-
-    test(`${face.folder} draws every condition in both blocks, in the shape and colour it draws on the whole band`, () => {
-      // Every condition but a neutral alert on a face with no corner block: push to pass and the
-      // headlight flash are white, which without their name would be the white flag or the black
-      // one, and sixteen pixels hold no name. They have no settled layer there at all.
-      const neutral = (id: string): boolean => id === 'pushToPass' || id === 'headlightFlash';
-      expect([...cornerLayers(face).keys()]).toEqual(ALERT_CATALOGUE.map((c) => c.id).filter((id) => face.bandCorners || !neutral(id)));
-      for (const condition of ALERT_CATALOGUE.filter((c) => face.bandCorners || !neutral(c.id))) {
-        const layer = cornerLayerOf(face, condition.id);
-        const children = [...walkItems(layer.children)].filter((i) => i.kind !== 'layer');
-        // Both ends, always: a flag at one end of the band would read as a fault rather than a flag.
-        for (const end of ['left', 'right'] as const) {
-          const drawn = children.filter((i) => i.name.startsWith(`flagCorner.${condition.id}.${end}.`));
-          expect({ face: face.folder, id: condition.id, end, drawn: drawn.length > 0 }).toMatchObject({ drawn: true });
-          for (const item of drawn) {
-            // A name's box is a WPF line box and is taller than the block, so it is held to the
-            // block's width; everything else is inside the block outright.
-            if (item.kind === 'text') {
-              expect({ item: item.name, within: item.rect.left === blocks[end].left && item.rect.width === blocks[end].width }).toMatchObject({ within: true });
-              continue;
-            }
-            expect({ item: item.name, rect: item.rect, inside: contains(blocks[end], item.rect) }).toMatchObject({ inside: true });
+    test(`${face.folder} draws every condition in it, in the shape and colour it draws on the whole band`, () => {
+      // Every condition, neutral alerts included: each writes its name there, so push to pass and the
+      // headlight flash say what they are rather than reading as a white flag or a black one.
+      expect([...settledLayers(face).keys()]).toEqual(ALERT_CATALOGUE.map((c) => c.id));
+      for (const condition of ALERT_CATALOGUE) {
+        const layer = settledLayerOf(face, condition.id);
+        for (const item of [...walkItems(layer.children)].filter((i) => i.kind !== 'layer')) {
+          // A name's box is a WPF line box and is taller than the rectangle, so it is held to the
+          // rectangle's width; everything else is inside the rectangle outright.
+          if (item.kind === 'text') {
+            expect({ item: item.name, within: item.rect.left === one.left && item.rect.width === one.width }).toMatchObject({ within: true });
+            continue;
           }
+          expect({ item: item.name, rect: item.rect, inside: contains(one, item.rect) }).toMatchObject({ inside: true });
         }
         // The ground carries the condition's own colour where the shape is the filled one, exactly as
         // the whole band does; the outlined family and the chequer lay `surface.base` instead.
         if (condition.band.shape === 'filled') {
-          for (const end of ['left', 'right'] as const) {
-            const ground = layer.children.find((c): c is RectangleItem => c.kind === 'rect' && c.name === `flagCorner.${condition.id}.${end}.band`)!;
-            expect({ id: condition.id, end, rect: ground.rect, colour: ground.backgroundColor }).toEqual({
-              id: condition.id,
-              end,
-              rect: blocks[end],
-              colour: condition.band.colour,
-            });
-          }
+          const ground = layer.children.find((c): c is RectangleItem => c.kind === 'rect' && c.name === `flagCorner.${condition.id}.band`)!;
+          expect({ id: condition.id, rect: ground.rect, colour: ground.backgroundColor }).toEqual({ id: condition.id, rect: one, colour: condition.band.colour });
         }
       }
     });
 
-    test(`${face.folder} writes a name in a block only where the name fits it`, () => {
-      // A name too wide for the block is not shrunk and not clipped: it is not written, and the
-      // block is colour alone, which is what the nano's twelve-pixel strip already is. The faces
-      // with no corner blocks are that case, sixteen pixels holding no word at all; the four with
-      // corner blocks hold every one of the eighteen labels, the chequer and the meatball having none.
-      // Where a condition has two names, which is the full course yellow's FULL COURSE YELLOW and FCY,
-      // it writes the longest that fits the narrower block, and writes it at both ends: one settled flag
-      // carrying two names, or a name at one end and none at the other, would read as two conditions
-      // rather than one. The blue flag's detail is held to the same rule, #497: where the widest of its
-      // three runs fits the narrower block, both ends write the three, and where it does not, the name.
+    test(`${face.folder} writes the longest name that fits it`, () => {
+      // A name too wide for the rectangle is not shrunk and not clipped: the condition writes its short
+      // form instead, FCY for FULL COURSE YELLOW, and every condition has one that fits. The blue flag's
+      // detail is held to the same rule, #497: where the widest of its three runs fits, the rectangle
+      // writes the three, and where it does not, the name.
       const wholeBlue = labelsOf(layerOf(face, BLUE_FLAG_ID).children);
-      const detail = wholeBlue.map((run) => run.text);
+      const room = one.width - 2 * BLACK_FLAG_BORDER;
       for (const condition of ALERT_CATALOGUE) {
-        const settled = cornerLayers(face).get(condition.id);
-        if (!settled) continue;
-        const names = labelsOf(settled.children);
+        const names = labelsOf(settledLayerOf(face, condition.id).children);
         for (const name of names) {
           expect({ item: name.name, font: name.font, weight: name.fontWeight }).toEqual({ item: name.name, font: ds.font.label, weight: FLAG_NAME_WEIGHT });
           const drawn = measureText('BarlowBold', name.widest ?? name.text, name.fontSize);
           expect({ item: name.name, drawn, box: name.rect.width, fits: drawn < name.rect.width }).toMatchObject({ fits: true });
         }
-        const room = Math.min(blocks.left.width, blocks.right.width) - 2 * BLACK_FLAG_BORDER;
         const text = bandNames(condition.band).find((name) => measureText('BarlowBold', name, ds.size.label) < room);
         const detailFits = condition.id === BLUE_FLAG_ID && wholeBlue.every((run) => measureText('BarlowBold', run.widest ?? run.text, ds.size.label) < room);
-        const expected = detailFits ? [...detail, ...detail] : text === undefined ? [] : [text, text];
+        const expected = detailFits ? wholeBlue.map((run) => run.text) : text === undefined ? [] : [text];
         expect({ face: face.folder, id: condition.id, names: names.map((n) => n.text) }).toEqual({ face: face.folder, id: condition.id, names: expected });
       }
-      // And where the blue block writes the car behind, it writes it exactly as the whole band does: each
-      // end carries the band's three runs, each shown by the same BlueFlagDetail, bound to the same
-      // expression and measured from the same widest. That is every face with corner blocks, and none
-      // of the four whose sixteen pixels hold no word.
-      const asWritten = (runs: readonly TextItem[]) => runs.map(({ text, widest, bindings }) => ({ text, widest, bindings }));
-      const settledBlue = labelsOf(cornerLayerOf(face, BLUE_FLAG_ID).children);
-      expect({ face: face.folder, detail: settledBlue.some((l) => l.bindings?.Text !== undefined) }).toEqual({ face: face.folder, detail: face.bandCorners });
-      if (face.bandCorners) {
-        for (const end of ['left', 'right'] as const) {
-          const runs = settledBlue.filter((l) => l.name.startsWith(`flagCorner.${BLUE_FLAG_ID}.${end}.`));
-          expect({ face: face.folder, end, runs: asWritten(runs) }).toEqual({ face: face.folder, end, runs: asWritten(wholeBlue) });
-        }
-      }
-      // The incident is the other way: the block writes INCIDENT, unbound, and its count against the
-      // limit is the whole band's for the seconds it has it.
-      for (const label of labelsOf(cornerLayerOf(face, 'incident').children)) {
-        expect({ item: label.name, text: label.text, bound: label.bindings?.Text !== undefined }).toEqual({ item: label.name, text: 'INCIDENT', bound: false });
+      // The incident is the other way: the rectangle writes INCIDENT, or INC, unbound, and its count
+      // against the limit is the whole band's for the seconds it has it.
+      for (const label of labelsOf(settledLayerOf(face, 'incident').children)) {
+        expect({ item: label.name, text: ['INCIDENT', 'INC'].includes(label.text), bound: label.bindings?.Text !== undefined }).toEqual({ item: label.name, text: true, bound: false });
       }
     });
 
-    test(`${face.folder} draws the debris flag's red stripes in both blocks, so a settled debris flag is never a yellow`, () => {
-      // Where a block holds no name, colour is all a driver has, and the debris flag's yellow alone
-      // was the yellow flag's. Its stripes are never fewer than three, so even sixteen pixels carry
-      // one red between two yellow, clear of both ends of the block (#498).
-      const layer = cornerLayerOf(face, 'debris');
-      for (const end of ['left', 'right'] as const) {
-        const parts = layer.children.filter((c): c is RectangleItem => c.kind === 'rect' && c.name.startsWith(`flagCorner.debris.${end}.`));
-        const stripes = parts.filter((p) => p.backgroundColor === ds.purpose.flag.debrisStripe);
-        expect({ face: face.folder, end, ground: parts[0]?.backgroundColor, stripes: stripes.length >= 1 }).toEqual({ face: face.folder, end, ground: ds.purpose.flag.debris, stripes: true });
-        for (const stripe of stripes) {
-          expect({
-            stripe: stripe.name,
-            fullHeight: stripe.rect.top === blocks[end].top && stripe.rect.height === blocks[end].height,
-            clearOfTheEnds: stripe.rect.left > blocks[end].left && stripe.rect.left + stripe.rect.width < blocks[end].left + blocks[end].width,
-          }).toEqual({ stripe: stripe.name, fullHeight: true, clearOfTheEnds: true });
-        }
+    test(`${face.folder} draws the debris flag's red stripes in it, so a settled debris flag is never a yellow`, () => {
+      const parts = settledLayerOf(face, 'debris').children.filter((c): c is RectangleItem => c.kind === 'rect');
+      const stripes = parts.filter((p) => p.backgroundColor === ds.purpose.flag.debrisStripe);
+      expect({ face: face.folder, ground: parts[0]?.backgroundColor, stripes: stripes.length >= 1 }).toEqual({ face: face.folder, ground: ds.purpose.flag.debris, stripes: true });
+      for (const stripe of stripes) {
+        expect({ stripe: stripe.name, fullHeight: stripe.rect.top === one.top && stripe.rect.height === one.height, inside: contains(one, stripe.rect) }).toEqual({
+          stripe: stripe.name,
+          fullHeight: true,
+          inside: true,
+        });
       }
     });
 
-    test(`${face.folder} draws the meatball in both blocks as its disc on the near-black, with no name`, () => {
+    test(`${face.folder} draws the meatball in it as its disc on the near-black, with no name`, () => {
       // A black box with an orange disc in the middle and no text, which is the author's ruling on
-      // #498, in a settled block as on the whole band. The disc is two thirds of the block's shorter
-      // side, which on the faces with no corner block is the sixteen or twelve pixels of its width.
-      const layer = cornerLayerOf(face, 'meatball');
-      for (const end of ['left', 'right'] as const) {
-        const parts = layer.children.filter((c) => c.name.startsWith(`flagCorner.meatball.${end}.`));
-        const [ground, disc] = parts;
-        if (parts.length !== 2 || ground?.kind !== 'rect' || disc?.kind !== 'ellipse') throw new Error(`${face.folder} draws the ${end} meatball as a ground and a disc`);
-        const block = blocks[end];
-        expect({
-          face: face.folder,
-          end,
-          ground: ground.rect,
-          fill: ground.backgroundColor,
-          border: ground.border,
-          disc: disc.fillColor,
-          inside: contains(block, disc.rect),
-          size: Math.abs(disc.rect.width - ALERT_DISC_RATIO * Math.min(block.width, block.height)) <= 1,
-        }).toEqual({ face: face.folder, end, ground: block, fill: ds.color.surface.base, border: undefined, disc: ds.purpose.flag.orange, inside: true, size: true });
-      }
+      // #498, in the settled rectangle as on the whole band. The disc is two thirds of its shorter side.
+      const parts = settledLayerOf(face, 'meatball').children;
+      const [ground, disc] = parts;
+      if (parts.length !== 2 || ground?.kind !== 'rect' || disc?.kind !== 'ellipse') throw new Error(`${face.folder} draws the meatball as a ground and a disc`);
+      expect({
+        face: face.folder,
+        ground: ground.rect,
+        fill: ground.backgroundColor,
+        border: ground.border,
+        disc: disc.fillColor,
+        inside: contains(one, disc.rect),
+        size: Math.abs(disc.rect.width - ALERT_DISC_RATIO * Math.min(one.width, one.height)) <= 1,
+      }).toEqual({ face: face.folder, ground: one, fill: ds.color.surface.base, border: undefined, disc: ds.purpose.flag.orange, inside: true, size: true });
     });
 
-    test(`${face.folder} keeps the waved yellow blinking in both blocks, and blinks nothing else`, () => {
-      // A blinking flag keeps blinking in the block: waving is what a waved yellow means, and it
-      // does not stop meaning it because the page came back.
-      const flashing = [...walkItems(cornerLayerOf(face, 'yellowWaving').children)].filter((i) => i.blink?.enabled);
-      expect(flashing.map((i) => i.name)).toEqual(['flagCorner.yellowWaving.left.flash', 'flagCorner.yellowWaving.right.flash']);
+    test(`${face.folder} keeps the waved yellow blinking in it, and blinks nothing else`, () => {
+      // A blinking flag keeps blinking: waving is what a waved yellow means, and it does not stop
+      // meaning it because the page came back.
+      const flashing = [...walkItems(settledLayerOf(face, 'yellowWaving').children)].filter((i) => i.blink?.enabled);
+      expect(flashing.map((i) => i.name)).toEqual(['flagCorner.yellowWaving.flash']);
       for (const flash of flashing) {
         expect(flash.blink).toEqual({ enabled: true, delayMs: FLAG_BLINK_MS });
         if (flash.kind !== 'rect') throw new Error('the flash is a band');
         expect(flash.backgroundColor).toBe(ds.color.surface.base);
       }
-      for (const condition of ALERT_CATALOGUE.filter((c) => c.id !== 'yellowWaving' && cornerLayers(face).has(c.id))) {
-        const layer = cornerLayerOf(face, condition.id);
+      for (const condition of ALERT_CATALOGUE.filter((c) => c.id !== 'yellowWaving')) {
+        const layer = settledLayerOf(face, condition.id);
         expect({ face: face.folder, id: condition.id, blinking: [...walkItems([layer])].filter((i) => i.blink?.enabled).map((i) => i.name) }).toEqual({
           face: face.folder,
           id: condition.id,
@@ -478,61 +401,8 @@ describe('the flag settles into the blocks at the ends of the band', () => {
     });
 
     test(`${face.folder} writes no name on the settled chequer either`, () => {
-      expect(labelsOf(cornerLayerOf(face, 'chequered').children)).toEqual([]);
+      expect(labelsOf(settledLayerOf(face, 'chequered').children)).toEqual([]);
     });
-  }
-});
-
-/**
- * The settled blocks are drawn over band D, at the takeover's own depth, on every face of every theme
- * (#731).
- *
- * SimHub paints a container's items in the order they are listed, a later one over an earlier one, and
- * the zone D widget paints its dashboard's ground over whatever the face drew before it. So a flag
- * drawing listed before the widget would be hidden by the band's well and its page, and one listed
- * after it is over them. The takeover and the settled blocks are two drawings of one reading, and the
- * takeover is seen over the band, so the blocks are held to the same place in the list: after the
- * widget and immediately after the takeover, with no widget after them to cover them again.
- *
- * Asked of the faces as the build composes them, theme by theme, rather than of `faceItems`, because a
- * theme's `settings` pass rewrites the built dashboard after the face is drawn and a reordering there
- * would be invisible to a test that stopped short of it. Every screen that draws both is asked, so the
- * arrangement without the rev bar is held to it as well as the main one.
- */
-describe('the settled blocks are drawn over band D', () => {
-  for (const theme of THEME_CATALOGUE) {
-    test(`on every face of the ${theme.id} theme, after the zone D widget and at the takeover's depth`, () => {
-      const faces = composeTheme({ theme, version: '0.0.0-test', simHubVersion: '9.12.6' });
-      expect(faces.length).toBeGreaterThan(0);
-      for (const { pkg } of faces) {
-        const main = pkg.dashboards[0]!;
-        const asked = main.screens.filter((s) => s.items.some((i) => i.name === 'zoneD') && s.items.some((i) => i.name === 'flagCorner'));
-        // The two arrangements of the face; the idle screen draws neither.
-        expect({ face: main.name, screens: asked.length }).toEqual({ face: main.name, screens: 2 });
-        for (const screen of asked) {
-          const names = screen.items.map((i) => i.name);
-          const widget = screen.items.find((i): i is WidgetItem => i.kind === 'widget' && i.name === 'zoneD')!;
-          const takeover = names.indexOf('flag');
-          const corners = names.indexOf('flagCorner');
-          const later = screen.items.slice(corners + 1).filter((i) => i.kind === 'widget').map((i) => i.name);
-          expect({ face: main.name, screen: screen.name, overBand: corners > names.indexOf('zoneD'), withTakeover: corners === takeover + 1, coveredBy: later }).toEqual({
-            face: main.name,
-            screen: screen.name,
-            overBand: true,
-            withTakeover: true,
-            coveredBy: [],
-          });
-          // And the blocks are on the band rather than beside it, so that "over band D" is about the
-          // pixels a driver reads the band in. Each block's ground is the rectangle it settles into.
-          const layer = screen.items[corners] as LayerItem;
-          const grounds = [...walkItems(layer.children)].filter((i): i is RectangleItem => i.kind === 'rect' && i.name.endsWith('.band'));
-          expect(grounds.length).toBeGreaterThan(0);
-          for (const ground of grounds) {
-            expect({ face: main.name, item: ground.name, onBand: contains(widget.rect, ground.rect) }).toEqual({ face: main.name, item: ground.name, onBand: true });
-          }
-        }
-      }
-    }, 60_000);
   }
 });
 

@@ -248,15 +248,16 @@ describe('the two formats cannot both draw', () => {
       // The settled form is the third list and is ranked the same way again, for the same reason:
       // the phase a flag is in decides the rectangle, never which flag wins.
       //
-      // Two conditions are ranked in all three and drawn in fewer: push to pass and the headlight
+      // Two conditions are ranked in all three and drawn in two: push to pass and the headlight
       // flash are white, which is the white flag's fill and the black family's outline, so they draw
-      // only where their name is written. The block writes no such name and a face without corner
-      // blocks has no room for one. They still rank, being in every other layer's negated terms.
+      // only where their name is written. The block writes no such name; the settled rectangle has
+      // room for every condition's name on every face since #731, so it draws them. They still rank
+      // in the block, being in every other layer's negated terms.
       const statesIn = (group: LayerItem): string[] =>
         group.children.filter((c): c is LayerItem => c.kind === 'layer').map((c) => c.name.slice(`${group.name}.`.length));
       const expected = new Map([
         [bandGroup, STATES],
-        [cornerGroup, arrangement.bandCorners ? STATES : BLOCK_STATES],
+        [cornerGroup, STATES],
         [fullGroup, BLOCK_STATES],
       ]);
       for (const [group, states] of expected) expect({ group: group.name, states: statesIn(group) }).toEqual({ group: group.name, states: [...states] });
