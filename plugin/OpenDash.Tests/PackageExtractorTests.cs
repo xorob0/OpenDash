@@ -519,6 +519,47 @@ namespace OpenDashPlugin.Tests
             Assert.True(written > before, "the face kept the package's time, " + written.ToString("o"));
         }
 
+        /// <summary>
+        /// A folder written over one SimHub already lists ends with a change inside it, which is what makes SimHub
+        /// read its title again (PackageExtractor.StampMetadata, #664). The folder arrives by a move, which SimHub
+        /// reports on DashTemplates and not on the folder, so without the stamp a rename kept its old title in
+        /// Dash Studio until a restart. The package's own times are old here so that only the stamp can pass.
+        /// </summary>
+        [Fact]
+        public void A_folder_written_over_another_has_its_metadata_stamped_after_the_move()
+        {
+            var packaged = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            MemoryStream Old(string version)
+            {
+                var stream = new MemoryStream();
+                using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var (name, content) in new[]
+                    {
+                        ("OpenDash/OpenDash.djson", "{\"Version\":2}"),
+                        ("OpenDash/OpenDash.djson.metadata", "{\"DashboardVersion\":\"" + version + "\"}"),
+                    })
+                    {
+                        var entry = zip.CreateEntry(name);
+                        entry.LastWriteTime = packaged;
+                        using (var writer = new StreamWriter(entry.Open())) writer.Write(content);
+                    }
+                }
+                stream.Position = 0;
+                return stream;
+            }
+
+            using (var package = Old("0.1.0")) PackageExtractor.Install(package, root, null);
+            var fingerprint = FolderFingerprint.Of(Templates("OpenDash"));
+            var before = DateTime.UtcNow.AddMinutes(-1);
+            using (var package = Old("0.1.0")) PackageExtractor.Install(package, root, null);
+
+            var metadata = File.GetLastWriteTimeUtc(Path.Combine(Templates("OpenDash"), "OpenDash.djson.metadata"));
+            Assert.True(metadata > before, "the metadata kept the package's time, " + metadata.ToString("o"));
+            Assert.True(File.GetLastWriteTimeUtc(Path.Combine(Templates("OpenDash"), "OpenDash.djson")) < before);
+            Assert.Equal(fingerprint, FolderFingerprint.Of(Templates("OpenDash")));
+        }
+
         [Fact]
         public void Install_refuses_entries_outside_the_package()
         {

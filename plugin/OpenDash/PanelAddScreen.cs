@@ -685,8 +685,9 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A rename used to change the card and nothing else, while its own tooltip promised SimHub's
         /// dashboard list as well. It writes the dashboard now, so the promise is kept, and SimHub reads the new
-        /// title by itself two seconds after the write (#664). A rename puts a font into DashFonts only where one
-        /// had gone from it, and then says so as an add does.
+        /// title by itself two seconds after the write (#664), because the install stamps the folder's metadata once
+        /// it is in place (PackageExtractor.StampMetadata). A rename puts a font into DashFonts only where one had
+        /// gone from it, and then says so as an add does.
         /// </remarks>
         public static string Renamed(string title, bool wroteFonts)
         {

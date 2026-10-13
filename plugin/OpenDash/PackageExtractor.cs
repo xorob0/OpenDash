@@ -425,6 +425,7 @@ namespace OpenDashPlugin
                     DeleteDirectory(target);
                 }
                 Directory.Move(extracted, target);
+                StampMetadata(target, folderName, log);
                 log.Info("Installed " + folderName + " " + (result.Version ?? "(no version)") + " into " + target);
 
                 result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
@@ -440,6 +441,35 @@ namespace OpenDashPlugin
                 {
                     log.Warn("Could not remove the staging folder " + staging + ": " + ex.Message);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Stamps the metadata of a folder just moved into place, so that a running SimHub reads its title again.
+        /// </summary>
+        /// <remarks>
+        /// SimHub watches DashTemplates and lists a new folder by itself (#664), but it reads a listed dashboard's
+        /// title again only when a file inside that dashboard's folder is created or changed: its refresh takes the
+        /// folder of each changed path and refreshes the item listed there, and a deletion or a rename is not
+        /// counted at all. Install never writes inside the target. It extracts into a staging folder and moves the
+        /// whole folder in, which the watcher reports as one event on DashTemplates itself, so a folder rewritten
+        /// under a new title (a rename from the panel) would keep the old one in Dash Studio until SimHub restarts.
+        /// A new last-write time on the .djson.metadata, the file the title is read from, is a change inside the
+        /// folder. Only the time moves, and FolderFingerprint hashes content, so the folder still reads as
+        /// untouched. A stamp that fails costs the new title until a restart and nothing else, so it is logged and
+        /// the install goes on.
+        /// </remarks>
+        internal static void StampMetadata(string target, string folderName, IInstallLog log)
+        {
+            var metadata = Path.Combine(target, folderName + MetadataExtension);
+            if (!File.Exists(metadata)) return;
+            try
+            {
+                File.SetLastWriteTimeUtc(metadata, DateTime.UtcNow);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                log.Warn("Could not stamp " + metadata + ", so SimHub may list it under its old title until it restarts: " + e.Message);
             }
         }
 

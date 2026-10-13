@@ -154,8 +154,17 @@ every item whose `.djson` is gone, adds every subfolder whose `<folder>/<folder>
 not listed, and ends in `GraphicalDashPluginListModel.RefreshList`, which raises
 `PluginManager.DashboardListUpdated`, a public event.
 
-So a new folder is listed two seconds after the last write into it, a removed one leaves the list as
-fast, and a rewritten one is listed under its new title. The ticket's reproduction on the VM agrees: with
+So a new folder is listed two seconds after the last write into it, and a removed one leaves the list
+as fast. A folder that is still listed is read again only when a file inside it is created or changed:
+the refresh takes the folder of each path the watcher counted, and it does not count a deletion or a
+rename. A folder moved in whole is one event on `DashTemplates` itself, which names no listed folder,
+and `AddModels` finds the same `.djson` path listed already, so the item keeps the title it read
+before. That is how `PackageExtractor.Install` writes every folder (it extracts into a staging folder,
+deletes the old one and moves the new one in), so a rename from the panel kept its old title in Dash
+Studio until a restart. Install therefore stamps the folder's `.djson.metadata` with a new last-write
+time after the move, which is a change inside the folder, and SimHub reads the new title with the rest.
+That last step follows from the decompile and has not yet been watched on the VM. The ticket's
+reproduction on the VM agrees with the rest: with
 Dash Studio open, a screen added from the panel at 04:30:26 wrote `OpenDash Rim (2)`, and a search for
 "rim" at 04:32 listed it with no restart. What does still need a restart is a font, which SimHub reads
 once per run (the next section); the panel asks for one only when a write put a face into `DashFonts`

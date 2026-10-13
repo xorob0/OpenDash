@@ -292,8 +292,10 @@ emulator is how to reach the second.
 has to be installed before SimHub starts rather than after: a face written into `DashFonts` while it
 runs is drawn by no dashboard, reopened or not, until the next start (#441). Its dashboard list is the
 other way round, which is easy to get wrong in the opposite direction: SimHub watches `DashTemplates`
-and lists a folder written while it runs two seconds later, drops a removed one as fast, and reads a
-rewritten one's title again (#664, docs/research/simhub-dash-format.md).
+and lists a folder written while it runs two seconds later, and drops a removed one as fast. A folder it
+lists already is read again only when a file inside it changes, so one replaced by moving a new copy in
+keeps its old title; the plugin's install stamps the metadata after its move for that reason (#664,
+docs/research/simhub-dash-format.md).
 
 **SimHub's process exists long before its window does.** `bun run vm install` reports "started" as
 soon as `SimHubWPF.exe` is running, which is about a second after launch; the window you can click
