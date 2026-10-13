@@ -33,7 +33,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(FacePages.BandD.Select(p => p.Name).Concat(new[] { "Porsche" }), pages.Select(p => p.Name));
             for (var page = 0; page < pages.Count; page++) Assert.Equal(page, pages[page].Number);
             Assert.Equal(9, Contract.FaceZonePageCount(3, Porsche));
-            Assert.Equal(511, Contract.DefaultZoneMask(3, Porsche));
+            // Every page but the held-back car page, the eighth (#969).
+            Assert.Equal(511 & ~(1 << 7), Contract.DefaultZoneMask(3, Porsche));
             Assert.Equal(8, Contract.DefaultFaceZonePage(3, Porsche));
             Assert.Equal(new[] { 0, 0, 14, 8 }, Contract.DefaultFaceZones(Porsche));
 
@@ -48,25 +49,26 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.Same(FacePages.BandD, FacePages.For("D", theme));
                 Assert.Equal(8, Contract.FaceZonePageCount(3, theme));
-                Assert.Equal(255, Contract.DefaultZoneMask(3, theme));
+                Assert.Equal(127, Contract.DefaultZoneMask(3, theme));
                 Assert.Equal(0, Contract.DefaultFaceZonePage(3, theme));
             }
         }
 
         [Fact]
-        public void A_porsche_screen_opens_band_d_on_the_porsche_row_and_its_button_cycles_nine_pages()
+        public void A_porsche_screen_opens_band_d_on_the_porsche_row_and_its_button_cycles_eight_pages()
         {
+            // Nine in the catalogue, and the car page, the eighth, held back (#969).
             var face = PorscheScreen().Face;
             Assert.Equal(Porsche, face.ThemeId());
             Assert.Equal(8, face.Start("D"));
             Assert.Equal(8, face.Zone("D"));
-            Assert.Equal(511, face.Mask("D"));
+            Assert.Equal(511 & ~(1 << 7), face.Mask("D"));
             Assert.Equal(Enumerable.Range(0, 9), face.Order("D"));
-            Assert.Equal(9, face.Position("D"));
+            Assert.Equal(8, face.Position("D"));
 
-            var seen = Enumerable.Range(0, 9).Select(_ => face.Cycle("D")).ToArray();
-            Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8 }, seen);
-            Assert.Equal(7, face.CycleBack("D"));
+            var seen = Enumerable.Range(0, 8).Select(_ => face.Cycle("D")).ToArray();
+            Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 8 }, seen);
+            Assert.Equal(6, face.CycleBack("D"));
             // The other zones open where a default face's do.
             Assert.Equal(new[] { 0, 0, 14 }, new[] { face.Start("A"), face.Start("B"), face.Start("C") });
         }
@@ -92,7 +94,8 @@ namespace OpenDashPlugin.Tests
             screen.Normalise();
             Assert.Equal(8, screen.Face.Zone("D"));
             Assert.Equal(8, screen.Face.Start("D"));
-            Assert.Equal(511, screen.Face.Mask("D"));
+            // The ninth bit stands; the eighth, the held-back car page's, is trimmed (#969).
+            Assert.Equal(511 & ~(1 << 7), screen.Face.Mask("D"));
 
             // And a copy keeps it.
             Assert.Equal(Porsche, screen.Copy().Face.ThemeId());
@@ -126,13 +129,13 @@ namespace OpenDashPlugin.Tests
             var face = screen.Face;
             Assert.Null(face.ThemeId());
             Assert.Equal(new[] { 3, 9, 14, 0 }, face.Zones);
-            Assert.Equal(new[] { 11, 2097115, 2097151, 255 }, face.Masks);
+            Assert.Equal(new[] { 11, 2097115, 2097151, 127 }, face.Masks);
             Assert.Equal(new[] { 0, 0, 14, 0 }, face.Starts);
             Assert.Equal(new[] { 3, 1, 0, 2 }, face.Orders[0]);
             Assert.Equal(Enumerable.Range(0, Modules.Count), face.Orders[1]);
             Assert.Equal(new[] { 4, 5, 6, 7, 0, 1, 2, 3 }, face.Orders[3]);
             Assert.Equal(Contract.DefaultQuickGlance, face.QuickGlance);
-            Assert.Equal("8 of 8", PanelScreens.ZoneCount(face, "D"));
+            Assert.Equal("7 of 7", PanelScreens.ZoneCount(face, "D"));
         }
 
         [Fact]
@@ -147,9 +150,9 @@ namespace OpenDashPlugin.Tests
             var screen = JsonConvert.DeserializeObject<ScreenInstance>(json);
             screen.Normalise();
             Assert.Equal(0, screen.Face.Start("D"));
-            Assert.Equal(255, screen.Face.Mask("D"));
+            Assert.Equal(127, screen.Face.Mask("D"));
             Assert.False(screen.Face.PageEnabled("D", 8));
-            Assert.Equal("8 of 9", PanelScreens.ZoneCount(screen.Face, "D"));
+            Assert.Equal("7 of 8", PanelScreens.ZoneCount(screen.Face, "D"));
             // Ticking it is all it takes.
             PanelScreens.Tick(screen.Face, "D", 8, true);
             Assert.True(screen.Face.PageEnabled("D", 8));
@@ -159,22 +162,24 @@ namespace OpenDashPlugin.Tests
         public void The_panel_lists_the_porsche_row_on_a_porsche_screen_and_only_there()
         {
             var face = PorscheScreen().Face;
-            Assert.Equal("9 of 9", PanelScreens.ZoneCount(face, "D"));
+            Assert.Equal("8 of 8", PanelScreens.ZoneCount(face, "D"));
             Assert.Equal("Porsche", PanelScreens.OpensOnName(face, "D"));
             // The aside draws the cycle from the page the band opens on, which is the Porsche row, then the
-            // house's eight in their order.
+            // house's seven in their order, the held-back car page among none of them.
+            var offered = FacePages.BandD.Where(p => p.Id != "car").Select(p => p.Name).ToArray();
             var rows = PanelScreens.ZoneRows(face, "D", true);
-            Assert.Equal(new[] { "Porsche" }.Concat(FacePages.BandD.Select(p => p.Name)), rows.Select(r => r.Name));
-            // The glance's page picker lists it after the house's eight.
-            Assert.Equal(FacePages.BandD.Select(p => p.Name).Concat(new[] { "Porsche" }), PanelScreens.GlancePageLabels(3, Porsche));
-            Assert.Equal(FacePages.BandD.Select(p => p.Name), PanelScreens.GlancePageLabels(3));
+            Assert.Equal(new[] { "Porsche" }.Concat(offered), rows.Select(r => r.Name));
+            // The glance's page picker lists it after the house's seven, as page 8.
+            Assert.Equal(offered.Concat(new[] { "Porsche" }), PanelScreens.GlancePageLabels(3, Porsche));
+            Assert.Equal(new[] { 0, 1, 2, 3, 4, 5, 6, 8 }, PanelScreens.GlancePages(3, Porsche));
+            Assert.Equal(offered, PanelScreens.GlancePageLabels(3));
             Assert.Equal("Band D · Porsche", PanelFacePlan.GlanceLabel(Contract.QuickGlanceValue(3, 8), Porsche));
             Assert.Equal(PanelFacePlan.GlanceOptions().Length + 1, PanelFacePlan.GlanceOptions(Porsche).Length);
 
             var house = new FaceSettings();
             house.Normalise();
-            Assert.Equal("8 of 8", PanelScreens.ZoneCount(house, "D"));
-            Assert.Equal(8, PanelScreens.ZoneRows(house, "D", true).Count);
+            Assert.Equal("7 of 7", PanelScreens.ZoneCount(house, "D"));
+            Assert.Equal(7, PanelScreens.ZoneRows(house, "D", true).Count);
         }
 
         [Fact]
