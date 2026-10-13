@@ -80,6 +80,92 @@ describe('the development tools', () => {
   });
 });
 
+describe('the site image', () => {
+  // The site hands out the zip this image compiles, so it is a release build in all but name, and
+  // the toolchain that builds it is held to the pins the other builds read (#915).
+  const dockerfile = read('site/Dockerfile');
+  const siteImage = read('.github/workflows/site-image.yml');
+
+  /** The Dockerfile's instructions, one to an entry, with comments dropped and continuations joined. */
+  const instructions = dockerfile
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('#'))
+    .join('\n')
+    .replace(/\\\n/g, ' ')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  /** Each FROM's image and the stage it names, with the line it was read from. */
+  const froms = instructions
+    .filter((line) => line.startsWith('FROM '))
+    .map((line) => {
+      const [, image = '', as, stage] = line.split(/\s+/);
+      return { line, image, stage: as?.toUpperCase() === 'AS' ? stage : undefined };
+    });
+  const stages = froms.flatMap(({ stage }) => (stage === undefined ? [] : [stage]));
+  /** Each COPY's sources, its options and destination left out. */
+  const copies = instructions
+    .filter((line) => line.startsWith('COPY '))
+    .map((line) => {
+      const words = line.split(/\s+/).slice(1);
+      const from = words.find((word) => word.startsWith('--from='))?.slice('--from='.length);
+      const paths = words.filter((word) => !word.startsWith('--'));
+      return { from, sources: paths.slice(0, -1) };
+    });
+
+  test('names every image it builds from by its exact version, never a tag that moves under it', () => {
+    const images = [
+      ...froms.map(({ image }) => image),
+      ...copies.flatMap(({ from }) => (from !== undefined && !stages.includes(from) ? [from] : [])),
+    ];
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) expect([image, /:\d+\.\d+\.\d+(-[a-z0-9.-]+)?$/.test(image)]).toEqual([image, true]);
+  });
+
+  test('compiles the plugin with an SDK global.json accepts, and with global.json beside it', () => {
+    const artifacts = froms.find(({ image }) => image.startsWith('mcr.microsoft.com/dotnet/sdk:'));
+    if (artifacts === undefined) throw new Error('no stage builds from the .NET SDK image');
+    // The stage that runs the release's own packaging copies the pin into the root it runs from, so
+    // the dotnet inside it reads the same global.json a local build and the runner do.
+    const stage = instructions.slice(instructions.indexOf(artifacts.line));
+    const next = stage.findIndex((line, i) => i > 0 && line.startsWith('FROM '));
+    const body = stage.slice(0, next < 0 ? undefined : next);
+    expect(body).toContain('WORKDIR /repo');
+    expect(body).toContain('RUN bun run package');
+    expect(body.some((line) => line.startsWith('COPY ') && line.split(/\s+/).includes('global.json'))).toBe(true);
+
+    // And the SDK the image carries is one that pin lets through, so the build cannot stop there
+    // either. The roll-forward policies are dotnet's own: each widens what may differ from the pin.
+    const { sdk } = JSON.parse(read('global.json')) as { sdk: { version: string; rollForward?: string } };
+    const parts = (version: string): number[] => {
+      const [major = NaN, minor = NaN, patch = NaN] = version.split('.').map(Number);
+      return [major, minor, Math.floor(patch / 100), patch % 100];
+    };
+    const tag = artifacts.image.match(/:(\d+\.\d+\.\d+)/)?.[1];
+    if (tag === undefined) throw new Error(`${artifacts.image} names no SDK version`);
+    const have = parts(tag);
+    const want = parts(sdk.version);
+    const same = { disable: 4, patch: 3, latestPatch: 3, feature: 2, latestFeature: 2, minor: 1, latestMinor: 1, major: 0, latestMajor: 0 }[
+      sdk.rollForward ?? 'latestPatch'
+    ];
+    expect(same).toBeDefined();
+    expect(have.slice(0, same)).toEqual(want.slice(0, same));
+    expect(have.map((n, i) => n - (want[i] ?? NaN)).find((d) => d !== 0) ?? 0).toBeGreaterThanOrEqual(0);
+  });
+
+  test('is rebuilt by CI on every push that changes something it copies', () => {
+    const paths = [...siteImage.slice(siteImage.indexOf('    paths:'), siteImage.indexOf('  workflow_dispatch:')).matchAll(/^\s+- "([^"]+)"$/gm)].map(
+      (m) => m[1],
+    );
+    expect(paths.length).toBeGreaterThan(0);
+    const sources = copies.filter(({ from }) => from === undefined).flatMap(({ sources }) => sources);
+    for (const source of sources) {
+      const watched = paths.includes(source) || paths.includes(`${source.replace(/\/$/, '')}/**`);
+      expect([source, watched]).toEqual([source, true]);
+    }
+  });
+});
+
 describe('compress-profiles.sh', () => {
   const run = (dir: string) => spawnSync('bash', [join(root, 'plugin', 'scripts', 'compress-profiles.sh'), dir], { encoding: 'utf8' });
 

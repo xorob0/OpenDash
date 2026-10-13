@@ -23,6 +23,13 @@
 # comes out of it on every push that touches anything it copies — see
 # .github/workflows/site-image.yml. A stage that stops copying something the site needs fails there,
 # on the branch that changed it, rather than in front of somebody pressing Redeploy.
+#
+# Every image below is named by its exact version, because the first one compiles the zip the site
+# hands out and the last two pick the Prisma engine the survey runs. A tag such as `sdk:8.0` or
+# `node:22-slim` is a different compiler or a different Debian whenever its publisher moves it, and
+# nothing in this repository would say so: the build would simply produce something else (#915). A
+# version that moves is a commit here, and the site image job builds it before anyone redeploys.
+# scripts/workflows.test.ts holds every FROM and COPY --from to that.
 
 # ---------------------------------------------------------------- 1. everything the site hands out
 # `bun run package` is the repository's own release command: it builds every .simhubdash and LED
@@ -35,13 +42,20 @@
 # It needs both toolchains, so bun is copied into the .NET SDK image rather than either being
 # reimplemented. That fuses what would be two cacheable layers into one; the alternative was two
 # stages that between them restate package.sh, and a stale download is worse than a slow build.
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS artifacts
-COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
+#
+# The SDK is the repository's as well as the image's: global.json is copied in with the manifests, so
+# the dotnet that runs here reads the same pin and roll-forward policy a local build and the CI runner
+# read, and a pin this image's SDK no longer satisfies fails the build rather than being ignored. The
+# image's own version is a feature band global.json accepts, which scripts/workflows.test.ts checks;
+# raising one is a reason to look at the other. plugin/Directory.Build.props explains why the pin is
+# there at all: a newer compiler than the pinned one has cost this repository three fixes.
+FROM mcr.microsoft.com/dotnet/sdk:8.0.425-bookworm-slim AS artifacts
+COPY --from=oven/bun:1.4.3-debian /usr/local/bin/bun /usr/local/bin/bun
 RUN apt-get update \
  && apt-get install -y --no-install-recommends zip unzip \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
-COPY package.json bun.lock bunfig.toml tsconfig.base.json VERSION ./
+COPY package.json bun.lock bunfig.toml tsconfig.base.json VERSION global.json ./
 COPY packages ./packages
 COPY design ./design
 COPY scripts ./scripts
@@ -54,11 +68,11 @@ RUN bun install --frozen-lockfile
 RUN bun run package
 
 # ---------------------------------------------------------------- 3. the site
-FROM node:22-slim AS build
+FROM node:22.23.3-bookworm-slim AS build
 WORKDIR /repo
 # The site's generators read design/tokens.json, packages/dash/src/contract.ts, scripts/changelog.ts,
 # VERSION and CHANGELOG.md, so those parts of the tree have to be here too.
-COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=oven/bun:1.4.3-debian /usr/local/bin/bun /usr/local/bin/bun
 COPY design ./design
 COPY packages ./packages
 COPY scripts ./scripts
@@ -109,7 +123,10 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN node node_modules/.bin/next build
 
 # ---------------------------------------------------------------- 4. what runs
-FROM node:22-slim AS runtime
+# On the same Debian as the build stage, bookworm, by name: Prisma picks its query engine by the
+# system's openssl, and bookworm's is the 3.0 that the debian-openssl-3.0.x target in schema.prisma
+# was written for. A slim tag without the release in it moves to the next Debian when node does.
+FROM node:22.23.3-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
