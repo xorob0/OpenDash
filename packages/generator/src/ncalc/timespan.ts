@@ -67,11 +67,14 @@ export function timeSpanToString(ts: TimeSpanValue): string {
  * SimHub's `toshorttime(timespan, decimals, alwaysSign, forceMinutes)`.
  *
  * Verified on the VM for the shapes the packages use: `toshorttime(t, 3, false, true)` is
- * `m:ss.fff`, and an hour or more is `h:mm:ss.fff`. Not verified, and written as the most likely
- * reading of SimHub's `ToShortTime`: the fraction is **truncated**, as every .NET TimeSpan format
- * truncates, rather than rounded; without `forceMinutes` and under a minute the seconds are drawn
- * without a leading zero (`5.2`); a negative span takes a `-` and `alwaysSign` puts a `+` on the
- * others, zero included.
+ * `m:ss.fff`, and an hour or more is `h:mm:ss.fff`. The fraction is **truncated** rather than
+ * rounded, which was verified by decompiling WoteverCommon's `StringExtensions.ToShortTime` (SimHub
+ * 9.12.x): it appends the TimeSpan custom format `\.fff`, and a TimeSpan `f` truncates. The lap
+ * time leans on that (#883): a lap of ten minutes drops its thousandth, and the digit dropped is
+ * the one the box already clipped. Not verified, and written as the most likely reading of the
+ * same method: without `forceMinutes` and under a minute the seconds are drawn without a leading
+ * zero (`5.2`); a negative span takes a `-` and `alwaysSign` puts a `+` on the others, zero
+ * included.
  */
 export function toShortTime(ts: TimeSpanValue, decimals: number, alwaysSign: boolean, forceMinutes: boolean): string {
   const neg = ts.ticks < 0;
