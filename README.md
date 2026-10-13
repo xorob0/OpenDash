@@ -166,8 +166,9 @@ Two more kinds of screen are built from the same modules and installed by the sa
 
 The **companion** is a phone or tablet beside the wheel showing one module at a time: lap times,
 delta, sectors, speedo, fuel, tyres, pit view, car settings, inputs, session, radar, track,
-leaderboard, relative, opponents, gear, stint and lap history. Twenty-one modules, each with its
-own switch in the plugin, paged with a wheel button through SimHub's own screen navigation.
+leaderboard, relative, opponents, gear, stint, lap history and engine readings. Each module has its
+own switch in the plugin, and the companion is paged with a wheel button through SimHub's own
+screen navigation.
 
 The **pit wall** is a 1920 by 1080 screen for someone who is not driving: three pages carrying
 the whole field with gaps, intervals, sectors, stints and stops, the driver's own lap next to it,
@@ -227,7 +228,7 @@ packages/
   generator/           TypeScript library that emits SimHub .djson scene graphs (no OpenDash knowledge)
   dash/                OpenDash itself: tokens in code, elements, components, cards, hero, layouts, build
     src/second/        the shared second-screen parts: fields, chips, gauges, traces, tables
-    src/modules/       the 21 companion modules, which are also the pit wall's zone pages
+    src/modules/       the companion modules, which are also the pit wall's zone pages
     src/screens/       the companion and pit wall packages
 plugin/
   OpenDash/            C# SimHub plugin: installer, properties, settings panel (builds on Linux)
