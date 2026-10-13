@@ -491,7 +491,17 @@ namespace OpenDashPlugin
                 result.BackupPath = Replace(extracted, target, keepAs, disk ?? DiskFolders.Instance, log);
                 log.Info("Installed " + folderName + " " + (result.Version ?? "(no version)") + " into " + target);
 
-                result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
+                // The folder is in by now, so a font that cannot be copied is reported on the result rather than thrown:
+                // a caller told "failed" would take the folder for the one that was there before (#588).
+                try
+                {
+                    result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
+                }
+                catch (Exception ex)
+                {
+                    result.FontsError = ex.Message;
+                    log.Error("Installed " + folderName + ", but could not copy its fonts into " + DashFonts + ": " + ex.Message);
+                }
                 return result;
             }
             finally
@@ -509,6 +519,10 @@ namespace OpenDashPlugin
 
         /// <summary>Prefix of the folder an install extracts into before moving it into place.</summary>
         public const string StagingPrefix = "_OpenDash_staging_";
+
+        /// <summary>Suffix of a copy written beside the ordinary backup, which takes the backup's name once a replace is
+        /// done (Replace).</summary>
+        public const string PartialSuffix = ".partial";
 
         /// <summary>Prefix of the folder a restore extracts a kept copy into before moving it into place.</summary>
         public const string RestorePrefix = "_OpenDash_restore_";
@@ -533,7 +547,9 @@ namespace OpenDashPlugin
         /// An aside folder is not swept blindly. It holds the dashboard that was there before a replace, which is
         /// all that is left of it when the process stopped before its replacement was moved in, so it is moved back
         /// under its own name when that name is free. When the name is taken, the replace got as far as moving the
-        /// new folder in, and the aside copy is deleted as the replace would have deleted it.
+        /// new folder in, and the aside copy is deleted as the replace would have deleted it. A replace that got further
+        /// renames its aside folder to a staging name before it deletes it, so a delete cut short is never put back.
+        /// A copy left beside the ordinary backup is removed too, since the backup it was to replace is still there.
         /// </remarks>
         public static int RemoveOrphanedStaging(string simHubRoot, IInstallLog log)
         {
@@ -553,7 +569,11 @@ namespace OpenDashPlugin
                         Directory.Move(folder, target);
                         log.Info("Put back " + name + ", which an interrupted install had moved aside.");
                     }
-                    Directory.Delete(aside, true);
+                    // What is left is spent, and is renamed as such before it is deleted, as Replace does, so that a
+                    // delete cut short here is never put back by a later sweep.
+                    var spent = Path.Combine(templates, StagingPrefix + Guid.NewGuid().ToString("N"));
+                    Directory.Move(aside, spent);
+                    Directory.Delete(spent, true);
                     removed++;
                 }
                 catch (Exception ex)
@@ -573,6 +593,21 @@ namespace OpenDashPlugin
                 catch (Exception ex)
                 {
                     log.Warn("Could not remove " + folder + ": " + ex.Message);
+                }
+            }
+            // A copy written beside the ordinary backup and never renamed over it, because the process stopped first
+            // (Replace). The backup it was to replace is still there.
+            foreach (var partial in Directory.GetFiles(templates, "*" + BackupSuffix + PartialSuffix))
+            {
+                try
+                {
+                    File.Delete(partial);
+                    removed++;
+                    log.Info("Removed a copy an interrupted install left unfinished: " + Path.GetFileName(partial));
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not remove " + partial + ": " + ex.Message);
                 }
             }
             return removed;
@@ -705,8 +740,8 @@ namespace OpenDashPlugin
         /// but a zip (#580, #869). Renames are what can be undone. The old folder is moved aside in one step, which
         /// Windows refuses whole while a file in it is open, so a held file now stops the replace before anything
         /// has changed. The copy is taken from the folder aside, the new folder is moved in, and only then is the old
-        /// one deleted, as a best effort, since by then it is no longer a dashboard. When the copy or the move in
-        /// fails, the old folder is moved back. When even that fails it is left whole in the aside folder, which
+        /// one renamed as spent (Retire) and deleted, as a best effort, since by then it is no longer a dashboard.
+        /// When the copy or the move in fails, the old folder is moved back. When even that fails it is left whole in the aside folder, which
         /// RemoveOrphanedStaging puts back at the next start, and the log says where it is.
         ///
         /// A copy that would overwrite one already on the shelf, which is the ordinary one-deep backup, is written
@@ -739,7 +774,7 @@ namespace OpenDashPlugin
                 throw new IOException(name + " is in use and was left as it is: " + ex.Message, ex);
             }
 
-            var pending = keepAs == null ? null : File.Exists(keepAs) ? keepAs + ".partial" : keepAs;
+            var pending = keepAs == null ? null : File.Exists(keepAs) ? keepAs + PartialSuffix : keepAs;
             try
             {
                 if (pending != null) Backup(aside, pending, log);
@@ -767,21 +802,24 @@ namespace OpenDashPlugin
             {
                 try
                 {
-                    File.Delete(keepAs);
-                    File.Move(pending, keepAs);
+                    // In one step, so that the older copy goes only as the newer one takes its name.
+                    if (File.Exists(keepAs)) File.Replace(pending, keepAs, null);
+                    else File.Move(pending, keepAs);
                     kept = keepAs;
                 }
                 catch (Exception ex)
                 {
-                    // The older copy is the one left on the shelf, and the folder it would have replaced is
-                    // OpenDash's own, since a copy of somebody's work always has a name of its own.
+                    // The older copy is the one left on the shelf, since a refused replace takes nothing away, and the
+                    // folder it is a copy of is OpenDash's own, since a copy of somebody's work always has a name of
+                    // its own.
                     log.Warn("Could not keep the previous copy of " + name + " as " + keepAs + ": " + ex.Message);
                     TryDeleteFile(pending, log);
                     kept = null;
                 }
             }
             if (kept != null) log.Info("Previous copy kept as " + kept);
-            Discard(holder, disk, log);
+            var spent = Retire(holder, disk, log);
+            if (spent != null) Discard(spent, disk, log);
             return kept;
         }
 
@@ -855,6 +893,32 @@ namespace OpenDashPlugin
             {
                 log.Error("Could not set aside the copy of " + Path.GetFileName(folder) + ", so it was left as it is: " + ex.Message);
                 throw new IOException("Could not set aside the existing " + Path.GetFileName(folder) + ": " + ex.Message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Renames the aside folder of a replace that is done to a staging name, and returns that name, or null when the
+        /// rename was refused.
+        /// </summary>
+        /// <remarks>
+        /// Once the new folder is in, the old one is spent, and a delete of it that stops part of the way through must
+        /// not leave anything the sweep would put back. The sweep puts an aside folder back whenever its name is free,
+        /// so a half-deleted one would have come back as a dashboard of nobody's once the screen was removed or resized
+        /// in the same session. A staging folder is only ever deleted. A refused rename has deleted nothing, so the
+        /// aside folder is left whole, and the sweep deletes it while the name is taken.
+        /// </remarks>
+        private static string Retire(string holder, IFolderMoves disk, IInstallLog log)
+        {
+            var spent = Path.Combine(Path.GetDirectoryName(holder), StagingPrefix + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Retrying(() => disk.Move(holder, spent));
+                return spent;
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not set " + holder + " out for removal; the next start of SimHub removes it: " + ex.Message);
+                return null;
             }
         }
 

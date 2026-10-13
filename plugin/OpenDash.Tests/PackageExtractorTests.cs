@@ -338,11 +338,94 @@ namespace OpenDashPlugin.Tests
             Assert.True(disk.Refused > 0, "the delete was refused");
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.NotNull(result.BackupPath);
-            Assert.Single(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.AsidePrefix + "*"));
+            // Set out as spent before the delete, so nothing aside is left to put back.
+            Assert.Empty(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.AsidePrefix + "*"));
+            Assert.Single(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.StagingPrefix + "*"));
 
             Assert.Equal(1, PackageExtractor.RemoveOrphanedStaging(root, null));
             Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
-            Assert.Empty(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.AsidePrefix + "*"));
+            Assert.Equal(new[] { "OpenDash" }, Directory.GetDirectories(Path.Combine(root, "DashTemplates")).Select(Path.GetFileName));
+        }
+
+        /// <summary>
+        /// A delete of the old folder that stops part of the way through, followed in the same session by the screen's
+        /// remove, which frees the name. The sweep used to put an aside folder back whenever its name was free, and so
+        /// put the half-deleted old folder back as a dashboard of nobody's, the shape #580 set out to remove.
+        /// </summary>
+        [Fact]
+        public void A_half_deleted_old_folder_is_not_put_back_once_its_name_is_free()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            // The delete takes one file and then stops, as a recursive delete does at a file it cannot remove.
+            var disk = new RefusingDisk
+            {
+                RefusesDelete = folder =>
+                {
+                    foreach (var file in Directory.GetFiles(folder, "*.djson", SearchOption.AllDirectories)) File.Delete(file);
+                    return true;
+                },
+            };
+
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, disk: disk);
+            Assert.True(disk.Refused > 0, "the delete was refused");
+            PackageExtractor.Remove(root, "OpenDash", false, null);
+            Assert.False(Directory.Exists(Templates("OpenDash")));
+
+            PackageExtractor.RemoveOrphanedStaging(root, null);
+            Assert.False(Directory.Exists(Templates("OpenDash")));
+            Assert.Empty(Directory.GetDirectories(Path.Combine(root, "DashTemplates")));
+        }
+
+        /// <summary>
+        /// An aside folder whose name is taken is spent, and the sweep sets it out as such before it deletes it, so that
+        /// a delete the sweep cannot finish does not leave something a later sweep puts back once the name is free.
+        /// </summary>
+        [Fact]
+        public void The_sweep_sets_a_spent_aside_folder_out_before_it_deletes_it()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null);
+            var aside = Path.Combine(root, "DashTemplates", PackageExtractor.AsidePrefix + "deadbeef", "OpenDash");
+            Directory.CreateDirectory(aside);
+            File.WriteAllText(Path.Combine(aside, "OpenDash.djson"), "{\"old\":true}");
+
+            Assert.Equal(1, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal(new[] { "OpenDash" }, Directory.GetDirectories(Path.Combine(root, "DashTemplates")).Select(Path.GetFileName));
+        }
+
+        /// <summary>
+        /// A copy written beside the ordinary backup by a replace the process did not live to finish is removed at the
+        /// next start, and the backup it was to replace is left as it is.
+        /// </summary>
+        [Fact]
+        public void A_copy_left_beside_the_backup_is_removed_and_the_backup_kept()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null);
+            var backup = Path.Combine(root, "DashTemplates", "OpenDash" + PackageExtractor.BackupSuffix);
+            File.WriteAllText(backup + PackageExtractor.PartialSuffix, "half a zip");
+
+            Assert.Equal(1, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.False(File.Exists(backup + PackageExtractor.PartialSuffix));
+            Assert.Equal("0.1.0", Versioning.ParseDashboardVersion(Entry(backup, "OpenDash.djson.metadata")));
+        }
+
+        /// <summary>
+        /// Fonts that cannot be copied once the folder is in no longer make the install throw, since a caller told it
+        /// failed would take the folder for the one that was there before (#588). The result says why instead.
+        /// </summary>
+        [Fact]
+        public void Fonts_that_cannot_be_copied_are_reported_on_an_install_that_happened()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            if (Directory.Exists(Path.Combine(root, "DashFonts"))) Directory.Delete(Path.Combine(root, "DashFonts"), true);
+            File.WriteAllText(Path.Combine(root, "DashFonts"), "not a folder");
+
+            var result = PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null);
+
+            Assert.NotNull(result.FontsError);
+            Assert.Equal(0, result.FontsCopied);
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
         }
 
         /// <summary>
