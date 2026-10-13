@@ -130,6 +130,11 @@ namespace OpenDashPlugin
         /// wants quiet on the way down the lane wants it of every surface. #791.</summary>
         public bool FlagsInPitLane { get; set; } = Contract.DefaultFlagsInPitLane;
 
+        /// <summary>Whether the plugin publishes the race as it stands on the road, so an iRacing place moves
+        /// when a car is passed rather than at the line. On by default; off, every dashboard draws iRacing's
+        /// own order. Rig-wide, because a place on the rim and on the pit wall is one answer. #1063.</summary>
+        public bool LivePositions { get; set; } = Contract.DefaultLivePositions;
+
         /// <summary>Card number per slot, index 0 is slot 1. Always Contract.SlotCount long after Normalise().</summary>
         public int[] Slots { get; set; } = Contract.DefaultSlots();
 
@@ -2188,6 +2193,7 @@ namespace OpenDashPlugin
             DriverNameTeam = other.DriverNameTeam;
             ClockFormat = other.ClockFormat;
             FlagsInPitLane = other.FlagsInPitLane;
+            LivePositions = other.LivePositions;
             Screens = other.Screens == null ? null : new List<string>(other.Screens);
             Slots = other.Slots == null ? null : (int[])other.Slots.Clone();
             Modules = other.Modules == null ? null : (bool[])other.Modules.Clone();

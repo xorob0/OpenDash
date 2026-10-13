@@ -1061,8 +1061,8 @@ describe('the pit family, the spotter and the warnings', () => {
 
   test('speeding is a comparison of two published numbers, not state between frames', () => {
     const text = serializeProfile(profile);
-    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeedMs]');
-    expect(text).toInclude('[DataCorePlugin.GameData.SpeedKmh]');
+    expect(text).toInclude('[DataCorePlugin.GameData.PitLimiterSpeed]');
+    expect(text).toInclude('[DataCorePlugin.GameData.SpeedLocal]');
     expect(text).toInclude('[DataCorePlugin.GameData.IsInPitLane]');
   });
 
@@ -1113,11 +1113,16 @@ describe('the pit family, the spotter and the warnings', () => {
   test('speeding is compared in one unit, and an unpublished limit never fires', () => {
     // PitLimiterSpeed is converted to the user's local speed unit, so comparing it with SpeedKmh
     // reads as speeding from a standstill for anyone on MPH -- and that term gates everything below
-    // the flags, so it would black out the panel rather than merely light the wrong picture.
+    // the flags, so it would black out the panel rather than merely light the wrong picture. The
+    // pair is `SpeedLocal` and `PitLimiterSpeed`, which SimHub converts by the same setting.
+    //
+    // It is not `PitLimiterSpeedMs`, which is what this asserted: that member carries
+    // `[DoNotExpose]` and is never a property, so the box read null, defaulted it to 999 m/s and
+    // never lit. readings.test.ts drives the comparison on a metric and an imperial rig.
     const text = serializeProfile(profile);
-    expect(text).toInclude('PitLimiterSpeedMs');
-    expect(text).not.toInclude('GameData.PitLimiterSpeed]');
-    expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeedMs], 999)');
+    expect(text).not.toInclude('PitLimiterSpeedMs');
+    expect(text).not.toInclude('GameData.SpeedKmh]');
+    expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeed], 999)');
   });
 
   test('the pit family outranks the warnings, and the spotter is not in the ranking at all', () => {

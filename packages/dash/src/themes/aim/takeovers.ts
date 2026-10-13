@@ -21,13 +21,13 @@ import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { pitAlertVisible } from '../../components/pitAlerts.ts';
 import { rect } from '../../design/geometry.ts';
-import { inTheCar } from '../../second/values.ts';
+import { inTheCar, pitLimitText } from '../../second/values.ts';
 import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
 import { lcdColour, reading, segment, segmentWidth } from './register.ts';
 
-const { and, div, fmt, game, gt, iff, isnull, lt, mod, num, or, raw, str, truncate } = ncalc;
+const { and, div, gt, iff, isnull, mod, num, or, raw, str, truncate } = ncalc;
 
 /** The canvas's takeovers at 440 x 284: `Pit Speed` 30 over the limit 64, 24 apart; the warning box 6 in, 3 px of ink, two lines of 26, 16 apart. */
 const LIMITER = { label: 30, value: 64, gap: 24 } as const;
@@ -43,9 +43,6 @@ const WARNINGS = [
 ] as const;
 
 const WARNING_WIDEST = WARNINGS.map((w) => w.text).reduce((a, b) => (b.length > a.length ? b : a));
-
-/** The lane's limit in the driver's unit; an unpublished one reads as the house's no-data dashes. */
-const pitLimit = (): Expr => isnull(game('PitLimiterSpeed'), num(999));
 
 /** A word in inverse video: the ink block, `pad` round it, and the word in the ground. */
 function inverse(name: string, text: string, centreX: number, top: number, size: number): Item[] {
@@ -75,7 +72,8 @@ function limiter(frame: Rect): Item {
     { kind: 'rect', name: 'limiter.ground', rect: frame, backgroundColor: lcdColour('ground') },
     ...inverse('limiter.label', 'Pit Speed', frame.left + frame.width / 2, top, label),
     ...reading('limiter.limit', '60', Math.round(frame.left + (frame.width + valueWidth) / 2), top + label + gap, value, {
-      bind: iff(lt(pitLimit(), num(999)), fmt(pitLimit(), '0'), str('--')),
+      // The lane's limit in the driver's unit; an unpublished one reads as the house's no-data dashes.
+      bind: pitLimitText(),
       widest: '888',
     }),
   ];

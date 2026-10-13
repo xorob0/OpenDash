@@ -107,7 +107,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
     .join('');
   const fns = {
     P: (name: string): unknown => (name in props ? props[name] : null),
-    // SimHub's `prop(name)`, a read whose name is itself an expression: the lap history's slots.
+    // SimHub's `prop(name)`, a property whose name is itself an expression, as `[name]` is one written out.
     prop: (name: string): unknown => (name in props ? props[name] : null),
     IF: (c: unknown, a: unknown, b: unknown): unknown => (c ? a : b),
     isnull: (v: unknown, d?: unknown): unknown => (d === undefined ? v === null || v === undefined : (v ?? d)),

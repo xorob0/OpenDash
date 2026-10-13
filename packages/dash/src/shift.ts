@@ -103,6 +103,17 @@ export const mirrorStageLit = (stage: number, local: number, count: number): Exp
   stage === 0 ? bandLit(firstRpm(), shiftRpm(), local, count) : stage === 1 ? bandLit(shiftRpm(), lastRpm(), local, count) : ge(rpms(), lastRpm());
 
 /**
+ * The forward gears, as the strings SimHub's `[Gear]` reports them in. One list for every reader:
+ * the box's gear glyphs, the ghosted neighbours either side of the gear, and the pit wall's gear
+ * trace. There were three, and they disagreed about `9`: the box drew it, the ghosts stopped at 8,
+ * and the trace sent it to neutral.
+ *
+ * Nine is above what these sims publish today, and a car with fewer simply never reaches the top.
+ * A list that stops short draws the top gear of a longer box as something else.
+ */
+export const FORWARD_GEARS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+/**
  * Top gear: the gear there is nothing to shift out of. Read from iRacing's own numeric gear rather
  * than `[Gear]`, which is a string ("N", "R", "1"), and false whenever the car does not say how
  * many gears it has — so a car that publishes no count keeps flashing as it did.

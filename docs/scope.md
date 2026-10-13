@@ -64,10 +64,11 @@ the foot.
 
 Each zone shows **one page at a time from its own catalogue, and a wheel button cycles it**. Zone
 A chooses among four pages built around the gear; zones B and C among the module pages that also
-serve the companion and the pit wall; band D among eight that suit a wide short band, with a flag
+serve the companion and the pit wall; band D among seven that suit a wide short band, with a flag
 taking the band over for three seconds when it comes out and then settling into the block at each
-end until it clears. The bar is not a zone and does not cycle: it carries what
-does not change during a lap, which is what earns it the space.
+end until it clears. Band D's eighth page, the telltale row, is held back from 1.0 until its
+pictograms exist (#969). The bar is not a zone and does not cycle: it carries what does not change
+during a lap, which is what earns it the space.
 
 A page is never scaled. It is laid out for the **shape** of the box it is given, and it sheds its
 secondary ranks before it shrinks its numerals, so a bigger screen shows more in each zone rather
@@ -220,9 +221,9 @@ they shipped.
 
 The plugin installs the embedded packages when one is missing or older than the embedded copy,
 attaches every setting as a SimHub property under the `OpenDash` prefix, and draws a settings
-page in SimHub's left menu. It does not render, does not read telemetry and does not compute
-anything; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why, and the
-question of whether it should ever compute is open as #98.
+page in SimHub's left menu. It does not render, and it computes only what a feature needs and nothing
+else can provide; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why it started
+inert, and [ADR 0009](decisions/0009-does-the-plugin-compute.md) is the rule for when it may compute.
 
 The Screens page does now show the screen it is configuring, and that is not a reversal of the sentence
 above. The panel hosts SimHub's own renderer, handed the `.djson` under `DashTemplates` that the
@@ -271,9 +272,9 @@ renderer; a picture of a dashboard produced by any code of ours still falls unde
 overwritten by the next build, and a pull request that contains a hand-edited scene graph cannot
 be reviewed. See [ADR 0002](decisions/0002-djson-generated-from-source.md).
 
-**Computed telemetry of our own.** The plugin does not compute, and
-[ADR 0009](decisions/0009-does-the-plugin-compute.md) is why the refusal turned out to be cheap to
-keep: SimHub already publishes the fuel family and the delta family, iRacing publishes the one
+**Computed telemetry of our own.** The plugin does not compute unless a feature needs a value that
+cannot be had any other way, and [ADR 0009](decisions/0009-does-the-plugin-compute.md) is why the
+refusal is cheap to keep almost everywhere: SimHub already publishes the fuel family and the delta family, iRacing publishes the one
 delta SimHub lacks, the live delta to the last lap, and the rest of what the catalogue draws is
 arithmetic over properties that exist, done in the expression. A five-lap average is
 `PreviousLap_00` to `_04` and a division, not a state machine.
@@ -281,8 +282,10 @@ arithmetic over properties that exist, done in the expression. A five-lap averag
 Two things fall outside that and are honestly labelled rather than quietly empty: virtual energy,
 which only Le Mans Ultimate publishes, and strength of field, which SimHub does not expose at all.
 
-The line moves if a derivation is shared widely enough to need a name, or if something genuinely
-needs memory between frames. The first is a JavaScript binding before it is a plugin: a package no
+The line moves where a feature needs a value that nothing else can provide: one SimHub and the sim
+do not publish and no expression can derive, because it needs memory between frames or one answer that
+many items agree on. A derivation that is merely shared widely enough to need a name is a JavaScript
+binding before it is a plugin: a package no
 longer stands on its own (#438), but a derivation in the expression still draws on a rig whose
 plugin is not yet enabled, and one in the plugin does not.
 
@@ -449,7 +452,7 @@ carries until that lands. Each is restated above with the record that would have
 | Still refused | What would have to happen first |
 |---|---|
 | Personalisation that changes the layout | #764: a package built from the user's own tokens. Nothing at runtime re-measures a text box. A shipped car theme is a build-time variant and is not under this line ([ADR 0015](decisions/0015-car-themes.md)) |
-| Computed telemetry of our own | Nothing. [ADR 0009](decisions/0009-does-the-plugin-compute.md) is written and accepted, and it confirmed the refusal rather than moving it |
+| Computed telemetry of our own | A feature that needs a value nothing else can provide, which is the rule [ADR 0009](decisions/0009-does-the-plugin-compute.md) sets; the race as it stands on the road on iRacing (#1063) is the case that made it one |
 
 None of them is built, and until one is, the refusal is the current answer. **A pull request that
 falls under one of these lines is declined however well it is written**; the line moves first, in
