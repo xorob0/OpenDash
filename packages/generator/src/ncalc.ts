@@ -28,6 +28,18 @@ export const str = (s: string): Expr => `'${s.replace(/\\/g, '\\\\').replace(/'/
 
 export const num = (n: number): Expr => (Number.isFinite(n) ? String(n) : '0');
 
+/**
+ * A number literal NCalc reads as a double: `0.0` where {@link num} writes `0`.
+ *
+ * NCalc types a literal by its spelling, so `0` is an Int32 and `0.0` a double, and the two are not
+ * interchangeable wherever the type of an operand decides the type of the answer. {@link max} and
+ * {@link min} are where that bites, and a literal bound written on their left is what this is for.
+ */
+export const real = (n: number): Expr => {
+  const s = num(n);
+  return /^-?\d+$/.test(s) ? `${s}.0` : s;
+};
+
 const wrap = (e: Expr): Expr => `(${e})`;
 
 export const not = (a: Expr): Expr => `!${wrap(a)}`;
@@ -94,6 +106,8 @@ export const secondsToTimespan = (s: Expr): Expr => `secondstotimespan(${s})`;
 
 export const round = (value: Expr, decimals = 0): Expr => `round(${value}, ${decimals})`;
 export const truncate = (value: Expr): Expr => `truncate(${value})`;
+/** NCalc's own `Ceiling`, dispatched exactly as `truncate` is, by its lower-cased name. */
+export const ceiling = (value: Expr): Expr => `ceiling(${value})`;
 export const abs = (value: Expr): Expr => `abs(${value})`;
 export const max = (a: Expr, b: Expr): Expr => `max(${a}, ${b})`;
 export const min = (a: Expr, b: Expr): Expr => `min(${a}, ${b})`;
@@ -219,6 +233,11 @@ export type DriverFunction =
   | 'gaptoplayer'
   | 'gaptoleadercombined'
   | 'relativegaptoplayer'
+  /**
+   * How far round its lap the car is, from 0 at the line to 1. `Opponent.TrackPositionPercent`,
+   * which iRacing fills from `CarIdxLapDistPct` and `GameManagerBase` folds into 0..1 (9.12.6).
+   */
+  | 'trackpositionpercent'
   | 'iscarinpit'
   | 'iscarinpitlane'
   | 'pitcount'
