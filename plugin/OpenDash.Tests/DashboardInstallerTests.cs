@@ -502,7 +502,7 @@ namespace OpenDashPlugin.Tests
             var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
             Assert.True(installer.Write(round).Written);
 
-            ScreenInstaller.Remove(round, root, null);
+            ScreenInstaller.Remove(round, root, null, null);
             settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
             var written = installer.Write(round);
 

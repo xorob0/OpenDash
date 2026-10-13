@@ -426,7 +426,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Keep it", PanelScreens.KeepButton);
             Assert.Equal("Remove it", PanelScreens.RemoveItButton);
             Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio.", PanelScreens.Removed("Rim"));
-            Assert.Equal("Removed Rim, but its dashboard could not be removed. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
+            Assert.Equal("Could not remove Rim. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
+            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio. Your edited dashboard is kept in DashTemplates as OpenDash Rim_yours_20261014-103000Z.zip.",
+                PanelScreens.Removed("Rim", System.IO.Path.Combine("DashTemplates", "OpenDash Rim_yours_20261014-103000Z.zip")));
         }
 
         /// <summary>A face's rows, in voice.md's words where the artboard's differ, which voice.md wins (#791).</summary>
@@ -1467,7 +1469,9 @@ namespace OpenDashPlugin.Tests
                 "edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption",
                 "reinstall.Click += (sender, args) => ReinstallScreen(screen);",
                 "Select(PanelPage.Screens, copy.Namespace);",
-                "Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);",
+                "Say(result.Ok ? PanelScreens.Removed(screen.Name, result.KeptCopy) : PanelScreens.RemoveFailed(screen.Name), result.Ok);",
+                // Off the rig before the folder goes, and back where it was when the folder stayed (#861).
+                "var at = Settings.Rig?.IndexOf(screen) ?? -1; Settings.RemoveScreen(screen.Namespace); Save(); WriteScreenThen(() => ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog()), result => { if (!result.Ok) Settings.PutScreenBack(screen, at);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");

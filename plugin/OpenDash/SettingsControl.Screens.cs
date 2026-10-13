@@ -1135,7 +1135,7 @@ namespace OpenDashPlugin
             Save();
             WriteScreenThen(() =>
             {
-                var old = ScreenInstaller.Remove(before, plugin.Installer.SimHubRoot, log);
+                var old = ScreenInstaller.Remove(before, plugin.Installer.SimHubRoot, plugin.Installer.Record, log);
                 if (!old.Ok) Log.Warn("The old folder of " + before.Name + " could not be removed: " + old.Error);
                 return plugin.Installer.Write(screen);
             }, result =>
@@ -1208,15 +1208,21 @@ namespace OpenDashPlugin
             remove.Click += (sender, args) =>
             {
                 if (WriteRefused()) return;
-                WriteScreenThen(() => ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, new SimHubInstallLog()), result =>
+                // Off the rig and saved before the folder goes, so that a SimHub closing during the delete saves a rig
+                // without the screen rather than one whose next start writes it again; and back on the rig, where it
+                // was, when the folder could not be taken out, which leaves it whole (#861).
+                var at = Settings.Rig?.IndexOf(screen) ?? -1;
+                Settings.RemoveScreen(screen.Namespace);
+                Save();
+                WriteScreenThen(() => ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog()), result =>
                 {
-                    Settings.RemoveScreen(screen.Namespace);
+                    if (!result.Ok) Settings.PutScreenBack(screen, at);
                     Save();
                     if (screen.Theme != null) plugin.SyncCarPlaylists();
-                    Select(PanelPage.Screens, null);
+                    Select(PanelPage.Screens, result.Ok ? null : screen.Namespace);
                     Redraw();
-                    if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed: " + result.Error);
-                    Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);
+                    if (!result.Ok) Log.Warn("The dashboard of " + screen.Name + " could not be removed, so the screen stays: " + result.Error);
+                    Say(result.Ok ? PanelScreens.Removed(screen.Name, result.KeptCopy) : PanelScreens.RemoveFailed(screen.Name), result.Ok);
                 });
             };
             var keep = Ui.Button(PanelScreens.KeepButton, PanelButtonKind.Ghost, PanelButtonSize.Large);

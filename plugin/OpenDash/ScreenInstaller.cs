@@ -26,6 +26,10 @@ namespace OpenDashPlugin
 
         /// <summary>True when this call actually wrote or removed the folder.</summary>
         public bool Written { get; set; }
+
+        /// <summary>The copy kept of a folder somebody had edited, when this call replaced or removed one; null
+        /// otherwise, the ordinary backup of a folder OpenDash wrote included.</summary>
+        public string KeptCopy { get; set; }
     }
 
     public static class ScreenInstaller
@@ -111,14 +115,22 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Deletes the folder a screen owns.
+        /// Deletes the folder a screen owns, keeping a copy of it first when somebody has edited it.
         /// </summary>
         /// <remarks>
         /// Only the folder. The screen's settings are the rig's to drop, and a wheel button bound to its
         /// actions is SimHub's; the panel says both before it asks. A folder that is not there already
         /// is a success, because the thing the caller wanted is true.
+        ///
+        /// It used to be a bare recursive delete, which a held file stopped part of the way through, and it
+        /// kept nothing of a dashboard somebody had edited in Dash Studio (#861). It goes through
+        /// PackageExtractor.Remove now, which takes the folder out whole or not at all, and keeps the edited
+        /// one's copy under a name no install reclaims, as a reinstall over it would have.
         /// </remarks>
-        public static ScreenInstallResult Remove(ScreenInstance screen, string simHubRoot, IInstallLog log)
+        /// <param name="record">What OpenDash last wrote into each folder, which tells an edited one; null when unknown,
+        /// and an unknown folder is taken as OpenDash's own, as the installer takes it.</param>
+        /// <param name="disk">How the folder is moved and deleted; the disk itself when omitted.</param>
+        public static ScreenInstallResult Remove(ScreenInstance screen, string simHubRoot, IFolderRecord record, IInstallLog log, IFolderMoves disk = null)
         {
             log = log ?? NullInstallLog.Instance;
             var result = new ScreenInstallResult { Folder = screen?.Folder };
@@ -128,7 +140,7 @@ namespace OpenDashPlugin
             {
                 if (Directory.Exists(folder))
                 {
-                    Directory.Delete(folder, true);
+                    result.KeptCopy = PackageExtractor.Remove(simHubRoot, screen.Folder, Edited(screen.Folder, folder, record), log, disk);
                     result.Written = true;
                     log.Info("Removed " + screen.Folder + ".");
                 }
@@ -139,6 +151,16 @@ namespace OpenDashPlugin
                 log.Error("Removing " + screen.Folder + " failed: " + ex);
             }
             return result;
+        }
+
+        /// <summary>
+        /// Whether a folder has changed since OpenDash wrote it, which is the question the installer asks before it
+        /// replaces one (DashboardInstaller.Process): a folder with no record is adopted rather than taken as somebody's.
+        /// </summary>
+        private static bool Edited(string folderName, string folder, IFolderRecord record)
+        {
+            var remembered = record?.Get(folderName);
+            return !string.IsNullOrWhiteSpace(remembered) && !FolderFingerprint.LooksUntouched(folder, remembered);
         }
 
         /// <summary>

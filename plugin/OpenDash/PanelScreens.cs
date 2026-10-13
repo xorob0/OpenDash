@@ -300,16 +300,31 @@ namespace OpenDashPlugin
 
         /// <summary>After a remove: SimHub reads its list at startup, so the step left is named, and the list
         /// named by where the driver meets it.</summary>
-        public static string Removed(string name)
+        public static string Removed(string name, string keptCopy = null)
         {
-            return "Removed " + name + ". Restart SimHub to take its dashboard out of Dash Studio.";
+            return WithEditsKept("Removed " + name + ". Restart SimHub to take its dashboard out of Dash Studio.", keptCopy);
         }
 
-        /// <summary>A remove whose folder stayed: "removed", as the sheet says, and the reason in the log, as
-        /// PanelAddScreen.DuplicateFailed points there.</summary>
+        /// <summary>A remove whose folder could not be taken out, which leaves the screen on the rig as it was (#861):
+        /// it used to say "removed" and drop the screen over a folder still there, which then belonged to nothing.
+        /// The reason is in the log, as PanelAddScreen.DuplicateFailed points there.</summary>
         public static string RemoveFailed(string name)
         {
-            return "Removed " + name + ", but its dashboard could not be removed. See SimHub's log.";
+            return "Could not remove " + name + ". See SimHub's log.";
+        }
+
+        /// <summary>
+        /// The line after a press, with the copy kept of a dashboard somebody had edited named after it, when the press
+        /// took one out of DashTemplates (#861, #588).
+        /// </summary>
+        /// <remarks>
+        /// Named by its file, because nothing on the panel offers it back: Put mine back reads the rig's folders, and
+        /// the folder this copy is of is no longer one of them.
+        /// </remarks>
+        public static string WithEditsKept(string line, string keptCopy)
+        {
+            if (string.IsNullOrEmpty(keptCopy)) return line;
+            return line + " Your edited dashboard is kept in DashTemplates as " + System.IO.Path.GetFileName(keptCopy) + ".";
         }
 
         // --- A face's rows ------------------------------------------------------------------------------

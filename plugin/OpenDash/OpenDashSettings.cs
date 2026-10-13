@@ -1954,6 +1954,24 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Puts a removed screen back where it was on the rig, which is how a remove whose folder could not be
+        /// deleted is undone (#861). A rig that already holds the screen's namespace is left as it is.
+        /// </summary>
+        /// <remarks>
+        /// The panel takes a screen off the rig and saves before it deletes the folder, so that a SimHub closing
+        /// during the delete saves a rig without it rather than one that reinstalls it at the next start. The folder
+        /// is then deleted whole or not at all, and when not, this brings the screen back, settings and place on the
+        /// rig included, since RemoveScreen dropped nothing else.
+        /// </remarks>
+        public void PutScreenBack(ScreenInstance screen, int index)
+        {
+            if (screen == null) return;
+            if (Rig == null) Rig = new List<ScreenInstance>();
+            if (Rig.Any(other => other != null && string.Equals(other.Namespace, screen.Namespace, StringComparison.Ordinal))) return;
+            Rig.Insert(Math.Max(0, Math.Min(index, Rig.Count)), screen);
+        }
+
+        /// <summary>
         /// What the stock screen at a size is set to, created with its defaults if the rig has not got one.
         /// </summary>
         /// <remarks>

@@ -786,7 +786,57 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Zips a folder into a copy. Throws when it cannot, which stops the replace.
+        /// Deletes a dashboard folder, keeping a copy of it first when it holds somebody's work, and returns where that
+        /// copy went. Throws when the folder could not be taken out of DashTemplates, which then holds it as it was.
+        /// </summary>
+        /// <remarks>
+        /// The screen's Remove used to be a bare recursive delete, which a file SimHub held stopped part of the way
+        /// through, leaving a folder that was no longer a dashboard and that no screen owned (#861). The folder is
+        /// moved out in one step instead, which Windows refuses whole while a file in it is open, and deleted once it
+        /// is out. Out means a working folder RemoveOrphanedStaging sweeps, so a delete that fails there, or that a
+        /// closing SimHub cuts short, is finished at the next start.
+        ///
+        /// The copy is taken while the folder is still in place, so that nothing a closing SimHub interrupts can lose
+        /// the work: either the folder is still there or its copy is. It is kept under a name of its own, as Install
+        /// keeps one, and removed again when the folder could not be moved, since the folder still holds the work.
+        /// </remarks>
+        /// <param name="holdsAuthoredWork">Whether somebody has edited the folder, so that a copy of it is kept.</param>
+        /// <param name="disk">How the folder is moved and deleted; the disk itself when omitted.</param>
+        /// <returns>The copy kept, or null when none was.</returns>
+        public static string Remove(string simHubRoot, string folderName, bool holdsAuthoredWork, IInstallLog log, IFolderMoves disk = null)
+        {
+            log = log ?? NullInstallLog.Instance;
+            disk = disk ?? DiskFolders.Instance;
+            var templates = Path.Combine(simHubRoot, DashTemplates);
+            var target = Path.Combine(templates, folderName);
+            if (!Directory.Exists(target)) return null;
+
+            string kept = null;
+            if (holdsAuthoredWork)
+            {
+                kept = BackupPathFor(templates, folderName, true);
+                Backup(target, kept, log);
+            }
+            var holder = Path.Combine(templates, StagingPrefix + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(holder);
+            try
+            {
+                Retrying(() => disk.Move(target, Path.Combine(holder, folderName)));
+            }
+            catch (Exception ex)
+            {
+                if (kept != null) TryDeleteFile(kept, log);
+                TryDeleteEmpty(holder);
+                log.Error("Could not move " + folderName + " out of DashTemplates, so it was left as it is: " + ex.Message);
+                throw new IOException(folderName + " is in use and was left as it is: " + ex.Message, ex);
+            }
+            if (kept != null) log.Info("Your copy of " + folderName + " is kept as " + kept);
+            Discard(holder, disk, log);
+            return kept;
+        }
+
+        /// <summary>
+        /// Zips a folder into a copy. Throws when it cannot, which stops the replace or the remove.
         /// </summary>
         /// <remarks>
         /// It used to warn and return null, and the caller deleted the folder regardless, so the one case the backup
