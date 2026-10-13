@@ -199,12 +199,43 @@ The Gap and the Int columns move with the rows, because both are measured agains
 row and that car has to be one the list draws. On a filtered list the Gap is to the leader of the
 player's class and the Int is to the row above it on the list rather than to whatever car the
 leaderboard puts in between. Measured the other way a class running a lap behind the overall leader
-reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. SimHub does
-publish a gap to the class leader, as `gaptoclassleader`, `lapstoclassleader` and
-`gaptoclassleadercombined`; both columns are nevertheless built today as differences of the two
-gaps to the overall leader, which is the arithmetic the pit wall values test evaluates against its
-model of a field, and reading SimHub's own three is the simplification recorded against
-`carClassRaceGap` in `second/values.ts`.
+reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. The seconds
+in both columns are differences of the two gaps to the overall leader, which for a car of the
+player's class is what SimHub's own `gaptoclassleader` is.
+
+The car every gap is measured from, the first of SimHub's leaderboard, has no gap of its own unless
+it is the player's, so both differences take its gap as 0 where SimHub leaves it null. Before that,
+counting in class, every classmate of the race leader read `--`, which is every car of a
+single-class race, and the second row's Int was empty under either setting (#1041). Where the
+class leader leads the race the class gap is then exact. Where another class leads, both gaps are
+measured on the race leader's running, so their difference is the time the race leader took
+between the two cars and not the time the class leader took, which is also what SimHub's own figure
+is. Any other car with no gap still reads `--`, being a car SimHub has not measured.
+
+Whether a row reads seconds or laps is asked of distance, through SimHub's `lapstoleader` on a list
+of the whole field and `lapstoclassleader` on a list of one class: each is the whole laps a car is
+behind, counted from the two cars' laps and fractions of a lap. The lap counters cannot answer it,
+because `currentlap` goes up as a car crosses the line, so a car on the lead lap has a counter one
+below the leader's for the seconds between the two crossing it. Asked that way, the overall column
+fell through to SimHub's `gaptoleadercombined` for those seconds and drew two decimals beside rows
+of one, and the class column read `+1L` on a classmate seconds behind its class leader (#1023).
+Neither column reads SimHub's combined strings, which write two decimals and `+1 lap`; both spell
+a lapped car `+1L`. The seconds are measured from the leader on the road, which the plugin
+publishes on iRacing (#1063), and the laps are SimHub's, counted from the sim's leader. So in the
+lap after a pass for the lead the count can be one short: a car a lap down on the road leader and
+not on the sim's reads its seconds to the road leader, which are true, and a car two laps down on
+the one and one on the other reads `+1L`.
+
+All of that is a race. SimHub's gaps measure distance run in every session, and in practice and
+qualifying the leaderboard is ordered by best lap, so its first car is the fastest rather than the
+furthest round and the distance between two cars says only how long each has been out: a car 0.4 s
+off the best lap read `+5L`, and one 0.6 s off it that had run more laps a negative three-digit gap.
+Outside a race both columns therefore measure best laps, the Gap a car's best lap less that of the
+row it counts from and the Int less that of the row above, and a car with no best lap reads `--`
+in the Gap and nothing in the Int (#1040). Which sessions those are is a list of the names iRacing
+gives practice, qualifying, testing and warmup; a session named anything else, or nothing, is
+measured as a race, because best-lap gaps in a race would be small and believable and false, where
+distance gaps in a practice are plainly nonsense.
 
 The word on the row a Gap column counts from is the one cell of the two that follows the numbering
 instead, `Lead` being a claim about a place rather than a measurement. A zone filtered to one class
@@ -214,9 +245,14 @@ there, as the Int cell of the same row already is, and it carries the word where
 row draws is the first. A class that leads the race keeps it under either setting.
 
 The ± column follows the numbering for the same reason, a places-gained figure being the movement
-of the place the column beside it shows. Counting in class it reads SimHub's `PositionGainClass`
-instead of its `PositionGain`, so that a car which has climbed three places overall and one within
-its own class does not draw the one figure against the other number.
+of the place the column beside it shows, so that a car which has climbed three places overall and
+one within its own class does not draw the one figure against the other number. SimHub publishes a
+class figure, `PositionGainClass`, but counts it from the class place of the first frame it saw the
+car, which for a car the sim had not placed yet is a place SimHub numbered from the driver list, so
+in a practice a car placed fourth in class reads places it never lost (#1022). The column therefore
+reads `PositionGain` alone, which waits for the car's first real place. Counting in class it draws
+that figure where the field is a single class, every class place then being the overall place, and
+in a field of several classes it draws nothing, not even the dash that says a car has not moved.
 
 The round faces read the same setting from `cards/position.ts` and are unaffected, there being no
 rows on a card to filter: the position and the count it is shown out of are both in class, which is
@@ -225,8 +261,11 @@ the reading that setting has always given.
 `packages/dash/test/positionMode.test.ts` holds the two to each other. It evaluates the formulas
 the build writes against a six-car, three-class grid and reads the position column downwards, and
 it reads the race board's own ± cell beside it on a grid whose starting order is not its running
-order. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
-against a board whose class is interleaved with another and a lap behind it.
+order. `packages/dash/test/classPlacesGained.test.ts` reads the same cell for one car over a
+sequence of frames, from unplaced to placed. The Gap and the Int are read the same way in `packages/dash/test/pitwallValues.test.ts`,
+against a board whose class is interleaved with another and a lap behind it, and in
+`packages/dash/test/gapLeader.test.ts` against a race whose leader SimHub gives no gap, and in
+`packages/dash/test/gapOutsideRace.test.ts` against a practice ordered by best lap.
 
 ## What is not drawn, and why
 

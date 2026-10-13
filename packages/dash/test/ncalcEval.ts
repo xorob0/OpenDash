@@ -8,13 +8,15 @@
  * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `ceiling`, `sin`, `cos`, `in`, `prop`
  * (a read by a computed name), `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the
  * leaderboard reads `getplayerleaderboardposition`, `getopponentleaderboardposition_aheadbehind`,
- * `drivercarclass`, `driverclassposition`, `driverposition` and `driveravailable` (each answered from
- * the props by its own call, as `drivercarclass(3)`, and null where they leave it out), the
- * comparisons, `and` / `or` / `!`, and the arithmetic, `%` included. Any other `driver<name>(position)`
- * call is answered from the key its canonical text spells, `drivertrackpositionpercent(1)`, as a
- * recorded trace names its column (`opponentCalls.ts` in the generator), and is null where the frame
- * has none, as SimHub answers for a row that is not there; a call the test answers itself, in its
- * {@link Calls}, is left to it. A date is passed as a `Date` and formatted by the hour and minute
+ * `getopponentleaderboardposition_playerclassonly`, `repeatindex`, `drivercarclass`,
+ * `driverclassposition`, `driverposition` and `driveravailable` (each answered from the props by its
+ * own call, as `drivercarclass(3)`, and null where they leave it out), the comparisons, `and` / `or` /
+ * `!`, and the arithmetic, `%` included. Any other `driver<name>(position)` call, `driverbestlap` and
+ * `driverlapstoleader` among them, is answered from the key its canonical text spells,
+ * `drivertrackpositionpercent(1)`, as a recorded trace names its column (`opponentCalls.ts` in the
+ * generator), and is null where the frame has none, as SimHub answers for a row that is not there; a
+ * call the test answers itself, in its {@link Calls}, is left to it. A best lap is passed in seconds,
+ * as a TimeSpan arrives once read. A date is passed as a `Date` and formatted by the hour and minute
  * specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the culture
  * SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test that
  * evaluates half an expression proves nothing.
@@ -296,6 +298,8 @@ export function evalNcalc(expression: string, props: Props, calls: Calls = {}): 
     driverposition: (position: unknown): unknown => called(`driverposition(${String(position)})`),
     driveravailable: (position: unknown): unknown => called(`driveravailable(${String(position)})`),
     getopponentleaderboardposition_aheadbehind: (offset: unknown): unknown => called(`getopponentleaderboardposition_aheadbehind(${String(offset)})`),
+    getopponentleaderboardposition_playerclassonly: (place: unknown): unknown => called(`getopponentleaderboardposition_playerclassonly(${String(place)})`),
+    repeatindex: (): unknown => called('repeatindex()'),
     timespantoseconds: (v: unknown): number => Number(v),
     EXTREME: (i: number, a: unknown, b: unknown): unknown => {
       const call = extremes[i]!;

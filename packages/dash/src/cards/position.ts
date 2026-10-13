@@ -6,6 +6,11 @@
  * `fieldSize` the bar, the session module and the pit wall draw. A grid before the green flag has
  * no positions, iRacing answering 0 for the player's place in both modes, and the card drew that
  * zero: a round face read `0 / 24` before every start where every zone read `-- / 24`. #992.
+ *
+ * Placed is asked of the overall place in both modes, which is what `hasPosition` asks behind
+ * `positionDigits`. The class place cannot say it: SimHub numbers every listed car's class place
+ * from 1 before the sim has placed anyone, so a card counting in class read `12 / 12` on a grid
+ * where the overall one read `-- / 24` (#1014).
  */
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
