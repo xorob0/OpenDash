@@ -32,12 +32,12 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
-import { chip, chipText, chipWidth } from './chip.ts';
+import { CHIP_WIDEST, chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
-const { iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
+const { and, iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
 /** How a table picks the car on each row. */
 export type TableMode = 'full' | 'class' | 'relative';
@@ -376,6 +376,11 @@ interface CellContext {
   isPlayer: Expr;
   /** True when the car is in the pit lane, which dims its row. */
   inPit: Expr;
+  /**
+   * When the gap gives way to the PIT chip, on a table that marks a car in the lane there; absent on
+   * one that has a pit column to say it in. {@link pitMarkOf} is the rule.
+   */
+  pitMark?: Expr;
   mode: TableMode;
   /**
    * The condition under which the rows of this block are the player's own class, absent on a block
@@ -464,13 +469,17 @@ const drawsOneClass = (ctx: CellContext): Expr | boolean => (ctx.mode === 'class
  * left inside cells cut for the widest value the column can hold, so P1 sat a whole digit cell
  * short of the edge and so did a `+9.9` measured against `+12.6`. `numeral` documents `width` as
  * the option for a value that does not fill its cells, and that is what this passes.
+ *
+ * `widest` is what the fit tests measure a cell by where its sample is the short end of what the
+ * binding draws, as `numeral` documents it; it never moves the cell.
  */
-function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign } = {}): Item[] {
+function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign; widest?: string } = {}): Item[] {
   const fs = opts.fs ?? ctx.type.lead;
   const align = opts.align ?? ctx.align;
   return [
     numeral(`${ctx.name}.${id}`, sample, ctx.x, ctx.top + (ctx.height - fs) / 2, fs, chars, {
       bind,
+      ...(opts.widest ? { widest: opts.widest } : {}),
       color: (opts.color as `#${string}`) ?? ds.color.text.secondary,
       colorBind: opts.colorBind ?? inkBind(ctx),
       hAlign: align,
@@ -556,21 +565,77 @@ function cellRank(ctx: CellContext): Item[] {
   ];
 }
 
+/**
+ * The PIT chip: the word on an inverted block, at the right edge of the cell it stands in, shown while
+ * `visible` holds.
+ *
+ * One drawing for the two places a row says a car is in the lane, the pit wall's pit column and the
+ * gap of a list that has none, both reading the one `carInPit` the row's ink is dimmed by.
+ */
+function pitChip(ctx: CellContext, name: string, visible: Expr): Item[] {
+  const width = Math.min(ctx.width, chipWidth(ctx.density, 'PIT'));
+  return chip(name, 'PIT', ctx.x + ctx.width - width, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
+    inverted: true,
+    visibleBind: visible,
+    width,
+  });
+}
+
 /** The pit column: the stop count, replaced by an inverted PIT chip while the car is in the lane. */
 function cellPit(ctx: CellContext): Item[] {
-  const chipW = Math.min(ctx.width, chipWidth(ctx.density, 'PIT'));
   return [
     ...cellValue(ctx, 'pit', '1', carPitCount(ctx.idx), { digits: 2, specials: 0 }, { fs: ctx.type.minor, align: 'right' }).map((item) => withMoreBindings(item, { Visible: not(ctx.inPit) })),
-    ...chip(`${ctx.name}.pitChip`, 'PIT', ctx.x + ctx.width - chipW, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
-      inverted: true,
-      visibleBind: ctx.inPit,
-      width: chipW,
-    }),
+    ...pitChip(ctx, `${ctx.name}.pitChip`, ctx.inPit),
   ];
 }
 
-/** A compound chip holds one letter, so it is the padding and a letter's width either side of it. */
-const compoundChipWidth = (d: DensitySpec): number => Math.ceil(2 * d.chipPadding + 14);
+/**
+ * When a row's gap gives way to the PIT chip: the car is in the pit lane and is not the player's (#388).
+ *
+ * The relative and the leaderboard are the pages a driver glances at most, and a car in the lane drew
+ * there as a dimmer row with a gap still counting, which a driver reads as a car on track and not as a
+ * car that has stopped. The pit wall's boards said it in their pit column; the lists, which have no
+ * such column and no room for one at the narrow faces, say it in the gap. The gap is the one column no
+ * shape sheds (`LEADERBOARD_COLUMNS` says why), and it is at least 92 px wide where the chip is 31 at
+ * its widest density, so the chip is drawn in it at every shape rather than in one place where a box is
+ * wide and another where it is narrow, and no column is added anywhere.
+ *
+ * **The player's own row is left alone**: the limiter banner already says the player is in the lane,
+ * and the own row's gap is the zero the relative is counted from.
+ *
+ * **A table with a pit column draws no mark in its gap**, because the column says it already: the
+ * three pit wall boards keep their gaps, which a pit engineer reads through a stop.
+ *
+ * **Off track is not marked**, though the ticket asks for it where the sim publishes it. iRacing does,
+ * as `CarIdxTrackSurface`, and SimHub reads it to fill `IsCarInPit` and nothing else: no member of
+ * `Opponent` says a car is off track, and the raw array is not a property, since `DataCorePlugin`
+ * declares no array held in a dictionary and iRacing's `Telemetry` is one. A row addresses its car by
+ * leaderboard position, and nothing an expression can read maps that position to a `CarIdx` either.
+ * `docs/research/simhub-dash-format.md` has the decompile.
+ */
+const pitMarkOf = (columns: readonly ColumnId[], inPit: Expr, isPlayer: Expr): Expr | undefined =>
+  columns.includes('pit') ? undefined : and(inPit, not(isPlayer));
+
+/** A gap cell, given way to the PIT chip where {@link pitMarkOf} says so. */
+function gapOrPit(ctx: CellContext, gap: Item[]): Item[] {
+  if (ctx.pitMark === undefined) return gap;
+  return [...gap.map((item) => withMoreBindings(item, { Visible: not(ctx.pitMark!) })), ...pitChip(ctx, `${ctx.name}.gap.pit`, ctx.pitMark)];
+}
+
+/**
+ * Characters the tyre chip shows: one, the compound's initial, which is the letter the canvas draws.
+ *
+ * The chip was cut for one letter and bound to `chipText`'s four, so a compound sent as `Dry 2` or
+ * `Medium` was clipped to its first letter and a sliver of the second on every row. The binding is
+ * cut to what the box holds instead, as the class chip's is, so it draws a whole `D` or `M`.
+ */
+const COMPOUND_CHARS = 1;
+
+/** The widest initial the tyre chip can draw, which is what it is sized by. */
+const COMPOUND_WIDEST = widestOf('BarlowMedium', COMPOUND_CHARS);
+
+/** A compound chip holds one letter, so it is the padding and the widest letter between. */
+const compoundChipWidth = (d: DensitySpec): number => chipWidth(d, COMPOUND_WIDEST);
 
 /** The position, which the canvas prefixes with a P: `P4`, not `4`. */
 const positionText = (idx: Expr): Expr => positionLabelled(idx);
@@ -626,12 +691,13 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
   class: {
     header: 'Class',
     align: 'left',
-    width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 34), 56),
+    width: (row) => drawnWidth(row, chipWidth(row.d), 56),
     cell: (ctx) =>
       chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carClass(ctx.idx)),
+        widest: CHIP_WIDEST,
         invertedBind: ctx.isPlayer,
-        width: Math.ceil(2 * ctx.d.chipPadding + 34),
+        width: chipWidth(ctx.d),
       }),
   },
   /**
@@ -649,22 +715,26 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
     // The one column both drawings size the same, so it takes no board number of its own.
     width: ({ type }) => cellColumn(92, type.lead, CHARS.relativeGap),
     cell: (ctx) =>
-      ctx.mode === 'relative'
-        ? // The own row is its own reference, so its gap is nought by definition rather than by
-          // whatever `relativegaptoplayer` answers for the player's own index. The sample carries
-          // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
-          // time is the glyph the bound value draws rather than .NET's hyphen.
-          cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
-        : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
+      gapOrPit(
+        ctx,
+        ctx.mode === 'relative'
+          ? // The own row is its own reference, so its gap is nought by definition rather than by
+            // whatever `relativegaptoplayer` answers for the player's own index. The sample carries
+            // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
+            // time is the glyph the bound value draws rather than .NET's hyphen.
+            cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { widest: RELATIVE_GAP_WIDEST, colorBind: liftBind(ctx, inkBind(ctx)) })
+          : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
+      ),
   },
   int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },
-  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
+  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime, { widest: LAP_TIME_WIDEST }) },
   best: {
     header: 'Best',
     align: 'right',
     width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
+        widest: LAP_TIME_WIDEST,
         colorBind: iff(carIsSessionBest(ctx.idx, drawsOneClass(ctx)), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
@@ -688,7 +758,8 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
       // draws its own: the column declares `right` and a chip filling it aligns nothing.
       const width = Math.min(ctx.width, compoundChipWidth(ctx.d));
       return chip(`${ctx.name}.tyre`, 'M', ctx.x + ctx.width - width, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
-        bind: chipText(carCompound(ctx.idx)),
+        bind: chipText(carCompound(ctx.idx), COMPOUND_CHARS),
+        widest: COMPOUND_WIDEST,
         width,
       });
     },
@@ -1011,6 +1082,7 @@ function rowBlock(spec: TableSpec, spans: readonly ColumnSpan[], rowHeight: numb
   const { name, top, rows, idx, inClass } = block;
   const isPlayer = carIsPlayer(idx);
   const inPit = carInPit(idx);
+  const pitMark = pitMarkOf(spans.map((span) => span.id), inPit, isPlayer);
   const children: Item[] = [
     withMoreBindings(band(`${spec.name}.${name}.background`, rect(spec.frame.left, top, spec.frame.width, rowHeight), ds.color.surface.zone), { Visible: isPlayer }),
     // The board's rows are flush and each is closed by a rule; a list's are two apart and closed by
@@ -1031,6 +1103,7 @@ function rowBlock(spec: TableSpec, spans: readonly ColumnSpan[], rowHeight: numb
         type,
         isPlayer,
         inPit,
+        ...(pitMark === undefined ? {} : { pitMark }),
         mode: spec.mode,
         ...(inClass === undefined ? {} : { inClass }),
         align: COLUMNS[id].align,

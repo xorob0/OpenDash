@@ -15,7 +15,7 @@ import { CANVAS_BASELINE, LINE_SPACING, WPF_BASELINE, gearCells, monoWidth } fro
 import { rect, type Rect } from '../src/design/geometry.ts';
 import { CHARS } from '../src/second/values.ts';
 import { ncalcEvaluator, type Item, type TextItem } from '../src/generator.ts';
-import { LEARNED_GEAR_COUNT_PROPERTY } from '../src/shift.ts';
+import { FORWARD_GEARS, LEARNED_GEAR_COUNT_PROPERTY } from '../src/shift.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { faceOf } from './monoGlyphs.ts';
@@ -257,9 +257,11 @@ describe('the ghosted gears either side of the one a driver is in', () => {
 
   test('neither end of the box invents a gear the sim never reports', () => {
     const bind = (item: TextItem): string => String(item.bindings!.Text!.formula);
-    // Eighth gear is the last SimHub names, so there is no ninth to ghost above it.
-    expect(bind(above)).not.toContain("'9'");
+    // The ghosts stop at the ends of the one forward-gear list, so there is nothing above the last of
+    // it and nothing below first; the car's own top gear is the Visible binding's to hide.
+    const last = FORWARD_GEARS[FORWARD_GEARS.length - 1]!;
+    expect(bind(above)).not.toContain(`'${Number(last) + 1}'`);
     expect(bind(below)).not.toContain("'0'");
-    expect(bind(above)).toContain("if(([DataCorePlugin.GameData.Gear]) = ('7'), '8'");
+    expect(bind(above)).toContain(`if(([DataCorePlugin.GameData.Gear]) = ('${Number(last) - 1}'), '${last}'`);
   });
 });

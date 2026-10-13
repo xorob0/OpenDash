@@ -28,7 +28,7 @@ const isGear = (name: string): boolean => /(^|\.)gear$/.test(name) || /(^|\.)gea
 
 /**
  * A flag's name, in either format and in either phase of the band one, which is the design's other
- * 700: a label on the band, the same label in the corner block the flag settles into, and a
+ * 700: a label on the band, the same label in the rectangle the flag settles into, and a
  * condensed run the height of the body in the full-screen format, which the sheets set in the same
  * weight for the same reason.
  */

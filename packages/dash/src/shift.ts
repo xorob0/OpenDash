@@ -32,7 +32,7 @@ import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName } from './contract.ts';
 
-const { prop, game, gt, ge, eq, mul, sub, num, str, concat, isnull, and, or, not, max, iff } = ncalc;
+const { prop, game, gt, ge, eq, mul, sub, num, real, str, concat, isnull, and, or, not, max, iff } = ncalc;
 
 /** Where the session string puts the driver's own car. The same nested path `incidentLimit` reads. */
 const DRIVER_INFO = 'DataCorePlugin.GameRawData.SessionData.DriverInfo.';
@@ -91,8 +91,14 @@ export const lastRpm = (): Expr => read(SHIFT_RPM_PROPERTIES.last);
 /** Shift now. Between `first` and `last` for every car that passes `mirrorAvailable`. */
 export const shiftRpm = (): Expr => read(SHIFT_RPM_PROPERTIES.shift);
 
-/** Over-rev, never below the last light, because a car may publish a ladder and no blink RPM. */
-export const blinkRpm = (): Expr => max(read(SHIFT_RPM_PROPERTIES.blink), lastRpm());
+/**
+ * Over-rev, never below the last light, because a car may publish a ladder and no blink RPM.
+ *
+ * The blink RPM's fallback is the double `0.0`: NCalc's `max` answers in its left operand's type, so
+ * an Int32 `0` there would round the last light to a whole RPM on a car that publishes no blink.
+ * #1046.
+ */
+export const blinkRpm = (): Expr => max(isnull(prop(SHIFT_RPM_PROPERTIES.blink), real(0)), lastRpm());
 
 /**
  * Whether the car published a usable ladder this frame, which is also what makes every expression
@@ -123,6 +129,17 @@ const bandLit = (from: Expr, to: Expr, local: number, count: number): Expr =>
  */
 export const mirrorStageLit = (stage: number, local: number, count: number): Expr =>
   stage === 0 ? bandLit(firstRpm(), shiftRpm(), local, count) : stage === 1 ? bandLit(shiftRpm(), lastRpm(), local, count) : ge(rpms(), lastRpm());
+
+/**
+ * The forward gears, as the strings SimHub's `[Gear]` reports them in. One list for every reader:
+ * the box's gear glyphs, the ghosted neighbours either side of the gear, and the pit wall's gear
+ * trace. There were three, and they disagreed about `9`: the box drew it, the ghosts stopped at 8,
+ * and the trace sent it to neutral.
+ *
+ * Nine is above what these sims publish today, and a car with fewer simply never reaches the top.
+ * A list that stops short draws the top gear of a longer box as something else.
+ */
+export const FORWARD_GEARS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
 /**
  * Top gear: the gear there is nothing to shift out of. False whenever neither iRacing nor SimHub

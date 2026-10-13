@@ -31,7 +31,7 @@ type LcdColour = (typeof LCD_COLOURS)[number];
 /** How far each grey stands from the ground towards the ink, on a backlight other than the white. */
 const TOWARDS_INK: Readonly<Record<Exclude<LcdColour, 'ground' | 'ink'>, number>> = { shade: 1 / 12, rule: 1 / 5, caption: 4 / 5, dim: 9 / 20 };
 
-/** The layers the face draws its flags in, which keep their colours whatever the backlight. */
+/** The layers the face draws its flags in, the settled one included, which keep their colours whatever the backlight. */
 export const FLAG_LAYERS: ReadonlySet<string> = new Set(['flag', 'flagCorner', 'flagFull']);
 
 const channels = (hex: Hex): number[] => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));

@@ -909,6 +909,9 @@ Measured for #454 against the `NCalc.dll` SimHub 9.12.6 ships, with SimHub's `is
 - NCalc's `null > 0` throws `ArgumentNullException`, and a throwing expression draws the empty string.
 - The guard therefore wraps the conversion: `isnull(timespantoseconds(t), 0) > 0` is false for a
   null, a zero and a missing time alike, and `hasTime` in `second/values.ts` is written that way.
+- Arithmetic throws on a null operand as a comparison does, so a time that is subtracted or summed
+  needs the same guard. `secondsOf` in `second/values.ts` is the one spelling of it, and
+  `packages/dash/test/timespanGuard.test.ts` holds every expression of every built package to it (#586).
 
 ### A function reads a different frame from a property
 
@@ -980,6 +983,86 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   as a double just under it: 1.005 to two places is `1.00` in the evaluator and `1.01` on the dash,
   and 9.9995 to three is `9.999` against `10.000`. At 12.345 the double is just over the half, so both
   draw `12.35`. This is from the .NET reference source and has not been measured on the VM.
+
+### `max` and `min` answer in their left operand's type (2026-10-09, #831)
+
+Read from NCalc 1.3.8's source, which is what the evaluator in `packages/generator/src/ncalc/` models; not
+yet measured on the VM.
+
+- **The left operand decides the type, and the right one is converted to it.** `Numbers.Max` and
+  `Numbers.Min` switch on the left operand's `TypeCode` and convert the right with `Convert.ToInt32`,
+  `Convert.ToDouble` and their siblings. A null on either side gives the other side. So `max(0, 2.6)`
+  is the Int32 3, rounded half to even, and `max(0.0, 2.6)` is the double 2.6.
+- **A literal is typed by its spelling**: `0` is an Int32 and `0.0` a double. A bound written on the
+  left of a reading that has a fraction is therefore written with a point, which is what `real` in
+  `packages/generator/src/ncalc.ts` does. With `max(0, …)` the `h:mm:ss` clock rounded its seconds
+  before truncating them and ticked over half a second early, and the refuel figure, formatted to
+  tenths, could only end in `.0`.
+- An Int32 on the left is still right where the value it bounds is whole, such as the tacho's scale
+  in thousands, which is a `truncate`. `packages/dash/test/ncalcCoverage.test.ts` holds every
+  expression of a full build and every LED profile to that.
+- **An operand that is an Int32 on some frames counts as one** (#1046): `isnull([X], 0)` is X's own
+  type while X is published and the Int32 0 when it is not, and an `if` is whichever branch it took.
+  So the steering dial's clamp puts its double bounds on the left, and the over-rev's blink RPM falls
+  back to `0.0`. `packages/dash/test/int32Bounds.ts` is the reading of a tree the guard makes, and
+  the dash tests' own evaluator, `packages/dash/test/ncalcEval.ts`, answers `max` and `min` by the
+  same rule, so a reading that rounds on the dash rounds in its test too.
+
+### iRacing's place moves only at the line, and SimHub keeps it that way (2026-10-13, #1063)
+
+Established by decompiling `GameReaderCommon.dll` from SimHub 9.12.6 (`GameManagerBase.PreParseDataBase`
+and `ComputeOpponentsData`). The iRacing reader itself is not among the assemblies OpenDash vendors, so
+what it fills is inferred from the symptom and from what iRacing documents, not read.
+
+- **`Opponent.Position` is the sim's place, and iRacing moves it at the start/finish line.** iRacing's
+  `CarIdxPosition` and `CarIdxClassPosition` are official scoring and change when a car crosses the
+  line. `driverposition()` and `driverclassposition()` read them, and so does every place OpenDash
+  drew, so a pass in the first corner showed a lap later.
+- **SimHub's leaderboard is sorted on `LivePosition` first.** `PreParseDataBase` orders the opponents
+  by `LivePosition` (0 counting as 9999), then `Position`, then best lap, and the index every
+  `driver*` function takes and `getplayerleaderboardposition()` returns is a place in that list.
+  `Opponent.LivePosition` is an `int` that nothing in `GameReaderCommon` writes; a reader that filled
+  it would make the leaderboard live. On iRacing the order is the sim's, so it is not filled there.
+  `PositionInClass`, where SimHub computes it, counts down the list sorted by `Position` first, so it
+  waits for the line too.
+- **`CurrentLapHighPrecision` is the distance covered, kept continuous across the line.** It is
+  `CurrentLap - 1 + TrackPositionPercent` unless the reader set it, and where it jumps by more than
+  half a lap within 1% of the line SimHub adds or takes away the lap that was counted early or late.
+  It is published per car as `drivercurrentlaphighprecision()`, and it is what the plugin ranks the
+  field on to publish the race as it stands on the road: each row's place over the field and in its
+  class, `OpenDash.LivePosition<row>` and `LiveClassPosition<row>`, and the row in each place,
+  `LiveOrder<place>` and `LiveClassOrder<place>` (`plugin/OpenDash/LivePosition.cs`).
+- **A property name can be built in the expression.** `prop('OpenDash.LiveOrder' + 3)` reads
+  `OpenDash.LiveOrder3`: NCalc's `+` writes a number into a string, and SimHub's `prop` takes the
+  name as an expression, as the lap history's `PreviousLap_NN` already relies on. The live names are
+  unpadded so a row or a place goes in with `+` alone, without a `format`.
+- The emulator ranks its field by distance on every tick (`tools/irsdk-emulator/Drivers.cs`), so on
+  the VM the sim's place is already live and this never showed. It is the emulator that is
+  generous, not iRacing.
+
+### Another car's pit lane is published and its off track is not (2026-10-09, #388)
+
+Established by decompiling `IRacingManager.GD_Opponents` in the guest's `ICarsReader.dll`,
+`GameReaderCommon.Opponent` and `DataCorePlugin.DeclareObject` in SimHub 9.12.6 with ilspycmd.
+
+- **The pit lane is a row read.** iRacing's reader fills `Opponent.IsCarInPitLane` from
+  `CarIdxOnPitRoad` and `Opponent.IsCarInPit` from `CarIdxTrackSurface` being `InPitStall`, and
+  `driveriscarinpitlane(position)` reads the first. It is what the pit wall's chip, the row's dimmed
+  ink and the relative's and the leaderboard's PIT mark all read, as `carInPit` in
+  `packages/dash/src/second/values.ts`.
+- **Off track is not.** iRacing publishes it for every car, as `CarIdxTrackSurface` being `OffTrack`,
+  and SimHub reads that array for the pit stall alone: no member of `Opponent` says a car is off the
+  track, so no `driver<name>` function can.
+- **The raw array is not a property either.** `DeclareObject` declares an array member as one
+  property per element (`Name01`, `Name02` and on), but iRacing's `Telemetry` is a
+  `Dictionary<string, object>`, and for a dictionary `DeclareObject` attaches only the values that are
+  not arrays. So `CarIdxTrackSurface`, like every other `CarIdx*` array, never reaches
+  `GameRawData.Telemetry`, and a dash has no way to read it.
+- **Nor could a row address it.** A table row addresses its car by leaderboard position, the array is
+  indexed by `CarIdx`, and no function maps the one to the other: `Opponent` carries no `CarIdx`.
+- So marking a car off track on the lists needs the plugin to publish it per leaderboard position,
+  which is a reading of telemetry of the kind ADR 0009 refuses and ADR 0018 allows for the player's
+  own car. That is a decision and not a fault, and it is not taken.
 
 ## Sources
 

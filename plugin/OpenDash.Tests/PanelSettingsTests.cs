@@ -210,6 +210,7 @@ namespace OpenDashPlugin.Tests
                 "AnchorFlags = settings.flags",
                 "AnchorFlagsInPitLane = settings.flags-in-pit-lane",
                 "AnchorLighting = settings.lighting",
+                "AnchorLivePositions = settings.live-positions",
                 "AnchorLowFuel = settings.low-fuel",
                 "AnchorNightBrightness = settings.night-brightness",
                 "AnchorNightMode = settings.night-mode",
@@ -1551,7 +1552,7 @@ namespace OpenDashPlugin.Tests
             foreach (var title in PanelSettings.SectionTitles) Assert.Contains(title, labels);
             foreach (var row in new[]
             {
-                PanelDataTab.PositionTitle, PanelDataTab.DeltaTitle, PanelDataTab.DeltaPrecisionTitle, PanelDataTab.SessionTitle,
+                PanelDataTab.PositionTitle, PanelDataTab.LivePositionsTitle, PanelDataTab.DeltaTitle, PanelDataTab.DeltaPrecisionTitle, PanelDataTab.SessionTitle,
                 PanelDataTab.DriverNameTitle, PanelDataTab.TeamNameTitle, PanelDataTab.ClockTitle, PanelSettings.UnitsTitle,
                 PanelDataTab.BlueFlagTitle, PanelSettings.FlagsInPitLaneTitle,
                 PanelSettings.LowFuelTitle, PanelSettings.OilTempTitle, PanelSettings.WaterTempTitle,
@@ -1570,7 +1571,7 @@ namespace OpenDashPlugin.Tests
                 Assert.Equal(PanelSettings.SectionAnchors[s], PanelSettings.Search.Single(entry => entry.Label == PanelSettings.SectionTitles[s]).Route.Anchor);
             }
             var rowEntries = PanelSettings.Search.Where(entry => !PanelSettings.SectionTitles.Contains(entry.Label)).ToList();
-            Assert.Equal(16, rowEntries.Count);
+            Assert.Equal(17, rowEntries.Count);
             Assert.All(rowEntries, entry => Assert.DoesNotContain(entry.Route.Anchor, PanelSettings.SectionAnchors));
             Assert.Equal(rowEntries.Count, rowEntries.Select(entry => entry.Route.Anchor).Distinct().Count());
             Assert.Equal(PanelSettings.AnchorOilTemp, PanelSettings.Search.Single(entry => entry.Label == PanelSettings.OilTempTitle).Route.Anchor);
@@ -1588,6 +1589,7 @@ namespace OpenDashPlugin.Tests
             {
                 new[] { PanelDataTab.SectionTitle },
                 new[] { PanelDataTab.PositionTitle, "overall", "class" },
+                new[] { PanelDataTab.LivePositionsTitle, "position", "iracing", "line", "leaderboard" },
                 new[] { PanelDataTab.DeltaTitle, "session best", "all-time best", "last lap" },
                 new[] { PanelDataTab.DeltaPrecisionTitle, "hundredths", "thousandths", "decimals" },
                 new[] { PanelDataTab.SessionTitle, "laps", "time" },
