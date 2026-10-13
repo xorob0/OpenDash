@@ -13,7 +13,9 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
 import {
+  DEFAULT_ZONE_PAGE,
   defaultZonePage,
+  isHeldBack,
   pagesForZone,
   zone as zoneSetting,
   zoneClassOnlyOnPage,
@@ -161,6 +163,14 @@ const groundOf = (zone: FaceZone): `#${string}` => (zone === 'D' ? ds.purpose.bl
 /**
  * A zone dashboard: every page of its catalogue, in the order the plugin lists them, and after
  * band D's the pages a theme adds to it, which go at the end so that no page leaves its index.
+ *
+ * A held-back page keeps its screen, so that the pages after it keep their indices, and that screen
+ * draws the house's opening page, fuel, rather than the held page: the plugin never shows it, and a
+ * property that says it anyway, from a settings file nothing has normalised, falls back to a page
+ * rather than to an empty well or to the held page itself (#969). The copy is named after the page it
+ * stands in for, which is what keeps its screen id and its items' ids its own. It is the house's page
+ * and not a theme's opening one, because a theme's band page may carry what a face draws once, such
+ * as the Porsche's crest.
  */
 export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false, drawing: ThemeDrawing = {}): Dashboard {
   const zone = zones[0];
@@ -170,7 +180,11 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
   const frame = rect(0, 0, size.width, size.height);
   const added = zone === 'D' ? (drawing.bandPages ?? []) : [];
   const screens = [
-    ...pages.map((page) => zonePageScreen(face, zones, page, size, corners, drawing)),
+    ...pages.map((page) =>
+      isHeldBack(zone, page.id)
+        ? { ...zonePageScreen(face, zones, pages[DEFAULT_ZONE_PAGE[zone]]!, size, corners, drawing), name: page.id }
+        : zonePageScreen(face, zones, page, size, corners, drawing),
+    ),
     ...added.map((page) => pageScreen(page.id, [...page.items(frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])], ground)),
   ];
   return pagedDashboard({

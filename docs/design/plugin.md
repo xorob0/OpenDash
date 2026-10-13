@@ -260,10 +260,17 @@ the same on every Porsche face. Clearing it removes the copy and the badge draws
 package never carries the crest ([scope.md](../scope.md), the trade dress section).
 
 **Band D lists a theme's own pages after the house's eight** (#718). The aside's catalogue is the
-screen's, read from its theme: eight pages on a default face, as before, and nine on a Porsche face, the
-ninth named for the theme, `Porsche`, which is the car's foot of boxes, tyres and bias. A Porsche screen
-opens band D on that row, so the aside draws it first, tagged First, and then the eight in their order;
-the count reads "9 of 9", and the quick glance's page picker lists `Porsche` after the eight.
+screen's, read from its theme: eight pages in the catalogue of a default face (seven offered, see
+below), and nine on a Porsche face, the ninth named for the theme, `Porsche`, which is the car's foot
+of boxes, tyres and bias. A Porsche screen opens band D on that row, so the aside draws it first,
+tagged First, and then the house's in their order.
+
+**Band D's eighth page, Car, is held back from 1.0** (#969): its telltales have no pictograms yet, and
+twelve empty boxes read as a broken page. The panel lists it nowhere, under Show all, in the count or in
+the quick glance's page picker, and cannot tick it or open a band on it, so the aside of a default face
+counts "7 of 7" and a Porsche face's "8 of 8", the picker listing `Porsche` after the house's seven. A rig
+that had it ticked or opened on it is moved on to the next page of the band's order when its settings
+are read. `FacePages.HeldBack` is the switch, mirroring `HELD_BACK_BAND_PAGES` in `contract.ts`.
 
 A pit wall draws the page on screen and its zones, the web view address and the portrait layout. A
 companion draws its modules to tick and order, and its first module. A round screen draws its cards on
