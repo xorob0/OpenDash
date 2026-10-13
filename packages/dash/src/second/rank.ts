@@ -15,7 +15,7 @@
  * it at the moment the driver most needs to read them.
  *
  * Both rules are deliberate and they contradict each other, which is why the choice is a mode of
- * one component rather than twenty-one judgements. A rank whose members can never go missing
+ * one component rather than a judgement per page. A rank whose members can never go missing
  * carries no bindings at all, so the two modes cost nothing where neither applies.
  */
 import type { Hex, Item } from '../generator.ts';
