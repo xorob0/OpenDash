@@ -98,7 +98,8 @@ const packageResource = (pkg: ManifestPackage): string => `OpenDashPlugin.Resour
  * One screen of the gallery rig, in the shape ScreenInstance serialises to.
  *
  * A themed package's screen carries its theme, which is what gives band D the theme's pages: on a
- * Porsche, `porscheFoot` is band page 8 and the whole-catalogue mask is nine bits (#718).
+ * Porsche, `porscheFoot` is band page 8 and the whole-catalogue mask is nine bits (#718), less the
+ * car page's, which is held back from 1.0 (#969).
  */
 export function screenFor(pkg: ManifestPackage, zones: [string, string, string, string], name?: string, masks: readonly number[] = FULL_MASKS): Record<string, unknown> {
   const pages = [zoneA(zones[0]), page(zones[1]), page(zones[2]), band(zones[3], pkg.theme)];
