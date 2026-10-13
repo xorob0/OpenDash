@@ -672,9 +672,23 @@ The opponent providers of the 9.12.6 assembly in `plugin/lib` register, beside `
 driver's gap to his own class leader; `lapstoclassleader`; and `gaptoclassleadercombined`, the
 driver's gap to the player's class leader as laps or seconds, spelled the way the overall one is.
 They were found while #212 was reviewed, the class gap having been built on the belief that they
-did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still derives the figure
-from the two gaps to the overall leader, for the reason its comment gives; the three names are here
-so that the next reader checks them rather than the belief.
+did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still derives the seconds
+from the two gaps to the overall leader, which is what `GaptoClassLeader` is for a car of the
+player's class; the three names are here so that the next reader checks them rather than the belief.
+
+What the laps count was read from `GameManagerBase` in the 9.12.6 `GameReaderCommon.dll` on
+2026-10-10 (#1023). `LapsToLeader` is `(int)Math.Truncate(leader.CurrentLapHighPrecision -
+car.CurrentLapHighPrecision)`, the leader being the first of `Opponents`, and `LapsToClassLeader` the
+same against the first opponent whose `CarClass` is the player's, which is the car
+`getopponentleaderboardposition_playerclassonly(1)` names. `CurrentLapHighPrecision` is the laps
+begun and the fraction of the lap run, `CurrentLap - 1` plus the track position where the reader
+does not set it itself, so both count whole laps behind by distance and stay 0 for
+a car on the leader's lap whose lap counter is one lower because the leader has crossed the line and
+it has not. Neither is set on the leader's own row, which is null. The combined strings are built by
+`Opponent.GetCombinedGapAsString`: the laps as `+1 lap` or `+2 laps` when above 0, and otherwise the
+seconds formatted `0.00` with a `+` when positive, so a car on the lead lap reads two decimals. The
+Gap columns read the counts and spell both cases themselves. The NCalc names are `driverlapstoleader`
+and `driverlapstoclassleader`, registered as `Lapstoleader` and `Lapstoclassleader` and lower-cased.
 
 ### Per-car playlists belong to a display device, and match the iRacing CarPath (2026-10-07, #199)
 
@@ -806,7 +820,10 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   places gained, `driverpositiongainclass`, are counted from the class place of the first frame
   SimHub saw the car, so a car first seen unplaced counts them from a place SimHub made up, and no
   package reads them. The overall `driverpositiongain` waits for the car's first real place, and
-  it is the class count too when the field is a single class (#1022).
+  it is the class count too when the field is a single class (#1022). `drivergaptoleader` does not
+  wait: before the sim has placed anyone it is published for every car, measured from the first
+  car of the driver list and negative for some, as seen on the test VM with every iRacing position
+  at 0, so the Gap and Int columns ask `driverposition` of both cars as well (#1028).
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.

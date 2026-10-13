@@ -199,12 +199,19 @@ The Gap and the Int columns move with the rows, because both are measured agains
 row and that car has to be one the list draws. On a filtered list the Gap is to the leader of the
 player's class and the Int is to the row above it on the list rather than to whatever car the
 leaderboard puts in between. Measured the other way a class running a lap behind the overall leader
-reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. SimHub does
-publish a gap to the class leader, as `gaptoclassleader`, `lapstoclassleader` and
-`gaptoclassleadercombined`; both columns are nevertheless built today as differences of the two
-gaps to the overall leader, which is the arithmetic the pit wall values test evaluates against its
-model of a field, and reading SimHub's own three is the simplification recorded against
-`carClassRaceGap` in `second/values.ts`.
+reads `+1L` on every row and `Lead` on none, which is a column carrying no gap at all. The seconds
+in both columns are differences of the two gaps to the overall leader, which for a car of the
+player's class is what SimHub's own `gaptoclassleader` is.
+
+Whether a row reads seconds or laps is asked of distance, through SimHub's `lapstoleader` on a list
+of the whole field and `lapstoclassleader` on a list of one class: each is the whole laps a car is
+behind, counted from the two cars' laps and fractions of a lap. The lap counters cannot answer it,
+because `currentlap` goes up as a car crosses the line, so a car on the lead lap has a counter one
+below the leader's for the seconds between the two crossing it. Asked that way, the overall column
+fell through to SimHub's `gaptoleadercombined` for those seconds and drew two decimals beside rows
+of one, and the class column read `+1L` on a classmate seconds behind its class leader (#1023).
+Neither column reads SimHub's combined strings, which write two decimals and `+1 lap`; both spell
+a lapped car `+1L`.
 
 The word on the row a Gap column counts from is the one cell of the two that follows the numbering
 instead, `Lead` being a claim about a place rather than a measurement. A zone filtered to one class

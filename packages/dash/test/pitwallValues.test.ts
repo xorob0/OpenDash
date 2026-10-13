@@ -21,8 +21,10 @@ interface Car {
   position: number;
   classposition: number;
   gaptoleader: number | null;
-  currentlap: number;
-  gaptoleadercombined: string | null;
+  /** SimHub's whole laps behind the race leader by distance, null on the leader's own row. */
+  lapstoleader: number | null;
+  /** The same behind the first car of the player's class. */
+  lapstoclassleader: number | null;
   /** Whether this car is in the player's own class, which is what the class-only lookup answers from. */
   ours: boolean;
   /** The last lap's sectors, in seconds; `0` is a sector that was never set. */
@@ -30,7 +32,7 @@ interface Car {
 }
 
 const car = (fields: Partial<Car>): Car =>
-  ({ position: 1, classposition: 1, gaptoleader: 0, currentlap: 1, gaptoleadercombined: null, ours: false, sectors: [0, 0, 0], ...fields });
+  ({ position: 1, classposition: 1, gaptoleader: 0, lapstoleader: null, lapstoclassleader: null, ours: false, sectors: [0, 0, 0], ...fields });
 
 /**
  * An NCalc formula evaluated in JavaScript against a leaderboard.
@@ -95,10 +97,10 @@ function fits(text: string, chars: Chars): boolean {
 
 describe('the Gap column', () => {
   const BOARD: readonly Car[] = [
-    car({ position: 1, gaptoleader: 0, currentlap: 24, gaptoleadercombined: '' }),
-    car({ position: 2, gaptoleader: 2.64, currentlap: 24, gaptoleadercombined: '+2.6' }),
-    car({ position: 3, gaptoleader: 142.35, currentlap: 23, gaptoleadercombined: '+1L' }),
-    car({ position: 4, gaptoleader: null, currentlap: 23, gaptoleadercombined: null }),
+    car({ position: 1, gaptoleader: 0 }),
+    car({ position: 2, gaptoleader: 2.64, lapstoleader: 0 }),
+    car({ position: 3, gaptoleader: 142.35, lapstoleader: 1 }),
+    car({ position: 4, gaptoleader: null, lapstoleader: 1 }),
   ];
   const gapOf = (row: number): unknown => evaluate(carRaceGap(repeatIndex()), BOARD, row);
 
@@ -118,13 +120,16 @@ describe('the Gap column', () => {
     expect(gapOf(4)).toBe('--');
   });
 
-  test('the combined string is reached only once the lapped test has said so', () => {
-    // It is one string for both cases and the dash has no say in its sign or its decimals, so a
-    // row that is not lapped must never fall through to it.
-    const formula = carRaceGap(repeatIndex());
-    const lapped = formula.indexOf('drivercurrentlap');
-    expect(lapped).toBeGreaterThan(-1);
-    expect(formula.indexOf('drivergaptoleadercombined')).toBeGreaterThan(lapped);
+  test("neither column reads SimHub's combined strings or the lap counters (#1023)", () => {
+    // The combined string is one string for both cases, and the dash has no say in its decimals or
+    // its words: two decimals and `+1 lap`. The lap counters differ between two cars on one lap for
+    // the seconds after the first of them crosses the line. Lapped is asked of the laps by distance.
+    for (const formula of [carRaceGap(repeatIndex()), carClassRaceGap(repeatIndex())]) {
+      expect(formula).not.toContain('combined');
+      expect(formula).not.toContain('drivercurrentlap');
+    }
+    expect(carRaceGap(repeatIndex())).toContain('driverlapstoleader');
+    expect(carClassRaceGap(repeatIndex())).toContain('driverlapstoclassleader');
   });
 
   test('the widest gap a lead-lap car can show fits the budget it is drawn in', () => {
@@ -147,13 +152,13 @@ describe('the Gap column', () => {
  */
 describe('the Gap and Int columns of a list drawn from one class', () => {
   const BOARD: readonly Car[] = [
-    car({ position: 1, classposition: 1, gaptoleader: 0, currentlap: 24, gaptoleadercombined: '' }),
-    car({ position: 2, classposition: 2, gaptoleader: 2.64, currentlap: 24, gaptoleadercombined: '+2.6' }),
-    car({ position: 3, classposition: 1, gaptoleader: 130, currentlap: 23, gaptoleadercombined: '+1L', ours: true }),
-    car({ position: 4, classposition: 3, gaptoleader: 132, currentlap: 23, gaptoleadercombined: '+1L' }),
-    car({ position: 5, classposition: 2, gaptoleader: 134.2, currentlap: 23, gaptoleadercombined: '+1L', ours: true }),
-    car({ position: 6, classposition: 3, gaptoleader: 140, currentlap: 23, gaptoleadercombined: '+1L', ours: true }),
-    car({ position: 7, classposition: 4, gaptoleader: 260, currentlap: 22, gaptoleadercombined: '+2L', ours: true }),
+    car({ position: 1, classposition: 1, gaptoleader: 0 }),
+    car({ position: 2, classposition: 2, gaptoleader: 2.64, lapstoleader: 0 }),
+    car({ position: 3, classposition: 1, gaptoleader: 130, lapstoleader: 1, ours: true }),
+    car({ position: 4, classposition: 3, gaptoleader: 132, lapstoleader: 1, lapstoclassleader: 0 }),
+    car({ position: 5, classposition: 2, gaptoleader: 134.2, lapstoleader: 1, lapstoclassleader: 0, ours: true }),
+    car({ position: 6, classposition: 3, gaptoleader: 140, lapstoleader: 1, lapstoclassleader: 0, ours: true }),
+    car({ position: 7, classposition: 4, gaptoleader: 260, lapstoleader: 2, lapstoclassleader: 1, ours: true }),
   ];
   /** The leaderboard rows such a list draws, top to bottom. */
   const ROWS = [3, 5, 6, 7];
@@ -181,9 +186,9 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
 
   test('a class that leads the race keeps the word under either setting', () => {
     const LEADING: readonly Car[] = [
-      car({ position: 1, classposition: 1, gaptoleader: 0, currentlap: 24, ours: true }),
-      car({ position: 2, classposition: 1, gaptoleader: 3.2, currentlap: 24 }),
-      car({ position: 3, classposition: 2, gaptoleader: 8.4, currentlap: 24, ours: true }),
+      car({ position: 1, classposition: 1, gaptoleader: 0, ours: true }),
+      car({ position: 2, classposition: 1, gaptoleader: 3.2, lapstoleader: 0 }),
+      car({ position: 3, classposition: 2, gaptoleader: 8.4, lapstoleader: 0, lapstoclassleader: 0, ours: true }),
     ];
     const lead = (positionMode: 'overall' | 'class'): unknown => evaluate(carClassRaceGap(repeatIndex()), LEADING, 1, positionMode);
     expect({ overall: lead('overall'), inClass: lead('class') }).toEqual({ overall: 'Lead', inClass: 'Lead' });
@@ -215,8 +220,8 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
   });
 
   test('a car a lap down on the class leader reads the lap, not the seconds', () => {
-    // Its own lap against the class leader's, and not against the race leader's: the class leader
-    // is itself a lap down on the race, so the two questions give different answers here.
+    // Its laps to the class leader, and not to the race leader: the class leader is itself a lap
+    // down on the race, so the two questions give different answers here.
     expect(gapOf(7)).toBe('+1L');
   });
 
