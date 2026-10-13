@@ -15,12 +15,13 @@
  */
 import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
-import { FACE_SIZES, FACE_ZONE_LETTERS, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone, type ThemeEntry } from '../contract.ts';
+import { FACE_SIZES, FACE_ZONE_LETTERS, pagesForZone, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone, type ThemeEntry } from '../contract.ts';
 import { withMoreBindings } from '../bind.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
-import { flagCorners, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
+import { flagSettled, flagSettledWidth, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
+import { measureText } from '../design/advances.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { pitAlerts } from '../components/pitAlerts.ts';
 import { popUps } from '../components/popUp.ts';
@@ -36,7 +37,6 @@ import type { FaceContext, ThemeDrawing } from '../themes/drawing.ts';
 import { label } from '../elements/label.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { bandFlagBlocks } from './bandPages.ts';
 import { widestCounter, zoneDashboardsFor, zoneWidget } from './pages.ts';
 
 const { and, not } = ncalc;
@@ -133,11 +133,15 @@ export function faceItems(
   // twenty now, where it drew the six properties SimHub normalises.
   //
   // The band format itself is two groups rather than one, #380: the flag takes the whole band for
-  // the few seconds after it comes out or changes, and then settles into the block at each end of
-  // the band, which gives the page a driver was reading back while the flag is still out. One
-  // window decides between them and it is asked twice, once per group, rather than thirty times;
-  // SimHub keys that window by the text of the expression rather than by the item asking, so the
-  // two groups share it and the band can never be in both phases or in neither.
+  // the few seconds after it comes out or changes, and then settles into one rectangle of the face
+  // that no reading uses, #731, which gives the page a driver was reading back while the flag is
+  // still out. One window decides between them and it is asked twice, once per group, rather than
+  // thirty times; SimHub keys that window by the text of the expression rather than by the item
+  // asking, so the two groups share it and the band can never be in both phases or in neither.
+  //
+  // The settled group is listed here, after every zone widget, wherever its rectangle is: a widget
+  // paints its dashboard's ground over whatever was drawn before it, so a flag listed before the
+  // zone it sits on would be hidden by it.
   const takingBand = flagTakingBand();
   const bandFormat = zoneSetting.flagFormatIs(face, 'band');
   items.push(withMoreBindings({
@@ -148,7 +152,7 @@ export function faceItems(
   items.push(withMoreBindings({
     kind: 'layer',
     name: 'flagCorner',
-    children: flagCorners(bandFlagBlocks(band_, layout.bandCorners), FLAG_STRIP_STYLES.standard, 'flagCorner'),
+    children: flagSettled(drawing.flagSettled ? drawing.flagSettled(ctx) : houseFlagSettled(regions, drawing), FLAG_STRIP_STYLES.standard, 'flagCorner'),
   }, { Visible: and(bandFormat, not(takingBand)) }));
 
   // The other format: the flag takes zones B, A and C together, which costs the gear for as long as
@@ -271,6 +275,44 @@ function zoneHeaderParts(face: FaceSize, zone: FaceZone, r: Rect, drawing: Theme
       widest: counter.widest,
     }),
   ];
+}
+
+/**
+ * Between the settled flag and the two things beside it in zone C's title line, the page name and the
+ * counter. Four pixels, because on the 800 x 480 face the room between the widest page name and the
+ * counter is seventy-three, and the widest shortest name, YELLOW, wants sixty-four of them.
+ */
+const FLAG_SETTLED_GAP = 4;
+
+/**
+ * Where the house face's flag settles, #731: in zone C's title line, against the page counter, in the
+ * room no page name reaches.
+ *
+ * The title line is the one part of every house face that holds no reading on any page: the page's
+ * name at its left, the counter at its right, and nothing between them, with room on every face for
+ * every condition's shortest name. It is measured rather than tabulated, from the widest name zone C's
+ * catalogue can show, set as the title is set, to the counter's widest reading, each with
+ * {@link FLAG_SETTLED_GAP} clear of it. The rectangle is that room or `flagSettledWidth()`,
+ * whichever is less, held against the counter, and its height is the title line's, so that it reads as
+ * part of the zone's header rather than as a box over the page.
+ *
+ * Zone C because it is the zone right of the gear on a landscape face and the one under B on the
+ * portrait one, and either way it is one place, the same on every face of the house.
+ */
+export function houseFlagSettled(regions: Regions, drawing: ThemeDrawing = {}): Rect {
+  const r = zoneRect(regions, 'C');
+  const density = densityForBox({ width: r.width, height: r.height });
+  const house = zoneFrameMetrics(density, 'face');
+  const metrics = drawing.zoneHeaderSize === undefined ? house : { ...house, size: drawing.zoneHeaderSize };
+  const counter = { kind: 'reserved', widest: widestCounter('C', metrics.size) } as const;
+  // The counter is right-aligned in a box a little wider than its widest reading, so the room ends where
+  // that reading starts rather than at the box.
+  const counterRun = zoneCounterX(r, counter, metrics) + zoneCounterWidth(counter, metrics) - measureText('BarlowMedium', counter.widest, metrics.size);
+  const right = Math.floor(counterRun) - FLAG_SETTLED_GAP;
+  const title = Math.max(...pagesForZone('C').map((page) => measureText('BarlowMedium', page.name, metrics.size)));
+  const left = Math.ceil(r.left + metrics.padX + title) + FLAG_SETTLED_GAP;
+  const width = Math.min(right - left, flagSettledWidth());
+  return rect(right - width, r.top + metrics.padTop, width, metrics.title);
 }
 
 export interface FaceBuildOptions {

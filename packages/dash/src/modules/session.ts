@@ -16,14 +16,19 @@ import { stack } from '../second/layout.ts';
 import {
   CHARS,
   CLASS_AND_PLACE_WIDEST,
+  INCIDENTS_WIDEST,
+  LAP_TOTAL_WIDEST,
+  LAP_WIDEST,
   carPosition,
   classAndPlace,
   positionDigits,
   classOpponentCount,
   currentLap,
   fieldSize,
+  hasLapTotal,
   incidents,
-  lapsLeft,
+  lapsLeftShown,
+  lapsLeftText,
   player,
   positionDrawn,
   sessionClock,
@@ -36,7 +41,7 @@ import {
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
-const { fmt, iff, concat, str, gt, num, isnull, not } = ncalc;
+const { and, fmt, iff, concat, str, gt, num, isnull, not } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
@@ -80,11 +85,23 @@ export const session = defineModule('session', (ctx) => {
         [
           fld(ctx, 'lap', 'Lap', {
             sample: '12',
+            widest: LAP_WIDEST,
             bind: fmt(currentLap(), '0'),
-            chars: CHARS.position,
+            chars: CHARS.lap,
             fs: d.mid,
-            follower: { kind: 'denominator', text: '/ 30', bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: gt(totalLaps(), num(0)) },
-            drawn: drawnFigure({ value: currentLap(), digits: CHARS.position.digits }),
+            follower: {
+              kind: 'denominator',
+              text: '/ 30',
+              widest: LAP_TOTAL_WIDEST,
+              bind: concat(str('/ '), fmt(totalLaps(), '0')),
+              // Hidden with the lap as well as without a length. iRacing's `TotalLaps` in a timed race
+              // is the leader's laps, so a denominator shown for that alone drew `/ 14` with no lap
+              // before it, and with the lap and the time left in one place, on top of the time left.
+              // The length is `hasLapTotal`'s, so a lap forced on in a timed race is drawn without
+              // the leader's laps after it too (#989).
+              visibleBind: and(not(time), hasLapTotal()),
+            },
+            drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
           }, { visibleBind: not(time) }),
           fld(ctx, 'timeLeft', 'Time left', {
             sample: '0:42:15',
@@ -93,18 +110,23 @@ export const session = defineModule('session', (ctx) => {
             chars: CHARS.clock,
             fs: d.mid,
           }, { visibleBind: time }),
-          fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', bind: fmt(lapsLeft(), '0'), chars: CHARS.position, fs: d.mid }, { visibleBind: gt(lapsLeft(), num(0)) }),
+          // A timed race's laps left are predicted from the time left and a lap, and `--` until a lap has
+          // been timed; `RemainingLaps` there is the car's laps behind the leader (#1008).
+          fld(ctx, 'lapsLeft', 'Laps left', { sample: '18', widest: LAP_WIDEST, bind: lapsLeftText(), chars: CHARS.lap, fs: d.mid }, { visibleBind: lapsLeftShown() }),
         ],
         ctx,
+        // The lap and the time left are never shown together, so a zone too narrow for the two side
+        // by side draws them in one place rather than leaving a line between the class and the time
+        // left that is always empty.
+        { turns: [['lap', 'timeLeft']] },
       ),
       fieldsRow(
         [
-          // Four cells rather than the count's three: the x the canvas draws after the number takes
-          // one, which is how `zones/bar.ts` budgets the same value.
           fld(ctx, 'incidents', 'Incidents', {
             sample: '3x',
+            widest: INCIDENTS_WIDEST,
             bind: concat(fmt(taken, '0'), str('x')),
-            chars: { digits: 4, specials: 0 },
+            chars: CHARS.incidents,
             fs: d.small,
             colorBind: iff(gt(taken, num(0)), str(ds.color.caution.primary), str(ds.color.text.primary)),
           }),

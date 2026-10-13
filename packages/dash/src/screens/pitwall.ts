@@ -281,9 +281,9 @@ const GEAR_RANGE = { min: -1, max: FORWARD_GEARS.length } as const;
  * The gear as a number, which is what a ChartItem samples.
  *
  * SimHub's `[Gear]` is a string ("R", "N", "1"), so it is mapped here. The numeric
- * `GameRawData.Telemetry.Gear` that `shift.ts` reads would be one line instead, but only iRacing
- * publishes it and every other sim would then trace a flat line at neutral, which is a picture of
- * data that is not there. Neutral and anything unrecognised fall to zero.
+ * `GameRawData.Telemetry.Gear` that `leds/shiftPoints.ts` reads would be one line instead, but only
+ * iRacing publishes it and every other sim would then trace a flat line at neutral, which is a
+ * picture of data that is not there. Neutral and anything unrecognised fall to zero.
  */
 /** True while the sim publishes this reading at all, which is how a cell without a control hides. */
 const present = (expr: Expr): Expr => ncalc.not(ncalc.isNull(expr));

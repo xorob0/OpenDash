@@ -182,3 +182,10 @@ draws the same places and the same rows either way. Qualifying, where the plugin
 `notc`, whose chequered flag falls 132 frames in and after which it publishes nothing, would be null for
 some or all of the recording anyway. The next `bun run record` reads them from the plugin and drops the
 entries.
+
+#1017 asserts one more in each, `DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal`, the length
+iRacing declares for the session. It was recorded on #1017's branch while #993's re-recording landed
+on main, and the two could not both be kept, so the traces are main's recording with that one column
+carried over from the branch's: 2700 in the race scenarios, 1800 in `notc` and 900 in `quali`, the
+emulator's own scenario lengths, which do not move within a session or between two recordings of one.
+The next `bun run record` reads it from SimHub and drops the entry.

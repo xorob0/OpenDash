@@ -42,7 +42,7 @@ the band itself.
 | 7 | Yellow | `yellowWaving` | yes | 9, 10 | The yellow flag, blinking. | Filled yellow, "YELLOW", flashing. |
 | 8 | Yellow | `yellow` | yes | 11 | Solid yellow, steady. | Filled yellow, "YELLOW", steady. |
 | 9 | Debris | `debris` | yes | 19 | Yellow with danger stripes. | Striped: `purpose.flag.debris` under vertical stripes of `purpose.flag.debris.stripe`, "DEBRIS" on a plate of the yellow. |
-| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE", or "BLUE · P4 GT3" as `BlueFlagDetail` asks, in a corner block as on the whole band. |
+| 10 | Blue | `blue` | yes | 20 | Blue with an arrow that moves: two frames. | Filled `purpose.flag.blue`, "BLUE", or "BLUE · P4 GT3" as `BlueFlagDetail` asks, in the settled flag as on the whole band. |
 | 11 | White | `white` | no | 16 | Solid white. In iRacing this is the last lap. | Filled white, "WHITE · LAST LAP". |
 | 12 | Green | `green` | no | 21 | Solid green. | Filled green, "GREEN", on `Flag_Green` rather than on the bit. |
 | 13 | Set | `startSet` | no | 22 | Two bars of the start gantry. | Outlined green, "GREEN · SET". |
@@ -85,10 +85,12 @@ author owes its reversal. The 8x8 box is the one surface that writes something e
 the author's choice for a panel eight columns wide (#499), [below](#the-four-decisions-sixty-four-pixels-forced).
 
 **The name is as long as the room.** The band carries two forms of it, FULL COURSE YELLOW and FCY,
-and band D and its corner blocks write the longest that fits the room they have. That is the whole
-name everywhere a word is written, since it fits every band and every corner block of the four faces
-that draw them, whereas the sixteen pixels a settled flag keeps on the other four hold no word at
-all, FCY included. The full-screen block is the surface where the room decides, and the author ruled
+and band D and the settled flag write the longest that fits the room they have. That is the whole
+name on every band, and on the settled flag's rectangle wherever it is the full 176 px it asks for,
+which is the house's four landscape faces at 1280 and 1920 and the portrait one, the Porsche's four
+widest and the AiM's 1920, 1280 × 400 and 800 × 480 and portrait faces; it is FCY on the narrower
+rectangles, since #731 (zones.md §6 tabulates them). Since that ticket every long name has a short form
+beside it for the same reason: DSQ, IGN OFF, ENG OFF, INC, P2P, WHITE, SET and READY. The full-screen block is the surface where the room decides, and the author ruled
 on it "long wherever legible". The block sets one size for its names, the sheets' share of its
 height unless the widest of its one-word names, which is INCIDENT, needs less, and FCY is what the
 caution brings to that measure, so that the long form never shrinks the others. FULL COURSE YELLOW
@@ -109,7 +111,7 @@ the rev bar, since both arrangements of every face write the same one.
 artboards and DashComponents draw "Yellow flag", "Blue flag", "Green flag" and "Black flag" on band D,
 and PagesAndAlerts draws "Red flag" (3 · RedFlag), "Black flag · furled" (5 · BlackFurled), "Black
 flag" (6 · BlackFlag), "Yellow flag" (11 · YellowFlag), "Blue flag · GT3 behind" (20 · BlueFlag) and
-"Green flag" (21 · GreenFlag). Band D and its corner blocks write RED, BLACK, YELLOW, BLUE and GREEN
+"Green flag" (21 · GreenFlag). Band D and the settled flag write RED, BLACK, YELLOW, BLUE and GREEN
 instead, as the pit wall's band does, and the blue flag's detail reads BLUE · P4 GT3. The names that
 never carried the word, WHITE · LAST LAP, GREEN · SET, GREEN · READY, DISQUALIFIED, DEBRIS and the
 full course yellow's two forms among them, do not move, and nor do the rows of the LED
@@ -138,11 +140,12 @@ flag is raised, which is the only clock there is, so the band reads that propert
 everywhere else. The box keeps the bit, a lit green lamp costing nothing.
 
 **One duration decides *how* the band shows it.** Since #380 the band's three seconds are how long a
-flag keeps the *whole* band before it settles into the block at each end and gives band D's page back;
+flag keeps the *whole* band before it settles into one rectangle of the face, in a part no reading uses
+(#731), and gives band D's page back;
 `indicator.alert.durationMs` is the figure and SimHub's own `changed()` window is the clock, which
 [ADR 0009](decisions/0009-does-the-plugin-compute.md) admits precisely because the state is SimHub's
 rather than ours. The window watches the rank of the winning condition and not one condition's bits,
-so a caution clearing to the yellow under it takes the band again. The block writes what the whole
+so a caution clearing to the yellow under it takes the band again. The rectangle writes what the whole
 band writes wherever it fits, the blue flag's detail included since #497, and the incident's count
 against its limit is the one run it leaves to the takeover. The box has no equivalent: a picture on
 64 pixels has nothing to settle into and nothing underneath it to give back.
@@ -151,8 +154,8 @@ against its limit is the one run it leaves to the takeover. The box has no equiv
 at 135 degrees.** The canvas gives the alert catalogue two patterns, the chequer and the stripes, and
 until #498 the band drew only the first: a debris flag was a yellow band named "DEBRIS", which said
 it wherever there was width for a name and was the yellow flag wherever there was not, on the nano
-and in the sixteen pixels a settled flag keeps at the ends of a band with no corner block. It is now
-the yellow under red stripes on every band, the corner blocks, the nano and the full-screen block,
+and in the sixteen pixels a settled flag kept at the ends of a band with no corner block until #731. It
+is now the yellow under red stripes on every band, the settled flag, the nano and the full-screen block,
 with the name on a plate of the yellow where a name is written, and the LED strip's lamp alternates
 the two colours where it used to blink the yellow alone. The stripes are vertical because that is how
 the real flag is made and because a diagonal is a rotated rectangle clipped to the band, which
@@ -164,13 +167,13 @@ the band orange.** The flag is black with an orange disc, which is what the box 
 with `purpose.flag.orange`, which is the caution amber, was neither of the flag's colours, and where
 no name is written it was a band of amber rather than a black flag. #498 first drew it in the black
 family's outlined form in the orange, a border and a name, and the author then ruled that the
-meatball is a black box with an orange disc in the middle and no text. Band D, its corner blocks,
+meatball is a black box with an orange disc in the middle and no text. Band D, the settled flag,
 the nano's strip, the companion's and the pit wall's bands, and the full-screen block on the face,
 the companion and the pit wall therefore draw the opaque `surface.base` ground with no border, and a
 disc of the orange in its middle whose diameter is two thirds of the rectangle's shorter side: that
 is the flag's own proportion, Appendix H drawing a disc 40 cm across on a flag 60 cm high, and the
-shorter side is what keeps the disc inside a settled block sixteen pixels wide and a full-screen
-block taller than it is wide. The disc is a fifth shape, outside the canvas's rule of bands,
+shorter side is what keeps the disc inside a settled flag's rectangle twenty-two pixels high and a
+full-screen block taller than it is wide. The disc is a fifth shape, outside the canvas's rule of bands,
 outlined bands and two patterns, and it is drawn with SimHub's ellipse, which the round faces' rings
 already use. Since the meatball no longer has a name, the full-screen block's one name size is
 measured over the other conditions, whose widest is INCIDENT rather than MEATBALL, and the names
@@ -196,7 +199,7 @@ for the matrix; it is not answered by drawing one.
 |---|---|---|---|---|
 | 1 | Ignition off | `GameData.EngineIgnitionOn` at 0, out of the pit lane | 2 | Outlined `purpose.alert.power`, "IGNITION OFF". |
 | 2 | Engine off | `GameData.EngineStarted` at 0, out of the pit lane | 1 | Outlined `purpose.alert.power`, "ENGINE OFF". |
-| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Filled `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" in a corner block. |
+| 12 | Incident | `PlayerCarMyIncidentCount` has just grown | 15 | Filled `purpose.alert.incident`, "INCIDENT · 4x / 17" while it has the whole band, "INCIDENT" or "INC" in the settled flag. |
 | 19 | Push to pass | `GameData.PushToPassActive` | 24 | Filled `purpose.alert.p2p`, "PUSH TO PASS", only where the name is written. |
 | 20 | Headlight flash | `dcHeadlightFlash` has just moved | 25 | Outlined `purpose.alert.p2p`, "FLASH", only where the name is written. |
 
@@ -242,7 +245,7 @@ sixteen-pixel block. `purpose.alert.p2p` is `color.neutral.primary`, which is wh
 the white flag and outlined it is the black family's `#F5F7FA`. The two patterns are the chequer's
 and the debris flag's and the disc is the meatball's, so no shape is left to give them, and push to
 pass and the flash are drawn only where their name is written. The nano's strip writes none and has
-no layer for them; a corner block too narrow for the word draws nothing rather than a white sliver;
+no layer for them; the settled flag names them, P2P or PUSH TO PASS and FLASH, since #731 gave it room for every name;
 and the full-screen block does not take the body for them at all, since what the driver's own hand
 has just done is not worth the gear for the length of a push to pass. That departure wants the
 author's arbitration in `design/`.
@@ -287,7 +290,7 @@ accepted while a car is alongside, is the author's decision and is not taken her
 The rule this file used to state here, namely that the whole-track condition must never look like
 one corner's yellow, no longer holds on every surface. On the face the caution is a filled yellow band
 carrying its name, as a yellow flag is, and the author has accepted that only the word tells the two
-apart there: where no word is written, on the nano and in a settled flag too narrow for one, they are
+apart there: where no word is written, which is the nano's strip, they are
 the same yellow. The LED strip does keep a difference of colour, alternating the caution amber with
 the flag yellow (`leds/effects.ts`), which is the only vocabulary a lamp has and is not the
 two-halves picture.

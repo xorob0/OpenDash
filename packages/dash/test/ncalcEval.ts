@@ -222,7 +222,14 @@ function extremesOf(expression: string): { name: 'max' | 'min'; left: E.Node; na
   return out;
 }
 
-export function evalNcalc(expression: string, props: Props): unknown {
+/**
+ * A SimHub function the evaluator does not model, answered by the test that reads it: a row's
+ * `driveriscarinpitlane(...)` is whatever the case under test says the car is doing, whichever row the
+ * index expression inside it lands on.
+ */
+export type Calls = Record<string, (...args: never[]) => unknown>;
+
+export function evalNcalc(expression: string, props: Props, calls: Calls = {}): unknown {
   // Each max and min becomes `EXTREME(i, a, b)`, which knows the tree of its left operand. Rewritten
   // from the end, so that the offsets of the calls before each one still hold.
   const extremes = extremesOf(expression);
@@ -287,6 +294,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
     sin: Math.sin,
     cos: Math.cos,
     rootdashboardscreenname: (): unknown => (ROOT_SCREEN in props ? props[ROOT_SCREEN] : null),
+    ...calls,
   };
   return new Function(...Object.keys(fns), `return (${js});`)(...Object.values(fns));
 }

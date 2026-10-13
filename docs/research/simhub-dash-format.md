@@ -797,7 +797,11 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   `[DataCorePlugin.GameData.X]`.
 - Unit strings are enum names: `SpeedLocalUnit` `KMH`/`MPH`, `FuelUnit` `Liters`/`Gallons`,
   `TemperatureUnit` `Celcius`/`Fahrenheit`/`Kelvin`, `TyrePressureUnit` `Psi`/`Kpa`/`Bar`.
-  `Fuel`, tyre temperatures and pressures are already converted to the user's unit.
+  `Fuel`, tyre temperatures and pressures are already converted to the user's unit. `FuelPercent`
+  is not a ratio of two converted figures: `GameManagerBase.ComputreFuelStatsAndOdo` divides
+  `FuelRaw`, the sim's own litres, by `MaxFuel`, which is converted, so on a gallons profile it
+  reads 3.8 times too full. `[DataCorePlugin.Computed.Fuel_Percent]` is `Fuel / MaxFuel` and is
+  right in either unit (#993).
 - Class position: there is no player class position property. `[PlayerClassOpponentsCount]`
   gives the class car count and `driverclassposition(getplayerleaderboardposition())` the
   position in class.
@@ -1090,6 +1094,30 @@ what it fills is inferred from the symptom and from what iRacing documents, not 
 - The emulator ranks its field by distance on every tick (`tools/irsdk-emulator/Drivers.cs`), so on
   the VM the sim's place is already live and this never showed. It is the emulator that is
   generous, not iRacing.
+
+### Another car's pit lane is published and its off track is not (2026-10-09, #388)
+
+Established by decompiling `IRacingManager.GD_Opponents` in the guest's `ICarsReader.dll`,
+`GameReaderCommon.Opponent` and `DataCorePlugin.DeclareObject` in SimHub 9.12.6 with ilspycmd.
+
+- **The pit lane is a row read.** iRacing's reader fills `Opponent.IsCarInPitLane` from
+  `CarIdxOnPitRoad` and `Opponent.IsCarInPit` from `CarIdxTrackSurface` being `InPitStall`, and
+  `driveriscarinpitlane(position)` reads the first. It is what the pit wall's chip, the row's dimmed
+  ink and the relative's and the leaderboard's PIT mark all read, as `carInPit` in
+  `packages/dash/src/second/values.ts`.
+- **Off track is not.** iRacing publishes it for every car, as `CarIdxTrackSurface` being `OffTrack`,
+  and SimHub reads that array for the pit stall alone: no member of `Opponent` says a car is off the
+  track, so no `driver<name>` function can.
+- **The raw array is not a property either.** `DeclareObject` declares an array member as one
+  property per element (`Name01`, `Name02` and on), but iRacing's `Telemetry` is a
+  `Dictionary<string, object>`, and for a dictionary `DeclareObject` attaches only the values that are
+  not arrays. So `CarIdxTrackSurface`, like every other `CarIdx*` array, never reaches
+  `GameRawData.Telemetry`, and a dash has no way to read it.
+- **Nor could a row address it.** A table row addresses its car by leaderboard position, the array is
+  indexed by `CarIdx`, and no function maps the one to the other: `Opponent` carries no `CarIdx`.
+- So marking a car off track on the lists needs the plugin to publish it per leaderboard position,
+  which is a reading of telemetry of the kind ADR 0009 refuses and ADR 0018 allows for the player's
+  own car. That is a decision and not a fault, and it is not taken.
 
 ## Sources
 

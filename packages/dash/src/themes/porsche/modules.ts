@@ -24,14 +24,14 @@
  */
 import type { Item, Rect, RectangleItem } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
-import { withMoreBindings } from '../../bind.ts';
+import { withMoreBindings, withoutBindings } from '../../bind.ts';
 import { measureText } from '../../design/advances.ts';
 import { rect } from '../../design/geometry.ts';
-import { boxSlack } from '../../design/metrics.ts';
+import { boxSlack, cells } from '../../design/metrics.ts';
 import { label } from '../../elements/label.ts';
 import type { ModuleContext } from '../../modules/module.ts';
 import type { Density } from '../../second/density.ts';
-import { field, fieldWidth, scaleFields, type FieldSpec } from '../../second/field.ts';
+import { field, fieldWidth, followerGap, scaleFields, valueCells, type FieldSpec } from '../../second/field.ts';
 import { zoneCounterX, zoneFrameMetrics } from '../../second/header.ts';
 import { stack, type StackRow } from '../../second/layout.ts';
 import { withHouseLayout } from '../moduleRegister.ts';
@@ -174,13 +174,54 @@ function bareValue(spec: FieldSpec, box: Rect, density: Density, align: 'right' 
   const value = valueOf(spec);
   const width = fieldWidth(value, density);
   const bottom = box.top + (box.height + value.value.fs) / 2;
-  if (align === 'center') return withinRight(field(value, box.left + (box.width - width) / 2, bottom, density, width), box.left + box.width);
+  const denominated = spec.value.follower?.kind === 'denominator' && !spec.value.mark;
+  if (align === 'center') {
+    const items = withinRight(field(value, box.left + (box.width - width) / 2, bottom, density, width), box.left + box.width);
+    return denominated ? againstDenominator(value, items, density, align) : items;
+  }
   const items = withinRight(field(value, box.left + box.width - CELL.valuePad - width, bottom, density, width), box.left + box.width - CELL.valuePad);
   // A value drawn in cells cut for its widest reading starts at the left of them, so a short reading
   // would stand away from the edge the car aligns its values on. Where nothing follows it, the value is
-  // set against the right of its box instead; a unit is placed from the value's left, so it keeps it.
+  // set against the right of its box instead; a unit is placed from the value's left, so it keeps it,
+  // and a denominator is placed after the value's cells instead, so it can.
+  if (denominated) return againstDenominator(value, items, density, align);
   if (spec.value.follower || spec.value.mark) return items;
   return items.map((item) => (item.kind === 'text' && item.name === `${spec.name}.value` ? { ...item, hAlign: 'right' as const } : item));
+}
+
+/**
+ * A value and its denominator with the value set against the right of its cells and the denominator
+ * standing after the last of them, where the house's field sets the value at the left of its cells and
+ * binds the denominator to follow whatever it draws.
+ *
+ * The house's way leaves the empty cells of a short reading at the right of the pair, and in a line
+ * the car aligns on the right that pushes the whole pair left. A lap is cut for `999` (#596), so
+ * `12 / 30` stood a cell further left than the position over it, and its end stood a cell and more
+ * short of the edge every other value ends on. Set this way the empty cells are at the left, where
+ * the gap to the title cell takes them, the slash stands in one place whatever the lap, and a lap of
+ * two digits sits where it did before the third cell was added. Centred under a title cell, the
+ * pair's empty room is then on both sides of it rather than all at its right, so it reads centred. A denominator that can be hidden
+ * while its value is not, as the lap's is in a session with no length, takes the value to the edge
+ * the pair ends on, or to the middle of the pair where the pair is centred, so the value does not
+ * stand alone a denominator's width from where the pair would.
+ */
+function againstDenominator(spec: FieldSpec, items: Item[], density: Density, align: 'right' | 'center'): Item[] {
+  const follower = spec.value.follower!;
+  const valueName = `${spec.name}.value`;
+  const value = items.find((item) => item.name === valueName);
+  if (value === undefined || !('rect' in value)) return items;
+  const left = value.rect.left;
+  const width = fieldWidth(spec, density);
+  const cellsEnd = left + valueCells(spec, cells(spec.value.weight ?? 'SemiBold', spec.value.fs));
+  const set = Math.round(cellsEnd - value.rect.width);
+  const alone = follower.visibleBind !== undefined && follower.visibleBind !== spec.visibleBind;
+  const ownLeft = alone ? ncalc.iff(follower.visibleBind!, ncalc.num(set), ncalc.num(Math.floor(align === 'right' ? left + width - value.rect.width : left + (width - value.rect.width) / 2))) : undefined;
+  return items.map((item) => {
+    if (item.kind !== 'text') return item;
+    if (item.name === valueName) return withMoreBindings({ ...item, hAlign: 'right' as const, rect: { ...item.rect, left: set } }, { Left: ownLeft });
+    if (item.name === `${spec.name}.denominator`) return withoutBindings({ ...item, rect: { ...item.rect, left: Math.round(cellsEnd + followerGap(follower)) } }, ['Left']);
+    return item;
+  });
 }
 
 /** The width of a page's column of title cells: its widest label, short, with 8 px either side. */
