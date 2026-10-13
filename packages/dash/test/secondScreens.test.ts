@@ -1654,7 +1654,10 @@ describe('the inputs page', () => {
 
   test('ends with the steering, which is a declared part the narrow shapes drop', () => {
     const steerIn = (items: Item[]): string[] => items.filter((i) => i.name.startsWith('inputs.steer')).map((i) => i.name);
-    const wheel = ['inputs.steer.spokes', 'inputs.steer.spoke', 'inputs.steer.rim', 'inputs.steer.gripLeft', 'inputs.steer.gripRight', 'inputs.steer.hub', 'inputs.steer.mark', 'inputs.steer.label'];
+    const spokes = ['Left', 'Right', 'Down'];
+    // A spoke tapers, and its taper is three bars: the middle and an edge either side.
+    const turning = [...spokes.flatMap((s) => [`inputs.steer.spoke${s}`, `inputs.steer.spoke${s}.left`, `inputs.steer.spoke${s}.right`]), ...spokes.map((s) => `inputs.steer.slot${s}`)];
+    const wheel = [...turning, 'inputs.steer.rim', 'inputs.steer.boss', 'inputs.steer.hole', 'inputs.steer.mark', 'inputs.steer.label'];
     expect(steerIn(build(600, 280))).toEqual(wheel);
     expect(steerIn(build(430, 300))).toHaveLength(wheel.length);
     expect(steerIn(build(274, 300))).toEqual([]);
@@ -1669,13 +1672,14 @@ describe('the inputs page', () => {
     expect(left).toContain('SteeringWheelAngle');
     expect(left).toContain('sin(');
     expect(top).toContain('cos(');
-    // Every part a turn changes is turned by the one clamped angle, and the rim, a circle that a turn
-    // leaves as it is, is not.
+    // Every part a turn changes is turned by the one clamped angle, and the rim, the boss and its
+    // hole, circles that a turn leaves as they are, are not.
     const turned = items.filter((i) => i.name.startsWith('inputs.steer.') && i.bindings?.Rotation).map((i) => i.name);
-    expect(turned).toEqual(['inputs.steer.spokes', 'inputs.steer.spoke', 'inputs.steer.gripLeft', 'inputs.steer.gripRight', 'inputs.steer.hub', 'inputs.steer.mark']);
-    // The stripe is white, on a grey wheel, so the top of the wheel is the one part told apart.
+    const spokes = ['Left', 'Right', 'Down'];
+    expect(turned).toEqual([...spokes.flatMap((s) => [`inputs.steer.spoke${s}`, `inputs.steer.spoke${s}.left`, `inputs.steer.spoke${s}.right`]), ...spokes.map((s) => `inputs.steer.slot${s}`), 'inputs.steer.mark']);
+    // The mark is white, on a grey wheel, so the top of the wheel is the one part told apart.
     expect((mark as RectangleItem).backgroundColor).toBe(ds.color.text.primary);
-    expect((named(items, 'inputs.steer.spokes') as RectangleItem).backgroundColor).toBe(ds.color.text.label);
+    expect((named(items, 'inputs.steer.spokeDown') as RectangleItem).backgroundColor).toBe(ds.color.text.label);
     // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is full lock
     // and not a mark that has come round past the top again, with the bounds on the left (#1046).
     expect(left).toContain('max(-3.5, min(3.5, ');

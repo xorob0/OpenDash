@@ -70,7 +70,6 @@ const RADIUS_EXCEPTIONS: readonly { match: RegExp; radius?: number; why: string 
   // tyre seen end-on rather than as three bars; it is cut from the box like every other part of it.
   { match: /(?:^|\.)tyres\.(?:Front|Rear)(?:Left|Right)\.track[123]$/, why: "the tyre's tread columns, whose shoulders are round: packages/dash/src/second/tyreGlyph.ts" },
   { match: /(?:^|\.)pitView\.car\.(?:body|nose|tail|(?:Front|Rear)(?:Left|Right))$/, why: 'the car seen from above, whose tapers are rectangles because the format has no path item: packages/dash/src/second/carTopView.ts' },
-  { match: /(?:^|\.)steer\.(?:gripLeft|gripRight|hub)$/, why: "the steering wheel's padded grips and centre pad, cut from the dial's box: packages/dash/src/second/steering.ts" },
 ];
 
 /** Where something was found: the package, the dashboard, and the item drawing it. */

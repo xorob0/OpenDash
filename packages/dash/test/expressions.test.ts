@@ -22,7 +22,7 @@ import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
-import type { RectangleItem, TextItem } from '../src/generator.ts';
+import type { EllipseItem, RectangleItem, TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -723,52 +723,36 @@ describe('module expressions', () => {
     expect(at(-10)).toEqual(at(-values.STEERING_RANGE));
   });
 
-  test('the wheel turns as one: the lower spoke opposite the mark, the grips at the hands, every part by the same angle in degrees', () => {
+  test('the wheel turns as one: every part goes round the hub and turns by the wheel angle on top of its own', () => {
     const module = MODULES.find((m) => m.id === 'inputs')!;
     const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
     const items = [...walkItems(module.build({ frame: box, density: 'zone', prefix: 'inputs.' }))];
-    const part = (name: string): RectangleItem => {
-      const item = items.find((i) => i.name === `inputs.steer.${name}`);
-      if (!item || item.kind !== 'rect') throw new Error(`inputs.steer.${name} is not a rect`);
-      return item;
-    };
-    const place = (n: number): number => Math.round(n * 1e6) / 1e6 + 0;
-    const turn = (item: RectangleItem, angle: number): number => place(evaluateNumber(item.bindings!.Rotation!.formula as string, angle));
-    // Rotation is clockwise degrees, and iRacing's angle is positive to the left, so a quarter turn
-    // to the left is a quarter turn anticlockwise for every part, and a straight wheel is not turned.
-    for (const name of ['spokes', 'spoke', 'gripLeft', 'gripRight', 'hub', 'mark']) {
-      expect({ name, straight: turn(part(name), 0), left: turn(part(name), Math.PI / 2), right: turn(part(name), -Math.PI / 2) }).toEqual({ name, straight: 0, left: -90, right: 90 });
-    }
-    // The crossbar and the centre pad are centred on the hub, which a turn about their own centre
-    // keeps where it is.
-    expect(part('spokes').bindings?.Left).toBeUndefined();
-    expect(part('hub').bindings?.Left).toBeUndefined();
-    // The lower spoke's centre goes round the hub opposite the mark's, at half the radius: a quarter
-    // turn to the left takes it to the right of the hub, level with it.
-    const spoke = part('spoke');
-    const at = (angle: number): { left: number; top: number } => ({
-      left: place(evaluateNumber(spoke.bindings!.Left!.formula as string, angle)),
-      top: place(evaluateNumber(spoke.bindings!.Top!.formula as string, angle)),
+    const turned = items.filter((i): i is RectangleItem => i.kind === 'rect' && i.name.startsWith('inputs.steer.') && i.bindings?.Rotation !== undefined);
+    expect(turned.map((i) => i.name)).toContain('inputs.steer.spokeDown');
+    const rim = items.find((i) => i.name === 'inputs.steer.rim') as EllipseItem;
+    const hub = { x: rim.rect.left + rim.rect.width / 2, y: rim.rect.top + rim.rect.height / 2 };
+    const place = (n: number): number => Math.round(n * 1e4) / 1e4 + 0;
+    const pose = (item: RectangleItem, angle: number): { x: number; y: number; turn: number } => ({
+      x: place(evaluateNumber(item.bindings!.Left!.formula as string, angle) + item.rect.width / 2 - hub.x),
+      y: place(evaluateNumber(item.bindings!.Top!.formula as string, angle) + item.rect.height / 2 - hub.y),
+      turn: place(evaluateNumber(item.bindings!.Rotation!.formula as string, angle)),
     });
-    expect(at(0)).toEqual({ left: spoke.rect.left, top: spoke.rect.top });
-    const half = spoke.rect.height / 2;
-    expect(at(Math.PI / 2)).toEqual({ left: spoke.rect.left + half, top: spoke.rect.top - half });
-    expect(at(-Math.PI / 2)).toEqual({ left: spoke.rect.left - half, top: spoke.rect.top - half });
-    // The grips go round with the hands: a quarter turn to the left takes the right grip to the top
-    // of the wheel and the left grip to the bottom.
-    const centre = (name: string, angle: number): { x: number; y: number } => {
-      const p = part(name);
-      return {
-        x: place(evaluateNumber(p.bindings!.Left!.formula as string, angle) + p.rect.width / 2),
-        y: place(evaluateNumber(p.bindings!.Top!.formula as string, angle) + p.rect.height / 2),
-      };
-    };
-    const hub = { x: part('hub').rect.left + part('hub').rect.width / 2, y: part('hub').rect.top + part('hub').rect.height / 2 };
-    const reach = centre('gripRight', 0).x - hub.x;
-    expect(reach).toBeGreaterThan(0);
-    expect(centre('gripLeft', 0)).toEqual({ x: hub.x - reach, y: hub.y });
-    expect(centre('gripRight', Math.PI / 2)).toEqual({ x: hub.x, y: hub.y - reach });
-    expect(centre('gripLeft', Math.PI / 2)).toEqual({ x: hub.x, y: hub.y + reach });
+    for (const item of turned) {
+      const straight = pose(item, 0);
+      // A straight wheel draws every part where the package writes it, at the rotation it writes.
+      expect({ name: item.name, ...straight }).toEqual({ name: item.name, x: place(item.rect.left + item.rect.width / 2 - hub.x), y: place(item.rect.top + item.rect.height / 2 - hub.y), turn: place(item.rotation ?? 0) });
+      // Rotation is clockwise degrees, and iRacing's angle is positive to the left, so a quarter turn
+      // to the left takes every part a quarter turn anticlockwise round the hub, (x, y) to (y, -x),
+      // and turns it by the same quarter, and the other way round for a turn to the right.
+      expect({ name: item.name, ...pose(item, Math.PI / 2) }).toEqual({ name: item.name, x: straight.y, y: place(-straight.x), turn: place(straight.turn - 90) });
+      expect({ name: item.name, ...pose(item, -Math.PI / 2) }).toEqual({ name: item.name, x: place(-straight.y), y: straight.x, turn: place(straight.turn + 90) });
+    }
+    // The spoke down sits opposite the stripe, and the two side spokes are lifted the same way.
+    const centre = (name: string): { x: number; y: number; turn: number } => pose(turned.find((i) => i.name === `inputs.steer.${name}`)!, 0);
+    expect(centre('spokeDown').x).toBe(0);
+    expect(centre('spokeDown').y).toBeGreaterThan(0);
+    expect(centre('spokeLeft').y).toBeLessThan(0);
+    expect(centre('spokeLeft')).toEqual({ x: place(-centre('spokeRight').x), y: centre('spokeRight').y, turn: place(-centre('spokeRight').turn) });
   });
 });
 
