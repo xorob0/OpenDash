@@ -4,7 +4,7 @@
  *
  * Three things here are worth a test rather than a reading. The box is measured against a 400 px
  * rectangle it has to hold a name, a 64 px reading and a mark inside, which is where it would clip;
- * only one notification may be out at a time, over a rectangle the pop-ups also use; and the mark's
+ * only one notification may be out at a time, over a rectangle the lap-time pop-up also uses; and the mark's
  * ink is in the pixels of a file rather than in a token, so the only way to hold it to the canvas's
  * rule is to open the file and look.
  */
@@ -35,7 +35,8 @@ import { TRACKED_VALUES, trackedValue } from '../src/second/tracked.ts';
 import { ds } from '../src/tokens.ts';
 import type { ImageItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
-import { ZONE_FACES, rectOf } from '../src/zones/index.ts';
+import { ZONE_FACES, faceItems, rectOf, zoneRegions } from '../src/zones/index.ts';
+import { regionRect } from '../src/themes/anatomy.ts';
 
 /** A hero with room for the sheet's box, so that what is measured here is the sheet's anatomy. */
 const HERO = rect(680, 141, 560, 200);
@@ -234,11 +235,15 @@ describe('the trend mark wears the colour the canvas gives it', () => {
   });
 });
 
-describe('a hero narrower than the sheet', () => {
-  /** Every width a hero is drawn at by a theme that ships, the 1920's 380 down to the AiM's 151, and a guard below it. */
+/**
+ * No body that ships is narrower than the sheet's 400 since the notification became a real pop-up
+ * over the whole face (#1047), so these widths are the guard for a theme whose body is: the fit that
+ * once answered the 1920's 380 px zone A down to the AiM's 151 px gear is kept, and asked here.
+ */
+describe('a box narrower than the sheet', () => {
   const WIDTHS = [380, 340, 300, 277, 260, 240, 202, 162, 151, 120];
 
-  test('the box is the hero\'s width and the reading steps down beside the name, which never gives', () => {
+  test('the box is the room\'s width and the reading steps down beside the name, which never gives', () => {
     for (const width of WIDTHS) {
       const hero = rect(100, 100, width, 200);
       const frame = changeNotificationFrame(hero);
@@ -280,20 +285,24 @@ describe('a hero narrower than the sheet', () => {
 });
 
 describe('every face draws it', () => {
-  test('the notification is over zone A on all eight, no larger than the zone, and takes no room of its own', () => {
+  test('the notification is the sheet\'s 400 by 96 centred on zone A on all eight, inside the body, and takes no room of its own', () => {
     for (const layout of ZONE_FACES) {
       const zoneA = rectOf(layout, 'A');
-      const frame = changeNotificationFrame(zoneA);
-      expect({ face: layout.folder, width: frame.width, height: frame.height, inside: contains(zoneA, frame) }).toEqual({
+      const body = regionRect(zoneRegions(layout), 'flagBody');
+      const frame = changeNotificationFrame(zoneA, body);
+      expect({ face: layout.folder, width: frame.width, height: frame.height, inside: contains(body, frame) }).toEqual({
         face: layout.folder,
-        width: Math.min(CHANGE_NOTIFICATION_WIDTH, zoneA.width),
-        height: Math.min(CHANGE_NOTIFICATION_HEIGHT, zoneA.height),
+        width: CHANGE_NOTIFICATION_WIDTH,
+        height: CHANGE_NOTIFICATION_HEIGHT,
         inside: true,
       });
-      // Inside the pop-up's own box, which is what carries over everything popUp.test.ts holds the
-      // pop-up to: it clears the rev bar, the bar of settled values, the limiter banner and band D,
-      // where a flag has the better claim on the same sixty pixels.
-      const popUp = popUpFrame(zoneA);
+      // As the face draws it, which is the frame above.
+      const drawn = faceItems(layout).flatMap((item) => [...walkItems([item])]).find((item) => item.name === `notice.${TRACKED_VALUES[0]!.id}.box`);
+      expect(drawn?.kind === 'rect' ? drawn.rect : undefined).toEqual(frame);
+      // Inside the lap-time pop-up's own box, which is what carries over everything popUp.test.ts
+      // holds that box to: it clears the rev bar, the bar of settled values, the limiter banner and
+      // band D, where a flag has the better claim on the same sixty pixels.
+      const popUp = popUpFrame(zoneA, body);
       const inside =
         frame.left >= popUp.left &&
         frame.left + frame.width <= popUp.left + popUp.width &&

@@ -23,7 +23,7 @@ import { rule } from '../elements/rule.ts';
 import { flagCorners, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { flagFull } from '../components/flagFull.ts';
 import { pitAlerts } from '../components/pitAlerts.ts';
-import { popUpRoom, popUps } from '../components/popUp.ts';
+import { lastingPopUpFrame, lastingPopUps, popUpRoom, transientPopUps } from '../components/popUp.ts';
 import { changeNotifications } from '../components/changeNotification.ts';
 import { rect } from '../design/geometry.ts';
 import { idleScreen } from '../idle.ts';
@@ -37,7 +37,7 @@ import { label } from '../elements/label.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
 import { bandFlagBlocks } from './bandPages.ts';
-import { widestCounter, zoneDashboardsFor, zoneWidget } from './pages.ts';
+import { widestCounter, zoneAGearInk, zoneDashboardsFor, zoneWidget } from './pages.ts';
 
 const { and, not } = ncalc;
 
@@ -166,42 +166,55 @@ export function faceItems(
   // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
   // stop under a red flag still has to know whether the limiter is on.
   const restyled = (drawn: Item[], boxes: 'inverse' | 'outline'): Item[] => (drawing.restyle ? drawing.restyle(drawn, { boxes }) : drawn);
-  items.push(...restyled(pitAlerts(regionRect(regions, 'pitAlert'), 'pitAlert'), 'inverse'));
+  const banner = regionRect(regions, 'pitAlert');
+  items.push(...restyled(pitAlerts(banner, 'pitAlert'), 'inverse'));
+
+  // A pop-up that holds for as long as its condition does, low fuel for the last laps of a stint and
+  // DRS for a straight, never covers the gear (#1047). It takes the pit banner's row, which every
+  // theme puts where a state may sit for as long as the limiter is on in the lane, cut short where
+  // the gear's ink on any of zone A's pages reaches into it, and it waits for the pit family, whose
+  // row it is. Drawn before a theme's takeovers, which are states of the car that hold too and are
+  // drawn over whatever they take: the AiM's engine warning over zone C, where its banner row is.
+  const row = lastingPopUpFrame(banner, zoneAGearInk(zoneRect(regions, 'A'), drawing));
+  items.push(...restyled(lastingPopUps(row, 'popUp'), 'outline'));
   if (drawing.takeovers) items.push(...drawing.takeovers(ctx));
 
-  // A pop-up covers the hero, which on this face is zone A: the gear and the speed are what a
-  // driver can give up for the three seconds a lap time is worth more than either. The box is
-  // centred on that rectangle rather than placed, which keeps it off the bar of settled values above
-  // it and band D below, where a flag has the better claim on the same sixty pixels. The limiter
-  // banner is inside the hero, and a theme whose hero is short brings a centred box up over it, so
-  // the box is centred on the part of the hero the banner leaves wherever that happens (#1052).
-  // Drawn after the limiter, which is the only other thing over a zone.
+  // A pop-up that is an event, the lap time for the three seconds after the line, is drawn as a real
+  // pop-up: the sheet's 560 by 120 centred on the hero, over the gear and over zones B and C either
+  // side for those seconds (#1047). It is kept inside the body, off the rev bar, the bar of settled
+  // values and band D, where a flag has the better claim on the same sixty pixels, and off the pit
+  // banner: a theme whose hero is short brings a centred box up over the banner, so the box is
+  // centred on the part of the hero the banner leaves wherever that happens (#1052). Drawn after the
+  // limiter and the takeovers, being over them for seconds.
   const hero = regionRect(regions, 'hero');
-  const room = popUpRoom(hero, regionRect(regions, 'pitAlert'));
-  items.push(...restyled(popUps(room, 'popUp'), 'outline'));
+  const flagBody = regionRect(regions, 'flagBody');
+  const room = popUpRoom(hero, banner, flagBody);
+  items.push(...restyled(transientPopUps(room, flagBody, 'popUp'), 'outline'));
 
-  // And the smaller box of the same family, on the same rectangle: a car setting that has just
-  // moved, for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up
-  // inside the component, so a lap time at the line is never covered by a click of traction control.
-  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(room, 'notice'), 'outline')));
+  // And the smaller box of the same kind, on the same rectangle: a car setting that has just moved,
+  // for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up inside the
+  // component, so a lap time at the line is never covered by a click of traction control.
+  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(room, flagBody, 'notice'), 'outline')));
 
   // The largest of the family, last, and on the same rectangle again: the debrief of the lap just
   // finished, for the four seconds after the line.
   //
   // Against the rest of the family it is ranked by geometry rather than by an exclusion chain, which
-  // is the one place this face does that and is worth saying why. The pop-up and the notification are centred on this same
-  // zone and are no larger than it, the sheet's 560 by 120 and 400 by 96 where it has the room and
-  // its width or height where it does not (#1047), and the review is larger than both in both
-  // directions and is drawn over them, so the two conditions that are true at the same moment -- a lap time at the line and
-  // a review of that lap -- cannot both be read. A chain would have to reach into `popUp.ts`, whose
-  // three conditions know nothing of a face and so could not ask which face's setting is on.
+  // is the one place this face does that and is worth saying why. The lap-time pop-up and the
+  // notification are centred on the same hero and kept inside the same body, at the sheet's 560 by
+  // 120 and 400 by 96, and the review is larger than both in both directions and is drawn over them,
+  // so the two conditions that are true at the same moment -- a lap time at the line and a review of
+  // that lap -- cannot both be read. A chain would have to reach into `popUp.ts`, whose conditions
+  // know nothing of a face and so could not ask which face's setting is on. A lasting pop-up in the
+  // banner row is covered for the review's four seconds where the review reaches the row, as on the
+  // nano, and is out again after them.
   //
   // The pit family is the exception, and is ranked by condition: the review does not open while any
   // state of the family is out (`lapReviewOut`, #1053). Geometry could not do it. On the nano the
   // body is 194 px and a 160 px panel reaches the banner, on the Porsche's faces it reaches the
   // banner at the top of the gear's tile, and a theme draws the limiter state over regions of its
   // own, the Porsche over the whole body the review is clamped to and the AiM over zone C.
-  items.push(...restyled([lapReview(lapReviewFrame(hero, regionRect(regions, 'flagBody')), lapReviewOut(face), 'lapReview')], 'outline'));
+  items.push(...restyled([lapReview(lapReviewFrame(hero, flagBody), lapReviewOut(face), 'lapReview')], 'outline'));
 
   return items;
 }

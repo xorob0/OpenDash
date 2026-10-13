@@ -15,9 +15,10 @@
  * the same clock seen at two lengths.
  *
  * **How it ranks against what is already on the face.** The panel is centred on the same hero
- * rectangle the pop-ups and the change notification take, and it is larger than both in both
+ * rectangle the lap-time pop-up and the change notification take, and it is larger than both in both
  * directions, so while it is out it covers them rather than arguing with them; it is pushed last in
- * `zones/face.ts`. The pit family is ranked the other way and by condition rather than by geometry:
+ * `zones/face.ts`. Low fuel and DRS hold for longer and are drawn in the pit banner's row, which the
+ * panel reaches on the nano and covers for its four seconds. The pit family is ranked the other way and by condition rather than by geometry:
  * the review does not open while any state of the family is out, so neither the limiter banner nor
  * a theme's own drawing of the limiter, which the Porsche spreads over the whole body, is ever under
  * it (`lapReviewOut`, #1053). Band D is outside it altogether, which is
@@ -272,9 +273,9 @@ const fuelFields = (prefix: string): FieldSpec[] => [
  * whatever that leaves.
  *
  * The body is zones B, A and C together, the rectangle a full-screen flag takes, and it is what this
- * panel is allowed to cover: unlike the pop-up and the change notification, which keep to the hero,
- * the review is the one box of the family a driver asks for, and the sheet draws it 1200 wide on
- * purpose. What it may not cover is what lies outside the body, which on the house face is the rev
+ * panel is allowed to cover, as the lap-time pop-up and the change notification are: the three are
+ * out for seconds and are drawn as real pop-ups over the whole face (#1047), and the sheet draws this
+ * one 1200 wide on purpose. What it may not cover is what lies outside the body, which on the house face is the rev
  * bar, the bar and band D and on the Porsche's is also the settings column and the telltales either
  * side of the zones, and on the Porsche's 800 x 286, whose body is 142 px tall, the foot (#1047).
  */
@@ -305,7 +306,7 @@ const rowWidth = (specs: readonly FieldSpec[], gap: number): number =>
  * instead. So the fuel goes first, then the line and the strip, and the lap time never goes at all.
  *
  * **The deltas are the floor.** The panel covers the lap-time pop-up while it is out, and that
- * pop-up already carries the lap time, and one delta where its hero has room for it; a review that
+ * pop-up already carries the lap time, and one delta where the face's figures leave room for it; a review that
  * had shed its way down to a lap time alone would be four seconds of the zones spent saying no more
  * than the box it replaced. So
  * where the deltas will not fit beside a 116 px lap time, the lap time steps down the density's own

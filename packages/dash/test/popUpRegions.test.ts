@@ -2,15 +2,22 @@
  * Every box of the pop-up family, on every face of every theme, inside the region it belongs to
  * (#1047).
  *
- * A pop-up is a function of the rectangle the face calls its hero, as a module is a function of its
- * zone, so it is held to that rectangle the way `secondScreens.test.ts` holds a module to its frame:
- * the face is built, and every item the family draws is found inside the region. The pop-ups and
- * the change notifications keep to the hero, which is zone A on the house face and the gear's tile
- * on the Porsche's and the AiM's; that is the sheet's "it never covers a slot", and it is what a box
- * of the sheet's 560 centred on a 380 px zone A broke, hiding the session name and the time left in
- * zone C while low fuel was flagged. The lap review is the one box of the family that is wider than
- * the hero on purpose, and the layout says so: it is clamped to the body, zones B, A and C, and
- * never covers the rev bar, the bar of settled values or band D.
+ * A pop-up is a function of the regions a face declares, as a module is a function of its zone, so
+ * it is held to them the way `secondScreens.test.ts` holds a module to its frame: the face is built,
+ * and every item the family draws is found inside the region it belongs to. Which region depends on
+ * how long the box stays out, which is the author's ruling on this pull request.
+ *
+ * - **A transient box**, the lap time at the line, the change notification and the lap review, is
+ *   out for seconds and is drawn as a real pop-up over the whole face: inside the body, zones B, A
+ *   and C, and clear of the rev bar, the bar of settled values, band D and the pit banner.
+ * - **A lasting box**, low fuel and DRS, is out for as long as its condition holds, and **never
+ *   covers the gear**. It keeps to the pit banner's row, which the pit family has first, and it is
+ *   held clear of the gear's ink on every page of zone A a driver can cycle to, in every arrangement
+ *   of every face of every theme, as each theme ships. That is what a 380 px pop-up over the 1920
+ *   face's gear broke, for as long as the tank was under its threshold.
+ *
+ * The lap review is the widest of the transient boxes on purpose: it is clamped to the body as the
+ * other two are, and is checked here for the deltas each face keeps.
  *
  * The faces are built from each theme's anatomy with the house's drawing, which is how the
  * conformance harness builds a test theme. A theme's own drawing that moves a member of the family
@@ -28,11 +35,13 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test';
 import { LAP_REVIEW_PAD_X, LAP_REVIEW_PAD_X_NARROW } from '../src/components/lapReview.ts';
-import { PIT_ALERTS, pitAlertVisible } from '../src/components/pitAlerts.ts';
+import { PIT_ALERTS, pitAlertOut, pitAlertVisible } from '../src/components/pitAlerts.ts';
+import { POP_UP_WIDTH, popUpVisible, popUpsOfKind } from '../src/components/popUp.ts';
 import { FACE_SIZES, lapReviewSettingName } from '../src/contract.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
-import type { Item, LayerItem, Rect } from '../src/generator.ts';
-import { contains, overlaps } from '../src/design/geometry.ts';
+import { ncalc, type Item, type LayerItem, type Rect, type TextItem } from '../src/generator.ts';
+import { contains, overlaps, translate } from '../src/design/geometry.ts';
+import { inkOf } from '../src/design/metrics.ts';
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
 import { buildThemeFace, drawsInThisProcess } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
@@ -40,6 +49,8 @@ import { THEME_ID } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, regionsWithoutRevBar, type ZoneLayout } from '../src/zones/index.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme } from './fixtures/gearLeftTheme.ts';
+
+const { not } = ncalc;
 
 // The test theme with the gear at the left edge is the case a centred box was most wrong on, so it
 // is asked too, and taken out again once this file has run.
@@ -88,24 +99,36 @@ const settled = (face: Face): [string, Rect | undefined][] => [
   ['band D', regionRect(face.regions, 'band')],
 ];
 
-describe('the pop-ups and the change notifications keep to the hero', () => {
+/** The prefixes the transient pop-ups and the change notifications are drawn under. */
+const TRANSIENT = [...popUpsOfKind('transient').map((spec) => `popUp.${spec.id}.`), 'notice.'];
+/** The prefixes the lasting pop-ups are drawn under. */
+const LASTING = popUpsOfKind('lasting').map((spec) => `popUp.${spec.id}.`);
+
+const partsOfAll = (items: Item[], prefixes: readonly string[]): Exclude<Item, LayerItem>[] =>
+  prefixes.flatMap((prefix) => partsOf(items, prefix)).filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer');
+
+/**
+ * The lap time at the line and the change notification are out for three seconds, and the author's
+ * ruling is that a box out for that long may be a real pop-up over the whole face rather than kept to
+ * zone A (#1047): the sheet's 560 by 120 and 400 by 96, over the gear and over zones B and C for
+ * those seconds. What it may still not cover is what lies outside the body, and the pit banner.
+ */
+describe('the transient pop-up and the change notifications are real pop-ups, inside the body', () => {
   for (const face of faces) {
     test(`${face.name}`, () => {
-      const hero = regionRect(face.regions, 'hero');
-      const parts = [...partsOf(face.items, 'popUp.'), ...partsOf(face.items, 'notice.')];
+      const body = regionRect(face.regions, 'flagBody');
+      const parts = partsOfAll(face.items, TRANSIENT);
       expect(parts.length).toBeGreaterThan(0);
       for (const item of parts) {
-        if (item.kind === 'layer') continue;
-        expect({ face: face.name, item: item.name, rect: item.rect, hero, inside: contains(hero, item.rect) }).toMatchObject({ inside: true });
-      }
-      // And so clear of the zones either side of the hero, which is the fault this file is for.
-      const others = (['B', 'C'] as const).map((zone) => [zone, zoneRect(face.regions, zone)] as const);
-      for (const item of parts) {
-        if (item.kind === 'layer') continue;
-        for (const [zone, rect] of others) {
-          expect({ face: face.name, item: item.name, zone, covered: overlaps(rect, item.rect) }).toMatchObject({ covered: false });
+        expect({ face: face.name, item: item.name, rect: item.rect, body, inside: contains(body, item.rect) }).toMatchObject({ inside: true });
+        for (const [what, box] of settled(face)) {
+          if (!box) continue;
+          expect({ face: face.name, item: item.name, what, covered: overlaps(box, item.rect) }).toMatchObject({ covered: false });
         }
       }
+      // And at the sheet's size wherever the body has the room, which is every face that ships.
+      const box = parts.find((item) => item.name === 'popUp.lap.box')!;
+      expect({ face: face.name, width: box.rect.width }).toEqual({ face: face.name, width: Math.min(POP_UP_WIDTH, body.width) });
     });
   }
 });
@@ -114,26 +137,144 @@ describe('the pop-ups and the change notifications keep to the hero', () => {
  * The pit banner is inside the hero on every face, at the top of zone A on the house's and of the
  * gear's tile on the Porsche's, and it is the one thing there with a state of its own: a pop-up
  * centred on a short hero once covered its bottom on the Porsche's 1280 x 400 and 600 x 686, and on
- * the portrait face the lower half of `Engage limiter` with it (#1052). Asked of the family over the
- * theme's regions, and again of the face as the theme ships it, where the banner is the one the face
- * draws and a theme's own notifications are drawn where the theme puts them.
+ * the portrait face the lower half of `Engage limiter` with it (#1052). Asked of the transient boxes
+ * over the theme's regions, and again of the face as the theme ships it, where the banner is the one
+ * the face draws and a theme's own notifications are drawn where the theme puts them. The lasting
+ * pop-ups share the banner's row and give it up by condition, which is asked further down.
  */
-describe('the pop-ups and the change notifications keep clear of the pit banner', () => {
+describe('the transient pop-up and the change notifications keep clear of the pit banner', () => {
   for (const face of faces) {
     test(`${face.name}`, () => {
       const banner = regionRect(face.regions, 'pitAlert');
-      const parts = [...partsOf(face.items, 'popUp.'), ...partsOf(face.items, 'notice.')];
+      const parts = partsOfAll(face.items, TRANSIENT);
       expect(parts.length).toBeGreaterThan(0);
       for (const item of parts) {
-        if (item.kind === 'layer') continue;
         expect({ face: face.name, item: item.name, rect: item.rect, banner, covered: overlaps(banner, item.rect) }).toMatchObject({ covered: false });
       }
     });
   }
 });
 
-describe('as each theme ships, no pop-up or change notification covers the pit banner the face draws', () => {
-  const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
+/** The lasting pop-ups are drawn in the pit banner's row and nowhere else. */
+describe('the lasting pop-ups keep to the pit banner\'s row', () => {
+  for (const face of faces) {
+    test(`${face.name}`, () => {
+      const banner = regionRect(face.regions, 'pitAlert');
+      const parts = partsOfAll(face.items, LASTING);
+      expect(parts.length).toBeGreaterThan(0);
+      for (const item of parts) {
+        expect({ face: face.name, item: item.name, rect: item.rect, banner, inside: contains(banner, item.rect) }).toMatchObject({ inside: true });
+      }
+    });
+  }
+});
+
+const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
+
+/** Every item a screen draws, layers walked through. */
+const drawnOn = (items: readonly Item[]): Exclude<Item, LayerItem>[] => [...walkItems(items)].filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer');
+
+/**
+ * The gear's ink on every page of zone A, as the face ships it: the zone A widget's rectangle on the
+ * screen, and every run of every page of the zone dashboard it points at that draws the gear, its
+ * ghosted neighbours and an LCD's unlit cell included, moved into the face's coordinates. The ink is
+ * the cap height and its overshoot down to the baseline, in the faces whose metrics the build knows,
+ * and the whole box in any other (`inkOf`).
+ *
+ * Read from the built package rather than from the function the face places the row by, so that a
+ * page, a theme's drawing of zone A or a face that moves the gear is caught here whatever the face
+ * thought it was clearing.
+ */
+function gearInkOn(screen: { items: Item[] }, zones: readonly { name: string; screens: { name: string; items: Item[] }[] }[]): { page: string; ink: Rect }[] {
+  const widget = drawnOn(screen.items).find((item) => item.kind === 'widget' && item.name === 'zoneA');
+  if (!widget || widget.kind !== 'widget') throw new Error('the face has no zone A widget');
+  const dashboard = zones.find((zone) => `${zone.name}.djson` === widget.fileName);
+  if (!dashboard) throw new Error(`no zone dashboard ${widget.fileName}`);
+  return dashboard.screens.flatMap((page) =>
+    drawnOn(page.items)
+      .filter((item): item is TextItem => item.kind === 'text' && /(^|\.)gear(\.(value|ghost|below|above))?$/.test(item.name))
+      .map((item) => ({ page: page.name, ink: translate(inkOf(item), widget.rect.left, widget.rect.top) })),
+  );
+}
+
+/**
+ * **A lasting pop-up never covers the gear** (#1047), which is the author's ruling on this pull
+ * request: low fuel stays up for the last laps of a stint, and a box over the gear for that long
+ * hides the one reading zone A is for. Asked of every face of every theme as it ships, in both
+ * arrangements, against every page of zone A a driver can cycle to while the box is up.
+ */
+describe('as each theme ships, no lasting pop-up covers the gear on any page of zone A', () => {
+  for (const id of here) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const { main, zones } = buildThemeFace(id, size, OPTS).built;
+        const screens = main.screens.filter((screen) => screen.name.startsWith('Main'));
+        expect(screens.length).toBeGreaterThanOrEqual(2);
+        for (const screen of screens) {
+          const gear = gearInkOn(screen, zones);
+          // Three of zone A's four pages draw the gear; the track page draws none.
+          expect(new Set(gear.map(({ page }) => page)).size).toBeGreaterThanOrEqual(3);
+          const lasting = drawnOn(screen.items).filter((item) => LASTING.some((prefix) => item.name.startsWith(prefix)));
+          expect(lasting.length).toBeGreaterThan(0);
+          for (const item of lasting) {
+            for (const { page, ink } of gear) {
+              const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, item: item.name, page };
+              expect({ ...where, rect: item.rect, ink, covered: overlaps(item.rect, ink) }).toMatchObject({ ...where, covered: false });
+            }
+          }
+        }
+      });
+    }
+  }
+});
+
+/** What a car is doing, as the properties the pit family reads; the in-car limiter control is present. */
+const G = 'DataCorePlugin.GameData';
+const car = (lane: boolean, limiter: boolean, ignition = true, started = ignition): Props => ({
+  [`${G}.IsInPitLane`]: lane ? 1 : 0,
+  [`${G}.PitLimiterOn`]: limiter ? 1 : 0,
+  [`${G}.EngineIgnitionOn`]: ignition ? 1 : 0,
+  [`${G}.EngineStarted`]: started ? 1 : 0,
+  'DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle': 1,
+});
+/** On the circuit, and in each state of the pit family. */
+const MOMENTS: { state?: string; car: Props }[] = [
+  { car: car(false, false) },
+  { state: 'ignition', car: car(true, false, false) },
+  { state: 'engine', car: car(true, false, true, false) },
+  { state: 'engage', car: car(true, false) },
+  { state: 'disengage', car: car(false, true) },
+  { state: 'limiter', car: car(true, true) },
+];
+
+/**
+ * The banner's row is the pit family's first: a lasting pop-up is drawn only while no state of the
+ * family is out, so the two never share the row, and an outlined banner, which is drawn over what is
+ * under it rather than over a ground of its own, is never read through a low-fuel box.
+ */
+describe('as each theme ships, a lasting pop-up gives the banner\'s row to the pit family', () => {
+  for (const id of here) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const screens = buildThemeFace(id, size, OPTS).built.main.screens.filter((screen) => screen.name.startsWith('Main'));
+        for (const screen of screens) {
+          const layers = [...walkItems(screen.items)].filter((item): item is LayerItem => item.kind === 'layer' && LASTING.some((prefix) => `${item.name}.` === prefix));
+          expect(layers.map((layer) => layer.name)).toEqual(LASTING.map((prefix) => prefix.slice(0, -1)));
+          for (const layer of layers) {
+            const id_ = layer.name.slice('popUp.'.length);
+            expect(layer.bindings?.Visible?.formula).toBe(popUpVisible(id_));
+            expect(popUpVisible(id_)).toContain(not(pitAlertOut()));
+          }
+        }
+        for (const moment of MOMENTS) {
+          expect({ state: moment.state ?? 'none', free: Boolean(evalNcalc(not(pitAlertOut()), moment.car)) }).toEqual({ state: moment.state ?? 'none', free: !moment.state });
+        }
+      });
+    }
+  }
+});
+
+describe('as each theme ships, no transient pop-up or change notification covers the pit banner the face draws', () => {
   for (const id of here) {
     for (const size of THEMES[id]!.anatomy.sizes) {
       test(`${id} ${size.width}x${size.height}`, () => {
@@ -145,7 +286,7 @@ describe('as each theme ships, no pop-up or change notification covers the pit b
         expect(screens.length).toBeGreaterThanOrEqual(2);
         for (const { screen, items } of screens) {
           const banners = items.filter((item) => item.name.startsWith('pitAlert.'));
-          const family = items.filter((item) => /^(popUp|notice)\./.test(item.name));
+          const family = items.filter((item) => TRANSIENT.some((prefix) => item.name.startsWith(prefix)));
           expect(family.length).toBeGreaterThan(0);
           for (const item of family) {
             for (const banner of banners) {
@@ -171,6 +312,15 @@ describe('the lap review keeps to the body, and says so', () => {
           if (!box) continue;
           expect({ face: face.name, item: item.name, what, covered: overlaps(box, item.rect) }).toMatchObject({ covered: false });
         }
+      }
+      // And it contains the lap-time pop-up and the change notification it is drawn over, which is
+      // the ranking by geometry `face.ts` relies on: a lap time at the line and its review are out
+      // together, and only the review may be read.
+      const review = parts.find((item) => item.name === 'lapReview.box');
+      for (const name of ['popUp.lap.box', ...partsOf(face.items, 'notice.').filter((item) => item.name.endsWith('.box')).map((item) => item.name)]) {
+        const box = partsOf(face.items, name).find((item) => item.name === name);
+        if (!box || box.kind === 'layer' || !review || review.kind === 'layer') throw new Error(`${face.name} draws no ${name} or no review`);
+        expect({ face: face.name, box: name, covered: contains(review.rect, box.rect) }).toEqual({ face: face.name, box: name, covered: true });
       }
     });
   }
@@ -235,24 +385,6 @@ describe('the lap review keeps its deltas wherever the face it is drawn in holds
  * asked, which is the house's banner and a theme's own drawing of the limiter alike.
  */
 describe('as each theme ships, the lap review never covers a state of the pit family', () => {
-  const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
-  const G = 'DataCorePlugin.GameData';
-  /** What a car is doing, as the properties the family reads; the in-car limiter control is present. */
-  const car = (lane: boolean, limiter: boolean, ignition = true, started = ignition): Props => ({
-    [`${G}.IsInPitLane`]: lane ? 1 : 0,
-    [`${G}.PitLimiterOn`]: limiter ? 1 : 0,
-    [`${G}.EngineIgnitionOn`]: ignition ? 1 : 0,
-    [`${G}.EngineStarted`]: started ? 1 : 0,
-    'DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle': 1,
-  });
-  const MOMENTS: { state?: string; car: Props }[] = [
-    { car: car(false, false) },
-    { state: 'ignition', car: car(true, false, false) },
-    { state: 'engine', car: car(true, false, true, false) },
-    { state: 'engage', car: car(true, false) },
-    { state: 'disengage', car: car(false, true) },
-    { state: 'limiter', car: car(true, true) },
-  ];
   const familyStates = new Map(PIT_ALERTS.map((spec) => [pitAlertVisible(spec.id), spec.id]));
   const shown = (layer: LayerItem, frame: Props): boolean => Boolean(evalNcalc(String(layer.bindings?.Visible?.formula), frame));
   const drawnParts = (layer: LayerItem): Exclude<Item, LayerItem>[] => [...walkItems(layer.children)].filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer');

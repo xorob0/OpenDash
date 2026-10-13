@@ -318,8 +318,8 @@ describe('what the panel may cover', () => {
       // is pushed after them, which is what makes "one at a time" true here without an exclusion
       // chain reaching into `popUp.ts`, whose conditions know nothing of a face.
       const frame = lapReviewFrame(layout.zones.zoneA, bodyOf(layout));
-      expect({ name, covers: contains(frame, popUpFrame(layout.zones.zoneA)) }).toMatchObject({ covers: true });
-      expect({ name, covers: contains(frame, changeNotificationFrame(layout.zones.zoneA)) }).toMatchObject({ covers: true });
+      expect({ name, covers: contains(frame, popUpFrame(layout.zones.zoneA, bodyOf(layout))) }).toMatchObject({ covers: true });
+      expect({ name, covers: contains(frame, changeNotificationFrame(layout.zones.zoneA, bodyOf(layout))) }).toMatchObject({ covers: true });
       expect(LAP_REVIEW_HEIGHT).toBeGreaterThan(POP_UP_HEIGHT);
       expect(LAP_REVIEW_HEIGHT).toBeGreaterThan(CHANGE_NOTIFICATION_HEIGHT);
       const names = items.map((i) => i.name);

@@ -7,13 +7,14 @@
  * second opinion about the design rather than a check on the code. Where tokens.json carries the
  * same figure the literal is held against the token instead, so the two cannot drift.
  *
- * What a pop-up covers is the hero, which on a zone face is zone A, and nothing else. 560 px is
- * wider than every landscape zone A the artboards draw, and a box of that width reached into zones
- * B and C and hid the session name and the time left while low fuel was flagged (#1047), which the
- * sheet's own "it never covers a slot" rules out; so the box is the hero's width where the hero is
- * narrower, and its runs give ground inside it. What it may not touch either is anything carrying
- * a state of its own: the rev bar in its well, the bar of settled values, the limiter banner and
- * band D, where a flag has the better claim on the same sixty pixels.
+ * What a pop-up covers depends on how long it is out, which is the author's ruling on #1047. The
+ * lap time at the line is out for three seconds and is drawn as a real pop-up, the sheet's 560 by
+ * 120 centred on the hero and reaching over zones B and C for those seconds. Low fuel and DRS hold
+ * for as long as their condition does, and are drawn on one line in the pit banner's row, where they
+ * never cover the gear. What neither may touch is anything outside the body that carries a state of
+ * its own, the rev bar in its well, the bar of settled values and band D, where a flag has the better
+ * claim on the same sixty pixels; and the transient box keeps off the limiter banner, which the
+ * lasting ones give way to by condition.
  */
 import { describe, expect, test } from 'bun:test';
 import { ncalc } from '../src/generator.ts';
@@ -22,6 +23,10 @@ import {
   DRS_POP_UP,
   FUEL_POP_UP,
   LAP_POP_UP,
+  LASTING_GAP,
+  LASTING_LEAST_HEIGHT,
+  LASTING_PAD_X,
+  LASTING_VALUE_SIZE,
   POP_UPS,
   POP_UP_GAP,
   POP_UP_HEIGHT,
@@ -31,14 +36,20 @@ import {
   POP_UP_SECONDS,
   POP_UP_VALUE_SIZE,
   POP_UP_WIDTH,
+  lastingFit,
+  lastingPopUpFrame,
+  lastingPopUps,
   popUp,
   popUpFit,
   popUpFrame,
   popUpRoom,
   popUpVisible,
-  popUps,
+  popUpsOfKind,
+  transientPopUps,
   type PopUpSpec,
 } from '../src/components/popUp.ts';
+import { pitAlertOut } from '../src/components/pitAlerts.ts';
+import { zoneAGearInk } from '../src/zones/pages.ts';
 import { FLAG_BLINK_MS } from '../src/components/flagStrip.ts';
 import { SIDE_EFFECTS } from '../src/leds/effects.ts';
 import { measureText } from '../src/design/advances.ts';
@@ -47,7 +58,8 @@ import { CANVAS_BASELINE, LINE_SPACING, WPF_BASELINE } from '../src/design/metri
 import { resolveToken } from '../src/tokens.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
-import { ZONE_FACES, faceItems, layoutWithoutRevBar, type ZoneLayout } from '../src/zones/index.ts';
+import { ZONE_FACES, faceItems, layoutWithoutRevBar, zoneRegions, type ZoneLayout } from '../src/zones/index.ts';
+import { regionRect } from '../src/themes/anatomy.ts';
 import { faceOf } from './monoGlyphs.ts';
 
 const { not } = ncalc;
@@ -146,42 +158,57 @@ describe('only the value wears the purpose colour', () => {
   }
 });
 
-describe('one pop-up at a time', () => {
-  test('each is visible only when no higher one is', () => {
-    for (const [index, spec] of POP_UPS.entries()) {
-      const visible = popUpVisible(spec.id);
-      expect(visible).toContain(spec.when);
-      for (const higher of POP_UPS.slice(0, index)) expect(visible).toContain(not(higher.when));
-      for (const lower of POP_UPS.slice(index + 1)) expect(visible).not.toContain(not(lower.when));
+describe('one pop-up of each kind at a time', () => {
+  test('the lap time is the one transient pop-up, and low fuel and DRS hold while their condition does', () => {
+    expect(POP_UPS.map((spec) => spec.id)).toEqual(['lap', 'fuel', 'drs']);
+    expect(popUpsOfKind('transient').map((spec) => spec.id)).toEqual(['lap']);
+    expect(popUpsOfKind('lasting').map((spec) => spec.id)).toEqual(['fuel', 'drs']);
+  });
+
+  test('each is visible only when no higher one of its kind is', () => {
+    for (const kind of ['transient', 'lasting'] as const) {
+      const specs = popUpsOfKind(kind);
+      for (const [index, spec] of specs.entries()) {
+        const visible = popUpVisible(spec.id);
+        expect(visible).toContain(spec.when);
+        for (const higher of specs.slice(0, index)) expect(visible).toContain(not(higher.when));
+        for (const lower of specs.slice(index + 1)) expect(visible).not.toContain(not(lower.when));
+        // The two kinds draw in different places and are not ranked against each other.
+        for (const other of POP_UPS.filter((p) => p.kind !== kind)) expect(visible).not.toContain(not(other.when));
+      }
     }
+  });
+
+  test('a lasting pop-up waits for the pit family, whose row it shares, and the lap time does not', () => {
+    for (const spec of popUpsOfKind('lasting')) expect(popUpVisible(spec.id)).toContain(not(pitAlertOut()));
+    expect(popUpVisible(LAP_POP_UP.id)).not.toContain(pitAlertOut());
   });
 
   /**
    * The chain evaluated rather than read: every condition stood up as a boolean, the `and` and the
    * `!` NCalc writes turned into JavaScript's, and the result asked which pop-ups would be drawn.
    * The conditions are substituted longest first, so one that is a substring of another cannot take
-   * its place.
+   * its place, and the pit family is stood up as out or not.
    */
-  const shownWhen = (live: Record<string, boolean>): string[] => {
+  const shownWhen = (live: Record<string, boolean>, pit = false): string[] => {
     const order = [...POP_UPS].sort((a, b) => b.when.length - a.when.length);
     return POP_UPS.filter((spec) => {
-      let expression = popUpVisible(spec.id);
+      let expression = popUpVisible(spec.id).split(pitAlertOut()).join(String(pit));
       for (const other of order) expression = expression.split(other.when).join(String(live[other.id]));
       return Boolean(new Function(`return ${expression.replace(/ and /g, ' && ')};`)());
     }).map((spec) => spec.id);
   };
 
-  test('no two are ever out together, and the one that is out is the highest whose condition holds', () => {
-    for (let mask = 0; mask < 1 << POP_UPS.length; mask++) {
-      const live = Object.fromEntries(POP_UPS.map((spec, i) => [spec.id, (mask & (1 << i)) !== 0]));
-      const shown = shownWhen(live);
-      const expected = POP_UPS.filter((spec) => live[spec.id]).map((spec) => spec.id).slice(0, 1);
-      expect({ live, shown }).toMatchObject({ live, shown: expected });
+  test('no two of a kind are ever out together, the one out is the highest whose condition holds, and the pit family silences the lasting kind', () => {
+    for (const pit of [false, true]) {
+      for (let mask = 0; mask < 1 << POP_UPS.length; mask++) {
+        const live = Object.fromEntries(POP_UPS.map((spec, i) => [spec.id, (mask & (1 << i)) !== 0]));
+        const shown = shownWhen(live, pit);
+        const first = (kind: 'transient' | 'lasting'): string[] => popUpsOfKind(kind).filter((spec) => live[spec.id]).map((spec) => spec.id).slice(0, 1);
+        const expected = [...first('transient'), ...(pit ? [] : first('lasting'))].sort((a, b) => POP_UPS.findIndex((p) => p.id === a) - POP_UPS.findIndex((p) => p.id === b));
+        expect({ live, pit, shown }).toMatchObject({ live, pit, shown: expected });
+      }
     }
-  });
-
-  test('the lap time leads, because it is the only one whose condition lasts seconds', () => {
-    expect(POP_UPS.map((spec) => spec.id)).toEqual(['lap', 'fuel', 'drs']);
   });
 
   test('a pop-up that is not out costs nothing, its bindings being behind one Visible', () => {
@@ -227,25 +254,23 @@ describe('nothing a pop-up draws is wider than the box it is drawn in', () => {
 
   test('a pop-up that fits keeps both runs at full size', () => {
     expect(popUpFit(LAP_POP_UP)).toEqual({ valueFs: POP_UP_VALUE_SIZE, secondary: true });
-    expect(popUpFit(FUEL_POP_UP)).toEqual({ valueFs: POP_UP_VALUE_SIZE, secondary: false });
   });
 });
 
 describe('a box narrower than the artboard gives ground inside itself', () => {
   /**
-   * Every width a hero is drawn at by a theme that ships, from the AiM's 151 px gear at 800 x 480 to
-   * the portrait face's 600, and a box narrower than any of them, which is the guard.
+   * Widths a transient box can be given, down to a box narrower than any body that ships, which is
+   * the guard: every shipped body has the sheet's 560 for it today, but a theme's need not.
    */
   const WIDTHS = [600, 380, 340, 300, 277, 260, 240, 202, 162, 151, 120];
-  /** The shortest a hero is, the Porsche's 102 px gear at 800 x 286, and one shorter still. */
+  /** The shortest room a transient box is given, the Porsche's 102 px gear at 800 x 286, and one shorter still. */
   const HEIGHTS = [POP_UP_HEIGHT, 102, 90];
 
-  test('the 1920 hero sheds the lap pop-up\'s delta and keeps the lap time at 64', () => {
+  test('a 380 px box sheds the lap pop-up\'s delta and keeps the lap time at 64', () => {
     expect(popUpFit(LAP_POP_UP, rect(0, 0, 380, POP_UP_HEIGHT))).toEqual({ valueFs: POP_UP_VALUE_SIZE, secondary: false });
-    expect(popUpFit(FUEL_POP_UP, rect(0, 0, 380, POP_UP_HEIGHT))).toEqual({ valueFs: POP_UP_VALUE_SIZE, secondary: false });
   });
 
-  for (const spec of POP_UPS) {
+  for (const spec of popUpsOfKind('transient')) {
     test(`${spec.id} draws nothing outside a box of any width or height a hero gives it`, () => {
       for (const width of WIDTHS) {
         for (const height of HEIGHTS) {
@@ -266,7 +291,7 @@ describe('a box narrower than the artboard gives ground inside itself', () => {
   }
 
   test('the value only shrinks where the box is narrower than the run, and never below 12', () => {
-    for (const spec of POP_UPS) {
+    for (const spec of popUpsOfKind('transient')) {
       let last = POP_UP_VALUE_SIZE;
       for (const width of WIDTHS) {
         const { valueFs } = popUpFit(spec, rect(0, 0, width, POP_UP_HEIGHT));
@@ -285,41 +310,78 @@ describe('the box covers the hero and nothing that carries a state of its own', 
   ]);
 
   for (const { name, layout, items } of arrangements) {
-    test(`${name} centres the box on zone A, no larger than the zone`, () => {
-      const frame = popUpFrame(layout.zones.zoneA);
-      expect(frame.width).toBe(Math.min(POP_UP_WIDTH, layout.zones.zoneA.width));
-      expect(frame.height).toBe(Math.min(POP_UP_HEIGHT, layout.zones.zoneA.height));
-      expect({ name, frame, inside: contains(layout.zones.zoneA, frame) }).toMatchObject({ inside: true });
+    const body = regionRect(zoneRegions(layout), 'flagBody');
+    const drawn = items.flatMap((i) => [...walkItems([i])]);
+
+    test(`${name} draws the lap time as the sheet's box, centred on zone A and inside the body`, () => {
+      const frame = popUpFrame(layout.zones.zoneA, body);
+      expect([frame.width, frame.height]).toEqual([POP_UP_WIDTH, POP_UP_HEIGHT]);
+      expect({ name, frame, inside: contains(body, frame) }).toMatchObject({ inside: true });
       // Within the half pixel a whole-pixel rect costs on a zone of odd height.
       const zone = centre(layout.zones.zoneA);
       const off = centre(frame);
       expect({ name, dx: Math.abs(off.x - zone.x) <= 0.5, dy: Math.abs(off.y - zone.y) <= 0.5 }).toMatchObject({ name, dx: true, dy: true });
-      const box = items.flatMap((i) => [...walkItems([i])]).find((i) => i.name === 'popUp.lap.box');
+      const box = drawn.find((i) => i.name === 'popUp.lap.box');
       expect(box?.kind === 'rect' ? box.rect : undefined).toEqual(frame);
+      // On every house face zone A is the middle of the face, so the box is centred on the face too.
+      expect({ name, dx: Math.abs(off.x - layout.width / 2) <= 0.5 }).toEqual({ name, dx: true });
     });
 
-    test(`${name} draws every pop-up inside zone A and clear of the other zones and the settled parts`, () => {
+    test(`${name} keeps the lap time clear of the settled parts and the limiter banner`, () => {
       const z = layout.zones;
-      const frame = popUpFrame(z.zoneA);
-      expect({ name, frame, inside: contains(z.zoneA, frame) }).toMatchObject({ inside: true });
       const untouchable: [string, Rect | undefined][] = [
         ['the rev bar well', name.endsWith('rev bar off') ? undefined : z.revBarWell],
         ['the bar', z.bar],
         ['the limiter banner', z.pitLimiter],
         ['band D', z.band],
-        ['zone B', z.zoneB],
-        ['zone C', z.zoneC],
       ];
-      for (const [what, box] of untouchable) {
-        if (!box) continue;
-        expect({ name, what, covered: overlaps(frame, box) }).toMatchObject({ covered: false });
+      for (const item of drawn) {
+        if (item.kind === 'layer' || !item.name.startsWith('popUp.lap.')) continue;
+        for (const [what, box] of untouchable) {
+          if (!box) continue;
+          expect({ name, item: item.name, what, covered: overlaps(item.rect, box) }).toMatchObject({ covered: false });
+        }
       }
-      for (const item of items.flatMap((i) => [...walkItems([i])])) {
-        if (item.kind === 'layer' || !item.name.startsWith('popUp.')) continue;
-        expect({ item: item.name, rect: item.rect, inside: contains(frame, item.rect) }).toMatchObject({ inside: true });
+    });
+
+    test(`${name} draws low fuel and DRS in the limiter banner's row, above the gear on every page of zone A`, () => {
+      const row = lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(layout.zones.zoneA));
+      expect({ name, inside: contains(layout.zones.pitLimiter, row) }).toEqual({ name, inside: true });
+      for (const spec of popUpsOfKind('lasting')) {
+        const box = drawn.find((i) => i.name === `popUp.${spec.id}.box`);
+        expect(box?.kind === 'rect' ? box.rect : undefined).toEqual(row);
+        for (const item of drawn) {
+          if (item.kind === 'layer' || !item.name.startsWith(`popUp.${spec.id}.`)) continue;
+          expect({ name, item: item.name, inside: contains(row, item.rect) }).toEqual({ name, item: item.name, inside: true });
+          for (const ink of zoneAGearInk(layout.zones.zoneA)) expect({ name, item: item.name, ink, covered: overlaps(item.rect, ink) }).toMatchObject({ covered: false });
+        }
       }
     });
   }
+
+  /**
+   * Where the gear's ink reaches into the banner's row the row ends there: the house's nano by a
+   * pixel and a half, which costs its low-fuel value three pixels of size, 19 against 22.
+   */
+  test('the nano\'s row is cut short above its gear, and every other house face keeps the whole banner row', () => {
+    for (const face of ZONE_FACES) {
+      for (const layout of [face, layoutWithoutRevBar(face)]) {
+        const row = lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(layout.zones.zoneA));
+        const cut = face.folder === 'OpenDash 800x286' && layout === face;
+        expect({ face: face.folder, revBar: layout === face, whole: row.height === layout.zones.pitLimiter.height }).toEqual({ face: face.folder, revBar: layout === face, whole: !cut });
+      }
+    }
+  });
+
+  test('the row ends where the gear\'s ink begins, and a row the gear leaves too short is refused rather than drawn over it', () => {
+    const banner = rect(0, 10, 200, 30);
+    expect(lastingPopUpFrame(banner, [rect(80, 60, 40, 100)])).toEqual(banner);
+    expect(lastingPopUpFrame(banner, [rect(80, 36.4, 40, 100)])).toEqual(rect(0, 10, 200, 26));
+    // Ink beside the row, however high, is not in it.
+    expect(lastingPopUpFrame(banner, [rect(210, 0, 40, 100)])).toEqual(banner);
+    expect(() => lastingPopUpFrame(banner, [rect(80, 10 + LASTING_LEAST_HEIGHT - 1, 40, 100)])).toThrow(/needs/);
+    expect(() => lastingPopUpFrame(banner, [rect(80, 0, 40, 100)])).toThrow(/above/);
+  });
 
   test('every house face centres the family on zone A itself, the banner being clear of it there', () => {
     for (const face of ZONE_FACES) {
@@ -350,12 +412,43 @@ describe('the box covers the hero and nothing that carries a state of its own', 
     expect(popUpFrame(popUpRoom(hero, rect(0, 110, 300, 30)))).toEqual(rect(0, 0, 300, 110));
   });
 
-  test('every face draws the whole catalogue, each behind its own Visible', () => {
+  test('every face draws the whole catalogue, each behind its own Visible, the lasting kind under the transient', () => {
+    const order = [...popUpsOfKind('lasting'), ...popUpsOfKind('transient')].map((s) => `popUp.${s.id}`);
     for (const face of ZONE_FACES) {
       const layers = faceItems(face).filter((i): i is LayerItem => i.kind === 'layer' && i.name.startsWith('popUp.'));
-      expect({ face: face.folder, ids: layers.map((l) => l.name) }).toMatchObject({ face: face.folder, ids: POP_UPS.map((s) => `popUp.${s.id}`) });
+      expect({ face: face.folder, ids: layers.map((l) => l.name) }).toMatchObject({ face: face.folder, ids: order });
     }
-    expect(popUps(rect(0, 0, 800, 400))).toHaveLength(POP_UPS.length);
+    expect(transientPopUps(rect(0, 0, 800, 400))).toHaveLength(popUpsOfKind('transient').length);
+    expect(lastingPopUps(rect(0, 0, 272, 30))).toHaveLength(popUpsOfKind('lasting').length);
+  });
+});
+
+describe('a lasting pop-up is one line in the banner\'s row', () => {
+  /** Every row a face that ships gives the lasting pop-ups, cut short where the gear reaches into it. */
+  const ROWS = [rect(824, 111, 272, 30), rect(299, 97, 252, 30), rect(294, 39, 212, 26), rect(200, 90, 200, 28), rect(489, 92, 271, 25), rect(248, 103, 192, 30), rect(15, 99, 570, 24), rect(1120, 118, 760, 30)];
+
+  for (const spec of popUpsOfKind('lasting')) {
+    test(`${spec.id} sets its label and its value on one baseline, centred, inside every row`, () => {
+      for (const row of ROWS) {
+        const items = [...walkItems([popUp(row, spec)])].filter((i): i is TextItem | RectangleItem => i.kind === 'text' || i.kind === 'rect');
+        for (const item of items) expect({ id: spec.id, row, item: item.name, inside: contains(row, item.rect) }).toMatchObject({ inside: true });
+        const label = items.find((i): i is TextItem => i.name === `popUp.${spec.id}.label`)!;
+        const value = items.find((i): i is TextItem => i.name === `popUp.${spec.id}.value`)!;
+        // One baseline: WPF sets it 1 em under the top of each box.
+        expect(Math.abs(label.rect.top + label.fontSize - (value.rect.top + value.fontSize))).toBeLessThanOrEqual(1);
+        expect(value.rect.left - (label.rect.left + label.rect.width)).toBe(LASTING_GAP);
+        expect(label.rect.left).toBeGreaterThanOrEqual(row.left + LASTING_PAD_X);
+        expect(value.rect.left + value.rect.width).toBeLessThanOrEqual(row.left + row.width - LASTING_PAD_X);
+        expect(value.fontSize).toBe(lastingFit(spec, row).valueFs);
+        expect(value.fontSize).toBeLessThanOrEqual(LASTING_VALUE_SIZE);
+        expect(drawnWidth(value)).toBeLessThanOrEqual(value.rect.width);
+        expect(items.some((i) => i.name === `popUp.${spec.id}.secondary`)).toBe(false);
+      }
+    });
+  }
+
+  test('the value is as large as the row lets it be: 22 in the 30 px row every face but three gives it', () => {
+    for (const spec of popUpsOfKind('lasting')) expect(lastingFit(spec, rect(0, 0, 272, 30)).valueFs).toBe(22);
   });
 });
 

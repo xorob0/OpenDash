@@ -79,7 +79,10 @@ export interface ThemeDrawing {
    * band D's well: the parts of the car's drawing that are not a zone, a flag or an alert.
    */
   chrome?(ctx: FaceContext): Item[];
-  /** States the theme draws over its regions, after the pit family and before the pop-ups. */
+  /**
+   * States the theme draws over its regions: after the pit family and the lasting pop-ups in the pit
+   * banner's row, and before the transient pop-ups, which are over everything for their seconds.
+   */
   takeovers?(ctx: FaceContext): Item[];
   /** The change notifications, in place of the house's box on the hero. */
   changeNotifications?(ctx: FaceContext): Item[];

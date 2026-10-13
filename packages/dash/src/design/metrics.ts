@@ -55,6 +55,35 @@ export const canvasBaseline = (y: number, fs: number): number => y + CANVAS_BASE
 /** The canvas line box top that puts a run of size `fs` on a given baseline. */
 export const canvasYForBaseline = (baseline: number, fs: number): number => baseline - CANVAS_BASELINE * fs;
 
+/**
+ * The families {@link FONT_METRICS} describes: Barlow, and Barlow Condensed under the name a package
+ * installs it by (`fontFiles.ts`).
+ */
+const BARLOW_FAMILIES: ReadonlySet<string> = new Set(['Barlow', 'openDash Display']);
+
+/**
+ * How far a figure or a capital marks above the baseline and below it, in em: the cap height and the
+ * overshoot a round figure carries past it and under the baseline. Read off the bundled faces with
+ * `tools/measure-font`, the 8 reaches 0.713 em in Barlow Condensed Bold and Barlow Bold and the round
+ * figures dip 0.011 under the line, so a fiftieth of an em either side holds every one of them.
+ */
+const INK_ABOVE_BASELINE = FONT_METRICS.capHeight / FONT_METRICS.unitsPerEm + 0.02;
+const INK_BELOW_BASELINE = 0.02;
+
+/**
+ * The part of a text box a run of figures or capitals can mark: from the top of the cap height and
+ * its overshoot down to just under the baseline, across the whole box. A WPF box is 1.2 em tall and
+ * its first 0.28 em is leading a figure never reaches, which is the room the face draws the pit banner
+ * in above the gear. A face these metrics do not describe, such as the AiM's seven-segment faces, is
+ * taken to mark its whole box, which is never smaller than its ink.
+ */
+export function inkOf(item: { rect: { left: number; top: number; width: number; height: number }; font: string; fontSize: number }): { left: number; top: number; width: number; height: number } {
+  if (!BARLOW_FAMILIES.has(item.font)) return { ...item.rect };
+  const baseline = item.rect.top + WPF_BASELINE * item.fontSize;
+  const top = baseline - INK_ABOVE_BASELINE * item.fontSize;
+  return { left: item.rect.left, top, width: item.rect.width, height: baseline + INK_BELOW_BASELINE * item.fontSize - top };
+}
+
 export type DataWeight = 'SemiBold' | 'Bold';
 
 /**

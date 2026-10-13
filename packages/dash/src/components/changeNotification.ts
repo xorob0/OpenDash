@@ -19,12 +19,18 @@
  * during a sweep is the live one rather than the one it settles on, which is the same number a
  * moment later.
  *
- * **One at a time, and under the lap time.** The box is centred on the same hero rectangle a pop-up
- * takes, so the two would otherwise draw over one another; the notification therefore waits for the
- * one pop-up that is an event rather than a state, and covers the other two for its three seconds.
- * Like the pop-up it is no wider than that rectangle, which on every landscape face but the 1920 is
- * narrower than the sheet's 400, so the reading steps down beside the setting's name, or under it
- * in the narrowest, rather than the box reaching into the zones either side (#1047).
+ * **One at a time, and under the lap time.** The box is centred on the same rectangle the lap-time
+ * pop-up takes, so the two would otherwise draw over one another; the notification therefore waits
+ * for that one, the other pop-up that is an event rather than a state. Low fuel and DRS hold for laps
+ * and seconds and are drawn in the pit banner's row instead, clear of this box.
+ *
+ * **A real pop-up, over the whole face** (#1047). It is out for three seconds and then goes, so it is
+ * drawn at the sheet's 400 by 96 wherever the body has the room, over the gear and over zones B and C
+ * either side for those seconds, rather than shrunk to zone A's width and its reading stepped down to
+ * fit: a driver who has just turned a dial reads it at a glance or not at all. What it never covers is
+ * what lies outside the body, the rev bar, the bar of settled values and band D, nor the pit banner.
+ * The reading steps down beside the setting's name, or goes under it, only in a body too narrow for
+ * the sheet's box, which no shipped face has.
  *
  * The one thing the canvas is emphatic about is the trend mark's colour: it wears `text.secondary`
  * and never a purpose colour, because which way a setting moved is information and not a state. The
@@ -36,7 +42,7 @@ import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { assetBox, imageOf, TREND_DOWN, TREND_UP } from '../design/assets.ts';
 import { measureText } from '../design/advances.ts';
-import { rect, roundRect } from '../design/geometry.ts';
+import { rect } from '../design/geometry.ts';
 import { boxSlack, cells, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -45,7 +51,7 @@ import { FIT_LADDER } from '../second/field.ts';
 import { TRACKED_VALUES, hasSetting, type TrackedValue } from '../second/tracked.ts';
 import { inTheCar } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { LAP_POP_UP } from './popUp.ts';
+import { LAP_POP_UP, sheetFrame } from './popUp.ts';
 
 const { and, changed, fmt, isdecreasing, isincreasing, not, num } = ncalc;
 
@@ -94,8 +100,9 @@ const moved = (value: TrackedValue): Expr => and(inTheCar(), hasSetting(value), 
  * out for three seconds and is the thing a driver is waiting for, so a dial turned at the same
  * moment waits its turn. Low fuel and DRS are not events: the tank is low for the rest of a stint
  * and the flap is free on every straight, so a notification that waited for them would be silent
- * for exactly the part of a race where a driver moves the most settings. Those two are covered for
- * the three seconds and come back, which is what a condition that is still true does.
+ * for exactly the part of a race where a driver moves the most settings. They are drawn in the pit
+ * banner's row rather than over the hero (#1047), so the two are out together and neither covers the
+ * other.
  */
 const lapPopUpOut = (): Expr => LAP_POP_UP.when;
 
@@ -117,19 +124,15 @@ const valueChars = (value: TrackedValue): Chars => ({
 });
 
 /**
- * The box, centred on the rectangle the face calls its hero, which is where a pop-up goes, and no
- * larger than that rectangle.
+ * The box: the sheet's 400 by 96, centred on the room the lap-time pop-up is centred on and kept
+ * inside the body, which is `popUpFrame`'s rule at the notification's size.
  *
  * Centred rather than placed, so that the same component sits over the gear on the reference face
  * and on the portrait one without either of them stating a coordinate. The sheet's 400 by 96 is the
  * most it takes, as the pop-up's 560 by 120 is the most that one does, so the notification stays
- * inside the pop-up's frame on every hero and covers no more than a pop-up would.
+ * inside the pop-up's frame on every face and covers no more than a pop-up would.
  */
-export function changeNotificationFrame(hero: Rect): Rect {
-  const width = Math.min(CHANGE_NOTIFICATION_WIDTH, hero.width);
-  const height = Math.min(CHANGE_NOTIFICATION_HEIGHT, hero.height);
-  return roundRect({ left: hero.left + (hero.width - width) / 2, top: hero.top + (hero.height - height) / 2, width, height });
-}
+export const changeNotificationFrame = (room: Rect, body: Rect = room): Rect => sheetFrame(room, body, CHANGE_NOTIFICATION_WIDTH, CHANGE_NOTIFICATION_HEIGHT);
 
 /** The name's box: its measured advances at the label size, and the slack every text box carries. */
 const nameWidth = (value: TrackedValue): number => Math.ceil(measureText('BarlowMedium', value.notice, ds.size.label)) + boxSlack(ds.size.label);
@@ -233,6 +236,6 @@ export function changeNotification(frame: Rect, value: TrackedValue, prefix = 'n
   return withMoreBindings({ kind: 'layer', name, children }, { Visible: changeNotificationVisible(value.id) });
 }
 
-/** Every watched setting's notification, over the hero of a face. */
-export const changeNotifications = (hero: Rect, prefix = 'notice'): Item[] =>
-  TRACKED_VALUES.map((value) => changeNotification(changeNotificationFrame(hero), value, prefix));
+/** Every watched setting's notification, centred on the room the lap-time pop-up takes and inside the body. */
+export const changeNotifications = (room: Rect, body: Rect = room, prefix = 'notice'): Item[] =>
+  TRACKED_VALUES.map((value) => changeNotification(changeNotificationFrame(room, body), value, prefix));
