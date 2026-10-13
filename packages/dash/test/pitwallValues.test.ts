@@ -113,8 +113,10 @@ function fits(text: string, chars: Chars): boolean {
 }
 
 describe('the Gap column', () => {
+  // SimHub gives the first car of its leaderboard no gap unless it is the player's (#1041), so the
+  // boards below leave it null, as SimHub publishes it.
   const BOARD: readonly Car[] = [
-    car({ position: 1, gaptoleader: 0 }),
+    car({ position: 1, gaptoleader: null }),
     car({ position: 2, gaptoleader: 2.64, lapstoleader: 0 }),
     car({ position: 3, gaptoleader: 142.35, lapstoleader: 1 }),
     car({ position: 4, gaptoleader: null, lapstoleader: 1 }),
@@ -152,9 +154,10 @@ describe('the Gap column', () => {
   test('the leader on the road reads Lead and the gaps are measured to it (#1063)', () => {
     // Row 2 has passed row 1 since the line: SimHub still has row 1 as its leader, and measures row 2
     // half a second ahead of it. The plugin has the order on the road as rows 2, 1, 3, 4. SimHub's
-    // laps to the leader are counted from row 1, which leads nothing and has none of its own.
+    // laps to the leader are counted from row 1, which leads nothing and has none of its own, and
+    // row 1 has no gap either, not being the player's: its gap to itself is 0, so it reads +0.5.
     const PASSED: readonly Car[] = [
-      car({ position: 1, gaptoleader: 0 }),
+      car({ position: 1, gaptoleader: null }),
       car({ position: 2, gaptoleader: -0.5, lapstoleader: 0 }),
       car({ position: 3, gaptoleader: 142.35, lapstoleader: 1 }),
       car({ position: 4, gaptoleader: null, lapstoleader: 1 }),
@@ -189,7 +192,7 @@ describe('the Gap column', () => {
  */
 describe('the Gap and Int columns of a list drawn from one class', () => {
   const BOARD: readonly Car[] = [
-    car({ position: 1, classposition: 1, gaptoleader: 0 }),
+    car({ position: 1, classposition: 1, gaptoleader: null }),
     car({ position: 2, classposition: 2, gaptoleader: 2.64, lapstoleader: 0 }),
     car({ position: 3, classposition: 1, gaptoleader: 130, lapstoleader: 1, ours: true }),
     car({ position: 4, classposition: 3, gaptoleader: 132, lapstoleader: 1, lapstoclassleader: 0 }),
@@ -223,7 +226,7 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
 
   test('a class that leads the race keeps the word under either setting', () => {
     const LEADING: readonly Car[] = [
-      car({ position: 1, classposition: 1, gaptoleader: 0, ours: true }),
+      car({ position: 1, classposition: 1, gaptoleader: null, ours: true }),
       car({ position: 2, classposition: 1, gaptoleader: 3.2, lapstoleader: 0 }),
       car({ position: 3, classposition: 2, gaptoleader: 8.4, lapstoleader: 0, lapstoclassleader: 0, ours: true }),
     ];
@@ -287,6 +290,24 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
     const int = (row: number): unknown => evaluate(carClassInterval(repeatIndex()), PASSED, row, 'class', live);
     expect([gap(5), gap(3), gap(6)]).toEqual(['Lead', '+0.2', '+10.2']);
     expect([int(5), int(3), int(6)]).toEqual(['', '+0.2', '+10.0']);
+  });
+
+  test('a class leader passed for the race lead reads its seconds to the car that passed it (#1063)', () => {
+    // A single class, so SimHub's first car is the class leader too, and it is not the player's, so
+    // SimHub gives it no gap. Row 2 has passed it since the line and is half a second ahead of it.
+    const PASSED: readonly Car[] = [
+      car({ position: 1, classposition: 1, gaptoleader: null, ours: true }),
+      car({ position: 2, classposition: 2, gaptoleader: -0.5, lapstoleader: 0, lapstoclassleader: 0, ours: true }),
+      car({ position: 3, classposition: 3, gaptoleader: 8.4, lapstoleader: 0, lapstoclassleader: 0, ours: true }),
+    ];
+    const live = {
+      'OpenDash.LiveClassOrder1': 2, 'OpenDash.LiveClassOrder2': 1, 'OpenDash.LiveClassOrder3': 3,
+      'OpenDash.LiveClassPosition2': 1, 'OpenDash.LiveClassPosition1': 2, 'OpenDash.LiveClassPosition3': 3,
+    };
+    const gap = (row: number): unknown => evaluate(carClassRaceGap(repeatIndex()), PASSED, row, 'class', live);
+    const int = (row: number): unknown => evaluate(carClassInterval(repeatIndex()), PASSED, row, 'class', live);
+    expect([gap(2), gap(1), gap(3)]).toEqual(['Lead', '+0.5', '+8.9']);
+    expect([int(2), int(1), int(3)]).toEqual(['', '+0.5', '+8.4']);
   });
 });
 

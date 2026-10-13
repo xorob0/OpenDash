@@ -883,8 +883,8 @@ export const placesGainedCounted = (): Expr => ncalc.or(ncalc.not(classMode()), 
 export const gapIsMeasured = (idx: Expr, from: Expr): Expr => and(hasPosition(idx), hasPosition(from));
 
 /**
- * The gap to the leader of a car another car is measured from: SimHub's `gaptoleader`, and 0 on the
- * first car of the leaderboard where SimHub leaves it null.
+ * A car's gap to SimHub's leader, on either side of a difference: SimHub's `gaptoleader`, and 0 on
+ * the first car of the leaderboard where SimHub leaves it null.
  *
  * Every gap SimHub publishes is measured from that first car, and the first car is given no gap of
  * its own. `GameManagerBase.ComputeOpponentsData` in 9.12.6 calls `UpdateGapToLeader` for every other
@@ -901,6 +901,13 @@ export const gapIsMeasured = (idx: Expr, from: Expr): Expr => and(hasPosition(id
  *
  * The first car is asked by its index, 1, and not by its place: the `driver` functions index SimHub's
  * `Opponents` from 1, and the first of that list is the car `UpdateGapToLeader` is handed.
+ *
+ * The columns read both cars of a difference through it, the car measured as well as the car it is
+ * measured from. Once they measure from the leader on the road (#1063), SimHub's first car is not
+ * always the one at the top: in the lap after a pass for the lead it is second on the road, and its
+ * own row is measured. Read raw, its gap is null whenever it is not the player's, and the car just
+ * passed read `--` in the Gap column and nothing in the Int column for the rest of that lap, where
+ * its gap to itself, 0, less the passing car's gives the half second it is behind.
  */
 export const referenceGap = (idx: Expr): Expr => iff(eq(idx, num(1)), isnull(driver('gaptoleader', num(1)), num(0)), driver('gaptoleader', idx));
 
@@ -988,7 +995,8 @@ const bestLapGap = (idx: Expr, from: Expr, missing: string): Expr => {
  * shape {@link carClassRaceGap} already has. SimHub's leader is the sim's, which iRacing changes only
  * at the line (#1063); where the two are the same car its own gap is zero and nothing moves. The
  * leader's own gap is read through {@link referenceGap}, since SimHub gives its first car none unless
- * it is the player's (#1041). `lapstoleader` is SimHub's count and so counts from SimHub's leader, and
+ * it is the player's (#1041), and so is the car's, which is that first car in the lap after it is
+ * passed for the lead. `lapstoleader` is SimHub's count and so counts from SimHub's leader, and
  * in the lap after a pass for the lead it can be one short: a car a lap down on the road leader and
  * not on the sim's reads its seconds to the road leader, which are true, and a car two laps down on
  * the one and one on the other reads `+1L`. No driver function counts laps from a car of the dash's
@@ -1006,7 +1014,7 @@ const bestLapGap = (idx: Expr, from: Expr, missing: string): Expr => {
  */
 export const carRaceGap = (idx: Expr): Expr => {
   const leader = liveRow(num(1));
-  const here = driver('gaptoleader', idx);
+  const here = referenceGap(idx);
   const lead = referenceGap(leader);
   const laps = isnull(driver('lapstoleader', idx), num(0));
   return iff(
@@ -1058,9 +1066,10 @@ const lapsDown = (laps: Expr): Expr => concat(str('+'), fmt(laps, '0'), str('L')
  * computes for a car of the player's class; `gaptoclassleadercombined` is not read, for the reasons
  * {@link carRaceGap} gives for its overall twin.
  *
- * The class leader's gap is read through {@link referenceGap}, because a class leader that leads the
- * race has none from SimHub, and the whole column read `--` below `Lead` in every single-class race
- * and in the class leading every other (#1041). There the difference is the car's gap to the race
+ * The class leader's gap is read through {@link referenceGap}, and so is the car's own, because a
+ * class leader that leads the race has none from SimHub, nor does it in the lap after it is passed,
+ * and the whole column read `--` below `Lead` in every single-class race and in the class leading
+ * every other (#1041). There the difference is the car's gap to the race
  * leader, which is its gap to its class leader exactly. Where another class leads, the difference is
  * of two gaps both measured on the race leader's running, so it is the time the race leader took
  * between the two cars rather than the time the class leader took, and a class leader slower than
@@ -1087,7 +1096,7 @@ const lapsDown = (laps: Expr): Expr => concat(str('+'), fmt(laps, '0'), str('L')
  */
 export const carClassRaceGap = (idx: Expr): Expr => {
   const leader = liveClassRow(num(1));
-  const here = driver('gaptoleader', idx);
+  const here = referenceGap(idx);
   const lead = referenceGap(leader);
   const laps = isnull(driver('lapstoclassleader', idx), num(0));
   return iff(
@@ -1143,7 +1152,9 @@ const raceInterval = (here: Expr, ahead: Expr): Expr =>
  * Below the first row it reads `--` until {@link gapIsMeasured} holds for the car and the car in
  * front, as the Gap beside it does (#1028). The second row's car in front is the first car of the
  * leaderboard, which SimHub gives no gap unless it is the player's, so it is read through
- * {@link referenceGap}; P2's cell was empty in every race the player did not lead (#1041).
+ * {@link referenceGap}; P2's cell was empty in every race the player did not lead (#1041). The car's
+ * own gap is read the same way, since in the lap after a pass for the lead that first car is the one
+ * a place behind the leader on the road.
  *
  * Outside a race it is the car's best lap less the best lap of the car in front, which is the
  * difference of the two best-lap gaps beside it, and empty where either car has no best lap, as it is
@@ -1153,7 +1164,7 @@ export const carInterval = (idx: Expr): Expr => {
   const place = carOverallPosition(idx);
   const above = liveRow(sub(place, num(1)));
   const ahead = referenceGap(above);
-  const here = driver('gaptoleader', idx);
+  const here = referenceGap(idx);
   // The car with nothing in front of it: the leader by place once the sim has placed the car, and the
   // first row before then, every other unplaced row reading `--` (#1028).
   const first = iff(hasPosition(idx), eq(place, num(1)), eq(idx, num(1)));
@@ -1175,14 +1186,15 @@ export const carInterval = (idx: Expr): Expr => {
  *
  * Below the class's first row it reads `--` until {@link gapIsMeasured} holds, as
  * {@link carInterval} does (#1028), and the car in front is read through {@link referenceGap}, as
- * it is there: the class leader is the race leader in every single-class race (#1041). Outside a
+ * it is there: the class leader is the race leader in every single-class race (#1041). So is the
+ * car's own, which is that first car in the lap after it is passed for the class lead. Outside a
  * race it measures best laps, as {@link carInterval} does (#1040).
  */
 export const carClassInterval = (idx: Expr): Expr => {
   const place = carClassPosition(idx);
   const above = liveClassRow(sub(place, num(1)));
   const ahead = referenceGap(above);
-  const here = driver('gaptoleader', idx);
+  const here = referenceGap(idx);
   return iff(
     gt(place, num(1)),
     iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
