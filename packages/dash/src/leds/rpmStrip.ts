@@ -251,7 +251,8 @@ const throttleBrakeBar = (count: number): leds.LedContainer[] => {
 
 /**
  * The fuel gauge: a bar that empties, and blinks once the tank is low. The *height* is
- * `FuelPercent`, which is SimHub's own; the *threshold* is {@link tankIsLow}, the laps remaining
+ * {@link fuelPercent}, SimHub's own `Computed.Fuel_Percent`, which is right in gallons where the game
+ * reader's `FuelPercent` is not (#993); the *threshold* is {@link tankIsLow}, the laps remaining
  * against the one number in laps the driver set.
  *
  * The bar used to raise itself at five percent of the tank, which was a third answer to "am I low"

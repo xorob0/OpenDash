@@ -1147,7 +1147,16 @@ export const rpm = rpms;
 const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
 export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
-export const fuelPercent = (): Expr => isnull(game('FuelPercent'), num(0));
+/**
+ * How full the tank is, 0..100.
+ *
+ * **Not `GameData.FuelPercent`.** SimHub's game reader sets that one from the fuel the sim reports,
+ * which is litres, over `MaxFuel`, which it has already converted to the driver's unit, so on a
+ * gallons profile a half tank reads 189 and a bar fed by it stays full until a quarter of the tank is
+ * left. The DataCore plugin's `Computed.Fuel_Percent` is `Fuel` over `MaxFuel`, both converted, so it
+ * is right in either unit; SimHub's own fuel percent text reads it. #993.
+ */
+export const fuelPercent = (): Expr => isnull(computed('Fuel_Percent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
 export const fuelLapsLeft = (): Expr => isnull(computed('Fuel_RemainingLaps'), num(0));
 /** The fuel range in seconds, nought when SimHub has none, guarded here for every caller as {@link sessionTimeLeft} is. */
