@@ -31,8 +31,10 @@ this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship
    SimHub's dashboard list. Press **Add a screen**, choose its kind, the size that matches the
    display from Sizes below and its name, and press **Add screen**: the plugin writes that one
    dashboard into its own folder under `DashTemplates` (`OpenDash 1280x480` for the first screen of
-   that size). Add one screen per display, then restart SimHub, which reads its list of dashboards
-   only when it starts. Until then each new screen's card reads "Restart SimHub to load it".
+   that size). Add one screen per display. SimHub lists each new dashboard by itself a couple of
+   seconds after it is written. The first screen you add also brings OpenDash's fonts, which SimHub
+   loads only when it starts, so the line after that add asks you to restart SimHub once; until then
+   the dashboard draws in another typeface.
 6. Assign each dashboard to its display. OpenDash is a normal SimHub dashboard from here on: in
    Dash Studio each one is listed under the name you gave its screen, and you open one in a window,
    send it to a USB or HDMI display, or point a phone or tablet at it exactly like any other
@@ -416,8 +418,9 @@ deleted.
 
 - SimHub never asked about the plugin, or shows an error about loading it: the file is
   blocked (step 3) or it is not in the SimHub folder itself (step 2).
-- A screen's card reads "Restart SimHub to load it": SimHub reads its list of dashboards only when
-  it starts. Restart SimHub, then assign the dashboard to its display in Dash Studio.
+- The line after adding a screen asks you to restart SimHub: that add brought fonts SimHub did not
+  have yet, and SimHub loads fonts only when it starts. Until it restarts, the dashboard is listed and
+  can be assigned, but draws in another typeface.
 - Home lists what needs attention on your rig, each with its fix. Start there when something is
   wrong.
 - Home reads "OpenDash could not read its settings" and the rig is empty: the settings file was
