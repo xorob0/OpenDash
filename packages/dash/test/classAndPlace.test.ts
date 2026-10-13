@@ -25,11 +25,16 @@ import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const { num } = ncalc;
 
-/** What the pair reads for the car on row 3 of the leaderboard, of the class and place given. */
-const read = (carClass: string | null, place: number | null): unknown => {
+/**
+ * What the pair reads for the car on row 3 of the leaderboard, of the class and class place given,
+ * and of the overall place, which is what says whether the sim has placed the car at all. It is the
+ * class place unless a test says otherwise; null leaves the read out.
+ */
+const read = (carClass: string | null, place: number | null, overall: number | null = place): unknown => {
   const props: Props = {};
   if (carClass !== null) props['drivercarclass(3)'] = carClass;
   if (place !== null) props['driverclassposition(3)'] = place;
+  if (overall !== null) props['driverposition(3)'] = overall;
   return evalNcalc(classAndPlace(num(3)), props);
 };
 
@@ -44,6 +49,16 @@ describe('the helper', () => {
     // and the composite drew `GT3 · P0` there while every other position on the face drew `--`.
     expect(read('GT3', 0)).toBe(`GT3 · P${NO_VALUE}`);
     expect(read('GT3', null)).toBe(`GT3 · P${NO_VALUE}`);
+  });
+
+  test('a class place SimHub counted before the sim placed anyone reads the placeholder (#1014)', () => {
+    // SimHub never reports a class place of 0 for a listed car: it numbers every car of a class from
+    // 1 in the order of the driver list before anyone is placed, and only the overall place is 0.
+    expect(read('GT3', 7, 0)).toBe(`GT3 · P${NO_VALUE}`);
+    expect(read('GT3', 7, null)).toBe(`GT3 · P${NO_VALUE}`);
+    expect(read(null, 7, 0)).toBe(`P${NO_VALUE}`);
+    // Placed overall, the class place is the one drawn, whatever the overall place is.
+    expect(read('GT3', 7, 19)).toBe('GT3 · P7');
   });
 
   test(`the class is cut to the ${CHIP_CHARS} characters a chip holds, in capitals, as the chip cuts it`, () => {
@@ -61,7 +76,7 @@ describe('the helper', () => {
   test('the class and the place are read from the one car the helper is handed', () => {
     // Any car's pair can be drawn, and the two halves cannot come from two different entries.
     const expression = classAndPlace(player());
-    expect(evalNcalc(expression, { 'getplayerleaderboardposition()': 7, 'drivercarclass(7)': 'LMP2', 'driverclassposition(7)': 2 })).toBe('LMP2 · P2');
+    expect(evalNcalc(expression, { 'getplayerleaderboardposition()': 7, 'drivercarclass(7)': 'LMP2', 'driverclassposition(7)': 2, 'driverposition(7)': 9 })).toBe('LMP2 · P2');
   });
 });
 

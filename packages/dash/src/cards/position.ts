@@ -20,12 +20,17 @@ export const CLASS_POSITION = 'driverclassposition(getplayerleaderboardposition(
  * does: SimHub reports a zero before then, on the grid and in a practice session before anyone has
  * a time, and the card drew it as `0 / 24` (#931). The denominator follows whichever of the two is
  * on the screen, the placeholder being two digit cells where the zero was one.
+ *
+ * Placed is asked of the overall `Position` in both modes, as `hasPosition` asks it of every other
+ * car. The class place cannot say it: SimHub numbers every listed car's class place from 1 before
+ * the sim has placed anyone, so a card counting in class read `12 / 12` on a grid where the overall
+ * one read `-- / 24` (#1014).
  */
 export const position = defineCard('position', (slot, rung, prefix, meta) => {
   const byClass = eq(setting.positionMode(), str('class'));
   const overall = game('Position');
   const pos = iff(byClass, isnull(CLASS_POSITION, overall), overall);
-  const placed = gt(isnull(pos, num(0)), num(0));
+  const placed = gt(isnull(overall, num(0)), num(0));
   const drawn = drawnEither(placed, drawnFigure({ value: pos, digits: POSITION_CHARS.digits }), drawnText(NO_VALUE));
   const count = iff(byClass, game('PlayerClassOpponentsCount'), game('OpponentsCount'));
   return readoutRow(

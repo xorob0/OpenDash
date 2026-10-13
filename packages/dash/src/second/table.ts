@@ -35,9 +35,9 @@ import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  placesGainedCounted, positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
-const { iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
+const { iff, str, fmt, num, ne, not, and, gt, lt, abs, concat } = ncalc;
 
 /** How a table picks the car on each row. */
 export type TableMode = 'full' | 'class' | 'relative';
@@ -518,7 +518,9 @@ const RANK_MARK = 10;
 
 /**
  * The rank column: the places a car has gained or lost, as the canvas's 10 px triangle with the
- * count beside it, and a short dash where the position has not moved.
+ * count beside it, and a short dash where the position has not moved. Where there is no count to
+ * give, which is counting in class in a field of several classes ({@link placesGainedCounted}), the
+ * cell is empty: the dash would say the car has not moved, which nobody knows.
  *
  * The triangle is a picture because SimHub draws rectangles, ellipses and text and a triangle is
  * none of the three; it is two pictures rather than one because an `ImageItem` has nothing that
@@ -546,7 +548,7 @@ function cellRank(ctx: CellContext): Item[] {
       image: asset.name,
       rect: assetBox(markerBox, imageOf(asset)),
     }, { Visible: visible })),
-    withMoreBindings(band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim), { Visible: not(moved) }),
+    withMoreBindings(band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim), { Visible: and(placesGainedCounted(), not(moved)) }),
     numeral(`${ctx.name}.rank.count`, '2', right - countWidth, ctx.top + (ctx.height - fs) / 2, fs, { digits: 2, specials: 0 }, {
       bind: iff(moved, fmt(abs(change), '0'), str('')),
       colorBind: colour,
