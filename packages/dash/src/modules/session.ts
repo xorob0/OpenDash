@@ -26,6 +26,7 @@ import {
   playerClass,
   positionDrawn,
   sessionClock,
+  SESSION_NAME_WIDEST,
   sessionType,
   showsTimeLeft,
   totalLaps,
@@ -52,7 +53,10 @@ export const session = defineModule('session', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: lead }),
+          // A word the sim writes rather than a number, so it is set proportionally and measured by
+          // the widest name iRacing gives a session: cut in eight cells for `Race`, `Lone Qualify`
+          // was drawn `Lone Qua` (#1029).
+          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), widest: SESSION_NAME_WIDEST, proportional: true, chars: CHARS.sessionName, fs: lead }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
             bind: positionDigits(player()),
