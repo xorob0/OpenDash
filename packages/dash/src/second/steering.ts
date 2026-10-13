@@ -28,7 +28,7 @@ import { ring } from '../elements/ring.ts';
 import { ds } from '../tokens.ts';
 import { STEERING_RANGE, steering } from './values.ts';
 
-const { add, max, min, mul, num, sub } = ncalc;
+const { add, max, min, mul, num, real, sub } = ncalc;
 
 /**
  * The catalogue's dial: a 96 px box holding a rim of radius 44 stroked 3 px, a 6 px mark riding on
@@ -63,6 +63,9 @@ function markOnCircle(name: string, face: Circle, size: number, color: Hex, angl
  *
  * The angle is clamped to the lock the pit wall's own steering trace is drawn at, because a wheel
  * turned further would carry the mark past the top again and read as a smaller angle than it is.
+ * The bounds are on the left of each clamp and written as doubles: NCalc's `max` and `min` answer in
+ * their left operand's type, and the reading on the left was `isnull(angle, 0)`, an Int32 on a frame
+ * with no angle (#1046).
  */
 export function steeringDial(name: string, frame: Rect, labelSize: number): Item[] {
   // A pixel over the advance: `Steer` is a whole 36 px at 15, and a box cut to the exact advance loses
@@ -84,7 +87,7 @@ export function steeringDial(name: string, frame: Rect, labelSize: number): Item
   const top = frame.top + Math.round((frame.height - side - labelRow) / 2);
   const cx = Math.round(frame.left + frame.width / 2);
   const cy = top + side / 2;
-  const clamped = min(max(steering(), num(-STEERING_RANGE)), num(STEERING_RANGE));
+  const clamped = max(real(-STEERING_RANGE), min(real(STEERING_RANGE), steering()));
   return [
     // The stroke lies inside the ellipse's own rect, so the rim's square is the outer diameter and
     // the mark rides half a stroke inside it, on the circle the catalogue gives radius 44.

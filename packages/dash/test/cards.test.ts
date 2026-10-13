@@ -3,7 +3,10 @@ import { describe, expect, test } from 'bun:test';
 import { CARDS } from '../src/cards/index.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { rungFor } from '../src/design/rung.ts';
+import type { TextItem } from '../src/generator.ts';
+import { NO_VALUE } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const slots = [rect(0, 0, 255, 187), rect(513, 253, 255, 187), rect(0, 0, 223, 156), rect(0, 0, 140, 104)];
 
@@ -73,5 +76,48 @@ describe('cards', () => {
     expect(denominator.rect).toEqual({ left: 55, top: 83, width: 153, height: 57 });
     expect(denominator.fontSize).toBe(46);
     expect(denominator.monospace).toBeUndefined();
+  });
+});
+
+/**
+ * The position card read as a driver reads it, which is the card's own value and where its
+ * denominator lands, evaluated rather than matched.
+ */
+describe('the position card', () => {
+  const slot = rect(0, 0, 255, 187);
+  const items = CARDS.find((c) => c.id === 'position')!.build(slot, 'x.');
+  const text = (name: string): TextItem => {
+    const item = items.find((i) => i.name === name);
+    if (item?.kind !== 'text') throw new Error(`${name} is not a text item`);
+    return item;
+  };
+  const value = text('x.value');
+  const denominator = text('x.denominator');
+  /** The player's place as SimHub reports it, overall and in class alike; null where it reports none. */
+  const read = (place: number | null): { value: unknown; left: unknown } => {
+    const props: Props = { 'getplayerleaderboardposition()': 5 };
+    if (place !== null) Object.assign(props, { 'DataCorePlugin.GameData.Position': place, 'driverclassposition(5)': place });
+    return {
+      value: evalNcalc(String(value.bindings?.Text?.formula ?? ''), props),
+      left: evalNcalc(String(denominator.bindings?.Left?.formula ?? ''), props),
+    };
+  };
+
+  test('a placed car reads its place, with the count one gap after its last digit', () => {
+    const four = read(4);
+    const twelve = read(12);
+    expect(four.value).toBe('4');
+    expect(twelve.value).toBe('12');
+    expect(Number(twelve.left) - Number(four.left)).toBe(value.monospace!.charWidth);
+  });
+
+  test('a car the sim has not placed reads the placeholder, not 0 (#931)', () => {
+    // The grid before the green flag and a practice session before anyone has a time: SimHub
+    // reports a zero, and the card drew `0 / 24` where every other position reads `--`.
+    expect(read(0).value).toBe(NO_VALUE);
+    expect(read(null).value).toBe(NO_VALUE);
+    // The placeholder is two digit cells, so the count stands where it does after a two-digit place.
+    expect(read(0).left).toBe(read(12).left);
+    expect(read(null).left).toBe(read(12).left);
   });
 });

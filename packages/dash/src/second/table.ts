@@ -32,10 +32,10 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rule } from '../elements/rule.ts';
 import { ds } from '../tokens.ts';
-import { chip, chipText, chipWidth } from './chip.ts';
+import { CHIP_WIDEST, chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
@@ -464,13 +464,17 @@ const drawsOneClass = (ctx: CellContext): Expr | boolean => (ctx.mode === 'class
  * left inside cells cut for the widest value the column can hold, so P1 sat a whole digit cell
  * short of the edge and so did a `+9.9` measured against `+12.6`. `numeral` documents `width` as
  * the option for a value that does not fill its cells, and that is what this passes.
+ *
+ * `widest` is what the fit tests measure a cell by where its sample is the short end of what the
+ * binding draws, as `numeral` documents it; it never moves the cell.
  */
-function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign } = {}): Item[] {
+function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, chars: Chars, opts: { fs?: number; color?: string; colorBind?: Expr; align?: HAlign; widest?: string } = {}): Item[] {
   const fs = opts.fs ?? ctx.type.lead;
   const align = opts.align ?? ctx.align;
   return [
     numeral(`${ctx.name}.${id}`, sample, ctx.x, ctx.top + (ctx.height - fs) / 2, fs, chars, {
       bind,
+      ...(opts.widest ? { widest: opts.widest } : {}),
       color: (opts.color as `#${string}`) ?? ds.color.text.secondary,
       colorBind: opts.colorBind ?? inkBind(ctx),
       hAlign: align,
@@ -569,8 +573,20 @@ function cellPit(ctx: CellContext): Item[] {
   ];
 }
 
-/** A compound chip holds one letter, so it is the padding and a letter's width either side of it. */
-const compoundChipWidth = (d: DensitySpec): number => Math.ceil(2 * d.chipPadding + 14);
+/**
+ * Characters the tyre chip shows: one, the compound's initial, which is the letter the canvas draws.
+ *
+ * The chip was cut for one letter and bound to `chipText`'s four, so a compound sent as `Dry 2` or
+ * `Medium` was clipped to its first letter and a sliver of the second on every row. The binding is
+ * cut to what the box holds instead, as the class chip's is, so it draws a whole `D` or `M`.
+ */
+const COMPOUND_CHARS = 1;
+
+/** The widest initial the tyre chip can draw, which is what it is sized by. */
+const COMPOUND_WIDEST = widestOf('BarlowMedium', COMPOUND_CHARS);
+
+/** A compound chip holds one letter, so it is the padding and the widest letter between. */
+const compoundChipWidth = (d: DensitySpec): number => chipWidth(d, COMPOUND_WIDEST);
 
 /** The position, which the canvas prefixes with a P: `P4`, not `4`. */
 const positionText = (idx: Expr): Expr => positionLabelled(idx);
@@ -626,12 +642,13 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
   class: {
     header: 'Class',
     align: 'left',
-    width: (row) => drawnWidth(row, Math.ceil(2 * row.d.chipPadding + 34), 56),
+    width: (row) => drawnWidth(row, chipWidth(row.d), 56),
     cell: (ctx) =>
       chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
         bind: chipText(carClass(ctx.idx)),
+        widest: CHIP_WIDEST,
         invertedBind: ctx.isPlayer,
-        width: Math.ceil(2 * ctx.d.chipPadding + 34),
+        width: chipWidth(ctx.d),
       }),
   },
   /**
@@ -654,17 +671,18 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
           // whatever `relativegaptoplayer` answers for the player's own index. The sample carries
           // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
           // time is the glyph the bound value draws rather than .NET's hyphen.
-          cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
+          cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { widest: RELATIVE_GAP_WIDEST, colorBind: liftBind(ctx, inkBind(ctx)) })
         : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
   int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },
-  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime) },
+  last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime, { widest: LAP_TIME_WIDEST }) },
   best: {
     header: 'Best',
     align: 'right',
     width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime),
     cell: (ctx) =>
       cellValue(ctx, 'best', '1:41.877', carBestLap(ctx.idx), CHARS.lapTime, {
+        widest: LAP_TIME_WIDEST,
         colorBind: iff(carIsSessionBest(ctx.idx, drawsOneClass(ctx)), str(ds.purpose.lap.sessionBest), inkBind(ctx)),
       }),
   },
@@ -688,7 +706,8 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
       // draws its own: the column declares `right` and a chip filling it aligns nothing.
       const width = Math.min(ctx.width, compoundChipWidth(ctx.d));
       return chip(`${ctx.name}.tyre`, 'M', ctx.x + ctx.width - width, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
-        bind: chipText(carCompound(ctx.idx)),
+        bind: chipText(carCompound(ctx.idx), COMPOUND_CHARS),
+        widest: COMPOUND_WIDEST,
         width,
       });
     },

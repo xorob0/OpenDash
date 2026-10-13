@@ -485,6 +485,13 @@ namespace OpenDashPlugin
                 Settings.PositionMode = value;
                 Save();
             });
+            // Under the count it makes live, and rig-wide for the same reason: a place on the rim and on the
+            // pit wall is one answer. The plugin reads it every frame, so it takes effect on the next. #1063.
+            var livePositions = BuildToggle(Settings.LivePositions, on =>
+            {
+                Settings.LivePositions = on;
+                Save();
+            });
             var delta = BuildSegmented(Contract.DeltaReferences, PanelDataTab.DeltaLabels, Settings.DeltaReference, value =>
             {
                 Settings.DeltaReference = value;
@@ -544,6 +551,7 @@ namespace OpenDashPlugin
             // Each live row under its own anchor, which its search entry lands on (PanelSettings.Search).
             return PageSection(PanelDataTab.SectionTitle, true, PanelKit.SectionHeadingGapSettings,
                 Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.PositionTitle, PanelDataTab.PositionCaption, position)), PanelSettings.AnchorPosition),
+                Ui.Anchor(SettingsNew(Ui.Row(PanelDataTab.LivePositionsTitle, PanelDataTab.LivePositionsCaption, livePositions)), PanelSettings.AnchorLivePositions),
                 Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaTitle, PanelDataTab.DeltaCaption, delta))), PanelSettings.AnchorDelta),
                 Ui.Anchor(SettingsFit(SettingsNew(Ui.Row(PanelDataTab.DeltaPrecisionTitle, PanelDataTab.DeltaPrecisionCaption, deltaPrecision))), PanelSettings.AnchorDeltaPrecision),
                 Ui.Anchor(SettingsFit(Ui.Row(PanelDataTab.SessionTitle, PanelDataTab.SessionCaption, session)), PanelSettings.AnchorSession),

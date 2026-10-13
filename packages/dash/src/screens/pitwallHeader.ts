@@ -34,6 +34,7 @@ import { inlineGroup, type InlinePart } from '../second/header.ts';
 import {
   CHARS,
   GRIP_WIDEST,
+  SESSION_NAME_WIDEST,
   currentLap,
   incidentLimit,
   incidents,
@@ -57,13 +58,6 @@ const { concat, str, fmt, iff, gt, num, isnull, isNull, not } = ncalc;
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
 /** The three page squares of the landscape dashboard. */
 export const PAGE_SQUARE = { size: 8, gap: 6 } as const;
-/**
- * The longest session name SimHub reports for iRacing, in the case it reports it. `SessionTypeName` passes
- * iRacing's own `SessionType` through, and "Offline Testing" is the longest of Practice, Lone
- * Qualify, Open Qualify, Warmup, Heat, Consolation and Race.
- */
-const WIDEST_SESSION_NAME = 'Offline Testing';
-
 /**
  * iRacing writes `IncidentLimit` as a number or as the word "unlimited", which is what a hosted
  * session with no limit reports and what the header has to have room for.
@@ -220,7 +214,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
             // Sized for "Offline Testing" and drawn from the right, so that the slack a short name
             // leaves falls to the left, into the empty middle of the header, rather than opening a
             // hole between the session name and the lap.
-            { kind: 'label', text: 'Race', widest: WIDEST_SESSION_NAME, hAlign: 'right', bind: sessionType() },
+            { kind: 'label', text: 'Race', widest: SESSION_NAME_WIDEST, hAlign: 'right', bind: sessionType() },
             { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
             { kind: 'label', text: 'of 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('of '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],

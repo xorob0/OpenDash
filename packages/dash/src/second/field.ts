@@ -6,14 +6,14 @@
  * field is placed by its bottom and reports the height it needs above that line.
  *
  * Width is measured, never guessed: the label through the font's advance table and the value
- * through its monospace cells, so `fieldRow` can lay fields out without a renderer and a test can
- * prove the row fits its module.
+ * through its monospace cells (or, for a run of text, the advances of its declared widest), so
+ * `fieldRow` can lay fields out without a renderer and a test can prove the row fits its module.
  */
 import type { Hex, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
+import { DATA_FACE, boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, textBox, type Chars, type DataWeight } from '../design/metrics.ts';
 import { denominator } from '../elements/denominator.ts';
 import { label } from '../elements/label.ts';
 import { mark, unmarked, type Mark } from '../elements/mark.ts';
@@ -69,6 +69,19 @@ export interface FieldValue {
    * Declare it wherever the sample is the short end of the range rather than the long one.
    */
   widest?: string;
+  /**
+   * A word rather than a number, set in the data face's own advances rather than in cells, and
+   * measured by `widest`, which a bound word is required to declare.
+   *
+   * Rule 19 keeps out of a cell any glyph whose ink overruns it, and a word the sim writes can be
+   * made of those: the session's name can be `Warmup`, and a class name can be `LMP2`, whose `M`
+   * overruns a digit cell (`font.cell.excluded`), so a class and the place after it, `LMP2 · P4`,
+   * is set this way too. Cut in cells, a word also takes a cell per letter whatever the letter, so
+   * `Offline Testing` is a third wider in cells than it draws. `chars` is then what it would take in
+   * cells and is not what it is measured by, as on the bar's own words. A word carries no follower,
+   * which is placed from the end of cells.
+   */
+  proportional?: boolean;
   /** Font size; a density size, e.g. `d.big`. */
   fs: number;
   color?: Hex;
@@ -182,6 +195,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
  * because the sample is what the author drew.
  */
 export function valueCells(spec: FieldSpec, mono: Monospace): number {
+  if (spec.value.proportional) return wordWidth(spec);
   const budget = monoWidth(mono, spec.value.chars);
   const drawn = charsOfText(spec.value.sample, mono);
   if (monoWidth(mono, drawn) > budget) {
@@ -192,9 +206,40 @@ export function valueCells(spec: FieldSpec, mono: Monospace): number {
   return budget;
 }
 
+/**
+ * The width a value's box is cut from: its cells, or for a word the advances of the widest reading
+ * it declares.
+ */
+export function valueBudget(spec: FieldSpec): number {
+  return valueCells(spec, cells(spec.value.weight ?? 'SemiBold', spec.value.fs));
+}
+
+/**
+ * The width a word takes: its widest reading in the advances of the face it is drawn in, rounded up
+ * and given the slack every measured box gets. A cell is cut wider than the digit it holds, so a
+ * number in cells has its room already; a word measured to its last advance has none, and WPF would
+ * clip its last glyph, which `field` would otherwise do by capping `numeral`'s own slack to this.
+ *
+ * A sample wider than the widest it declares is refused for the reason `valueCells` refuses a sample
+ * past its budget: the box is a declaration, and the sample is what the author drew.
+ */
+function wordWidth(spec: FieldSpec): number {
+  const value = spec.value;
+  if (value.bind !== undefined && value.widest === undefined) {
+    throw new Error(`field ${spec.name}: a bound word declares no widest; a word is measured by the widest reading its binding can draw, not by its sample`);
+  }
+  if (value.follower !== undefined) {
+    throw new Error(`field ${spec.name}: a word carries no follower; a follower is placed from the end of the cells a number is cut from`);
+  }
+  const face = DATA_FACE[value.weight ?? 'SemiBold'];
+  if (value.widest !== undefined && measureText(face, value.sample, value.fs) > measureText(face, value.widest, value.fs)) {
+    throw new Error(`field ${spec.name}: the sample ${JSON.stringify(value.sample)} is wider than the widest ${JSON.stringify(value.widest)} it declares`);
+  }
+  return Math.ceil(measureText(face, value.widest ?? value.sample, value.fs)) + boxSlack(value.fs);
+}
+
 export function valueWidth(spec: FieldSpec, d: DensitySpec): number {
-  const mono = cells(spec.value.weight ?? 'SemiBold', spec.value.fs);
-  const width = valueCells(spec, mono);
+  const width = valueBudget(spec);
   const follower = spec.value.follower;
   if (!follower) return width;
   return width + followerGap(follower) + followerWidth(follower, d, spec.value.fs);
@@ -291,7 +336,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   // Before anything is placed, and whether or not the width was measured here: a caller that hands
   // its own `maxWidth` goes through no measurement at all, so this is the one point every drawn
   // field passes through.
-  const cellsWidth = valueCells(spec, cells(spec.value.weight ?? 'SemiBold', spec.value.fs));
+  const cellsWidth = valueBudget(spec);
   if (hasLabel) {
     // The row is the sheets' 13 px and the run inside it is the ramp's 15, centred: `label` takes
     // the run's own line box, so the row's top is offset by half the difference the way
@@ -312,6 +357,7 @@ export function field(spec: FieldSpec, x: number, bottom: number, density: Densi
   items.push(
     numeral(`${spec.name}.value`, spec.value.sample, x, valueY, spec.value.fs, spec.value.chars, {
       weight: spec.value.weight,
+      proportional: spec.value.proportional,
       bind: spec.value.bind,
       widest: spec.value.widest,
       color: spec.value.color,

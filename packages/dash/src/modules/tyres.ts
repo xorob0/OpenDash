@@ -152,6 +152,7 @@ export const tyres = defineModule('tyres', (ctx) => {
             size: CHIP.size,
             width: chipWidth,
             bind: carCompound(player()),
+            widest: CHIP.widest,
           }),
         ];
       }),
