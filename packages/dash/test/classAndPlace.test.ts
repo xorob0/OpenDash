@@ -16,7 +16,7 @@ import { ncalc } from '../src/generator.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { sessionPanel } from '../src/screens/pitwall.ts';
-import { CHIP_CHARS, CHIP_WIDEST } from '../src/second/chip.ts';
+import { CHIP_CHARS } from '../src/second/chip.ts';
 import { CLASS_AND_PLACE_WIDEST, classAndPlace, NO_VALUE, player } from '../src/second/values.ts';
 import { expressionsIn, walkItems } from '../src/walk.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
@@ -77,9 +77,9 @@ describe('the widest it declares', () => {
     expect(readings).toContain(CLASS_AND_PLACE_WIDEST);
   });
 
-  test("is wider than the chip's LMP2, which a Mustang or a Mercedes overran", () => {
+  test("is wider than LMP2, the chip's widest until #569, which a Mustang or a Mercedes overran", () => {
     for (const weight of ['SemiBold', 'Bold'] as const) {
-      expect(measureText(DATA_FACE[weight], `MUST · P44`, 100)).toBeGreaterThan(measureText(DATA_FACE[weight], `${CHIP_WIDEST} · P44`, 100));
+      expect(measureText(DATA_FACE[weight], `MUST · P44`, 100)).toBeGreaterThan(measureText(DATA_FACE[weight], `LMP2 · P44`, 100));
     }
   });
 

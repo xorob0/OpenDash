@@ -74,12 +74,12 @@ import { rule } from '../elements/rule.ts';
 import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
 import { charsThatFit, measureText, widestOf } from '../design/advances.ts';
 import { densityOf, grownAtMost, rampOf } from '../second/density.ts';
-import { chip, chipText, chipWidth } from '../second/chip.ts';
+import { CHIP_WIDEST, chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour, RELATIVE_GAP_WIDEST } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour, ratingWidest, RELATIVE_GAP_WIDEST } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -210,8 +210,11 @@ function cellsThatFit(cells: readonly Cell[], width: number): Cell[] {
   return kept.map((cell) => (cell.want === undefined ? cell : { ...cell, width: Math.min(cell.want, cell.width + spare) }));
 }
 
+/** The face the labels that follow the gap are drawn in, which is `label`'s. */
+const DETAIL_FACE = 'BarlowMedium';
+
 /** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
-const detailWidth = (text: string, fs: number): number => Math.ceil(measureText('BarlowMedium', text, fs)) + 1;
+const detailWidth = (text: string, fs: number): number => Math.ceil(measureText(DETAIL_FACE, text, fs)) + 1;
 
 /** One of the labels that follow the gap: its sample, the widest its binding draws, and the binding. */
 interface Detail {
@@ -228,6 +231,13 @@ interface Detail {
  * The last lap carries its "Last" only where the catalogue writes one. The fullest drawing has room
  * to say what the time is; `grid` and `tall` print it bare, a time beside a gap being unambiguous
  * once the page has been read once, and that is the width the prefix costs spent on the reading.
+ *
+ * Each is measured by the widest string its binding draws and not by its sample. The two readings
+ * are the sim's, a lap time and a rating, drawn in a proportional face, so the sample is one reading
+ * among many and not the widest: `iR 3.1k` is ten pixels short of a driver rated 10 000 at 15 px, and
+ * `1:43.234` leaves no room for a lap of `1:40.000` or of `2:04.404`. #902. The lap is measured by
+ * {@link LAP_TIME_WIDEST}, whose fours are Barlow Medium's widest digit and whose cells a lap of ten
+ * minutes, drawn to the hundredth, fills too (#883).
  */
 function details(ctx: ModuleContext, side: Side, keep: readonly string[]): Detail[] {
   const idx = listNeighbour(side.offset, ctx.classOnly);
@@ -247,7 +257,7 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): Detai
           },
         ]
       : []),
-    ...(keep.includes('rating') ? [{ id: 'rating', text: 'iR 3.1k', widest: 'iR 3.1k', bind: concat(str('iR '), carRating(idx)) }] : []),
+    ...(keep.includes('rating') ? [{ id: 'rating', text: 'iR 3.1k', widest: `iR ${ratingWidest(DETAIL_FACE)}`, bind: concat(str('iR '), carRating(idx)) }] : []),
   ];
 }
 
@@ -358,7 +368,7 @@ function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, kee
         }
         if (cell.id === 'num') items.push(...field(numSpec, x, centred(numberSize) + numberSize, ctx.density, cell.width));
         if (cell.id === 'class') {
-          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), width: cell.width }));
+          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), widest: CHIP_WIDEST, width: cell.width }));
         }
         x += cell.width + IDENTITY_GAP;
       }

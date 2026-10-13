@@ -9,7 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts';
+import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, propertyName, setting } from '../contract.ts';
@@ -324,6 +324,17 @@ export const minutesClock = (seconds: Expr): Expr => {
 
 /** An iRating as `2.4k`, or `--` when the sim does not report one. */
 export const ratingK = (value: Expr): Expr => iff(gt(isnull(value, num(0)), num(0)), concat(fmt(div(value, num(1000)), '0.0'), str('k')), str(NO_VALUE));
+
+/**
+ * The widest {@link ratingK} a proportional box in `face` has to hold: two whole thousands, since a
+ * few hundred drivers are rated over 10 000 and none near 100 000, which is also what
+ * {@link CHARS.rating}'s four digit cells hold.
+ *
+ * Measured rather than written as a sample, because a sample is a rating somebody holds and the box
+ * has to hold everybody's: the opponents page was cut to `iR 3.1k` and clipped the `k` of every
+ * driver rated ten thousand or more, and of a driver rated `4.0k` as well. #902.
+ */
+export const ratingWidest = (face: MeasuredFace): string => widestFigure(face, '99.9k');
 
 // --- The player's own car ------------------------------------------------------------------
 
