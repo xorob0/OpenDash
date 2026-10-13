@@ -6,10 +6,10 @@
  * flag does and cannot draw over one that outranks it.
  *
  * It draws in two phases, #380. `flagStrip` is the takeover, the whole band for the few seconds a
- * condition has just come out or just changed; `flagCorners` is what it settles into, the same twenty
- * conditions in the block at each end of the band, so the page a driver was reading comes back while
- * the flag stays out. `flagTakingBand` is the one window that decides between them, and `zones/face.ts`
- * is where the two groups are gated against each other.
+ * condition has just come out or just changed; `flagSettled` is what it settles into, the same twenty
+ * conditions in one rectangle of the face that no reading uses (#731), so the page a driver was
+ * reading comes back while the flag stays out. `flagTakingBand` is the one window that decides between
+ * them, and `zones/face.ts` is where the two groups are gated against each other.
  *
  * It reads the catalogue's bits through `conditionVisible` rather than SimHub's six normalised
  * `Flag_*` properties, which is the whole of what this file is for. Those six are a lossy summary:
@@ -42,8 +42,7 @@ import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, discB
 import { ALERT_CATALOGUE, bandNames, bandRaised, bandVisible, FACE_FLAG_PRIORITY, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
-import { CHIP_WIDEST } from '../second/chip.ts';
-import { carBehindClass, carBehindPositionClass, WIDEST_BEHIND_POSITION_CLASS } from '../second/values.ts';
+import { carBehindClass, carBehindPositionClass, WIDEST_BEHIND_CLASS, WIDEST_BEHIND_POSITION_CLASS } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
 export { ALERT_BAND_BORDER as BLACK_FLAG_BORDER, ALERT_FLASH_MS as FLAG_BLINK_MS, ALERT_NAME_WEIGHT as FLAG_NAME_WEIGHT, ALERT_BAND_STYLES as FLAG_STRIP_STYLES } from './alertBand.ts';
@@ -113,7 +112,7 @@ const shapeParts = (name: string, frame: Rect, style: AlertBandStyle, spec: Aler
 /**
  * The whole band: the shape, and in place of the label the run a condition writes when it has the
  * band to itself, which is the incident's count against its limit. A style that writes no name
- * writes no run, and the settled corner blocks draw `shapeParts` alone, so the run is the takeover's.
+ * writes no run, and the settled rectangle draws `shapeParts` alone, so the run is the takeover's.
  */
 const bandParts = (name: string, frame: Rect, style: AlertBandStyle, spec: AlertBandSpec): Item[] => {
   if (spec.shape === 'chequer' || spec.shape === 'striped' || spec.shape === 'disc' || spec.run === undefined || !style.labels) return shapeParts(name, frame, style, spec);
@@ -136,7 +135,7 @@ export const BLUE_FLAG_ID = 'blue';
  * band writes is one centred string in all three cases, and a name pinned to the centre with a
  * detail hung off its end would be two boxes fighting over the same middle. Each run declares the
  * widest string it can draw, which is what `textFit.test.ts` measures against the band and what a
- * settled corner block is measured against before it writes the runs at all: the longest is the
+ * settled rectangle is measured against before it writes the runs at all: the longest is the
  * label, a two-digit place and the widest chip, and a run that stopped fitting some face's band
  * would fail there rather than be clipped by WPF.
  *
@@ -162,7 +161,7 @@ const blueFlagRuns = (label: string): readonly BlueFlagRun[] => {
   const withLabel = (detail: Expr): Expr => iff(eq(detail, str('')), str(label), concat(str(`${label} · `), detail));
   const runs: readonly BlueFlagRun[] = [
     { detail: 'none', sample: label, widest: label },
-    { detail: 'class', sample: `${label} · GT3`, widest: `${label} · ${CHIP_WIDEST}`, bind: withLabel(carBehindClass()) },
+    { detail: 'class', sample: `${label} · GT3`, widest: `${label} · ${WIDEST_BEHIND_CLASS}`, bind: withLabel(carBehindClass()) },
     {
       detail: 'positionClass',
       sample: `${label} · P4 GT3`,
@@ -258,10 +257,28 @@ export const FLAG_TAKEOVER_MS = ds.indicator.alert.durationMs;
  */
 export const flagTakingBand = (): Expr => changed(num(FLAG_TAKEOVER_MS), raisedRank(bandRaised));
 
-/** The two rectangles a settled flag keeps, which `zones/bandPages.ts` measures off the band. */
-export interface FlagCornerBlocks {
-  left: Rect;
-  right: Rect;
+/** Inside the settled flag's border, at each side of the longest name it writes. */
+const FLAG_SETTLED_PAD = 8;
+
+/**
+ * The widest the settled flag asks to be: the longest name any condition writes, with its border and
+ * {@link FLAG_SETTLED_PAD} at each side, which is FULL COURSE YELLOW's. A rectangle is that wide where
+ * its theme has the room and narrower where it has not, in which case the name it writes is the short
+ * form; it is never wider, so that a long free stretch does not become a long bar of colour.
+ */
+export const flagSettledWidth = (): number =>
+  Math.ceil(Math.max(...ALERT_CATALOGUE.flatMap((c) => bandNames(c.band)).map((text) => measureText('BarlowBold', text, ds.size.label)))) +
+  2 * (ALERT_BAND_BORDER + FLAG_SETTLED_PAD);
+
+/**
+ * A settled flag's rectangle from a theme's table of them, keyed by the face's size: each theme that
+ * places the flag itself lists the rectangle it measured on every face it draws, rather than deriving
+ * it from parts of the face that move, and a size missing from the table is a build that fails.
+ */
+export function flagSettledAt(table: Readonly<Record<string, Rect>>, face: { width: number; height: number }, theme: string): Rect {
+  const at = table[`${face.width}x${face.height}`];
+  if (!at) throw new RangeError(`the ${theme} theme places no settled flag on its ${face.width} x ${face.height} face`);
+  return at;
 }
 
 /** Whether the blue flag's three runs fit `block`, each measured from its `widest` as a name is. */
@@ -269,27 +286,19 @@ const blueDetailFits = (block: Rect, spec: AlertBandSpec): boolean =>
   spec.shape === 'filled' && blueFlagRuns(spec.label).every((run) => nameFits(block, run.widest));
 
 /**
- * One end of the settled condition: its own shape, with its name where the block has room, and never
- * the incident's count, which the whole band writes in place of the name.
+ * The settled condition in its one rectangle: its own shape, with its name, and never the incident's
+ * count, which the whole band writes in place of the name.
  *
- * The name is the longest of the condition's names that fits the block, by the same measure as the
- * whole band's. A name that does not fit is not shrunk and not clipped; it is simply not written, and
- * the block is colour alone, which is what the nano's twelve-pixel strip already is. The blue flag
- * writes its detail by that measure too, #497: the three runs the whole band draws where the widest of
- * them fits the block, and BLUE where only the name does.
- *
- * All eighteen labels, which are every condition's but the chequer's and the meatball's, fit all four
- * corner-block sizes, FULL COURSE YELLOW being the widest of them, and none of the names fits the
- * sixteen pixels of side padding, FCY included, so the answer comes out per face rather than per
- * condition: on the four faces with no corner block a settled flag is a colour, and a colour is a
- * family rather than a member -- the three blacks are one outlined sliver. The debris flag is not a
- * yellow there, since #498: its stripes are never fewer than three, so sixteen pixels still hold one
- * red between two yellow. The meatball loses nothing there, having no name anywhere: its disc is sized
- * from the block, ten pixels across in sixteen. zones.md §6 weighs that against holding the whole band
- * for the length of a caution, and §10 records what the canvas still owes those four faces. A neutral
- * alert is the exception that has no colour to fall back on, and draws nothing there.
+ * The name is the longest of the condition's names that fits the rectangle, by the same measure as
+ * the whole band's, so FULL COURSE YELLOW where there is room for it and FCY where there is not. Every
+ * settled rectangle a face draws has room for every condition's shortest name, which
+ * `flagSettled.test.ts` holds; a name that did not fit would not be written, and the rectangle would be
+ * a colour alone. The blue flag writes its detail by that measure too, #497: the three runs the whole
+ * band draws where the widest of them fits, and BLUE where only the name does. A neutral alert drawn
+ * without its name would say "last lap" or "black flag" instead of what the driver's hand did, so where
+ * no name fits it draws nothing.
  */
-const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition: AlertCondition): Item[] => {
+const settledParts = (name: string, block: Rect, style: AlertBandStyle, condition: AlertCondition): Item[] => {
   const spec = condition.band;
   if (condition.id === BLUE_FLAG_ID && style.labels && blueDetailFits(block, spec)) return blueFlagParts(name, block, style, spec);
   const labels = style.labels && bandNames(spec).some((text) => nameFits(block, text));
@@ -298,26 +307,26 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
 };
 
 /**
- * The settled flag: the same twenty conditions, ranked the same way, drawn in the block at each end
- * of the band instead of across the whole of it.
+ * The settled flag: the same twenty conditions, ranked the same way, drawn in one rectangle of the face
+ * instead of across the whole band, #731.
  *
  * The page underneath is back, which is the point of #380, and the flag is still out until its bits
- * clear. A blinking flag keeps blinking, because the flash is part of what a waved yellow means and
- * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
+ * clear. It used to settle into a block at each end of the band, which covered the band's corner fields
+ * on four faces and was sixteen nameless pixels at each end on the others, and with the takeover that
+ * was a colour in three places. It is one rectangle now, carrying the name, in a part of the face where
+ * no reading is drawn; where that is depends on the theme, and `zones/face.ts` asks the theme's drawing
+ * for it and draws the house's in zone C's title line otherwise. A blinking flag keeps blinking, because
+ * the flash is part of what a waved yellow means and `filledBand` puts it inside the rectangle it is
+ * given, whatever that rectangle is.
  *
- * The blue flag keeps its detail, #497: the block writes it as the whole band does, under the same
- * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P99 LMP2" is narrower than
- * FULL COURSE YELLOW, so that is every corner block there is, and the sixteen pixels of the four faces
- * without one write neither the detail nor BLUE. One thing the takeover has that this does not: the
- * incident's count against its limit. The block writes INCIDENT.
- *
- * A condition whose blocks draw nothing, which is a neutral alert on a face with no corner block, has
- * no layer here at all rather than an empty one.
+ * One thing the takeover has that this does not: the incident's count against its limit. The rectangle
+ * writes INCIDENT. A condition whose rectangle draws nothing has no layer here at all rather than an
+ * empty one.
  */
-export function flagCorners(blocks: FlagCornerBlocks, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flagCorner'): Item[] {
+export function flagSettled(frame: Rect, style: AlertBandStyle = ALERT_BAND_STYLES.standard, prefix = 'flagCorner'): Item[] {
   return ALERT_CATALOGUE.flatMap((condition) => {
     const name = `${prefix}.${condition.id}`;
-    const children = [...cornerParts(`${name}.left`, blocks.left, style, condition), ...cornerParts(`${name}.right`, blocks.right, style, condition)];
+    const children = settledParts(name, frame, style, condition);
     return children.length === 0 ? [] : [conditionLayer(condition, name, children)];
   });
 }

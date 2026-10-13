@@ -14,7 +14,8 @@ import { measureText } from '../src/design/advances.ts';
 import { CANVAS_BASELINE, LINE_SPACING, WPF_BASELINE, gearCells, monoWidth } from '../src/design/metrics.ts';
 import { rect, type Rect } from '../src/design/geometry.ts';
 import { CHARS } from '../src/second/values.ts';
-import type { Item, TextItem } from '../src/generator.ts';
+import { ncalcEvaluator, type Item, type TextItem } from '../src/generator.ts';
+import { FORWARD_GEARS, LEARNED_GEAR_COUNT_PROPERTY } from '../src/shift.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { faceOf } from './monoGlyphs.ts';
@@ -243,11 +244,24 @@ describe('the ghosted gears either side of the one a driver is in', () => {
     expect(below.bindings?.Visible).toBeUndefined();
   });
 
+  test('on Assetto Corsa the one above is hidden in top gear too, and names the gear above below it', () => {
+    // #996. Assetto Corsa publishes no DriverInfo block, so the count is the one SimHub learns for
+    // the car; before, the ghost was never hidden there, and in sixth of six it drew a dim 7.
+    const { evaluate, int } = ncalcEvaluator;
+    const ac = (gear: string): Record<string, unknown> => ({ 'DataCorePlugin.GameData.Gear': gear, [LEARNED_GEAR_COUNT_PROPERTY]: int(6) });
+    const visible = (gear: string): unknown => evaluate(String(above.bindings!.Visible!.formula), { properties: ac(gear) });
+    const text = (gear: string): unknown => evaluate(String(above.bindings!.Text!.formula), { properties: ac(gear) });
+    expect(visible('6')).toBe(false);
+    expect({ visible: visible('5'), text: text('5') }).toEqual({ visible: true, text: '6' });
+  });
+
   test('neither end of the box invents a gear the sim never reports', () => {
     const bind = (item: TextItem): string => String(item.bindings!.Text!.formula);
-    // Eighth gear is the last SimHub names, so there is no ninth to ghost above it.
-    expect(bind(above)).not.toContain("'9'");
+    // The ghosts stop at the ends of the one forward-gear list, so there is nothing above the last of
+    // it and nothing below first; the car's own top gear is the Visible binding's to hide.
+    const last = FORWARD_GEARS[FORWARD_GEARS.length - 1]!;
+    expect(bind(above)).not.toContain(`'${Number(last) + 1}'`);
     expect(bind(below)).not.toContain("'0'");
-    expect(bind(above)).toContain("if(([DataCorePlugin.GameData.Gear]) = ('7'), '8'");
+    expect(bind(above)).toContain(`if(([DataCorePlugin.GameData.Gear]) = ('${Number(last) - 1}'), '${last}'`);
   });
 });

@@ -170,3 +170,22 @@ None of that stops a trace from being reproducible in the sense that matters, wh
 re-recording an unchanged scenario produces the same picture. It does mean that a trace diff is
 never empty, and that the lines worth reading in it are the ones belonging to properties the
 scenario actually touches.
+
+#1063 asserts two hundred and fifty-six in each, typed on top of that recording because the plugin it
+was taken with did not publish them yet: `OpenDash.LivePosition<row>`, `LiveClassPosition<row>`,
+`LiveOrder<place>` and `LiveClassOrder<place>` for sixty-four cars, the race as it stands on the road,
+which the plugin works out because iRacing moves its own order only at the line. They are all null,
+which is not what a recording of the race scenarios will write, and says so here: there the plugin
+publishes the order the emulator gives, and the emulator ranks its field by distance on every tick, so
+every one of them is the sim's own answer that the dashboards fall back to when it is null. The replay
+draws the same places and the same rows either way. Qualifying, where the plugin publishes nothing, and
+`notc`, whose chequered flag falls 132 frames in and after which it publishes nothing, would be null for
+some or all of the recording anyway. The next `bun run record` reads them from the plugin and drops the
+entries.
+
+#1017 asserts one more in each, `DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal`, the length
+iRacing declares for the session. It was recorded on #1017's branch while #993's re-recording landed
+on main, and the two could not both be kept, so the traces are main's recording with that one column
+carried over from the branch's: 2700 in the race scenarios, 1800 in `notc` and 900 in `quali`, the
+emulator's own scenario lengths, which do not move within a session or between two recordings of one.
+The next `bun run record` reads it from SimHub and drops the entry.

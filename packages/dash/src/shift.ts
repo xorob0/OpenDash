@@ -32,7 +32,7 @@ import { ncalc } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV, CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, propertyName } from './contract.ts';
 
-const { prop, game, raw, gt, ge, eq, mul, sub, num, isnull, and, or, not, max, iff } = ncalc;
+const { prop, game, gt, ge, eq, mul, sub, num, real, str, concat, isnull, and, or, not, max, iff } = ncalc;
 
 /** Where the session string puts the driver's own car. The same nested path `incidentLimit` reads. */
 const DRIVER_INFO = 'DataCorePlugin.GameRawData.SessionData.DriverInfo.';
@@ -51,9 +51,31 @@ export const SHIFT_RPM_PROPERTIES = {
 
 /**
  * How many forward gears the car has, from the same DriverInfo block as the four RPMs. Used only
- * to find the gear there is nothing to shift out of.
+ * to find the gear there is nothing to shift out of, and only iRacing publishes it.
  */
 export const GEAR_COUNT_PROPERTY = `${DRIVER_INFO}DriverCarGearNumForward`;
+
+/**
+ * SimHub's own count of the car's forward gears, which it publishes for every sim.
+ *
+ * `GameManagerBase.GetMaxGear` (decompiled from 9.12.6) takes it from the game reader where the
+ * reader has one, else from the car's settings, else from the highest gear seen this session; and
+ * the car's settings learn it as the highest gear SimHub has ever seen in that car, kept from one
+ * session to the next. So it is learned rather than declared, and the first time a car is driven
+ * it is the highest gear reached so far. That is why it is the fallback for a sim that declares
+ * nothing rather than the source: iRacing's reader returns no count of its own, and its learned one
+ * would be wrong in the same way on a first drive where `DriverCarGearNumForward` never is. #996.
+ */
+export const LEARNED_GEAR_COUNT_PROPERTY = 'DataCorePlugin.GameData.CarSettings_MaxGears';
+
+/**
+ * How many forward gears the car has: the count iRacing declares, else the one SimHub has learned,
+ * else zero.
+ */
+export const gearCount = (): Expr => {
+  const declared = isnull(prop(GEAR_COUNT_PROPERTY), num(0));
+  return iff(gt(declared, num(0)), declared, isnull(prop(LEARNED_GEAR_COUNT_PROPERTY), num(0)));
+};
 
 /** Engine speed now. */
 export const rpms = (): Expr => isnull(game('Rpms'), num(0));
@@ -69,8 +91,14 @@ export const lastRpm = (): Expr => read(SHIFT_RPM_PROPERTIES.last);
 /** Shift now. Between `first` and `last` for every car that passes `mirrorAvailable`. */
 export const shiftRpm = (): Expr => read(SHIFT_RPM_PROPERTIES.shift);
 
-/** Over-rev, never below the last light, because a car may publish a ladder and no blink RPM. */
-export const blinkRpm = (): Expr => max(read(SHIFT_RPM_PROPERTIES.blink), lastRpm());
+/**
+ * Over-rev, never below the last light, because a car may publish a ladder and no blink RPM.
+ *
+ * The blink RPM's fallback is the double `0.0`: NCalc's `max` answers in its left operand's type, so
+ * an Int32 `0` there would round the last light to a whole RPM on a car that publishes no blink.
+ * #1046.
+ */
+export const blinkRpm = (): Expr => max(isnull(prop(SHIFT_RPM_PROPERTIES.blink), real(0)), lastRpm());
 
 /**
  * Whether the car published a usable ladder this frame, which is also what makes every expression
@@ -103,16 +131,33 @@ export const mirrorStageLit = (stage: number, local: number, count: number): Exp
   stage === 0 ? bandLit(firstRpm(), shiftRpm(), local, count) : stage === 1 ? bandLit(shiftRpm(), lastRpm(), local, count) : ge(rpms(), lastRpm());
 
 /**
- * Top gear: the gear there is nothing to shift out of. Read from iRacing's own numeric gear rather
- * than `[Gear]`, which is a string ("N", "R", "1"), and false whenever the car does not say how
- * many gears it has — so a car that publishes no count keeps flashing as it did.
+ * The forward gears, as the strings SimHub's `[Gear]` reports them in. One list for every reader:
+ * the box's gear glyphs, the ghosted neighbours either side of the gear, and the pit wall's gear
+ * trace. There were three, and they disagreed about `9`: the box drew it, the ghosts stopped at 8,
+ * and the trace sent it to neutral.
  *
- * ADR 0014, amended for #774.
+ * Nine is above what these sims publish today, and a car with fewer simply never reaches the top.
+ * A list that stops short draws the top gear of a longer box as something else.
  */
-export const lastGear = (): Expr => {
-  const count = isnull(prop(GEAR_COUNT_PROPERTY), num(0));
-  return and(gt(count, num(0)), ge(isnull(raw('Gear'), num(0)), count));
-};
+export const FORWARD_GEARS: readonly string[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+/**
+ * Top gear: the gear there is nothing to shift out of. False whenever neither iRacing nor SimHub
+ * knows how many gears the car has, so a car with no count keeps flashing as it did.
+ *
+ * Compared as text, with `[Gear]`, because that is the gear SimHub publishes for every sim: iRacing's
+ * numeric `Telemetry.Gear`, which this read until #996, is iRacing's alone, and on any other sim
+ * the comparison was never true. `[Gear]` is a string ("N", "R", "1"), so the count is turned into
+ * one with `'' +`, which NCalc concatenates when the left operand is a string, rather than the gear
+ * into a number. Comparing the two as they come is not safe: NCalc compares a string with a number
+ * as the more precise of the two types, so the outcome would hang on whether a count arrives as an
+ * Int32, an Int64 or the session string's text, and as an Int64 it throws on "N". A count of zero
+ * becomes "0", which names no gear SimHub reports, since neutral is "N"; and a gear not yet
+ * published reads as the empty string, which names none either.
+ *
+ * ADR 0014, amended for #774 and #996.
+ */
+export const lastGear = (): Expr => eq(isnull(game('Gear'), str('')), concat(str(''), gearCount()));
 
 /**
  * Over-rev: the flash, under the car's own ladder — and not in the last gear, where a flash is an

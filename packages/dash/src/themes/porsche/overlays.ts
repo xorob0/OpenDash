@@ -28,7 +28,7 @@ import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
 import { TRACKED_VALUES } from '../../second/tracked.ts';
-import { speed } from '../../second/values.ts';
+import { overPitLimit, pitLimitText, speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { gearSizeIn } from '../../zones/zoneAPages.ts';
 import { regionRect, zoneRect } from '../anatomy.ts';
@@ -37,7 +37,7 @@ import { panelOf } from './body.ts';
 import { picture } from './pictograms.ts';
 import { BORDER, BOX_PAD, centredY, lowFuelAlarm, RADIUS, runWidth } from './register.ts';
 
-const { add, fmt, game, gt, iff, isnull, lt, num, raw, str, concat } = ncalc;
+const { fmt, game, iff, raw, str, concat } = ncalc;
 
 /**
  * The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side,
@@ -64,16 +64,6 @@ function scaled<T>(layout: T, k: number): T {
 /** How much smaller than `reference` a frame is, never larger than one. */
 const shrink = (frame: Rect, reference: { width: number; height: number }): number => Math.min(1, frame.width / reference.width, frame.height / reference.height);
 
-/**
- * The pit lane limit in the driver's own unit, which is the unit `SpeedLocal` is in, so the two are
- * compared as they are drawn. An unpublished limit reads as one nothing reaches, so the body stays
- * green rather than going red on a track whose limit the sim does not say.
- */
-const pitLimit = (): string => isnull(game('PitLimiterSpeed'), num(999));
-/** A limiter holds the car a fraction over its figure, so one unit is let by before the body turns red. */
-const overTheLimit = (): string => gt(speed(), add(pitLimit(), num(1)));
-
-
 /** The change box's name and value, and the alarm's two lines, as the canvas sets them. */
 const NOTICE_AT_REFERENCE = { name: 32, value: 116, line: 36 };
 const ALARM_AT_REFERENCE = { triangle: { width: 44, height: 40 }, word: 34, reading: 26, gap: 6 };
@@ -86,7 +76,11 @@ const ALARM_AT_REFERENCE = { triangle: { width: 44, height: 40 }, word: 34, read
 function limiterBody(frame: Rect, gear: Rect): Item {
   const ink = ds.color.surface.base;
   const LIMITER = scaled(LIMITER_AT_REFERENCE, shrink(frame, BODY));
-  const fill = iff(overTheLimit(), str(ds.color.danger.primary), str(ds.color.good.primary));
+  // Red over the limit, which is `overPitLimit`: the limit in the driver's own unit, the unit the
+  // speed beside it is in, with the one unit a limiter is let by. An unpublished limit is never
+  // exceeded, so the body stays green on a track whose limit the sim does not say. The lane is not
+  // asked, since the body is only drawn while the limiter is on.
+  const fill = iff(overPitLimit(), str(ds.color.danger.primary), str(ds.color.good.primary));
   const left = frame.left + LIMITER.padX;
   const top = frame.top + LIMITER.padTop;
   const limit = rect(left, frame.top + frame.height - LIMITER.padBottom - LIMITER.limit.height, LIMITER.limit.width, LIMITER.limit.height);
@@ -108,7 +102,7 @@ function limiterBody(frame: Rect, gear: Rect): Item {
       size: LIMITER.limit.value,
       color: ink,
       hAlign: 'right',
-      bind: iff(lt(pitLimit(), num(999)), fmt(pitLimit(), '0'), str('--')),
+      bind: pitLimitText(),
       widest: '888',
     }),
     // The gear stays in the middle, in the face and weight zone A draws it, so that it reads as the

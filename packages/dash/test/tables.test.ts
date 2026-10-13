@@ -295,11 +295,12 @@ test('the default format draws Liam Byrne whole on every box whose declared row 
     const declared = nameRoom(box, tableRowHeight(box.density));
     expect({ box: box.name, room, declared, short: declared < NAME_SAMPLE.length, kept: room >= nameFloorOf(declared) }).toMatchObject({ short: true, kept: true });
   }
-  // The five narrow boxes, named so that one being added or leaving is a diff rather than a silence:
-  // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements, and the companion's
-  // portrait page, whose 109 px column holds eight.
+  // The six narrow boxes, named so that one being added or leaving is a diff rather than a silence:
+  // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements. The companion's
+  // portrait page was a seventh, its 109 px column holding eight beside a chip cut for `LMP2`; a chip
+  // that holds four M (#569) is wider than that row can spare, so the row gives the class up and the
+  // name has twelve.
   expect(short).toEqual([
-    'OpenDash Companion portrait page',
     'face-274x328',
     'face-274x366',
     'face-249x328',
@@ -567,8 +568,8 @@ describe('what a row gives way, in the order the leaderboard writes down', () =>
       }
       return found;
     };
-    expect(least('compact')).toEqual({ best: 587, last: 477, class: 367, num: 313, name: 191, pos: 156, gap: 104 });
-    expect(least('zone')).toEqual({ best: 666, last: 540, class: 414, num: 356, name: 216, pos: 177, gap: 117 });
+    expect(least('compact')).toEqual({ best: 588, last: 478, class: 368, num: 313, name: 191, pos: 156, gap: 104 });
+    expect(least('zone')).toEqual({ best: 670, last: 544, class: 418, num: 356, name: 216, pos: 177, gap: 117 });
   });
 
   test('the name goes once it cannot hold a letter and the ellipsis, and not before', () => {

@@ -66,6 +66,8 @@ import {
   DELTA_REFERENCES,
   FLAGS_IN_PIT_LANE_SETTING,
   PORSCHE_CREST,
+  LIVE_SLOTS,
+  liveSettingNames,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -177,11 +179,13 @@ describe('settings', () => {
     // The lone 12 is RevBar, the blue flag detail, the two that decide how a driver is named, the
     // idle screen's two, the class best, the clock format, the delta's precision, whether a flag
     // shows in the pit lane, the Porsche crest's path and the AiM's backlight, which every screen
-    // shares with the four modes and the twelve slots.
+    // shares with the four modes and the twelve slots, and the race as it stands on the road after
+    // them, four families of a place or a row per car, which every screen that draws one reads (#1063).
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
         12 +
+        4 * LIVE_SLOTS +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -229,8 +233,10 @@ describe('settings', () => {
     // estimate: the strip's switch, and the three the plugin computes. And 403 before the Porsche's
     // badge could draw the crest the plugin fetches into the user's own folder (#714). And 404 before
     // the AiM's backlight became the driver's choice (#715), and 405 before the catalogue gained the
-    // engine readings, and with them a companion switch (#752).
-    expect(props).toHaveLength(406);
+    // engine readings, and with them a companion switch (#752). And 406 before the plugin had to
+    // publish the race as it stands on the road, a place and a row in each of two counts for sixty-four
+    // cars, because iRacing moves it only at the line (#1063).
+    expect(props).toHaveLength(662);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -371,13 +377,16 @@ describe('settings', () => {
         // And each theme's own settings, shared because a backlight is the driver's taste and a rig in
         // auto mode shows whichever theme the car picks. #715.
         'ThemeAimBacklight',
+        // And the race as it stands on the road, published rather than chosen and read by every screen
+        // that draws a place, a list or a gap. #1063.
+        ...liveSettingNames(),
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
     // The web view address is the pit wall's although its name carries no prefix: it was named
     // before the idiom, and no other screen has a browser page to point anywhere.
     expect(screenProperties(PIT_WALL_PREFIX)).toContain('OpenDash.WebViewUrl');
-    // The twenty-one switches, the page and the flag format. The start module and the glance module
+    // The module switches, the page and the flag format. The start module and the glance module
     // are the plugin's own state and not properties, because nothing on the screen reads either: the
     // start is applied once by Init, and the glance is a value the hold copies into the page and back
     // out again.

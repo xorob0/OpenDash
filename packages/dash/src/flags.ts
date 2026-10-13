@@ -29,7 +29,7 @@
  * The catalogue carries no duration of its own, and *whether* a condition shows is exactly as long
  * as it holds: the canvas asks for a configurable three seconds per alert, and a flag that went dark
  * on a clock while it was still flying would be a lie. What has a duration is *how* band D shows it
- * -- the whole band for a few seconds and its corner blocks afterwards, #380 -- and the two alerts
+ * -- the whole band for a few seconds and one rectangle afterwards, #380 and #731 -- and the two alerts
  * that are events rather than states, an incident and a flash of the headlights, which hold for
  * those same seconds after the value they watch moves. Every one of those clocks is SimHub's
  * `changed()` window rather than one of ours, which is what ADR 0009 admits. `raisedRank` below is
@@ -139,19 +139,25 @@ export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_B
  * condition that reaches the catalogue without a shape, a colour and a name is a condition the face
  * cannot draw, and the type is what refuses it.
  *
- * A filled bar may carry a `short` form of its label, which is the name where the label does not fit,
- * or fits only too small to read. Band D and its corner blocks write the longest of the two that fits
- * the room they have, so the name is as long as the room allows rather than as short as the smallest
- * room; the full-screen block writes the label at a size of its own wherever that size is at least
- * `FLAG_FULL_LONG_NAME_MIN_RATIO` of the one size its other names share, in `components/flagFull.ts`.
- * One condition has one, the full course yellow, whose FULL COURSE YELLOW is FCY on a full-screen
- * block where the whole name would be under half the size of the others, #497; the others are short
- * enough everywhere they are written, and a second form nobody reads would be a second name to keep
- * in step with the first.
+ * A named band may carry a `short` form of its label, which is the name where the label does not fit.
+ * Band D and the settled flag write the longest of the two that fits the room they have, so the name is
+ * as long as the room allows rather than as short as the smallest room. The settled flag is why most
+ * of them exist, #731: it is one rectangle in a part of the face no reading uses, which on the
+ * narrowest faces is about sixty-five pixels, and every condition has a name that fits there. So FULL
+ * COURSE YELLOW is FCY, DISQUALIFIED is DSQ, IGNITION OFF and ENGINE OFF are IGN OFF and ENG OFF,
+ * INCIDENT is INC, PUSH TO PASS is P2P, WHITE · LAST LAP is WHITE, and the start gantry's GREEN · SET
+ * and GREEN · READY are SET and READY, which is what the full-screen block already calls the two. The
+ * other labels, YELLOW the widest of them, fit every settled rectangle as they are and have none.
+ *
+ * The full-screen block writes the label at a size of its own wherever that size is at least
+ * `FLAG_FULL_LONG_NAME_MIN_RATIO` of the one size its other names share, in `components/flagFull.ts`,
+ * and it does that for the full course yellow alone, FCY being on a full-screen block where the whole
+ * name would be under half the size of the others, #497. Its other conditions keep the one word of its
+ * own table, so the short forms here change nothing there.
  */
 export type AlertBandSpec =
   | { shape: 'filled'; colour: Hex; label: string; short?: string; flash?: true; run?: BandRun }
-  | { shape: 'outlined'; colour: Hex; label: string; run?: BandRun }
+  | { shape: 'outlined'; colour: Hex; label: string; short?: string; run?: BandRun }
   | { shape: 'chequer' }
   | { shape: 'striped'; colour: Hex; stripe: Hex; label: string }
   | { shape: 'disc'; colour: Hex };
@@ -159,16 +165,16 @@ export type AlertBandSpec =
 /** The names a band can write for the condition, longest first, and none for the chequer or the disc. */
 export const bandNames = (spec: AlertBandSpec): readonly string[] => {
   if (spec.shape === 'chequer' || spec.shape === 'disc') return [];
-  return spec.shape === 'filled' && spec.short !== undefined ? [spec.label, spec.short] : [spec.label];
+  return (spec.shape === 'filled' || spec.shape === 'outlined') && spec.short !== undefined ? [spec.label, spec.short] : [spec.label];
 };
 
 /**
  * What the whole band writes in place of its label, for the one condition with a number to say: the
  * incident, with its count and the limit it is counted against.
  *
- * Only the band writes it, and only while the condition has the whole band. A corner block writes the
- * label, and the nano writes nothing. The blue flag's detail is not held to that rule since #497: a
- * corner block writes it wherever it fits. `sample` is what DashStudio draws and `widest` is the
+ * Only the band writes it, and only while the condition has the whole band. The settled flag writes
+ * the label, and the nano writes nothing. The blue flag's detail is not held to that rule since #497:
+ * the settled flag writes it wherever it fits. `sample` is what DashStudio draws and `widest` is the
  * longest string the binding can produce, which is what `textFit.test.ts` measures the band against
  * and what `widest.test.ts` holds the binding to.
  */
@@ -243,9 +249,8 @@ export interface CarAlert extends CatalogueEntry {
    *
    * That token is `color.neutral.primary`, which is white, and white is already two flags: the white
    * flag is filled with it, and the black family is outlined in the `#F5F7FA` beside it. On a band
-   * that writes a name the name tells them apart. Where no name is written -- the nano's strip, and a
-   * corner block too narrow for the word -- a neutral alert draws nothing rather than a colour that
-   * says "last lap" or "black flag". Nor does it take the full-screen block, which is the flag that
+   * that writes a name the name tells them apart. Where no name is written -- the nano's strip -- a
+   * neutral alert draws nothing rather than a colour that says "last lap" or "black flag". Nor does it take the full-screen block, which is the flag that
    * cannot be missed and has no business covering the gear for the length of a push to pass.
    */
   neutral?: true;
@@ -293,7 +298,7 @@ const IGNITION_OFF: CarAlert = {
   id: 'ignition',
   name: 'Ignition off',
   when: outOnCircuit(ignitionOff()),
-  band: { shape: 'outlined', colour: ds.purpose.alert.power, label: 'IGNITION OFF' },
+  band: { shape: 'outlined', colour: ds.purpose.alert.power, label: 'IGNITION OFF', short: 'IGN OFF' },
 };
 
 /**
@@ -304,7 +309,7 @@ const ENGINE_OFF: CarAlert = {
   id: 'engine',
   name: 'Engine off',
   when: outOnCircuit(engineStopped()),
-  band: { shape: 'outlined', colour: ds.purpose.alert.power, label: 'ENGINE OFF' },
+  band: { shape: 'outlined', colour: ds.purpose.alert.power, label: 'ENGINE OFF', short: 'ENG OFF' },
 };
 
 /** The incidents this driver has taken, as a number whatever the sim publishes. */
@@ -338,8 +343,7 @@ const incidentCount = (): Expr => isnull(incidents(), num(0));
  *
  * Filled, as the canvas draws it. Its colour is `purpose.alert.incident`, which is the caution amber
  * `#FFB300`, and so is the meatball's `purpose.flag.orange`, so the two can only be told apart by
- * shape wherever the incident writes no name, which is the nano and a settled block too narrow for
- * the word; and a driver who has just hit something is the driver a meatball is most likely to be
+ * shape wherever the incident writes no name, which is the nano; and a driver who has just hit something is the driver a meatball is most likely to be
  * for. While the meatball was a filled band the incident was outlined for that reason. Since #498 the
  * meatball is drawn as the flag is, a black box with an orange disc in its middle and no name, so the
  * incident takes the canvas's fill back and the pair stays apart at every size: a band of amber is
@@ -353,6 +357,7 @@ const INCIDENT: CarAlert = {
     shape: 'filled',
     colour: ds.purpose.alert.incident,
     label: 'INCIDENT',
+    short: 'INC',
     run: {
       sample: 'INCIDENT · 4x / 17',
       bind: concat(str('INCIDENT · '), fmt(incidentCount(), '0'), str('x'), iff(hasIncidentLimit(), concat(str(' / '), incidentLimit()), str(''))),
@@ -376,7 +381,7 @@ const PUSH_TO_PASS: CarAlert = {
   name: 'Push to pass',
   neutral: true,
   when: and(driving(), eq(isnull(game('PushToPassActive'), num(0)), num(1))),
-  band: { shape: 'filled', colour: ds.purpose.alert.p2p, label: 'PUSH TO PASS' },
+  band: { shape: 'filled', colour: ds.purpose.alert.p2p, label: 'PUSH TO PASS', short: 'P2P' },
 };
 
 /**
@@ -447,7 +452,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   IGNITION_OFF,
   ENGINE_OFF,
   { id: 'red', name: 'Red', critical: true, motion: 'moves', bits: ['red'], band: { shape: 'filled', colour: ds.purpose.flag.red, label: 'RED' } },
-  { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED' } },
+  { id: 'disqualify', name: 'Disqualified', critical: true, motion: 'moves', bits: ['disqualify'], band: { shape: 'outlined', colour: ds.purpose.flag.black, label: 'DISQUALIFIED', short: 'DSQ' } },
   // The furled black is named as the black flag is, #497, and neither flashes, so on the band and on
   // the full-screen block the two are one drawing; the box alone tells them apart, by a bar that walks
   // against an outline that waves.
@@ -460,8 +465,8 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   // The full course yellow: iRacing's caution of the whole track, which is the pace car being
   // deployed. It outranks a local yellow because it is the whole track. The canvas names it Safety
   // car (7 · SafetyCar), and the name here is the one decided in #497, which docs/design/flag-box.md
-  // records against the canvas. It is the one name with a short form, since FULL COURSE YELLOW is
-  // too long for the full-screen block on the portrait screens to stay legible there.
+  // records against the canvas. Its short form is the one the full-screen block uses as well, since FULL
+  // COURSE YELLOW is too long for the block on the portrait screens to stay legible there.
   {
     id: 'caution',
     name: 'Full course yellow',
@@ -500,7 +505,7 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
   INCIDENT,
   { id: 'blue', name: 'Blue', critical: true, motion: 'held', bits: ['blue'], band: { shape: 'filled', colour: ds.purpose.flag.blue, label: 'BLUE' }, faceFlag: 'Flag_Blue' },
   // In iRacing the white bit is the last lap and nothing else, which is why the name says so.
-  { id: 'white', name: 'White', critical: false, motion: 'held', bits: ['white'], band: { shape: 'filled', colour: ds.purpose.flag.white, label: 'WHITE · LAST LAP' }, faceFlag: 'Flag_White' },
+  { id: 'white', name: 'White', critical: false, motion: 'held', bits: ['white'], band: { shape: 'filled', colour: ds.purpose.flag.white, label: 'WHITE · LAST LAP', short: 'WHITE' }, faceFlag: 'Flag_White' },
   {
     id: 'green',
     name: 'Green',
@@ -511,8 +516,8 @@ export const ALERT_CATALOGUE: readonly AlertCondition[] = [
     limiter: 'Flag_Green',
     faceFlag: 'Flag_Green',
   },
-  { id: 'startSet', name: 'Set', critical: false, motion: 'held', bits: ['startSet'], band: { shape: 'outlined', colour: ds.purpose.flag.green, label: 'GREEN · SET' } },
-  { id: 'startReady', name: 'Ready', critical: false, motion: 'held', bits: ['startReady'], band: { shape: 'outlined', colour: ds.purpose.flag.green, label: 'GREEN · READY' } },
+  { id: 'startSet', name: 'Set', critical: false, motion: 'held', bits: ['startSet'], band: { shape: 'outlined', colour: ds.purpose.flag.green, label: 'GREEN · SET', short: 'SET' } },
+  { id: 'startReady', name: 'Ready', critical: false, motion: 'held', bits: ['startReady'], band: { shape: 'outlined', colour: ds.purpose.flag.green, label: 'GREEN · READY', short: 'READY' } },
   { id: 'chequered', name: 'Chequered', critical: false, motion: 'moves', bits: ['checkered'], band: { shape: 'chequer' }, faceFlag: 'Flag_Checkered' },
   PUSH_TO_PASS,
   HEADLIGHT_FLASH,
@@ -616,7 +621,7 @@ export function conditionVisible(condition: AlertCondition, criticalOnly: Critic
 /**
  * How every band ranks a condition: the whole catalogue, read null-safely, with no critical switch.
  *
- * Band D's takeover, its settled corner blocks and the full-screen block are three drawings of one
+ * Band D's takeover, the settled flag and the full-screen block are three drawings of one
  * reading, on the face, the companion and the pit wall alike, so it is written once here rather than
  * as the same four arguments in each of them.
  */

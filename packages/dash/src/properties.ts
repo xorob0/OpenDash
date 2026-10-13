@@ -21,16 +21,22 @@
 import { composePackages, themesToBuild } from './build.ts';
 import { callTextsFor, functionCalls, isOpponentCall } from './generator.ts';
 import { PREVIOUS_LAP_SLOTS } from './second/values.ts';
+import { liveSettingNames, propertyName } from './contract.ts';
 import { expressionsIn, propertiesIn } from './walk.ts';
 
 /**
  * The reads whose property name is computed at render time: `PersistantTrackerPlugin.PreviousLap_NN`
- * and its delta, one pair per row of the lap history. SimHub numbers the most recent lap 00.
+ * and its delta, one pair per row of the lap history, SimHub numbering the most recent lap 00; and
+ * every one of the plugin's live places and rows, `OpenDash.LiveOrder3`, which a list names by the row
+ * or the place it is drawing (#1063).
  */
-export const COMPUTED_PROPERTIES: readonly string[] = Array.from({ length: PREVIOUS_LAP_SLOTS }, (_, slot) => {
-  const name = `PersistantTrackerPlugin.PreviousLap_${String(slot).padStart(2, '0')}`;
-  return [name, `${name}_DeltaToSessionBest`];
-}).flat();
+export const COMPUTED_PROPERTIES: readonly string[] = [
+  ...Array.from({ length: PREVIOUS_LAP_SLOTS }, (_, slot) => {
+    const name = `PersistantTrackerPlugin.PreviousLap_${String(slot).padStart(2, '0')}`;
+    return [name, `${name}_DeltaToSessionBest`];
+  }).flat(),
+  ...liveSettingNames().map(propertyName),
+];
 
 /** Every theme a release ships: the default and every other one that has code, as `--all-themes` picks them. */
 const shippedThemes = () => themesToBuild({ themes: [], allThemes: true, touchedThemes: false }, () => {});

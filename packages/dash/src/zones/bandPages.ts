@@ -18,7 +18,8 @@
  *
  * Seven of the eight pages are that. The eighth, D8 Car, is the twelve-lamp telltale rank, which is
  * a rank of boxes rather than of fields and lives in `telltales.ts`; this file hands it the same
- * room it gives a page of fields and otherwise leaves it alone.
+ * room it gives a page of fields and otherwise leaves it alone. It is held back from 1.0 (#969), so
+ * no built band reaches it, and is drawn here still for the tests and for #148.
  */
 import type { HAlign, Item, Monospace, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
@@ -36,10 +37,14 @@ import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
   airTemperature,
+  bandFuelQuantity,
+  bandFuelQuantityDrawn,
+  bandFuelQuantityWidest,
   bestLap,
   carPosition,
   positionLabelled,
   carRelativeGap,
+  RELATIVE_GAP_WIDEST,
   CHARS,
   INCIDENTS_WIDEST,
   LAP_WIDEST,
@@ -59,23 +64,29 @@ import {
   FUEL_TO_END_WIDEST,
   fuelUnit,
   incidents,
+  LAP_TIME_WIDEST,
+  lapTime,
   lastLap,
   listNeighbour,
   localClock,
   meridiemWidest,
   minutesClock,
-  NO_TIME,
+  MINUTES_CLOCK_WIDEST,
   NO_VALUE,
+  pitRefuel,
+  pitRefuelIsAbsent,
   roadTemperature,
+  secondsOf,
   sectorTime,
   settledFuelTimeLeft,
   simClock,
+  spotterCar,
   twelveHour,
   windKmh,
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds, toShortTime } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -164,8 +175,6 @@ export interface BandField {
   numeralWidest?: string;
 }
 
-const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), toShortTime(expr, 3));
-
 /**
  * A reading derived from what a lap costs, drawn only once a lap has cost something.
  *
@@ -175,10 +184,29 @@ const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)
 const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VALUE));
 
 /**
+ * Whole digits a tank or a refuel can take, `999` in either unit, which is the three the page has
+ * always budgeted for them; and a lap's consumption, `99`, the two it always budgeted for that.
+ */
+const TANK_DIGITS = 3;
+const LAP_DIGITS = 2;
+
+/**
+ * A fuel quantity's cells and the reading they are measured by, for a figure drawn through
+ * {@link bandFuelQuantity}: the whole form's widest against the `9.9` of the decimal one. #899.
+ */
+const quantity = (digits: number): Pick<BandField, 'chars' | 'numeralWidest'> => {
+  const { widest, chars } = bandFuelQuantityWidest(digits);
+  return { chars, numeralWidest: widest };
+};
+
+/**
  * D1 Fuel: what a driver checks on a straight, which is why it is the default.
  *
  * The tank and the refuel are read off the sim directly, whereas the other four are derived from
- * what a lap costs, so those four wait for a lap and answer together. Before the first crossing
+ * what a lap costs, so those four wait for a lap and answer together. The refuel is the order the
+ * pit service is set to, {@link pitRefuel}, and not the fuel module's `To add`, which is an estimate
+ * off the per-lap average: it is converted to the unit the tank beside it is drawn in, and reads
+ * the absence where the sim publishes no order rather than an order of nothing (#604). Before the first crossing
  * SimHub extrapolates `Fuel_LitersPerLap` from the lap in progress and every figure taken off it
  * moves every frame; a band that gated only some of them consequently read `EST. LAPS --` beside
  * `PER LAP 0.000` and `LAST LAP 0.000`, which is one row and one tank with two fields saying they
@@ -197,21 +225,28 @@ const settled = (value: string): string => iff(fuelIsSettled(), value, str(NO_VA
  * saying whether the tank reaches the flag rather than the estimate a driver would have to subtract
  * the laps left from himself. It is the one field of this page the canvas draws on neither fuel
  * sheet, and `docs/design/zones.md` §5 records that. #387.
+ *
+ * The four quantities, the tank, the refuel, the per lap and the last lap, are drawn whole from 10
+ * up and to one decimal below, through {@link bandFuelQuantity}, in the driver's unit. That is the
+ * author's ruling on #899: the fuel time's third minute digit cost the Porsche's and the AiM's feet
+ * fields at 850 and 800 wide, and the tenths of a tank are worth less than a field. The cells are
+ * cut for the longer of the two forms, so a tank is three digit cells and a lap's consumption two
+ * and a point, where both used to be five and a point.
  */
 const fuel: readonly BandField[] = [
   {
     id: 'fuel',
     label: 'Fuel',
-    sample: '15.12',
-    bind: fmt(fuelLevel(), '0.00'),
-    chars: { digits: 5, specials: 1 },
-    drawn: drawnFigure({ value: fuelLevel(), digits: 3, decimals: 2 }),
+    sample: '15',
+    bind: bandFuelQuantity(fuelLevel()),
+    ...quantity(TANK_DIGITS),
+    drawn: bandFuelQuantityDrawn(fuelLevel(), TANK_DIGITS),
     after: 'L',
     afterBind: fuelUnit(),
     afterWidest: 'gal',
     color: ds.purpose.fuel.nominal,
   },
-  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), chars: CHARS.minutesClock },
+  { id: 'time', label: 'Fuel time', sample: '08:46', bind: minutesClock(settledFuelTimeLeft()), numeralWidest: MINUTES_CLOCK_WIDEST, chars: CHARS.minutesClock },
   {
     id: 'toEnd',
     label: 'Margin',
@@ -226,9 +261,9 @@ const fuel: readonly BandField[] = [
     afterWidest: FUEL_TO_END_UNIT_WIDEST,
   },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
-  { id: 'refuel', label: 'Refuel', sample: '32.67', bind: fmt(isnull(raw('PitSvFuel'), num(0)), '0.00'), chars: { digits: 5, specials: 1 }, color: ds.color.caution.primary },
-  { id: 'perLap', label: 'Per lap', sample: '1.432', bind: settled(fmt(fuelPerLap(), '0.000')), chars: { digits: 5, specials: 1 } },
-  { id: 'lastLap', label: 'Last lap', sample: '1.321', bind: iff(fuelLastLapIsSettled(), fmt(fuelLastLap(), '0.000'), str(NO_VALUE)), chars: { digits: 5, specials: 1 } },
+  { id: 'refuel', label: 'Refuel', sample: '33', bind: iff(pitRefuelIsAbsent(), str(NO_VALUE), bandFuelQuantity(pitRefuel())), ...quantity(TANK_DIGITS), color: ds.color.caution.primary },
+  { id: 'perLap', label: 'Per lap', sample: '1.4', bind: settled(bandFuelQuantity(fuelPerLap())), ...quantity(LAP_DIGITS) },
+  { id: 'lastLap', label: 'Last lap', sample: '1.3', bind: iff(fuelLastLapIsSettled(), bandFuelQuantity(fuelLastLap()), str(NO_VALUE)), ...quantity(LAP_DIGITS) },
 ];
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */
@@ -252,14 +287,14 @@ const energy: readonly BandField[] = [
 /** D3 Stint. The pit window needs a strategy the plugin does not compute; see ADR 0009. */
 const stint: readonly BandField[] = [
   { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.lap, numeralWidest: LAP_WIDEST },
-  { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(timespanToSeconds(isnull(driver('timesincelastpitout', playerPosition()), num(0)))), chars: CHARS.clock },
+  { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(secondsOf(driver('timesincelastpitout', playerPosition()))), chars: CHARS.clock },
   { id: 'stops', label: 'Stops', sample: '1', bind: fmt(isnull(driver('pitcount', playerPosition()), num(0)), '0'), chars: CHARS.position },
   {
     id: 'lastStop',
     label: 'Last stop',
     sample: '24.3',
-    bind: fmt(timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), '0.0'),
-    drawn: drawnFigure({ value: timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), digits: CHARS.consumption.digits - 1, decimals: 1 }),
+    bind: fmt(secondsOf(driver('pitlastduration', playerPosition())), '0.0'),
+    drawn: drawnFigure({ value: secondsOf(driver('pitlastduration', playerPosition())), digits: CHARS.consumption.digits - 1, decimals: 1 }),
     chars: CHARS.consumption,
     after: 's',
   },
@@ -322,8 +357,8 @@ const sectors: readonly BandField[] = [
   { id: 's1', label: 'S1', sample: '28.41', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 1)), chars: CHARS.sector },
   { id: 's2', label: 'S2', sample: '41.07', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 2)), chars: CHARS.sector },
   { id: 's3', label: 'S3', sample: '32.83', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 3)), chars: CHARS.sector },
-  { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime },
-  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, color: ds.purpose.lap.sessionBest },
+  { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST },
+  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST, color: ds.purpose.lap.sessionBest },
 ];
 
 /**
@@ -370,6 +405,7 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
     labelWidest: 'P99',
     sample: '-1.342',
     bind: carRelativeGap(listNeighbour(-1, classOnly)),
+    numeralWidest: RELATIVE_GAP_WIDEST,
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -390,6 +426,7 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
     labelWidest: 'P99',
     sample: '+0.722',
     bind: carRelativeGap(listNeighbour(1, classOnly)),
+    numeralWidest: RELATIVE_GAP_WIDEST,
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -838,8 +875,10 @@ interface BlockGeometry {
  *
  * Kept because the rank, the corner block and the shedding are read off artboards that still lay the
  * band out around a `D`: giving the room to the page moves the rank and the left corner inboard and
- * lets the 850 x 480 fuel page keep the last lap and the 600 x 686 band all twelve telltales, which is a
- * redraw of the band and the canvas's to make rather than a consequence of dropping a label.
+ * lets the 600 x 686 band draw all twelve telltales, which is a redraw of the band and the canvas's to
+ * make rather than a consequence of dropping a label. (It used to let the 850 x 480 fuel page keep the
+ * last lap as well, which that page now does in its own room since its quantities lost their tenths,
+ * #899.)
  */
 const letterRoom = (frame: Rect): number => {
   const m = bandMetrics(frame);
@@ -888,7 +927,7 @@ const cornerLamps = (): { id: string; text: string; on: string; colour: `#${stri
   {
     id: 'spt',
     text: 'SPT',
-    on: ncalc.or(gt(isnull(game('SpotterCarLeft'), num(0)), num(0)), gt(isnull(game('SpotterCarRight'), num(0)), num(0))),
+    on: ncalc.or(spotterCar('Left'), spotterCar('Right')),
     colour: ds.color.caution.primary,
   },
 ];
@@ -935,41 +974,6 @@ export function bandCornerWidths(frame: Rect): { left: number; right: number } {
 }
 
 const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, densityOf('zone').small, ds.size.label, LABEL_ROW, FIELD_GAP);
-
-/**
- * The two rectangles a flag keeps at the ends of the band once it has settled there, #380.
- *
- * On a face that draws corner blocks they *are* those blocks, each taken whole and to the band's own
- * edge: the flag covers the incidents and the track state at one end, the lamps and both clocks at
- * the other, and gives the page in the middle back. That is the trade the ticket makes deliberately.
- * A full course yellow runs several minutes and the flag has said everything it has to say after two
- * seconds, whereas what a driver decides during one is whether to pit, so the fuel page outranks a
- * clock and the availability of DRS for the rest of the caution.
- *
- * Whole is `bandCornerWidths`, which is the block's two fields plus `padX` plus `letterRoom`, so the
- * block runs to the band's own edge, as the side padding does on the four faces without corners, and
- * a settled flag is one drawing on all eight. zones.md §6 records it, and `flagBand.test.ts` holds
- * the face to it.
- *
- * On a face that draws no corners -- 850 x 480, 800 x 480, 800 x 286 and 600 x 686 -- there is none
- * to take, and the flag keeps the side padding instead: `padX` at each end, which is the only room in
- * the band no page is ever laid into, since `bandPageRoom` reserves it at both ends whether the face
- * has corners or not. It is colour without a name at that width, as the nano's strip is, and it is
- * drawn rather than left out because the ticket's own case is one of those four faces. No artboard
- * draws it; zones.md §10 records that.
- *
- * Measured here rather than by the face, for the same reason `bandCornerWidths` is: the band's own
- * table is what decides where a page stops, and a flag settling into room the page is using would be
- * the one thing a band must never do.
- */
-export function bandFlagBlocks(frame: Rect, corners: boolean): { left: Rect; right: Rect } {
-  const m = bandMetrics(frame);
-  const taken = corners ? bandCornerWidths(frame) : { left: m.padX, right: m.padX };
-  return {
-    left: rect(frame.left, frame.top, taken.left, frame.height),
-    right: rect(frame.left + frame.width - taken.right, frame.top, taken.right, frame.height),
-  };
-}
 
 /**
  * The room a lamp takes: the word, the 7 px either side of it, and the chip's own outline.
@@ -1082,5 +1086,9 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   return items;
 }
 
-/** Every page id band D can show, in cycle order, for a test that wants to walk them. */
+/**
+ * Every page id band D can draw, in catalogue order, for a test that wants to walk them. The car page
+ * is among them although it is held back from 1.0 (`HELD_BACK_BAND_PAGES` in `contract.ts`, #969):
+ * the rank is still built and measured, so that #148 re-enables it rather than rewriting it.
+ */
 export const BAND_PAGE_IDS: readonly string[] = [...Object.keys(BAND_PAGES), TELLTALE_PAGE];

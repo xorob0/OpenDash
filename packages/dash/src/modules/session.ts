@@ -15,10 +15,12 @@ import { drawnFigure } from '../second/drawn.ts';
 import { stack } from '../second/layout.ts';
 import {
   CHARS,
+  CLASS_AND_PLACE_WIDEST,
   INCIDENTS_WIDEST,
   LAP_TOTAL_WIDEST,
   LAP_WIDEST,
   carPosition,
+  classAndPlace,
   positionDigits,
   classOpponentCount,
   currentLap,
@@ -28,9 +30,9 @@ import {
   lapsLeftShown,
   lapsLeftText,
   player,
-  playerClass,
   positionDrawn,
   sessionClock,
+  SESSION_NAME_WIDEST,
   sessionType,
   showsTimeLeft,
   totalLaps,
@@ -39,11 +41,10 @@ import {
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
-const { and, fmt, iff, concat, str, gt, num, isnull, not, driver } = ncalc;
+const { and, fmt, iff, concat, str, gt, num, isnull, not } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
-  const classPosition = isnull(driver('classposition', player()), num(0));
   const taken = isnull(incidents(), num(0));
   // The Session progress setting was read by the legacy card alone, so a zone drew the lap and the
   // time left side by side whatever the driver had chosen. One of the two answers the question and
@@ -57,7 +58,10 @@ export const session = defineModule('session', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), chars: CHARS.word, fs: lead }),
+          // A word the sim writes rather than a number, so it is set proportionally and measured by
+          // the widest name iRacing gives a session: cut in eight cells for `Race`, `Lone Qualify`
+          // was drawn `Lone Qua` (#1029).
+          fld(ctx, 'type', 'Session', { sample: 'Race', bind: sessionType(), widest: SESSION_NAME_WIDEST, proportional: true, chars: CHARS.sessionName, fs: lead }),
           fld(ctx, 'position', 'Position', {
             sample: '4',
             bind: positionDigits(player()),
@@ -68,8 +72,10 @@ export const session = defineModule('session', (ctx) => {
           }),
           fld(ctx, 'class', 'Class', {
             sample: 'GT3 · P4',
-            bind: concat(playerClass(), str(' · P'), fmt(classPosition, '0')),
+            bind: classAndPlace(player()),
             chars: CHARS.classPosition,
+            widest: CLASS_AND_PLACE_WIDEST,
+            proportional: true,
             fs: lead,
           }, { visibleBind: gt(classOpponentCount(), num(0)) }),
         ],

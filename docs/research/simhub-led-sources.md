@@ -46,10 +46,10 @@ Two related facts, both verified:
 | Effect | Property | Notes |
 |---|---|---|
 | Shift ladder | `GameRawData.SessionData.DriverInfo.DriverCarSL{First,Shift,Last,Blink}RPM` | ADR 0014. One set per car, not per gear |
-| Last gear | `…DriverInfo.DriverCarGearNumForward` vs `GameRawData.Telemetry.Gear` | `[Gear]` is a string; the raw one is numeric |
+| Last gear | `GameData.Gear` vs `…DriverInfo.DriverCarGearNumForward`, else `GameData.CarSettings_MaxGears` | iRacing declares its count; every other sim has SimHub's learned one. `[Gear]` is a string, so the count is written as text to compare. #996 |
 | Shift fallback | `GameData.CarSettings_RPMShiftLight1` / `2`, `CarSettings_RPMRedLineReached` | ADR 0004, for a car publishing no ladder |
 | Brake, throttle | `GameData.Brake`, `GameData.Throttle` | 0..100 |
-| Fuel gauge | `GameData.FuelPercent` | 0..100 |
+| Fuel gauge | `Computed.Fuel_Percent` | 0..100. Not `GameData.FuelPercent`, which the game reader computes as the sim's litres over a `MaxFuel` already converted to the profile's unit, so it reads 189 for a half tank on a gallons profile. DataCore's divides the two converted figures. #993 |
 | Low fuel | `GameData.CarSettings_FuelAlertActive` | What the native `Status.LowFuelRemainingLapsAlert` reads. SimHub computes it, so it works on iRacing |
 | ABS active | `GameData.ABSActive`, `OpenDash.WheelLock` | `(BrakeABSactive > 0)`, a real intervention unlike TC, on a car with ABS. Otherwise the plugin's lock-up estimate, while the strip's `LedInferSlip` is on — see below |
 | TC | `GameData.TCActive`, `OpenDash.WheelSpin` | The intervention where a sim reports it. On iRacing, the plugin's wheelspin estimate, while the strip's `LedInferSlip` is on — see below |
@@ -70,7 +70,9 @@ Two related facts, both verified:
 There is no speeding property at any layer. It is `IsInPitLane` **and** a `PitLimiterSpeed` above
 zero **and** a `SpeedLocal` above it by a margin. The margin is what stops the light strobing while
 the limiter settles. `PitLimiterSpeedMs` exists on `StatusDataBase` but carries `[DoNotExpose]`, so
-it is not a property.
+it is not a property. The strip and the flag box read the one composition, `pitSpeeding` in
+`packages/dash/src/second/values.ts`; the pair is in one unit whatever the driver set, because
+`SpeedLocal` and `PitLimiterSpeed` are both converted by `GameUnitSettings.LocalSpeedUnit`.
 
 ### Wheelspin and lock-up are estimated by the plugin, because SimHub keeps its estimate for ShakeIt
 

@@ -8,7 +8,7 @@
  *
  * The stripes were the one shape left out, on the grounds that the name carries the difference, and
  * #498 reversed that: the name is written only where there is width for it, so on the nano's strip,
- * in the sixteen pixels a settled flag keeps on a face with no corner block and on the LED strip, a
+ * in the sixteen pixels a settled flag kept on a face with no corner block until #731 and on the LED strip, a
  * debris flag was a yellow flag. They are vertical where the canvas draws them at 135 degrees, which
  * is how the real flag is made and needs nothing SimHub is not known to draw: a diagonal stripe is a
  * rotated rectangle clipped to the band, and docs/research/simhub-dash-format.md establishes neither.

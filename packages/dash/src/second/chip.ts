@@ -21,19 +21,44 @@ import { textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { ds } from '../tokens.ts';
-import { densityOf, type Density } from './density.ts';
+import { densityOf, type Density, type DensitySpec } from './density.ts';
 
 const { left, ucase, iff, str, isnull } = ncalc;
 
 /** Characters a chip shows. "LMP2" and "GTP" fit; a longer class name is cut to this. */
 export const CHIP_CHARS = 4;
 
-/** The widest four letters a class name realistically has, which is what a chip is sized by. */
-export const CHIP_WIDEST = 'LMP2';
+/**
+ * The letter a class chip is sized by: M, the widest capital in Barlow Medium but one.
+ *
+ * The one is W, at 0.878 em against M's 0.715, and it is left out on purpose. Four of it is a chip
+ * 58 px wide in a zone where four M are 50, and the eight px between them come out of the name: the
+ * leaderboard and the relative in every 469 px face zone would cut `Liam Byrne` to eight characters,
+ * and the opponents page on the 600 px compact zones would drop its name to 13 px. A class name with
+ * a W in it still fits four M unless the other three are nearly as wide as M themselves, which `BMW`
+ * and `VW` are not. A class of two W is the price, and it clips its last letter rather than costing
+ * every name on those faces two of theirs.
+ */
+export const CHIP_GLYPH = 'M';
+
+/**
+ * The widest text a class chip can draw, which is what it is sized by: four of {@link CHIP_GLYPH}.
+ *
+ * It was `LMP2`, the widest four letters a class name was thought to have, and it is not: `MERC`,
+ * `MCLA` and `MAZD` are all wider, and a box cut for `LMP2` clipped the end of each. A class name
+ * is whatever the sim sends, upper-cased, so the chip is sized for the widest letters there are
+ * rather than for the names somebody thought of.
+ */
+export const CHIP_WIDEST = CHIP_GLYPH.repeat(CHIP_CHARS);
 
 export interface ChipOptions {
   /** Live text; `text` is then the design-time sample. */
   bind?: Expr;
+  /**
+   * The widest string `bind` can produce, which a bound chip has to declare: the fit tests measure
+   * a bound text by it, and a chip that left it out was measured by its sample and passed.
+   */
+  widest?: string;
   /** True (or an expression) draws the inverted chip: light block, dark text. */
   inverted?: boolean;
   invertedBind?: Expr;
@@ -52,19 +77,24 @@ export interface ChipOptions {
 }
 
 /** Width a chip takes at a density: padding, four characters, padding. */
-export function chipWidth(density: Density, widest: string = CHIP_WIDEST): number {
-  const d = densityOf(density);
+export function chipWidth(density: Density | DensitySpec, widest: string = CHIP_WIDEST): number {
+  const d = typeof density === 'string' ? densityOf(density) : density;
   return Math.ceil(2 * d.chipPadding + measureText('BarlowMedium', widest, d.labelSm));
 }
 
-/** Cuts a class name to what the chip can hold, upper-cased. */
-export const chipText = (expr: Expr): Expr => ucase(left(isnull(expr, str('')), CHIP_CHARS));
+/**
+ * Cuts a class name to what the chip can hold, upper-cased: `chars` characters, four by default.
+ * A chip sized for fewer passes the count it holds, and declares as its widest that many of the
+ * widest glyph it can draw.
+ */
+export const chipText = (expr: Expr, chars: number = CHIP_CHARS): Expr => ucase(left(isnull(expr, str('')), chars));
 
 /**
  * A chip whose top edge is `top`. The block is the chip's height; the text sits on the canvas
  * line box that centres it in the block.
  */
 export function chip(name: string, text: string, x: number, top: number, density: Density, opts: ChipOptions = {}): Item[] {
+  if (opts.bind !== undefined && opts.widest === undefined) throw new Error(`chip ${name}: bound and declares no widest`);
   const d = densityOf(density);
   const height = opts.height ?? d.chipHeight;
   const size = opts.size ?? d.labelSm;
@@ -84,6 +114,7 @@ export function chip(name: string, text: string, x: number, top: number, density
         color: ink,
         hAlign: 'center',
         bind: opts.bind,
+        widest: opts.widest,
         visibleBind: opts.visibleBind,
       }),
       { TextColor: inkBind },
