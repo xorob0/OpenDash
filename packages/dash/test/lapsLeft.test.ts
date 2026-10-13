@@ -291,6 +291,29 @@ describe('a car behind the leader runs to its first crossing after the leader’
     expect({ lapsLeft: lapsLeft(unpublished), refuel: refuel(unpublished) }).toEqual({ lapsLeft: '2', refuel: '1.4' });
   });
 
+  test('a road leader that is another car is read on its own row, where it is and at its own pace (#1063)', () => {
+    // Row 3 leads on the road 60 s from the line, and row 1, the sim's leader, is 5 s from it: the
+    // car, 20 s out, crosses before the road leader and runs a lap more. Row 1's figures would end it.
+    const behind = car(0, 20, {
+      ...leader(0.95),
+      'driverisplayer(3)': false,
+      'drivertrackpositionpercent(3)': 0.4,
+      'driverbestlap(3)': 100,
+      'OpenDash.LiveOrder1': 3,
+    });
+    expect({ lapsLeft: lapsLeft(behind), refuel: refuel(behind) }).toEqual({ lapsLeft: '2', refuel: '1.4' });
+    // Both at 0.8 of the lap, but the road leader on a 300 s lap is 60 s out and row 1 on a 50 s lap
+    // only 10 s: the wait is the road leader's pace, not the sim leader's.
+    const slower = car(0, 20, {
+      ...leader(0.8, 50),
+      'driverisplayer(3)': false,
+      'drivertrackpositionpercent(3)': 0.8,
+      'driverbestlap(3)': 300,
+      'OpenDash.LiveOrder1': 3,
+    });
+    expect(lapsLeft(slower)).toBe('2');
+  });
+
   test('with no leader on the leaderboard, the most the wait can be is counted', () => {
     // Nothing says where the leader is, so it may cross a whole lap after the clock: a lap more.
     const unplaced = { 'driverisplayer(1)': null };

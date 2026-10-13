@@ -1531,7 +1531,10 @@ const isRace = (): Expr => eq(ucase(sessionType()), str('RACE'));
  * moves that place only at the line (#1063), so for the rest of the lap after a pass for the lead row
  * 1 is the car that was passed. A car that had just taken the lead was told to wait for it, and read
  * a lap left too many and a Refuel for it on the last lap of a timed race. Where the plugin publishes
- * no live order, which is every sim but iRacing and every session but a race, the row is 1.
+ * no live order, the row is 1: on every sim but iRacing, in every session but a race, with Live
+ * positions switched off in the panel, before the sim has placed anyone and once the chequered flag
+ * is out (the `LIVE_POSITION` note of the contract). The car then waits for the sim's leader, as it
+ * did before.
  */
 const RACE_LEADER = liveRow(num(1));
 
