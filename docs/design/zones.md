@@ -28,7 +28,10 @@ pit alerts are drawn in, the hero the pop-ups, the change notifications and the 
 centred on, and the body a full-screen flag takes. The default theme returns the rectangles of
 `packages/dash/src/zones/faces/*.ts` as they are, so the tables of this section remain its data,
 whereas another theme may move a region or go without the bar while every zone keeps its whole
-catalogue (ADR 0015).
+catalogue (ADR 0015). The pit alerts' rectangle is inside the hero on the house's faces and the
+Porsche's, and the pop-ups and the change notifications keep clear of it: where a box centred on a
+theme's short hero would cover the banner, as on the Porsche's 1280 × 400 and 600 × 686, it is
+centred on the part of the hero the banner leaves instead (#1052).
 
 Under the default theme, the same five parts are on every rectangular face, and only their sizes
 change.
@@ -216,7 +219,8 @@ stalled on the circuit is told too, and the one condition is never drawn in both
 two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
 would blank the limiter band under a full course yellow, which is precisely when the pit lane is
 busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
-without one should not be told to use it.
+without one should not be told to use it. The lap review is ranked under the whole list, and does
+not open while any of the five is out ([§11](#11-a-field-that-is-not-there)).
 
 ---
 
@@ -1535,10 +1539,22 @@ centred on the hero rectangle and clamped to the body, zones B, A and C together
 last, so while it is out it covers the lap-time pop-up and the change notification, whose frames it
 contains in both directions. It is the one box of the family wider than the hero, on purpose: the
 pop-ups and the change notification are no larger than the hero (§10, *The pop-up's width*).
-The ranking is by geometry rather than by an exclusion chain, because a chain would have to reach
+That ranking is by geometry rather than by an exclusion chain, because a chain would have to reach
 into the pop-ups, whose conditions know nothing of a face and so cannot ask which face's setting is
-on. What it never covers is band D, the rev bar well, the bar of settled values or the limiter
-banner, the pit alerts being pushed before the whole transient family. It sheds the fuel pair, then
+on. What it never covers is band D, the rev bar well or the bar of settled values, which are
+outside the body, or **the pit family, which it gives way to by condition**: the review does not
+open while any state of the family is out, and closes if one comes out while it is up (#1053).
+Geometry could not do it. The review's 160 px reach the banner on the nano and on the Porsche's
+faces, and a theme may draw the family's limiter state as a takeover of its own inside the body
+the review is clamped to: the Porsche colours the whole body green or red round the pit speed and
+the limit, and the AiM writes `Pit Speed` over zone C. **A theme's takeover that draws a state of
+the pit family is that family**, shown on the same condition, and is never under the review; a
+driver crossing the line in the pit lane, as most pit exits do, keeps the limiter and the speed
+the lane's limit is read against. The review of a lap that ended in the lane is the one a driver
+has least use for. A theme's other takeovers, the Porsche's fuel alarm under ten litres and the
+AiM's engine warning, hold for laps rather than seconds, and the review covers them for its four
+seconds as it covers the house's low-fuel pop-up, where a gate would keep it closed for the rest
+of a stint. It sheds the fuel pair, then
 the driver line and its sector strip, before it shrinks anything, and the two deltas are the floor:
 a review shed down to a lap time alone would say less than the pop-up it replaces. Where a 64 px lap
 time and the two deltas do not fit inside the sheet's 32 px of side padding, the padding tightens to

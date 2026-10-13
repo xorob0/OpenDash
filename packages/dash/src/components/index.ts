@@ -29,6 +29,7 @@ export {
   popUps,
   popUpFit,
   popUpFrame,
+  popUpRoom,
   popUpVisible,
   POP_UPS,
   POP_UP_WIDTH,
