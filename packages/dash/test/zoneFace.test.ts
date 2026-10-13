@@ -132,7 +132,7 @@ describe('the reference face is the artboard', () => {
 
   test('zone A is a narrow column, not a third of the screen', () => {
     // The whole point of the model. A twelve-slot face gave the hero 382 of 1920; a zone face gives
-    // zone A 380 and the rest to two zones that show twenty-one pages each.
+    // zone A 380 and the rest to two zones that show the whole catalogue each.
     expect(z.zoneA.width).toBeLessThan(z.zoneB.width);
     expect(z.zoneA.height).toBe(z.zoneB.height);
   });
@@ -1058,7 +1058,7 @@ describe('the bar keeps its three blocks apart', () => {
   }
 });
 
-describe('the twenty-one pages reach the face', () => {
+describe('the pages of the catalogue reach the face', () => {
   const size = { width: 769, height: 314 };
   const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', size))!;
 
@@ -1133,7 +1133,7 @@ describe('a zone counts its cycle, not its catalogue', () => {
     expect(texts.some((t) => t.name === 'zoneA.counter' || t.name === 'zoneD.counter')).toBe(false);
   });
 
-  test('and no page of the shared dashboard counts for itself, which would count to twenty-one', () => {
+  test('and no page of the shared dashboard counts for itself, which would count the whole catalogue', () => {
     const shared = reference.built.zones.find((d) => d.name === zoneDashboardName('module', { width: 769, height: 314 }))!;
     const counters = itemsOf(shared).filter((i) => i.name.endsWith('.zone.counter'));
     expect(counters).toEqual([]);
@@ -1148,7 +1148,7 @@ describe('a zone counts its cycle, not its catalogue', () => {
     expect(readCounter(expression, 'B', MODULE_COUNT - 1, all)).toBe(`${MODULE_COUNT} / ${MODULE_COUNT}`);
 
     // Three pages on -- lap times, fuel and the relative -- is a cycle of three whichever of them
-    // is showing, and the twenty-one is nowhere on the screen.
+    // is showing, and the catalogue's length is nowhere on the screen.
     const three = (1 << 0) | (1 << 4) | (1 << 14);
     expect(readCounter(expression, 'B', 0, three)).toBe('1 / 3');
     expect(readCounter(expression, 'B', 4, three)).toBe('2 / 3');
