@@ -47,7 +47,7 @@ import { engineStopped, ignitionOff, isInPitLane, pitLimiterOn } from '../second
 import { ds } from '../tokens.ts';
 import { PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
 
-const { and, isNull, not, raw } = ncalc;
+const { and, isNull, not, or, raw } = ncalc;
 
 /**
  * This car has a limiter to engage.
@@ -96,6 +96,16 @@ export function pitAlertVisible(id: string): Expr {
   if (!spec) throw new Error(`pitAlerts: no alert ${id}`);
   return and(...PIT_ALERTS.slice(0, index).map((a) => not(a.when)), spec.when);
 }
+
+/**
+ * Whether any state of the family is out, whichever it is and wherever a theme draws it.
+ *
+ * The chain shows at most one state, and one of them is out exactly when one of their own conditions
+ * holds, so this is the conditions alone rather than the chain. It is what the lap review gives way
+ * to (#1053): a theme that draws the `limiter` state as a takeover of its own, as the Porsche's body
+ * and the AiM's `Pit Speed` are, shows it on `pitAlertVisible('limiter')`, which this covers.
+ */
+export const pitAlertOut = (): Expr => or(...PIT_ALERTS.map((a) => a.when));
 
 /**
  * One state's band: filled in its colour with the name knocked out, or the face's own ground

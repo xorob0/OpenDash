@@ -24,11 +24,16 @@ The anatomy below is the default theme's output rather than the shape every face
 theme declares is a function from a face size to a set of named regions, each of which carries a
 role and a rectangle (`packages/dash/src/themes/anatomy.ts`), and the roles are the parts the face
 knows how to fill: the rev bar and its well, the bar, zones B, A and C, band D, the rectangle the
-pit alerts are drawn in, the hero the pop-ups, the change notifications and the lap review are
-centred on, and the body a full-screen flag takes. The default theme returns the rectangles of
+pit alerts are drawn in, the hero the lap-time pop-up, the change notifications and the lap review
+are centred on, and the body a full-screen flag takes. The default theme returns the rectangles of
 `packages/dash/src/zones/faces/*.ts` as they are, so the tables of this section remain its data,
 whereas another theme may move a region or go without the bar while every zone keeps its whole
-catalogue (ADR 0015).
+catalogue (ADR 0015). The pit alerts' rectangle is inside the hero on the house's faces and the
+Porsche's, and the boxes that are out for seconds keep clear of it: where a box centred on a
+theme's short hero would cover the banner, as on the Porsche's 1280 × 400 and 600 × 686, it is
+centred on the part of the hero the banner leaves instead (#1052). The pop-ups that hold for as
+long as their condition does, low fuel and DRS, are drawn *in* that rectangle, on one line, while no
+pit alert is out, and never over the gear (#1047, §10 *The pop-up's place*).
 
 Under the default theme, the same five parts are on every rectangular face, and only their sizes
 change.
@@ -216,7 +221,8 @@ stalled on the circuit is told too, and the one condition is never drawn in both
 two draw in different rectangles and never contend, so gating the pit list on "no flag is showing"
 would blank the limiter band under a full course yellow, which is precisely when the pit lane is
 busiest. `ENGAGE LIMITER` is guarded on the presence of the in-car control itself, since a car
-without one should not be told to use it.
+without one should not be told to use it. The lap review is ranked under the whole list, and does
+not open while any of the five is out ([§11](#11-a-field-that-is-not-there)).
 
 ---
 
@@ -1523,6 +1529,7 @@ a mistake in this document.
 | The delta page's caption on the portrait companion | The canvas draws the reference caption beside the number wherever there is room across, and the portrait companion had it at two places: 306 px of number, ten of gap and 102 of caption in 432. **At three places the caption goes under the number, and it does so at both precisions**, because beside it the pair is 473 px and the box is cut for three places whichever is drawn. The number moves up 20 px with it. No artboard draws the portrait companion's delta page, so this is not a drawing departed from, but it is the one page whose arrangement the setting changed for a driver who never touches it. |
 | A centred delta in a narrow zone | The compact zones of the 800 and 850 faces centre the delta page across the zone, and a centred field centres its box rather than its ink. The two-place box already had one cell more than `−0.21` fills, the second whole digit, so the figure sat half a cell, 11 px at 46, left of the zone's centre. The box now holds three places, so **a two-place figure sits a further half cell left**, 22 px in all, and a three-place one sits where the two-place one used to. Lap times, which centres each of its fields across the same zones, moves too, though less and at both precisions: its delta field was as wide as its label, 100 px, and is now as wide as its three-place box, 105 px, so the label and the figure both sit 2 px further left on the 850 and 3 px on the 800. With the rev bar off, where the zone is tall and the page promotes its delta to 39 px, the field goes from 106 to 125 px and both sit 9 px further left on the 850 and 10 px on the 800. Centring on the ink would need the field's `Left` bound to its reading, which the page's other rows do not do and the canvas has not asked for; the offset is recorded rather than bound away. |
 | Lap times at the 1280 × 720 face with the rev bar off | Rule 20 grows lap times until a rank meets its box, and at this face's 445 × 560 body the rank that meets the width first is the one along the foot: laps, the estimate and the delta. [#330](https://github.com/xorob0/OpenDash/issues/330) grew the page there to 108 over 57. The delta's box now holds three places whichever precision is chosen, so at 57 the foot no longer fits across, and **the page stops a step sooner, at 100 over 53**, which is what it draws with the rev bar on: the delta's box is 164 px at 53 where the two-place one was 150 at 57, and the three times are drawn at 100 px where they were drawn at 108, so that the cell a third place needs is there. Keeping 108 would need the foot's delta cut for two places at this one size, which thousandths would then overrun, or the foot to wrap, which no drawing of the page does. The loss is recorded rather than designed away, and is the canvas owner's to rule on. |
+| The pop-up's place | PagesAndAlerts draws every pop-up 560 by 120 and the change notification 400 by 96, and says of them "centred over the hero" and "it never covers a slot". Every landscape face draws a zone A narrower than 560, from the 1920's 380 to the nano's 260, and the AiM's and the Porsche's gear is narrower still, so the two sentences cannot both hold; and centred over the hero, a box covers the gear. The build kept the sheet's width until [#1047](https://github.com/xorob0/OpenDash/issues/1047), when a pop-up reached into zones B and C and on the 1920 face low fuel hid the session name and zone C's time left for the last minutes of a race. Fitting the boxes to zone A instead put the low-fuel pop-up over the gear for as long as the tank was low, and the author's ruling on that pull request is the one that ships: **a box that is out for seconds may be a real pop-up over the whole face, and one that stays while its condition holds never covers the gear.** The transient boxes are the lap time at the line, out for three seconds, the change notification, out for SimHub's three-second window, and the lap review (§11). The first two are the sheet's 560 by 120 and 400 by 96 on every face of every theme, centred on the hero, which on every house face is the middle of the face, and kept inside the body, zones B, A and C, so for their seconds they cover the gear and the edges of zones B and C and never the rev bar, the bar of settled values, band D or the pit banner. The only face whose room is shorter than the sheet is the Porsche's 800 × 286, whose 102 px gear tile takes a 560 by 102 box. The lap time is 64 px everywhere; its delta is drawn on every house face, and not on the Porsche's or the AiM's, whose wider figures do not hold a 64 px lap time and a 46 px delta in 560. The lasting boxes are low fuel, out from the driver's threshold to the stop, and DRS, out for the length of a zone, which is a straight a driver is changing up through. They are drawn compact, the label and the value on one line, in the rectangle the pit alerts take: the row each theme's anatomy keeps for a state that holds as long as the limiter is on in the lane, at the top of zone A in the leading above the gear on the house's faces, at the top of the gear's tile on the Porsche's, and at the top of zone C on the AiM's. The pit family has the row first, so a lasting box is hidden while any pit alert is out, and the row is cut short wherever the gear's ink on any of zone A's pages reaches into it (`zoneAGearInk`, `lastingPopUpFrame`). The value is 22 px in the 30 px row of every face but three: the house's nano, whose gear reaches 4 px into its row, at 19; the house's 600 × 686, whose row is 28, at 20; and the Porsche's 1280 × 400 and 600 × 686, whose gear reaches 5 and 6 px into the row, at 18 and 17. `popUpRegions.test.ts` holds every lasting box clear of the gear's ink on every page of zone A, in both arrangements of every face of every theme as it ships. **The AiM's row is the top 30 px of zone C**, which on the LCD holds the page and not a header, so low fuel covers the top of whatever zone C shows for the rest of a stint; and on every face the low-fuel value is a third of the sheet's 64. Both are the canvas owner's to rule on. |
 | The steering dial | The catalogue's Inputs page draws an open arc turned by the wheel angle, with the mark fixed at top dead centre, and the build drew the inverse, a ring standing still with the mark running round it, on the belief that `Rotation` does not bind. It does ([simhub-dash-format.md](../research/simhub-dash-format.md#rotation-binds-and-turns-an-item-about-its-own-centre-2026-10-13-1057)). **A wheel is taken**, at the author's request on [#1060](https://github.com/xorob0/OpenDash/pull/1060): a three-spoke sport wheel drawn after the reference the author gave, a thick grey rim, two side spokes lifted a little above level and a broader one down, each tapering from the boss to the rim with a slot along it, and a round boss with a hole, every spoke turning with the wheel, and a white stripe across the top of the rim, as a racing wheel carries one, so that the top is the one part told apart. A taper is three bars, the format having no polygon. The rim stays closed rather than open, a turned arc's gap being one more part to carry round. The canvas owes the wheel. |
 
 ### Every variant the 1280 × 480 sheet lists
@@ -1561,16 +1568,41 @@ under the same mode, although none of them carries an optional field today: the 
 oil pressure the sim does not wire rather than drawing 0.0, which is a reading and a wrong one, and
 it gave those readings up when D8 became the telltale rank.
 
-**The lap review is the largest of the boxes drawn over zone A**, at `min(1200, face width)` by 160,
-centred on the hero rectangle and clamped to the face, and it is pushed last, so while it is out it
-covers the lap-time pop-up and the change notification, whose frames it contains in both directions.
-The ranking is by geometry rather than by an exclusion chain, because a chain would have to reach
+**The lap review is the largest of the boxes drawn over zone A**, at `min(1200, body width)` by 160,
+centred on the hero rectangle and clamped to the body, zones B, A and C together, and it is pushed
+last, so while it is out it covers the lap-time pop-up and the change notification, whose frames it
+contains in both directions on every face of every theme. It is the widest of the transient boxes,
+which are all drawn as real pop-ups over the body for the seconds they are out (§10, *The pop-up's
+place*); the lasting ones, low fuel and DRS, are in the pit banner's row clear of the gear, which the
+review reaches on the nano and covers for its four seconds. That ranking is by geometry rather than by an exclusion chain, because a chain would have to reach
 into the pop-ups, whose conditions know nothing of a face and so cannot ask which face's setting is
-on. What it never covers is band D, the rev bar well, the bar of settled values or the limiter
-banner, the pit alerts being pushed before the whole transient family. It sheds the fuel pair, then
+on. What it never covers is band D, the rev bar well or the bar of settled values, which are
+outside the body, or **the pit family, which it gives way to by condition**: the review does not
+open while any state of the family is out, and closes if one comes out while it is up (#1053).
+Geometry could not do it. The review's 160 px reach the banner on the nano and on the Porsche's
+faces, and a theme may draw the family's limiter state as a takeover of its own inside the body
+the review is clamped to: the Porsche colours the whole body green or red round the pit speed and
+the limit, and the AiM writes `Pit Speed` over zone C. **A theme's takeover that draws a state of
+the pit family is that family**, shown on the same condition, and is never under the review; a
+driver crossing the line in the pit lane, as most pit exits do, keeps the limiter and the speed
+the lane's limit is read against. The review of a lap that ended in the lane is the one a driver
+has least use for. A theme's other takeovers, the Porsche's fuel alarm under ten litres and the
+AiM's engine warning, hold for laps rather than seconds, and the review covers them for its four
+seconds as it may the house's low-fuel pop-up, where a gate would keep it closed for the rest
+of a stint. It sheds the fuel pair, then
 the driver line and its sector strip, before it shrinks anything, and the two deltas are the floor:
-a review shed down to a lap time alone would say less than the pop-up it replaces. It is off by
-default, for the reason the band is the default flag format.
+a review shed down to a lap time alone would say less than the pop-up it replaces. Where a 64 px lap
+time and the two deltas do not fit inside the sheet's 32 px of side padding, the padding tightens to
+the 24 under it on the `space` scale before the deltas go. The house's condensed figures keep the
+floor on every face at the sheet's padding. A theme that sets its figures in a wider face reaches
+the steps sooner: in the Porsche's Barlow a 64 px lap time and two deltas are 680 px, so its
+850 × 480 body, 743 px, takes the tighter padding, and **its 800 × 480, 800 × 286 and 600 × 686
+bodies, 694, 705 and 582 px, draw the lap time alone**. The first two kept their deltas while the
+review was clamped to the face rather than to the body, and gave them up for not covering the
+settings column and the telltales (#1047). The AiM's seven-segment figures need 808 px, and its
+850 × 480, 800 × 480, 800 × 286 and 600 × 686 draw the lap time alone, as they did before. Whether
+a theme's narrow review should keep one delta, or set its deltas smaller, is the canvas owner's to
+rule on. It is off by default, for the reason the band is the default flag format.
 
 A change of setting is announced the same way, and one token of its group is deliberately unread:
 `indicator.changeNotification.settleFrames` exists for a rotary swept through its positions, and

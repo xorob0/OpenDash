@@ -12,7 +12,8 @@
  * to zone C as the car draws it. The alarm is the car's own threshold, `FuelLevel` under ten litres,
  * which iRacing publishes in litres whatever the display unit; it is the one condition here the
  * house does not already draw, and the house's own low-fuel pop-up, which asks about laps rather
- * than litres, still takes the hero when its condition holds.
+ * than litres, is still drawn when its condition holds, in the pit banner's row at the top of the
+ * gear's tile, above the gear (#1047).
  *
  * The alarm's warning triangle is the telltale column's hazard pictogram, drawn in the alarm's ink.
  */

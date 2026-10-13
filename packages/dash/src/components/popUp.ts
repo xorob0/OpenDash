@@ -1,5 +1,5 @@
 /**
- * popUp: the box that takes the hero while one thing is worth more than the speed.
+ * popUp: the box that comes out while one thing is worth more than what it covers.
  *
  * The anatomy is the pagesandalerts artboard's: a 560 by 120 box in `purpose.popUp.surface`, a 2 px
  * rule in `purpose.popUp.rule` along its top edge, 32 px of side padding, a 15 px label 4 px above
@@ -11,16 +11,28 @@
  * is a colour; the rule, the label and the secondary take fixed tokens. That is the artboard's rule
  * written into the signature rather than into a convention, so a caller cannot dress the wrong part.
  *
- * **It covers the hero and nothing else.** The box is placed from the hero rectangle each layout
- * gives it rather than at a coordinate, so it is centred on the gear on a face of any size, and it
- * is short enough and narrow enough to leave the rev bar, the bar of settled values, the limiter
- * banner and band D uncovered. A flag takes band D over for its first three seconds and keeps the
- * block at each end of it for as long as it is out, and a pop-up must not be the thing that hides
- * either.
+ * **Two kinds, by how long they stay** (#1047). The sheet centres every pop-up on the hero, which is
+ * the gear, and that is right for a box that is out for the three seconds after the line and wrong
+ * for one that is out for as long as a condition holds: low fuel stays up for the last laps of a
+ * stint, and a driver who cannot see the gear for two laps has lost the one reading zone A is for.
  *
- * **One at a time**, by the exclusion chain the flags use: a pop-up is visible when its own
- * condition holds and no higher one's does. An invisible layer's other bindings are never
- * evaluated, so the two that are not showing cost nothing while they are not.
+ * - A **transient** pop-up is an event, out for seconds, and is drawn as a real pop-up: the sheet's
+ *   560 by 120, centred on the hero and free to reach over zones B and C, inside the body and clear
+ *   of the rev bar, the bar of settled values, band D and the pit banner. The lap time at the line
+ *   is the one, and the change notification is drawn the same way.
+ * - A **lasting** pop-up is a state, out for as long as its condition holds, and never covers the
+ *   gear. It is drawn compact, its label and its value on one line, in the row the face keeps for a
+ *   state that holds: the pit banner's, which every theme's anatomy places where it hides nothing a
+ *   driver reads by reflex, at the top of zone A above the gear on the house's faces and the
+ *   Porsche's and at the top of zone C on the AiM's. The row is cut short where the gear's ink
+ *   reaches into it, and the pit family has it first: a lasting pop-up is hidden while any state of
+ *   the family is out. Low fuel and DRS are the two.
+ *
+ * **One at a time of each kind**, by the exclusion chain the flags use: a pop-up is visible when its
+ * own condition holds and no higher one of its kind's does. The two kinds draw in different places
+ * and are not ranked against each other, so a lap time at the line no longer hides low fuel. An
+ * invisible layer's other bindings are never evaluated, so the ones that are not showing cost
+ * nothing while they are not.
  *
  * Every condition here is a state or is arithmetic over a published property, which is what
  * ADR 0009 leaves a dashboard able to say for itself. None of them is a timer: `indicator.popUp`
@@ -32,8 +44,8 @@ import type { Hex, Item, LayerItem, Rect, TextItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
-import { rect, roundRect } from '../design/geometry.ts';
-import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, type Chars } from '../design/metrics.ts';
+import { overlaps, rect, roundRect } from '../design/geometry.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -42,15 +54,17 @@ import { CHARS, hasTime, LAP_TIME_WIDEST, lapTime, lastLap, REFERENCE_DELTA_WIDE
 import { FIT_LADDER } from '../second/field.ts';
 import { ds } from '../tokens.ts';
 import { FLAG_BLINK_MS } from './flagStrip.ts';
+import { pitAlertOut } from './pitAlerts.ts';
 
 const { and, computed, concat, eq, fmt, game, isnull, lt, not, num, str } = ncalc;
 
 /**
- * The box the pagesandalerts artboard draws.
+ * The box the pagesandalerts artboard draws, which is the largest a pop-up is ever drawn.
  *
  * The height is `indicator.popUp.height`; the width is the one figure of this component that
  * tokens.json does not carry, so it is read off the artboard the way every rectangle in `zones/`
- * is, with the sheet as its citation rather than a ratio.
+ * is, with the sheet as its citation rather than a ratio. A body narrower or a room shorter than
+ * either gets a box its own size, `popUpFrame`.
  */
 export const POP_UP_WIDTH = 560;
 export const POP_UP_HEIGHT = ds.indicator.popUp.height;
@@ -69,6 +83,20 @@ export const POP_UP_VALUE_SIZE = ds.size.lapTime;
 
 /** The 46 px of the figure at the right end. */
 export const POP_UP_SECONDARY_SIZE = ds.size.value;
+
+/**
+ * A lasting pop-up's side padding and the room between its label and its value, which share a line.
+ * The banner row it is drawn in is 30 px deep on every face, so the sheet's 32 and its stacked 4 are
+ * the anatomy of a box four times taller; these are the next steps down the `space` scale.
+ */
+export const LASTING_PAD_X = ds.space[3];
+export const LASTING_GAP = ds.space[2];
+
+/**
+ * The largest a lasting pop-up's value is set: the sheet's secondary, the size the face gives a figure
+ * that is read beside another rather than as the hero. The banner row holds about 22.
+ */
+export const LASTING_VALUE_SIZE = POP_UP_SECONDARY_SIZE;
 
 /**
  * How long the artboard gives a pop-up, in seconds: `indicator.popUp.durationMs`.
@@ -100,13 +128,20 @@ export interface PopUpLabel {
   widest?: string;
 }
 
+/**
+ * How long a pop-up stays out, which decides where it may be drawn: an event of a few seconds over
+ * the whole face, a state that holds somewhere that never covers the gear (#1047).
+ */
+export type PopUpKind = 'transient' | 'lasting';
+
 export interface PopUpSpec {
   id: string;
+  kind: PopUpKind;
   label: PopUpLabel;
   value: PopUpText;
   /** The one colour the caller chooses. It reaches the value and nothing else. */
   colour: Hex;
-  /** The dimmer figure at the right end, dropped rather than drawn outside the box. */
+  /** The dimmer figure at the right end, dropped rather than drawn outside the box. A lasting pop-up draws none. */
   secondary?: PopUpText;
   /** True while it is out. The exclusion chain adds the higher conditions' negations. */
   when: Expr;
@@ -117,12 +152,36 @@ export interface PopUpSpec {
 /** What a label draws: its text, or the widest its binding can write. */
 const labelText = (spec: PopUpLabel): string => (spec.bind ? (spec.widest ?? spec.text) : spec.text);
 
+/** The label's box: its measured advances at the label size, and the slack every text box carries. */
+const labelWidth = (spec: PopUpLabel): number => Math.ceil(measureText('BarlowMedium', labelText(spec), ds.size.label)) + boxSlack(ds.size.label);
+
 /** Width of a run at a size: its cells when it has a budget, its measured advances otherwise. */
 const runWidth = (text: PopUpText, fs: number): number =>
   text.chars ? monoWidth(cells('SemiBold', fs), text.chars) : Math.ceil(measureText(DATA_FACE.SemiBold, text.widest ?? text.sample, fs));
 
-/** The room the two runs share. */
-const innerWidth = (): number => POP_UP_WIDTH - 2 * POP_UP_PAD_X;
+/** The room the two runs share in a box of this width. */
+const innerWidth = (width: number): number => width - 2 * POP_UP_PAD_X;
+
+/**
+ * Where the label and the value are set in a box: the two line boxes stacked 4 px apart and the
+ * stack centred in what the rule leaves, which is the artboard's `align-items: center`.
+ */
+function popUpStack(frame: Rect, valueFs: number): { labelY: number; valueY: number } {
+  const labelY = frame.top + POP_UP_RULE + (frame.height - POP_UP_RULE - (ds.size.label + POP_UP_GAP + valueFs)) / 2;
+  return { labelY, valueY: labelY + ds.size.label + POP_UP_GAP };
+}
+
+/** Whether a text box of this size, set at canvas `y`, is drawn between the rule and the foot of the box. */
+function boxInside(frame: Rect, y: number, fs: number): boolean {
+  const box = textBox(y, fs);
+  return Math.round(box.top) >= frame.top + POP_UP_RULE && Math.round(box.top) + box.height <= frame.top + frame.height;
+}
+
+/** Whether a value of this size, under its label, is drawn inside the box from top to bottom. */
+function stackFits(frame: Rect, valueFs: number): boolean {
+  const { labelY, valueY } = popUpStack(frame, valueFs);
+  return boxInside(frame, labelY, ds.size.label) && boxInside(frame, valueY, valueFs);
+}
 
 /** How a pop-up whose runs are wider than its box gives ground. */
 export interface PopUpFit {
@@ -131,55 +190,175 @@ export interface PopUpFit {
   secondary: boolean;
 }
 
+/** The smallest a value is ever set, which is the floor every fitted run on the face shares. */
+const LEAST_VALUE_SIZE = 12;
+
 /**
- * The size the value is drawn at, and whether the secondary survives.
+ * The size a transient pop-up's value is drawn at in a box, and whether the secondary survives.
  *
  * Rule 17 in the small, and the same order `fitFields` takes: the least important run is shed
  * before the most important one is shrunk, so the secondary goes first and only a value that still
- * does not fit the box on its own is scaled down. A bound run draws its binding rather than its
- * sample, so all of this is measured from `widest`.
+ * does not fit the box on its own is scaled down, by the ladder's steps and then, in a box narrower
+ * than the ladder reaches, to the size that fills it. A bound run draws its binding rather than its
+ * sample, so all of this is measured from `widest`. The box is the sheet's wherever the body has
+ * room for it, so this is answered by a narrow theme body or a short room under the pit banner.
  */
-export function popUpFit(spec: PopUpSpec): PopUpFit {
-  const room = innerWidth();
+export function popUpFit(spec: PopUpSpec, frame: Rect = rect(0, 0, POP_UP_WIDTH, POP_UP_HEIGHT)): PopUpFit {
+  const room = innerWidth(frame.width);
+  const fits = (fs: number): boolean => runWidth(spec.value, fs) <= room && stackFits(frame, fs);
   const after = spec.secondary ? runWidth(spec.secondary, POP_UP_SECONDARY_SIZE) + POP_UP_PAD_X : 0;
-  if (runWidth(spec.value, POP_UP_VALUE_SIZE) + after <= room) return { valueFs: POP_UP_VALUE_SIZE, secondary: spec.secondary !== undefined };
-  for (const factor of FIT_LADDER) {
-    const fs = Math.max(12, Math.round(POP_UP_VALUE_SIZE * factor));
-    if (runWidth(spec.value, fs) <= room) return { valueFs: fs, secondary: false };
+  if (runWidth(spec.value, POP_UP_VALUE_SIZE) + after <= room && stackFits(frame, POP_UP_VALUE_SIZE)) {
+    return { valueFs: POP_UP_VALUE_SIZE, secondary: spec.secondary !== undefined };
   }
-  return { valueFs: Math.max(12, Math.round(POP_UP_VALUE_SIZE * FIT_LADDER[FIT_LADDER.length - 1]!)), secondary: false };
+  for (const factor of FIT_LADDER) {
+    const fs = Math.max(LEAST_VALUE_SIZE, Math.round(POP_UP_VALUE_SIZE * factor));
+    if (fits(fs)) return { valueFs: fs, secondary: false };
+  }
+  for (let fs = Math.round(POP_UP_VALUE_SIZE * FIT_LADDER[FIT_LADDER.length - 1]!) - 1; fs > LEAST_VALUE_SIZE; fs--) {
+    if (fits(fs)) return { valueFs: fs, secondary: false };
+  }
+  return { valueFs: LEAST_VALUE_SIZE, secondary: false };
 }
 
 /**
- * The box, centred on the rectangle the face calls its hero.
+ * A box of the sheet's size, centred on `room` and kept inside `body`.
  *
  * Placed rather than fixed, so the same component sits over the gear on the 1920 reference face and
- * on the 600 portrait one without either of them stating a coordinate.
+ * on the 600 portrait one without either of them stating a coordinate. The box is as wide as the
+ * sheet draws it wherever the body has the width, which on a landscape face reaches over zones B and
+ * C for the seconds it is out, and no taller than the room, which is what keeps it off the pit banner.
+ * Where a theme puts the hero at an edge, the box is moved along rather than drawn off the body.
  */
-export const popUpFrame = (hero: Rect): Rect =>
-  roundRect({ left: hero.left + (hero.width - POP_UP_WIDTH) / 2, top: hero.top + (hero.height - POP_UP_HEIGHT) / 2, width: POP_UP_WIDTH, height: POP_UP_HEIGHT });
+export function sheetFrame(room: Rect, body: Rect, width: number, height: number): Rect {
+  const w = Math.min(width, body.width);
+  const h = Math.min(height, room.height, body.height);
+  const within = (start: number, span: number, size: number, wanted: number): number => Math.max(start, Math.min(start + span - size, wanted));
+  return roundRect({
+    left: within(body.left, body.width, w, room.left + (room.width - w) / 2),
+    top: within(body.top, body.height, h, room.top + (room.height - h) / 2),
+    width: w,
+    height: h,
+  });
+}
 
-/** The items of one pop-up, behind the Visible expression that ranks it against the others. */
+/** The transient pop-up's box: the sheet's 560 by 120, centred on the room and inside the body. */
+export const popUpFrame = (room: Rect, body: Rect = room): Rect => sheetFrame(room, body, POP_UP_WIDTH, POP_UP_HEIGHT);
+
+/**
+ * The rectangle the transient boxes are centred on: the hero, or the part of it the pit banner leaves
+ * where a box centred on the whole hero would cover the banner.
+ *
+ * The banner is the one thing inside the hero with a state of its own. On the house face it sits at
+ * the top of zone A and a box centred on the zone clears it on every face, so the hero is the room
+ * there and nothing moves. A theme can put it where a short hero brings the box up over it: the
+ * Porsche draws it inside the gear's tile, and on its 1280 x 400 and 600 x 686 faces a pop-up
+ * centred on the tile covered the banner's bottom, on the portrait face the lower half of
+ * `Engage limiter` with it (#1052). Where that happens the room is the hero below the banner, or
+ * above it where that is the taller, and the box is centred there and no taller than it. The pop-up's
+ * frame decides for the change notification too, so the two are centred on one rectangle and the
+ * notification stays inside the pop-up's frame.
+ */
+export function popUpRoom(hero: Rect, banner: Rect, body: Rect = hero): Rect {
+  if (!overlaps(popUpFrame(hero, body), banner)) return hero;
+  const heroBottom = hero.top + hero.height;
+  const bannerBottom = banner.top + banner.height;
+  const below = rect(hero.left, bannerBottom, hero.width, Math.max(0, heroBottom - bannerBottom));
+  const above = rect(hero.left, hero.top, hero.width, Math.max(0, banner.top - hero.top));
+  return below.height >= above.height ? below : above;
+}
+
+/** The shortest row a lasting pop-up is drawn in: the rule and a label's line box under it. */
+export const LASTING_LEAST_HEIGHT = POP_UP_RULE + textBox(0, ds.size.label).height;
+
+/**
+ * The row a lasting pop-up is drawn in: the pit banner's rectangle, cut short above the gear.
+ *
+ * The banner's row is the face's place for a state that holds. Every theme's anatomy puts it where
+ * a state may sit for as long as the limiter is on in the lane without hiding what a driver reads by
+ * reflex: on the house's faces at the top of zone A, in the leading the gear's line box leaves above
+ * its figures; on the Porsche's at the top of the gear's tile; on the AiM's at the top of zone C. A
+ * lasting pop-up takes the same row, and the pit family has it first (`popUpVisible`).
+ *
+ * `gear` is the ink of the gear on every one of zone A's pages (`zoneAGearInk`). Where any of it
+ * reaches into the row, as the house's nano does by a pixel and the Porsche's portrait face by four,
+ * the row ends where the ink begins, so the box is never over the gear whichever page is showing. A
+ * row the gear leaves too short for a label's line box is a layout this cannot draw, and says so
+ * rather than covering the gear: that is a theme's anatomy to answer.
+ */
+export function lastingPopUpFrame(banner: Rect, gear: readonly Rect[]): Rect {
+  const reaching = gear.filter((ink) => overlaps(ink, banner));
+  if (reaching.some((ink) => ink.top <= banner.top)) {
+    throw new Error(`popUp: the gear's ink starts above the pit banner's row at ${JSON.stringify(banner)}, so a lasting pop-up there would cover it`);
+  }
+  const bottom = Math.min(banner.top + banner.height, ...reaching.map((ink) => Math.floor(ink.top)));
+  const frame = rect(banner.left, banner.top, banner.width, bottom - banner.top);
+  if (frame.height < LASTING_LEAST_HEIGHT) {
+    throw new Error(`popUp: the gear leaves ${frame.height} px of the pit banner's row at ${JSON.stringify(banner)}, and a lasting pop-up needs ${LASTING_LEAST_HEIGHT}`);
+  }
+  return frame;
+}
+
+/** Where a lasting pop-up's two runs are set in its row, at a value size. */
+function lastingLine(spec: PopUpSpec, frame: Rect, valueFs: number): { left: number; labelY: number; valueY: number; valueWidth: number } {
+  const valueWidth = runWidth(spec.value, valueFs) + boxSlack(valueFs);
+  const group = labelWidth(spec.label) + LASTING_GAP + valueWidth;
+  const left = Math.round(frame.left + Math.max(LASTING_PAD_X, (frame.width - group) / 2));
+  // The value's line box centred in what the rule leaves, and the label on the value's baseline.
+  const inner = frame.height - POP_UP_RULE;
+  const valueY = frame.top + POP_UP_RULE + (inner - textBox(0, valueFs).height) / 2 - textBox(0, valueFs).top;
+  const labelY = canvasYForBaseline(canvasBaseline(valueY, valueFs), ds.size.label);
+  return { left, labelY, valueY, valueWidth };
+}
+
+/**
+ * The size a lasting pop-up's value is set at in its row: the largest, up to the sheet's secondary,
+ * at which the label and the value share the line inside the side padding and both line boxes are
+ * drawn between the rule and the foot of the row. There is nothing to shed; a row narrower than the
+ * label and a 12 px value would be drawn at 12 and fail the face's fit tests, which is where it
+ * should be noticed.
+ */
+export function lastingFit(spec: PopUpSpec, frame: Rect): { valueFs: number } {
+  for (let fs = LASTING_VALUE_SIZE; fs > LEAST_VALUE_SIZE; fs--) {
+    const { labelY, valueY, valueWidth } = lastingLine(spec, frame, fs);
+    const wide = labelWidth(spec.label) + LASTING_GAP + valueWidth <= frame.width - 2 * LASTING_PAD_X;
+    if (wide && boxInside(frame, valueY, fs) && boxInside(frame, labelY, ds.size.label)) return { valueFs: fs };
+  }
+  return { valueFs: LEAST_VALUE_SIZE };
+}
+
+/** The items of one pop-up, behind the Visible expression that ranks it against the others of its kind. */
 export function popUp(frame: Rect, spec: PopUpSpec, prefix = 'popUp'): LayerItem {
   const name = `${prefix}.${spec.id}`;
-  const fit = popUpFit(spec);
-  const x = frame.left + POP_UP_PAD_X;
-  const labelY = frame.top + POP_UP_RULE + (frame.height - POP_UP_RULE - (ds.size.label + POP_UP_GAP + fit.valueFs)) / 2;
-  const valueY = labelY + ds.size.label + POP_UP_GAP;
-  const labelWidth = Math.ceil(measureText('BarlowMedium', labelText(spec.label), ds.size.label)) + boxSlack(ds.size.label);
-  const children: Item[] = [
+  const ground: Item[] = [
     band(`${name}.box`, frame, ds.purpose.popUp.surface),
     band(`${name}.rule`, rect(frame.left, frame.top, frame.width, POP_UP_RULE), ds.purpose.popUp.rule),
-    label(`${name}.label`, spec.label.text, x, labelY, labelWidth, { bind: spec.label.bind, ...(spec.label.widest ? { widest: spec.label.widest } : {}) }),
-    popUpRun(`${name}.value`, spec.value, x, valueY, fit.valueFs, spec.colour, spec.flashMs),
   ];
-  if (fit.secondary && spec.secondary) {
-    const fs = POP_UP_SECONDARY_SIZE;
-    const width = runWidth(spec.secondary, fs) + boxSlack(fs);
-    const right = frame.left + frame.width - POP_UP_PAD_X - width;
-    // On the value's baseline rather than on its line box, which is what puts a smaller run beside
-    // a larger one everywhere else on the face.
-    children.push(popUpRun(`${name}.secondary`, spec.secondary, right, canvasYForBaseline(canvasBaseline(valueY, fit.valueFs), fs), fs, ds.color.text.secondary, undefined, width));
+  const labelOpts = { bind: spec.label.bind, ...(spec.label.widest ? { widest: spec.label.widest } : {}) };
+  const children: Item[] = [...ground];
+  if (spec.kind === 'lasting') {
+    const { valueFs } = lastingFit(spec, frame);
+    const { left, labelY, valueY } = lastingLine(spec, frame, valueFs);
+    const width = labelWidth(spec.label);
+    children.push(
+      label(`${name}.label`, spec.label.text, left, labelY, width, labelOpts),
+      popUpRun(`${name}.value`, spec.value, left + width + LASTING_GAP, valueY, valueFs, spec.colour, spec.flashMs),
+    );
+  } else {
+    const fit = popUpFit(spec, frame);
+    const x = frame.left + POP_UP_PAD_X;
+    const { labelY, valueY } = popUpStack(frame, fit.valueFs);
+    children.push(
+      label(`${name}.label`, spec.label.text, x, labelY, labelWidth(spec.label), labelOpts),
+      popUpRun(`${name}.value`, spec.value, x, valueY, fit.valueFs, spec.colour, spec.flashMs),
+    );
+    if (fit.secondary && spec.secondary) {
+      const fs = POP_UP_SECONDARY_SIZE;
+      const width = runWidth(spec.secondary, fs) + boxSlack(fs);
+      const right = frame.left + frame.width - POP_UP_PAD_X - width;
+      // On the value's baseline rather than on its line box, which is what puts a smaller run beside
+      // a larger one everywhere else on the face.
+      children.push(popUpRun(`${name}.secondary`, spec.secondary, right, canvasYForBaseline(canvasBaseline(valueY, fit.valueFs), fs), fs, ds.color.text.secondary, undefined, width));
+    }
   }
   return withMoreBindings({ kind: 'layer', name, children }, { Visible: popUpVisible(spec.id) });
 }
@@ -217,9 +396,15 @@ const atTheLine = (): Expr => and(hasTime(lastLap()), lt(secondsOf(game('Current
 /** A SimHub status property, read the null-safe way the LED catalogue reads the same ones. */
 const on = (name: string): Expr => eq(isnull(game(name), num(0)), num(1));
 
-/** Lap time at the line: the previous lap, and the delta against the reference the driver chose. */
+/**
+ * Lap time at the line: the previous lap, and the delta against the reference the driver chose.
+ *
+ * Transient: it is out for the three seconds after the line and then goes whatever the car does, so
+ * it is drawn as the sheet draws it, over the gear and the zones either side, for those three seconds.
+ */
 export const LAP_POP_UP: PopUpSpec = {
   id: 'lap',
+  kind: 'transient',
   label: { text: 'Lap' },
   value: { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST },
   colour: ds.color.text.primary,
@@ -230,6 +415,8 @@ export const LAP_POP_UP: PopUpSpec = {
 /**
  * Low fuel, flashing at the rate the flag band defines, so one rate is written once.
  *
+ * Lasting: the tank is low from the threshold to the stop, which is laps, so it never covers the gear.
+ *
  * The laps carry their unit inside the run, which is what the artboard draws and what stops "FUEL /
  * 0.8" being read as litres. That costs the run its cells: a word cannot sit in a digit cell, so
  * this one is proportional and is measured from the widest reading the threshold allows, which is
@@ -237,6 +424,7 @@ export const LAP_POP_UP: PopUpSpec = {
  */
 export const FUEL_POP_UP: PopUpSpec = {
   id: 'fuel',
+  kind: 'lasting',
   label: { text: 'Fuel' },
   value: { sample: '0.8 laps', bind: concat(fmt(isnull(computed('Fuel_RemainingLaps'), num(0)), '0.0'), str(' laps')), widest: '99.9 laps' },
   colour: ds.purpose.fuel.low,
@@ -246,6 +434,9 @@ export const FUEL_POP_UP: PopUpSpec = {
 
 /**
  * DRS available.
+ *
+ * Lasting: the flap is free for the length of a zone, and a zone is a straight, which is where a
+ * driver changes up through the gears and has to read them.
  *
  * The strip's `drs` effect lights on `DRSAvailable` **or** `DRSEnabled`, the flap free and the flap
  * open, and tells the two apart by flashing. A pop-up whose value is the word "Available" cannot
@@ -259,6 +450,7 @@ export const FUEL_POP_UP: PopUpSpec = {
  */
 export const DRS_POP_UP: PopUpSpec = {
   id: 'drs',
+  kind: 'lasting',
   label: { text: 'DRS' },
   value: { sample: 'Available' },
   colour: ds.color.good.primary,
@@ -266,22 +458,31 @@ export const DRS_POP_UP: PopUpSpec = {
 };
 
 /**
- * The pop-ups in priority order, highest first.
+ * The pop-ups in priority order within each kind, highest first.
  *
- * The lap time leads because it is the only one of the three whose condition lasts seconds: low
- * fuel is true for the rest of a stint and an aid for the length of a zone, so either of them
- * placed above it would swallow every lap time a driver is waiting for at the line. Below it,
- * danger outranks an aid, as it does everywhere else on this face.
+ * The lap time is the one transient pop-up. Of the two lasting ones danger outranks an aid, as it
+ * does everywhere else on this face.
  */
 export const POP_UPS: readonly PopUpSpec[] = [LAP_POP_UP, FUEL_POP_UP, DRS_POP_UP];
 
-/** `spec.when` and no higher pop-up's condition: the chain the flag band ranks itself with. */
+/** The pop-ups of one kind, in their order. */
+export const popUpsOfKind = (kind: PopUpKind): readonly PopUpSpec[] => POP_UPS.filter((spec) => spec.kind === kind);
+
+/**
+ * `spec.when` and no higher pop-up of its kind's condition: the chain the flag band ranks itself with.
+ * A lasting pop-up also waits for the pit family, whose banner row it shares.
+ */
 export function popUpVisible(id: string): Expr {
-  const index = POP_UPS.findIndex((p) => p.id === id);
-  const spec = POP_UPS[index];
+  const spec = POP_UPS.find((p) => p.id === id);
   if (!spec) throw new Error(`popUp: no pop-up ${id}`);
-  return and(...POP_UPS.slice(0, index).map((p) => not(p.when)), spec.when);
+  const kind = popUpsOfKind(spec.kind);
+  const higher = kind.slice(0, kind.indexOf(spec)).map((p) => not(p.when));
+  return spec.kind === 'lasting' ? and(not(pitAlertOut()), ...higher, spec.when) : and(...higher, spec.when);
 }
 
-/** Every pop-up, over the hero of a face. */
-export const popUps = (hero: Rect, prefix = 'popUp'): Item[] => POP_UPS.map((spec) => popUp(popUpFrame(hero), spec, prefix));
+/** The transient pop-ups, each in the sheet's box centred on `room` and inside `body`. */
+export const transientPopUps = (room: Rect, body: Rect = room, prefix = 'popUp'): Item[] =>
+  popUpsOfKind('transient').map((spec) => popUp(popUpFrame(room, body), spec, prefix));
+
+/** The lasting pop-ups, each in `row`, which is `lastingPopUpFrame`'s. */
+export const lastingPopUps = (row: Rect, prefix = 'popUp'): Item[] => popUpsOfKind('lasting').map((spec) => popUp(row, spec, prefix));

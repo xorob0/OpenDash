@@ -11,7 +11,7 @@
  * for would scale its type with it, and zone A's four pages are not zone B's twenty-two, so the two
  * cannot share a file even at the same size.
  */
-import type { Dashboard, DashboardMetadata, Item, Rect, Screen, WidgetItem } from '../generator.ts';
+import type { Dashboard, DashboardMetadata, Item, Rect, Screen, TextItem, WidgetItem } from '../generator.ts';
 import {
   DEFAULT_ZONE_PAGE,
   defaultZonePage,
@@ -26,7 +26,9 @@ import {
   type ThemeEntry,
 } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
-import { rect, type Size } from '../design/geometry.ts';
+import { rect, translate, type Size } from '../design/geometry.ts';
+import { inkOf } from '../design/metrics.ts';
+import { walkItems } from '../walk.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { sessionNotice, withSessionGate } from '../modules/module.ts';
 import { pageScreen, pagedDashboard, pagedWidget } from '../pagedDashboard.ts';
@@ -53,6 +55,34 @@ export type ZoneGroup = readonly [FaceZone, ...FaceZone[]];
 /** `zoneface-module-769x314`: the dashboard name, which is also its file name. */
 export const zoneDashboardName = (kind: ZoneKind, size: Size): string => `zoneface-${kind}-${size.width}x${size.height}`;
 
+/** One of zone A's pages drawn in `frame`, the theme's way where it draws one and the house's otherwise. */
+const zoneAItems = (page: string, frame: Rect, drawing: ThemeDrawing): Item[] =>
+  drawing.zoneAPage?.(page, frame, `${page}.`) ?? zoneAPage(page, frame, `${page}.`, drawing.gearGhosts ?? true);
+
+/**
+ * A run of zone A that draws the gear: the gear itself, the neighbours ghosted beside it, and the
+ * unlit cell an LCD draws under it. Never the small label a page sets after it.
+ */
+const GEAR_RUN = /(^|\.)gear(\.(value|ghost|below|above))?$/;
+
+/**
+ * Where the gear marks the face on each of zone A's pages, in the face's own coordinates: the ink of
+ * every run that draws it, drawn in `zoneA` as the zone's dashboard draws it.
+ *
+ * Read off the pages rather than off a table, because the gear is cut from the column (rule 18) and
+ * so moves with every face, every arrangement and every theme's page. It is what a pop-up that stays
+ * up for as long as its condition holds is kept clear of (#1047): the gear may be on whichever page a
+ * driver cycles to while it is up. The track page draws no gear and adds nothing.
+ */
+export function zoneAGearInk(zoneA: Rect, drawing: ThemeDrawing = {}): Rect[] {
+  const frame = rect(0, 0, zoneA.width, zoneA.height);
+  return pagesForZone('A').flatMap((page) =>
+    [...walkItems(zoneAItems(page.id, frame, drawing))]
+      .filter((item): item is TextItem => item.kind === 'text' && GEAR_RUN.test(item.name))
+      .map((item) => translate(inkOf(item), zoneA.left, zoneA.top)),
+  );
+}
+
 /**
  * One screen of a zone dashboard.
  *
@@ -69,7 +99,7 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
 
   if (zone === 'A') {
     // No header: see the comment on zoneAPages.
-    items = drawing.zoneAPage?.(page.id, frame, `${page.id}.`) ?? zoneAPage(page.id, frame, `${page.id}.`, drawing.gearGhosts ?? true);
+    items = zoneAItems(page.id, frame, drawing);
   } else if (zone === 'D') {
     // A band draws no header either. It is one rank across the whole width, the corner blocks say
     // what is at each end, and a title line would take a third of the height to say "fuel" above a
