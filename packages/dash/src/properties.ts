@@ -25,15 +25,15 @@ import { liveSettingNames, propertyName } from './contract.ts';
 import { expressionsIn, propertiesIn } from './walk.ts';
 
 /**
- * The reads whose property name is computed at render time: `PersistantTrackerPlugin.PreviousLap_NN`
- * and its delta, one pair per row of the lap history, SimHub numbering the most recent lap 00; and
- * every one of the plugin's live places and rows, `OpenDash.LiveOrder3`, which a list names by the row
- * or the place it is drawing (#1063).
+ * The reads whose property name is computed at render time: `PersistantTrackerPlugin.PreviousLap_NN`,
+ * its delta and whether it was driven in this session, one set per row of the lap history, SimHub
+ * numbering the most recent lap 00; and every one of the plugin's live places and rows,
+ * `OpenDash.LiveOrder3`, which a list names by the row or the place it is drawing (#1063).
  */
 export const COMPUTED_PROPERTIES: readonly string[] = [
   ...Array.from({ length: PREVIOUS_LAP_SLOTS }, (_, slot) => {
     const name = `PersistantTrackerPlugin.PreviousLap_${String(slot).padStart(2, '0')}`;
-    return [name, `${name}_DeltaToSessionBest`];
+    return [name, `${name}_DeltaToSessionBest`, `${name}_IsCurrentSession`];
   }).flat(),
   ...liveSettingNames().map(propertyName),
 ];

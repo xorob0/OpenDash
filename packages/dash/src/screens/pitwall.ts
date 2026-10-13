@@ -30,7 +30,7 @@ import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { assistField } from '../modules/carSettings.ts';
 import { airTemperature, bestLap, brake, brakeBias, carPosition,
-  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, YOUR_BEST_CAPTION, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
@@ -125,7 +125,7 @@ export function lapDeltaPanel(name: string, frame: Rect): Item[] {
   const d = densityOf(DENSITY);
   const { items, body } = panel(name, { frame, title: 'Lap delta' });
   const value = referenceDelta();
-  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', 'vs session best', { sample: '\u22120.21', widest: REFERENCE_DELTA_WIDEST, bind: referenceDeltaText(value), chars: CHARS.referenceDelta, fs: d.big, colorBind: referenceDeltaColour(value) }, {
+  const deltaField = fld(ctxOf(body, `${name}.`), 'delta', YOUR_BEST_CAPTION, { sample: '\u22120.21', widest: REFERENCE_DELTA_WIDEST, bind: referenceDeltaText(value), chars: CHARS.referenceDelta, fs: d.big, colorBind: referenceDeltaColour(value) }, {
     labelBind: referenceLabel(),
     labelWidest: REFERENCE_LABEL_WIDEST,
   });

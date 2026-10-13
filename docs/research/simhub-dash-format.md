@@ -1150,6 +1150,33 @@ Established by decompiling `IRacingManager.GD_Opponents` in the guest's `ICarsRe
   which is a reading of telemetry of the kind ADR 0009 refuses and ADR 0018 allows for the player's
   own car. That is a decision and not a fault, and it is not taken.
 
+### The previous laps are the lap database's, not the session's (2026-10-10, #1011)
+
+Established by decompiling `PersistantTrackerPlugin` and `GameManagerBase` in SimHub 9.12.6, after
+the VM showed a new session's out lap with an average of laps from an earlier run.
+
+- **The ring is filled from the database.** `ComputeLapHistory` loads
+  `DBManager.GetLastLaps(TrackIdWithConfig, CarId, 10)`, the last ten laps of this car at this track
+  from any session, into `PreviousLap_00` to `_09`. It runs when the plugin's context changes, which
+  is SimHub starting, the game starting, a session restart and a change of car or track, and again at
+  every lap, with the new lap put in front. So a session starts with the last session's laps in the
+  ring, and on the VM they survived a restart of SimHub and a new `SessionUniqueID`, `SessionID` and
+  `SubSessionID` at the same track and car.
+- **`PreviousLap_NN_IsCurrentSession` says which slots are this session's.** It is an int, 1 when the
+  slot's lap is in `SessionLapHistory` by its `LapId`, and 0 otherwise. The lap just completed is
+  added to `SessionLapHistory` before the ring is refilled for it (`RaiseNewLap` calls
+  `AddLapHistoryEntry` and then `TrackNewLap`), so slot zero reads 1 from the frame it appears. A
+  session restart clears `SessionLapHistory` and resets the context, so every flag the refill
+  writes is 0.
+- **A slot past the laps the database holds keeps its flag.** Its time and deltas are written zero
+  and `IsCurrentSession` is left as it was. When the database holds no laps at all for this car and
+  track, as on a combination never driven before, that is all ten slots, and slot zero can read 1
+  from the last combination with a time and a delta of nought. So the flag is not a gate on its
+  own: a slot is a lap of this session when it has a time and the flag is 1. `hasSessionLap` in
+  `packages/dash/src/second/values.ts` is that gate, and every reading built on the ring asks it.
+- Beside the two the dashes read, each slot publishes `_DeltaToAllTimeBest` and a hidden
+  `_DeltaToBest`, which is the same value.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

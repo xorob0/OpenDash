@@ -2291,9 +2291,44 @@ export const pitServiceProgress = (): Expr =>
 export const PREVIOUS_LAP_SLOTS = 10;
 /** `PersistantTrackerPlugin.PreviousLap_NN`, addressed by the row's repeat index. */
 export const previousLap = (slotExpr: Expr): Expr => propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00')));
-/** The same lap's delta to the session best, in seconds. */
+/**
+ * The same lap's delta to your best, in seconds.
+ *
+ * SimHub names the property `_DeltaToSessionBest`, and it means the player's own best lap of the
+ * session: the tracker writes it as the slot's time less `BestLapTime` (`PersistantTrackerPlugin`,
+ * 9.12.6), which is the time Lap times draws as `Your best`. The field's best, which Lap times and
+ * every other page call the session best, is {@link sessionBestLap} and a different number, so a
+ * reading of this is labelled against your best and never against the session best (#1030).
+ */
 export const previousLapDelta = (slotExpr: Expr): Expr =>
   propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_DeltaToSessionBest')));
+
+/**
+ * Whether the lap in a slot was driven in this session, by SimHub's own word for it.
+ *
+ * The ring is the lap database's and not the session's. `PersistantTrackerPlugin` fills its ten
+ * slots from `DBManager.GetLastLaps(track, car, 10)`, which is the last ten laps of this car at this
+ * track from any day, and reloads them whenever SimHub or the game starts or a session restarts.
+ * So a driver back at the same track in the same car finds yesterday's laps in the ring before the
+ * first lap of today is done, and every reading built from the ring would be built from them
+ * (#1011). `PreviousLap_NN_IsCurrentSession` is 1 only for a lap found in this session's own lap
+ * history, and it is written with the slot's time whenever the ring is filled.
+ *
+ * An unpublished flag reads as an earlier session's lap, because a lap that cannot be placed in
+ * this session is the one thing the readings built on the ring must not count.
+ */
+export const previousLapIsThisSession = (slotExpr: Expr): Expr =>
+  gt(isnull(propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_IsCurrentSession'))), num(0)), num(0));
+
+/**
+ * Whether a slot holds a lap of this session: a time, and SimHub's word that it was driven in it.
+ *
+ * Both, because neither says it alone. A slot the database has no lap for is written `00:00:00`,
+ * but its flag is left at whatever the last lap in it was, so the flag of an emptied slot can
+ * still read 1; and a slot with a time may hold a lap of another session. Every reading built on
+ * the ring asks this rather than `hasTime` of the slot.
+ */
+export const hasSessionLap = (slotExpr: Expr): Expr => and(previousLapIsThisSession(slotExpr), hasTime(previousLap(slotExpr)));
 
 /**
  * A signed delta to `places` decimals where `chars` holds it, and to fewer where it does not:
@@ -2302,7 +2337,7 @@ export const previousLapDelta = (slotExpr: Expr): Expr =>
  * A box cannot change its cells at runtime, so a delta whose whole part grows past what its cells
  * were cut for loses its last digit to WPF instead, and `+123.45` in five cells is drawn `+123.4`,
  * a figure the sim never published. The lap that carried a stop, a tow or a repair is a minute or
- * three off the session best and off the lap before it, and its sectors with it, so the deltas that
+ * three off your best and off the lap before it, and its sectors with it, so the deltas that
  * are cut for an ordinary lap meet that reading once a stint, on the lap they are most looked at
  * (#886). Each place given up buys a whole digit, which is the trade
  * {@link referenceDeltaText} already makes past 100 s: a figure rounded to the tenth is still the
@@ -2351,16 +2386,19 @@ export const AVERAGE_LAPS = 5;
  * slots read as seconds, summed and divided. A slot that has not been driven yet holds `00:00:00`
  * rather than null, which would average in as a nought and read as a lap two seconds quicker than
  * anything on the track, so every one of the five is required to hold a time before any of them
- * is shown.
+ * is shown. And every one of the five is required to be a lap of this session, because the ring
+ * starts a session full of the laps the database kept from earlier ones
+ * ({@link previousLapIsThisSession}): the average waits for the fifth lap of today rather than
+ * reading yesterday's.
  */
 export const average5 = (): Expr => {
   // From slot zero, which is the lap just completed. Starting at one averaged laps two to six and
   // left the newest out, so the number moved a lap late; `modules/lapHistory.ts` reads the same
   // slots and says so where it draws row one.
-  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i)));
-  const seconds = slots.map((slot) => secondsOf(slot));
+  const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => num(i));
+  const seconds = slots.map((slot) => secondsOf(previousLap(slot)));
   return iff(
-    and(...slots.map((slot) => hasTime(slot))),
+    and(...slots.map((slot) => hasSessionLap(slot))),
     lapReading(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS)))),
     str(NO_TIME),
   );
@@ -2407,19 +2445,32 @@ export const lastLapDelta = (): Expr =>
 /**
  * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
  * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
- * different laps. An unknown value reads the session best, which is the default.
+ * different laps. An unknown value reads the `session` reference, which is the default.
+ *
+ * The `session` reference is SimHub's live delta to its session best, which is the player's own best
+ * lap of this session and not the field's: SimHub's lap tracker follows the player's laps and nobody
+ * else's. So it is drawn as the delta to your best, the lap Lap times draws under that name, and the
+ * session best a page draws beside it in purple is the field's (#1030).
  */
 export const referenceDelta = (): Expr =>
   iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+
+/** The caption of a delta to the player's own best lap of the session, which is what SimHub's session best is. */
+export const YOUR_BEST_CAPTION = 'vs your best';
 
 /**
  * The label that says which reference the delta is against.
  *
  * "vs last lap" rather than "vs previous": the lap review already uses "vs previous" for a finished
  * lap against the one before it, which is a different comparison drawn at a different moment.
+ *
+ * "vs your best" rather than the canvas's "vs session best", because the reference is the player's
+ * own best lap of the session (see {@link referenceDelta}), and "session best" is what Lap times,
+ * Sectors and the pit wall call the field's. On a face that drew both, the same two words named two
+ * laps most of a second apart (#1030).
  */
 export const referenceLabel = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str('vs session best')));
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str(YOUR_BEST_CAPTION)));
 
 /**
  * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is
@@ -2442,19 +2493,31 @@ const drawnToThousandths = (seconds: Expr): Expr => and(inThousandths(), lt(abs(
 /**
  * The live delta to the reference as it is drawn: signed, with a true minus, to the places the
  * precision setting asks for, except that a delta of 100 s or more is drawn to hundredths at either
- * setting, since three places would take it past the box ({@link drawnToThousandths}).
+ * setting, since three places would take it past the box ({@link drawnToThousandths}). A level delta,
+ * inside {@link referenceDeltaBand}, is the bare `0.00` the canvas draws, or `0.000` at thousandths.
  *
  * One helper for the five surfaces that draw it -- card 3, the delta page, Lap times, the lap pop-up
  * and the pit wall's Lap delta panel -- so that no two of them can draw one reading to different
  * places. The sector deltas, the lap review's two deltas and the lap history's column are other
  * comparisons with formats of their own and do not come through here.
  *
+ * The level branch is here and not on the card, where it used to be: card 3 drew `0.00` and the four
+ * other surfaces drew `+0.00`, or `−0.00` for a reading a thousandth under, so one reading looked
+ * like two (#614). A forced sign on a figure the band calls level is a plus or a minus drawn in the
+ * resting white, which is a direction the colour has just said there is not. The band is the one
+ * {@link referenceDeltaColour} reads, so the figure and its colour cannot disagree about it.
+ *
  * The choice is an `if` around two formats rather than one format with a bound pattern. `signed`
  * writes its pattern as a string literal, and a pattern that was itself an expression would be
  * emitted as the text of that expression; `format` has never been verified with anything but a
  * literal pattern either. #322.
  */
-export const referenceDeltaText = (seconds: Expr): Expr => iff(drawnToThousandths(seconds), signed(seconds, '0.000'), signed(seconds, '0.00'));
+export const referenceDeltaText = (seconds: Expr): Expr =>
+  iff(
+    referenceDeltaLevel(seconds),
+    iff(inThousandths(), str('0.000'), str('0.00')),
+    iff(drawnToThousandths(seconds), signed(seconds, '0.000'), signed(seconds, '0.00')),
+  );
 
 /**
  * The longest reading {@link referenceDeltaText} is budgeted for, which is what every box that draws
@@ -2494,7 +2557,8 @@ export const referenceDeltaLevel = (seconds: Expr): Expr => lt(abs(seconds), ref
  *
  * One predicate with the text rather than {@link deltaColour}'s own band, so the figure and its colour
  * cannot disagree at either precision: a figure drawn as a zero is white and a figure drawn as
- * anything else is green or red. Card 3 draws its resting `0.00` off the same predicate.
+ * anything else is green or red. {@link referenceDeltaText} draws its bare `0.00` off the same
+ * predicate.
  */
 export const referenceDeltaColour = (seconds: Expr): Expr =>
   iff(referenceDeltaLevel(seconds), str(dsColour.zero), iff(lt(seconds, num(0)), str(dsColour.faster), str(dsColour.slower)));
@@ -2508,12 +2572,18 @@ export const referenceDeltaColour = (seconds: Expr): Expr =>
  * three whole digits at hundredths: a long stop in the pits can take the delta past a hundred
  * seconds, `+100.00` fits the box, and a caption placed for two digits would sit on its last one.
  * A delta that long is drawn to hundredths at either setting, so the caption asks the same question
- * of the reading that {@link referenceDeltaText} does.
+ * of the reading that {@link referenceDeltaText} does. So does a level delta, which is drawn with no
+ * sign and so a cell shorter than a signed zero: a caption placed for the sign would stand a cell off
+ * the `0.00` it follows.
  */
 export const referenceDeltaDrawn = (seconds: Expr): DrawnFigure => {
   const figure = (decimals: number): DrawnFigure =>
     drawnFigure({ value: seconds, digits: CHARS.referenceDelta.digits - 1 - decimals, decimals, signed: true });
-  return drawnEither(drawnToThousandths(seconds), figure(3), figure(2));
+  return drawnEither(
+    referenceDeltaLevel(seconds),
+    drawnEither(inThousandths(), drawnText('0.000'), drawnText('0.00')),
+    drawnEither(drawnToThousandths(seconds), figure(3), figure(2)),
+  );
 };
 
 export const sectorLast = (sector: number): Expr => game(`Sector${sector}LastLapTime`);
@@ -2536,17 +2606,28 @@ export const magnitude = (expr: Expr): Expr => abs(expr);
  * The canvas states a two-colour rule for the lap review's own deltas -- red when slower, green when
  * faster -- and the code has three states here, the third being `purpose.delta.zero` inside this
  * band. The three are kept, and for a finished lap as well as for a live one. A lap that came in
- * five thousandths off the session best is not a lap that was faster, and colouring it as though it
- * were is a claim the number does not carry; besides, one comparison drawn two ways is how the delta
- * card and the delta module would come to disagree, since every surface that draws a delta goes
- * through {@link deltaColour}. The difference from the canvas is recorded here rather than resolved
- * by a second rule.
+ * four thousandths off the session best is drawn `+0.00`, which is not a lap that was slower, and
+ * colouring it as though it were is a claim the number does not carry. The difference from the
+ * canvas is recorded here rather than resolved by a second rule.
+ *
+ * The lap review's two deltas are what {@link deltaColour} colours. The live delta to the reference
+ * has a band of its own, {@link referenceDeltaBand}, which narrows when the delta is drawn to
+ * thousandths, and the lap history's column and the sectors colour by rules of their own. What the
+ * reference's band shares with this one is the edge: half a unit of the last place drawn, and
+ * strictly inside it.
  */
 export const DELTA_DEADBAND = 0.005;
 
-/** Green when faster, red when slower, white within the deadband. */
+/**
+ * Green when faster, red when slower, white within the deadband.
+ *
+ * Strictly within. .NET rounds a half away from zero, so 0.005 to two places is `+0.01` and −0.005
+ * is `−0.01`, and a band that took its own edge in coloured those figures as level. Every figure
+ * drawn as a zero is white and every other is green or red, which is {@link referenceDeltaLevel}'s
+ * rule at hundredths (#614).
+ */
 export const deltaColour = (seconds: Expr): Expr =>
-  iff(lt(seconds, num(-DELTA_DEADBAND)), str(dsColour.faster), iff(gt(seconds, num(DELTA_DEADBAND)), str(dsColour.slower), str(dsColour.zero)));
+  iff(le(seconds, num(-DELTA_DEADBAND)), str(dsColour.faster), iff(ge(seconds, num(DELTA_DEADBAND)), str(dsColour.slower), str(dsColour.zero)));
 
 /** The delta colours, named so the expression above reads as a sentence. */
 const dsColour = { faster: dsTokens.purpose.delta.faster, slower: dsTokens.purpose.delta.slower, zero: dsTokens.purpose.delta.zero };

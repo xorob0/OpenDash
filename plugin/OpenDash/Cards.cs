@@ -39,8 +39,8 @@ namespace OpenDashPlugin
         public static readonly IReadOnlyList<Card> All = new[]
         {
             new Card(0, "currentLap", "Current", "Current lap", "Running lap time."),
-            new Card(1, "lastLap", "Last", "Last lap", "Last lap time, purple when it is the session best."),
-            new Card(2, "bestLap", "Best", "Best lap", "Session best lap time."),
+            new Card(1, "lastLap", "Last", "Last lap", "Last lap time, purple when it is your best."),
+            new Card(2, "bestLap", "Best", "Best lap", "Your best lap of the session."),
             new Card(3, "delta", "Delta", "Delta", "Live delta to the reference lap."),
             new Card(4, "position", "Position", "Position", "Position and car count, overall or in class."),
             new Card(5, "session", "Lap", "Session", "Lap of total, or time left."),
