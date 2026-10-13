@@ -30,11 +30,12 @@ import { assetBox } from '../design/assets.ts';
 import { rect, type Rect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { densityOf } from '../second/density.ts';
+import { spotterCar } from '../second/values.ts';
 import type { Item, RadarItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { defineModule } from './module.ts';
 
-const { game, gt, num, isnull, iff, str } = ncalc;
+const { iff, str } = ncalc;
 
 /**
  * Pixels per metre are ten times the scale, so the scale is how large the car beside you is drawn
@@ -71,8 +72,6 @@ export const spotterWidthFor = (width: number): number => Math.max(12, Math.min(
  */
 const CAR: Size = { width: 24, height: 44 };
 
-const spotterOn = (side: 'Left' | 'Right') => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
-
 export const radar = defineModule('radar', (ctx) => {
   const d = densityOf(ctx.density);
   const height = ctx.frame.height;
@@ -107,6 +106,6 @@ export const radar = defineModule('radar', (ctx) => {
   );
   grid.push(band(`${ctx.prefix}centre`, rect(Math.round(plot.left + plot.width / 2), plot.top, 1, plot.height), ds.color.surface.raised));
   const you = band(`${ctx.prefix}you`, assetBox(plot, CAR, { maxWidth: CAR.width, maxHeight: CAR.height }), ds.color.text.primary);
-  const side = (id: 'left' | 'right', x: number): Item => withMoreBindings(band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim), { BackgroundColor: iff(spotterOn(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) });
+  const side = (id: 'left' | 'right', x: number): Item => withMoreBindings(band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim), { BackgroundColor: iff(spotterCar(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) });
   return [side('left', ctx.frame.left), ...grid, item, you, side('right', ctx.frame.left + ctx.frame.width - spotter)];
 });

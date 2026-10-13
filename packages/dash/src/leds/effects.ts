@@ -35,11 +35,11 @@ import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS, FLAG_TAKEOVER_MS } from '../components/flagStrip.ts';
 import { propertyName, setting, WHEEL_LOCK, WHEEL_SPIN } from '../contract.ts';
 import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
-import { tankIsLow } from '../second/values.ts';
+import { isInPitLane, pitLimiterOn, pitSpeeding, rpm, spotterCar, tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { type EffectRole, type Lamp, type LampRole } from './lamps.ts';
 
-const { add, and, changed, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
+const { and, changed, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
 
 export interface LedEffect {
   id: string;
@@ -132,18 +132,6 @@ const on = (name: string): Expr => eq(g(name), num(1));
  */
 const inferred = (name: string): Expr => and(eq(setting.ledInferSlip(), 'true'), eq(isnull(prop(propertyName(name)), 'false'), 'true'));
 
-/** Speed in the unit the user picked, and the pit lane limit in the same one. */
-const speedLocal = (): Expr => isnull(game('SpeedLocal'), num(0));
-const pitLimit = (): Expr => isnull(game('PitLimiterSpeed'), num(0));
-
-/**
- * Over the pit lane limit. SimHub publishes no speeding property of any kind, so it is composed:
- * in the lane, a limit that is actually known, and above it by more than a tolerance. The
- * tolerance is what stops the light strobing as the limiter settles.
- */
-export const PIT_SPEEDING_MARGIN = 1;
-const pitSpeeding = (): Expr => and(on('IsInPitLane'), gt(pitLimit(), num(0)), gt(speedLocal(), add(pitLimit(), num(PIT_SPEEDING_MARGIN))));
-
 /**
  * Low fuel, as {@link tankIsLow}: the laps remaining against the one threshold in laps the driver
  * set, which is `LightsLowFuelLaps` with the box's deprecated name behind it.
@@ -161,7 +149,7 @@ const lowFuel = (): Expr => tankIsLow();
  * without this the car lamp is red in every garage and on every grid, and a lamp that is red when
  * nothing is wrong is a lamp the driver stops reading by the third session.
  */
-const engineRunning = (): Expr => gt(g('Rpms'), num(0));
+const engineRunning = (): Expr => gt(rpm(), num(0));
 
 /**
  * What a race lamp can draw, highest rank first: one row per appearance, each taking the catalogue
@@ -493,7 +481,7 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
     label: 'Car alongside, left',
     role: 'side',
     side: 'left',
-    when: gt(g('SpotterCarLeft'), num(0)),
+    when: spotterCar('Left'),
     color: ds.purpose.light.spotter,
     source: 'DataCorePlugin.GameData.SpotterCarLeft',
   },
@@ -502,7 +490,7 @@ export const SPOTTER_EFFECTS: readonly LedEffect[] = [
     label: 'Car alongside, right',
     role: 'side',
     side: 'right',
-    when: gt(g('SpotterCarRight'), num(0)),
+    when: spotterCar('Right'),
     color: ds.purpose.light.spotter,
     source: 'DataCorePlugin.GameData.SpotterCarRight',
   },
@@ -556,7 +544,7 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     id: 'pit.lane',
     label: 'In the pit lane',
     role: 'strip',
-    when: and(on('IsInPitLane'), not(pitSpeeding())),
+    when: and(isInPitLane(), not(pitSpeeding())),
     color: ds.purpose.pitLimiter,
     source: 'DataCorePlugin.GameData.IsInPitLane',
   },
@@ -564,11 +552,11 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     id: 'pit.limiter',
     label: 'Pit limiter on',
     role: 'strip',
-    when: on('PitLimiterOn'),
+    when: pitLimiterOn(),
     color: ds.purpose.pitLimiter,
     // Slow: the limiter is a state the driver chose and is holding, not an event. It ran at 186 ms,
     // a rate of its own that was neither of the two and that the eye sorts as whichever it is nearer.
-    blinkWhen: on('PitLimiterOn'),
+    blinkWhen: pitLimiterOn(),
     blinkDelayMs: SLOW_BLINK_MS,
     source: 'DataCorePlugin.GameData.PitLimiterOn',
   },
@@ -577,6 +565,9 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     label: 'Speeding in the pit lane',
     role: 'strip',
     // Composed, because SimHub publishes no speeding property: in the lane, a known limit, over it.
+    // The body is `pitSpeeding` in second/values.ts, which the flag box's speeding picture reads too.
+    // It was spelled here a second time beside a box comparing metres per second against a property
+    // SimHub does not publish, so the two lit at different speeds and the box never lit at all.
     when: pitSpeeding(),
     color: ds.color.danger.primary,
     // Fast: a penalty is accruing while it is lit, which is the one thing on the strip the driver
