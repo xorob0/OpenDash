@@ -46,6 +46,7 @@ import {
   fuelPerLap,
   fuelThisLap,
   fuelToAddText,
+  FUEL_TO_ADD_WIDEST,
   fuelToEndColour,
   fuelToEndDrawn,
   fuelToEndText,
@@ -143,6 +144,7 @@ export const fuel = defineModule('fuel', (ctx) => {
           fld(ctx, 'toAdd', 'To add', {
             sample: '12.6',
             bind: fuelToAddText(),
+            widest: FUEL_TO_ADD_WIDEST,
             chars: CHARS.fuel,
             fs: d.mid,
             color: ds.color.caution.primary,

@@ -1285,7 +1285,7 @@ const RACE_LEADER = num(1);
  * is not run on about one in ten; with the leader's own lap it was right on every one.
  */
 const leaderLapSeconds = (): Expr =>
-  iff(hasTime(driver('bestlap', RACE_LEADER)), timespanToSeconds(driver('bestlap', RACE_LEADER)), timedLapSeconds());
+  iff(hasTime(driver('bestlap', RACE_LEADER)), secondsOf(driver('bestlap', RACE_LEADER)), timedLapSeconds());
 
 /**
  * How long after the clock reaches nought the overall leader takes the chequered flag, in seconds,
@@ -1465,6 +1465,14 @@ export const fuelToAddIsSettled = (): Expr => and(fuelIsSettled(), lapsLeftIsKno
  */
 export const fuelToAddText = (): Expr =>
   iff(fuelToAddIsSettled(), iff(lt(fuelToAdd(), num(999.95)), fmt(fuelToAdd(), '0.0'), fmt(fuelToAdd(), '0')), str(NO_VALUE));
+
+/**
+ * The widest reading {@link fuelToAddText} draws, `999.9`: the four digit cells and the point of
+ * {@link CHARS.fuel}, a cell wider than the whole `9999` above it. Declared because the count it
+ * multiplies asks whether the session is a race (#1027), and a text that reads the session's name
+ * declares what it draws (#1029).
+ */
+export const FUEL_TO_ADD_WIDEST = '999.9';
 
 /**
  * Whether a fuel figure derived from a lap's consumption means anything yet.
