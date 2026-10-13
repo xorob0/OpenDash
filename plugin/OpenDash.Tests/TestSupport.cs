@@ -1,5 +1,6 @@
 // TestSupport.cs: what the installer and extractor tests share: synthetic .simhubdash zips built in memory, a package
-// source over such zips, a folder record in memory, a way to deny this account a path, and a log that records its lines.
+// source over such zips, a folder record in memory, a way to deny this account a path, a disk that refuses a move the
+// way Windows does while a file is held, and a log that records its lines.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -257,6 +258,54 @@ namespace OpenDashPlugin.Tests
         {
             lock (gate) { lines.Add(line); }
             Written.Set();
+        }
+    }
+
+    /// <summary>
+    /// The disk, except that it refuses the moves and deletes a test names, as Windows refuses them while a file in
+    /// the folder is held open.
+    /// </summary>
+    /// <remarks>
+    /// Linux renames and deletes a folder whatever is open in it, so a FileStream held with FileShare.None stages
+    /// nothing here. Every refusal is counted, so a test can tell that the case it stages was reached.
+    /// </remarks>
+    internal sealed class RefusingDisk : IFolderMoves
+    {
+        public Func<string, string, bool> RefusesMove { get; set; } = (from, to) => false;
+
+        public Func<string, bool> RefusesDelete { get; set; } = folder => false;
+
+        public int Refused { get; private set; }
+
+        /// <summary>Refuses every move of the folder at this path, out of it or into it: the folder SimHub holds.</summary>
+        public static RefusingDisk Holding(string folder)
+        {
+            return new RefusingDisk { RefusesMove = (from, to) => Same(from, folder) || Same(to, folder) };
+        }
+
+        public void Move(string from, string to)
+        {
+            if (RefusesMove(from, to))
+            {
+                Refused++;
+                throw new IOException("The process cannot access the file because it is being used by another process.");
+            }
+            Directory.Move(from, to);
+        }
+
+        public void Delete(string folder)
+        {
+            if (RefusesDelete(folder))
+            {
+                Refused++;
+                throw new UnauthorizedAccessException("Access to the path is denied.");
+            }
+            Directory.Delete(folder, true);
+        }
+
+        public static bool Same(string a, string b)
+        {
+            return string.Equals(Path.GetFullPath(a), Path.GetFullPath(b), StringComparison.Ordinal);
         }
     }
 }

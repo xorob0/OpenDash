@@ -2,6 +2,7 @@
 // root and checks the folder, also one with spaces in its name, the sidecar version, the backup, the font copy rules
 // and the refusal of unsafe entries. When the dash has been built, the real package is read as well.
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -237,6 +238,183 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(root, null));
             Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(Path.Combine(root, "absent"), null));
             Assert.Equal(0, PackageExtractor.RemoveOrphanedStaging(null, null));
+        }
+
+        /// <summary>
+        /// A restore extracts into a folder of its own, which the sweep used to leave alone, so an interrupted Put mine
+        /// back left a whole dashboard in DashTemplates for good (#580).
+        /// </summary>
+        [Fact]
+        public void A_folder_an_interrupted_restore_left_behind_is_removed()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            var orphan = Path.Combine(root, "DashTemplates", PackageExtractor.RestorePrefix + "deadbeef");
+            Directory.CreateDirectory(orphan);
+            File.WriteAllText(Path.Combine(orphan, "OpenDash.djson"), "{}");
+
+            Assert.Equal(1, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.False(Directory.Exists(orphan));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+        }
+
+        /// <summary>
+        /// A file SimHub holds used to stop the delete part of the way through, and the folder was left half deleted
+        /// with the install reported as failed (#580). The folder is moved aside in one step now, which Windows refuses
+        /// whole, so the install fails with the folder as it was and nothing else changed.
+        /// </summary>
+        [Fact]
+        public void A_held_file_leaves_the_installed_folder_whole_and_the_install_failed()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "my work")), root, null);
+            var disk = RefusingDisk.Holding(Templates("OpenDash"));
+
+            Assert.Throws<IOException>(() => PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true, disk: disk));
+
+            Assert.True(disk.Refused > 0, "the held folder was reached");
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal("my work", File.ReadAllText(Path.Combine(Templates("OpenDash"), "mine.djson")));
+            // No copy is offered for work the folder still holds, and no working folder is left in DashTemplates.
+            Assert.Empty(PackageExtractor.KeptCopies(root, "OpenDash"));
+            Assert.Equal(new[] { "OpenDash" }, Directory.GetDirectories(Path.Combine(root, "DashTemplates")).Select(Path.GetFileName));
+        }
+
+        /// <summary>
+        /// A new folder that cannot be moved in, as when a virus scanner holds a file it has just been handed, used to
+        /// leave nothing under the name, since the old folder was already deleted (#580). The old one goes back, and the
+        /// ordinary backup is still the one that was there, not a copy of the folder that stayed.
+        /// </summary>
+        [Fact]
+        public void A_new_folder_that_cannot_be_moved_in_puts_the_old_one_back()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null);
+            var target = Templates("OpenDash");
+            var disk = new RefusingDisk { RefusesMove = (from, to) => RefusingDisk.Same(to, target) && from.Contains(PackageExtractor.StagingPrefix) };
+
+            Assert.Throws<IOException>(() => PackageExtractor.Install(Package("OpenDash", "0.3.0"), root, null, disk: disk));
+
+            Assert.True(disk.Refused > 0, "the move in was refused");
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            var backup = Path.Combine(root, "DashTemplates", "OpenDash" + PackageExtractor.BackupSuffix);
+            Assert.Equal("0.1.0", Versioning.ParseDashboardVersion(Entry(backup, "OpenDash.djson.metadata")));
+            Assert.Equal(new[] { backup }, PackageExtractor.KeptCopies(root, "OpenDash"));
+        }
+
+        /// <summary>
+        /// When the old folder cannot even be moved back, it is kept whole aside rather than lost, and the next start
+        /// puts it back under its own name.
+        /// </summary>
+        [Fact]
+        public void An_old_folder_that_cannot_be_moved_back_is_put_back_at_the_next_start()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "my work")), root, null);
+            var target = Templates("OpenDash");
+            var disk = new RefusingDisk { RefusesMove = (from, to) => RefusingDisk.Same(to, target) };
+            var log = new ListLog();
+
+            Assert.Throws<IOException>(() => PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, log, disk: disk));
+            Assert.False(Directory.Exists(target));
+            Assert.Contains(log.Lines, line => line.StartsWith("error: Could not put OpenDash back, so it is kept whole in ", StringComparison.Ordinal));
+
+            Assert.Equal(1, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal("my work", File.ReadAllText(Path.Combine(target, "mine.djson")));
+            Assert.Empty(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.AsidePrefix + "*"));
+        }
+
+        /// <summary>
+        /// The old folder is deleted last and as a best effort: once the new one is in it is not a dashboard, so a
+        /// delete that fails leaves the install done and a working folder the next start removes, without putting the
+        /// old folder back over the new one.
+        /// </summary>
+        [Fact]
+        public void An_old_folder_that_cannot_be_deleted_after_the_replace_is_swept_and_not_put_back()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            var disk = new RefusingDisk { RefusesDelete = folder => true };
+
+            var result = PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, disk: disk);
+
+            Assert.True(disk.Refused > 0, "the delete was refused");
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.NotNull(result.BackupPath);
+            Assert.Single(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.AsidePrefix + "*"));
+
+            Assert.Equal(1, PackageExtractor.RemoveOrphanedStaging(root, null));
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Empty(Directory.GetDirectories(Path.Combine(root, "DashTemplates"), PackageExtractor.AsidePrefix + "*"));
+        }
+
+        /// <summary>
+        /// Put mine back replaced the folder the way Install did, delete and then move, so a held file left the folder
+        /// half deleted with the copy still on the shelf (#869). It fails whole now, and the copy is still offered.
+        /// </summary>
+        [Fact]
+        public void A_held_file_leaves_a_restore_undone_and_the_kept_copy_on_the_shelf()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0", ("OpenDash/mine.djson", "my work")), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+            var kept = PackageExtractor.KeptCopies(root, "OpenDash").Single();
+            var disk = RefusingDisk.Holding(Templates("OpenDash"));
+
+            Assert.Throws<IOException>(() => PackageExtractor.Restore(root, "OpenDash", null, kept, holdsAuthoredWork: false, disk: disk));
+
+            Assert.True(disk.Refused > 0, "the held folder was reached");
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal(new[] { kept }, PackageExtractor.KeptCopies(root, "OpenDash"));
+            Assert.Equal(new[] { "OpenDash" }, Directory.GetDirectories(Path.Combine(root, "DashTemplates")).Select(Path.GetFileName));
+        }
+
+        /// <summary>
+        /// Restoring the ordinary backup swaps it with the folder. A swap whose move in fails used to have rewritten
+        /// the backup with the folder already, so the copy the driver asked for was gone from the shelf; it is kept.
+        /// </summary>
+        [Fact]
+        public void A_swap_that_cannot_finish_keeps_the_backup_it_was_putting_back()
+        {
+            PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+            PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null);
+            var target = Templates("OpenDash");
+            var disk = new RefusingDisk { RefusesMove = (from, to) => RefusingDisk.Same(to, target) && from.Contains(PackageExtractor.RestorePrefix) };
+
+            Assert.Throws<IOException>(() => PackageExtractor.Restore(root, "OpenDash", null, holdsAuthoredWork: false, disk: disk));
+
+            Assert.Equal("0.2.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            var backup = Path.Combine(root, "DashTemplates", "OpenDash" + PackageExtractor.BackupSuffix);
+            Assert.Equal("0.1.0", Versioning.ParseDashboardVersion(Entry(backup, "OpenDash.djson.metadata")));
+            Assert.Empty(Directory.GetFiles(Path.Combine(root, "DashTemplates"), "*.partial"));
+
+            // And the same restore with nothing in the way still swaps them.
+            Assert.True(PackageExtractor.Restore(root, "OpenDash", null, holdsAuthoredWork: false));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal("0.2.0", Versioning.ParseDashboardVersion(Entry(backup, "OpenDash.djson.metadata")));
+        }
+
+        /// <summary>
+        /// A kept copy is stamped in UTC and in the invariant calendar, whatever the system's culture (#580). A Thai
+        /// system wrote the Buddhist year 2569, which sorted the copy apart from every other.
+        /// </summary>
+        [Fact]
+        public void A_kept_copy_is_stamped_in_the_same_calendar_on_every_system()
+        {
+            var thai = CultureInfo.GetCultureInfo("th-TH");
+            // Where the runner has no culture data, every culture is the invariant one and there is nothing to stage.
+            if (!(thai.Calendar is ThaiBuddhistCalendar)) return;
+            var was = CultureInfo.CurrentCulture;
+            try
+            {
+                CultureInfo.CurrentCulture = thai;
+                Assert.Equal("20261014-103000Z", PackageExtractor.Stamp(new DateTime(2026, 10, 14, 10, 30, 0, DateTimeKind.Utc)));
+
+                PackageExtractor.Install(Package("OpenDash", "0.1.0"), root, null);
+                PackageExtractor.Install(Package("OpenDash", "0.2.0"), root, null, holdsAuthoredWork: true);
+                var kept = Path.GetFileName(PackageExtractor.KeptCopies(root, "OpenDash").Single());
+                Assert.StartsWith("OpenDash" + PackageExtractor.EditedSuffix + DateTime.UtcNow.Year.ToString(CultureInfo.InvariantCulture), kept);
+            }
+            finally
+            {
+                CultureInfo.CurrentCulture = was;
+            }
         }
 
         [Fact]
