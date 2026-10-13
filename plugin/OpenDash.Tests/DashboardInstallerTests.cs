@@ -618,6 +618,62 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// The Edit sheet renames before it resizes, so a resize that is undone puts the old name back with the old size:
+        /// the old folder is titled with it, and Dash Studio would have listed the screen under a name the card no longer
+        /// shows.
+        /// </summary>
+        [Fact]
+        public void A_resize_that_is_undone_puts_the_old_name_back_as_well()
+        {
+            var catalogue = PackageCatalogue.From(Rounds("0.3.0-rc.8"));
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            var before = new ScreenInstance { Name = round.Name, Folder = round.Folder, Width = round.Width, Height = round.Height, Package = round.Package, Theme = round.Theme };
+
+            round.Name = "Wheel";
+            settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
+            settings.ResizeScreenBack(round, before);
+
+            Assert.Equal("Round", round.Name);
+            Assert.Equal(RoundFolder, round.Folder);
+            Assert.Equal(480, round.Width);
+        }
+
+        /// <summary>
+        /// A write can fail after its folder is in, as when the package's fonts cannot be copied. Resize used to read any
+        /// failure as nothing written, so the panel put the screen back at its old size over a folder that held the new
+        /// one, or left the new folder to nobody. It reads whether the folder was written now: the new size stays, the
+        /// old folder goes as on success, and the error still reaches the panel.
+        /// </summary>
+        [Fact]
+        public void A_resize_whose_write_fails_after_its_folder_is_in_keeps_the_new_size()
+        {
+            var packages = Rounds("0.3.0-rc.8");
+            var catalogue = PackageCatalogue.From(packages);
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var installer = OverSettings(packages, settings);
+            var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            Assert.True(installer.Write(round).Written);
+            // DashFonts a file, so the fonts cannot be copied once the folder is in.
+            if (Directory.Exists(Path.Combine(root, PackageExtractor.DashFonts))) Directory.Delete(Path.Combine(root, PackageExtractor.DashFonts), true);
+            File.WriteAllText(Path.Combine(root, PackageExtractor.DashFonts), "not a folder");
+
+            var old = round.Folder;
+            settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
+            var written = ScreenInstaller.Resize(old, round, installer.Write, root, installer.Record, null);
+
+            Assert.False(written.Ok);
+            Assert.True(written.Written);
+            Assert.Contains("fonts", written.Error);
+            Assert.True(HasDashboardSpelled("OpenDash Round"));
+            Assert.False(Directory.Exists(PackageExtractor.InstalledFolder(root, RoundFolder)));
+            // Recorded as OpenDash wrote it, so the next start does not take the folder for somebody's work.
+            Assert.Equal(FolderFingerprint.Of(PackageExtractor.InstalledFolder(root, round.Folder)), installer.Record.Get(round.Folder));
+        }
+
+        /// <summary>
         /// A rig that met this before it was fixed holds the card face it could not write, and a second one if the
         /// driver tried again. The next start writes both, Install it again works on either, and neither moves in the
         /// settings.

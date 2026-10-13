@@ -1515,9 +1515,12 @@ namespace OpenDashPlugin.Tests
                 "Say(result.Ok ? PanelAddScreen.Added(copy) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
-                "Say(result.Ok ? PanelScreens.WithEditsKept(PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name), result.KeptCopy) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel), result.Ok);",
-                // The new folder before the old one goes, and the screen back on the old one when the write failed (#588).
-                "WriteScreenThen(() => ScreenInstaller.Resize(before.Folder, screen, plugin.Installer.Write, plugin.Installer.SimHubRoot, plugin.Installer.Record, log), result => { if (!result.Ok) Settings.ResizeScreenBack(screen, before);",
+                "var said = result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : result.Written ? PanelAddScreen.ResizedIncomplete(screen.Name, screen.SizeLabel) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel);",
+                "Say(result.Written ? PanelScreens.WithEditsKept(said, result.KeptCopy) : said, result.Ok);",
+                // The new folder before the old one goes, and the screen back on the old one when the write wrote
+                // nothing (#588), with the name it had before the sheet renamed it.
+                "WriteScreenThen(() => ScreenInstaller.Resize(before.Folder, screen, plugin.Installer.Write, plugin.Installer.SimHubRoot, plugin.Installer.Record, log), result => { if (!result.Written) Settings.ResizeScreenBack(screen, before);",
+                "var named = screen.Name; RenameScreen(screen, wanted); ResizeScreen(screen, entry, named);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");

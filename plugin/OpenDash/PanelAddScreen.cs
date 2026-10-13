@@ -604,6 +604,14 @@ namespace OpenDashPlugin
             return "Could not resize " + name + " to " + size + ". See SimHub's log.";
         }
 
+        /// <summary>A resize whose dashboard was written but whose install did not finish, as when its fonts could not
+        /// be copied. The new folder is in, so the screen keeps the new size, and the line says so and admits the half
+        /// that did not land, in the words <see cref="AddFailed"/> uses for the same case.</summary>
+        public static string ResizedIncomplete(string name, string size)
+        {
+            return name + " is now " + size + ", but its dashboard could not be installed. See SimHub's log.";
+        }
+
         /// <summary>
         /// The size the edit sheet's row opens on: the screen's own among <paramref name="offered"/>, or -1 where
         /// this build offers no package at the screen's size.

@@ -1069,9 +1069,11 @@ namespace OpenDashPlugin
             {
                 case ScreenEdit.Resize:
                     // The name first, so the folder ResizeScreen writes is titled with it rather than with the
-                    // name the screen is about to stop having.
+                    // name the screen is about to stop having; the old name goes back with the old size when the
+                    // write does not happen, since the old folder is titled with it.
+                    var named = screen.Name;
                     RenameScreen(screen, wanted);
-                    ResizeScreen(screen, entry);
+                    ResizeScreen(screen, entry, named);
                     return;
                 case ScreenEdit.Rename:
                     RenameScreen(screen, wanted);
@@ -1118,7 +1120,8 @@ namespace OpenDashPlugin
             });
         }
 
-        private void ResizeScreen(ScreenInstance screen, PackageEntry entry)
+        /// <param name="named">The name the screen had before the Edit sheet renamed it.</param>
+        private void ResizeScreen(ScreenInstance screen, PackageEntry entry, string named)
         {
             if (entry == null || (entry.Width == screen.Width && entry.Height == screen.Height))
             {
@@ -1130,19 +1133,21 @@ namespace OpenDashPlugin
             // The new folder first and the old one after, which goes through the edited check and the kept copy every
             // replace has (ScreenInstaller.Resize, #588): a screen that was the stock one at its old size owns that
             // package's own folder, and leaving it behind would put a dashboard in SimHub's list that nothing answers
-            // for. The screen as it was is kept, so that a write that fails puts it back on the folder it still has.
-            var before = new ScreenInstance { Name = screen.Name, Folder = screen.Folder, Width = screen.Width, Height = screen.Height, Package = screen.Package, Theme = screen.Theme };
+            // for. The screen as it was is kept, so that a write that wrote nothing puts it back on the folder it still
+            // has. A write that failed after its folder was in keeps the new size, since that folder holds it.
+            var before = new ScreenInstance { Name = named ?? screen.Name, Folder = screen.Folder, Width = screen.Width, Height = screen.Height, Package = screen.Package, Theme = screen.Theme };
             Settings.ResizeScreen(screen, entry);
             Save();
             WriteScreenThen(() => ScreenInstaller.Resize(before.Folder, screen, plugin.Installer.Write, plugin.Installer.SimHubRoot, plugin.Installer.Record, log), result =>
             {
-                if (!result.Ok) Settings.ResizeScreenBack(screen, before);
+                if (!result.Written) Settings.ResizeScreenBack(screen, before);
                 Save();
                 if (screen.Theme != null || before.Theme != null) plugin.SyncCarPlaylists();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
-                if (!result.Ok) Log.Warn("Writing " + screen.Name + " at " + entry.SizeLabel + " failed, so it stays at " + screen.SizeLabel + ": " + result.Error);
-                Say(result.Ok ? PanelScreens.WithEditsKept(PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name), result.KeptCopy) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel), result.Ok);
+                if (!result.Ok) Log.Warn("Writing " + screen.Name + " at " + entry.SizeLabel + " failed, so it is at " + screen.SizeLabel + ": " + result.Error);
+                var said = result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : result.Written ? PanelAddScreen.ResizedIncomplete(screen.Name, screen.SizeLabel) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel);
+                Say(result.Written ? PanelScreens.WithEditsKept(said, result.KeptCopy) : said, result.Ok);
             });
         }
 

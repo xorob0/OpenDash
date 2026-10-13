@@ -161,13 +161,19 @@ namespace OpenDashPlugin
         /// The panel used to delete the old folder first, with a bare recursive delete, and write the new one after
         /// (#588). A dashboard the driver had edited in Dash Studio went without a copy, under a sheet whose caption
         /// says their settings are kept, and a write that failed left the screen with no folder at all. The order is
-        /// the other way round now. A write that fails returns before anything is removed, so the old folder is still
+        /// the other way round now. A write that wrote nothing returns before anything is removed, so the old folder is still
         /// there for the panel to put the screen back on. A write that works is followed by the remove, which asks
         /// the edited question every replace asks and keeps the copy every replace keeps; a folder the new size keeps,
         /// as a second screen's does, was replaced by the write itself, which asked the same question there.
         ///
         /// A remove that fails after the write has worked leaves the old folder whole and the screen at its new size,
         /// which is what the driver asked for, so it is logged rather than undone.
+        ///
+        /// What decides is whether the folder was written, not whether the write reported an error. A write can fail
+        /// after its folder is in, as when the package's fonts cannot be copied, and undoing the resize then would put
+        /// the screen back at its old size over a folder that holds the new one, or leave the new folder to nobody.
+        /// Such a write keeps the new size and removes the old folder as one that worked does, and its error still
+        /// reaches the panel.
         /// </remarks>
         /// <param name="oldFolder">The folder the screen held before the settings moved it.</param>
         /// <param name="write">Writes the screen's folder: DashboardInstaller.Write.</param>
@@ -183,7 +189,7 @@ namespace OpenDashPlugin
         {
             log = log ?? NullInstallLog.Instance;
             var written = write(screen);
-            if (!written.Ok) return written;
+            if (!written.Written) return written;
             if (string.IsNullOrEmpty(oldFolder) || string.Equals(oldFolder, screen.Folder, StringComparison.OrdinalIgnoreCase)) return written;
             var old = Remove(new ScreenInstance { Name = screen.Name, Folder = oldFolder }, simHubRoot, record, log, disk);
             if (old.Ok) written.KeptCopy = old.KeptCopy;

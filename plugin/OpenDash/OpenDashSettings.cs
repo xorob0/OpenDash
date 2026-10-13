@@ -1848,14 +1848,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Puts a screen back at the size, package, theme and folder it had before a resize, which is how a resize
+        /// Puts a screen back at the name, size, package, theme and folder it had before a resize, which is how a resize
         /// whose dashboard could not be written is undone (#588): the old folder is still there, and the screen owns
         /// it again rather than a folder nothing wrote.
         /// </summary>
-        /// <param name="before">The screen as it was, of which only those five are read.</param>
+        /// <remarks>
+        /// The name too, because the Edit sheet renames before it resizes, so that the new folder is titled with the
+        /// new name. The old folder is still titled with the old one, and a screen that kept the new name over it would
+        /// be listed in Dash Studio under a name the card no longer shows.
+        /// </remarks>
+        /// <param name="before">The screen as it was, of which only those six are read.</param>
         public void ResizeScreenBack(ScreenInstance screen, ScreenInstance before)
         {
             if (screen == null || before == null) return;
+            if (!string.IsNullOrEmpty(before.Name)) screen.Name = before.Name;
             screen.Width = before.Width;
             screen.Height = before.Height;
             screen.Package = before.Package;
