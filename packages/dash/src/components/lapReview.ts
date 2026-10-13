@@ -55,6 +55,7 @@ import {
   carPosition,
   positionLabelled,
   completedLaps,
+  DELTA_WIDEST,
   deltaColour,
   fuel,
   fuelLastLap,
@@ -67,11 +68,13 @@ import {
   player,
   previousLap,
   previousLapDelta,
+  secondsOf,
   sessionType,
+  signedToFit,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { and, concat, eq, fmt, game, iff, isnull, lt, num, or, signed, str, sub, timespanToSeconds, ucase } = ncalc;
+const { and, concat, eq, fmt, game, iff, isnull, lt, num, or, str, sub, ucase } = ncalc;
 
 /** The density the canvas draws this panel at: 116 over a 15 px label, 46, 13, and 24 between a pair. */
 const DENSITY = 'companion';
@@ -125,7 +128,7 @@ export const LAP_REVIEW_SECONDS = ds.indicator.lapReview.durationMs / 1000;
  * duration would read as though the two were one decision.
  */
 export const lapReviewAtTheLine = (): Expr =>
-  and(hasTime(lastLap()), lt(timespanToSeconds(isnull(game('CurrentLapTime'), num(0))), num(LAP_REVIEW_SECONDS)));
+  and(hasTime(lastLap()), lt(secondsOf(game('CurrentLapTime')), num(LAP_REVIEW_SECONDS)));
 
 /**
  * Whether this face wants the review in the session being driven.
@@ -164,7 +167,7 @@ export const WIDEST_DRIVER_LINE = 'You · #9999 · P99';
  * and slot zero is the lap just completed -- the same reading `modules/lapHistory.ts` draws its
  * first row from, and the reason `average5` starts at zero rather than at one.
  */
-const vsSessionBest = (): Expr => iff(hasTime(lastLap()), signed(isnull(previousLapDelta(num(0)), num(0)), '0.00'), str(NO_VALUE));
+const vsSessionBest = (): Expr => iff(hasTime(lastLap()), signedToFit(isnull(previousLapDelta(num(0)), num(0)), CHARS.delta, 2), str(NO_VALUE));
 
 /**
  * The lap just finished against the one before it: arithmetic over two published properties, which
@@ -174,16 +177,25 @@ const vsSessionBest = (): Expr => iff(hasTime(lastLap()), signed(isnull(previous
  * against it would be nought on every lap of every race; the lap before it is slot one, and until
  * there have been two laps there is nothing to compare and the field says so.
  */
-const previousLapSeconds = (): Expr => timespanToSeconds(isnull(previousLap(num(1)), num(0)));
-const vsPreviousSeconds = (): Expr => sub(timespanToSeconds(isnull(lastLap(), num(0))), previousLapSeconds());
-const vsPrevious = (): Expr => iff(and(hasTime(lastLap()), hasTime(previousLap(num(1)))), signed(vsPreviousSeconds(), '0.00'), str(NO_VALUE));
+const previousLapSeconds = (): Expr => secondsOf(previousLap(num(1)));
+const vsPreviousSeconds = (): Expr => sub(secondsOf(lastLap()), previousLapSeconds());
+const vsPrevious = (): Expr => iff(and(hasTime(lastLap()), hasTime(previousLap(num(1)))), signedToFit(vsPreviousSeconds(), CHARS.delta, 2), str(NO_VALUE));
 
-/** A delta field of the panel: 46 px, coloured by the comparison rather than by a second reading of it. */
+/**
+ * A delta field of the panel: 46 px, coloured by the comparison rather than by a second reading of it.
+ *
+ * Both deltas are drawn through {@link signedToFit}, because the lap the review is opened for with
+ * its deltas at their largest is the in-lap, a minute or more off both comparisons. Cut for `±99.99`
+ * and drawn to two places regardless, its `+123.45` lost the last digit and read as `+123.4`; it is
+ * drawn `+123.5` now. A sixth cell, which the reference delta has, was the other way to hold it, and
+ * it would have cost the portrait face its deltas: at 600 px the two of them beside a 64 px lap time
+ * have 276 px, which five cells fit in 268 and six would need 312 for. #886.
+ */
 const deltaField = (prefix: string, id: string, caption: string, value: Expr, colour: Expr, sample: string): FieldSpec => ({
   name: `${prefix}.${id}`,
   id,
   label: caption,
-  value: { sample, bind: value, chars: CHARS.delta, fs: densityOf(DENSITY).mid, colorBind: colour },
+  value: { sample, widest: DELTA_WIDEST, bind: value, chars: CHARS.delta, fs: densityOf(DENSITY).mid, colorBind: colour },
 });
 
 /**

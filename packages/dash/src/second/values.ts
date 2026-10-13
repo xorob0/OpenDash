@@ -9,7 +9,7 @@
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { ELLIPSIS, measureText, type MeasuredFace } from '../design/advances.ts';
+import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { MINUS, type Chars } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, propertyName, setting } from '../contract.ts';
@@ -25,6 +25,7 @@ const {
   prop,
   str,
   num,
+  real,
   iff,
   eq,
   gt,
@@ -131,8 +132,10 @@ export const CHARS = {
   /**
    * `-0.21`: a signed delta in five digit cells and a point, the sign taking one of the cells. The
    * sector deltas and the lap review's two draw it to two places, which leaves two whole digits; the
-   * lap history's column draws it to three, `+0.594`, which leaves one. The live delta to the
-   * reference has a budget of its own, {@link CHARS.referenceDelta}.
+   * lap history's column draws it to three, `+0.594`, which leaves one. A reading with more whole
+   * digits than that gives up places to keep them, through {@link signedToFit}, so the in-lap's
+   * `+123.45` is drawn `+123.5` rather than cut. The live delta to the reference has a budget of
+   * its own, {@link CHARS.referenceDelta}.
    */
   delta: { digits: 5, specials: 1 } as Chars,
   /**
@@ -158,14 +161,19 @@ export const CHARS = {
   carNumber: { digits: 4, specials: 0 } as Chars,
   /** `0:42:15` */
   clock: { digits: 6, specials: 2 } as Chars,
-  /** `08:46` */
-  minutesClock: { digits: 4, specials: 1 } as Chars,
+  /**
+   * `08:46`, and `100:00` once a tank lasts a hundred minutes: {@link minutesClock} counts on in
+   * minutes rather than turning into an hour, so the budget is three minute digits and two of
+   * seconds, and {@link MINUTES_CLOCK_WIDEST} is what a box holding one is measured by. #899.
+   */
+  minutesClock: { digits: 5, specials: 1 } as Chars,
   /**
    * `14:32`, and `12:59` on a twelve-hour clock: the same four digits and a colon, so one budget
    * holds either format. The `AM` or `PM` after a twelve-hour clock is a word beside the value and
    * not a cell of it, `M` being a glyph no cell holds; see {@link TimeOfDay}. Its own budget rather
-   * than {@link CHARS.minutesClock}'s, which is a duration and reads `08:46` for the same cells, so
-   * that widening one cannot quietly widen the other.
+   * than {@link CHARS.minutesClock}'s, which is a duration and reads `08:46` in the same cells, so
+   * that widening one cannot quietly widen the other: the duration has since had a third minute
+   * digit for a tank that lasts `100:00`, and the time of day stayed at four.
    */
   timeOfDay: { digits: 4, specials: 1 } as Chars,
   /** `299` */
@@ -231,20 +239,34 @@ export const CHARS = {
  * with no value behind it drew nothing where it should have drawn {@link noTime}, and a value that
  * came and went drew a field that vanished and came back. #454.
  */
-export const hasTime = (ts: Expr): Expr => gt(isnull(timespanToSeconds(ts), num(0)), num(0));
+export const hasTime = (ts: Expr): Expr => gt(secondsOf(ts), num(0));
+
+/**
+ * A TimeSpan as seconds, or nought when there is no TimeSpan behind it.
+ *
+ * The one place a time is converted for arithmetic or a comparison, because every comparison and
+ * every operator throws on the null `timespantoseconds` answers for a missing time (see
+ * {@link hasTime}), and a binding that throws draws nothing at all. The `driver*` reads are null on
+ * a frame SimHub is still building and while the player is unplaced, and a `GameData` time is null
+ * with no session, so a guard written inside the conversion instead, `timespantoseconds(isnull(t,
+ * 0))`, blanked the stint, the sectors and the session clock on exactly the frames they had a
+ * placeholder for. `test/timespanGuard.test.ts` holds every binding of every package to this. #586.
+ */
+export const secondsOf = (ts: Expr): Expr => isnull(timespanToSeconds(ts), num(0));
 
 /**
  * A lap time as `toshorttime` writes it, `m:ss.fff`, and to {@link LONG_LAP_DECIMALS} places once
  * the lap reaches ten minutes, `10:42.90`, so that every lap fits the cells cut for `1:42.905`.
  *
- * With no guard of its own: a lap that may be unset goes through {@link lapTime}, which reads this
- * only once {@link hasTime} has said there is a time to read. `timespantoseconds` of a TimeSpan is
- * never null, and NCalc's `if` evaluates the branch it takes and not the other.
+ * With no placeholder of its own: a lap that may be unset goes through {@link lapTime}, which reads
+ * this only once {@link hasTime} has said there is a time to read. The ten-minute test still reads
+ * through {@link secondsOf}, so that it cannot throw on a missing time whichever branch a caller
+ * takes, which is the rule `test/timespanGuard.test.ts` holds every binding to. #586.
  */
 export const lapReading = (ts: Expr, decimals = 3): Expr => {
   const long = Math.min(decimals, LONG_LAP_DECIMALS);
   if (long === decimals) return toShortTime(ts, decimals, false, true);
-  return iff(lt(timespanToSeconds(ts), num(LONG_LAP_SECONDS)), toShortTime(ts, decimals, false, true), toShortTime(ts, long, false, true));
+  return iff(lt(secondsOf(ts), num(LONG_LAP_SECONDS)), toShortTime(ts, decimals, false, true), toShortTime(ts, long, false, true));
 };
 
 /** A lap time as {@link lapReading} draws it, or the placeholder of the same shape when it was never set. */
@@ -266,25 +288,53 @@ export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), lapRea
  * already writes its sectors in. Five digits hold up to `999.99`, which no sector of a lap reaches.
  */
 export const sectorTime = (ts: Expr, decimals = 2): Expr =>
-  iff(hasTime(ts), fmt(timespanToSeconds(ts), `0.${'0'.repeat(decimals)}`), str(NO_VALUE));
+  iff(hasTime(ts), fmt(secondsOf(ts), `0.${'0'.repeat(decimals)}`), str(NO_VALUE));
 
 /** Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count. */
 export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(seconds), str('-:--:--'));
 
+/** The longest reading {@link minutesClock} draws, and so what a box holding one is measured by. */
+export const MINUTES_CLOCK_WIDEST = '999:59';
+
+/** {@link MINUTES_CLOCK_WIDEST} in seconds, the most {@link minutesClock} counts. */
+const MINUTES_CLOCK_CAP = 999 * 60 + 59;
+
 /**
  * Seconds as `mm:ss`, or `--:--` when there is nothing to count. Built the way `hms` is, minus the
  * hour term, because band D is 60 px tall and an hour that reads `0:` whenever a tank lasts under
- * one is a cell spent saying nothing. A range over 99 minutes overruns the four digits it is
- * budgeted, which no tank the sims model reaches.
+ * one is a cell spent saying nothing.
+ *
+ * Past 99 minutes the minutes count on, `100:00`, rather than turning into an hour. The budget used
+ * to be four digits on the reasoning that no tank lasts that long, and a full tank in a car that
+ * sips fuel does, at a short circuit or at the start of an endurance stint: `100:00` in a box cut
+ * for `08:46` was clipped by WPF, on the band's default page, at the moment a driver reads it.
+ * Rolling into `1:40` instead would have fitted and read as a minute and forty seconds, which is the
+ * one misreading a fuel time cannot allow, so the box has a third minute digit instead. That cell
+ * costs no house face a field. On its own it cost the Porsche's and the AiM's feet at 850 and 800
+ * wide between one and three from the tail, and {@link bandFuelQuantity} wins that room back. The
+ * seconds are capped at {@link MINUTES_CLOCK_WIDEST}, over sixteen hours, which no tank lasts but a
+ * per-lap figure a hair above zero can ask for, so that even that reading stays inside the cells
+ * it is drawn in. The floor and the cap are doubles for the reason {@link hms} gives. #899.
  */
 export const minutesClock = (seconds: Expr): Expr => {
-  const s = max(num(0), seconds);
+  const s = min(real(MINUTES_CLOCK_CAP), max(real(0), seconds));
   const mmss = concat(fmt(truncate(div(s, num(60))), '00'), str(':'), fmt(truncate(mod(s, num(60))), '00'));
   return iff(gt(seconds, num(0)), mmss, str('--:--'));
 };
 
 /** An iRating as `2.4k`, or `--` when the sim does not report one. */
 export const ratingK = (value: Expr): Expr => iff(gt(isnull(value, num(0)), num(0)), concat(fmt(div(value, num(1000)), '0.0'), str('k')), str(NO_VALUE));
+
+/**
+ * The widest {@link ratingK} a proportional box in `face` has to hold: two whole thousands, since a
+ * few hundred drivers are rated over 10 000 and none near 100 000, which is also what
+ * {@link CHARS.rating}'s four digit cells hold.
+ *
+ * Measured rather than written as a sample, because a sample is a rating somebody holds and the box
+ * has to hold everybody's: the opponents page was cut to `iR 3.1k` and clipped the `k` of every
+ * driver rated ten thousand or more, and of a driver rated `4.0k` as well. #902.
+ */
+export const ratingWidest = (face: MeasuredFace): string => widestFigure(face, '99.9k');
 
 // --- The player's own car ------------------------------------------------------------------
 
@@ -836,9 +886,21 @@ export const carClassRaceGap = (idx: Expr): Expr => {
  * The gap to the player on track, signed, three decimals: a car ahead reads `−5.886` and a car
  * behind `+0.722`. The minus is the typographic one, which `signed` substitutes for the hyphen
  * .NET's formatter writes.
+ *
+ * Three places in {@link CHARS.relativeGap}'s six cells leave two whole digits, and a car half a lap
+ * away is a hundred seconds off on a lap of three and a half minutes, which is Le Mans and the
+ * Nordschleife with a thin field. Past that the gap gives up places rather than its last digit,
+ * `−104.31`, through {@link signedToFit}, as the deltas do (#886).
  */
 export const carRelativeGap = (idx: Expr): Expr =>
-  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signed(driver('relativegaptoplayer', idx), '0.000'));
+  iff(ncalc.isNull(driver('relativegaptoplayer', idx)), str(NO_VALUE), signedToFit(driver('relativegaptoplayer', idx), CHARS.relativeGap, 3));
+
+/**
+ * The widest reading {@link carRelativeGap} draws, which is what a box drawing it declares: the true
+ * minus and five digits around a point, the whole of {@link CHARS.relativeGap}. Past a hundred
+ * seconds the gap draws `−104.32` in the same six cells, so this is the length of every reading.
+ */
+export const RELATIVE_GAP_WIDEST = `${MINUS}99.999`;
 
 /**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
@@ -971,7 +1033,12 @@ export const currentLap = (): Expr => isnull(game('CurrentLap'), num(0));
 /** Laps completed, which is one behind the lap in progress for as long as a lap is in progress. */
 export const completedLaps = (): Expr => isnull(game('CompletedLaps'), num(0));
 export const totalLaps = (): Expr => isnull(game('TotalLaps'), num(0));
-export const sessionTimeLeft = (): Expr => timespanToSeconds(game('SessionTimeLeft'));
+/**
+ * The session's time left in seconds, nought with no session. Guarded here rather than at each
+ * caller, so that {@link isTimedSession}, {@link sessionClock} and the fuel margin read a session
+ * that is not there as untimed instead of throwing on it. #586.
+ */
+export const sessionTimeLeft = (): Expr => secondsOf(game('SessionTimeLeft'));
 /**
  * The longest session clock taken at its word: a day, and a day inclusive.
  *
@@ -1076,18 +1143,28 @@ export const rpm = rpms;
 // lights at, and it lives in `shift.ts` as `redlineRpm` so that the number and the bar cannot
 // disagree. ADR 0014. This file used to carry a second body for it, reading SimHub's number
 // while the bar beside it read the car's.
-export const fuelUnit = (): Expr => iff(eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons')), str('gal'), str('L'));
+/** Whether the driver has SimHub set to gallons, which is the one switch every fuel figure follows. */
+const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
+export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
 export const fuelPercent = (): Expr => isnull(game('FuelPercent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
 export const fuelLapsLeft = (): Expr => isnull(computed('Fuel_RemainingLaps'), num(0));
-export const fuelTimeLeft = (): Expr => timespanToSeconds(computed('Fuel_RemainingTime'));
+/** The fuel range in seconds, nought when SimHub has none, guarded here for every caller as {@link sessionTimeLeft} is. */
+export const fuelTimeLeft = (): Expr => secondsOf(computed('Fuel_RemainingTime'));
 export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'), num(0));
 export const fuelThisLap = (): Expr => isnull(computed('Fuel_CurrentLapConsumption'), num(-1));
 export const lapsLeft = (): Expr => isnull(game('RemainingLaps'), num(0));
 
-/** Fuel to add: what the laps left will burn, less what is in the tank; never negative. */
-export const fuelToAdd = (): Expr => max(num(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
+/**
+ * Fuel to add: what the laps left will burn, less what is in the tank; never negative. An estimate,
+ * labelled `To add`, and not the order the pit service is set to, which is {@link pitRefuel}.
+ *
+ * The floor is the double `0.0`: NCalc's `max` answers in its left operand's type, so `max(0, …)`
+ * would round the litres to a whole one and the reading would end in `.0` under a format that draws
+ * tenths. #831.
+ */
+export const fuelToAdd = (): Expr => max(real(0), sub(mul(lapsLeft(), fuelPerLap()), fuel()));
 
 /**
  * Whether a fuel figure derived from a lap's consumption means anything yet.
@@ -1131,6 +1208,59 @@ export const fuelLastLapIsSettled = (): Expr => and(fuelIsSettled(), gt(fuelLast
  */
 export const settledFuelTimeLeft = (): Expr => iff(fuelIsSettled(), fuelTimeLeft(), num(0));
 
+/**
+ * The least quantity band D's fuel page draws whole: from here up a quantity reads `10`, `13`, `30`,
+ * and below it `9.9`, `9.5`, one decimal. In the driver's unit, whichever it is, since the figure
+ * is read in it: ten litres and ten gallons are both where a tenth stops being worth a cell.
+ */
+export const BAND_FUEL_WHOLE_FROM = 10;
+
+/**
+ * The least value whose one-decimal reading is {@link BAND_FUEL_WHOLE_FROM}: `format` rounds a half
+ * away from zero, so 9.95 is drawn `10.0` and 9.94 `9.9`. The test is on this rather than on 10, so
+ * that a 9.96 reads `10` and never `10.0`, which would be a third whole digit cell's worth of figure
+ * in the decimal form. A double literal, so that nothing compares or formats as an Int32. #899.
+ */
+const BAND_FUEL_DECIMAL_BELOW = BAND_FUEL_WHOLE_FROM - 0.05;
+
+/**
+ * A fuel quantity as band D's fuel page draws it: whole from 10 up, one decimal below, and
+ * {@link NO_VALUE} where the sim gives nothing.
+ *
+ * The author's ruling of 2026-10-09 on #899. The fuel time's third minute digit cost the Porsche's
+ * and the AiM's feet between one and three fields at 850 and 800 wide, and the room is won back on
+ * the quantities rather than by shedding: a tank of `32.67` reads `33`, which is what a driver
+ * reads off it on a straight anyway, and the tenths come back below ten, where they are the
+ * difference between one more lap and none. Every litre or gallon reading of the page goes through
+ * this one function (the tank, the refuel, the per lap and the last lap) and no other surface does:
+ * the fuel module, pit view, the pop-ups and the cards keep their own decimals.
+ *
+ * `value` is any figure already in the driver's unit. The page's own gates and fallbacks go around
+ * or inside it, as `iff(absent, str(NO_VALUE), bandFuelQuantity(pitRefuel()))` would for a pit
+ * service order read through a converted helper. {@link bandFuelQuantityDrawn} is the width it
+ * draws, for a unit placed after it, and {@link bandFuelQuantityWidest} the longest reading.
+ */
+export const bandFuelQuantity = (value: Expr): Expr =>
+  iff(isNull(value), str(NO_VALUE), iff(lt(value, real(BAND_FUEL_DECIMAL_BELOW)), fmt(value, '0.0'), fmt(value, '0')));
+
+/** How wide {@link bandFuelQuantity} draws `value` whose whole form has at most `digits` digits. */
+export const bandFuelQuantityDrawn = (value: Expr, digits: number): DrawnFigure =>
+  drawnEither(
+    isNull(value),
+    drawnText(NO_VALUE),
+    drawnEither(lt(value, real(BAND_FUEL_DECIMAL_BELOW)), drawnFigure({ value, digits: 1, decimals: 1 }), drawnFigure({ value, digits })),
+  );
+
+/**
+ * The longest reading {@link bandFuelQuantity} draws for a quantity of at most `digits` whole
+ * digits, and the cells that hold it: `999` for a tank, against the `9.9` of the decimal form, and
+ * the decimal form itself where the whole one is two digits, since a point takes a cell of its own.
+ */
+export function bandFuelQuantityWidest(digits: number): { widest: string; chars: Chars } {
+  if (digits < 2) throw new RangeError('a band D fuel quantity is drawn whole from 10, so its whole form has two digits at least');
+  return digits > 2 ? { widest: '9'.repeat(digits), chars: { digits, specials: 0 } } : { widest: '9.9', chars: { digits: 2, specials: 1 } };
+}
+
 /** So the timed margin below reads as minutes rather than as a division by a bare 60. */
 const SECONDS_PER_MINUTE = 60;
 
@@ -1153,9 +1283,9 @@ const SECONDS_PER_MINUTE = 60;
  * whose name the sim does not give reads nothing here, which is the right way to be wrong: an absence
  * says the dash cannot tell, where a red figure says the tank will not make it.
  *
- * `Refuel` is the counter-precedent and stays as it is: it reads the race's remaining laps in
- * practice too, but it is drawn in caution amber as an instruction to the crew rather than as a
- * verdict, so a figure of no use in practice is not a figure that alarms there.
+ * The fuel page's `To add` is the counter-precedent and stays as it is: it reads the race's
+ * remaining laps in practice too, but it is drawn in caution amber as an instruction to the crew
+ * rather than as a verdict, so a figure of no use in practice is not a figure that alarms there.
  */
 const raceHasAnEnd = (): Expr => and(eq(ucase(sessionType()), str('RACE')), iff(showsTimeLeft(), isTimedSession(), gt(lapsLeft(), num(0))));
 
@@ -1671,7 +1801,35 @@ export const PIT_SERVICE_BITS = { FrontLeft: 1, FrontRight: 2, RearLeft: 4, Rear
 const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvFlags'), num(0)), num(bit))), num(2));
 
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
-export const pitRefuelLitres = (): Expr => raw('PitSvFuel');
+
+/**
+ * SimHub's own ratio from litres to gallons, `GameManagerBase.GetFuelConvertRatio` in 9.12.6. The
+ * tank a face draws beside the pit order is converted by it, so the order is converted by the same
+ * figure rather than by a more exact one that would disagree with the tank in the last digit.
+ */
+export const LITRES_TO_GALLONS = 0.264172;
+
+/** True where the sim publishes no pit fuel order, which is every sim but iRacing. */
+export const pitRefuelIsAbsent = (): Expr => isNull(raw('PitSvFuel'));
+
+/**
+ * The fuel the pit service is set to add, in the unit the driver reads the tank in (#604).
+ *
+ * iRacing publishes `PitSvFuel` in litres whatever the display unit, as it does `FuelLevel` (the
+ * emulator's catalogue carries the var header's `l`), and SimHub passes raw telemetry through
+ * unconverted, where it converts `Fuel` to gallons on a gallons profile. Pit view used to draw the
+ * litres beside a unit bound to `FuelUnit`, so a 40 litre order read `40.0 gal`, and band D drew the
+ * same litres with no unit beside a tank in gallons. Both read this now, and the face says
+ * {@link fuelUnit} after it as it does after the tank.
+ *
+ * This is the pit service order and not {@link fuelToAdd}, the estimate of what the laps left will
+ * burn; the fuel page labels that one `To add` and the pit pages label this one `Refuel`, so the two
+ * are never drawn under the same word.
+ */
+export const pitRefuel = (): Expr => {
+  const litres = isnull(raw('PitSvFuel'), num(0));
+  return iff(fuelInGallons(), mul(litres, num(LITRES_TO_GALLONS)), litres);
+};
 export const isInPitLane = (): Expr => gt(isnull(game('IsInPitLane'), num(0)), num(0));
 
 // --- The pit lane and the spotter, one body each for the faces, the strips and the box -----------
@@ -1766,10 +1924,11 @@ export const pitTyreSelection = (): Expr => {
  * seconds since the car entered the box over the duration of the last stop, which is the only
  * figure the game gives for how long a stop takes. It reads nothing outside the lane and before a
  * first stop has been timed, which is honest about a number that is not there rather than showing
- * a quantity from another page.
+ * a quantity from another page. The cap is the double `100.0`, since `min` answers in its left
+ * operand's type and an Int32 there would round the gauge to whole percent. #831.
  */
 export const pitServiceProgress = (): Expr =>
-  iff(and(isInPitLane(), gt(lastPitDuration(), num(0))), min(num(100), mul(num(100), div(inPitSeconds(), lastPitDuration()))), num(0));
+  iff(and(isInPitLane(), gt(lastPitDuration(), num(0))), min(real(100), mul(num(100), div(inPitSeconds(), lastPitDuration()))), num(0));
 
 // --- Lap history and deltas ---------------------------------------------------------------------
 
@@ -1779,6 +1938,52 @@ export const previousLap = (slotExpr: Expr): Expr => propByName(concat(str('Pers
 /** The same lap's delta to the session best, in seconds. */
 export const previousLapDelta = (slotExpr: Expr): Expr =>
   propByName(concat(str('PersistantTrackerPlugin.PreviousLap_'), fmt(slotExpr, '00'), str('_DeltaToSessionBest')));
+
+/**
+ * A signed delta to `places` decimals where `chars` holds it, and to fewer where it does not:
+ * `+1.03`, `+123.5` and `+1234` in {@link CHARS.delta}'s five cells at two places.
+ *
+ * A box cannot change its cells at runtime, so a delta whose whole part grows past what its cells
+ * were cut for loses its last digit to WPF instead, and `+123.45` in five cells is drawn `+123.4`,
+ * a figure the sim never published. The lap that carried a stop, a tow or a repair is a minute or
+ * three off the session best and off the lap before it, and its sectors with it, so the deltas that
+ * are cut for an ordinary lap meet that reading once a stint, on the lap they are most looked at
+ * (#886). Each place given up buys a whole digit, which is the trade
+ * {@link referenceDeltaText} already makes past 100 s: a figure rounded to the tenth is still the
+ * figure, and a hundredth of a lap two minutes off is not what anybody is reading it for.
+ *
+ * The sign takes a digit cell and the point a narrow one, so `places` decimals leave
+ * `chars.digits - 1 - places` whole digits. Each edge is half a unit of the last place short of the
+ * next power of ten, under which .NET still rounds to the shorter figure: 99.995 to two places is
+ * `100.00`, a sixth digit. Past the last edge the figure is whole seconds, which five cells hold to
+ * 9999 s, the better part of three hours. The choice is an `if` around literal patterns for the
+ * reason {@link referenceDeltaText} gives.
+ */
+export const signedToFit = (seconds: Expr, chars: Chars, places: number): Expr => {
+  const patternOf = (p: number): string => (p === 0 ? '0' : `0.${'0'.repeat(p)}`);
+  let text: Expr = signed(seconds, '0');
+  for (let p = 1; p <= places; p++) {
+    const whole = chars.digits - 1 - p;
+    if (whole < 1) throw new Error(`signedToFit: ${chars.digits} digit cells hold no whole digit beside a sign and ${p} places`);
+    text = iff(lt(abs(seconds), num(Number((10 ** whole - 0.5 * 10 ** -p).toFixed(p + 1)))), signed(seconds, patternOf(p)), text);
+  }
+  return text;
+};
+
+/**
+ * The widest reading {@link signedToFit} draws in {@link CHARS.delta} at two places, which is what a
+ * box drawing one declares as its `widest`: the true minus and four digits around a point. The
+ * samples stay the canvas's `+1.03` and `−0.21`, the short end of the range.
+ */
+export const DELTA_WIDEST = `${MINUS}99.99`;
+
+/**
+ * The same budget for the lap history's column, which draws {@link signedToFit} to three places:
+ * `−9.999` is as long as {@link DELTA_WIDEST} in every face, since both are five digit cells and a
+ * point, but it has the column's own shape. The AiM theme ghosts a reading's widest cell for cell,
+ * and a ghost of `888.88` behind `+0.594` puts the point a cell off its ghost on every row.
+ */
+export const HISTORY_DELTA_WIDEST = `${MINUS}9.999`;
 
 /** How many laps the rolling average covers, and the number the field is named after. */
 export const AVERAGE_LAPS = 5;
@@ -1797,7 +2002,7 @@ export const average5 = (): Expr => {
   // left the newest out, so the number moved a lap late; `modules/lapHistory.ts` reads the same
   // slots and says so where it draws row one.
   const slots = Array.from({ length: AVERAGE_LAPS }, (_, i) => previousLap(num(i)));
-  const seconds = slots.map((slot) => timespanToSeconds(slot));
+  const seconds = slots.map((slot) => secondsOf(slot));
   return iff(
     and(...slots.map((slot) => hasTime(slot))),
     lapReading(secondsToTimespan(div(add(...seconds), num(AVERAGE_LAPS)))),
@@ -1960,11 +2165,11 @@ export const sectorBest = (sector: number): Expr => game(`Sector${sector}BestTim
 
 /** True when a sector of the last lap beat your own best of that sector. */
 export const sectorImproved = (sector: number): Expr =>
-  and(hasTime(sectorLast(sector)), hasTime(sectorBest(sector)), lt(timespanToSeconds(sectorLast(sector)), timespanToSeconds(sectorBest(sector))));
+  and(hasTime(sectorLast(sector)), hasTime(sectorBest(sector)), lt(secondsOf(sectorLast(sector)), secondsOf(sectorBest(sector))));
 
 /** The signed difference between a sector of the last lap and your best of that sector. */
 export const sectorDelta = (sector: number): Expr =>
-  sub(timespanToSeconds(isnull(sectorLast(sector), num(0))), timespanToSeconds(isnull(sectorBest(sector), num(0))));
+  sub(secondsOf(sectorLast(sector)), secondsOf(sectorBest(sector)));
 
 /** Absolute seconds, for a gain-or-loss bar that only knows how far it is from zero. */
 export const magnitude = (expr: Expr): Expr => abs(expr);
