@@ -46,16 +46,16 @@ face follows too, and the speed has the speedo module.
 
 ## The companion
 
-One dashboard, twenty-two screens, one per module in catalogue order. Each screen carries a
+One dashboard, one screen per module in catalogue order. Each screen carries a
 header (module name, page counter, position, lap), the module, a row of page dots and a compact
 flag band.
 
 Which screens exist is a plugin setting. Each screen's `ScreenEnabledExpression` reads its own
 property, `isnull([OpenDash.CompanionModule07], 1)`; SimHub treats a screen as enabled when the
-expression is above zero and removes a disabled one from its Next/Previous ring. So turning eight
-modules off means paging through thirteen.
+expression is above zero and removes a disabled one from its Next/Previous ring. So turning a
+module off takes it out of what a tap pages through.
 
-Every module screen is an in-game screen and nothing else, and a twenty-second screen after them is
+Every module screen is an in-game screen and nothing else, and one more screen after them is
 the idle screen every package carries (#763). SimHub filters screens by role only when the roles
 differ between them -- `Dashboard.GetActiveScreens` compares `"{Pit};{InGame};{Idle}"` across the
 enabled screens -- so while a game runs the ring is the modules alone and a tap still pages them, and
@@ -262,14 +262,14 @@ the data exists in other sims and the module should be there when someone runs o
 ### The one absence that is temporary: no session yet
 
 The centred dim block those three modules draw says something else too, and it is the opposite kind
-of absence from the table above. Twelve of the
-twenty-one modules have nothing to draw until timing exists -- lap times, delta, sectors, fuel, pit
-view, session, track, leaderboard, relative, opponents, stint and lap history -- and rather than an
-empty table they say `Leaderboard · Go into a session`, in the same centred dim block, until there is
-one. Not a value the sim cannot publish, therefore, but one it has not published yet, and the
-difference is that this notice goes away on its own. It matters because a dashboard is installed,
-opened and looked at before any session is joined, so the empty state is the product's first
-impression, and an empty leaderboard reads exactly like a leaderboard that has failed.
+of absence from the table above. Twelve of the modules have nothing to draw until timing exists --
+lap times, delta, sectors, fuel, pit view, session, track, leaderboard, relative, opponents, stint
+and lap history -- and rather than an empty table they say `Leaderboard · Go into a session`, in the
+same centred dim block, until there is one. Not a value the sim cannot publish, therefore, but one
+it has not published yet, and the difference is that this notice goes away on its own. It matters
+because a dashboard is installed, opened and looked at before any session is joined, so the empty
+state is the product's first impression, and an empty leaderboard reads exactly like a leaderboard
+that has failed.
 
 The declaration is `needsSession` in `MODULE_CATALOGUE`, one line per module, so a module added later
 answers the question by existing; `defineModule` composes the two halves from it through

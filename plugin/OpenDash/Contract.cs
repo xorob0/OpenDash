@@ -1497,7 +1497,7 @@ namespace OpenDashPlugin
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
         public static readonly string[] FaceZoneLetters = { "A", "B", "C", "D" };
 
-        /// <summary>How many pages each zone can show, in letter order: A four, B and C the twenty-one
+        /// <summary>How many pages each zone can show, in letter order: A four, B and C the
         /// modules, D eight. The house's catalogues: a theme adds band pages, which
         /// <see cref="FaceZonePageCount"/> counts.</summary>
         public static readonly IReadOnlyList<int> FaceZonePageCounts = new[] { 4, Modules.Count, Modules.Count, 8 };
@@ -2065,7 +2065,7 @@ namespace OpenDashPlugin
         /// them. Both reach the screen through CompanionOpenOn, forced for a moment: the start by Init
         /// and the panel, the glance by its button.
         ///
-        /// The page is appended after the twenty-one rather than put in front of them, because both
+        /// The page is appended after the switches rather than put in front of them, because both
         /// halves of the contract assert this group by index.
         /// </remarks>
         public static IEnumerable<string> CompanionPropertyNames(string ns)
