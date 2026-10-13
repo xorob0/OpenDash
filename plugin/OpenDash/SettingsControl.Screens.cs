@@ -1127,25 +1127,22 @@ namespace OpenDashPlugin
             }
             if (WriteRefused()) return;
             var log = new SimHubInstallLog();
-            // The old folder first: a screen that was the stock one at its old size owns that package's own
-            // folder, and leaving it behind would put a dashboard in SimHub's list that nothing answers for. Removed
-            // on the write's thread, by the folder the screen holds now, since the settings move it below.
-            var before = new ScreenInstance { Name = screen.Name, Folder = screen.Folder };
+            // The new folder first and the old one after, which goes through the edited check and the kept copy every
+            // replace has (ScreenInstaller.Resize, #588): a screen that was the stock one at its old size owns that
+            // package's own folder, and leaving it behind would put a dashboard in SimHub's list that nothing answers
+            // for. The screen as it was is kept, so that a write that fails puts it back on the folder it still has.
+            var before = new ScreenInstance { Name = screen.Name, Folder = screen.Folder, Width = screen.Width, Height = screen.Height, Package = screen.Package, Theme = screen.Theme };
             Settings.ResizeScreen(screen, entry);
             Save();
-            WriteScreenThen(() =>
+            WriteScreenThen(() => ScreenInstaller.Resize(before.Folder, screen, plugin.Installer.Write, plugin.Installer.SimHubRoot, plugin.Installer.Record, log), result =>
             {
-                var old = ScreenInstaller.Remove(before, plugin.Installer.SimHubRoot, plugin.Installer.Record, log);
-                if (!old.Ok) Log.Warn("The old folder of " + before.Name + " could not be removed: " + old.Error);
-                return plugin.Installer.Write(screen);
-            }, result =>
-            {
+                if (!result.Ok) Settings.ResizeScreenBack(screen, before);
                 Save();
-                if (screen.Theme != null) plugin.SyncCarPlaylists();
+                if (screen.Theme != null || before.Theme != null) plugin.SyncCarPlaylists();
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
-                if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
+                if (!result.Ok) Log.Warn("Writing " + screen.Name + " at " + entry.SizeLabel + " failed, so it stays at " + screen.SizeLabel + ": " + result.Error);
+                Say(result.Ok ? PanelScreens.WithEditsKept(PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name), result.KeptCopy) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel), result.Ok);
             });
         }
 

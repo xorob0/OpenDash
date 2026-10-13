@@ -488,8 +488,8 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         /// <remarks>
         /// The same comparison was reached from here: the screen kept its namespace, its stock namespace followed the new
-        /// size, and the copy was refused for want of anything to rewrite. The panel removes the old folder first, as
-        /// the Rig tab does before it asks the settings.
+        /// size, and the copy was refused for want of anything to rewrite. The panel writes the new folder and then
+        /// removes the old one, as ScreenInstaller.Resize does here.
         /// </remarks>
         [Fact]
         public void A_card_face_resized_to_the_other_round_is_written_in_a_folder_of_its_own()
@@ -502,9 +502,9 @@ namespace OpenDashPlugin.Tests
             var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
             Assert.True(installer.Write(round).Written);
 
-            ScreenInstaller.Remove(round, root, null, null);
+            var old = round.Folder;
             settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
-            var written = installer.Write(round);
+            var written = ScreenInstaller.Resize(old, round, installer.Write, root, installer.Record, null);
 
             Assert.Null(written.Error);
             Assert.True(written.Written);
@@ -513,6 +513,108 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(800, round.Width);
             Assert.True(HasDashboardSpelled("OpenDash Round"));
             Assert.False(PackageExtractor.IsInstalled(root, LargeRoundFolder));
+            Assert.False(Directory.Exists(PackageExtractor.InstalledFolder(root, RoundFolder)));
+            Assert.Null(written.KeptCopy);
+        }
+
+        /// <summary>
+        /// Resizing a screen whose dashboard somebody edited in Dash Studio deleted the folder with no question and no
+        /// copy, under a sheet that says their settings are kept (#588). The old folder now goes through the same edited
+        /// check a reinstall makes, and its copy is kept under a name no install reclaims.
+        /// </summary>
+        [Fact]
+        public void Resizing_an_edited_screen_keeps_a_copy_of_the_dashboard_it_had()
+        {
+            var packages = Rounds("0.3.0-rc.8");
+            var catalogue = PackageCatalogue.From(packages);
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var installer = OverSettings(packages, settings);
+            var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            Assert.True(installer.Write(round).Written);
+            var main = Path.Combine(PackageExtractor.InstalledFolder(root, RoundFolder), RoundFolder + PackageExtractor.DashExtension);
+            File.WriteAllText(main, "{\"Version\":2,\"Mine\":true}");
+
+            var old = round.Folder;
+            settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
+            var written = ScreenInstaller.Resize(old, round, installer.Write, root, installer.Record, null);
+
+            Assert.True(written.Ok, written.Error);
+            Assert.True(HasDashboardSpelled("OpenDash Round"));
+            Assert.False(Directory.Exists(PackageExtractor.InstalledFolder(root, RoundFolder)));
+            Assert.NotNull(written.KeptCopy);
+            Assert.Equal(new[] { written.KeptCopy }, PackageExtractor.KeptCopies(root, RoundFolder));
+            Assert.Contains(PackageExtractor.EditedSuffix, written.KeptCopy);
+            using (var zip = ZipFile.OpenRead(written.KeptCopy))
+            using (var reader = new StreamReader(zip.GetEntry(RoundFolder + PackageExtractor.DashExtension).Open()))
+            {
+                Assert.Equal("{\"Version\":2,\"Mine\":true}", reader.ReadToEnd());
+            }
+        }
+
+        /// <summary>
+        /// A screen that keeps its folder across a resize, as a second screen of a size does, has the folder replaced by
+        /// the write itself, which asks the edited question there and keeps the copy under the folder the rig still has,
+        /// where Put mine back offers it.
+        /// </summary>
+        [Fact]
+        public void Resizing_an_edited_screen_that_keeps_its_folder_keeps_a_copy_Put_mine_back_offers()
+        {
+            var packages = Rounds("0.3.0-rc.8");
+            var catalogue = PackageCatalogue.From(packages);
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var installer = OverSettings(packages, settings);
+            settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "First");
+            var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            Assert.True(installer.Write(round).Written);
+            Assert.Equal("OpenDash Round", round.Folder);
+            var main = Path.Combine(PackageExtractor.InstalledFolder(root, round.Folder), round.Folder + PackageExtractor.DashExtension);
+            File.WriteAllText(main, "{\"Version\":2,\"Mine\":true}");
+
+            var old = round.Folder;
+            settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
+            Assert.Equal(old, round.Folder);
+            var written = ScreenInstaller.Resize(old, round, installer.Write, root, installer.Record, null);
+
+            Assert.True(written.Ok, written.Error);
+            Assert.Contains("\"Width\":800", File.ReadAllText(PackageExtractor.InstalledSidecar(root, round.Folder)));
+            Assert.True(PanelUpdates.ShowsKept(PackageExtractor.KeptCopies(root, round.Folder)));
+        }
+
+        /// <summary>
+        /// A resize whose new dashboard could not be written used to have deleted the old one already, which left the
+        /// screen with no folder at all (#588). The new one is written first now, so a failure leaves the old one in
+        /// place, and the panel puts the screen back on it at its old size.
+        /// </summary>
+        [Fact]
+        public void A_resize_whose_write_fails_leaves_the_old_folder_and_the_screen_goes_back_to_it()
+        {
+            var packages = Rounds("0.3.0-rc.8");
+            var catalogue = PackageCatalogue.From(packages);
+            var settings = new OpenDashSettings();
+            settings.Normalise();
+            var installer = OverSettings(packages, settings);
+            var round = settings.AddScreen(catalogue.Single(entry => entry.Folder == RoundFolder), "Round");
+            Assert.True(installer.Write(round).Written);
+            // The same packages, except that the one the new size is written from cannot be read.
+            var broken = OverSettings(new MemoryPackageSource()
+                .Add(RoundName, SyntheticPackage.CardFace(RoundFolder, 480, 480, "0.3.0-rc.8"))
+                .Add(LargeRoundName, "not a zip"), settings);
+
+            var before = new ScreenInstance { Name = round.Name, Folder = round.Folder, Width = round.Width, Height = round.Height, Package = round.Package, Theme = round.Theme };
+            settings.ResizeScreen(round, catalogue.Single(entry => entry.Folder == LargeRoundFolder));
+            var written = ScreenInstaller.Resize(before.Folder, round, broken.Write, root, broken.Record, null);
+
+            Assert.False(written.Ok);
+            Assert.True(HasDashboardSpelled(RoundFolder));
+            Assert.Empty(PackageExtractor.KeptCopies(root, RoundFolder));
+
+            settings.ResizeScreenBack(round, before);
+            Assert.Equal(RoundFolder, round.Folder);
+            Assert.Equal(480, round.Width);
+            Assert.Equal(RoundName, round.Package);
+            Assert.True(installer.Write(round).Ok);
         }
 
         /// <summary>

@@ -1105,7 +1105,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_panel_writes_dashboards_only_off_the_interface_thread()
         {
-            var writes = new[] { "Installer.Write(", ".EnsureInstalled(", "PackageExtractor.Restore(", "ScreenInstaller.Remove(" };
+            var writes = new[] { "Installer.Write(", ".EnsureInstalled(", "PackageExtractor.Restore(", "ScreenInstaller.Remove(", "ScreenInstaller.Resize(" };
             var method = new System.Text.RegularExpressions.Regex(@"(private|public|internal|protected)[^;{}=]*\(");
             var onTheClick = new List<string>();
             var seen = 0;

@@ -1513,7 +1513,9 @@ namespace OpenDashPlugin.Tests
                 "Say(result.Ok ? PanelAddScreen.Added(copy) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
+                "Say(result.Ok ? PanelScreens.WithEditsKept(PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name), result.KeptCopy) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel), result.Ok);",
+                // The new folder before the old one goes, and the screen back on the old one when the write failed (#588).
+                "WriteScreenThen(() => ScreenInstaller.Resize(before.Folder, screen, plugin.Installer.Write, plugin.Installer.SimHubRoot, plugin.Installer.Record, log), result => { if (!result.Ok) Settings.ResizeScreenBack(screen, before);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");

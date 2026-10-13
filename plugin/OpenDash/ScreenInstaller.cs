@@ -154,6 +154,44 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Writes a resized screen's dashboard into the folder its new size gives it, and only then removes the folder
+        /// it had, keeping a copy of that one when somebody had edited it.
+        /// </summary>
+        /// <remarks>
+        /// The panel used to delete the old folder first, with a bare recursive delete, and write the new one after
+        /// (#588). A dashboard the driver had edited in Dash Studio went without a copy, under a sheet whose caption
+        /// says their settings are kept, and a write that failed left the screen with no folder at all. The order is
+        /// the other way round now. A write that fails returns before anything is removed, so the old folder is still
+        /// there for the panel to put the screen back on. A write that works is followed by the remove, which asks
+        /// the edited question every replace asks and keeps the copy every replace keeps; a folder the new size keeps,
+        /// as a second screen's does, was replaced by the write itself, which asked the same question there.
+        ///
+        /// A remove that fails after the write has worked leaves the old folder whole and the screen at its new size,
+        /// which is what the driver asked for, so it is logged rather than undone.
+        /// </remarks>
+        /// <param name="oldFolder">The folder the screen held before the settings moved it.</param>
+        /// <param name="write">Writes the screen's folder: DashboardInstaller.Write.</param>
+        /// <returns>The write's result, carrying the copy kept of the old folder when one was.</returns>
+        public static ScreenInstallResult Resize(
+            string oldFolder,
+            ScreenInstance screen,
+            Func<ScreenInstance, ScreenInstallResult> write,
+            string simHubRoot,
+            IFolderRecord record,
+            IInstallLog log,
+            IFolderMoves disk = null)
+        {
+            log = log ?? NullInstallLog.Instance;
+            var written = write(screen);
+            if (!written.Ok) return written;
+            if (string.IsNullOrEmpty(oldFolder) || string.Equals(oldFolder, screen.Folder, StringComparison.OrdinalIgnoreCase)) return written;
+            var old = Remove(new ScreenInstance { Name = screen.Name, Folder = oldFolder }, simHubRoot, record, log, disk);
+            if (old.Ok) written.KeptCopy = old.KeptCopy;
+            else log.Warn("The old folder " + oldFolder + " of " + screen.Name + " could not be removed: " + old.Error);
+            return written;
+        }
+
+        /// <summary>
         /// Whether a folder has changed since OpenDash wrote it, which is the question the installer asks before it
         /// replaces one (DashboardInstaller.Process): a folder with no record is adopted rather than taken as somebody's.
         /// </summary>

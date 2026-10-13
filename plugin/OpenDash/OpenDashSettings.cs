@@ -1831,8 +1831,8 @@ namespace OpenDashPlugin
         /// The namespace is frozen at creation and this does not move it either (ADR 0017), so the zone
         /// settings, the bar and every wheel button bound to the screen survive a resize. What that costs
         /// is the folder: a screen that held the stock folder of its old size no longer holds the stock
-        /// namespace of its new one, so it needs a folder of its own, and the caller deletes the old one
-        /// before calling this.
+        /// namespace of its new one, so it needs a folder of its own, and the caller removes the old one
+        /// once the new one is written (ScreenInstaller.Resize).
         /// </remarks>
         public void ResizeScreen(ScreenInstance screen, PackageEntry entry)
         {
@@ -1844,6 +1844,23 @@ namespace OpenDashPlugin
             screen.Folder = screen.IsStock
                 ? entry.Folder
                 : PackageCatalogue.UniqueFolder(screen.Name, Taken(screen), entry.Folder);
+            screen.Normalise();
+        }
+
+        /// <summary>
+        /// Puts a screen back at the size, package, theme and folder it had before a resize, which is how a resize
+        /// whose dashboard could not be written is undone (#588): the old folder is still there, and the screen owns
+        /// it again rather than a folder nothing wrote.
+        /// </summary>
+        /// <param name="before">The screen as it was, of which only those five are read.</param>
+        public void ResizeScreenBack(ScreenInstance screen, ScreenInstance before)
+        {
+            if (screen == null || before == null) return;
+            screen.Width = before.Width;
+            screen.Height = before.Height;
+            screen.Package = before.Package;
+            screen.Theme = before.Theme;
+            screen.Folder = before.Folder;
             screen.Normalise();
         }
 
