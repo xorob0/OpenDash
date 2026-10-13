@@ -78,9 +78,10 @@ namespace OpenDashPlugin
     /// </para>
     /// <para>
     /// Nothing is published -- the dashboards then draw the sim's own order, which is also what they draw
-    /// with no plugin -- outside a race, where a place is a lap time rather than a distance; once the
-    /// chequered flag is out, when cars stop racing and their distances stop meaning anything; and before
-    /// the sim has placed anybody, so that the grid still reads <c>--</c> (#992).
+    /// with no plugin -- while the driver has Live positions switched off; outside a race, where a place is
+    /// a lap time rather than a distance; once the chequered flag is out, when cars stop racing and their
+    /// distances stop meaning anything; and before the sim has placed anybody, so that the grid still reads
+    /// <c>--</c> (#992).
     /// </para>
     /// </remarks>
     public static class LivePosition
@@ -95,12 +96,14 @@ namespace OpenDashPlugin
         public const string IRacing = "IRacing";
 
         /// <summary>Whether the live order applies to this frame at all.</summary>
+        /// <param name="wanted">The driver's Live positions switch, OpenDashSettings.LivePositions.</param>
         /// <param name="gameName">SimHub's name for the running game.</param>
         /// <param name="sessionType">SimHub's SessionTypeName.</param>
         /// <param name="chequered">Whether the chequered flag is out.</param>
-        public static bool Applies(string gameName, string sessionType, bool chequered)
+        public static bool Applies(bool wanted, string gameName, string sessionType, bool chequered)
         {
-            return string.Equals(gameName, IRacing, StringComparison.OrdinalIgnoreCase)
+            return wanted
+                && string.Equals(gameName, IRacing, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(sessionType, RaceSession, StringComparison.OrdinalIgnoreCase)
                 && !chequered;
         }

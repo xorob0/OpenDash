@@ -324,6 +324,15 @@ namespace OpenDashPlugin
         /// pit exit is still a flag.</summary>
         public const bool DefaultFlagsInPitLane = true;
 
+        /// <summary>
+        /// Whether the plugin publishes the race as it stands on the road (<see cref="LivePosition"/>): on, so
+        /// an iRacing place moves when a car is passed rather than when it next crosses the line. Off, the
+        /// plugin publishes nothing and every dashboard draws iRacing's own order, which is also what it
+        /// draws with no plugin. A switch on the plugin rather than a property: off is the absence of the
+        /// live properties, which every dashboard already reads its way past. #1063.
+        /// </summary>
+        public const bool DefaultLivePositions = true;
+
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
         public static readonly string[] PitWallZoneLetters = { "A", "B", "C", "D" };

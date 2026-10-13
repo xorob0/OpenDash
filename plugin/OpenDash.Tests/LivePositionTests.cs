@@ -133,18 +133,37 @@ namespace OpenDashPlugin.Tests
         }
 
         [Theory]
-        [InlineData("IRacing", "Race", false, true)]
-        [InlineData("IRacing", "race", false, true)]
-        [InlineData("IRacing", "Race", true, false)]
-        [InlineData("IRacing", "Practice", false, false)]
-        [InlineData("IRacing", "Lone Qualify", false, false)]
-        [InlineData("LMU", "Race", false, false)]
-        [InlineData(null, null, false, false)]
-        public void It_applies_to_an_iracing_race_until_the_chequered_flag(string game, string session, bool chequered, bool applies)
+        [InlineData(true, "IRacing", "Race", false, true)]
+        [InlineData(true, "IRacing", "race", false, true)]
+        [InlineData(false, "IRacing", "Race", false, false)]
+        [InlineData(true, "IRacing", "Race", true, false)]
+        [InlineData(true, "IRacing", "Practice", false, false)]
+        [InlineData(true, "IRacing", "Lone Qualify", false, false)]
+        [InlineData(true, "LMU", "Race", false, false)]
+        [InlineData(true, null, null, false, false)]
+        public void It_applies_to_an_iracing_race_until_the_chequered_flag_unless_switched_off(bool wanted, string game, string session, bool chequered, bool applies)
         {
-            // A practice or qualifying place is a lap time, not a distance; after the flag cars stop racing; and
-            // the other sims SimHub reads already move the place as it happens.
-            Assert.Equal(applies, LivePosition.Applies(game, session, chequered));
+            // Switched off, never. A practice or qualifying place is a lap time, not a distance; after the flag
+            // cars stop racing; and the other sims SimHub reads already move the place as it happens.
+            Assert.Equal(applies, LivePosition.Applies(wanted, game, session, chequered));
+        }
+
+        [Fact]
+        public void It_is_on_by_default_and_a_settings_file_written_before_the_switch_keeps_it_on()
+        {
+            Assert.True(Contract.DefaultLivePositions);
+            Assert.True(new OpenDashSettings().LivePositions);
+            var older = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>("{\"PositionMode\":\"overall\"}");
+            Assert.True(older.LivePositions);
+        }
+
+        [Fact]
+        public void The_switch_is_offered_under_the_count_it_makes_live()
+        {
+            Assert.Equal("Live positions", PanelDataTab.LivePositionsTitle);
+            Assert.Equal("On iRacing, places and lists change as cars pass, not when they next cross the line.", PanelDataTab.LivePositionsCaption);
+            var raceData = PanelSettings.RowAnchorsBySection[0];
+            Assert.Equal(raceData.ToList().IndexOf(PanelSettings.AnchorPosition) + 1, raceData.ToList().IndexOf(PanelSettings.AnchorLivePositions));
         }
 
         [Fact]

@@ -618,7 +618,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Fills <see cref="liveRace"/> from the frame SimHub has finished, or empties it where the sim's own
-        /// order is the one to draw. See LivePosition.cs.
+        /// order is the one to draw, which includes a driver who turned Live positions off. See LivePosition.cs.
         /// </summary>
         /// <remarks>
         /// The rows are SimHub's leaderboard rows on that frame, and a dashboard hands them to driver*()
@@ -630,7 +630,9 @@ namespace OpenDashPlugin
         {
             var frame = data != null && data.GameRunning ? data.NewData : null;
             var opponents = frame == null ? null : frame.Opponents;
-            if (opponents == null || !OpenDashPlugin.LivePosition.Applies(data.GameName, frame.SessionTypeName, frame.Flag_Checkered != 0))
+            var settings = Settings;
+            var wanted = settings == null ? Contract.DefaultLivePositions : settings.LivePositions;
+            if (opponents == null || !OpenDashPlugin.LivePosition.Applies(wanted, data.GameName, frame.SessionTypeName, frame.Flag_Checkered != 0))
             {
                 liveRace = null;
                 return;

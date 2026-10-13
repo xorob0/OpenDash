@@ -34,6 +34,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Contract.DefaultSlots(), settings.Slots);
             // A flag shows in the pit lane, which is what every surface drew before it was a choice. #791.
             Assert.True(settings.FlagsInPitLane);
+            // The race as it stands on the road, on unless a driver turns it off. #1063.
+            Assert.True(settings.LivePositions);
             // The rig's thresholds are unanswered until Normalise reads them off matrix 1, and a new
             // install's matrix 1 has none, so they come back as zero: the profile's own default.
             Assert.Null(settings.LightsOilTemp);
@@ -1201,6 +1203,7 @@ namespace OpenDashPlugin.Tests
                 LedRpmStyle = "leftToRight",
                 LedFlagAnimation = false,
                 FlagsInPitLane = false,
+                LivePositions = false,
             };
             source.Normalise();
             source.SetMatrixRest(2, "gear");
@@ -1230,6 +1233,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(115, copy.LightsWaterTemp);
             Assert.Equal(130, copy.MatrixOilTemp(4));
             Assert.False(copy.FlagsInPitLane);
+            Assert.False(copy.LivePositions);
             Assert.Equal("gear", copy.MatrixRest(2));
             Assert.Equal("left", copy.MatrixSide(1));
             Assert.True(copy.MatrixFlags(4));
@@ -1452,12 +1456,14 @@ namespace OpenDashPlugin.Tests
 
             // And what this version writes, it reads back.
             settings.FlagsInPitLane = false;
+            settings.LivePositions = false;
             settings.SetLightsWaterTemp(230);
             settings.SetBarBrightness("LedMLD", 40);
             settings.SetBarEffect("LedMLD", "drs", false);
             var back = Newtonsoft.Json.JsonConvert.DeserializeObject<OpenDashSettings>(Newtonsoft.Json.JsonConvert.SerializeObject(settings));
             back.Normalise();
             Assert.False(back.FlagsInPitLane);
+            Assert.False(back.LivePositions);
             Assert.Equal(120, back.LightsOilTemp);
             Assert.Equal(230, back.MatrixWaterTemp(3));
             Assert.Equal(40, back.BarBrightness("LedMLD"));

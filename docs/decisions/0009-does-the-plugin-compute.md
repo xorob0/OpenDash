@@ -189,7 +189,9 @@ class, the row in each place over the field, and the row in each place of the pl
 place a dashboard draws, the order every list is drawn in, the leader the gap is measured from and the
 car ahead the interval is measured to are read through them. It publishes nothing outside an iRacing
 race, after the chequered flag, or before the sim has placed anybody, and where a car cannot be
-compared on distance it keeps the sim's order for it.
+compared on distance it keeps the sim's order for it. It is a switch on the panel, Live positions,
+on by default: a driver who would rather read the official order turns it off, and the plugin then
+publishes nothing, which every dashboard already reads its way past.
 
 The cost is a frame. The rows the plugin publishes are SimHub's rows on the frame it finished, and a
 dashboard hands them to `driver*` functions that read the frame being built. The two are the same list

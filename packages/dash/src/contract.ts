@@ -270,8 +270,9 @@ export const PORSCHE_CREST = 'PorscheCrest';
  * - `LiveOrder<place>`: the leaderboard row of the car in that place over the field.
  * - `LiveClassOrder<place>`: the leaderboard row of the car in that place of the player's own class.
  *
- * Every one is null wherever the sim's own answer is the one to draw, which is outside a race, after
- * the chequered flag, before the sim has placed anybody, and on a row the field does not have:
+ * Every one is null wherever the sim's own answer is the one to draw, which is while the driver has
+ * Live positions switched off on the panel (on by default), outside a race, after the chequered flag,
+ * before the sim has placed anybody, and on a row the field does not have:
  * `plugin/OpenDash/LivePosition.cs` says how. So each is read through {@link setting.live} with
  * SimHub's own answer as the fallback, and a package with no plugin draws what it always drew.
  * `second/values.ts` is where they are read.
