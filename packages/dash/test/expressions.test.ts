@@ -22,7 +22,7 @@ import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
-import type { TextItem } from '../src/generator.ts';
+import type { RectangleItem, TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -682,11 +682,11 @@ describe('module expressions', () => {
   });
 
   /**
-   * The steering mark, which is a position rather than a rotation because a rotation does not bind.
+   * The steering wheel's mark, carried round the hub by its position and turned by its rotation.
    *
-   * The two formulas are the whole of the dial's movement, so what they are worth is where they put
-   * the mark: at the top of the rim on a wheel that is straight, at the left of it a quarter turn to
-   * the left, and at the right a quarter turn the other way. Evaluating them is the only way to
+   * The formulas are the whole of the dial's movement, so what they are worth is where they put the
+   * mark: at the top of the rim on a wheel that is straight, at the left of it a quarter turn to the
+   * left, and at the right a quarter turn the other way, turned by the same quarter. Evaluating them is the only way to
    * catch a sine and a cosine that have been exchanged, which reads as a dial that is right at the
    * two locks and wrong everywhere between them, and the only way to catch the sign of iRacing's
    * angle, which is positive to the left, being read the other way round (#1057).
@@ -721,6 +721,54 @@ describe('module expressions', () => {
     // angle than the wheel is actually at, and it stops at either lock.
     expect(at(10)).toEqual(at(values.STEERING_RANGE));
     expect(at(-10)).toEqual(at(-values.STEERING_RANGE));
+  });
+
+  test('the wheel turns as one: the lower spoke opposite the mark, the grips at the hands, every part by the same angle in degrees', () => {
+    const module = MODULES.find((m) => m.id === 'inputs')!;
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const items = [...walkItems(module.build({ frame: box, density: 'zone', prefix: 'inputs.' }))];
+    const part = (name: string): RectangleItem => {
+      const item = items.find((i) => i.name === `inputs.steer.${name}`);
+      if (!item || item.kind !== 'rect') throw new Error(`inputs.steer.${name} is not a rect`);
+      return item;
+    };
+    const place = (n: number): number => Math.round(n * 1e6) / 1e6 + 0;
+    const turn = (item: RectangleItem, angle: number): number => place(evaluateNumber(item.bindings!.Rotation!.formula as string, angle));
+    // Rotation is clockwise degrees, and iRacing's angle is positive to the left, so a quarter turn
+    // to the left is a quarter turn anticlockwise for every part, and a straight wheel is not turned.
+    for (const name of ['spokes', 'spoke', 'gripLeft', 'gripRight', 'hub', 'mark']) {
+      expect({ name, straight: turn(part(name), 0), left: turn(part(name), Math.PI / 2), right: turn(part(name), -Math.PI / 2) }).toEqual({ name, straight: 0, left: -90, right: 90 });
+    }
+    // The crossbar and the centre pad are centred on the hub, which a turn about their own centre
+    // keeps where it is.
+    expect(part('spokes').bindings?.Left).toBeUndefined();
+    expect(part('hub').bindings?.Left).toBeUndefined();
+    // The lower spoke's centre goes round the hub opposite the mark's, at half the radius: a quarter
+    // turn to the left takes it to the right of the hub, level with it.
+    const spoke = part('spoke');
+    const at = (angle: number): { left: number; top: number } => ({
+      left: place(evaluateNumber(spoke.bindings!.Left!.formula as string, angle)),
+      top: place(evaluateNumber(spoke.bindings!.Top!.formula as string, angle)),
+    });
+    expect(at(0)).toEqual({ left: spoke.rect.left, top: spoke.rect.top });
+    const half = spoke.rect.height / 2;
+    expect(at(Math.PI / 2)).toEqual({ left: spoke.rect.left + half, top: spoke.rect.top - half });
+    expect(at(-Math.PI / 2)).toEqual({ left: spoke.rect.left - half, top: spoke.rect.top - half });
+    // The grips go round with the hands: a quarter turn to the left takes the right grip to the top
+    // of the wheel and the left grip to the bottom.
+    const centre = (name: string, angle: number): { x: number; y: number } => {
+      const p = part(name);
+      return {
+        x: place(evaluateNumber(p.bindings!.Left!.formula as string, angle) + p.rect.width / 2),
+        y: place(evaluateNumber(p.bindings!.Top!.formula as string, angle) + p.rect.height / 2),
+      };
+    };
+    const hub = { x: part('hub').rect.left + part('hub').rect.width / 2, y: part('hub').rect.top + part('hub').rect.height / 2 };
+    const reach = centre('gripRight', 0).x - hub.x;
+    expect(reach).toBeGreaterThan(0);
+    expect(centre('gripLeft', 0)).toEqual({ x: hub.x - reach, y: hub.y });
+    expect(centre('gripRight', Math.PI / 2)).toEqual({ x: hub.x, y: hub.y - reach });
+    expect(centre('gripLeft', Math.PI / 2)).toEqual({ x: hub.x, y: hub.y + reach });
   });
 });
 

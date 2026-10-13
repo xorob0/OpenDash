@@ -1036,6 +1036,29 @@ with SimHub's property list open and read `SteeringWheelAngle` going positive.
   The emulator scenarios that sweep the angle do so symmetrically, so none of the committed traces
   could have shown the sign either way.
 
+### `Rotation` binds, and turns an item about its own centre (2026-10-13, #1057)
+
+Read from the decompiled `plugin/lib/SimHub.Plugins.dll` (9.12.6); not yet seen on the VM, which is
+the check still owed: a bound wheel turning in a live session.
+
+- **It is a `double`, and a `double` binds.** `DrawableItem.Rotation` is a public virtual `double`
+  with an auto-property setter that raises `PropertyChanged`, and carries no `[NoBinding]`. The rule
+  above, a CLR property found by `GetProperty` and set by `Applybindings` when its type is one of the
+  six, therefore covers it, as it covers `Left` and `Top`. `Layer` overrides it as well.
+- **The renderer turns it live.** `ControlHost` binds its own `Rotation` dependency property one way
+  to `DataContext.Rotation`, and `rotationChanged` sets a `RotateTransform` of that angle as the
+  host's `RenderTransform`, or clears it at 0. Degrees, clockwise, as WPF's are.
+- **About the item's centre, by inference.** The transform is built with `CenterX` and `CenterY` of
+  0.5, which is the centre only if the host's template sets `RenderTransformOrigin` to the middle,
+  and the template is BAML this decompile does not show. The rev arc already relies on the centre:
+  its segments are placed on a circle by their centres and turned by a written `Rotation`
+  (`packages/dash/src/components/revArc.ts`). The wheel relies on it the same way, and the VM check
+  above is what settles it.
+- The steering dial was built on the opposite belief, that `Rotation` is a number written into the
+  package and nothing a formula can drive, and drew a mark running round a still ring. It is a wheel
+  that turns now (`packages/dash/src/second/steering.ts`), and the generator offers `Rotation` as a
+  binding target on the kinds a written rotation is verified on: text, rectangle and ellipse.
+
 ### iRacing's place moves only at the line, and SimHub keeps it that way (2026-10-13, #1063)
 
 Established by decompiling `GameReaderCommon.dll` from SimHub 9.12.6 (`GameManagerBase.PreParseDataBase`

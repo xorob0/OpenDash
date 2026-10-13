@@ -212,7 +212,8 @@ decide, grouped by where they arose. Each is a sentence the author can answer in
 - **The steering dial.** The catalogue turns an arc and fixes the mark at the top. Neither half is
   expressible, there being no arc and no bindable rotation, so the drawing is inverted: the rim
   stands still and the mark runs round it. The recommendation is to accept that rather than
-  rasterise an arc.
+  rasterise an arc. *Since #1057: `Rotation` does bind, and the dial is now a turning wheel; see
+  zones.md §10.*
 - **The telemetry traces.** The axis footer reads `Earlier`, `Time`, `Now`, because a number of
   seconds cannot be backed while the window is a sample count against a refresh interval the
   dashboard does not fix. The gear trace is pinned from minus one to eight, a chart's maximum being
