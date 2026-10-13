@@ -100,9 +100,10 @@ bun run dev 'OpenDash Pit wall' --scenario notc
 [docs/dev-loop.md](docs/dev-loop.md) is the whole loop on one page and is the place to start. It
 covers `bun run vm` for the VM and SimHub, `bun run emulator` for the telemetry, why opening a
 dashboard has to be clicked, and the five traps that fail silently: session 0 has no desktop,
-SimHub reads its fonts once at startup (its dashboard list it watches), SimHub's process exists half a minute before its
-window does, Bun does not deliver signals to a handler, and GDI+ will not write to the share. [docs/testing-vm.md](docs/testing-vm.md) describes the VM itself
-and is what to read when something in it breaks.
+SimHub reads its fonts once at startup (its dashboard list it watches), SimHub's process exists half
+a minute before its window does, Bun does not deliver signals to a handler, and GDI+ will not write
+to the share. [docs/testing-vm.md](docs/testing-vm.md) describes the VM itself and is what to read
+when something in it breaks.
 
 To look at a whole package quickly, open it in Dash Studio's editor and drag the Overview
 panel's splitter up: the Overview draws every screen as a live thumbnail, which is the fastest
