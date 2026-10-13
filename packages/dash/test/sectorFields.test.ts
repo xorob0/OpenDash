@@ -8,8 +8,11 @@
 import { describe, expect, test } from 'bun:test';
 import { rect } from '../src/design/geometry.ts';
 import { sectorColour, sectorFields } from '../src/second/sectors.ts';
+import { DELTA_WIDEST } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import type { TextItem } from '../src/generator.ts';
+import { widthAsDrawn } from './drawnStrings.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const row = (width: number): TextItem[] =>
   sectorFields('p.', rect(0, 0, width, 60), 'wide', 24).filter((i): i is TextItem => i.kind === 'text');
@@ -67,6 +70,44 @@ describe('the sectors under a lap delta', () => {
           inside: true,
         });
       }
+    }
+  });
+});
+
+/**
+ * #886: a sector delta is cut for `±99.99`, and the sector of the in-lap that holds the pit stall is
+ * a stop's length off your best of it. Drawn to two places regardless, its `+123.45` was drawn
+ * `+123.4`, in the field and in the label of a narrow zone alike.
+ */
+describe('a sector delta past a hundred seconds', () => {
+  /** A frame in which sector one is `seconds` off its best, with a best of half a minute. */
+  const frame = (seconds: number) => ({
+    'DataCorePlugin.GameData.Sector1LastLapTime': 30 + seconds,
+    'DataCorePlugin.GameData.Sector1BestTime': 30,
+  });
+  const READINGS: readonly [number, string][] = [
+    [-0.29, '−0.29'],
+    [12.34, '+12.34'],
+    [123.47, '+123.5'],
+    [1234.56, '+1235'],
+  ];
+
+  test('gives up a place in the field rather than its last digit', () => {
+    const delta = row(1248).find((i) => i.name === 'p.delta1.value')!;
+    expect(delta.widest).toBe(DELTA_WIDEST);
+    const formula = String(delta.bindings?.Text?.formula);
+    for (const [seconds, text] of READINGS) {
+      const drawn = evalNcalc(formula, frame(seconds));
+      expect({ seconds, drawn, fits: widthAsDrawn(delta, String(drawn)) <= widthAsDrawn(delta, DELTA_WIDEST) }).toEqual({ seconds, drawn: text, fits: true });
+    }
+  });
+
+  test('and in the label of the narrow form, which is measured from `S1 · +99.99`', () => {
+    const label = row(240).find((i) => i.name === 'p.s1.label')!;
+    const formula = String(label.bindings?.Text?.formula);
+    for (const [seconds, text] of READINGS) {
+      const drawn = evalNcalc(formula, frame(seconds));
+      expect({ seconds, drawn, fits: widthAsDrawn(label, String(drawn)) <= widthAsDrawn(label, label.widest!) }).toEqual({ seconds, drawn: `S1 · ${text}`, fits: true });
     }
   });
 });

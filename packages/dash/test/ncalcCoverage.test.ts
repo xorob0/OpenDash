@@ -17,13 +17,22 @@
  * reached. A runtime failure is allowed there, since SimHub fails the same way (a null compared, the
  * opponent calls a version 1 trace does not carry); an unsupported construct is not.
  *
+ * One more question is asked of the same walk, since it is the only place every expression is in
+ * hand: whether any `max` or `min` has an Int32 literal on its left against a value that may have a
+ * fraction. NCalc answers both in the left operand's type, so `max(0, x)` rounds `x` to a whole
+ * number, which is what made every clock tick early and the refuel figure end in `.0` (#831).
+ *
  * A failure names the package, the dashboard, the screen, the item path and the binding, and quotes
  * the expression.
  */
 import { describe, expect, test } from 'bun:test';
 import { readTrace } from '../../../scripts/trace.ts';
 import { composePackages, themesToBuild } from '../src/build.ts';
-import { ncalcEvaluator as E, type Dashboard, type Formula, type Item } from '../src/generator.ts';
+import { ncalcEvaluator as E, stableGuid, type Dashboard, type Formula, type Item } from '../src/generator.ts';
+import { buildFlagBoxProfile } from '../src/leds/index.ts';
+import { rpmStripProfile } from '../src/leds/rpmStrip.ts';
+import { ALL_SHAPES } from '../src/leds/strip.ts';
+import { roundingBounds } from './int32Bounds.ts';
 
 interface Site {
   /** Where the expression lives, for a message a reader can find it by. */
@@ -113,6 +122,48 @@ describe('every expression in a full build, held to the browser evaluator', () =
         failures.push(describeFailure(site, `${problem.kind === 'dispatch' ? 'SimHub would not dispatch' : 'the evaluator does not compute'} ${problem.name}() with ${problem.count} argument(s) at offset ${problem.offset}: ${problem.reason}`));
       }
     }
+    expect(failures).toEqual([]);
+  });
+
+  test('no max or min has a left operand that may be an Int32 against a right one that may have a fraction', () => {
+    // `int32Bounds.ts` says what "may" means. Let through are the bounds that are whole on both
+    // sides, the tacho's scale in thousands (a truncate) and the rev bar's clamp in whole RPM among
+    // them. Anything else wants `real` on the left, as #831 explains, and #1046 is why a nested or
+    // fallen-back Int32 counts as much as a bare literal.
+    const failures: string[] = [];
+    const seen = new Set<string>();
+    for (const site of sites) {
+      if (seen.has(site.expression)) continue;
+      seen.add(site.expression);
+      for (const node of roundingBounds(E.parseCached(site.expression).root)) {
+        failures.push(describeFailure(site, `${E.print(node)} may round its right operand to an Int32`));
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test('nor does any max or min in the LED profiles, which share the shift lights with the dashes', () => {
+    // A profile's expressions sit in fields of several names, so every string that calls max or min
+    // is taken for one; each has to parse, which is the check that it was an expression after all.
+    const profiles: [string, unknown][] = [
+      ['the flag box', buildFlagBoxProfile('0.0.0-test')],
+      ...ALL_SHAPES.map((shape): [string, unknown] => [`the ${shape.id} strip`, rpmStripProfile(shape, stableGuid(`OpenDash/leds/${shape.id}`), '0.0.0-test')]),
+    ];
+    const failures: string[] = [];
+    const seen = new Set<string>();
+    let found = 0;
+    const visit = (where: string, value: unknown): void => {
+      if (typeof value === 'string') {
+        if (!/\b(max|min)\(/.test(value) || seen.has(value)) return;
+        seen.add(value);
+        found += 1;
+        for (const node of roundingBounds(E.parseCached(value).root)) failures.push(`${where}\n  ${E.print(node)} may round its right operand to an Int32\n  in ${value}`);
+      } else if (value !== null && typeof value === 'object') {
+        for (const child of Object.values(value)) visit(where, child);
+      }
+    };
+    for (const [where, profile] of profiles) visit(where, profile);
+    expect(found).toBeGreaterThan(0);
     expect(failures).toEqual([]);
   });
 

@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { charsThatFit, measureText, type MeasuredFace } from '../src/design/advances.ts';
-import { LINE_SPACING, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
+import { DATA_FACE, LINE_SPACING, boxSlack, cells, monoWidth, type Chars } from '../src/design/metrics.ts';
 import {
   COMPANION_PAGE_SETTING,
   MODULE_CATALOGUE,
@@ -35,7 +35,7 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox, densityOf, grownAtMost } from '../src/second/density.ts';
-import { CHARS, CORNERS, type Corner } from '../src/second/values.ts';
+import { CHARS, CORNERS, classAndPlace, player, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
@@ -407,7 +407,7 @@ describe('the companion', () => {
       sim.tap();
       seen.push(sim.frame());
     }
-    // Eighteen of the twenty-one are on by default, and the ring comes back round to the first.
+    // All but three are on by default, and the ring comes back round to the first.
     expect(new Set(seen).size).toBe(MODULE_COUNT - 3);
     expect(seen).not.toContain(idOf(5));
   });
@@ -415,7 +415,7 @@ describe('the companion', () => {
   test('every module is an in-game screen and the idle screen is the only idle one', () => {
     // `Dashboard.GetActiveScreens` compares "{PitScreen};{InGameScreen};{IdleScreen}" across the
     // enabled screens and filters by role only when they differ, which they now do: while a game runs
-    // the ring is the twenty-one modules and the tap still pages them, and between sessions it is the
+    // the ring is the modules that are on and the tap still pages them, and between sessions it is the
     // idle screen alone. Identical roles are what used to leave a companion at rest on a module full
     // of dashes (#763).
     expect([...new Set(modules(main).map((s) => `${s.inGame};${s.idle};${s.pit}`))]).toEqual(['true;false;false']);
@@ -1178,6 +1178,56 @@ describe('the opponents block keeps the gaps the canvas draws it with', () => {
 });
 
 /**
+ * The rating and the lap time on the gap row hold every reading the sim can hand them.
+ *
+ * Both are the sim's values drawn in a proportional face, which is the case `widest.test.ts` says
+ * it cannot hold: the binding has no floor to read, so the declaration is the only place the answer
+ * can be, and a declaration copied from the sample holds the sample and nothing wider. The rating
+ * label was cut to `iR 3.1k` and clipped the `k` of every driver rated 10 000 or more, and of a
+ * `4.0k` too, the four being Barlow Medium's widest digit; the lap was cut to `1:43.234` and had no
+ * room for a `1:40.000`. #902.
+ *
+ * So the readings are listed here rather than derived from what the module declares: every rating
+ * from 0.1k to 99.9k, and every lap under ten minutes to the second with the thousandths that draw
+ * narrowest and widest. Each has to fit strictly inside its box, the rule `textFit.test.ts` holds.
+ */
+describe('the opponents gap row holds every rating and every lap', () => {
+  const opponents = MODULES.find((m) => m.id === 'opponents')!;
+  const RATINGS = ['--', ...Array.from({ length: 999 }, (_, n) => `${((n + 1) / 10).toFixed(1)}k`)];
+  const LAPS = Array.from({ length: 10 * 60 }, (_, n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`).flatMap((mss) =>
+    ['000', '040', '404', '444', '999'].map((fff) => `${mss}.${fff}`),
+  );
+  /** What a lap label can draw, by the words its sample carries around the time. */
+  const lapReadings = (sample: string): string[] =>
+    sample.startsWith('Last Best ') ? LAPS.map((lap) => `Last Best ${lap} · ${lap}`) : sample.startsWith('Last ') ? LAPS.map((lap) => `Last ${lap}`) : LAPS;
+  const widestOf = (item: TextItem, readings: readonly string[]): { text: string; width: number } =>
+    readings.map((text) => ({ text, width: measureText(faceOf(item), text, item.fontSize) })).reduce((a, b) => (b.width > a.width ? b : a));
+
+  test('a driver rated ten thousand needs more than the sample did', () => {
+    // The case the ticket names, measured so that a change to the advances that made it moot says so.
+    expect(measureText('BarlowMedium', 'iR 10.0k', 15)).toBeGreaterThan(Math.ceil(measureText('BarlowMedium', 'iR 3.1k', 15)) + 1);
+  });
+
+  for (const box of moduleBoxes()) {
+    test(`on a ${box.name}`, () => {
+      const items = opponents.build({ frame: box.frame, density: box.density, prefix: '' }).flatMap((i) => [...walkItems([i])]);
+      for (const side of ['ahead', 'behind']) {
+        const rating = items.find((i): i is TextItem => i.kind === 'text' && i.name === `${side}.rating`);
+        if (rating) {
+          const widest = widestOf(rating, RATINGS.map((r) => `iR ${r}`));
+          expect({ box: box.name, item: rating.name, widest: widest.text, fits: widest.width < rating.rect.width }).toMatchObject({ fits: true });
+        }
+        const lap = items.find((i): i is TextItem => i.kind === 'text' && i.name === `${side}.lastLap`);
+        if (lap) {
+          const widest = widestOf(lap, lapReadings(lap.text));
+          expect({ box: box.name, item: lap.name, widest: widest.text, fits: widest.width < lap.rect.width }).toMatchObject({ fits: true });
+        }
+      }
+    });
+  }
+});
+
+/**
  * The identity row across, which is the one line of this page that no fit check can speak for.
  *
  * The three cells are placed by arithmetic rather than by a rank, so two of them can sit on top of
@@ -1367,6 +1417,67 @@ describe('a value is drawn from its budget and not from its sample', () => {
 
   test('and a sample past it is refused, with the module and both counts named', () => {
     expect(() => field(spec('1:43.234', { digits: 3, specials: 1 }), 0, 200, 'companion')).toThrow(/probe.*1:43\.234.*6\+2 cells.*3\+1/);
+  });
+
+  // A class and its place is a run of letters, and a letter is not a digit: `M` overruns a cell. So
+  // that one value is set in advances, and its box is cut from the widest it declares instead.
+  describe('a proportional value', () => {
+    const run = (value: Partial<FieldSpec['value']>): FieldSpec => ({
+      name: 'probe',
+      label: 'Class',
+      value: { sample: 'GT3 · P4', chars: CHARS.classPosition, fs: 46, proportional: true, ...value },
+    });
+
+    test('is drawn without cells, in a box cut from its widest', () => {
+      const value = field(run({ widest: 'LMP2 · P44' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+      expect(value.monospace).toBeUndefined();
+      expect(value.rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText(DATA_FACE.SemiBold, 'LMP2 · P44', 46)));
+      expect(value.rect.width).toBeLessThan(monoWidth(cells('SemiBold', 46), CHARS.classPosition));
+    });
+
+    test('and is refused bound without a widest, with a follower, or with a sample wider than its widest', () => {
+      expect(() => field(run({ bind: classAndPlace(player()) }), 0, 200, 'companion')).toThrow(/probe.*declares no widest/);
+      expect(() => field(run({ widest: 'LMP2 · P44', follower: { text: 'L' } }), 0, 200, 'companion')).toThrow(/probe.*follower/);
+      expect(() => field(run({ sample: 'WWWW · P44', widest: 'LMP2 · P44' }), 0, 200, 'companion')).toThrow(/probe.*WWWW.*wider/);
+    });
+  });
+});
+
+/**
+ * A word the sim writes is not a number, and is drawn and measured as a word (#1029).
+ *
+ * The session page cut its Session field in eight cells for `Race`, and iRacing names a qualifying
+ * session `Lone Qualify`, which was drawn `Lone Qua`. A word is set in the face's advances and its
+ * box is the widest reading the binding can draw, so the width the field asks of its row is that
+ * reading's.
+ */
+describe('a word is drawn from its widest reading, in the advances of its face', () => {
+  const word = (value: Partial<FieldSpec['value']>): FieldSpec => ({
+    name: 'probe',
+    label: 'Session',
+    value: { sample: 'Race', chars: CHARS.sessionName, fs: 46, proportional: true, ...value },
+  });
+
+  test('the box holds the widest reading and is not monospaced', () => {
+    const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.monospace).toBeUndefined();
+    expect(value.rect.width).toBeGreaterThan(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46));
+  });
+
+  // The field's width caps the value's box, so a word measured to its last advance and handed on as
+  // that width took `numeral`'s slack back off: the companion's Session box held `Offline Testing`
+  // with 0.06 px to spare, and WPF clips a box cut to the exact text.
+  test('and keeps the slack every measured box is given past it', () => {
+    const value = field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]', widest: 'Offline Testing' }), 0, 200, 'companion').find((i): i is TextItem => i.name === 'probe.value')!;
+    expect(value.rect.width).toBeGreaterThanOrEqual(Math.ceil(measureText('BarlowCondensedSemiBold', 'Offline Testing', 46)) + boxSlack(46));
+  });
+
+  test('a bound word that declares no widest is refused, since its sample is the short end', () => {
+    expect(() => field(word({ bind: '[DataCorePlugin.GameData.SessionTypeName]' }), 0, 200, 'companion')).toThrow(/probe.*declares no widest/);
+  });
+
+  test('and a word takes no follower, which is placed from the end of cells', () => {
+    expect(() => field(word({ widest: 'Offline Testing', follower: { text: 'L' } }), 0, 200, 'companion')).toThrow(/probe.*no follower/);
   });
 });
 
@@ -1558,9 +1669,8 @@ describe('the inputs page', () => {
     expect(left).toContain('sin(');
     expect(top).toContain('cos(');
     // Clamped to the lock the pit wall's own steering trace is drawn at, so full lock is full lock
-    // and not a mark that has come round past the top again.
-    expect(left).toContain('min(max(');
-    expect(left).toContain('3.5');
+    // and not a mark that has come round past the top again, with the bounds on the left (#1046).
+    expect(left).toContain('max(-3.5, min(3.5, ');
     // Where the two formulas put the mark on a wheel that is straight is expressions.test.ts.
     expect((named(items, 'inputs.steer.label') as TextItem).text).toBe('Steer');
   });

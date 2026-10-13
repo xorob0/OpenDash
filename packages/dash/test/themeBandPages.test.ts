@@ -55,7 +55,8 @@ describe('band D’s catalogue on a themed face', () => {
     expect(BAND_D_PAGES).toHaveLength(8);
     expect(defaultZonePage('D', house)).toBe(DEFAULT_ZONE_PAGE.D);
     expect(defaultZoneMask('D', house)).toBe(defaultZoneMask('D'));
-    expect(defaultZoneMask('D')).toBe(255);
+    // Every page but the eighth, the car page held back from 1.0 (#969).
+    expect(defaultZoneMask('D')).toBe(255 & ~(1 << 7));
   });
 
   test('is the house’s eight and then the theme’s, numbered on, so no house page leaves its index', () => {
@@ -63,7 +64,7 @@ describe('band D’s catalogue on a themed face', () => {
     expect(pages.slice(0, 8)).toEqual([...BAND_D_PAGES]);
     expect(pages.slice(8)).toEqual([{ number: 8, id: 'porscheFoot', name: 'Porsche' }]);
     for (const [i, page] of pages.entries()) expect(page.number).toBe(i);
-    expect(defaultZoneMask('D', porsche)).toBe(511);
+    expect(defaultZoneMask('D', porsche)).toBe(511 & ~(1 << 7));
   });
 
   test('opens on the theme’s first page, and changes no other zone', () => {

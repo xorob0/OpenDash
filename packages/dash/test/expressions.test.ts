@@ -20,6 +20,8 @@ import { expressionsOf, walkItems } from '../src/walk.ts';
 import { sectorIsSlower, sectorIsZero } from '../src/second/sectors.ts';
 import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
+import { ds } from '../src/tokens.ts';
 import type { TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
@@ -32,15 +34,13 @@ const textItem = (id: string, name: string): TextItem => {
  * A numeric NCalc formula evaluated in JavaScript, every property read standing for `value`.
  *
  * A formula that is arithmetic rather than a string is worth what it computes, and the dial's two
- * are the whole of its movement. `isnull` is NCalc's and the rest are the maths library, which is
- * .NET's and therefore JavaScript's to six decimals.
+ * are the whole of its movement. The sine and cosine are .NET's and therefore JavaScript's to six
+ * decimals, and the clamp's `min` and `max` answer in their left operand's type as NCalc's do, which
+ * the shared evaluator models (#1046).
  */
 const evaluateNumber = (formula: string, value: number): number => {
-  const js = formula
-    .replace(/\[[^\]]+\]/g, String(value))
-    .replace(/\bisnull\(/g, 'nz(')
-    .replace(/\b(sin|cos|min|max)\(/g, 'Math.$1(');
-  return Number(new Function('nz', `return ${js};`)((v: number, fallback: number) => v ?? fallback));
+  const props = Object.fromEntries([...formula.matchAll(/\[([^\]]+)\]/g)].map(([, name]) => [name, value]));
+  return Number(evalNcalc(formula, props));
 };
 
 const formulaOf = (item: TextItem, target: 'Text' | 'TextColor' | 'Left' | 'Visible'): string => {
@@ -62,25 +62,27 @@ describe('ncalc helpers', () => {
 
   test('hms formats seconds as h:mm:ss without TimeSpan format strings', () => {
     const e = ncalc.hms('[S]');
-    expect(e).toContain('max(0, [S])');
+    expect(e).toContain('max(0.0, [S])');
     expect(e).toContain('/ (3600)');
-    expect(e).toContain("format(truncate(((max(0, [S])) % (3600)) / (60)), '00')");
-    expect(e).toContain("format(truncate((max(0, [S])) % (60)), '00')");
+    expect(e).toContain("format(truncate(((max(0.0, [S])) % (3600)) / (60)), '00')");
+    expect(e).toContain("format(truncate((max(0.0, [S])) % (60)), '00')");
     expect(e).not.toContain('\\');
   });
 });
 
 describe('card expressions', () => {
-  test('position follower Left is x + digitCount * cell + gap', () => {
+  test('position follower Left is x + digitCount * cell + gap, and two cells for the `--` of a grid (#992)', () => {
     const left = formulaOf(textItem('position', 'denominator'), 'Left');
-    expect(left).toMatch(/^\(16\) \+ \(\(if\(.* >= \(10\), 2, 1\)\) \* \(31\)\) \+ \(8\)$/);
+    expect(left).toMatch(/^\(16\) \+ \(if\(.* > \(0\), \(if\(.* >= \(10\), 2, 1\)\) \* \(31\), 62\)\) \+ \(8\)$/);
     expect(left).toContain('driverclassposition(getplayerleaderboardposition())');
+    expect(left).toContain('driverposition(getplayerleaderboardposition())');
     expect(formulaOf(textItem('position', 'denominator'), 'Text')).toContain("('/ ') + (format(");
   });
 
   test('session resolves its mode from the setting and the 0 < time left <= 86400 guard', () => {
     const mode = "isnull([OpenDash.SessionProgress], 'auto')";
-    const secs = 'timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft])';
+    // Guarded outside the conversion, so a frame with no session reads as untimed rather than throwing (#586).
+    const secs = 'isnull(timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]), 0)';
     const timed = `((${secs}) > (0)) and ((${secs}) <= (86400))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
@@ -131,7 +133,7 @@ describe('card expressions', () => {
 
   test('lap times use toshorttime with forced minutes and dim no-data glyphs', () => {
     expect(formulaOf(textItem('currentLap', 'value'), 'Text')).toBe(
-      "if((timespantoseconds([DataCorePlugin.GameData.CurrentLapTime])) <= (0), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
+      "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.CurrentLapTime]), 0)) > (0)), '−:−−.−', toshorttime([DataCorePlugin.GameData.CurrentLapTime], 1, false, true))",
     );
     // One spelling of the placeholder, shared with the module pages, and a true minus in every
     // cell: the cards wrote theirs with hyphens and one glyph fewer than the time it stands in for.
@@ -171,14 +173,22 @@ describe('card expressions', () => {
     expect(colour).toContain(`${deadband}'#F5F7FA'`);
   });
 
-  test('assists show -- without the raw field, OFF at zero', () => {
-    expect(formulaOf(textItem('tc', 'value'), 'Text')).toBe(
-      "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))",
-    );
-    expect(formulaOf(textItem('abs', 'value'), 'Text')).toContain('dcABS');
-    expect(formulaOf(textItem('abs', 'value'), 'TextColor')).toBe(
-      "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))",
-    );
+  test('assists show -- on a car without the system, OFF at zero', () => {
+    const KNOB = { tc: 'DataCorePlugin.GameRawData.Telemetry.dcTractionControl', abs: 'DataCorePlugin.GameRawData.Telemetry.dcABS' };
+    const LEVEL = { tc: 'DataCorePlugin.GameData.TCLevel', abs: 'DataCorePlugin.GameData.ABSLevel' };
+    for (const id of ['tc', 'abs'] as const) {
+      const shown = (props: Props) => ({ text: evalNcalc(formulaOf(textItem(id, 'value'), 'Text'), props), colour: evalNcalc(formulaOf(textItem(id, 'value'), 'TextColor'), props) });
+      // No knob and no level: a car without the system, which is the one case for the dashes.
+      expect(shown({ [LEVEL[id]]: 0 })).toEqual({ text: '--', colour: ds.purpose.assist.none });
+      // The knob turned to zero is the system switched off.
+      expect(shown({ [KNOB[id]]: 0, [LEVEL[id]]: 0 })).toEqual({ text: 'OFF', colour: ds.purpose.assist.off });
+      expect(shown({ [KNOB[id]]: 3, [LEVEL[id]]: 3 })).toEqual({ text: '3', colour: ds.color.text.primary });
+      // A level and no knob is a fixed system, or a sim without iRacing's knobs: `assistPresent`
+      // says the car has it, as the strip beside the card does, so the level is drawn and not `--`.
+      expect(shown({ [LEVEL[id]]: 4 })).toEqual({ text: '4', colour: ds.color.text.primary });
+      // A knob with no level published reads as off rather than throwing on a null.
+      expect(shown({ [KNOB[id]]: 0 })).toEqual({ text: 'OFF', colour: ds.purpose.assist.off });
+    }
   });
 
   test('tyre temps convert thresholds per unit and tyre pressures spell the unit as its symbol', () => {
@@ -205,6 +215,25 @@ describe('second-screen values', () => {
     expect(gap).toContain("'-', '−'");
   });
 
+  test('a relative gap past a hundred seconds gives up a place rather than its last digit (#886)', () => {
+    // Half a lap of Le Mans: `−104.315` is seven digit cells of six, and WPF drew it `−104.31`
+    // only by cutting the last one off; rounded, it is the figure.
+    const gap = values.carRelativeGap('1').replaceAll('driverrelativegaptoplayer(1)', '[GAP]');
+    const READINGS: readonly [number | null, string][] = [
+      [-5.886, '−5.886'],
+      [0.722, '+0.722'],
+      [-45.678, '−45.678'],
+      [-104.317, '−104.32'],
+      [241.567, '+241.57'],
+      [null, '--'],
+    ];
+    for (const [seconds, text] of READINGS) {
+      const drawn = String(evalNcalc(gap, { GAP: seconds }));
+      // The point is the one narrow cell; every other character takes a digit cell.
+      expect({ seconds, drawn, fits: drawn.replace('.', '').length <= values.CHARS.relativeGap.digits }).toEqual({ seconds, drawn: text, fits: true });
+    }
+  });
+
   test('the no-data lap time is one placeholder of the same shape as the time it stands in for', () => {
     expect(values.NO_TIME).toBe('−:−−.−−−');
     expect(values.NO_TIME).toHaveLength('1:42.905'.length);
@@ -215,6 +244,7 @@ describe('second-screen values', () => {
   test('a missing lap time draws the placeholder rather than throwing (#454)', () => {
     // SimHub's timespantoseconds answers null for the number 0, and NCalc's `null > 0` throws, which
     // SimHub draws as an empty field. So the null guard wraps the conversion and never sits inside it.
+    expect(values.secondsOf('[T]')).toBe('isnull(timespantoseconds([T]), 0)');
     expect(values.hasTime('[T]')).toBe('(isnull(timespantoseconds([T]), 0)) > (0)');
     expect(values.lapTime('[T]')).not.toContain('timespantoseconds(isnull(');
     expect(values.sectorTime('[T]')).not.toContain('timespantoseconds(isnull(');
@@ -312,7 +342,9 @@ describe('hero expressions', () => {
   const CAR_OWN_FLASH = `((isnull([OpenDash.CarLadderOverRev], false)) = (true)) and (!(${LAST_GEAR}))`;
   // The two derived flashes and the choice between them, which is what the measured bar falls back to
   // for a car whose table carries no flash -- 47 of the 85. Spelled out here too, for the same reason.
-  const MIRROR_FLASH = `((${RPMS}) >= (max(${SL('Blink')}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
+  // The blink's fallback is the double 0.0, so the max keeps the last light's own type (#1046).
+  const BLINK = 'isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0.0)';
+  const MIRROR_FLASH = `((${RPMS}) >= (max(${BLINK}, ${SL('Last')}))) and (!(${LAST_GEAR}))`;
   const SIMHUB_FLASH = `((isnull([DataCorePlugin.GameData.CarSettings_RPMRedLineReached], 0)) = (1)) and (!(${LAST_GEAR}))`;
   const EITHER_FLASH = `((${MIRROR}) and (${MIRROR_FLASH})) or ((!(${MIRROR})) and (${SIMHUB_FLASH}))`;
   const FLASHES = `(isnull([OpenDash.CarLadderFlashes], false)) = (true)`;
@@ -432,7 +464,7 @@ describe('hero expressions', () => {
       `if(((${RPMS}) > (${SL('First')})) and ((((${RPMS}) - (${SL('First')})) * (5)) > ((4) * ((${SL('Shift')}) - (${SL('First')})))), '#00D96A', '#33383F')`,
     ]);
     // The last band lights together at the last light, and flashes above the blink RPM rather than at redline.
-    const blink = `max(isnull([DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM], 0), ${SL('Last')})`;
+    const blink = `max(${BLINK}, ${SL('Last')})`;
     expect(seg(10).bindings?.BackgroundColor).toEqual({ mode: 'formula', formula: `if((${RPMS}) >= (${SL('Last')}), '#FF2D46', '#33383F')` });
     expect(seg(14).bindings?.BlinkEnabled).toEqual({ mode: 'formula', formula: `((${RPMS}) >= (${blink})) and (!(${LAST_GEAR}))` });
     expect(seg(14).blink).toEqual({ delayMs: 62 });

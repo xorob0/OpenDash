@@ -607,6 +607,52 @@ namespace OpenDashPlugin
         private volatile object classBestLap;
 
         /// <summary>
+        /// The race as it stands on the road, or null: what the <see cref="Contract.LivePosition"/> families
+        /// publish. Replaced whole on SimHub's data thread and read whole by each delegate, so a reader sees
+        /// one frame's ranking or the next one's, never a mixture of the two.
+        /// </summary>
+        private volatile LiveRace liveRace;
+
+        /// <summary>The leaderboard handed to <see cref="LivePosition"/>, kept between frames so a frame allocates nothing but its growth.</summary>
+        private readonly List<LiveCar> liveField = new List<LiveCar>();
+
+        /// <summary>
+        /// Fills <see cref="liveRace"/> from the frame SimHub has finished, or empties it where the sim's own
+        /// order is the one to draw, which includes a driver who turned Live positions off. See LivePosition.cs.
+        /// </summary>
+        /// <remarks>
+        /// The rows are SimHub's leaderboard rows on that frame, and a dashboard hands them to driver*()
+        /// functions that read the frame SimHub is building next. The two lists are the same list except on
+        /// the frame on which a car crosses the line and the sim reorders it, so a row can name the car next
+        /// to the one meant for that frame, and the next frame puts it right.
+        /// </remarks>
+        private void UpdateLivePosition(GameData data)
+        {
+            var frame = data != null && data.GameRunning ? data.NewData : null;
+            var opponents = frame == null ? null : frame.Opponents;
+            var settings = Settings;
+            var wanted = settings == null ? Contract.DefaultLivePositions : settings.LivePositions;
+            if (opponents == null || !OpenDashPlugin.LivePosition.Applies(wanted, data.GameName, frame.SessionTypeName, frame.Flag_Checkered != 0))
+            {
+                liveRace = null;
+                return;
+            }
+            while (liveField.Count < opponents.Count) liveField.Add(new LiveCar());
+            if (liveField.Count > opponents.Count) liveField.RemoveRange(opponents.Count, liveField.Count - opponents.Count);
+            for (var i = 0; i < opponents.Count; i++)
+            {
+                var opponent = opponents[i];
+                var car = liveField[i];
+                car.Progress = opponent == null ? null : opponent.CurrentLapHighPrecision;
+                car.Position = opponent == null ? 0 : opponent.Position;
+                car.CarClass = opponent == null ? null : opponent.CarClass;
+                car.IsPlayer = opponent != null && opponent.IsPlayer;
+                car.IsConnected = opponent != null && opponent.IsConnected;
+            }
+            liveRace = OpenDashPlugin.LivePosition.Rank(liveField);
+        }
+
+        /// <summary>
         /// The game, car, track and session SimHub last reported, for the settings panel. Written on the
         /// data thread only when one of them changed, and read on the interface thread as one reference.
         /// </summary>
@@ -677,6 +723,9 @@ namespace OpenDashPlugin
                 classBestLap = data != null && data.GameRunning && data.NewData != null
                     ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
                     : null;
+
+                // And the live place, from the same finished frame and before anything below can throw.
+                UpdateLivePosition(data);
 
                 // What the panel names, compared before anything is built and replaced only when
                 // something in it moved, so a frame in which nothing did allocates nothing for the
@@ -919,7 +968,7 @@ namespace OpenDashPlugin
             this.AttachDelegate(Contract.DeltaReference, () => Settings.DeltaReference);
             this.AttachDelegate(Contract.SessionProgress, () => Settings.SessionProgress);
             // The twelve card slots. They are attached unconditionally and are not deprecated: a round
-            // face becomes zones on a ring before 1.0 (#145, #487), and until it does these are the only
+            // face becomes zones on a ring after 1.0 (#145, #487), and until it does these are the only
             // card-slot properties the two round packages read, the published OpenDash slots <size>
             // faces read four to twelve of them besides, and no zone face reads one. Deleting a mode
             // attachment above is not safe for a round face on that account: both round packages also
@@ -963,6 +1012,21 @@ namespace OpenDashPlugin
             {
                 var declared = themeSetting;
                 this.AttachDelegate(declared.Property, () => Settings.ThemeSetting(declared));
+            }
+            // And the race as it stands on the road, filled by DataUpdate from the frame SimHub has finished and
+            // null wherever the sim's own order stands. Not a setting: see Contract.LivePosition. #1063.
+            foreach (var family in Contract.LiveFamilies)
+            {
+                for (var n = 1; n <= OpenDashPlugin.LivePosition.Slots; n++)
+                {
+                    var name = family;
+                    var at = n;
+                    this.AttachDelegate(name + at, () =>
+                    {
+                        var race = liveRace;
+                        return race == null ? null : race.Read(name, at);
+                    });
+                }
             }
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
