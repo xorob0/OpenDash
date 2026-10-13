@@ -822,7 +822,7 @@ export const setting = {
 // reading the first two and the 800 the first six, and the eight `OpenDash slots <size>` card
 // faces, built for a comparison on a rig and published nowhere, read four to twelve of them besides. No zone face reads one. README.md publishes the
 // twelve as properties another dashboard or an LED profile may read. A round face becomes zones on a
-// ring before 1.0 (#145, #487), and that release is the one that carries a warning about the twelve;
+// ring after 1.0 (#145, #487), and that release is the one that carries a warning about the twelve;
 // none is promised before it (#170).
 //
 // The shape of these is the whole point of the model. A slot is arranged once, with a mouse,
@@ -1304,7 +1304,7 @@ export const quickGlancePage = (value: number): number => value % 100;
 export const zone = {
   /** `isnull([OpenDash.Face1920x480ZoneB], 0)`: the page a zone is showing, on a face of the theme given. */
   page: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zonePageSettingName(face, z))), num(defaultZonePage(z, theme))),
-  /** `isnull([OpenDash.Face1920x480ZoneBPages], 2097151)`: which pages are enabled, as a mask. */
+  /** `isnull([OpenDash.Face1920x480ZoneBPages], …)`: which pages are enabled, as a mask, every page on by default. */
   mask: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zoneMaskSettingName(face, z))), num(defaultZoneMask(z, theme))),
   /** `isnull([OpenDash.Face1920x480ZoneBStart], 0)`: the page the zone opens on. */
   start: (face: FaceSize, z: FaceZone, theme?: ThemeEntry): Expr => isnull(prop(propertyName(zoneStartSettingName(face, z))), num(defaultZonePage(z, theme))),

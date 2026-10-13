@@ -14,8 +14,8 @@ contributor or an agent should read first, and the one that has to be amended wh
 > faces. The twelve-slot ones they replaced are still built as `OpenDash slots <size>`, and they are
 > what they already were in practice: a comparison built for a rig from a local build, installed by
 > nothing and published nowhere (#438), until #146 deletes them. The two round faces still ship on the card
-> model, and that is a decision rather than a gap: a round face becomes zones on a ring before 1.0
-> (#487), and until that lands it stays the design it is (#145).
+> model, and that is a decision rather than a gap: they ship on it in 1.0, a round face becomes zones
+> on a ring after the release (#487), and until that lands it stays the design it is (#145).
 >
 > The distinction matters because of the rule at the end of the refusals: a line has to move here
 > before the code that crosses it may be written. That is the reason this document changed first.
@@ -63,7 +63,7 @@ a recessed well, a bar of settled values, a body of zone B, zone A and zone C, a
 the foot.
 
 Each zone shows **one page at a time from its own catalogue, and a wheel button cycles it**. Zone
-A chooses among four pages built around the gear; zones B and C among the twenty-one that also
+A chooses among four pages built around the gear; zones B and C among the module pages that also
 serve the companion and the pit wall; band D among seven that suit a wide short band, with a flag
 taking the band over for three seconds when it comes out and then settling into the block at each
 end until it clears. Band D's eighth page, the telltale row, is held back from 1.0 until its
@@ -87,8 +87,8 @@ card model, on purpose, and what they become is noted below.
 | `OpenDash 800x480` | 800 x 480 | derived from 850 x 480 |
 | `OpenDash 800x286` | 800 x 286 | no bar: the height is not there |
 | `OpenDash 600x686` | 600 x 686 | portrait, A over B over C |
-| `OpenDash 800 round` | 800 x 800 | the card model until #487 converts it; see below |
-| `OpenDash 480 round` | 480 x 480 | the card model until #487 converts it; see below |
+| `OpenDash 800 round` | 800 x 800 | the card model in 1.0, until #487 converts it; see below |
+| `OpenDash 480 round` | 480 x 480 | the card model in 1.0, until #487 converts it; see below |
 
 **The base size is 850 x 480 and the large size is 1280 x 480.** They are the pair anything that
 has to pick a face picks: the size `bun run dev` opens when no package is named, the two the
@@ -129,26 +129,32 @@ that the two cannot drift.
 every page of every catalogue, and the shape model. [ADR 0006](decisions/0006-the-zone-face.md) is
 why the model changed from twelve equal slots, which is what shipped in 0.1.0.
 
-**A round face becomes zones on a ring, before 1.0 (#487).** The rev arc it already has, zone A in the
+**A round face becomes zones on a ring, after 1.0 (#487).** The rev arc it already has, zone A in the
 middle, the rectangles its cards occupy today as small catalogue zones, and the flag on the ring:
 no bar and no band. That is the answer #145 took, of three, and
 [design/zones.md](design/zones.md) section 9 is the written form of it, with an amendment to
 [ADR 0006](decisions/0006-the-zone-face.md) recording the date.
 
-**Until that work is done the two round faces ship on the card model, deliberately.** They are
-decided and not yet converted, which is a different thing from undecided, and it is why
-`OpenDash.Slot01` to `Slot12` stay until #487 lands (#170). The card path is retired at 1.0: #487
-converts the round faces and #146 deletes the path behind them, in that order, and the rule that
-kept it through 1.0 was removed on 2026-09-29. The canvas owes two round artboards drawn on the new
-model and the plugin panel owes a round picker before the conversion can be built.
+**Until that work is done the two round faces ship on the card model, deliberately, and 1.0 ships
+them that way.** They are decided and not yet converted, which is a different thing from undecided,
+and it is why `OpenDash.Slot01` to `Slot12` stay attached and undeprecated through 1.0 and until
+#487 lands (#170). The card path is not retired at 1.0: after the release #487 converts the round
+faces and #146 deletes the path behind them, in that order. The canvas owes two round artboards
+drawn on the new model and the plugin panel owes a round picker before the conversion can be built,
+and neither exists yet. So a round screen in 1.0 is a card face, and adding one from the Screens page
+has to work (#474).
+
+From 2026-09-29 to 2026-10-09 this section said the opposite: that the conversion was before 1.0
+and the card path retired at it. That was withdrawn in the triage of the open tickets for 1.0 on
+2026-10-09, because the conversion's first obligation is the two artboards and they have not been
+drawn; [ADR 0006](decisions/0006-the-zone-face.md) records both amendments.
 
 ### The companion
 
 A phone or tablet beside the wheel showing one module at a time, in landscape at 850 x 480 or in
-portrait at 480 x 850. There are twenty-one modules, each of which is its own SimHub screen with
-its own switch in the plugin, and a module that is switched off is removed from SimHub's
-next-and-previous ring rather than left as an empty page. Paging is a wheel button bound to
-SimHub's own screen navigation.
+portrait at 480 x 850. Each module is its own SimHub screen with its own switch in the plugin, and
+a module that is switched off is removed from SimHub's next-and-previous ring rather than left as an
+empty page. Paging is a wheel button bound to SimHub's own screen navigation.
 
 ### The pit wall
 
@@ -228,7 +234,7 @@ and it states how far the line moved and what would move it further.
 The settings are the shift lights, the position mode, the delta reference and the places the delta
 is drawn to, the session progress mode, the four zones of the face (the page each shows, which pages
 are enabled, and the page it opens on), the quick glance, the bar's four end fields, twelve card
-slots, twenty-one companion module switches, five pit wall zone assignments and a web view address.
+slots, a switch for each companion module, five pit wall zone assignments and a web view address.
 Because they are ordinary SimHub properties, another dashboard or an LED profile can read them, and
 a change reaches the running dashboard at once without restarting SimHub or reopening the dashboard.
 
@@ -238,8 +244,9 @@ the only readers are the two round ones: `OpenDash 480 round` reads the first tw
 eight `OpenDash slots <size>` packages of the banner above read them too, four to twelve each and
 all twelve at 1920 x 480 and 1280 x 720, because they are the card faces the zone faces replaced;
 the csproj keeps them out of the plugin's resources and no release publishes them, so they are
-built for a comparison on a rig and are no reason to keep anything. The card path is retired at 1.0,
-once #487 has converted the round faces (#146). The twelve are not deprecated and no release is promised to remove them before that; the release that
+built for a comparison on a rig and are no reason to keep anything. The card path is not retired at
+1.0: the round faces ship on it, and #146 retires it after the release, once #487 has converted them.
+The twelve are not deprecated and no release is promised to remove them before that; the release that
 converts a round face to zones on a ring, #487, is the one that says what becomes of
 them (#170).
 

@@ -915,7 +915,7 @@ namespace OpenDashPlugin
         // --- The zone face ---------------------------------------------------------------------
         //
         // Additive: Slot01 to Slot12 stay, and they are not on their way out. They drive the two
-        // round faces, which ship on the card model until a round face becomes zones on a ring before
+        // round faces, which ship on the card model until a round face becomes zones on a ring after
         // 1.0 (#145, #487), so the release that converts those faces is the one that carries a warning
         // about the twelve. The eight published OpenDash slots <size> card faces read them as well;
         // no zone face does. #170.
@@ -1497,7 +1497,7 @@ namespace OpenDashPlugin
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
         public static readonly string[] FaceZoneLetters = { "A", "B", "C", "D" };
 
-        /// <summary>How many pages each zone can show, in letter order: A four, B and C the twenty-one
+        /// <summary>How many pages each zone can show, in letter order: A four, B and C the
         /// modules, D eight. The house's catalogues: a theme adds band pages, which
         /// <see cref="FaceZonePageCount"/> counts.</summary>
         public static readonly IReadOnlyList<int> FaceZonePageCounts = new[] { 4, Modules.Count, Modules.Count, 8 };
@@ -1998,7 +1998,7 @@ namespace OpenDashPlugin
         /// release read four to twelve of them besides, and no zone face reads one. They are published
         /// in README.md as properties another dashboard or an LED profile may read, they are not
         /// deprecated, and no release is promised to remove them. The one that would is the release
-        /// converting the round faces to zones on a ring, which is before 1.0. #145, #487, #170.
+        /// converting the round faces to zones on a ring, which is after 1.0. #145, #487, #170.
         /// </remarks>
         public static string SlotProperty(int slot)
         {
@@ -2069,7 +2069,7 @@ namespace OpenDashPlugin
         /// them. Both reach the screen through CompanionOpenOn, forced for a moment: the start by Init
         /// and the panel, the glance by its button.
         ///
-        /// The page is appended after the twenty-one rather than put in front of them, because both
+        /// The page is appended after the switches rather than put in front of them, because both
         /// halves of the contract assert this group by index.
         /// </remarks>
         public static IEnumerable<string> CompanionPropertyNames(string ns)

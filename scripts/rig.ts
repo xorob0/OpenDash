@@ -3,8 +3,8 @@
  * rig: put a set of screens on the VM's plugin, so the captures show more than one layout.
  *
  * Every face draws the same four default pages, which is right for a first run and wrong for a
- * wall of pictures: ten photographs of lap times, the gear and the relative say less about
- * twenty-one pages than eight photographs of eight different ones. The plugin already decides what
+ * wall of pictures: ten photographs of lap times, the gear and the relative say less about the
+ * catalogue's pages than eight photographs of eight different ones. The plugin already decides what
  * a zone shows, and it keeps that decision in its settings file, so this writes a rig there rather
  * than clicking through the panel forty times.
  *
