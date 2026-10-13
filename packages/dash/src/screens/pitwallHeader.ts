@@ -33,9 +33,13 @@ import { densityOf } from '../second/density.ts';
 import { inlineGroup, type InlinePart } from '../second/header.ts';
 import {
   CHARS,
+  INCIDENTS_WIDEST,
+  LAP_TOTAL_WIDEST,
+  LAP_WIDEST,
   GRIP_WIDEST,
   SESSION_NAME_WIDEST,
   currentLap,
+  hasLapTotal,
   incidentLimit,
   incidents,
   localClock,
@@ -52,7 +56,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { concat, str, fmt, iff, gt, num, isnull, isNull, not } = ncalc;
+const { concat, str, fmt, iff, num, isnull, isNull, not } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
@@ -68,7 +72,7 @@ const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 const WIDEST_LAP_TOTAL = 'of 999';
 
 /** The same total after the portrait's "Lap 12 / 30", which writes it as a denominator. */
-const WIDEST_LAP_DENOMINATOR = '/ 999';
+const WIDEST_LAP_DENOMINATOR = LAP_TOTAL_WIDEST;
 
 /**
  * The strongest wind the readout has room for, unit included. iRacing's weather generator stays
@@ -197,14 +201,16 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
 
   const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
-  const lapTotal = gt(totalLaps(), num(0));
+  // `of 30` is the race's length only in a race counted in laps; in a timed iRacing race `TotalLaps`
+  // is the leader's laps, and `L12 of 14` read as two laps to go with half an hour to run (#989).
+  const lapTotal = hasLapTotal();
   const groups: HeaderGroup[] = [
     compact
       ? {
           id: 'lap',
           parts: [
             { kind: 'label', text: 'Lap' },
-            { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: { digits: 3, specials: 0 } },
+            { kind: 'value', sample: '12', bind: fmt(currentLap(), '0'), chars: CHARS.lap, widest: LAP_WIDEST },
             { kind: 'label', text: '/ 30', widest: WIDEST_LAP_DENOMINATOR, bind: concat(str('/ '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],
         }
@@ -215,7 +221,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
             // leaves falls to the left, into the empty middle of the header, rather than opening a
             // hole between the session name and the lap.
             { kind: 'label', text: 'Race', widest: SESSION_NAME_WIDEST, hAlign: 'right', bind: sessionType() },
-            { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 } },
+            { kind: 'value', sample: 'L12', bind: concat(str('L'), fmt(currentLap(), '0')), chars: { digits: 4, specials: 0 }, widest: `L${LAP_WIDEST}` },
             { kind: 'label', text: 'of 30', widest: WIDEST_LAP_TOTAL, bind: concat(str('of '), fmt(totalLaps(), '0')), visibleBind: lapTotal },
           ],
         },
@@ -230,7 +236,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
       id: 'incidents',
       parts: [
         { kind: 'label', text: 'Inc' },
-        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: { digits: 4, specials: 0 }, color: ds.purpose.alert.incident },
+        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, widest: INCIDENTS_WIDEST, color: ds.purpose.alert.incident },
         ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
       ],
     },

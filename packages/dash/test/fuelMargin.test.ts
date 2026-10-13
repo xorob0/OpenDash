@@ -65,6 +65,7 @@ const telemetry = (
     lapsLeft?: number;
     fuelSeconds?: number;
     sessionSeconds?: number;
+    bestLap?: number;
     progress?: string;
     type?: string | null;
   } = {},
@@ -75,6 +76,7 @@ const telemetry = (
   'DataCorePlugin.GameData.RemainingLaps': opts.lapsLeft ?? 11,
   'DataCorePlugin.Computed.Fuel_RemainingTime': opts.fuelSeconds ?? 1500,
   'DataCorePlugin.GameData.SessionTimeLeft': opts.sessionSeconds ?? A_WEEK,
+  ...(opts.bestLap === undefined ? {} : { 'DataCorePlugin.GameData.BestLapTime': opts.bestLap }),
   'DataCorePlugin.GameData.SessionTypeName': opts.type === undefined ? 'Race' : opts.type,
   ...(opts.progress === undefined ? {} : { 'OpenDash.SessionProgress': opts.progress }),
 });
@@ -105,7 +107,9 @@ describe('the fuel margin on the fuel module', () => {
   test('which of the two it draws follows SessionProgress, as the session page’s counter does', () => {
     // A timed session with the setting on laps compares laps, and a lap-counted one with the setting
     // on time has no time to compare and says so, which is what the session page draws there too.
-    const both = { fuelLaps: 13.1, lapsLeft: 11, fuelSeconds: 1500, sessionSeconds: 1200 } as const;
+    // The timed session's laps are the time left over its best lap and the one the clock runs out on,
+    // twenty minutes at two being eleven, as the lap-counted session's `RemainingLaps` is (#1008).
+    const both = { fuelLaps: 13.1, lapsLeft: 11, fuelSeconds: 1500, sessionSeconds: 1200, bestLap: 120 } as const;
     expect(marginOn(fuelItems, telemetry({ ...both, progress: 'auto' })).value).toBe('+5');
     expect(marginOn(fuelItems, telemetry({ ...both, progress: 'laps' })).value).toBe('+2.1');
     expect(marginOn(fuelItems, telemetry({ ...both, progress: 'time' })).value).toBe('+5');

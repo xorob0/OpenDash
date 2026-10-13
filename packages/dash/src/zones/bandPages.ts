@@ -46,6 +46,8 @@ import {
   carRelativeGap,
   RELATIVE_GAP_WIDEST,
   CHARS,
+  INCIDENTS_WIDEST,
+  LAP_WIDEST,
   clock,
   currentLap,
   fuel as fuelLevel,
@@ -284,7 +286,7 @@ const energy: readonly BandField[] = [
 
 /** D3 Stint. The pit window needs a strategy the plugin does not compute; see ADR 0009. */
 const stint: readonly BandField[] = [
-  { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.position },
+  { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.lap, numeralWidest: LAP_WIDEST },
   { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(secondsOf(driver('timesincelastpitout', playerPosition()))), chars: CHARS.clock },
   { id: 'stops', label: 'Stops', sample: '1', bind: fmt(isnull(driver('pitcount', playerPosition()), num(0)), '0'), chars: CHARS.position },
   {
@@ -900,7 +902,10 @@ const leftCornerFields = (): BandField[] => [
     label: 'Incidents',
     sample: '3x',
     bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')),
-    chars: CHARS.count,
+    // The count's three cells and one for the `x`, which is how the bar and the session page cut the
+    // same reading: in the count's three alone, `100x` lost its `x` to the corner's edge. #596.
+    chars: CHARS.incidents,
+    numeralWidest: INCIDENTS_WIDEST,
     color: ds.color.caution.primary,
   },
   // Mixed case rather than upper: "Dry" is a word the driver reads at a glance and "DRY" is one he
