@@ -1033,6 +1033,38 @@ with SimHub's property list open and read `SteeringWheelAngle` going positive.
   The emulator scenarios that sweep the angle do so symmetrically, so none of the committed traces
   could have shown the sign either way.
 
+### iRacing's place moves only at the line, and SimHub keeps it that way (2026-10-13, #1063)
+
+Established by decompiling `GameReaderCommon.dll` from SimHub 9.12.6 (`GameManagerBase.PreParseDataBase`
+and `ComputeOpponentsData`). The iRacing reader itself is not among the assemblies OpenDash vendors, so
+what it fills is inferred from the symptom and from what iRacing documents, not read.
+
+- **`Opponent.Position` is the sim's place, and iRacing moves it at the start/finish line.** iRacing's
+  `CarIdxPosition` and `CarIdxClassPosition` are official scoring and change when a car crosses the
+  line. `driverposition()` and `driverclassposition()` read them, and so does every place OpenDash
+  drew, so a pass in the first corner showed a lap later.
+- **SimHub's leaderboard is sorted on `LivePosition` first.** `PreParseDataBase` orders the opponents
+  by `LivePosition` (0 counting as 9999), then `Position`, then best lap, and the index every
+  `driver*` function takes and `getplayerleaderboardposition()` returns is a place in that list.
+  `Opponent.LivePosition` is an `int` that nothing in `GameReaderCommon` writes; a reader that filled
+  it would make the leaderboard live. On iRacing the order is the sim's, so it is not filled there.
+  `PositionInClass`, where SimHub computes it, counts down the list sorted by `Position` first, so it
+  waits for the line too.
+- **`CurrentLapHighPrecision` is the distance covered, kept continuous across the line.** It is
+  `CurrentLap - 1 + TrackPositionPercent` unless the reader set it, and where it jumps by more than
+  half a lap within 1% of the line SimHub adds or takes away the lap that was counted early or late.
+  It is published per car as `drivercurrentlaphighprecision()`, and it is what the plugin ranks the
+  field on to publish the race as it stands on the road: each row's place over the field and in its
+  class, `OpenDash.LivePosition<row>` and `LiveClassPosition<row>`, and the row in each place,
+  `LiveOrder<place>` and `LiveClassOrder<place>` (`plugin/OpenDash/LivePosition.cs`).
+- **A property name can be built in the expression.** `prop('OpenDash.LiveOrder' + 3)` reads
+  `OpenDash.LiveOrder3`: NCalc's `+` writes a number into a string, and SimHub's `prop` takes the
+  name as an expression, as the lap history's `PreviousLap_NN` already relies on. The live names are
+  unpadded so a row or a place goes in with `+` alone, without a `format`.
+- The emulator ranks its field by distance on every tick (`tools/irsdk-emulator/Drivers.cs`), so on
+  the VM the sim's place is already live and this never showed. It is the emulator that is
+  generous, not iRacing.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)

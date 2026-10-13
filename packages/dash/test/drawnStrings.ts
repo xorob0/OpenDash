@@ -13,10 +13,10 @@
  * '°F', ..)) + ' · LAST STOP'` has no literal wider than the declared `TYRES °F`, and draws a
  * string that is. So this reads the expression as a tree and works out what the tree can draw.
  *
- * It cannot know everything -- a `[Property]` or a `format(...)` is whatever the sim sends -- and it
- * does not pretend to. Every string it returns is a **floor**: a string some output of the binding
- * is certain to be at least as wide as, in any face, because it is that output with the unknowable
- * parts left out. A floor wider than `widest` is therefore a real defect and never a false alarm,
+ * It cannot know everything -- a `[Property]` or a `format(...)` is whatever the sim sends, short of
+ * the few properties `VOCABULARIES` lists the words of -- and it does not pretend to. Every string
+ * it returns is a **floor**: a string some output of the binding is certain to be at least as wide
+ * as, in any face, because it is that output with the unknowable parts left out. A floor wider than `widest` is therefore a real defect and never a false alarm,
  * and a binding whose output is entirely unknowable has no floors and nothing to say, which is the
  * honest answer rather than a guess. A floor built from literals alone is also *exact* -- an
  * output as written -- and the readings that need a whole string, `left` and `replace`, act only on
@@ -24,7 +24,31 @@
  */
 import { measureText } from '../src/design/advances.ts';
 import type { TextItem } from '../src/generator.ts';
+import { SESSION_NAMES } from '../src/second/values.ts';
 import { bindingExpression, faceOf } from './monoGlyphs.ts';
+
+/**
+ * The properties whose every value is known, and the values: what the sim writes there is one of
+ * these words, so each is an output as written rather than nothing anyone can say.
+ *
+ * Only a property with a closed vocabulary that a source of record names belongs here. The session
+ * type is the one a box was cut too short for while every test passed, because a free property had
+ * no floor to hold a `widest` to and the session page declared none (#1029).
+ */
+export const VOCABULARIES: Readonly<Record<string, readonly string[]>> = {
+  'DataCorePlugin.GameData.SessionTypeName': SESSION_NAMES,
+};
+
+/**
+ * True where an item's text is bound to an expression that reads a property whose words are known.
+ *
+ * Read off the expression as written, so a binding that only tests the property, as the fuel to the
+ * end asks whether the session is a race, counts too. That asks a `widest` of it and nothing more.
+ */
+export function readsVocabulary(item: TextItem): boolean {
+  const expression = bindingExpression(item, 'Text');
+  return Object.keys(VOCABULARIES).some((property) => expression.includes(`[${property}]`));
+}
 
 type Node =
   | { kind: 'str'; value: string }
@@ -251,8 +275,11 @@ function floorsOf(node: Node): Floor[] {
       return [{ text: node.value, exact: true }];
     // A number is drawn as its digits, but `+` on two of them is a sum and not a string, so a
     // number's floor is nothing rather than a digit that might be added away.
+    case 'prop': {
+      const words = VOCABULARIES[node.name];
+      return words === undefined ? [...UNKNOWN] : words.map((text) => ({ text, exact: true }));
+    }
     case 'num':
-    case 'prop':
     case 'ident':
     case 'unary':
       return [...UNKNOWN];
@@ -323,6 +350,19 @@ export function drawnFloors(expression: string): string[] {
 export function certainlyDrawn(item: TextItem): string[] {
   const expression = bindingExpression(item, 'Text');
   return expression === '' ? [item.text] : drawnFloors(expression);
+}
+
+/**
+ * What an item draws in full where that is known: its exact floors where it is bound, each an output
+ * as written, and its own text where it is not. A binding that writes anything the sim chooses has
+ * none, and the strings returned are drawn as they are, character for character.
+ */
+export function exactlyDrawn(item: TextItem): string[] {
+  const expression = bindingExpression(item, 'Text');
+  if (expression === '') return [item.text];
+  return floorsOf(parseNcalc(expression))
+    .filter((f) => f.exact && f.text !== '')
+    .map((f) => f.text);
 }
 
 /**

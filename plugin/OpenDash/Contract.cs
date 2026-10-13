@@ -84,6 +84,40 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string PorscheCrest = "PorscheCrest";
 
+        /// <summary>
+        /// The race as it stands on the road during an iRacing race: <c>LivePosition&lt;row&gt;</c> is the place
+        /// over the field of the car on SimHub's leaderboard row, counted from one and unpadded. Published
+        /// rather than chosen, and null wherever the sim's own order is the one to draw.
+        /// </summary>
+        /// <remarks>
+        /// iRacing moves a car's place only when it crosses the start/finish line, SimHub passes that place on
+        /// as it is and sorts its leaderboard on it, so every place, list and gap on a dashboard moved a lap
+        /// after the pass that changed it (#1063). The plugin ranks the field on SimHub's
+        /// CurrentLapHighPrecision instead; LivePosition.cs says how, and when it publishes nothing. A
+        /// dashboard reads each of the four families with SimHub's own answer as its isnull() fallback, which
+        /// is also what it draws with no plugin. Unpadded so an expression can name one with + alone.
+        /// </remarks>
+        public const string LivePosition = "LivePosition";
+
+        /// <summary><c>LiveClassPosition&lt;row&gt;</c>: the place in its own class of the car on that row. See <see cref="LivePosition"/>.</summary>
+        public const string LiveClassPosition = "LiveClassPosition";
+
+        /// <summary><c>LiveOrder&lt;place&gt;</c>: the leaderboard row of the car in that place over the field. See <see cref="LivePosition"/>.</summary>
+        public const string LiveOrder = "LiveOrder";
+
+        /// <summary><c>LiveClassOrder&lt;place&gt;</c>: the leaderboard row of the car in that place of the player's class. See <see cref="LivePosition"/>.</summary>
+        public const string LiveClassOrder = "LiveClassOrder";
+
+        /// <summary>The four families, in the order they are attached.</summary>
+        public static readonly string[] LiveFamilies = { LivePosition, LiveClassPosition, LiveOrder, LiveClassOrder };
+
+        /// <summary>Every live property, family by family and from one to <see cref="OpenDashPlugin.LivePosition.Slots"/> within each.</summary>
+        public static IEnumerable<string> LivePropertyNames()
+        {
+            foreach (var family in LiveFamilies)
+                for (var n = 1; n <= OpenDashPlugin.LivePosition.Slots; n++) yield return family + n;
+        }
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -289,6 +323,15 @@ namespace OpenDashPlugin
         /// <summary>On, which is what every surface drew before there was a choice: a flag waved at the
         /// pit exit is still a flag.</summary>
         public const bool DefaultFlagsInPitLane = true;
+
+        /// <summary>
+        /// Whether the plugin publishes the race as it stands on the road (<see cref="LivePosition"/>): on, so
+        /// an iRacing place moves when a car is passed rather than when it next crosses the line. Off, the
+        /// plugin publishes nothing and every dashboard draws iRacing's own order, which is also what it
+        /// draws with no plugin. A switch on the plugin rather than a property: off is the absence of the
+        /// live properties, which every dashboard already reads its way past. #1063.
+        /// </summary>
+        public const bool DefaultLivePositions = true;
 
         /// <summary>The four configurable zones of a pit wall page. Prefixed because the dash face has
         /// zones of its own now, and the two are deliberately different catalogues.</summary>
@@ -915,7 +958,7 @@ namespace OpenDashPlugin
         // --- The zone face ---------------------------------------------------------------------
         //
         // Additive: Slot01 to Slot12 stay, and they are not on their way out. They drive the two
-        // round faces, which ship on the card model until a round face becomes zones on a ring before
+        // round faces, which ship on the card model until a round face becomes zones on a ring after
         // 1.0 (#145, #487), so the release that converts those faces is the one that carries a warning
         // about the twelve. The eight published OpenDash slots <size> card faces read them as well;
         // no zone face does. #170.
@@ -1492,12 +1535,15 @@ namespace OpenDashPlugin
             // And every theme's own settings, appended for the same reason and shared because a backlight
             // is the driver's taste and a rig in auto mode shows whichever theme the car picks. #715.
             foreach (var setting in ThemeSettings) yield return setting.Property;
+            // And the race as it stands on the road, appended for the same reason, published rather than chosen
+            // and shared because every screen that draws a place, a list or a gap reads it. #1063.
+            foreach (var live in LivePropertyNames()) yield return live;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>
         public static readonly string[] FaceZoneLetters = { "A", "B", "C", "D" };
 
-        /// <summary>How many pages each zone can show, in letter order: A four, B and C the twenty-one
+        /// <summary>How many pages each zone can show, in letter order: A four, B and C the
         /// modules, D eight. The house's catalogues: a theme adds band pages, which
         /// <see cref="FaceZonePageCount"/> counts.</summary>
         public static readonly IReadOnlyList<int> FaceZonePageCounts = new[] { 4, Modules.Count, Modules.Count, 8 };
@@ -1917,11 +1963,15 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every page enabled, which is the mask a zone starts with: a driver turns off what
-        /// they do not want rather than turning on what they do.</summary>
+        /// they do not want rather than turning on what they do. Every page offered, that is: a held-back
+        /// page's bit is never set (<see cref="FacePages.HeldBack"/>), and since this is also the mask a
+        /// stored one is trimmed to, a rig that had the page in its cycle loses it there. Mirrors
+        /// defaultZoneMask in contract.ts.</summary>
         public static int DefaultZoneMask(int zoneIndex, string theme = null)
         {
             if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
-            return (1 << FaceZonePageCount(zoneIndex, theme)) - 1;
+            var all = (1 << FaceZonePageCount(zoneIndex, theme)) - 1;
+            return zoneIndex == BandIndex ? all & ~FacePages.HeldBackBandMask : all;
         }
 
         /// <summary>The default page of every face zone, in letter order, on a face of the theme given.</summary>
@@ -1994,7 +2044,7 @@ namespace OpenDashPlugin
         /// release read four to twelve of them besides, and no zone face reads one. They are published
         /// in README.md as properties another dashboard or an LED profile may read, they are not
         /// deprecated, and no release is promised to remove them. The one that would is the release
-        /// converting the round faces to zones on a ring, which is before 1.0. #145, #487, #170.
+        /// converting the round faces to zones on a ring, which is after 1.0. #145, #487, #170.
         /// </remarks>
         public static string SlotProperty(int slot)
         {
@@ -2065,7 +2115,7 @@ namespace OpenDashPlugin
         /// them. Both reach the screen through CompanionOpenOn, forced for a moment: the start by Init
         /// and the panel, the glance by its button.
         ///
-        /// The page is appended after the twenty-one rather than put in front of them, because both
+        /// The page is appended after the switches rather than put in front of them, because both
         /// halves of the contract assert this group by index.
         /// </remarks>
         public static IEnumerable<string> CompanionPropertyNames(string ns)
@@ -2642,14 +2692,16 @@ namespace OpenDashPlugin
 
         /// <summary>Returns the glance when both halves are in range, else the default. A page outside
         /// its zone's catalogue takes the zone with it: half a glance is not a glance. The catalogue is the
-        /// one of a face of the theme given, so a Porsche face can glance at its own band page.</summary>
+        /// one of a face of the theme given, so a Porsche face can glance at its own band page; a held-back
+        /// page is outside it, so a glance saved on band D's car page is the default glance now (#969).</summary>
         public static int NormaliseQuickGlance(int value, string theme = null)
         {
             if (value < 0) return DefaultQuickGlance;
             var zoneIndex = QuickGlanceZone(value);
             if (zoneIndex >= FaceZoneLetters.Length) return DefaultQuickGlance;
             var page = QuickGlancePage(value);
-            return page < FaceZonePageCount(zoneIndex, theme) ? value : DefaultQuickGlance;
+            if (page >= FaceZonePageCount(zoneIndex, theme)) return DefaultQuickGlance;
+            return FacePages.IsHeldBack(FaceZoneLetters[zoneIndex], page, theme) ? DefaultQuickGlance : value;
         }
 
         /// <summary>A pit wall zone and a standard page packed the way a face's glance is packed.</summary>
