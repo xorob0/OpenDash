@@ -35,7 +35,7 @@ import { ds } from '../tokens.ts';
 import { chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, LAP_TIME_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
@@ -658,7 +658,7 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
           // whatever `relativegaptoplayer` answers for the player's own index. The sample carries
           // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
           // time is the glyph the bound value draws rather than .NET's hyphen.
-          cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { colorBind: liftBind(ctx, inkBind(ctx)) })
+          cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { widest: RELATIVE_GAP_WIDEST, colorBind: liftBind(ctx, inkBind(ctx)) })
         : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
   },
   int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },

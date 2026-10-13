@@ -35,9 +35,9 @@ import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from '
 import path from 'node:path';
 import { FLAG_BOX_FILE } from '../../packages/dash/src/build.ts';
 import {
-  BAND_D_PAGES,
   BAR_FIELDS,
   MODULE_CATALOGUE,
+  offeredPages,
   PIT_WALL_PAGES,
   PIT_WALL_WIDE_ZONE_PAGES,
   PIT_WALL_ZONE_PAGES,
@@ -393,8 +393,8 @@ export const MODULES = ${json(MODULE_CATALOGUE)} as const;
 /** Zone A's pages. */
 export const ZONE_A_PAGES: SitePage[] = ${json(pages(ZONE_A_PAGES))};
 
-/** Band D's pages. */
-export const BAND_D_PAGES: SitePage[] = ${json(pages(BAND_D_PAGES))};
+/** Band D's pages a driver can reach: the car page is held back from 1.0 (#969). */
+export const BAND_D_PAGES: SitePage[] = ${json(pages(offeredPages('D')))};
 
 /** The fields the bar's ends can carry. */
 export const BAR_FIELDS: SitePage[] = ${json(pages(BAR_FIELDS))};

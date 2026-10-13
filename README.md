@@ -118,11 +118,12 @@ the foot.
 
 **Each zone shows one page at a time and a wheel button cycles it.** Zone A is the narrow middle
 column and holds the gear, because the gear is read by reflex; zones B and C flank it and choose
-among the same twenty-two pages the companion has; the band chooses among eight that suit a wide,
-short strip, and a flag takes the band over for three seconds when it comes out and then settles
-into the block at each end until it clears. The bar does not cycle, which is what
-earns it the space: it carries what does not change during a lap, two fields at each end and the
-car settings your sim publishes between them.
+among the same twenty-two pages the companion has; the band chooses among seven that suit a wide,
+short strip (its eighth, the telltale row, is held back from 1.0 until its pictograms exist), and a
+flag takes the band over for three seconds when it comes out and then settles into the block at each
+end until it clears. The bar does not cycle, which is what earns it the space: it carries what does
+not change during a lap, two fields at each end and the car settings your sim publishes between
+them.
 
 A page is never scaled. It is laid out for the shape of the box it is given: it sheds its secondary
 rows before it shrinks its numerals, and it grows to fill a box it does not fill — every size on it

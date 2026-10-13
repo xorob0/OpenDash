@@ -7,15 +7,15 @@
 import { ncalc } from '../generator.ts';
 import { readout } from '../components/readout.ts';
 import { ds } from '../tokens.ts';
-import { LAP_TIME_WIDEST, lapReading, NO_TIME } from '../second/values.ts';
+import { LAP_TIME_WIDEST, lapReading, NO_TIME, hasTime } from '../second/values.ts';
 import { defineCard } from './card.ts';
 import { LAP_TIME_CHARS } from './chars.ts';
 
-const { game, timespanToSeconds, le, num, iff, str } = ncalc;
+const { game, not, iff, str } = ncalc;
 
 export const bestLap = defineCard('bestLap', (slot, rung, prefix, meta) => {
   const best = game('BestLapTime');
-  const noData = le(timespanToSeconds(best), num(0));
+  const noData = not(hasTime(best));
   return readout(
     slot,
     rung,
