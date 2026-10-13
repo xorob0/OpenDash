@@ -30,6 +30,7 @@ import {
   type Scope,
   type Value,
 } from '../src/ncalc/index.ts';
+import { hms, max, min, real } from '../src/ncalc.ts';
 
 const scope = (properties: Record<string, unknown> = {}, extra: Partial<Scope> = {}): Scope => ({ properties, ...extra });
 const ev = (source: string, properties: Record<string, unknown> = {}, extra: Partial<Scope> = {}): Value => evaluate(source, scope(properties, extra));
@@ -329,6 +330,27 @@ describe('NCalc\'s maths', () => {
     expect(ev('min([A], 3.5)', { A: 4.25 })).toEqual(double(3.5));
     expect(ev('max([Missing], 3)')).toEqual(int(3));
     expect(ev('max([Missing], [Missing])')).toBeNull();
+  });
+
+  test('real writes the literal NCalc reads as a double, which is what a bound on the left of max and min wants', () => {
+    expect([real(0), real(100), real(-3), real(2.5), real(Number.NaN)]).toEqual(['0.0', '100.0', '-3.0', '2.5', '0.0']);
+    expect(ev(real(0))).toEqual(double(0));
+    expect(ev(max(real(0), '[T]'), { T: 2.6 })).toEqual(double(2.6));
+    expect(ev(min(real(100), '[T]'), { T: 62.5 })).toEqual(double(62.5));
+    expect(js(`format(${max(real(0), '[F]')}, '0.0')`, { F: 7.4 })).toBe('7.4');
+    // What the Int32 on the left did instead, #831: the fraction is gone before the format sees it.
+    expect(js(`format(${max('0', '[F]')}, '0.0')`, { F: 7.4 })).toBe('7.0');
+  });
+
+  test('hms counts whole seconds down from the double it is given rather than rounding them, #831', () => {
+    const at = (t: number): unknown => js(hms('[T]'), { T: t });
+    expect(at(59.6)).toBe('0:00:59');
+    expect(at(3599.5)).toBe('0:59:59');
+    expect(at(3600)).toBe('1:00:00');
+    expect(at(0.4)).toBe('0:00:00');
+    expect(at(-5)).toBe('0:00:00');
+    expect(at(7322.9)).toBe('2:02:02');
+    expect(hms('[T]')).toContain('max(0.0, [T])');
   });
 
   test('cos and sin of a double', () => {
