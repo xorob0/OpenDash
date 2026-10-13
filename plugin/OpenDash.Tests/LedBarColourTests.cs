@@ -102,7 +102,11 @@ namespace OpenDashPlugin.Tests
         public void A_bar_with_no_colours_of_its_own_installs_what_the_build_wrote()
         {
             var embedded = BuiltProfile("3-9-3");
-            if (embedded == null) return;
+            if (embedded == null)
+            {
+                Assert.False(RepoPaths.OnCI, "no built 3-9-3 strip in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
             var bar = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3", Colours = new Dictionary<string, string>() };
             Assert.Equal(LedBarProfile.For(new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" }, embedded), LedBarProfile.For(bar, embedded));
             Assert.Equal(embedded, LedBarProfile.Recolour(embedded, bar));
@@ -112,7 +116,11 @@ namespace OpenDashPlugin.Tests
         public void A_colour_of_its_own_reaches_every_container_of_its_effect_and_no_other()
         {
             var embedded = BuiltProfile("4-14-4");
-            if (embedded == null) return;
+            if (embedded == null)
+            {
+                Assert.False(RepoPaths.OnCI, "no built 4-14-4 strip in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
             var bar = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "4-14-4" };
             bar.SetColour("abs", "#33D9F2");
             bar.SetColour("flag.yellow", "#FFFFFF");
@@ -146,7 +154,11 @@ namespace OpenDashPlugin.Tests
         public void The_chequer_moves_its_lit_half_and_keeps_its_dark_one()
         {
             var embedded = BuiltProfile("3-9-3");
-            if (embedded == null) return;
+            if (embedded == null)
+            {
+                Assert.False(RepoPaths.OnCI, "no built 3-9-3 strip in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
             var bar = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
             bar.SetColour("flag.chequered", "#2E7BFF");
             var chequer = ColoursOf(LedBarProfile.For(bar, embedded), "Chequered flag");
