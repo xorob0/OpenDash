@@ -993,7 +993,13 @@ yet measured on the VM.
   tenths, could only end in `.0`.
 - An Int32 on the left is still right where the value it bounds is whole, such as the tacho's scale
   in thousands, which is a `truncate`. `packages/dash/test/ncalcCoverage.test.ts` holds every
-  expression of a full build to that.
+  expression of a full build and every LED profile to that.
+- **An operand that is an Int32 on some frames counts as one** (#1046): `isnull([X], 0)` is X's own
+  type while X is published and the Int32 0 when it is not, and an `if` is whichever branch it took.
+  So the steering dial's clamp puts its double bounds on the left, and the over-rev's blink RPM falls
+  back to `0.0`. `packages/dash/test/int32Bounds.ts` is the reading of a tree the guard makes, and
+  the dash tests' own evaluator, `packages/dash/test/ncalcEval.ts`, answers `max` and `min` by the
+  same rule, so a reading that rounds on the dash rounds in its test too.
 
 ## Sources
 
