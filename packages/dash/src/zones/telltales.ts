@@ -35,9 +35,9 @@ import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rank, type RankMember } from '../second/rank.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
-import { tankIsLow } from '../second/values.ts';
+import { pitLimiterOn, tankIsLow } from '../second/values.ts';
 
-const { computed, div, eq, game, gt, iff, isnull, lt, mod, num, or, raw, str, truncate } = ncalc;
+const { computed, div, gt, iff, isnull, lt, mod, num, or, raw, str, truncate } = ncalc;
 
 /** The page of band D this rank is, which is the id the contract gives it. */
 export const TELLTALE_PAGE = 'car';
@@ -114,7 +114,7 @@ export const TELLTALES: readonly Telltale[] = [
   // leaves the lamp dark instead of lighting it on every car that has no such reading.
   { id: 'fuel', lit: 'danger', on: tankIsLow() },
   { id: 'battery' },
-  { id: 'limiter', lit: 'neutral', on: eq(isnull(game('PitLimiterOn'), num(0)), num(1)) },
+  { id: 'limiter', lit: 'neutral', on: pitLimiterOn() },
   { id: 'pressure' },
   { id: 'door' },
 ];

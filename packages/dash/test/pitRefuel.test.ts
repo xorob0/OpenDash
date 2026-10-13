@@ -79,9 +79,10 @@ describe('pit view draws the order in the unit it names', () => {
 });
 
 describe("band D's fuel page draws the order in the tank's unit", () => {
-  test('40 litres reads 40.00 on a litres profile and 10.57 on a gallons one, beside a tank in the same unit', () => {
-    expect(textOn(bandItems, 'refuel.value', order('Liters'))).toBe('40.00');
-    expect(textOn(bandItems, 'refuel.value', order('Gallons'))).toBe('10.57');
+  // Whole from ten up, as every quantity of the page is since #899, so 10.57 gallons reads 11.
+  test('40 litres reads 40 on a litres profile and 11 on a gallons one, beside a tank in the same unit', () => {
+    expect(textOn(bandItems, 'refuel.value', order('Liters'))).toBe('40');
+    expect(textOn(bandItems, 'refuel.value', order('Gallons'))).toBe('11');
     expect(textOn(bandItems, 'fuel.unit', order('Gallons'))).toBe('gal');
   });
 

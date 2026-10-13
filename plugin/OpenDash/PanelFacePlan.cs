@@ -338,14 +338,14 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every zone and page the quick glance can be set to, packed the way
-        /// Contract.QuickGlanceValue packs them, in Contract.FaceZoneLetters order, on a face of the theme given.</summary>
+        /// Contract.QuickGlanceValue packs them, in Contract.FaceZoneLetters order, on a face of the theme given.
+        /// A held-back page is not among them.</summary>
         public static int[] GlanceOptions(string theme = null)
         {
             var values = new List<int>();
             for (var zone = 0; zone < Contract.FaceZoneLetters.Length; zone++)
             {
-                var pages = FacePages.CountAt(zone, theme);
-                for (var page = 0; page < pages; page++) values.Add(Contract.QuickGlanceValue(zone, page));
+                foreach (var page in FacePages.Offered(Contract.FaceZoneLetters[zone], theme)) values.Add(Contract.QuickGlanceValue(zone, page.Number));
             }
             return values.ToArray();
         }
