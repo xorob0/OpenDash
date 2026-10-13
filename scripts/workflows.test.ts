@@ -115,9 +115,11 @@ describe('the site image', () => {
 
   test('names the line of every image it uses, and the Debian release of every stage', () => {
     // A tag floats on patches, as the rest of the repository's toolchain does, but never on its line:
-    // no `latest`, no bare name, and a stage says which Debian it is so that a publisher moving the
-    // default release cannot change the openssl the Prisma engine was chosen for. A digest is the
-    // strongest pin there is and passes both.
+    // no `latest`, no bare name, and a stage says which Debian it is, so that the system under the
+    // build changes when someone changes the tag rather than when a publisher moves its default. The
+    // stages name the same release: the build and runtime stages share a node_modules, and the SDK
+    // stage follows them for consistency. A digest is the strongest pin there is and passes both,
+    // though the SDK's keeps its tag beside it, because the next test reads the version from the tag.
     const digest = /@sha256:[0-9a-f]{64}$/;
     const images = [
       ...froms.map(({ image }) => image),
@@ -133,7 +135,7 @@ describe('the site image', () => {
   });
 
   test('compiles the plugin with an SDK global.json accepts, and with global.json beside it', () => {
-    const artifacts = froms.find(({ image }) => image.startsWith('mcr.microsoft.com/dotnet/sdk:'));
+    const artifacts = froms.find(({ image }) => /^mcr\.microsoft\.com\/dotnet\/sdk[:@]/.test(image));
     if (artifacts === undefined) throw new Error('no stage builds from the .NET SDK image');
     // The stage that runs the release's own packaging copies the pin into the root it runs from, so
     // the dotnet inside it reads the same global.json a local build and the runner do.
@@ -152,7 +154,9 @@ describe('the site image', () => {
       return [major, minor, Math.floor(patch / 100), patch % 100];
     };
     const tag = artifacts.image.match(/:(\d+\.\d+(?:\.\d+)?)/)?.[1];
-    if (tag === undefined) throw new Error(`${artifacts.image} names no SDK version`);
+    if (tag === undefined) {
+      throw new Error(`${artifacts.image} names no SDK version: keep the tag beside a digest, as in sdk:8.0-bookworm-slim@sha256:...`);
+    }
     // A floating tag such as `8.0` names the major and minor and leaves the feature band and patch to
     // the publisher, so those count as unknown: the policy must not fix them, and the pin must ask for
     // no more than the lowest of them, or only an exact tag can show the image satisfies it.

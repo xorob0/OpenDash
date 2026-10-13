@@ -24,14 +24,18 @@
 # .github/workflows/site-image.yml. A stage that stops copying something the site needs fails there,
 # on the branch that changed it, rather than in front of somebody pressing Redeploy.
 #
-# Every image below names its line and its Debian release and floats on patches within them, as the
-# rest of the repository does: global.json takes any 8.0 SDK, CI installs 8.0.x, and a redeploy picks
-# up the security releases of node and Debian without a commit here. What a tag must not do is change
-# the line under the build. `sdk:8.0` cannot carry an SDK that global.json refuses, as stage 1 says,
-# and the node stages say bookworm because the Prisma engine depends on it (stage 4).
+# Every stage names its Debian release, every image names its line, and each floats on patches within
+# them, as the rest of the repository does: global.json takes any 8.0 SDK, CI installs 8.0.x, and a
+# redeploy picks up the security releases of node and Debian without a commit here. What a tag must
+# not do is change the line under the build. `sdk:8.0` cannot carry an SDK that global.json refuses,
+# as stage 1 says, and naming bookworm keeps the Debian, and with it glibc, openssl and the apt
+# packages, from changing under the build until someone changes the tag on purpose. The stages all
+# name the same release, which stage 4 needs and the others follow for consistency; stage 4 also
+# says what moving to the next one takes.
 # bun is the 1.4 line, which is the one place the image pins bun where CI does not (CONTRIBUTING.md):
 # a lockfile written by a newer bun stops `bun install --frozen-lockfile` here, loudly, and the fix
-# is to raise this tag. scripts/workflows.test.ts holds every FROM and COPY --from to this (#915).
+# is to raise this tag. scripts/workflows.test.ts holds every image to its line and every stage to
+# its release (#915).
 
 # ---------------------------------------------------------------- 1. everything the site hands out
 # `bun run package` is the repository's own release command: it builds every .simhubdash and LED
@@ -125,10 +129,13 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN node node_modules/.bin/next build
 
 # ---------------------------------------------------------------- 4. what runs
-# On the same Debian as the build stage, bookworm, by name: Prisma picks its query engine by the
-# system's openssl, and bookworm's is the 3.0 that the debian-openssl-3.0.x target in schema.prisma
-# was written for. A slim tag without the release in it moves to the next Debian when node does, and
-# this one moves only with node 22's patches and bookworm's.
+# On the same Debian as the build stage, bookworm, by name: the build stage writes the node_modules
+# this one runs, so the two agree on the system under them, and a release-less tag would let the
+# next Debian arrive whenever node's images move to it rather than when this file says so. Prisma
+# is not what holds the image to bookworm. It picks its engine by the openssl major and serves any
+# 3.x with the debian-openssl-3.0.x engine schema.prisma declares, so trixie's openssl 3.5 needs no
+# change to the schema; moving is a change to every stage's tag and a green run of the Site image
+# workflow.
 FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
