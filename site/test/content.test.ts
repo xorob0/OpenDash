@@ -15,6 +15,7 @@ import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
 import { THEME_CATALOGUE } from '../../packages/dash/src/contract.ts';
 import { downloads, flags, heroFace, ledProfileCount, readBuildManifest, releases, sitePackages, stripShapes, themedPackages, themes, type Manifest } from '../scripts/content.ts';
 import { stripGrid } from '../lib/stripGrid.ts';
+import { built, withBuild } from '../../scripts/buildOutput.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const manifest: Manifest | null = readBuildManifest(repoRoot);
@@ -47,8 +48,8 @@ describe('the strip shapes', () => {
     for (const s of shapes.filter((x) => !x.legacy)) expect(s.left).toBe(s.right);
   });
 
-  test.if(manifest !== null)('each one has a profile in the manifest, as does its far-end twin, and the flag box makes a hundred and fifty-eight', () => {
-    const profiles = new Set(manifest!.ledProfiles ?? []);
+  test.if(withBuild(manifest !== null))('each one has a profile in the manifest, as does its far-end twin, and the flag box makes a hundred and fifty-eight', () => {
+    const profiles = new Set(built(manifest).ledProfiles ?? []);
     for (const s of ALL_SHAPES) expect(profiles.has(`OpenDash ${s.id}.ledsprofile`)).toBe(true);
     for (const s of shapes) expect(profiles.has(`OpenDash ${s.id.replace(/-reversed$/, '')}-reversed.ledsprofile`) || s.id.endsWith('-fanatec')).toBe(true);
     expect(profiles.size).toBe(158);
@@ -135,11 +136,12 @@ describe('the package list', () => {
     expect(Object.keys(p!)).toEqual(['folder', 'kind', 'width', 'height', 'round']);
   });
 
-  test.if(manifest !== null)('is the fourteen packages the plugin installs', () => {
-    expect(sitePackages(manifest!)).toHaveLength(14);
+  test.if(withBuild(manifest !== null))('is the fourteen packages the plugin installs', () => {
+    const m = built(manifest);
+    expect(sitePackages(m)).toHaveLength(14);
     // A themed package is listed apart, never among the screens, and carries its theme.
-    const themedOnes = themedPackages(manifest!);
-    for (const p of themedOnes) expect({ folder: p.folder, theme: p.theme, listed: sitePackages(manifest!).some((s) => s.folder === p.folder) }).toEqual({ folder: p.folder, theme: expect.any(String), listed: false });
+    const themedOnes = themedPackages(m);
+    for (const p of themedOnes) expect({ folder: p.folder, theme: p.theme, listed: sitePackages(m).some((s) => s.folder === p.folder) }).toEqual({ folder: p.folder, theme: expect.any(String), listed: false });
   });
 });
 
@@ -197,6 +199,9 @@ describe('the LED profile count', () => {
   test('is the manifest’s when there is one, and the shapes plus the flag box when there is not', () => {
     expect(ledProfileCount({ ledProfiles: ['a', 'b', 'c'] }, ALL_SHAPES)).toBe(3);
     expect(ledProfileCount(null, ALL_SHAPES)).toBe(ALL_SHAPES.length + 1);
-    if (manifest) expect(ledProfileCount(manifest, ALL_SHAPES)).toBe(ALL_SHAPES.length + 1);
+  });
+
+  test.if(withBuild(manifest !== null))('is the shapes plus the flag box in the manifest the build wrote', () => {
+    expect(ledProfileCount(built(manifest), ALL_SHAPES)).toBe(ALL_SHAPES.length + 1);
   });
 });

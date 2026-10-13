@@ -15,6 +15,7 @@ import path from 'node:path';
 import { ncalc, readZip, type Item } from '../src/generator.ts';
 import { composeTheme } from '../src/build.ts';
 import { setting, themeEntry } from '../src/contract.ts';
+import { requireBuild, withBuild } from '../../../scripts/buildOutput.ts';
 
 const ROOT = path.resolve(import.meta.dir, '../../..');
 const sha256 = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex');
@@ -96,13 +97,12 @@ describe('no crest ships', () => {
     expect(named).toEqual([]);
   });
 
-  test('no entry of any built package is the crest', () => {
-    const build = path.join(ROOT, 'build');
-    const packages = existsSync(build) ? readdirSync(build).filter((f) => f.endsWith('.simhubdash')) : [];
-    if (packages.length === 0) {
-      console.log('no built packages in build/ to look inside; run `bun run build --all-themes` to check them');
-      return;
-    }
+  // Skipped, not passed, when this tree has not built; on CI, which builds every theme first, run
+  // either way, so that the one check on what a release actually ships is never a quiet pass (#909).
+  const build = path.join(ROOT, 'build');
+  const packages = existsSync(build) ? readdirSync(build).filter((f) => f.endsWith('.simhubdash')) : [];
+  test.if(withBuild(packages.length > 0))('no entry of any built package is the crest', () => {
+    requireBuild(packages.length > 0, 'build/ holds no .simhubdash');
     for (const file of packages) {
       const outer = readZip(new Uint8Array(readFileSync(path.join(build, file))));
       for (const [name, bytes] of Object.entries(outer)) {

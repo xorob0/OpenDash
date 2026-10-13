@@ -51,6 +51,7 @@ import { glyphCatalogue } from '../../packages/dash/src/leds/sheet.ts';
 import { ALL_SHAPES, BASE_SHAPES, LEGACY_SHAPES, type StripShape } from '../../packages/dash/src/leds/strip.ts';
 import { BASE_FACE } from '../../packages/dash/src/zones/index.ts';
 import type { ZoneLayout } from '../../packages/dash/src/zones/layout.ts';
+import { readBuiltManifest } from '../../scripts/buildOutput.ts';
 import { sectionFor, versionsIn } from '../../scripts/changelog.ts';
 import { PLUGIN_ZIP } from '../lib/site.ts';
 
@@ -121,19 +122,12 @@ export interface Manifest {
  * a tree where nothing is actually wrong. `dotnet test` has drawn this distinction from the
  * beginning, in `BuildOutputFact` and in the message `PackageExtractorTests` prints; this is the
  * same courtesy on the TypeScript side.
+ *
+ * The reading itself is scripts/buildOutput.ts's, which the root's tests share, and so is the rule
+ * that on CI, which builds before it tests, a null here fails the tests rather than skipping them.
  */
 export function readBuildManifest(repoRoot: string, warn: (message: string) => void = console.warn): Manifest | null {
-  const file = path.join(repoRoot, 'build', 'manifest.json');
-  if (!existsSync(file)) return null;
-  const manifest = JSON.parse(readFileSync(file, 'utf8')) as Manifest;
-  const version = readFileSync(path.join(repoRoot, 'VERSION'), 'utf8').trim();
-  if (manifest.version === version) return manifest;
-  warn(
-    `build/manifest.json carries version ${manifest.version}, whereas VERSION says ${version}. ` +
-      'That is build output which a branch switch does not refresh, so the tests that read it are ' +
-      'being skipped rather than failed: run `bun run build` and try again.',
-  );
-  return null;
+  return readBuiltManifest<Manifest>(repoRoot, warn);
 }
 
 export function sitePackages(manifest: { packages: ManifestEntry[] }): SitePackage[] {

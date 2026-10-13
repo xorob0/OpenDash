@@ -9,13 +9,13 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { BAND_D_PAGES, MODULE_CATALOGUE, ZONE_A_PAGES } from '../packages/dash/src/contract.ts';
 import { shapeById, stripLength } from '../packages/dash/src/leds/strip.ts';
+import { built, readBuiltManifest, withBuild } from './buildOutput.ts';
 import { withFakeHost, type Answer } from './fakeHost.ts';
 import { browShape, catalogueMask, GALLERY, galleryRig, main, panelRig, RIM_FOLDER, RIM_SHAPE, RIM_ZONE_B, RIM_ZONE_C, screenFor, themedEdit, type ManifestPackage } from './rig.ts';
 import type { Claim } from './vm.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..');
-const manifestPath = path.join(repoRoot, 'build', 'manifest.json');
-const manifest: { packages: ManifestPackage[] } | null = existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, 'utf8')) : null;
+const manifest = readBuiltManifest<{ version: string; packages: ManifestPackage[] }>();
 
 describe('a seeded screen', () => {
   const pkg: ManifestPackage = { folder: 'OpenDash 1280x480', kind: 'dash', width: 1280, height: 480, file: 'OpenDash 1280x480.simhubdash' };
@@ -95,8 +95,8 @@ describe('the gallery rig', () => {
     }
   });
 
-  test.if(manifest !== null)('names only packages the build produced', () => {
-    expect(galleryRig(manifest!)).toHaveLength(Object.keys(GALLERY).length);
+  test.if(withBuild(manifest !== null))('names only packages the build produced', () => {
+    expect(galleryRig(built(manifest))).toHaveLength(Object.keys(GALLERY).length);
   });
 });
 
@@ -217,8 +217,8 @@ describe('the panel rig', () => {
     expect(sides).toBe('both');
   });
 
-  test.if(manifest !== null)('names only packages the build produced', () => {
-    expect((panelRig(manifest!).Rig as unknown[]).length).toBe(5);
+  test.if(withBuild(manifest !== null))('names only packages the build produced', () => {
+    expect((panelRig(built(manifest)).Rig as unknown[]).length).toBe(5);
   });
 });
 
