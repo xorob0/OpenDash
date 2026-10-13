@@ -905,6 +905,9 @@ Measured for #454 against the `NCalc.dll` SimHub 9.12.6 ships, with SimHub's `is
 - NCalc's `null > 0` throws `ArgumentNullException`, and a throwing expression draws the empty string.
 - The guard therefore wraps the conversion: `isnull(timespantoseconds(t), 0) > 0` is false for a
   null, a zero and a missing time alike, and `hasTime` in `second/values.ts` is written that way.
+- Arithmetic throws on a null operand as a comparison does, so a time that is subtracted or summed
+  needs the same guard. `secondsOf` in `second/values.ts` is the one spelling of it, and
+  `packages/dash/test/timespanGuard.test.ts` holds every expression of every built package to it (#586).
 
 ### A function reads a different frame from a property
 

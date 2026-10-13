@@ -19,7 +19,7 @@ import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } 
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
 import { textWidth } from '../src/second/drawn.ts';
-import { bandFuelQuantity, bandFuelQuantityDrawn, bandFuelQuantityWidest, fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
+import { bandFuelQuantity, bandFuelQuantityDrawn, bandFuelQuantityWidest, fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, LITRES_TO_GALLONS, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
 import { ncalcEvaluator as E } from '../src/generator.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
 import { ds } from '../src/tokens.ts';
@@ -443,12 +443,16 @@ describe('the fuel page draws its quantities whole from 10 and to a tenth below'
     expect(through).toEqual([...QUANTITIES]);
   });
 
-  /** The properties of a settled stint, with every quantity of the page at `value`, in `unit`. */
+  /**
+   * The properties of a settled stint, with every quantity of the page at `value`, in `unit`. The pit
+   * service order is the one iRacing publishes in litres whatever the unit (#604), so on a gallons
+   * profile it is given as the litres that convert to `value`.
+   */
   const settledAt = (value: number, unit: 'Liters' | 'Gallons'): Record<string, unknown> => ({
     'DataCorePlugin.GameData.FuelUnit': unit,
     'DataCorePlugin.GameData.CompletedLaps': 3,
     'DataCorePlugin.GameData.Fuel': E.double(value),
-    'DataCorePlugin.GameRawData.Telemetry.PitSvFuel': E.double(value),
+    'DataCorePlugin.GameRawData.Telemetry.PitSvFuel': E.double(unit === 'Gallons' ? value / LITRES_TO_GALLONS : value),
     'DataCorePlugin.Computed.Fuel_LitersPerLap': E.double(value),
     'DataCorePlugin.Computed.Fuel_LastLapConsumption': E.double(value),
   });

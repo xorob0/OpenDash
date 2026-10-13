@@ -5,15 +5,15 @@
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
  * with and without its sign flag, `replace`, `ucase`, SimHub's three-argument `left(value, start,
  * count)`, `timespantoseconds` (seconds are passed as numbers, which is how SimHub's own TimeSpans
- * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `sin`, `cos`, `in`,
- * `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the leaderboard reads
- * `getplayerleaderboardposition`, `getopponentleaderboardposition_aheadbehind`, `drivercarclass`,
- * `driverclassposition`, `driverposition` and `driveravailable` (each answered from the props by its
- * own call, as `drivercarclass(3)`, and null where they leave it out), the comparisons, `and` / `or` /
- * `!`, and the arithmetic. A date is passed as a `Date` and formatted by the hour and minute
- * specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the culture
- * SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test that
- * evaluates half an expression proves nothing.
+ * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `sin`, `cos`, `in`, `prop` (a read by
+ * a computed name), `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the leaderboard
+ * reads `getplayerleaderboardposition`, `getopponentleaderboardposition_aheadbehind`,
+ * `drivercarclass`, `driverclassposition`, `driverposition` and `driveravailable` (each answered from
+ * the props by its own call, as `drivercarclass(3)`, and null where they leave it out), the
+ * comparisons, `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by
+ * the hour and minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon,
+ * which is the culture SimHub sets at startup. Anything else is an error rather than a silent
+ * `undefined`: a test that evaluates half an expression proves nothing.
  *
  * It lived inside `session.test.ts` until the fuel margin needed the same thing (#387): the margin
  * is a subtraction whose two terms are drawn elsewhere on the same frame, so what is worth pinning

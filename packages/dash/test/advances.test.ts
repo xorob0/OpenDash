@@ -8,7 +8,7 @@
  * are checked here against the files the package ships.
  */
 import { describe, expect, test } from 'bun:test';
-import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type SegmentFace, type TextFace } from '../src/design/advances.ts';
+import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestFigure, widestGlyph, widestOf, type SegmentFace, type TextFace } from '../src/design/advances.ts';
 import { UNTIMED_MARK } from '../src/second/values.ts';
 
 /** Which bundled file each measured face is measured from. */
@@ -113,6 +113,31 @@ describe('the widest glyph, which is what a character budget is measured by', ()
     for (const face of FACES) {
       expect({ face, narrower: measureText(face, ELLIPSIS, 1) < widestGlyph(face).advance }).toMatchObject({ narrower: true });
     }
+  });
+});
+
+describe('the widest figure, which is what a proportional box for a number is measured by', () => {
+  test('each place holds the widest digit it can, so no number of the shape is wider', () => {
+    // Every number the shape can write, against what `widestFigure` declares for it, in every face:
+    // a declaration narrower than one of them is a box that clips it. #902.
+    const every = (shape: string): string[] =>
+      [...shape].reduce<string[]>((prefixes, ch) => {
+        const options = ch >= '0' && ch <= '9' ? Array.from({ length: Number(ch) + 1 }, (_, d) => String(d)) : [ch];
+        return prefixes.flatMap((p) => options.map((o) => p + o));
+      }, ['']);
+    for (const face of FACES) {
+      for (const shape of ['99.9k', '9:59.99', '59']) {
+        const declared = measureText(face, widestFigure(face, shape), 1);
+        const widest = Math.max(...every(shape).map((text) => measureText(face, text, 1)));
+        expect({ face, shape, declared }).toMatchObject({ declared: widest });
+      }
+    }
+  });
+
+  test('and in Barlow Medium that is the four, not the nine a budget is written with', () => {
+    expect(widestFigure('BarlowMedium', '99.9k')).toBe('44.4k');
+    expect(widestFigure('BarlowMedium', '9:59.999')).toBe('4:44.444');
+    expect(measureText('BarlowMedium', '4', 1)).toBeGreaterThan(measureText('BarlowMedium', '9', 1));
   });
 });
 

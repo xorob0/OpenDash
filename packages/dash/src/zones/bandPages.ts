@@ -44,6 +44,7 @@ import {
   carPosition,
   positionLabelled,
   carRelativeGap,
+  RELATIVE_GAP_WIDEST,
   CHARS,
   clock,
   currentLap,
@@ -62,16 +63,18 @@ import {
   fuelUnit,
   incidents,
   LAP_TIME_WIDEST,
-  lapReading,
+  lapTime,
   lastLap,
   listNeighbour,
   localClock,
   meridiemWidest,
   minutesClock,
   MINUTES_CLOCK_WIDEST,
-  NO_TIME,
   NO_VALUE,
+  pitRefuel,
+  pitRefuelIsAbsent,
   roadTemperature,
+  secondsOf,
   sectorTime,
   settledFuelTimeLeft,
   simClock,
@@ -81,7 +84,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition, timespanToSeconds } = ncalc;
+const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -170,8 +173,6 @@ export interface BandField {
   numeralWidest?: string;
 }
 
-const lapTime = (expr: string): string => iff(eq(timespanToSeconds(expr), num(0)), str(NO_TIME), lapReading(expr));
-
 /**
  * A reading derived from what a lap costs, drawn only once a lap has cost something.
  *
@@ -200,7 +201,10 @@ const quantity = (digits: number): Pick<BandField, 'chars' | 'numeralWidest'> =>
  * D1 Fuel: what a driver checks on a straight, which is why it is the default.
  *
  * The tank and the refuel are read off the sim directly, whereas the other four are derived from
- * what a lap costs, so those four wait for a lap and answer together. Before the first crossing
+ * what a lap costs, so those four wait for a lap and answer together. The refuel is the order the
+ * pit service is set to, {@link pitRefuel}, and not the fuel module's `To add`, which is an estimate
+ * off the per-lap average: it is converted to the unit the tank beside it is drawn in, and reads
+ * the absence where the sim publishes no order rather than an order of nothing (#604). Before the first crossing
  * SimHub extrapolates `Fuel_LitersPerLap` from the lap in progress and every figure taken off it
  * moves every frame; a band that gated only some of them consequently read `EST. LAPS --` beside
  * `PER LAP 0.000` and `LAST LAP 0.000`, which is one row and one tank with two fields saying they
@@ -255,7 +259,7 @@ const fuel: readonly BandField[] = [
     afterWidest: FUEL_TO_END_UNIT_WIDEST,
   },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
-  { id: 'refuel', label: 'Refuel', sample: '33', bind: bandFuelQuantity(isnull(raw('PitSvFuel'), num(0))), ...quantity(TANK_DIGITS), color: ds.color.caution.primary },
+  { id: 'refuel', label: 'Refuel', sample: '33', bind: iff(pitRefuelIsAbsent(), str(NO_VALUE), bandFuelQuantity(pitRefuel())), ...quantity(TANK_DIGITS), color: ds.color.caution.primary },
   { id: 'perLap', label: 'Per lap', sample: '1.4', bind: settled(bandFuelQuantity(fuelPerLap())), ...quantity(LAP_DIGITS) },
   { id: 'lastLap', label: 'Last lap', sample: '1.3', bind: iff(fuelLastLapIsSettled(), bandFuelQuantity(fuelLastLap()), str(NO_VALUE)), ...quantity(LAP_DIGITS) },
 ];
@@ -281,14 +285,14 @@ const energy: readonly BandField[] = [
 /** D3 Stint. The pit window needs a strategy the plugin does not compute; see ADR 0009. */
 const stint: readonly BandField[] = [
   { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.position },
-  { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(timespanToSeconds(isnull(driver('timesincelastpitout', playerPosition()), num(0)))), chars: CHARS.clock },
+  { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(secondsOf(driver('timesincelastpitout', playerPosition()))), chars: CHARS.clock },
   { id: 'stops', label: 'Stops', sample: '1', bind: fmt(isnull(driver('pitcount', playerPosition()), num(0)), '0'), chars: CHARS.position },
   {
     id: 'lastStop',
     label: 'Last stop',
     sample: '24.3',
-    bind: fmt(timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), '0.0'),
-    drawn: drawnFigure({ value: timespanToSeconds(isnull(driver('pitlastduration', playerPosition()), num(0))), digits: CHARS.consumption.digits - 1, decimals: 1 }),
+    bind: fmt(secondsOf(driver('pitlastduration', playerPosition())), '0.0'),
+    drawn: drawnFigure({ value: secondsOf(driver('pitlastduration', playerPosition())), digits: CHARS.consumption.digits - 1, decimals: 1 }),
     chars: CHARS.consumption,
     after: 's',
   },
@@ -399,6 +403,7 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
     labelWidest: 'P99',
     sample: '-1.342',
     bind: carRelativeGap(listNeighbour(-1, classOnly)),
+    numeralWidest: RELATIVE_GAP_WIDEST,
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
@@ -419,6 +424,7 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
     labelWidest: 'P99',
     sample: '+0.722',
     bind: carRelativeGap(listNeighbour(1, classOnly)),
+    numeralWidest: RELATIVE_GAP_WIDEST,
     chars: CHARS.relativeGap,
     color: ds.color.text.secondary,
   },
