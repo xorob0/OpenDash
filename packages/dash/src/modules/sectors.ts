@@ -10,7 +10,7 @@ import { rect } from '../design/geometry.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { SECTORS, sectorSpecs, sectorStrip } from '../second/sectors.ts';
-import { CHARS, bestLap, lapTime, lastLap, sectorTime, sessionBestLap, sessionBestSplit } from '../second/values.ts';
+import { CHARS, bestLap, LAP_TIME_WIDEST, lapTime, lastLap, sectorTime, sessionBestLap, sessionBestSplit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld, shapeIn } from './module.ts';
 import { archetypeOf } from './shedding.ts';
@@ -44,9 +44,9 @@ export const sectors = defineModule('sectors', (ctx) => {
       blockRow(stripHeight, (bottom) => sectorStrip(`${ctx.prefix}strip`, rect(ctx.frame.left, bottom - stripHeight, ctx.frame.width, stripHeight))),
       fieldsRow(
         [
-          fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, fs: d.small }),
-          fld(ctx, 'last', 'Last', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, fs: d.small }),
-          fld(ctx, 'sessionBest', sessionBestLabel, { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, fs: d.small, color: ds.purpose.lap.sessionBest }),
+          fld(ctx, 'yourBest', 'Your best', { sample: '1:42.311', bind: lapTime(bestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.small }),
+          fld(ctx, 'last', 'Last', { sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.small }),
+          fld(ctx, 'sessionBest', sessionBestLabel, { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.small, color: ds.purpose.lap.sessionBest }),
         ],
         ctx,
         RECAP_GAP,
