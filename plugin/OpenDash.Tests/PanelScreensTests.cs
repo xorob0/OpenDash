@@ -1501,7 +1501,8 @@ namespace OpenDashPlugin.Tests
                 "Say(result.Ok ? PanelAddScreen.Added(copy, result.WroteFonts) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name, result.WroteFonts) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, result.WroteFonts) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name, result.WroteFonts) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
+                // A resize says what its own add would (#664): a themed screen is never assigned by hand.
+                "Say(result.Ok ? PanelAddScreen.Resized(screen, result.WroteFonts) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");

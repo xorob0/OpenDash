@@ -118,6 +118,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("porsche", screen.Theme);
             Assert.Equal(porscheAt1920.Package, screen.Package);
             Assert.Equal("porsche", screen.Copy().Theme);
+
+            // The line after the resize: never "assign it in Dash Studio", which would put the Porsche face on the
+            // display in every car, but the next car, as after an add.
+            Assert.Equal("Porsche is now 1920 × 480. A display showing a 1920 × 480 face switches to it when you next load a car it is drawn for.",
+                PanelAddScreen.Resized(screen, false));
+            Assert.Equal("Porsche is now 1920 × 480. Restart SimHub to load its fonts, and a display showing a 1920 × 480 face switches to it in the cars it is drawn for.",
+                PanelAddScreen.Resized(screen, true));
+            Assert.DoesNotContain("Dash Studio", PanelAddScreen.Resized(screen, true));
+            var plain = new OpenDashSettings();
+            var rim = plain.AddScreen(Default850, "Rim");
+            plain.ResizeScreen(rim, Default1280);
+            Assert.Equal(PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", false), PanelAddScreen.Resized(rim, false));
+            Assert.Equal(PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", true), PanelAddScreen.Resized(rim, true));
         }
 
         [Fact]

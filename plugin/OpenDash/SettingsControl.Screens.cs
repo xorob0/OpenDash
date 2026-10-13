@@ -1141,7 +1141,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " at its new size failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name, result.WroteFonts) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Resized(screen, result.WroteFonts) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);
             });
         }
 

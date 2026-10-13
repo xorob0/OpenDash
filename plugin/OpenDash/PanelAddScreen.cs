@@ -613,6 +613,18 @@ namespace OpenDashPlugin
             return name + " is now " + size + ". " + (wroteFonts ? RestartForFonts + ", then assign" : "Assign") + " \"" + title + "\" to this display again in Dash Studio.";
         }
 
+        /// <summary><see cref="Resized(string, string, string, bool)"/> for a screen of either kind. A themed screen
+        /// is bound through the per-car playlists, which the resize syncs, so it is never assigned by hand: doing so
+        /// would make it the display's dashboard in every car. What is left for it is the next car, as
+        /// <see cref="Added(ScreenInstance, bool)"/> says for an add.</summary>
+        public static string Resized(ScreenInstance screen, bool wroteFonts)
+        {
+            if (screen == null) return string.Empty;
+            if (screen.Theme == null) return Resized(screen.Name, screen.SizeLabel, screen.Name, wroteFonts);
+            if (wroteFonts) return screen.Name + " is now " + screen.SizeLabel + ". " + RestartForFonts + ", and a display showing a " + screen.SizeLabel + " face switches to it in the cars it is drawn for.";
+            return screen.Name + " is now " + screen.SizeLabel + ". A display showing a " + screen.SizeLabel + " face switches to it " + NextCar + ".";
+        }
+
         /// <summary>A resize whose dashboard was not installed. The resize itself happened -- the old folder is
         /// gone and the screen holds its new size, which the header and the card then show -- so the line says
         /// so and admits the half that did not land, as <see cref="AddFailed"/> does.</summary>
