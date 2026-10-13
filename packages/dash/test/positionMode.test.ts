@@ -22,7 +22,19 @@ import { BAND_PAGES } from '../src/zones/bandPages.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { racePage } from '../src/screens/pitwall.ts';
 import { sectorColour } from '../src/second/sectors.ts';
-import { carIsSessionBest, carPosition, fieldSize, player, rowsInClass, sessionBestLap, sessionBestRow } from '../src/second/values.ts';
+import {
+  carIsSessionBest,
+  carPosition,
+  fieldSize,
+  carRankChange,
+  player,
+  positionDigits,
+  positionLabelled,
+  rowIndex,
+  rowsInClass,
+  sessionBestLap,
+  sessionBestRow,
+} from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
 import { walkItems } from '../src/walk.ts';
@@ -109,6 +121,30 @@ interface Settings {
    * being built, finds no leaderboard and answers nothing. #454.
    */
   midBuild?: boolean;
+  /**
+   * The order on the road, as leaderboard rows from first place to last, which the plugin publishes
+   * during an iRacing race because the sim's own moves only at the line (#1063). Unset is a frame it
+   * publishes nothing for, or no plugin at all.
+   */
+  live?: readonly number[];
+}
+
+/**
+ * What the plugin publishes for an order on the road: each row's place over the field and in its own
+ * class, each place's row, and each place of the player's class's row. Unpadded, as the plugin names them.
+ */
+function liveProperties(order: readonly number[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  const counted: Record<string, number> = {};
+  order.forEach((row, i) => {
+    const klass = GRID[row - 1]!;
+    counted[klass] = (counted[klass] ?? 0) + 1;
+    out[`OpenDash.LivePosition${row}`] = i + 1;
+    out[`OpenDash.LiveClassPosition${row}`] = counted[klass];
+    out[`OpenDash.LiveOrder${i + 1}`] = row;
+    if (klass === PLAYER_CLASS) out[`OpenDash.LiveClassOrder${counted[klass]}`] = row;
+  });
+  return out;
 }
 
 /** SimHub's leaderboard functions, answered from {@link GRID}. A row that is not there is null. */
@@ -129,10 +165,12 @@ function scopeFor(settings: Settings, repeatIndex: number): Record<string, unkno
     // The player's own best of the sector, slower than either session best so that only the
     // purple branch can tell the two references apart.
     'DataCorePlugin.GameData.Sector1BestTime': 29.0,
+    ...(settings.live === undefined ? {} : liveProperties(settings.live)),
   };
   const classRowAt = (place: number): number => CLASS_ROWS[place - 1] ?? -1;
   return {
     P: (name: string): unknown => properties[name],
+    prop: (name: string): unknown => properties[name],
     // By arity rather than by whether a fallback came back undefined: `isnull(x, driverbestlap(-1))`
     // is the two-argument form even on a frame where its fallback finds no car.
     nz: (...args: unknown[]): unknown => (args.length < 2 ? args[0] === undefined || args[0] === null : (args[0] ?? args[1])),
@@ -177,7 +215,7 @@ function toJavaScript(formula: string): string {
     .replace(/ and /g, ' && ')
     .replace(/ or /g, ' || ');
   const unknown = js.replace(/'[^']*'/g, '').match(/\b[a-z][a-z0-9_]*\(/g) ?? [];
-  const known = ['nz(', 'if(', 'format(', 'abs(', 'left(', 'ucase(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'drivercarclass(', 'driverpositiongain(', 'driverpositiongainclass(',
+  const known = ['nz(', 'if(', 'format(', 'prop(', 'abs(', 'left(', 'ucase(', 'repeatindex(', 'driverposition(', 'driverclassposition(', 'drivercarclass(', 'driverpositiongain(', 'driverpositiongainclass(',
     'driveravailable(', 'getplayerleaderboardposition(', 'driverbestlap(', 'driveriscarinpitlane(', 'driverisplayer(', 'timespantoseconds(',
     'getbestsplittime(', 'getbestsplittime_playerclassonly(',
     'getopponentleaderboardposition_playerclassonly(', 'getopponentleaderboardposition_aheadbehind(', 'getopponentleaderboardposition_aheadbehind_playerclassonly('];
@@ -500,4 +538,57 @@ describe("the bar's two position cells cannot contradict each other", () => {
       expect(evaluate(cell('classPosition').bind, { positionMode })).toBe(`${PLAYER_CLASS} · P${classPositionOf(PLAYER_ROW)}`);
     });
   }
+});
+
+describe('every place and every list moves when a car passes, not when it next crosses the line (#1063)', () => {
+  // The sim's order is the leaderboard's, rows 1 to 6, from the last time each car crossed the line.
+  // Since then the GT3 on row 6 has passed the LMP2 on row 2 and the player's GT3 on row 3, so on the
+  // road the order is rows 1, 6, 2, 3, 4, 5: the player is fourth rather than third, and third in GT3
+  // rather than second.
+  const ROAD = [1, 6, 2, 3, 4, 5] as const;
+  const live = (positionMode: Settings['positionMode']): Settings => ({ positionMode, live: ROAD });
+
+  test("the player's place is the one on the road, in either count", () => {
+    expect(evaluate(positionDigits(player()), live('overall'))).toBe('4');
+    expect(evaluate(positionDigits(player()), live('class'))).toBe('3');
+    expect(evaluate(positionLabelled(player()), live(undefined))).toBe('P3');
+    const bar = BAR_FIELD_SPECS.find((f) => f.id === 'position')!;
+    expect(evaluate(bar.bind, live('overall'))).toBe('4');
+    const classCell = BAR_FIELD_SPECS.find((f) => f.id === 'classPosition')!;
+    expect(evaluate(classCell.bind, live('overall'))).toBe(`${PLAYER_CLASS} · P3`);
+  });
+
+  test('a leaderboard is drawn in the order on the road and its column still counts down one at a time', () => {
+    expect([1, 2, 3, 4, 5, 6].map((line) => evaluate(rowIndex.full(), live('overall'), line))).toEqual([...ROAD]);
+    const page = build('leaderboard', PAGE.width, PAGE.height);
+    expect(column(page, live('overall'))).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  test("a class list is the player's class in the order on the road", () => {
+    expect([1, 2, 3].map((line) => evaluate(rowIndex.inClass(), live('class'), line))).toEqual([1, 6, 3]);
+    const page = build('leaderboard', PAGE.width, PAGE.height);
+    expect(column(page, live('class'))).toEqual([1, 2, 3]);
+  });
+
+  test("a relative is the cars around the player on track, each numbered by its place on the road", () => {
+    // The relative is track order, which the sim already gives as it happens; what moves is the numbers.
+    const page = build('relative', PAGE.width, PAGE.height);
+    expect([...column(page, live('overall'))].sort()).toEqual([1, 2, 3, 4, 5, 6]);
+    // The player's own line, offset 0 from them on track, reads fourth.
+    expect(evaluate(positionDigits(rowIndex.relative(0)), live('overall'), 0)).toBe('4');
+  });
+
+  test('places gained count from the place on the road', () => {
+    // The player started sixth: three places gained by the sim's count, two on the road.
+    expect(evaluate(carRankChange(player()), { positionMode: 'overall' })).toBe(START[PLAYER_ROW - 1]! - PLAYER_ROW);
+    expect(evaluate(carRankChange(player()), live('overall'))).toBe(START[PLAYER_ROW - 1]! - 4);
+  });
+
+  test("with nothing published every place and every row is the sim's, which is a package with no plugin", () => {
+    for (const positionMode of ['overall', 'class', undefined] as const) {
+      expect(evaluate(carPosition(player()), { positionMode })).toBe(positionMode === 'overall' ? PLAYER_ROW : classPositionOf(PLAYER_ROW));
+      expect([1, 2, 3, 4, 5, 6].map((line) => evaluate(rowIndex.full(), { positionMode }, line))).toEqual([1, 2, 3, 4, 5, 6]);
+      expect([1, 2, 3].map((line) => evaluate(rowIndex.inClass(), { positionMode }, line))).toEqual(CLASS_ROWS);
+    }
+  });
 });

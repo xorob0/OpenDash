@@ -101,6 +101,7 @@ namespace OpenDashPlugin
         // hit on the section's last row would land with the row below the fold. An alert's is on its name cell.
 
         public const string AnchorPosition = "settings.position";
+        public const string AnchorLivePositions = "settings.live-positions";
         public const string AnchorDelta = "settings.delta-reference";
         public const string AnchorDeltaPrecision = "settings.delta-precision";
         public const string AnchorSession = "settings.session-progress";
@@ -121,7 +122,7 @@ namespace OpenDashPlugin
         /// its section's link (SectionOf).</summary>
         public static readonly string[][] RowAnchorsBySection =
         {
-            new[] { AnchorPosition, AnchorDelta, AnchorDeltaPrecision, AnchorSession, AnchorDriverNames, AnchorTeamNames, AnchorClock, AnchorUnits },
+            new[] { AnchorPosition, AnchorLivePositions, AnchorDelta, AnchorDeltaPrecision, AnchorSession, AnchorDriverNames, AnchorTeamNames, AnchorClock, AnchorUnits },
             new[] { AnchorBlueFlag, AnchorFlagsInPitLane },
             new[] { AnchorLowFuel, AnchorOilTemp, AnchorWaterTemp },
             new[] { AnchorBrightness, AnchorNightBrightness, AnchorNightMode },
@@ -649,6 +650,7 @@ namespace OpenDashPlugin
         {
             new PanelSearch.Entry(PanelDataTab.SectionTitle, PanelPage.Settings, AnchorRaceData),
             new PanelSearch.Entry(PanelDataTab.PositionTitle, PanelPage.Settings, AnchorPosition, "overall", "class"),
+            new PanelSearch.Entry(PanelDataTab.LivePositionsTitle, PanelPage.Settings, AnchorLivePositions, "position", "iracing", "line", "leaderboard"),
             new PanelSearch.Entry(PanelDataTab.DeltaTitle, PanelPage.Settings, AnchorDelta, "session best", "all-time best", "last lap"),
             new PanelSearch.Entry(PanelDataTab.DeltaPrecisionTitle, PanelPage.Settings, AnchorDeltaPrecision, "hundredths", "thousandths", "decimals"),
             new PanelSearch.Entry(PanelDataTab.SessionTitle, PanelPage.Settings, AnchorSession, "laps", "time"),

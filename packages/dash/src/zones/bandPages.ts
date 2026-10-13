@@ -70,6 +70,7 @@ import {
   sectorTime,
   settledFuelTimeLeft,
   simClock,
+  spotterCar,
   twelveHour,
   windKmh,
 } from '../second/values.ts';
@@ -885,7 +886,7 @@ const cornerLamps = (): { id: string; text: string; on: string; colour: `#${stri
   {
     id: 'spt',
     text: 'SPT',
-    on: ncalc.or(gt(isnull(game('SpotterCarLeft'), num(0)), num(0)), gt(isnull(game('SpotterCarRight'), num(0)), num(0))),
+    on: ncalc.or(spotterCar('Left'), spotterCar('Right')),
     colour: ds.color.caution.primary,
   },
 ];

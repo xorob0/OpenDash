@@ -59,7 +59,9 @@ describe('the telemetry traces', () => {
   test('spans the gear axis from reverse to a gear no car exceeds', () => {
     // Written rather than bound: a ChartItem's Maximum is a number in the file, so the axis cannot
     // follow the car's own gear count, and autoscaling it would move a gear up and down the plot.
-    expect({ minimum: chartsOf('gear')[0]!.minimum, maximum: chartsOf('gear')[0]!.maximum }).toEqual({ minimum: -1, maximum: 8 });
+    // The top is the last of the one forward-gear list, which is nine: it stopped at eight while the
+    // box drew a ninth, and the trace sent that ninth gear to neutral.
+    expect({ minimum: chartsOf('gear')[0]!.minimum, maximum: chartsOf('gear')[0]!.maximum }).toEqual({ minimum: -1, maximum: 9 });
   });
 
   test('samples a number for the gear, because SimHub reports it as a word', () => {
