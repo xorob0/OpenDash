@@ -895,10 +895,12 @@ holding a drawing against a zone should find the argument rather than suspect a 
   shape and on the companion's lists as on the face. The gap is where it goes because it is the one
   column no shape sheds and the chip fits it at every density, so no column is added at the narrow
   faces. The player's own row is not marked, the limiter banner saying it already, and a board, which
-  has its pit column, keeps its gap. Off track would take the same treatment with `OFF`, and is not
-  drawn because SimHub publishes nothing a dash can read that says another car is off the track;
-  [simhub-dash-format.md](../research/simhub-dash-format.md) has the decompile. The canvas owes the
-  drawing of the marked row.
+  has its pit column, keeps its gap. On the AiM the LCD draws no chip, and sets `PIT` as the gap it
+  replaces is set: the seven-segment face, at the gap's weight and size (34 px on the 1280 and 1920
+  faces, 24 on the others), in the gap's box and right-aligned where its figures end. Off track would
+  take the same treatment with `OFF`, and is not drawn because SimHub publishes nothing a dash can
+  read that says another car is off the track; [simhub-dash-format.md](../research/simhub-dash-format.md)
+  has the decompile. The canvas owes the drawing of the marked row.
 - **Stint at `wide` and at `tall`.** The driver, where the drawing closes the page with the pit
   window. The window is not a field the module builds, and a handover is what the recap is read for.
 - **Car settings at every shape.** The module draws the seven settings iRacing exposes and the
