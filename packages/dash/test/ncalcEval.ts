@@ -3,10 +3,14 @@
  * shape of the formula behind it.
  *
  * It covers the subset the expressions under test use: `[Property]` reads, `if`, `isnull`, `format`
- * with and without its sign flag, `replace`, `ucase`, `timespantoseconds` (seconds are passed as
- * numbers, which is how SimHub's own TimeSpans arrive once read), `max`, `min`, `abs`, `round`,
- * `truncate`, `in`, `rootdashboardscreenname` (answered from {@link ROOT_SCREEN}), the comparisons,
- * `and` / `or` / `!`, and the arithmetic. A date is passed as a `Date` and formatted by the hour and
+ * with and without its sign flag, `replace`, `ucase`, SimHub's three-argument `left(value, start,
+ * count)`, `timespantoseconds` (seconds are passed as numbers, which is how SimHub's own TimeSpans
+ * arrive once read), `max`, `min`, `abs`, `round`, `truncate`, `in`, `rootdashboardscreenname`
+ * (answered from {@link ROOT_SCREEN}), the leaderboard reads `getplayerleaderboardposition`,
+ * `getopponentleaderboardposition_aheadbehind`, `drivercarclass`, `driverclassposition`,
+ * `driverposition` and `driveravailable` (each answered from the props by its own call, as
+ * `drivercarclass(3)`, and null where they leave it out), the comparisons, `and` / `or` / `!`, and
+ * the arithmetic. A date is passed as a `Date` and formatted by the hour and
  * minute specifiers a clock uses, `HH`, `H`, `hh`, `h`, `mm` and `m`, in en-US's colon, which is the
  * culture SimHub sets at startup. Anything else is an error rather than a silent `undefined`: a test
  * that evaluates half an expression proves nothing.
@@ -105,6 +109,7 @@ export function evalNcalc(expression: string, props: Props): unknown {
             .replace(/ != /g, ' !== '),
     )
     .join('');
+  const called = (call: string): unknown => (call in props ? props[call] : null);
   const fns = {
     P: (name: string): unknown => (name in props ? props[name] : null),
     // SimHub's `prop(name)`, a property whose name is itself an expression, as `[name]` is one written out.
@@ -121,6 +126,13 @@ export function evalNcalc(expression: string, props: Props): unknown {
     IN: (value: unknown, ...options: unknown[]): boolean => options.some((option) => option === value),
     replace: (v: string, from: string, to: string): string => String(v).split(from).join(to),
     ucase: (v: unknown): string => String(v).toUpperCase(),
+    left: (v: unknown, start: number, count: number): string => String(v).slice(start, start + count),
+    getplayerleaderboardposition: (): unknown => called('getplayerleaderboardposition()'),
+    drivercarclass: (position: unknown): unknown => called(`drivercarclass(${String(position)})`),
+    driverclassposition: (position: unknown): unknown => called(`driverclassposition(${String(position)})`),
+    driverposition: (position: unknown): unknown => called(`driverposition(${String(position)})`),
+    driveravailable: (position: unknown): unknown => called(`driveravailable(${String(position)})`),
+    getopponentleaderboardposition_aheadbehind: (offset: unknown): unknown => called(`getopponentleaderboardposition_aheadbehind(${String(offset)})`),
     timespantoseconds: (v: unknown): number => Number(v),
     max: Math.max,
     min: Math.min,

@@ -42,8 +42,7 @@ import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, discB
 import { ALERT_CATALOGUE, bandNames, bandRaised, bandVisible, FACE_FLAG_PRIORITY, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
-import { CHIP_WIDEST } from '../second/chip.ts';
-import { carBehindClass, carBehindPositionClass, WIDEST_BEHIND_POSITION_CLASS } from '../second/values.ts';
+import { carBehindClass, carBehindPositionClass, WIDEST_BEHIND_CLASS, WIDEST_BEHIND_POSITION_CLASS } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
 export { ALERT_BAND_BORDER as BLACK_FLAG_BORDER, ALERT_FLASH_MS as FLAG_BLINK_MS, ALERT_NAME_WEIGHT as FLAG_NAME_WEIGHT, ALERT_BAND_STYLES as FLAG_STRIP_STYLES } from './alertBand.ts';
@@ -162,7 +161,7 @@ const blueFlagRuns = (label: string): readonly BlueFlagRun[] => {
   const withLabel = (detail: Expr): Expr => iff(eq(detail, str('')), str(label), concat(str(`${label} · `), detail));
   const runs: readonly BlueFlagRun[] = [
     { detail: 'none', sample: label, widest: label },
-    { detail: 'class', sample: `${label} · GT3`, widest: `${label} · ${CHIP_WIDEST}`, bind: withLabel(carBehindClass()) },
+    { detail: 'class', sample: `${label} · GT3`, widest: `${label} · ${WIDEST_BEHIND_CLASS}`, bind: withLabel(carBehindClass()) },
     {
       detail: 'positionClass',
       sample: `${label} · P4 GT3`,
@@ -306,7 +305,7 @@ const cornerParts = (name: string, block: Rect, style: AlertBandStyle, condition
  * `filledBand` puts it inside the rectangle it is given, whatever that rectangle is.
  *
  * The blue flag keeps its detail, #497: the block writes it as the whole band does, under the same
- * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P99 LMP2" is narrower than
+ * `BlueFlagDetail` and from the same bound runs, wherever it fits. "BLUE · P44 LAMB" is narrower than
  * FULL COURSE YELLOW, so that is every corner block there is, and the sixteen pixels of the four faces
  * without one write neither the detail nor BLUE. One thing the takeover has that this does not: the
  * incident's count against its limit. The block writes INCIDENT.
