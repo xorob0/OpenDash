@@ -1512,8 +1512,16 @@ export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(ti
 /** Whether the session is a race, the one session name OpenDash matches with certainty. */
 const isRace = (): Expr => eq(ucase(sessionType()), str('RACE'));
 
-/** The overall leader's row on SimHub's leaderboard, which is sorted by live position. */
-const RACE_LEADER = num(1);
+/**
+ * The overall leader's row on SimHub's leaderboard: the car first on the road, {@link liveRow} of 1.
+ *
+ * Not row 1, which is the sim's leader. SimHub sorts its leaderboard by the sim's place, and iRacing
+ * moves that place only at the line (#1063), so for the rest of the lap after a pass for the lead row
+ * 1 is the car that was passed. A car that had just taken the lead was told to wait for it, and read
+ * a lap left too many and a Refuel for it on the last lap of a timed race. Where the plugin publishes
+ * no live order, which is every sim but iRacing and every session but a race, the row is 1.
+ */
+const RACE_LEADER = liveRow(num(1));
 
 /**
  * The overall leader's lap in seconds: its best, and the car's own {@link timedLapSeconds} until
@@ -1533,13 +1541,14 @@ const leaderLapSeconds = (): Expr =>
  * or after now once the clock has reached it: the wait {@link lapsLeft} adds to the time left.
  *
  * The leader is the one car whose crossing ends a timed race, and it is on the leaderboard with how
- * far round its lap it is, `drivertrackpositionpercent(1)`. Run on at its own lap for the time left,
- * that says how far round it will be when the clock reaches nought, the whole laps dropped, and the
- * flag falls when it has run the rest of that lap: the wait is that rest at its lap. A leader
- * exactly at the line as the clock reaches nought is read as having just crossed it, and waited for
- * a whole lap, the side a fuel figure can afford to be wrong on. The position is a distance and the
- * lap a time, so a leader running slower than its best reaches the line a little later than this
- * says; near the flag that moves the answer only for a car within those seconds of it on the road.
+ * far round its lap it is, `drivertrackpositionpercent` of {@link RACE_LEADER}. Run on at its own
+ * lap for the time left, that says how far round it will be when the clock reaches nought, the whole
+ * laps dropped, and the flag falls when it has run the rest of that lap: the wait is that rest at its
+ * lap. A leader exactly at the line as the clock reaches nought is read as having just crossed it,
+ * and waited for a whole lap, the side a fuel figure can afford to be wrong on. The position is a
+ * distance and the lap a time, so a leader running slower than its best reaches the line a little
+ * later than this says; near the flag that moves the answer only for a car within those seconds of
+ * it on the road.
  *
  * Nought where nothing is waited for: outside a race, where a practice or a qualifying session ends
  * for each car at its own first crossing after the clock; for the leader itself, whose crossing is

@@ -697,8 +697,11 @@ A timed race ends at the overall leader's first crossing after the clock, so `la
 decompile of `GameReaderCommon.dll`, `ICarsReader.dll` (`IRacingManager.GD_Opponents`) and the
 opponent providers of `SimHub.Plugins.dll`; none of it has been checked on iRacing itself.
 
-- **Row 1 is the overall leader.** `driver<name>(1)` reads the first opponent of the leaderboard,
-  which is sorted by position, whatever the rig's class setting.
+- **Row 1 is the sim's overall leader.** `driver<name>(1)` reads the first opponent of the
+  leaderboard, which is sorted by the sim's position, whatever the rig's class setting. On iRacing
+  that position moves only at the line (#1063), so for the lap after a pass for the lead row 1 is the
+  car that was passed. `lapsLeft()` therefore reads the leader's row as the plugin's
+  `OpenDash.LiveOrder1` where it is published, and as row 1 where it is not.
 - **`drivertrackpositionpercent(n)`** is `Opponent.TrackPositionPercent`, which the iRacing reader
   fills from `CarIdxLapDistPct` and `GameManagerBase` folds into 0..1, so a car out of the world
   (-1) reads 0. `drivercurrentlaphighprecision(n)` is the lap less one plus that fraction.

@@ -281,6 +281,16 @@ describe('a car behind the leader runs to its first crossing after the leader’
     expect(lapsLeft(car(0, 20, { ...leader(0.4), 'DataCorePlugin.GameData.SessionTypeName': 'Qualify' }))).toBe('1');
   });
 
+  test('the leader waited for is the one on the road, not the sim’s, which moves only at the line (#1063)', () => {
+    // The car, on row 2, has passed row 1 for the lead since the line, and the plugin has it first on
+    // the road: its own crossing is the flag, though row 1 is still the sim's leader, 20 s behind it.
+    const passed = car(0, 20, { ...leader(0.4), 'driverisplayer(2)': true, 'OpenDash.LiveOrder1': 2 });
+    expect({ lapsLeft: lapsLeft(passed), refuel: refuel(passed) }).toEqual({ lapsLeft: '1', refuel: '0.0' });
+    // With no live order published, row 1 is the leader and the car waits for it, as before.
+    const unpublished = car(0, 20, { ...leader(0.4), 'driverisplayer(2)': true });
+    expect({ lapsLeft: lapsLeft(unpublished), refuel: refuel(unpublished) }).toEqual({ lapsLeft: '2', refuel: '1.4' });
+  });
+
   test('with no leader on the leaderboard, the most the wait can be is counted', () => {
     // Nothing says where the leader is, so it may cross a whole lap after the clock: a lap more.
     const unplaced = { 'driverisplayer(1)': null };
