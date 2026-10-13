@@ -425,24 +425,34 @@ describe('the parts the face draws itself', () => {
     expect(names.filter((n) => n.startsWith('revBar')).length).toBeGreaterThan(0);
   });
 
-  test('the flag takes band D rather than having a strip of its own, in both of its phases', () => {
+  test('the flag takes band D rather than having a strip of its own, and settles into zone C’s title line', () => {
     const band = zoneFace1920x480.zones.band;
     // The band format, which is the one this is about, and both phases of it: `flag.` is the
     // takeover, the whole band for the few seconds after a flag comes out, and `flagCorner.` is what
-    // it settles into, the block at each end (#380). The face draws a second, full-screen format
-    // beside them under `flagFull.`, deliberately over zones B, A and C; `flagFormat.test.ts` holds
-    // that one, including that the formats cannot draw at once.
-    const flag = all.filter((i) => i.name.startsWith('flag.') || i.name.startsWith('flagCorner.'));
+    // it settles into, one rectangle in zone C's title line (#380, #731). The face draws a second,
+    // full-screen format beside them under `flagFull.`, deliberately over zones B, A and C;
+    // `flagFormat.test.ts` holds that one, including that the formats cannot draw at once, and
+    // `flagSettled.test.ts` holds the settled rectangle clear of every reading.
+    const flag = all.filter((i) => i.name.startsWith('flag.'));
+    const settled = all.filter((i) => i.name.startsWith('flagCorner.'));
     expect(flag.length).toBeGreaterThan(0);
-    expect(all.some((i) => i.name.startsWith('flagCorner.'))).toBe(true);
+    expect(settled.length).toBeGreaterThan(0);
     expect(all.some((i) => i.name.startsWith('flagFull.'))).toBe(true);
-    // Every part of it is inside band D. The slot model drew a strip along the bottom edge and the
-    // band is where that sixty pixels went, so a flag that fell outside the band would mean the
-    // face had grown a second one.
+    // Every part of the takeover is inside band D. The slot model drew a strip along the bottom edge
+    // and the band is where that sixty pixels went, so a flag that fell outside the band would mean
+    // the face had grown a second one.
     for (const item of flag) {
       if (item.kind === 'layer') continue;
       const r = item.rect;
       const inside = r.top >= band.top && r.top + r.height <= band.top + band.height + 8 && r.left >= band.left && r.left + r.width <= band.left + band.width;
+      expect({ item: item.name, rect: r, inside }).toMatchObject({ inside: true });
+    }
+    // And every part of the settled flag is in zone C's title line.
+    const zoneC = zoneFace1920x480.zones.zoneC;
+    for (const item of settled) {
+      if (item.kind === 'layer') continue;
+      const r = item.rect;
+      const inside = r.top >= zoneC.top && r.top + r.height <= zoneC.top + 6 + 22 + 8 && r.left >= zoneC.left && r.left + r.width <= zoneC.left + zoneC.width;
       expect({ item: item.name, rect: r, inside }).toMatchObject({ inside: true });
     }
   });

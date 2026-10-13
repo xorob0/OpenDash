@@ -28,7 +28,7 @@ import { ALERT_CATALOGUE, conditionRaised, conditionShown, conditionVisible, FAC
 import { isInPitLane } from '../src/second/values.ts';
 import { buildContainerObject, serializeProfile, validateProfile, walkContainers, type Hex, type MatrixContainer, type MatrixFrame } from '../src/generator.ts';
 import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts';
-import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
+import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, LEARNED_GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
@@ -65,16 +65,19 @@ const litOf = (colorBind: string | undefined): string => {
  * String equality against the rev bar is what the flash is pinned by below, and it cannot tell a
  * digit and a bar that are wrong together from two that are right: that is exactly how the
  * fallback ladder kept flashing in the last gear through a green suite. Covers the whole of what
- * `shift.ts` emits and nothing besides -- property reads, `isnull`, `max`, the comparisons,
- * `and` / `or` / `!` and arithmetic -- and throws on anything wider rather than guessing.
+ * `shift.ts` emits and nothing besides -- property reads, `isnull`, `if`, `max`, the comparisons,
+ * `and` / `or` / `!`, arithmetic and the `'' +` that writes a number as text -- and throws on
+ * anything wider rather than guessing.
  */
-const evaluateShift = (expression: string, telemetry: Record<string, number | boolean>): boolean => {
+const evaluateShift = (expression: string, telemetry: Record<string, number | boolean | string>): boolean => {
   const words = expression.replace(/\[[A-Za-z0-9_.]+\]/g, '0').match(/[A-Za-z_][A-Za-z_.]*/g) ?? [];
   // `true` and `false` are the isnull() fallbacks of the panel's own switches.
-  const unknown = words.filter((w) => !['isnull', 'max', 'and', 'or', 'true', 'false'].includes(w));
+  const unknown = words.filter((w) => !['isnull', 'if', 'max', 'and', 'or', 'true', 'false'].includes(w));
   if (unknown.length > 0) throw new Error(`evaluateShift does not cover ${unknown.join(', ')} in ${expression}`);
   // Booleans as well as numbers, because two of the properties the car's own bar is read through are
-  // published as booleans and `1` is not `true` to the comparison the expression makes. The shared
+  // published as booleans and `1` is not `true` to the comparison the expression makes. Strings as
+  // well, because the gear is one: SimHub publishes `[Gear]` as "N", "R", "1", and the last gear is
+  // found by comparing it with the gear count written as text (#996). The shared
   // evaluator reads a missing property as null and answers `max` in its left operand's type (#1046).
   const result = evalNcalc(expression, telemetry);
   if (typeof result !== 'boolean') throw new Error(`not a condition: ${expression}`);
@@ -804,27 +807,37 @@ describe('the gear, as the resting state', () => {
     const flash = emitted.slice(guard.length, -1);
 
     const zeros = Object.fromEntries(Object.values(SHIFT_RPM_PROPERTIES).map((p) => [p, 0]));
-    const frame = (props: Record<string, number>): Record<string, number> => ({ ...zeros, [GEAR_COUNT_PROPERTY]: 6, ...props });
-    const GEAR = 'DataCorePlugin.GameRawData.Telemetry.Gear';
+    // The count arrives as the session string's text, as the recorded traces carry it.
+    const frame = (props: Record<string, number | string>): Record<string, number | string> => ({ ...zeros, [GEAR_COUNT_PROPERTY]: '6', ...props });
+    const GEAR = 'DataCorePlugin.GameData.Gear';
     const RPMS = 'DataCorePlugin.GameData.Rpms';
     const ladder = { [SHIFT_RPM_PROPERTIES.first]: 6000, [SHIFT_RPM_PROPERTIES.shift]: 7000, [SHIFT_RPM_PROPERTIES.last]: 7500, [SHIFT_RPM_PROPERTIES.blink]: 7800 };
 
     // The four RPMs at zero is the fallback, which is the half the guard was missing.
-    const fallback = frame({ [REDLINE_REACHED]: 1, [GEAR]: 5 });
+    const fallback = frame({ [REDLINE_REACHED]: 1, [GEAR]: '5' });
     expect(evaluateShift(mirrorAvailable(), fallback)).toBe(false);
     expect(evaluateShift(flash, fallback)).toBe(true);
-    expect(evaluateShift(flash, { ...fallback, [GEAR]: 6 })).toBe(false);
+    expect(evaluateShift(flash, { ...fallback, [GEAR]: '6' })).toBe(false);
     // Off redline it is steady whatever the gear, so the guard has not swallowed the flash itself.
     expect(evaluateShift(flash, { ...fallback, [REDLINE_REACHED]: 0 })).toBe(false);
 
     // And the car's own ladder, which behaved, goes on behaving: over the blink RPM and below the
     // last gear it flashes, and in the last gear it does not.
-    const own = frame({ ...ladder, [RPMS]: 7900, [GEAR]: 5 });
+    const own = frame({ ...ladder, [RPMS]: 7900, [GEAR]: '5' });
     expect(evaluateShift(mirrorAvailable(), own)).toBe(true);
     expect(evaluateShift(flash, own)).toBe(true);
-    expect(evaluateShift(flash, { ...own, [GEAR]: 6 })).toBe(false);
-    // A car that declares no gear count keeps flashing, which is what `lastGear` promises.
-    expect(evaluateShift(flash, { ...own, [GEAR]: 6, [GEAR_COUNT_PROPERTY]: 0 })).toBe(true);
+    expect(evaluateShift(flash, { ...own, [GEAR]: '6' })).toBe(false);
+    // A car that declares no gear count, on a sim where SimHub has learned none either, keeps
+    // flashing, which is what `lastGear` promises.
+    expect(evaluateShift(flash, { ...own, [GEAR]: '6', [GEAR_COUNT_PROPERTY]: 0 })).toBe(true);
+
+    // Assetto Corsa: no DriverInfo block and no ladder of the car's own, so the fallback, with the
+    // gear count SimHub has learned for the car. The flash stops in sixth of six and fires in fifth,
+    // where before #996 it never stopped at all.
+    const { [GEAR_COUNT_PROPERTY]: _declared, ...undeclared } = frame({ [REDLINE_REACHED]: 1 });
+    const ac = { ...undeclared, [LEARNED_GEAR_COUNT_PROPERTY]: 6 };
+    expect(evaluateShift(flash, { ...ac, [GEAR]: '5' })).toBe(true);
+    expect(evaluateShift(flash, { ...ac, [GEAR]: '6' })).toBe(false);
 
     // One expression rather than three: the strip's fallback over-rev is the digit's, character
     // for character, and the bar's is pinned against the digit by the test above.

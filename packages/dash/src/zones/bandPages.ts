@@ -46,6 +46,8 @@ import {
   carRelativeGap,
   RELATIVE_GAP_WIDEST,
   CHARS,
+  INCIDENTS_WIDEST,
+  LAP_WIDEST,
   clock,
   currentLap,
   fuel as fuelLevel,
@@ -284,7 +286,7 @@ const energy: readonly BandField[] = [
 
 /** D3 Stint. The pit window needs a strategy the plugin does not compute; see ADR 0009. */
 const stint: readonly BandField[] = [
-  { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.position },
+  { id: 'laps', label: 'Stint laps', sample: '12', bind: fmt(isnull(driver('lapsdonesincelastpitout', playerPosition()), num(0)), '0'), chars: CHARS.lap, numeralWidest: LAP_WIDEST },
   { id: 'time', label: 'Stint time', sample: '0:21:40', bind: clock(secondsOf(driver('timesincelastpitout', playerPosition()))), chars: CHARS.clock },
   { id: 'stops', label: 'Stops', sample: '1', bind: fmt(isnull(driver('pitcount', playerPosition()), num(0)), '0'), chars: CHARS.position },
   {
@@ -900,7 +902,10 @@ const leftCornerFields = (): BandField[] => [
     label: 'Incidents',
     sample: '3x',
     bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')),
-    chars: CHARS.count,
+    // The count's three cells and one for the `x`, which is how the bar and the session page cut the
+    // same reading: in the count's three alone, `100x` lost its `x` to the corner's edge. #596.
+    chars: CHARS.incidents,
+    numeralWidest: INCIDENTS_WIDEST,
     color: ds.color.caution.primary,
   },
   // Mixed case rather than upper: "Dry" is a word the driver reads at a glance and "DRY" is one he
@@ -969,41 +974,6 @@ export function bandCornerWidths(frame: Rect): { left: number; right: number } {
 }
 
 const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, densityOf('zone').small, ds.size.label, LABEL_ROW, FIELD_GAP);
-
-/**
- * The two rectangles a flag keeps at the ends of the band once it has settled there, #380.
- *
- * On a face that draws corner blocks they *are* those blocks, each taken whole and to the band's own
- * edge: the flag covers the incidents and the track state at one end, the lamps and both clocks at
- * the other, and gives the page in the middle back. That is the trade the ticket makes deliberately.
- * A full course yellow runs several minutes and the flag has said everything it has to say after two
- * seconds, whereas what a driver decides during one is whether to pit, so the fuel page outranks a
- * clock and the availability of DRS for the rest of the caution.
- *
- * Whole is `bandCornerWidths`, which is the block's two fields plus `padX` plus `letterRoom`, so the
- * block runs to the band's own edge, as the side padding does on the four faces without corners, and
- * a settled flag is one drawing on all eight. zones.md §6 records it, and `flagBand.test.ts` holds
- * the face to it.
- *
- * On a face that draws no corners -- 850 x 480, 800 x 480, 800 x 286 and 600 x 686 -- there is none
- * to take, and the flag keeps the side padding instead: `padX` at each end, which is the only room in
- * the band no page is ever laid into, since `bandPageRoom` reserves it at both ends whether the face
- * has corners or not. It is colour without a name at that width, as the nano's strip is, and it is
- * drawn rather than left out because the ticket's own case is one of those four faces. No artboard
- * draws it; zones.md §10 records that.
- *
- * Measured here rather than by the face, for the same reason `bandCornerWidths` is: the band's own
- * table is what decides where a page stops, and a flag settling into room the page is using would be
- * the one thing a band must never do.
- */
-export function bandFlagBlocks(frame: Rect, corners: boolean): { left: Rect; right: Rect } {
-  const m = bandMetrics(frame);
-  const taken = corners ? bandCornerWidths(frame) : { left: m.padX, right: m.padX };
-  return {
-    left: rect(frame.left, frame.top, taken.left, frame.height),
-    right: rect(frame.left + frame.width - taken.right, frame.top, taken.right, frame.height),
-  };
-}
 
 /**
  * The room a lamp takes: the word, the 7 px either side of it, and the chip's own outline.

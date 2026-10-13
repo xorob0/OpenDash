@@ -134,7 +134,9 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
 
 /**
  * The names the block can write for the condition, longest first, or the failure to build the face
- * at all: the band's own two where the band has a short form, and the table's one word otherwise.
+ * at all: the table's one word where it has one, and the band's own two otherwise, which is the full
+ * course yellow. The table is asked first because the band has short forms of its own since #731,
+ * for the settled flag's narrow rectangle, and the block has always written its own word.
  *
  * Every face calls this for every condition, so a condition that reaches the catalogue without a
  * name on the block fails `bun run build` rather than drawing an unnamed colour. That is the same
@@ -142,11 +144,11 @@ const BLOCK_NAMES: Readonly<Record<string, string>> = {
  * string and no type can be made to refuse it.
  */
 const blockNames = (condition: AlertCondition): readonly string[] => {
+  const name = BLOCK_NAMES[condition.id];
+  if (name !== undefined) return [name];
   const band = bandNames(condition.band);
   if (band.length > 1) return band;
-  const name = BLOCK_NAMES[condition.id];
-  if (name === undefined) throw new RangeError(`${condition.id} has no name on the full-screen block`);
-  return [name];
+  throw new RangeError(`${condition.id} has no name on the full-screen block`);
 };
 
 /** Whether the block draws the condition at all: everything but the two neutral alerts. */

@@ -106,7 +106,7 @@ CarIdxP2P_Status|bool|64||0|Push2Pass active or not
 CarIdxP2P_Count|int|64||0|Push2Pass count of usage (or remaining in Race)
 PaceMode|int|1|irsdk_PaceMode|4|Are we pacing or not
 OnPitRoad|bool|1||0|Is the player car on pit road between the cones
-SteeringWheelAngle|float|1|rad|0|Steering wheel angle
+SteeringWheelAngle|float|1|rad|0|Steering wheel angle, positive turned left (counter-clockwise)
 Throttle|float|1|%|1|0=off throttle to 1=full throttle
 Brake|float|1|%|0|0=brake released to 1=max pedal force
 Clutch|float|1|%|1|0=disengaged to 1=fully engaged

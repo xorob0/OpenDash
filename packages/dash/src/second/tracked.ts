@@ -39,8 +39,15 @@ export interface TrackedValue {
   strip: string;
   /** What a change notification calls it, where there is room for the whole name. */
   notice: string;
-  /** What DashStudio draws, and what the cell and the box are measured from. */
+  /** What DashStudio draws. */
   sample: string;
+  /**
+   * The longest reading the setting can draw, which every box that shows it is cut from and measured
+   * by: {@link LEVEL_WIDEST} for a level and {@link BIAS_WIDEST} for the bias. The boxes used to be
+   * cut from the sample, and most samples are one digit, so the strip and the change notification
+   * drew a TC of 10 in the one cell its `5` took. #596.
+   */
+  widest: string;
   read: Expr;
   /** .NET format string the reading is written with. */
   pattern: string;
@@ -77,6 +84,11 @@ export const hasSetting = (value: TrackedValue): Expr => value.has ?? not(isNull
  */
 export const assistPresent = (knob: Expr, level: Expr): Expr => or(not(isNull(knob)), gt(isnull(level, num(0)), num(0)));
 
+/** The widest level a stepped setting draws: two digits, a GT3 car's TC and ABS dials running to twelve. */
+export const LEVEL_WIDEST = '88';
+/** The widest brake bias: two digits and a place, a front share always being under a hundred. */
+export const BIAS_WIDEST = '88.8';
+
 /**
  * The seven, in the order the canvas draws the strip. Cut is `dcTractionControl2`, the second
  * traction dial a GT3 car exposes beside TC level.
@@ -95,13 +107,13 @@ export const assistPresent = (knob: Expr, level: Expr): Expr => or(not(isNull(kn
  * TODO: bind Diff and Slip once the canvas says which in-car adjustment each shows, or rename them.
  */
 export const TRACKED_VALUES: readonly TrackedValue[] = [
-  { id: 'slip', strip: 'Slip', notice: 'Slip', sample: '4', read: raw('dcThrottleShape'), pattern: '0' },
-  { id: 'tc', strip: 'TC', notice: 'TC', sample: '5', read: tcLevel(), pattern: '0', has: assistPresent(raw('dcTractionControl'), tcLevel()) },
-  { id: 'cut', strip: 'Cut', notice: 'TC cut', sample: '2', read: raw('dcTractionControl2'), pattern: '0' },
-  { id: 'bias', strip: 'Bias', notice: 'Brake bias', sample: '50.5', read: brakeBias(), pattern: '0.0', has: not(isNull(game('BrakeBias'))) },
-  { id: 'abs', strip: 'ABS', notice: 'ABS', sample: '4', read: absLevel(), pattern: '0', has: assistPresent(raw('dcABS'), absLevel()) },
-  { id: 'map', strip: 'Map', notice: 'Engine map', sample: '1', read: fuelMixture(), pattern: '0' },
-  { id: 'diff', strip: 'Diff', notice: 'Diff', sample: '4', read: antiRollRear(), pattern: '0' },
+  { id: 'slip', strip: 'Slip', notice: 'Slip', sample: '4', read: raw('dcThrottleShape'), widest: LEVEL_WIDEST, pattern: '0' },
+  { id: 'tc', strip: 'TC', notice: 'TC', sample: '5', read: tcLevel(), widest: LEVEL_WIDEST, pattern: '0', has: assistPresent(raw('dcTractionControl'), tcLevel()) },
+  { id: 'cut', strip: 'Cut', notice: 'TC cut', sample: '2', read: raw('dcTractionControl2'), widest: LEVEL_WIDEST, pattern: '0' },
+  { id: 'bias', strip: 'Bias', notice: 'Brake bias', sample: '50.5', read: brakeBias(), widest: BIAS_WIDEST, pattern: '0.0', has: not(isNull(game('BrakeBias'))) },
+  { id: 'abs', strip: 'ABS', notice: 'ABS', sample: '4', read: absLevel(), widest: LEVEL_WIDEST, pattern: '0', has: assistPresent(raw('dcABS'), absLevel()) },
+  { id: 'map', strip: 'Map', notice: 'Engine map', sample: '1', read: fuelMixture(), widest: LEVEL_WIDEST, pattern: '0' },
+  { id: 'diff', strip: 'Diff', notice: 'Diff', sample: '4', read: antiRollRear(), widest: LEVEL_WIDEST, pattern: '0' },
 ];
 
 /** The entry with this id, or the failure to build: an id nothing claims is a typo, not a state. */

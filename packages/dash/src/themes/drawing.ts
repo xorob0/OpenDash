@@ -114,6 +114,13 @@ export interface ThemeDrawing {
   /** Whether band D draws its corner blocks, in place of the house face's answer for this size. */
   bandCorners?: boolean;
   /**
+   * The one rectangle a flag settles into once it has had band D for its few seconds, #731, in place of
+   * the house's, which is in zone C's title line between the page name and the counter. It has to be
+   * somewhere no reading of the theme's face is drawn, on every page a zone can show, and wide enough
+   * for every condition's shortest name; `flagSettled.test.ts` holds every face of every theme to that.
+   */
+  flagSettled?(ctx: FaceContext): Rect;
+  /**
    * Pages added to band D's catalogue, after the contract's own: the drawing of each page the theme's
    * catalogue entry lists in `bandPages`, the same pages in the same order, which the build holds it to.
    */

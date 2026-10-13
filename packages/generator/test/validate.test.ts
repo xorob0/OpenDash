@@ -187,7 +187,11 @@ describe('binding targets', () => {
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('TextColor');
     expect(ALLOWED_BINDING_TARGETS.rect).not.toContain('FontSize');
     expect(ALLOWED_BINDING_TARGETS.text).toContain('FontSize');
-    expect(ALLOWED_BINDING_TARGETS.ellipse).toEqual(['Left', 'Top', 'Width', 'Height', 'Visible', 'BackgroundColor', 'Opacity', 'BlinkEnabled', 'FillColor', 'EllipseColor']);
+    expect(ALLOWED_BINDING_TARGETS.ellipse).toEqual(['Left', 'Top', 'Width', 'Height', 'Visible', 'BackgroundColor', 'Opacity', 'BlinkEnabled', 'FillColor', 'EllipseColor', 'Rotation']);
+    // Rotation binds where a written rotation is verified, and nowhere else.
+    for (const kind of Object.keys(ALLOWED_BINDING_TARGETS) as (keyof typeof ALLOWED_BINDING_TARGETS)[]) {
+      expect({ kind, rotation: ALLOWED_BINDING_TARGETS[kind].includes('Rotation') }).toEqual({ kind, rotation: ['text', 'rect', 'ellipse'].includes(kind) });
+    }
     expect(ALLOWED_BINDING_TARGETS.chart).toContain('CurrentValue');
     expect(ALLOWED_BINDING_TARGETS.linearGauge).toContain('Value');
     expect(ALLOWED_BINDING_TARGETS.webPage).toContain('StartAddress');

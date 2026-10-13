@@ -338,7 +338,8 @@ const drawing = (layer: LayerItem, frame: Rect): unknown[] =>
 /**
  * The debris flag is yellow with red stripes, and since #498 every band draws the stripes. Drawn as a
  * yellow named DEBRIS it was the yellow flag wherever no name was written: the nano's strip, the
- * companion's, and the sixteen or twelve pixels a settled flag keeps on a face with no corner block.
+ * companion's, and the sixteen or twelve pixels a settled flag kept at each end of a band with no
+ * corner block until #731 gave it one rectangle with room for its name, which is drawn here too.
  */
 describe('the debris flag is its yellow and red wherever it is drawn', () => {
   const unnamed: AlertBandStyle = { ...ALERT_BAND_STYLES.standard, labels: false };
@@ -347,8 +348,9 @@ describe('the debris flag is its yellow and red wherever it is drawn', () => {
     { where: 'the portrait band', frame: NARROW, style: ALERT_BAND_STYLES.standard },
     { where: 'the nano strip', frame: rect(0, 274, 800, 12), style: ALERT_BAND_STYLES.nano },
     { where: 'the portrait companion strip', frame: rect(0, 838, 480, 12), style: ALERT_BAND_STYLES.nano },
-    { where: 'a sixteen-pixel settled block', frame: rect(0, 420, 16, 60), style: unnamed },
-    { where: 'a twelve-pixel settled block', frame: rect(0, 630, 12, 56), style: unnamed },
+    { where: 'a sixteen-pixel unnamed block', frame: rect(0, 420, 16, 60), style: unnamed },
+    { where: 'a twelve-pixel unnamed block', frame: rect(0, 630, 12, 56), style: unnamed },
+    { where: 'the settled rectangle in a title line', frame: rect(1042, 105, 176, 22), style: ALERT_BAND_STYLES.standard },
   ];
 
   for (const { where, frame, style } of FRAMES) {
@@ -403,9 +405,10 @@ describe('the debris flag is its yellow and red wherever it is drawn', () => {
 /**
  * The meatball is a black box with an orange disc in the middle and no text, which is the author's
  * ruling on #498, on every rectangle a band is drawn in: the whole band, the nano's and the
- * companion's strips, and the sixteen or twelve pixels a settled flag keeps on a face with no corner
- * block, where the shorter side is the width and the disc is sized by it. The corner blocks are held
- * in flagBand.test.ts and the full-screen block in flagFormat.test.ts.
+ * companion's strips, a block sixteen or twelve pixels wide, where the shorter side is the width and
+ * the disc is sized by it, and the settled flag's rectangle in a title line, where it is the height.
+ * The settled flag on the faces is held in flagBand.test.ts and the full-screen block in
+ * flagFormat.test.ts.
  */
 describe('the meatball is its orange disc on the near-black, and nothing else', () => {
   const unnamed: AlertBandStyle = { ...ALERT_BAND_STYLES.standard, labels: false };
@@ -414,8 +417,9 @@ describe('the meatball is its orange disc on the near-black, and nothing else', 
     { where: 'the portrait band', frame: NARROW, style: ALERT_BAND_STYLES.standard },
     { where: 'the nano strip', frame: rect(0, 274, 800, 12), style: ALERT_BAND_STYLES.nano },
     { where: 'the portrait companion strip', frame: rect(0, 838, 480, 12), style: ALERT_BAND_STYLES.nano },
-    { where: 'a sixteen-pixel settled block', frame: rect(0, 420, 16, 60), style: unnamed },
-    { where: 'a twelve-pixel settled block', frame: rect(0, 630, 12, 56), style: unnamed },
+    { where: 'a sixteen-pixel unnamed block', frame: rect(0, 420, 16, 60), style: unnamed },
+    { where: 'a twelve-pixel unnamed block', frame: rect(0, 630, 12, 56), style: unnamed },
+    { where: 'the settled rectangle in a title line', frame: rect(1042, 105, 176, 22), style: ALERT_BAND_STYLES.standard },
   ];
 
   for (const { where, frame, style } of FRAMES) {
@@ -459,8 +463,8 @@ describe('the meatball and the incident are two drawings where no name is writte
   for (const { where, frame, style } of [
     { where: 'the nano strip', frame: rect(0, 274, 800, 12), style: ALERT_BAND_STYLES.nano },
     { where: 'the portrait companion strip', frame: rect(0, 838, 480, 12), style: ALERT_BAND_STYLES.nano },
-    { where: 'a sixteen-pixel settled block', frame: rect(0, 420, 16, 60), style: unnamed },
-    { where: 'a twelve-pixel settled block', frame: rect(0, 630, 12, 56), style: unnamed },
+    { where: 'a sixteen-pixel unnamed block', frame: rect(0, 420, 16, 60), style: unnamed },
+    { where: 'a twelve-pixel unnamed block', frame: rect(0, 630, 12, 56), style: unnamed },
   ]) {
     test(where, () => {
       expect(ds.purpose.alert.incident).toBe(ds.purpose.flag.orange);
