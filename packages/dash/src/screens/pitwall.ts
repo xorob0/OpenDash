@@ -30,7 +30,7 @@ import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { assistField } from '../modules/carSettings.ts';
 import { airTemperature, bestLap, brake, brakeBias, carPosition,
-  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, classOpponentCount, clutch, estimatedLap, fieldSize, lapTime, lastLap, player, playerClass, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
@@ -65,14 +65,6 @@ function panelRow(body: Rect, specs: readonly FieldSpec[], gap?: number): Item[]
 }
 
 /**
- * The longest session name the panel's first label can draw, which is what its box is measured by.
- *
- * `pitwallHeader.ts` measures the same list for the same property; the two constants stay apart
- * because neither file owns the other, and `values.ts` is where a third consumer would put it.
- */
-const WIDEST_SESSION_LABEL = 'Offline Testing';
-
-/**
  * The session panel: how long is left, where you are in the field, where you are in your class.
  *
  * Three fields rather than the five this used to draw, and the portrait sheet's rather than the
@@ -96,7 +88,7 @@ export function sessionPanel(name: string, frame: Rect): Item[] {
         'left',
         'Race',
         { sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock, fs: d.mid },
-        { labelBind: sessionType(), labelWidest: WIDEST_SESSION_LABEL },
+        { labelBind: sessionType(), labelWidest: SESSION_NAME_WIDEST },
       ),
       fld(ctxOf(body, `${name}.`), 'position', 'Position', {
         sample: '4',
