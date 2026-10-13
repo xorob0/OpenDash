@@ -184,7 +184,7 @@ namespace OpenDashPlugin
         /// check found are the ones the panel's Update button applies whichever of the two asked.
         /// </summary>
         public UpdateService Updates =>
-            updates ?? (updates = new UpdateService(new ReleaseClient(Version), new SimHubInstallLog()));
+            updates ?? (updates = new UpdateService(new ReleaseClient(Version), new SimHubInstallLog(), Version));
 
         private UpdateService updates;
 

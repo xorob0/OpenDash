@@ -26,7 +26,21 @@ namespace OpenDashPlugin.Tests
             try { Directory.Delete(root, true); } catch (Exception) { }
         }
 
+        /// <summary>A plugin zip whose assembly is a real one, this test assembly, which carries the
+        /// version this checkout builds (<see cref="BuiltVersion"/>). Every other entry is text.</summary>
         private static byte[] Zip(params string[] entries)
+        {
+            return ZipOf(entries, real: true);
+        }
+
+        /// <summary>A plugin zip whose every entry is text, its assembly included, so that no version can
+        /// be read out of it.</summary>
+        private static byte[] TextZip(params string[] entries)
+        {
+            return ZipOf(entries, real: false);
+        }
+
+        private static byte[] ZipOf(string[] entries, bool real)
         {
             using (var buffer = new MemoryStream())
             {
@@ -35,6 +49,11 @@ namespace OpenDashPlugin.Tests
                     foreach (var name in entries)
                     {
                         var entry = zip.CreateEntry(name);
+                        if (real && Path.GetFileName(name) == PluginUpdate.DllName)
+                        {
+                            using (var target = entry.Open()) target.Write(Assembly(), 0, Assembly().Length);
+                            continue;
+                        }
                         using (var writer = new StreamWriter(entry.Open(), new UTF8Encoding(false)))
                         {
                             writer.Write("contents of " + name);
@@ -43,6 +62,18 @@ namespace OpenDashPlugin.Tests
                 }
                 return buffer.ToArray();
             }
+        }
+
+        private static byte[] Assembly()
+        {
+            return File.ReadAllBytes(typeof(PluginUpdateTests).Assembly.Location);
+        }
+
+        /// <summary>Stages <paramref name="zip"/> as an update to the release this checkout builds would,
+        /// from a plugin older than it.</summary>
+        private PluginStageResult Stage(byte[] zip, string under = null)
+        {
+            return PluginUpdate.Stage(zip, under ?? root, BuiltVersion(), "0.0.1");
         }
 
         [Fact]
@@ -57,10 +88,10 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_assembly_is_taken_out_of_the_release_zip_and_left_beside_the_one_in_use()
         {
-            var result = PluginUpdate.Stage(Zip("INSTALL.md", PluginUpdate.DllName, "OFL.txt"), root);
+            var result = Stage(Zip("INSTALL.md", PluginUpdate.DllName, "OFL.txt"));
             Assert.True(result.Ok, result.Error);
             Assert.Equal(PluginUpdate.StagedPath(root), result.Path);
-            Assert.Equal("contents of " + PluginUpdate.DllName, File.ReadAllText(result.Path));
+            Assert.Equal(Assembly(), File.ReadAllBytes(result.Path));
             Assert.True(PluginUpdate.Pending(root));
             // The assembly in use is not touched: the swap is the only thing that replaces it, and it
             // runs when this process is gone.
@@ -74,10 +105,11 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Staging_twice_leaves_the_newer_one_waiting()
         {
-            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
-            var second = PluginUpdate.Stage(Zip("nested/" + PluginUpdate.DllName), root);
+            Assert.True(Stage(Zip(PluginUpdate.DllName)).Ok);
+            File.WriteAllText(PluginUpdate.StagedPath(root), "the first staging");
+            var second = Stage(Zip("nested/" + PluginUpdate.DllName));
             Assert.True(second.Ok, second.Error);
-            Assert.Equal("contents of nested/" + PluginUpdate.DllName, File.ReadAllText(second.Path));
+            Assert.Equal(Assembly(), File.ReadAllBytes(second.Path));
         }
 
         /// <summary>
@@ -93,14 +125,14 @@ namespace OpenDashPlugin.Tests
         {
             foreach (var bytes in new[] { Zip("INSTALL.md", "OFL.txt"), new byte[0], null })
             {
-                var result = PluginUpdate.Stage(bytes, root);
+                var result = Stage(bytes);
                 Assert.False(result.Ok);
                 Assert.NotNull(result.Error);
                 Assert.Null(result.Path);
                 Assert.False(PluginUpdate.Pending(root));
             }
             // Nor does something that is not an archive at all.
-            var nonsense = PluginUpdate.Stage(Encoding.UTF8.GetBytes("not a zip"), root);
+            var nonsense = Stage(Encoding.UTF8.GetBytes("not a zip"));
             Assert.False(nonsense.Ok);
             Assert.False(PluginUpdate.Pending(root));
         }
@@ -117,7 +149,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Arming_again_over_a_script_that_cannot_be_written_still_counts_as_armed()
         {
-            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            Assert.True(Stage(Zip(PluginUpdate.DllName)).Ok);
             File.WriteAllText(PluginUpdate.ScriptPath(root), PluginUpdate.SwapScript());
             using (File.Open(PluginUpdate.ScriptPath(root), FileMode.Open, FileAccess.Read, FileShare.Read))
             {
@@ -232,7 +264,7 @@ namespace OpenDashPlugin.Tests
         public void The_swap_script_written_for_an_accented_root_with_a_percent_sign_is_ASCII_and_names_no_path()
         {
             var odd = Path.Combine(root, "Jos\u00e9", "Sim%Hub!\u5c71");
-            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), odd).Ok);
+            Assert.True(Stage(Zip(PluginUpdate.DllName), odd).Ok);
             Assert.True(PluginUpdate.Arm(odd));
 
             var bytes = File.ReadAllBytes(PluginUpdate.ScriptPath(odd));
@@ -282,9 +314,91 @@ namespace OpenDashPlugin.Tests
             Assert.Null(PluginUpdate.StagedVersion(root));
             StageARealAssembly();
             Assert.Equal(BuiltVersion(), PluginUpdate.StagedVersion(root));
-            // What Stage writes from a zip that carries no real assembly has no version to read.
-            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            // A file that is not an assembly has no version to read.
+            File.WriteAllText(PluginUpdate.StagedPath(root), "contents of " + PluginUpdate.DllName);
             Assert.Null(PluginUpdate.StagedVersion(root));
+        }
+
+        /// <summary>
+        /// A download whose assembly is older than the plugin running is not staged, and nothing is armed
+        /// to swap it in (#862).
+        /// </summary>
+        /// <remarks>
+        /// Only <see cref="PluginUpdate.Review"/> read the version, at the start after the waiter armed at
+        /// staging had already moved the older file into place; and since the rig was still older than the
+        /// release, the next check offered it again, once a day.
+        /// </remarks>
+        [Fact]
+        public void An_assembly_older_than_the_plugin_running_is_not_staged()
+        {
+            var result = PluginUpdate.Stage(Zip(PluginUpdate.DllName), root, BuiltVersion(), "999.0.0");
+            Assert.False(result.Ok);
+            Assert.Equal("the plugin download is " + BuiltVersion() + ", older than the 999.0.0 installed here", result.Error);
+            Assert.Null(result.Path);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.False(File.Exists(PluginUpdate.StagedPath(root) + ".part"));
+            // Launch arms only what is staged, so nothing would swap it in either.
+            Assert.False(PluginUpdate.Launch(root));
+            Assert.False(File.Exists(PluginUpdate.ScriptPath(root)));
+        }
+
+        /// <summary>
+        /// A release whose zip carries an assembly of another version is a packaging mistake, and its
+        /// assembly is not staged whichever way the mistake goes: the rig would be told it had the release
+        /// and would be offered it again at the next check.
+        /// </summary>
+        [Fact]
+        public void An_assembly_that_is_not_the_release_s_version_is_not_staged()
+        {
+            foreach (var release in new[] { "999.0.0", "0.0.2" })
+            {
+                var result = PluginUpdate.Stage(Zip(PluginUpdate.DllName), root, release, "0.0.1");
+                Assert.False(result.Ok);
+                Assert.Equal("the plugin download is " + BuiltVersion() + " in a release of " + release, result.Error);
+                Assert.False(PluginUpdate.Pending(root));
+            }
+        }
+
+        /// <summary>An assembly with no version to read cannot be told apart from a downgrade, and is not
+        /// staged on trust.</summary>
+        [Fact]
+        public void An_assembly_without_a_version_is_not_staged()
+        {
+            var result = Stage(TextZip(PluginUpdate.DllName));
+            Assert.False(result.Ok);
+            Assert.Equal("no version could be read from the plugin download", result.Error);
+            Assert.False(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// A refused download leaves what was already staged exactly as it was: the version is read before
+        /// the new file is moved over the old one.
+        /// </summary>
+        [Fact]
+        public void A_refused_download_leaves_an_earlier_staging_as_it_was()
+        {
+            StageARealAssembly();
+            Assert.False(Stage(TextZip(PluginUpdate.DllName)).Ok);
+            Assert.False(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root, BuiltVersion(), "999.0.0").Ok);
+            Assert.Equal(Assembly(), File.ReadAllBytes(PluginUpdate.StagedPath(root)));
+            Assert.True(File.Exists(PluginUpdate.ScriptPath(root)), "the swap armed for it was taken away");
+        }
+
+        /// <summary>
+        /// The release's own version is staged over a plugin of the same version.
+        /// </summary>
+        /// <remarks>
+        /// A rig whose plugin is already the release is offered it when one of its screens was edited and
+        /// held back, since the rig's version is its oldest screen's. That run is how a yes to replacing the
+        /// edited screen reaches the start that writes it (EditedConsent), and the twin is cleared at that
+        /// start rather than swapped, so refusing it would leave the driver an update that fails every time.
+        /// </remarks>
+        [Fact]
+        public void The_release_s_own_version_is_staged_over_the_same_version()
+        {
+            var result = PluginUpdate.Stage(Zip(PluginUpdate.DllName), root, BuiltVersion(), BuiltVersion());
+            Assert.True(result.Ok, result.Error);
+            Assert.True(PluginUpdate.Pending(root));
         }
 
         /// <summary>
@@ -344,7 +458,7 @@ namespace OpenDashPlugin.Tests
             StageARealAssembly();
             Assert.Equal(StagedPluginVerdict.Arm, PluginUpdate.Review(root, "0.0.1"));
             Assert.Equal(StagedPluginVerdict.Arm, PluginUpdate.Review(root, "0.0.1"));
-            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
+            Assert.True(Stage(Zip(PluginUpdate.DllName)).Ok);
             Assert.Equal(0, PluginUpdate.FailedSwaps(root));
         }
 
@@ -353,8 +467,9 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_staged_file_without_a_version_is_cleared()
         {
-            Assert.True(PluginUpdate.Stage(Zip(PluginUpdate.DllName), root).Ok);
-            Assert.True(PluginUpdate.Arm(root));
+            // Staging refuses such a file now (#862), so this is one a plugin from before that left.
+            StageARealAssembly();
+            File.WriteAllText(PluginUpdate.StagedPath(root), "contents of " + PluginUpdate.DllName);
             Assert.Equal(StagedPluginVerdict.Unreadable, PluginUpdate.Review(root, "0.0.1"));
             AssertNothingIsLeftToSwap();
         }

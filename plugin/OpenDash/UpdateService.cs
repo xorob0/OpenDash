@@ -104,10 +104,16 @@ namespace OpenDashPlugin
         /// <summary>Why a run that SimHub's close stopped did not finish. Nothing on disk had been touched.</summary>
         public const string StoppedReason = "SimHub closed before the download finished";
 
-        public UpdateService(IReleaseSource source, IInstallLog log = null)
+        /// <summary>The version of the plugin running, which a staged plugin may not be older than.</summary>
+        private readonly string pluginVersion;
+
+        /// <param name="pluginVersion">The version of the plugin running (OpenDash.Version). Null only for a caller
+        /// with no plugin to compare against, which then holds a download to the release's version alone.</param>
+        public UpdateService(IReleaseSource source, IInstallLog log = null, string pluginVersion = null)
         {
             this.source = source ?? throw new ArgumentNullException(nameof(source));
             this.log = log ?? NullInstallLog.Instance;
+            this.pluginVersion = pluginVersion;
         }
 
         /// <summary>The releases this check found, kept so that applying does not have to ask again.</summary>
@@ -246,6 +252,16 @@ namespace OpenDashPlugin
                 {
                     return new UpdateOutcome { Reason = item.FolderName + " did not download correctly" };
                 }
+                // The digest says these are the bytes GitHub published, not that they are the release's version or
+                // newer than the folder they replace (#862). Asked here, with nothing yet written, because the
+                // installer below runs forced and would write a downgrade over a current dashboard and call it an
+                // update. A package that cannot be read at all is left to the installer, which reports it Failed.
+                var refusal = PackageRefusal(item, fetched.Bytes, release, installer);
+                if (refusal != null)
+                {
+                    log.Error("The update to " + release.Version + " was refused: " + refusal + ".");
+                    return new UpdateOutcome { Reason = refusal };
+                }
                 downloaded.Add(item.Asset.Name, fetched.Bytes);
                 fetchedSoFar++;
             }
@@ -260,7 +276,7 @@ namespace OpenDashPlugin
                 // and one that got in first is waited for here rather than deleting a folder the run extracts into.
                 lock (WriteLock)
                 {
-                    var outcome = StageAndInstall(installer, replaceEdited, progress, plan, pluginBytes, downloaded);
+                    var outcome = StageAndInstall(installer, release, replaceEdited, progress, plan, pluginBytes, downloaded);
                     if (settings != null) Settle(outcome, release, installer, settings, log);
                     return outcome;
                 }
@@ -272,12 +288,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The half of <see cref="Apply"/> that writes: the plugin staged, then the packages installed.</summary>
-        private UpdateOutcome StageAndInstall(DashboardInstaller installer, bool replaceEdited, Action<double> progress, UpdatePlan plan, byte[] pluginBytes, DownloadedPackageSource downloaded)
+        private UpdateOutcome StageAndInstall(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited, Action<double> progress, UpdatePlan plan, byte[] pluginBytes, DownloadedPackageSource downloaded)
         {
             // Staged before the dashboards are written, because staging is a file written beside the one
             // in use and changes nothing until SimHub exits; the swap itself is PluginUpdate's, out of
-            // this process entirely.
-            var staged = pluginBytes == null ? null : PluginUpdate.Stage(pluginBytes, installer.SimHubRoot, log);
+            // this process entirely. Staging refuses an assembly that is not the release's version or is
+            // older than this plugin (#862), so the waiter below is armed only for one worth the swap.
+            var staged = pluginBytes == null ? null : PluginUpdate.Stage(pluginBytes, installer.SimHubRoot, release.Version, pluginVersion, log);
             // Armed here rather than at shutdown, for the reason PluginUpdate spells out: End is not
             // reached on a shutdown that times out or a process that is killed, and the waiter has to
             // outlive both.
@@ -364,6 +381,31 @@ namespace OpenDashPlugin
             {
                 log.Warn("The screens' names could not be put back after the update: " + ex.Message);
             }
+        }
+
+        /// <summary>
+        /// Why a downloaded package may not replace its folder (<see cref="CarriedVersion"/>), or null when it may or
+        /// when it cannot be read as a package at all, which the installer reports for itself.
+        /// </summary>
+        private static string PackageRefusal(UpdateItem item, byte[] bytes, ReleaseInfo release, DashboardInstaller installer)
+        {
+            string carried;
+            try
+            {
+                using (var stream = new System.IO.MemoryStream(bytes, false))
+                {
+                    carried = PackageExtractor.ReadPackageVersion(stream, out var folder);
+                    if (folder == null) return null;
+                }
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+            var installed = installer.Packages
+                .FirstOrDefault(p => string.Equals(p.FolderName, item.FolderName, StringComparison.OrdinalIgnoreCase))
+                ?.InstalledVersion;
+            return CarriedVersion.Refusal(item.FolderName, carried, release.Version, installed);
         }
 
         /// <summary>The folder an asset was fetched for, when the package itself could not be read.</summary>

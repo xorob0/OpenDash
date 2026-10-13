@@ -30,7 +30,9 @@
 // SimHub to finish updating", with no Update button, for good (#598). `Init` now reads the version out
 // of the staged assembly, clears one that is not newer than the plugin running, and gives up on one
 // that is still waiting after `MaxFailedSwaps` starts. Cleared, the panel
-// offers the update again, which is the way back from either.
+// offers the update again, which is the way back from either. `Stage` reads the version too, before
+// the waiter is armed: an assembly that is not the release's version, or is older than the plugin
+// running, is never staged at all (#862), because by the time `Init` reads it the swap has happened.
 //
 // Pure but for the file system: no SimHub types, so OpenDash.Tests compiles it and pins the staging,
 // the script and the decision.
@@ -215,11 +217,20 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// The bytes are already checked against the digest GitHub published by the caller, so what is
-        /// left to be wrong here is the shape of the archive. An entry that is missing or empty is a
-        /// refusal rather than a zero-byte DLL staged for a swap that would leave SimHub with no plugin
-        /// at all.
+        /// left to be wrong here is the shape of the archive and the version it carries. An entry that
+        /// is missing or empty is a refusal rather than a zero-byte DLL staged for a swap that would
+        /// leave SimHub with no plugin at all.
+        ///
+        /// So is an assembly that is not the release's version, or is older than the plugin running
+        /// (<see cref="CarriedVersion"/>, #862). The digest cannot tell a v0.4.0 zip built from 0.3.0
+        /// from the real thing, and only <see cref="Review"/> read the version, at the start after the
+        /// waiter armed here had already put the older file in place. The version is read from the
+        /// partial file, before it is moved over whatever is staged, so a refused download leaves an
+        /// earlier staging exactly as it was.
         /// </remarks>
-        public static PluginStageResult Stage(byte[] zipBytes, string simHubRoot, IInstallLog log = null)
+        /// <param name="releaseVersion">The version of the release the zip was published with.</param>
+        /// <param name="runningVersion">The version of the plugin running, which the staged one replaces.</param>
+        public static PluginStageResult Stage(byte[] zipBytes, string simHubRoot, string releaseVersion, string runningVersion, IInstallLog log = null)
         {
             log = log ?? NullInstallLog.Instance;
             var result = new PluginStageResult();
@@ -256,6 +267,14 @@ namespace OpenDashPlugin
                     using (var target = File.Create(partial))
                     {
                         source.CopyTo(target);
+                    }
+                    var refusal = CarriedVersion.Refusal("the plugin download", VersionOf(partial), releaseVersion, runningVersion);
+                    if (refusal != null)
+                    {
+                        TryDelete(partial);
+                        result.Error = refusal;
+                        log.Error("The new plugin was not staged: " + refusal + ".");
+                        return result;
                     }
                     if (File.Exists(path)) File.Delete(path);
                     File.Move(partial, path);
@@ -407,9 +426,15 @@ namespace OpenDashPlugin
         /// </remarks>
         public static string StagedVersion(string simHubRoot)
         {
+            return VersionOf(StagedPath(simHubRoot));
+        }
+
+        /// <summary>The informational version of the assembly at <paramref name="path"/>, as
+        /// <see cref="StagedVersion"/> reads it, or null.</summary>
+        private static string VersionOf(string path)
+        {
             try
             {
-                var path = StagedPath(simHubRoot);
                 if (!File.Exists(path)) return null;
                 var version = FileVersionInfo.GetVersionInfo(path).ProductVersion;
                 if (string.IsNullOrWhiteSpace(version)) return null;

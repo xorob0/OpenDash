@@ -181,5 +181,31 @@ namespace OpenDashPlugin.Tests
             // Nothing to forget.
             Assert.False(EditedConsent.Forget(null, "0.3.0", swapPending: false));
         }
+
+        /// <summary>
+        /// What a download may carry: the release's own version, and nothing older than what it replaces (#862). The
+        /// same version as what is installed is let through, for the edited screen that holds a rig back and the yes
+        /// to replacing it that only a run can carry to the start (EditedConsent).
+        /// </summary>
+        [Theory]
+        [InlineData("0.4.0", "0.4.0", "0.3.0", null)]
+        [InlineData("0.4.0", "v0.4.0", "0.3.0", null)]
+        [InlineData("0.4.0", "0.4.0", "0.4.0", null)]
+        [InlineData("0.4.0", "0.4.0", null, null)]
+        [InlineData("0.4.0", "0.4.0", Versioning.UnknownVersion, null)]
+        [InlineData("0.3.0-rc.7", "0.3.0-rc.7", "0.3.0-rc.6", null)]
+        // The packaging mistake, either way round.
+        [InlineData("0.3.0", "0.4.0", "0.2.0", "OpenDash is 0.3.0 in a release of 0.4.0")]
+        [InlineData("0.5.0", "0.4.0", "0.2.0", "OpenDash is 0.5.0 in a release of 0.4.0")]
+        [InlineData("0.3.0-rc.7", "0.3.0", "0.2.0", "OpenDash is 0.3.0-rc.7 in a release of 0.3.0")]
+        // A release older than what is here, which a rig held back by an older screen can be offered.
+        [InlineData("0.4.0", "0.4.0", "0.5.0", "OpenDash is 0.4.0, older than the 0.5.0 installed here")]
+        [InlineData("0.3.0-rc.6", "0.3.0-rc.6", "0.3.0-rc.7", "OpenDash is 0.3.0-rc.6, older than the 0.3.0-rc.7 installed here")]
+        [InlineData(null, "0.4.0", "0.3.0", "no version could be read from OpenDash")]
+        [InlineData("", "0.4.0", "0.3.0", "no version could be read from OpenDash")]
+        public void A_download_carries_the_release_s_version_and_nothing_older_than_what_is_here(string carried, string release, string current, string refusal)
+        {
+            Assert.Equal(refusal, CarriedVersion.Refusal("OpenDash", carried, release, current));
+        }
     }
 }
