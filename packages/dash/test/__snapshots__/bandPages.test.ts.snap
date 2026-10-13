@@ -277,7 +277,7 @@ exports[`the fields the catalogue draws on each page the fuel fields a completed
     "backgroundColor": "#00FFFFFF",
     "bindings": {
       "Text": {
-        "formula": "if(isnull(isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)), '--', if((isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)) < (9.95), format(isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0), '0.0'), format(isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0), '0')))",
+        "formula": "if(isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel]), '--', if(isnull(if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), (isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)) * (0.264172), isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0))), '--', if((if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), (isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)) * (0.264172), isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0))) < (9.95), format(if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), (isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)) * (0.264172), isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)), '0.0'), format(if((isnull([DataCorePlugin.GameData.FuelUnit], 'Liters')) = ('Gallons'), (isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)) * (0.264172), isnull([DataCorePlugin.GameRawData.Telemetry.PitSvFuel], 0)), '0'))))",
         "mode": "formula",
       },
     },

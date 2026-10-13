@@ -71,6 +71,8 @@ import {
   minutesClock,
   MINUTES_CLOCK_WIDEST,
   NO_VALUE,
+  pitRefuel,
+  pitRefuelIsAbsent,
   roadTemperature,
   secondsOf,
   sectorTime,
@@ -199,7 +201,10 @@ const quantity = (digits: number): Pick<BandField, 'chars' | 'numeralWidest'> =>
  * D1 Fuel: what a driver checks on a straight, which is why it is the default.
  *
  * The tank and the refuel are read off the sim directly, whereas the other four are derived from
- * what a lap costs, so those four wait for a lap and answer together. Before the first crossing
+ * what a lap costs, so those four wait for a lap and answer together. The refuel is the order the
+ * pit service is set to, {@link pitRefuel}, and not the fuel module's `To add`, which is an estimate
+ * off the per-lap average: it is converted to the unit the tank beside it is drawn in, and reads
+ * the absence where the sim publishes no order rather than an order of nothing (#604). Before the first crossing
  * SimHub extrapolates `Fuel_LitersPerLap` from the lap in progress and every figure taken off it
  * moves every frame; a band that gated only some of them consequently read `EST. LAPS --` beside
  * `PER LAP 0.000` and `LAST LAP 0.000`, which is one row and one tank with two fields saying they
@@ -254,7 +259,7 @@ const fuel: readonly BandField[] = [
     afterWidest: FUEL_TO_END_UNIT_WIDEST,
   },
   { id: 'laps', label: 'Est. laps', sample: '13.1', bind: settled(fmt(fuelLapsLeft(), '0.0')), chars: CHARS.consumption },
-  { id: 'refuel', label: 'Refuel', sample: '33', bind: bandFuelQuantity(isnull(raw('PitSvFuel'), num(0))), ...quantity(TANK_DIGITS), color: ds.color.caution.primary },
+  { id: 'refuel', label: 'Refuel', sample: '33', bind: iff(pitRefuelIsAbsent(), str(NO_VALUE), bandFuelQuantity(pitRefuel())), ...quantity(TANK_DIGITS), color: ds.color.caution.primary },
   { id: 'perLap', label: 'Per lap', sample: '1.4', bind: settled(bandFuelQuantity(fuelPerLap())), ...quantity(LAP_DIGITS) },
   { id: 'lastLap', label: 'Last lap', sample: '1.3', bind: iff(fuelLastLapIsSettled(), bandFuelQuantity(fuelLastLap()), str(NO_VALUE)), ...quantity(LAP_DIGITS) },
 ];
