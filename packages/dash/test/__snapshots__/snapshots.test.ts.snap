@@ -774,13 +774,13 @@ exports[`card snapshots card 8 tc 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+          "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
         },
         "Mode": 2
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+          "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
         },
         "Mode": 2
       }
@@ -845,13 +845,13 @@ exports[`card snapshots card 9 abs 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+          "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
         },
         "Mode": 2
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+          "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
         },
         "Mode": 2
       }
@@ -888,7 +888,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
     "Bindings": {
       "Text": {
         "Formula": {
-          "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+          "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
         },
         "Mode": 2
       }
@@ -930,7 +930,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
         },
         "Mode": 2
       }
@@ -1046,7 +1046,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
         },
         "Mode": 2
       }
@@ -1162,7 +1162,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
         },
         "Mode": 2
       }
@@ -1278,7 +1278,7 @@ exports[`card snapshots card 10 tyreTemps 1`] = `
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+          "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
         },
         "Mode": 2
       }
@@ -3636,7 +3636,7 @@ exports[`hero snapshot hero of the 1920x480 layout 1`] = `
     "Bindings": {
       "Visible": {
         "Formula": {
-          "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+          "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
         },
         "Mode": 2
       }
@@ -9290,7 +9290,7 @@ exports[`dashboard snapshots OpenDash.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -14422,13 +14422,13 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -14513,13 +14513,13 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -14576,7 +14576,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -14618,7 +14618,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -14734,7 +14734,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -14850,7 +14850,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -14966,7 +14966,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -17643,7 +17643,7 @@ exports[`package snapshots OpenDash slots 1280x480/OpenDash slots 1280x480.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -21939,13 +21939,13 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -22030,13 +22030,13 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -22093,7 +22093,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -22135,7 +22135,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -22177,7 +22177,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -22219,7 +22219,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -22261,7 +22261,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -24864,7 +24864,7 @@ exports[`package snapshots OpenDash slots 1280x400/OpenDash slots 1280x400.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -29520,13 +29520,13 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -29611,13 +29611,13 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -29674,7 +29674,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -29716,7 +29716,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -29758,7 +29758,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -29800,7 +29800,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -29842,7 +29842,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -32445,7 +32445,7 @@ exports[`package snapshots OpenDash slots 850x480/OpenDash slots 850x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -36203,13 +36203,13 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -36294,13 +36294,13 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -36357,7 +36357,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -36399,7 +36399,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -36441,7 +36441,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -36483,7 +36483,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -36525,7 +36525,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -39128,7 +39128,7 @@ exports[`package snapshots OpenDash slots 800x480/OpenDash slots 800x480.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -42826,13 +42826,13 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -42917,13 +42917,13 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -42980,7 +42980,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -43022,7 +43022,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -43064,7 +43064,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -43106,7 +43106,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -43148,7 +43148,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -45781,7 +45781,7 @@ exports[`package snapshots OpenDash slots 1280x720/OpenDash slots 1280x720.djson
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -50193,13 +50193,13 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -50284,13 +50284,13 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -50347,7 +50347,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -50389,7 +50389,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -50431,7 +50431,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -50473,7 +50473,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -50515,7 +50515,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -53088,7 +53088,7 @@ exports[`package snapshots OpenDash slots 800x286/OpenDash slots 800x286.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -58209,13 +58209,13 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -58300,13 +58300,13 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -58363,7 +58363,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -58405,7 +58405,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -58447,7 +58447,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -58489,7 +58489,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -58531,7 +58531,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -61104,7 +61104,7 @@ exports[`package snapshots OpenDash slots 600x686/OpenDash slots 600x686.djson 1
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -64577,13 +64577,13 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -64668,13 +64668,13 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -64731,7 +64731,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -64773,7 +64773,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -64815,7 +64815,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -64857,7 +64857,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -64899,7 +64899,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -67438,7 +67438,7 @@ exports[`package snapshots OpenDash 480 round/OpenDash 480 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -69702,13 +69702,13 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -69793,13 +69793,13 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -69856,7 +69856,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C')))"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C')))"
               },
               "Mode": 2
             }
@@ -69898,7 +69898,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -69940,7 +69940,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -69982,7 +69982,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -70024,7 +70024,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -72504,7 +72504,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.Gear]) = ('8'), '7', if(([DataCorePlugin.GameData.Gear]) = ('7'), '6', if(([DataCorePlugin.GameData.Gear]) = ('6'), '5', if(([DataCorePlugin.GameData.Gear]) = ('5'), '4', if(([DataCorePlugin.GameData.Gear]) = ('4'), '3', if(([DataCorePlugin.GameData.Gear]) = ('3'), '2', if(([DataCorePlugin.GameData.Gear]) = ('2'), '1', '')))))))"
+                "Expression": "if(([DataCorePlugin.GameData.Gear]) = ('9'), '8', if(([DataCorePlugin.GameData.Gear]) = ('8'), '7', if(([DataCorePlugin.GameData.Gear]) = ('7'), '6', if(([DataCorePlugin.GameData.Gear]) = ('6'), '5', if(([DataCorePlugin.GameData.Gear]) = ('5'), '4', if(([DataCorePlugin.GameData.Gear]) = ('4'), '3', if(([DataCorePlugin.GameData.Gear]) = ('3'), '2', if(([DataCorePlugin.GameData.Gear]) = ('2'), '1', ''))))))))"
               },
               "Mode": 2
             }
@@ -72540,7 +72540,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(([DataCorePlugin.GameData.Gear]) = ('7'), '8', if(([DataCorePlugin.GameData.Gear]) = ('6'), '7', if(([DataCorePlugin.GameData.Gear]) = ('5'), '6', if(([DataCorePlugin.GameData.Gear]) = ('4'), '5', if(([DataCorePlugin.GameData.Gear]) = ('3'), '4', if(([DataCorePlugin.GameData.Gear]) = ('2'), '3', if(([DataCorePlugin.GameData.Gear]) = ('1'), '2', '')))))))"
+                "Expression": "if(([DataCorePlugin.GameData.Gear]) = ('8'), '9', if(([DataCorePlugin.GameData.Gear]) = ('7'), '8', if(([DataCorePlugin.GameData.Gear]) = ('6'), '7', if(([DataCorePlugin.GameData.Gear]) = ('5'), '6', if(([DataCorePlugin.GameData.Gear]) = ('4'), '5', if(([DataCorePlugin.GameData.Gear]) = ('3'), '4', if(([DataCorePlugin.GameData.Gear]) = ('2'), '3', if(([DataCorePlugin.GameData.Gear]) = ('1'), '2', ''))))))))"
               },
               "Mode": 2
             },
@@ -72641,7 +72641,7 @@ exports[`package snapshots OpenDash 800 round/OpenDash 800 round.djson 1`] = `
           "Bindings": {
             "Visible": {
               "Formula": {
-                "Expression": "([DataCorePlugin.GameData.PitLimiterOn]) = (1)"
+                "Expression": "(isnull([DataCorePlugin.GameData.PitLimiterOn], 0)) = (1)"
               },
               "Mode": 2
             }
@@ -75533,13 +75533,13 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '--', if(([DataCorePlugin.GameData.TCLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.TCLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.TCLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]), '#33383F', if(([DataCorePlugin.GameData.TCLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl]))) or ((isnull([DataCorePlugin.GameData.TCLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.TCLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -75624,13 +75624,13 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '--', if(([DataCorePlugin.GameData.ABSLevel]) = (0), 'OFF', format([DataCorePlugin.GameData.ABSLevel], '0')))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '--', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), 'OFF', format(isnull([DataCorePlugin.GameData.ABSLevel], 0), '0')))"
               },
               "Mode": 2
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]), '#33383F', if(([DataCorePlugin.GameData.ABSLevel]) = (0), '#8A9099', '#F5F7FA'))"
+                "Expression": "if(!((!(isnull([DataCorePlugin.GameRawData.Telemetry.dcABS]))) or ((isnull([DataCorePlugin.GameData.ABSLevel], 0)) > (0))), '#33383F', if((isnull([DataCorePlugin.GameData.ABSLevel], 0)) = (0), '#8A9099', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -75687,7 +75687,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
           "Bindings": {
             "Text": {
               "Formula": {
-                "Expression": "('Tyres ') + (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), '°F', if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
+                "Expression": "('Tyres ') + (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), '°F', if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 'K', '°C'))) + (' · last stop')"
               },
               "Mode": 2
             }
@@ -75729,7 +75729,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -75771,7 +75771,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureFrontRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -75813,7 +75813,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearLeft], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
@@ -75855,7 +75855,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 140, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Fahrenheit'), 212, if(([DataCorePlugin.GameData.TemperatureUnit]) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
+                "Expression": "if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) = (0), '#33383F', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) < (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 140, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 333, 60))), '#2E7BFF', if((isnull([DataCorePlugin.GameData.TyreTemperatureRearRight], 0)) > (if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Fahrenheit'), 212, if((isnull([DataCorePlugin.GameData.TemperatureUnit], 'Celcius')) = ('Kelvin'), 373, 100))), '#FF2D46', '#F5F7FA')))"
               },
               "Mode": 2
             }
