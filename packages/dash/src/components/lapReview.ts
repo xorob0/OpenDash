@@ -17,8 +17,10 @@
  * **How it ranks against what is already on the face.** The panel is centred on the same hero
  * rectangle the pop-ups and the change notification take, and it is larger than both in both
  * directions, so while it is out it covers them rather than arguing with them; it is pushed last in
- * `zones/face.ts`, after the pit alerts, so the limiter banner at the top of zone A is the one thing
- * that is not covered where the two rectangles meet. Band D is outside it altogether, which is
+ * `zones/face.ts`. The pit family is ranked the other way and by condition rather than by geometry:
+ * the review does not open while any state of the family is out, so neither the limiter banner nor
+ * a theme's own drawing of the limiter, which the Porsche spreads over the whole body, is ever under
+ * it (`lapReviewOut`, #1053). Band D is outside it altogether, which is
  * deliberate and is the same call the pit alerts made: a lap review and a flag are answers to
  * different questions, and a driver crossing the line under a full course yellow needs both. The
  * rev bar and the bar of settled values are outside it for the same reason they are outside the
@@ -44,6 +46,7 @@ import { textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { zone as zoneSetting, type FaceSize } from '../contract.ts';
+import { pitAlertOut } from './pitAlerts.ts';
 import { densityOf } from '../second/density.ts';
 import { drawnFigure, drawnOr } from '../second/drawn.ts';
 import { fieldRowFitted, fieldTail, fieldWidth, rowHeight, type FieldSpec } from '../second/field.ts';
@@ -70,7 +73,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { and, concat, eq, fmt, game, iff, isnull, lt, num, or, signed, str, sub, timespanToSeconds, ucase } = ncalc;
+const { and, concat, eq, fmt, game, iff, isnull, lt, not, num, or, signed, str, sub, timespanToSeconds, ucase } = ncalc;
 
 /** The density the canvas draws this panel at: 116 over a 15 px label, 46, 13, and 24 between a pair. */
 const DENSITY = 'companion';
@@ -138,8 +141,21 @@ export const lapReviewAtTheLine = (): Expr =>
 export const lapReviewWanted = (face: FaceSize): Expr =>
   or(zoneSetting.lapReviewIs(face, 'all'), and(zoneSetting.lapReviewIs(face, 'race'), eq(ucase(sessionType()), str('RACE'))));
 
-/** The panel is wanted and the lap has just landed: the one expression the face binds it to. */
-export const lapReviewOut = (face: FaceSize): Expr => and(lapReviewWanted(face), lapReviewAtTheLine());
+/**
+ * The panel is wanted, the lap has just landed and no state of the pit family is out: the one
+ * expression the face binds it to.
+ *
+ * The last term is the ranking against the pit family, which is by condition rather than by
+ * geometry (#1053). The review is clamped to the body, and the body is the rectangle a theme's
+ * limiter takes over: the Porsche colours the whole of it green or red round the pit speed and the
+ * limit, and the AiM writes `Pit Speed` over zone C, so a review drawn over the family would hide
+ * the one reading a driver keeps under the lane's limit by, at the line, which most pit lanes cross.
+ * On a face whose banner sits at the top of a short hero, the Porsche's and the house's nano, the
+ * review's 160 px reach it too. So the review does not open while a state of the family is out, and
+ * closes if one comes out while it is up: a review of the lap that ended in the lane is the one a
+ * driver has least use for.
+ */
+export const lapReviewOut = (face: FaceSize): Expr => and(lapReviewWanted(face), lapReviewAtTheLine(), not(pitAlertOut()));
 
 /** The lap just finished, which is the lap the panel is about. */
 const lapNumber = (): Expr => concat(str('Lap '), fmt(completedLaps(), '0'));
