@@ -8,7 +8,11 @@
   "values": {
     // Ninth on the road, just past the line: eight cars of race.json's field are further round.
     "Graphics.NormalizedCarPosition": 0.003,
-    "Graphics.iCurrentTime": 300,
+    // Half a minute into the lap, as the irsdk pit inherits it: the lap timer is stopped below, so this
+    // is the current lap time for the whole run, and under the lap pop-up's three seconds it would
+    // hold the pop-up over the gear from start to end (#1138). A car stopped in its box this close
+    // past the line crossed it in the pit lane on the way in.
+    "Graphics.iCurrentTime": 36162,
     "Graphics.SessionTimeLeft": 1010000,
   },
   "pin": {
