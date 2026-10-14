@@ -13,8 +13,12 @@
  * it, so that the four states of the family that are mistakes keep the house's banner at the top of
  * zone C. The warning is iRacing's `EngineWarnings` bits for water temperature, oil pressure and fuel
  * pressure, which band D's car page lights its engine lamp on; a stalled engine is left out, since
- * a car sitting in its pit box is stalled and is not in trouble. When both hold, the limiter is
- * drawn over the warning, being the one that ends in seconds.
+ * a car sitting in its pit box is stalled and is not in trouble.
+ *
+ * The warning is a state of the car rather than a safety layer, and the face ranks it under both:
+ * it is hidden while a state of the pit family is out, since its box covers the banner row at the
+ * top of zone C and the limiter's `Pit Speed`, and while the full-screen flag is out, whose name it
+ * would cover (#1097, #1098). It comes back when they clear, the engine still being in trouble.
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';

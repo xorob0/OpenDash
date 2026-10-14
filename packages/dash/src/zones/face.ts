@@ -195,11 +195,16 @@ export function faceItems(
   // theme puts where a state may sit for as long as the limiter is on in the lane, cut short where
   // the gear's ink on any of zone A's pages reaches into it, and it waits for the pit family, whose
   // row it is, and for the full-screen flag, whose name it reaches on the Porsche's nano and the
-  // AiM's portrait face. Drawn before a theme's takeovers, which are states of the car that hold too
-  // and are drawn over whatever they take: the AiM's engine warning over zone C, where its banner row is.
+  // AiM's portrait face. Drawn before a theme's takeovers, which are drawn over whatever they take.
   const row = lastingPopUpFrame(banner, zoneAGearInk(zoneRect(regions, 'A'), drawing));
   items.push(...giveWay(restyled(lastingPopUps(row, 'popUp'), 'outline'), { pitFamily: 'waits already' }));
-  items.push(...takeovers);
+
+  // A theme's takeover that draws a state of the pit family is that family, and is drawn over the
+  // flag as the house's banner is. Its other takeovers are states of the car that hold for laps, the
+  // Porsche's fuel alarm in zone C's panel and the AiM's engine warning over zone C, and they give way
+  // as the lasting pop-ups do (#1097, #1098): the warning covers the AiM's banner row, the alarm the
+  // right of the Porsche's limiter body, and both the full-screen flag's name.
+  items.push(...takeovers.map((takeover) => (drawsPitState(takeover) ? takeover : giveWay([takeover])[0]!)));
 
   // A pop-up that is an event, the lap time for the three seconds after the line, is drawn as a real
   // pop-up: the sheet's 560 by 120 centred on the hero, over the gear and over zones B and C either
@@ -256,6 +261,18 @@ const visibleOf = (item: Item): Expr | undefined => {
   return visible?.mode === 'formula' && typeof visible.formula === 'string' ? visible.formula : undefined;
 };
 
+/**
+ * Whether a theme's takeover is a drawing of a state of the pit family, known as the face knows every
+ * such layer, by its Visible being the state's. A takeover that is not, and holds a layer that is,
+ * stops the build: it would be ranked as a state of the car and hidden under the state it draws.
+ */
+const drawsPitState = (takeover: Item): boolean => {
+  if (PIT_STATES.has(visibleOf(takeover) ?? '')) return true;
+  const inside = [...walkItems([takeover])].find((item) => item !== takeover && PIT_STATES.has(visibleOf(item) ?? ''));
+  if (inside !== undefined) throw new Error(`face: the takeover ${takeover.name ?? takeover.kind} draws a state of the pit family in ${inside.name ?? inside.kind}, which has to be a takeover of its own`);
+  return false;
+};
+
 /** A layer the pop-up family may not be drawn over while it is out: when it is out, what it draws, and which it is. */
 interface SafetyLayer {
   out: Expr;
@@ -289,7 +306,8 @@ const pitStatesDrawn = (items: readonly Item[]): SafetyLayer[] => {
 /**
  * How the pop-up family gives way to the safety layers drawn in the body (#1069, #1070): the returned
  * function takes a member's boxes and hides each one while a safety layer it would be drawn over is
- * out.
+ * out. A theme's takeover of the car, which is not a state of the pit family, is ranked the same way
+ * and asked about the family by what it covers (#1097, #1098).
  *
  * - **The flag.** The full-screen block, on a face whose format is `full`, while it draws a
  *   condition: it is the whole of `flagBody`, so every box inside the body waits for it, and a driver

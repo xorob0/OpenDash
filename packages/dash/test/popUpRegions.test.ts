@@ -49,6 +49,7 @@ import { contains, overlaps, translate } from '../src/design/geometry.ts';
 import { inkOf } from '../src/design/metrics.ts';
 import { optionalRegionRect, regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
 import { buildThemeFace, drawsInThisProcess } from '../src/themes/faces.ts';
+import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -419,14 +420,15 @@ function wanting(name: string, face: FaceSize): Props {
 }
 
 /** A face as the theme ships it: its main screens' layers, and the contract's entry for its size. */
-function shipped(id: string, size: { width: number; height: number }): { face: FaceSize; screens: { name: string; layers: LayerItem[] }[] } {
+function shipped(id: string, size: { width: number; height: number }): { face: FaceSize; layout: ZoneLayout; regions: Regions; screens: { name: string; layers: LayerItem[] }[] } {
   const face = FACE_SIZES.find((f) => f.width === size.width && f.height === size.height)!;
-  const screens = buildThemeFace(id, size, OPTS)
-    .built.main.screens.filter((screen) => screen.name.startsWith('Main'))
+  const { layout, regions, built } = buildThemeFace(id, size, OPTS);
+  const screens = built.main.screens
+    .filter((screen) => screen.name.startsWith('Main'))
     .map((screen) => ({ name: screen.name, layers: [...walkItems(screen.items)].filter((item): item is LayerItem => item.kind === 'layer') }));
   // Both arrangements, the rev bar on and off.
   expect(screens.length).toBeGreaterThanOrEqual(2);
-  return { face, screens };
+  return { face, layout, regions, screens };
 }
 
 /**
@@ -552,6 +554,148 @@ describe('as each theme ships, no box of the pop-up family covers the flag', () 
                   expect({ ...at, settledCovered: shown(box, band, SETTLED) && covers(box, settled) }).toEqual({ ...at, settledCovered: false });
                   expect({ ...at, open: shown(box, band, SETTLED) }).toEqual({ ...at, open: !covers(box, settled) });
                 }
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+});
+
+/**
+ * The takeovers of each theme that are not a state of the pit family, by name: states of the car the
+ * theme draws over its regions for as long as they hold, after the pit family and the full-screen
+ * flag. Pinned, so that a takeover a theme adds is asked about below rather than drawn unranked.
+ */
+const CAR_TAKEOVERS: Record<string, readonly string[]> = {
+  porsche: ['lowFuel'],
+  aim: ['warning'],
+};
+
+/**
+ * A theme's takeovers as its drawing returns them, before the face ranks them: those that draw a state
+ * of the pit family, which are that family, and the others, which are states of the car.
+ */
+function takeoversOf(id: string, { face, layout, regions }: { face: FaceSize; layout: ZoneLayout; regions: Regions }): { family: string[]; car: LayerItem[] } {
+  const takeovers = THEME_DRAWINGS[id]?.takeovers;
+  if (!takeovers) return { family: [], car: [] };
+  const drawn = takeovers({ layout, face, regions, withRevBar: true }).filter((item): item is LayerItem => item.kind === 'layer');
+  const states = new Set(PIT_ALERTS.map((spec) => pitAlertVisible(spec.id)));
+  const ofFamily = (layer: LayerItem): boolean => states.has(String(layer.bindings?.Visible?.formula));
+  return { family: drawn.filter(ofFamily).map((layer) => layer.name), car: drawn.filter((layer) => !ofFamily(layer)) };
+}
+
+/** A frame in which a takeover of the car is out, read off its own condition: every property it reads set to 1. */
+const bringingOut = (takeover: LayerItem): Props => reads(String(takeover.bindings?.Visible?.formula));
+
+/** The one layer of a screen by that name, which a takeover's is. */
+const theLayer = (layers: readonly LayerItem[], name: string): LayerItem => {
+  const found = layers.filter((layer) => layer.name === name);
+  expect({ name, count: found.length }).toEqual({ name, count: 1 });
+  return found[0]!;
+};
+
+/**
+ * No takeover of a theme covers a state of the pit family while it is out, on every face as each
+ * theme ships it (#1097).
+ *
+ * A theme's takeovers are drawn after the pit family, and the AiM's engine warning is a box over zone
+ * C, whose top 30 px are the AiM's banner row: for as long as an engine warning held, `Disengage
+ * limiter`, `Engage limiter`, `Ignition off` and `Engine off` were drawn under it. The Porsche's fuel
+ * alarm fills zone C's panel, which is inside the limiter body, so a car in the lane on its last ten
+ * litres had a red panel over the right of a green body that says it is under the limit. A takeover
+ * of the car gives way as a box of the pop-up family does: with it brought out, once on the circuit
+ * and once in each state of the family, every layer drawing that state that is out is either drawn
+ * over the takeover or not covered by it, or the takeover is hidden.
+ */
+describe('as each theme ships, no takeover of the car covers a state of the pit family', () => {
+  const familyStates = new Map(PIT_ALERTS.map((spec) => [pitAlertVisible(spec.id), spec.id]));
+
+  for (const id of here.filter((each) => THEME_DRAWINGS[each]?.takeovers)) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const ships = shipped(id, size);
+        const { screens } = ships;
+        const takeovers = takeoversOf(id, ships);
+        expect({ theme: id, car: takeovers.car.map((layer) => layer.name) }).toEqual({ theme: id, car: [...(CAR_TAKEOVERS[id] ?? [])] });
+        for (const screen of screens) {
+          const family = screen.layers.filter((layer) => familyStates.has(String(layer.bindings?.Visible?.formula)));
+          expect(family.length).toBeGreaterThanOrEqual(PIT_ALERTS.length + takeovers.family.length);
+          for (const own of takeovers.car) {
+            const takeover = theLayer(screen.layers, own.name);
+            for (const moment of MOMENTS) {
+              const frame = { ...bringingOut(own), ...moment.car };
+              const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, takeover: own.name, state: moment.state ?? 'none' };
+              // Its own condition holds in every moment, so a hidden takeover is one the face kept shut.
+              expect({ ...where, own: shown(own, frame) }).toEqual({ ...where, own: true });
+              if (!moment.state) {
+                expect({ ...where, shown: shown(takeover, frame) }).toEqual({ ...where, shown: true });
+                continue;
+              }
+              const out = family.filter((layer) => shown(layer, frame));
+              expect({ ...where, out: [...new Set(out.map((layer) => familyStates.get(String(layer.bindings?.Visible?.formula))))] }).toEqual({ ...where, out: [moment.state] });
+              for (const layer of out) {
+                const hidden = !shown(takeover, frame);
+                const over = screen.layers.indexOf(layer) > screen.layers.indexOf(takeover);
+                expect({ ...where, layer: layer.name, covered: !(hidden || over || !covers(takeover, layer)) }).toEqual({ ...where, layer: layer.name, covered: false });
+              }
+            }
+          }
+        }
+      });
+    }
+  }
+});
+
+/**
+ * With the flag format at `full`, no takeover of a theme covers the flag while it is out, on every
+ * face as each theme ships it (#1098).
+ *
+ * The block is the whole body and a takeover is drawn after it, so on the Porsche's faces the fuel
+ * alarm's red panel covered the right of YELLOW, FULL COURSE YELLOW and BLACK for as long as the tank
+ * was under ten litres, and on the AiM's the engine warning covered zone C's part of every name. A
+ * takeover of the car ranks under the flag as the house's low-fuel pop-up does (zones.md §1): each
+ * condition the block draws is raised in turn with the takeover brought out, and a takeover drawn
+ * over the condition's layer is hidden. In the band format the flag settles, once it has had band D
+ * for its seconds, into the one rectangle #731 keeps for it, and a takeover over that waits for it
+ * too; with no flag out the takeover is shown in either format.
+ */
+describe('as each theme ships, no takeover of the car covers the flag', () => {
+  for (const id of here.filter((each) => THEME_DRAWINGS[each]?.takeovers)) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const ships = shipped(id, size);
+        const { face, screens } = ships;
+        const takeovers = takeoversOf(id, ships);
+        const format = `OpenDash.${flagFormatSettingName(face)}`;
+        const onTrack = { 'DataCorePlugin.GameRawData.Telemetry.IsOnTrack': true, [`${G}.EngineIgnitionOn`]: 1, [`${G}.EngineStarted`]: 1 };
+        for (const screen of screens) {
+          const block = screen.layers.find((layer) => layer.name === 'flagFull')!;
+          const conditions = screen.layers.filter((layer) => layer.name.startsWith('flagFull.') && !layer.name.slice('flagFull.'.length).includes('.'));
+          const corner = screen.layers.find((layer) => layer.name === 'flagCorner')!;
+          expect(conditions.length).toBe(ALERT_CATALOGUE.filter((c) => !('neutral' in c && c.neutral)).length);
+          for (const own of takeovers.car) {
+            const takeover = theLayer(screen.layers, own.name);
+            const wants = { ...onTrack, ...bringingOut(own) };
+            const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, takeover: own.name };
+            for (const value of ['full', 'band']) {
+              expect({ ...where, format: value, shown: shown(takeover, { ...wants, [format]: value }) }).toEqual({ ...where, format: value, shown: true });
+            }
+            // Every takeover of the car is drawn over the block, which is the whole body, so every
+            // condition asks a question here.
+            expect({ ...where, overTheBlock: conditions.every((layer) => covers(takeover, layer)) }).toEqual({ ...where, overTheBlock: true });
+            for (const layer of conditions) {
+              const condition = alertCondition(layer.name.slice('flagFull.'.length));
+              const frame = { ...wants, ...raising(condition), [format]: 'full' };
+              const at = { ...where, condition: condition.id };
+              expect({ ...at, own: shown(own, frame), block: shown(block, frame) && shown(layer, frame) }).toEqual({ ...at, own: true, block: true });
+              expect({ ...at, covered: shown(takeover, frame) }).toEqual({ ...at, covered: false });
+              const settled = screen.layers.find((each) => each.name === `flagCorner.${condition.id}`);
+              if (settled && condition.id !== 'incident') {
+                const band = { ...frame, [format]: 'band' };
+                expect({ ...at, settled: shown(corner, band, SETTLED) && shown(settled, band, SETTLED) }).toEqual({ ...at, settled: true });
+                expect({ ...at, settledCovered: shown(takeover, band, SETTLED) && covers(takeover, settled) }).toEqual({ ...at, settledCovered: false });
               }
             }
           }
