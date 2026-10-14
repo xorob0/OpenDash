@@ -228,3 +228,10 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+That recording was 2026-10-14, for #1123, when the track state moved from `GameData.TrackGripStatus`,
+which SimHub publishes for no game, to iRacing's `Telemetry.TrackWetness` (#1128). The new column is 1
+on every frame of all nine, iRacing's dry and the emulator's constant, and `CarHasPitLimiter` is `true`
+as asserted, so no entry is asserted in any of the nine. The header names its `game` from that recording
+on. The rig carried an 850x480 screen beside the 1280x480 that day and no pit wall, which is why the
+850x480's settings read values and the pit wall's are null.
