@@ -757,14 +757,18 @@ namespace OpenDashPlugin
         /// predates this keeps every slot that was doing something, which on the old defaults is matrix 1
         /// alone and on a rig with two boxes is both -- so nobody's box goes dark because the model
         /// underneath it changed.
+        ///
+        /// Which of the two a file is comes in as <paramref name="saved"/> rather than being asked here,
+        /// because by now MigrateFlagBoxToMatrices() has emptied the legacy scalars that are the only
+        /// sign of a save a file from that era may carry (#578).
         /// </remarks>
-        private void NormaliseMatrixPanels()
+        private void NormaliseMatrixPanels(bool saved)
         {
             if (FlagBoxMatrixName == null)
             {
                 FlagBoxMatrixName = new string[Contract.FlagBoxMatrices.Count];
                 // A settings object nobody has saved is a new install, and a new install owns nothing.
-                if (!WasSaved()) return;
+                if (!saved) return;
                 foreach (var matrix in Contract.FlagBoxMatrices)
                 {
                     var i = matrix - 1;
@@ -793,7 +797,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Repairs the per-matrix arrays, whatever came back from disk.</summary>
-        private void NormaliseLights()
+        /// <param name="saved">What <see cref="WasSaved"/> said before any migration ran.</param>
+        private void NormaliseLights(bool saved)
         {
             LightsBrightness = Contract.NormaliseBrightness(LightsBrightness);
             LightsNightBrightness = Contract.NormaliseBrightness(LightsNightBrightness);
@@ -820,7 +825,7 @@ namespace OpenDashPlugin
             CollapseFlagBoxGearIntoRest();
             // After the arrays are four long and the old scalars have been emptied into them, because
             // which panels a migrating rig keeps is read off what those panels were doing.
-            NormaliseMatrixPanels();
+            NormaliseMatrixPanels(saved);
             // After both of those: a file that predates the rig-wide thresholds takes a named panel's,
             // which may be where a legacy scalar just went, and which panels are named is only known
             // once the names are.
@@ -1096,6 +1101,10 @@ namespace OpenDashPlugin
         /// a short or missing slot array is padded with the default assignment, a long one is truncated.</summary>
         public void Normalise()
         {
+            // Asked before anything below runs, because the migrations empty the legacy fields that
+            // answer it: by the time the matrix panels are named, a file whose only sign of a save was a
+            // flag box setting would read as a new install and lose its box (#578).
+            var saved = WasSaved();
             RevBar = RevBarMode();
             ShiftLights = RevBar == Contract.RevBarShift;
             PositionMode = Contract.NormaliseChoice(PositionMode, Contract.PositionModes, Contract.DefaultPositionMode);
@@ -1105,7 +1114,7 @@ namespace OpenDashPlugin
             BlueFlagDetail = Contract.NormaliseChoice(BlueFlagDetail, Contract.BlueFlagDetails, Contract.DefaultBlueFlagDetail);
             DriverNameFormat = Contract.NormaliseChoice(DriverNameFormat, Contract.DriverNameFormats, Contract.DefaultDriverNameFormat);
             ClockFormat = Contract.NormaliseChoice(ClockFormat, Contract.ClockFormats, Contract.DefaultClockFormat);
-            NormaliseLights();
+            NormaliseLights(saved);
 
             var normalised = Contract.DefaultSlots();
             if (Slots != null)
@@ -1848,18 +1857,6 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether this object was read from a file somebody's SimHub has written, rather than being the
-        /// blank one a new install starts from.
-        /// </summary>
-        /// <remarks>
-        /// The per-slot arrays cannot answer it: they have class defaults, so a blank object and a saved
-        /// one carrying the defaults look the same from there. What does answer it is the state only a
-        /// save produces -- a rig, or the screen list that preceded it, or one of the legacy scalars a
-        /// migration has not yet emptied. It decides one thing: whether a matrix panel is kept for
-        /// somebody who had a box working before panels were instances, or whether the rig starts empty
-        /// as a new one should.
-        /// </remarks>
-        /// <summary>
         /// A bar namespace nothing else on the rig holds.
         /// </summary>
         /// <remarks>
@@ -1916,6 +1913,22 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// Whether this object was read from a file somebody's SimHub has written, rather than being the
+        /// blank one a new install starts from.
+        /// </summary>
+        /// <remarks>
+        /// The per-slot arrays cannot answer it: they have class defaults, so a blank object and a saved
+        /// one carrying the defaults look the same from there. What does answer it is the state only a
+        /// save produces -- a rig, or the screen list that preceded it, or one of the legacy scalars a
+        /// migration has not yet emptied. It decides one thing: whether a matrix panel is kept for
+        /// somebody who had a box working before panels were instances, or whether the rig starts empty
+        /// as a new one should.
+        ///
+        /// Asked once, at the top of Normalise(), and never after a migration has run: what runs below it
+        /// empties the legacy scalars and fills the screen list and the rig, so asked any later it reads
+        /// a file whose only sign of a save was a flag box setting as a new install (#578).
+        /// </remarks>
         private bool WasSaved()
         {
             return Rig != null
