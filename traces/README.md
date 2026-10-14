@@ -221,3 +221,10 @@ on main, and the two could not both be kept, so the traces are main's recording 
 carried over from the branch's: 2700 in the race scenarios, 1800 in `notc` and 900 in `quali`, the
 emulator's own scenario lengths, which do not move within a session or between two recordings of one.
 The next `bun run record` reads it from SimHub and drops the entry.
+
+#1101 asserts one more in each, `OpenDash.CarHasPitLimiter`, whether the car has a pit limiter to engage,
+which the plugin answers per sim so that no dashboard names a game (ADR 0021). The pit family reads it in
+place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On iRacing the plugin's answer
+is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
+in each: a constant, and the value a recording with the plugin installed will write. The next
+`bun run record` reads it from the plugin and drops the entry.

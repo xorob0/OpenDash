@@ -118,6 +118,41 @@ namespace OpenDashPlugin
                 for (var n = 1; n <= OpenDashPlugin.LivePosition.Slots; n++) yield return family + n;
         }
 
+        /// <summary>
+        /// Whether the car in the session has a pit limiter to engage: true, false, or null where the plugin
+        /// does not know. Published rather than chosen, from the running sim's row of SimCapabilities.cs. #1101.
+        /// </summary>
+        /// <remarks>
+        /// The first of the capabilities ADR 0021 sets out: a question whose answer differs by sim in a way no
+        /// expression can see, answered by the plugin so that no dashboard names a game. A car without a limiter
+        /// reads SimHub's PitLimiterOn 0 like one switched off, so iRacing's answer is the presence of the car's
+        /// own limiter control; on Assetto Corsa and ACC every car has one, and Le Mans Ultimate says so itself.
+        /// Each is read with iRacing's own answer as the isnull() fallback, which is what a package draws with no
+        /// plugin and on a game the table has no row for.
+        /// </remarks>
+        public const string CarHasPitLimiter = "CarHasPitLimiter";
+
+        /// <summary>
+        /// Whether the pit limiter is engaged, as the sim reports it. See <see cref="CarHasPitLimiter"/>. SimHub's
+        /// own PitLimiterOn is the pit lane on Assetto Corsa, where the plugin reads the physics page instead.
+        /// </summary>
+        public const string PitLimiterOn = "PitLimiterOn";
+
+        /// <summary>
+        /// Whether the sim reports the car's damage at all. See <see cref="CarHasPitLimiter"/>. iRacing fills
+        /// SimHub's CarDamage1..5 with zeros, which cannot be told from an undamaged car.
+        /// </summary>
+        public const string DamageReported = "DamageReported";
+
+        /// <summary>
+        /// Whether the driver is in the car, physics running: iRacing's IsOnTrack, and each sim's own reading of
+        /// the same thing elsewhere. See <see cref="CarHasPitLimiter"/>.
+        /// </summary>
+        public const string DriverInCar = "DriverInCar";
+
+        /// <summary>Every capability, in the order they are attached. ADR 0021.</summary>
+        public static readonly string[] Capabilities = { CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar };
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1538,6 +1573,9 @@ namespace OpenDashPlugin
             // And the race as it stands on the road, appended for the same reason, published rather than chosen
             // and shared because every screen that draws a place, a list or a gap reads it. #1063.
             foreach (var live in LivePropertyNames()) yield return live;
+            // And what the running sim can report, appended for the same reason, published rather than chosen
+            // and shared because every screen that asks one of the questions asks it of the same sim. #1101.
+            foreach (var capability in Capabilities) yield return capability;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

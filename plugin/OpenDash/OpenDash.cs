@@ -703,6 +703,32 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What the running sim can report on the last frame SimHub finished: what the
+        /// <see cref="Contract.Capabilities"/> publish. Interned and replaced whole, so a reader sees one frame's
+        /// answers or the next one's. See SimCapabilities.cs and ADR 0021.
+        /// </summary>
+        private volatile SimReport simReport = SimReport.Unknown;
+
+        /// <summary>SimHub's property reader, made once rather than on every frame.</summary>
+        private Func<string, object> readProperty;
+
+        /// <summary>
+        /// Fills <see cref="simReport"/> from the running game's row of the table, or empties it with no game
+        /// running, so that every dashboard falls back on iRacing's own answer exactly as it does with no plugin.
+        /// </summary>
+        private void UpdateSimReport(PluginManager pluginManager, GameData data)
+        {
+            if (data == null || !data.GameRunning || data.NewData == null || pluginManager == null)
+            {
+                simReport = SimReport.Unknown;
+                return;
+            }
+            var read = readProperty;
+            if (read == null) readProperty = read = pluginManager.GetPropertyValue;
+            simReport = SimCapabilities.Read(data.GameName, read);
+        }
+
+        /// <summary>
         /// The game, car, track and session SimHub last reported, for the settings panel. Written on the
         /// data thread only when one of them changed, and read on the interface thread as one reference.
         /// </summary>
@@ -743,7 +769,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// One frame of what OpenDash reads from SimHub. Each frame it copies the class best lap out
-        /// of the leaderboard, compares the game, car, track and session names the panel shows with
+        /// of the leaderboard, reads what the running sim can report (ADR 0021), compares the game, car,
+        /// track and session names the panel shows with
         /// the copy it holds and replaces that copy only when one of them moved, and runs the car's own
         /// bar, the only thing OpenDash computes (ADR 0018).
         ///
@@ -796,6 +823,19 @@ namespace OpenDashPlugin
             {
                 liveRace = null;
                 Report(livePositionFault, e, nowMs);
+            }
+
+            // And what the sim can report, from the same frame and for the same reason (#1101). A
+            // failure empties it, which every dashboard reads as no plugin and answers as iRacing does.
+            try
+            {
+                UpdateSimReport(pluginManager, data);
+                Report(simReportFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                simReport = SimReport.Unknown;
+                Report(simReportFault, e, nowMs);
             }
 
             // What the panel names, compared before anything is built and replaced only when
@@ -873,6 +913,7 @@ namespace OpenDashPlugin
         // The parts of DataUpdate, each counted on its own, and what a driver sees while one of them fails.
         private readonly FrameFault classBestFault = new FrameFault("Reading the class best lap", "dashboards show none");
         private readonly FrameFault livePositionFault = new FrameFault("Ranking the live positions", "dashboards order the field as the sim does");
+        private readonly FrameFault simReportFault = new FrameFault("Reading what the running sim can report", "dashboards fall back on iRacing's own answers");
         private readonly FrameFault liveCardFault = new FrameFault("Naming the game, car and track for the settings panel", "the panel's live card keeps what it last named");
         private readonly FrameFault carLightsFault = new FrameFault("Computing the car's own lights", "the strips and rev bars fall back to the ladder the sim publishes");
         private readonly FrameFault slipFault = new FrameFault("Estimating wheelspin and lock-up", "the slip lamps stay dark");
@@ -1167,6 +1208,13 @@ namespace OpenDashPlugin
                         return race == null ? null : race.Read(name, at);
                     });
                 }
+            }
+            // And what the running sim can report, filled by DataUpdate from the frame SimHub has finished and null
+            // with no game running or for a game SimCapabilities.cs has no row for. Not a setting: see ADR 0021. #1101.
+            foreach (var capability in Contract.Capabilities)
+            {
+                var name = capability;
+                this.AttachDelegate(name, () => simReport.Read(name));
             }
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
