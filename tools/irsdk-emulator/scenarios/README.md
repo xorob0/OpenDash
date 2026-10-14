@@ -101,6 +101,19 @@ inputs module's mark sits at nine o'clock and the pit wall's steering trace runs
 line (#1057). It has no trace: it is looked at, and a trace of it would be `green`'s with one value
 held.
 
+## The engine stopped with a warning
+
+`oilpressure` holds the car on the circuit, off the pit road with the limiter off, and sets the
+oil-pressure bit of `EngineWarnings` for twenty seconds round: ten with `RPM` at nought and ten at
+3000. iRacing raises that bit on an engine that is merely stopped as readily as on one that is
+failing, so every engine warning OpenDash draws reads it only while the engine turns (#1115). In the
+first half the AiM draws no ENGINE box over zone C and the Porsche's oil and warning pictograms are
+dim; in the second the AiM reads ENGINE / OIL PRESS LOW and both pictograms are lit. It is off the
+pit road because in the lane a state of the pit family is always out, ENGAGE LIMITER at the least,
+and the AiM draws its limiter over the warning and, from #1097, keeps the warning shut under every
+state of that family, so the turning half would show nothing there either. It has no trace: it is
+looked at, and its states are pinned in `packages/dash/test/engineWarnings.test.ts`.
+
 ## The other scenarios
 
 `race.json` is the base: a GT3/GT4 race at Spa, 24 cars, 30 laps with 12 done, the player at

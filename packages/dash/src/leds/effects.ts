@@ -35,7 +35,7 @@ import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS, FLAG_TAKEOVER_MS } from '../components/flagStrip.ts';
 import { propertyName, setting, WHEEL_LOCK, WHEEL_SPIN } from '../contract.ts';
 import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
-import { isInPitLane, pitLimiterOn, pitSpeeding, rpm, spotterCar, tankIsLow } from '../second/values.ts';
+import { engineRunning, isInPitLane, pitLimiterOn, pitSpeeding, spotterCar, tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { type EffectRole, type Lamp, type LampRole } from './lamps.ts';
 
@@ -142,14 +142,6 @@ const inferred = (name: string): Expr => and(eq(setting.ledInferSlip(), 'true'),
  * "am I low" with one number in the panel that moved only one of them.
  */
 const lowFuel = (): Expr => tankIsLow();
-
-/**
- * The engine turning, which is what an engine warning has to be read against. `EngineWarnings` sets
- * its oil-pressure bit on an engine that is merely stopped as readily as on one that is failing, so
- * without this the car lamp is red in every garage and on every grid, and a lamp that is red when
- * nothing is wrong is a lamp the driver stops reading by the third session.
- */
-const engineRunning = (): Expr => gt(rpm(), num(0));
 
 /**
  * What a race lamp can draw, highest rank first: one row per appearance, each taking the catalogue

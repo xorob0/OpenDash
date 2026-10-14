@@ -2193,6 +2193,24 @@ export const ignitionOff = (): Expr => eq(isnull(ignitionOn(), num(1)), num(0));
 export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)), num(0));
 
 /**
+ * The engine turning: `Rpms` above zero. This is what an engine warning has to be read against, and
+ * the one definition of it, which the LED strip's car lamp, band D's engine lamp, the AiM's engine
+ * warning and the Porsche's telltales all read (#1115).
+ *
+ * iRacing's `EngineWarnings` sets its oil-pressure bit on an engine that is merely stopped as readily
+ * as on one that is failing, so without this gate the lamp is red in every garage, on every grid and
+ * after every stall, and a lamp that is red when nothing is wrong is a lamp the driver stops reading
+ * by the third session.
+ *
+ * The turning of the engine rather than {@link engineStopped}, because the question is whether there
+ * is anything to make the pressure, and that is the crank: SimHub's `EngineStarted` holds over five
+ * frames and guesses about hybrids, and a pressure warning on a car that has just stalled is not one
+ * a driver can act on. It was the strip's alone until the dash surfaces were found reading the bit
+ * ungated.
+ */
+export const engineRunning = (): Expr => gt(rpm(), num(0));
+
+/**
  * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
  * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
  * change to this line.

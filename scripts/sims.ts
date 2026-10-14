@@ -98,6 +98,10 @@ export const IRACING: Sim = {
     // steerleft holds the wheel a quarter turn to the left so the steering dial's direction can be
     // seen (#1057); it is looked at on the VM, and its trace would be green's with one value held.
     'steerleft',
+    // oilpressure sets the oil-pressure bit with the engine stopped and then turning, ten seconds each,
+    // so that the engine warnings can be seen to wait for the crank (#1115); it is looked at on the VM,
+    // and both of its states are pinned in engineWarnings.test.ts already.
+    'oilpressure',
   ],
 };
 
