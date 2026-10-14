@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79311,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["DataCorePlugin.GameRawData.Track.TrackInfo.name"]}
+{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79311,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -89,6 +89,7 @@
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM","v":7800}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM","v":8800}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM","v":8400}
+{"p":"DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","v":"Spa"}
 {"p":"DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit","v":"unlimited"}
 {"p":"DataCorePlugin.GameRawData.Telemetry.EngineWarnings","v":16}
 {"p":"DataCorePlugin.GameRawData.Telemetry.FuelLevel","v":8.6}

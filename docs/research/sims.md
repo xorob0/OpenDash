@@ -316,13 +316,15 @@ and `PreParseDataBase` adds the player alone, **named `Me`**, with the player's 
 
 ### iRacing's raw properties, on the other three
 
-Every `GameRawData` property OpenDash reads is iRacing's, so each is null on Assetto Corsa, ACC and
-Le Mans Ultimate: their raw blocks have other names (next section). What a null does to the reading:
+Every `GameRawData` property OpenDash reads is iRacing's, Assetto Corsa's `Track.TrackInfo.name` aside,
+so each is null on Assetto Corsa, ACC and Le Mans Ultimate: their raw blocks have other names (next
+section). What a null does to the reading:
 
 | Property | What reads it | On the other three | Ticket |
 |---|---|---|---|
 | `SessionData.DriverInfo.DriverCarGearNumForward` | top gear, the gear ghost | the fallback, which is wrong | #996 |
 | `SessionData.DriverInfo.DriverCarSLBlinkRPM`, `SLFirstRPM`, `SLLastRPM`, `SLShiftRPM` | the car's own shift ladder | SimHub's bands | #748 |
+| `SessionData.WeekendInfo.TrackDisplayShortName` | the track header's name, after AC's own | AC's raw name, or `TrackName` | #1124 |
 | `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | `0x` drawn as a value | #567 |
 | `Telemetry.SteeringWheelAngle` | the steering dial and trace | flat | #567 |
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
@@ -432,7 +434,7 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 | A delta to the last lap | yes | no | no (one to the best) | no (one to the best) |
 | Damage | no | `CarDamage1..5` | `CarDamage1..5` | no |
 | Opponents beyond the player | yes | only with SimHub's AC app | only with broadcasting | yes |
-| Track name for people | `TrackName` | raw `Track.TrackInfo.name` | `TrackName` | `TrackName` |
+| Track name for people | raw `SessionData.WeekendInfo.TrackDisplayShortName`; `TrackName` is iRacing's code, `spa gp` | raw `Track.TrackInfo.name` | `TrackName` | `TrackName` |
 | Track grip | no | a number | a word | a level |
 | Wind and time of day | yes | no | yes | yes |
 | Pit lane speed limit | yes | no | a constant 60 km/h | no |
