@@ -386,9 +386,13 @@ made before OpenDash started watching cannot be told from an untouched folder.
 
 The plugin can also tell you when a newer release exists. It asks GitHub once a day, sends nothing
 that identifies you, and can be switched off with **Check for updates** on the Updates page, in
-which case nothing is fetched at all; **Check now** asks at once. Nothing is ever installed without
-being asked for. A newer release shows as a card at the top of the Updates page, headed with its
-version, with its release notes and **Download**. Download fetches the new plugin with the
+which case the check fetches nothing at all; **Check now** asks at once. The check is one of two
+requests the plugin makes without a press. The other is the car's crest: a Porsche screen at a size
+that draws the badge fetches it once, when there is no copy of it yet, from the address in the
+**Crest** row under the screen's picture on the Screens page, which is Wikipedia's copy by default.
+Clearing the address stops it, removes the copy and leaves the badge empty. Nothing is ever
+installed without being asked for. A newer release shows as a card at the top of the Updates page,
+headed with its version, with its release notes and **Download**. Download fetches the new plugin with the
 dashboards inside it, and the card then reads "OpenDash is downloaded. Restart SimHub to finish
 updating." A dialog offers to close SimHub and start it again there and then. That start puts the
 new plugin in place and brings the dashboards up to date as described above, and it replaces one

@@ -523,8 +523,10 @@ edited since as it is and says so, since nothing has asked to replace those edit
 **Support** copies a report to paste (versions, devices and the last 200 log lines; nothing is sent),
 opens SimHub's log, and links the issue tracker and the guide.
 
-**The check asks GitHub for the newest release once a day**, and nothing else leaves the machine
-([ADR 0012](../decisions/0012-update-checks.md)).
+**The check asks GitHub for the newest release once a day**, and sends nothing about the user
+([ADR 0012](../decisions/0012-update-checks.md)). The caption speaks for the check alone: the crest is
+fetched at a start without a press too, whatever the switch says, and the telemetry refusal in
+[scope.md](../scope.md) names every request the plugin makes (#1116).
 
 ### What the artboard does not settle, and what the panel does
 
@@ -698,6 +700,7 @@ row names is in its built column.
 | Updates: "Repair everything" | "Reinstall everything" | the press reinstalls, and its hover and the Screens page say so; not yet ruled. `PanelConfirmation.ReinstallLabel` |
 | Screens: "In band D" | "Band D" | the zone's name as the picture draws it; not yet ruled. `PanelScreens.FlagLabels` |
 | Updates: "Car tables:" in the support report | "Car Data:" | one name for the data. `PanelUpdates.Report` |
+| Updates: "Asks GitHub for the newest release once a day. Nothing else leaves your machine." | "Asks GitHub for the newest release once a day, and sends nothing about you." | the crest is fetched at a start without a press too, so the artboard's second sentence was false (#1116); one sentence, as voice.md asks; not yet ruled. `UpdateWording.CheckCaption` |
 | Updates, Matrix: no state for a light profile newer than the plugin | "Newer than this build" on the Updates row and the Matrix line, with the hover "Update OpenDash to match it" and the version this build ships | no artboard draws the state; a press over it would go back a version (#642). `PanelCopy.NewerThanBuild`, `PanelCopy.NewerStep` |
 
 **Two groups carry two words each, as the artboards do**, and are left for the author since the canvas
