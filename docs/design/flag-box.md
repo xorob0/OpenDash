@@ -16,9 +16,15 @@ reason rather than approximated from something nearby.
 
 Detection is `SessionFlagsDetails`, SimHub's per-bit explosion of iRacing's `SessionFlags`
 bitfield, which gives one boolean per bit and needs no bitwise operator. The six normalised
-`Flag_*` properties are not used here: `Flag_Yellow` folds `yellow`, `yellowWaving`, `caution`
-and `cautionWaving` into one, and `Flag_Black` is only the `black` bit, so a furled black and a
-disqualification are invisible through them.
+`Flag_*` properties are not used where the bits are published: `Flag_Yellow` folds `yellow`,
+`yellowWaving`, `caution` and `cautionWaving` into one, and `Flag_Black` is only the `black` bit,
+so a furled black and a disqualification are invisible through them.
+
+A sim that publishes none of a condition's bits, which is every sim but iRacing, has only the
+summary, and there a condition with a `faceFlag` in the catalogue reads it instead (#551): the
+black, the standing yellow, the blue, the white, the green and the chequer. The rest stay dark,
+by the rule above. Where SimHub's summary is itself wrong for a sim, the plugin's answer is read
+ahead of it, one capability per flag (ADR 0021, #1129); only Le Mans Ultimate has one.
 
 ## What is drawn
 

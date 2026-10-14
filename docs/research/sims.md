@@ -427,7 +427,7 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 |---|---|---|---|---|
 | The car has a pit limiter | `dcPitSpeedLimiterToggle` present | yes | yes | `mSpeedLimiterAvailable` |
 | The limiter is on | `GameData.PitLimiterOn` | raw `Physics.PitLimiterOn` | `GameData.PitLimiterOn` | `GameData.PitLimiterOn` |
-| Flags, by kind | `SessionFlagsDetails` | `Graphics.Flags`, no green | `Graphics.Flag` and the globals, a sector yellow | `mFlag`, `mGamePhase`, `mSectorFlag`, `mYellowFlagState`; no chequered or white in `GameData` |
+| Flags, by kind | `SessionFlagsDetails` | `Graphics.Flags`, no green; `Flag_*` read as they are (#551) | `Graphics.Flag` and the globals, a sector yellow; `Flag_*` read as they are | the plugin answers four (#1129): the yellow from the own sector's `mSectorFlag`, the black from `mNumPenalties`, the white from the last lap, the chequer from `mGamePhase` 8; blue and green are SimHub's |
 | In the car | `IsOnTrack` | `Graphics.Status == 2` | `Graphics.Status == 2` | `mInRealtime` |
 | Pit service | yes | no | the MFD's fuel and tyre set | no |
 | Incidents | yes | no | no | no |
