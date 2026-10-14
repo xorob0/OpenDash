@@ -12,9 +12,11 @@ import { sizeLabel } from './packages';
 import { FREE_FOREVER, NOTHING_TO_UNLOCK, THEMES_FREE } from './site';
 
 /**
- * The date every competitor cell was last read against its product's own pages. The table prints
- * it, so that a reader knows how old a line about Lovely or DNR is; a cell changed after this date
- * moves it.
+ * The date the competitor cells were last read against their products' own pages. The table prints
+ * it, so that a reader knows how old a line about Lovely or DNR is. A whole table read again moves
+ * it; a row read again on its own, or written after this date, carries its own `readOn` instead,
+ * and the page prints that row's date beside this one, so neither date claims a reading the other
+ * row did not have.
  */
 export const CHECKED_ON = '2026-09-22';
 
@@ -47,6 +49,8 @@ export interface CompareRow {
   id: string;
   label: string;
   cells: Record<ProductId, Cell>;
+  /** The date this row's competitor cells were last read, when that is later than CHECKED_ON. */
+  readOn?: string;
 }
 
 export const PRODUCTS: Product[] = [
@@ -254,10 +258,11 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
   {
     id: 'themes',
     label: 'Car themes',
-    // The row is younger than CHECKED_ON, so its competitor cells say what the rows read on that date
-    // already hold: Lovely's per-car logo fetch is the privacy row's, and the car as DNR's idle screen
-    // is the idle row's. That none of DNR's dashboards is drawn for a car was checked against its own
-    // dashboards FAQ on 2026-10-14, which lists the seven by the racing each is for (#811).
+    // The row is younger than CHECKED_ON. Lovely's per-car logo fetch is what the privacy row read,
+    // and the car as DNR's idle screen is what the idle row read. That none of DNR's dashboards is
+    // drawn for a car was read in its own dashboards FAQ on 2026-10-14, which lists the seven by the
+    // racing each is for, and the page prints that date for the row (#811).
+    readOn: '2026-10-14',
     cells: {
       opendash: cell('yes', themesCell(l.themes, l.faces), { word: 'Free' }),
       lovely: cell('partial', 'Your car’s logo on the dash, fetched per car. No face drawn like the car’s own display.', { word: 'Logo' }),

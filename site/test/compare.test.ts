@@ -157,6 +157,12 @@ describe('the comparison', () => {
 
   test('the competitor cells carry the date they were read', () => {
     expect(CHECKED_ON).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    // A row read after the rest of the table carries its own date, which the page prints beside
+    // CHECKED_ON; the car themes row's DNR cell was read three weeks after the table it sits in (#811).
+    for (const row of ROWS.filter((r) => r.readOn !== undefined)) {
+      expect({ row: row.id, date: /^\d{4}-\d{2}-\d{2}$/.test(row.readOn!), later: row.readOn! > CHECKED_ON }).toEqual({ row: row.id, date: true, later: true });
+    }
+    expect(ROWS.find((r) => r.id === 'themes')?.readOn).toBeDefined();
   });
 
   test('row ids are unique', () => {
