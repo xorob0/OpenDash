@@ -13,13 +13,13 @@ import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
 import { BASE_FACE, byFolder, pickerFaces } from '../lib/faces';
 import { counted } from '../lib/counts';
 import { sizeLabel } from '../lib/packages';
-import { COUNTS } from '../lib/liveCounts';
+import { COUNTS, LISTED } from '../lib/liveCounts';
 import { issuesOf, rows } from '../lib/compare';
 import { CLAIMED_SIM, DIFFERENTIATORS, FREE_FOREVER, FREE_HEADLINE, INSTALL, NOTHING_TO_UNLOCK, THEMES_FREE, issueUrl, releaseWord } from '../lib/site';
 import styles from './page.module.css';
 
 /** The issues night mode for the screens is scheduled under, read from the comparison's row. */
-const NIGHT = issuesOf(rows(COUNTS), 'night');
+const NIGHT = issuesOf(rows(COUNTS, LISTED), 'night');
 
 /** The states the lights teaser shows, drawn by the site. */
 const TEASER = [FRAMES.shift!, FRAMES.yellow!, FRAMES.spotter!];

@@ -5,10 +5,11 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { CHECKED_ON, PRODUCTS, rows, scheduled } from '../lib/compare.ts';
+import { sizeLabel } from '../lib/packages.ts';
 import { FREE_FOREVER, THEMES_FREE } from '../lib/site.ts';
-import { SAMPLE_COUNTS } from './sampleCounts.ts';
+import { SAMPLE_COUNTS, SAMPLE_LISTED } from './sampleCounts.ts';
 
-const ROWS = rows(SAMPLE_COUNTS);
+const ROWS = rows(SAMPLE_COUNTS, SAMPLE_LISTED);
 
 describe('the comparison', () => {
   test('every row has a cell for every product', () => {
@@ -55,13 +56,41 @@ describe('the comparison', () => {
 
   test('the car themes are included, and the user’s own colours are still coming', () => {
     expect(ROWS.find((r) => r.id === 'themes')?.cells.opendash.word).toBe('Free');
-    expect(scheduled(SAMPLE_COUNTS).map((r) => r.id)).toContain('colours');
-    expect(scheduled(SAMPLE_COUNTS).map((r) => r.id)).not.toContain('themes');
+    expect(scheduled(SAMPLE_COUNTS, SAMPLE_LISTED).map((r) => r.id)).toContain('colours');
+    expect(scheduled(SAMPLE_COUNTS, SAMPLE_LISTED).map((r) => r.id)).not.toContain('themes');
   });
 
   test('the counts in the cells are the build’s', () => {
     expect(ROWS.find((r) => r.id === 'sizes')?.cells.opendash.text).toContain(`${SAMPLE_COUNTS.faces} faces`);
     expect(ROWS.find((r) => r.id === 'flagBox')?.cells.opendash.text).toContain(`${SAMPLE_COUNTS.glyphs} glyphs`);
+  });
+
+  test('the sizes cell lists as many sizes as it counts, and they are the build’s', () => {
+    // A count read from the build beside a list typed by hand is the drift #560 ended for counts (#819).
+    const text = ROWS.find((r) => r.id === 'sizes')?.cells.opendash.text ?? '';
+    const m = /^(\d+) faces: (.+)\.$/.exec(text);
+    expect(m).not.toBeNull();
+    const listed = m![2]!.split(', ');
+    expect({ counted: Number(m![1]), listed: listed.length }).toEqual({ counted: SAMPLE_COUNTS.faces, listed: SAMPLE_COUNTS.faces });
+    expect(listed).toEqual(SAMPLE_LISTED.faces.map(sizeLabel));
+  });
+
+  test('the second screens name the sizes the build makes', () => {
+    const companion = ROWS.find((r) => r.id === 'companion')?.cells.opendash.text ?? '';
+    for (const s of SAMPLE_LISTED.companions) expect(companion).toContain(sizeLabel(s));
+    expect(companion).toContain(`${SAMPLE_COUNTS.pages} pages`);
+    const pitWall = ROWS.find((r) => r.id === 'pitWall')?.cells.opendash.text ?? '';
+    for (const s of SAMPLE_LISTED.pitWalls) expect(pitWall).toContain(sizeLabel(s));
+    expect(pitWall).toContain(`${SAMPLE_COUNTS.pitWallPages} pages`);
+  });
+
+  test('the car themes cell names every theme the build makes', () => {
+    // The cell described the Porsche alone after the AiM had shipped (#819).
+    const text = ROWS.find((r) => r.id === 'themes')?.cells.opendash.text ?? '';
+    expect(text).toStartWith(`${SAMPLE_LISTED.themes.length} car themes`);
+    for (const t of SAMPLE_LISTED.themes) expect(text).toContain(t.name);
+    expect(text).toContain(`${SAMPLE_LISTED.themes.reduce((n, t) => n + t.cars.length, 0)} cars`);
+    expect(text).toContain('every rectangular size');
   });
 
   test('the competitor cells carry the date they were read', () => {

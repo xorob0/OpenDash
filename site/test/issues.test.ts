@@ -13,7 +13,7 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { rows } from '../lib/compare.ts';
-import { SAMPLE_COUNTS } from './sampleCounts.ts';
+import { SAMPLE_COUNTS, SAMPLE_LISTED } from './sampleCounts.ts';
 
 const site = path.resolve(import.meta.dir, '..');
 
@@ -46,7 +46,7 @@ function deletedByTheImport(): Set<number> {
 /** Every issue a page links: the comparison's rows, and each `issueUrl(n)` a source spells out. */
 function cited(): { where: string; n: number }[] {
   const out: { where: string; n: number }[] = [];
-  for (const row of rows(SAMPLE_COUNTS)) for (const n of row.cells.opendash.issues ?? []) out.push({ where: `compare/${row.id}`, n });
+  for (const row of rows(SAMPLE_COUNTS, SAMPLE_LISTED)) for (const n of row.cells.opendash.issues ?? []) out.push({ where: `compare/${row.id}`, n });
   for (const f of FILES) for (const m of readFileSync(f, 'utf8').matchAll(/issueUrl\((\d+)\)/g)) out.push({ where: path.relative(site, f), n: Number(m[1]) });
   return out;
 }

@@ -81,6 +81,25 @@ describe('the counts', () => {
     expect(offenders).toEqual([]);
   });
 
+  test('no source spells a count out either', () => {
+    // "eleven pages" is the same retyped number as "11 pages", and the rule above cannot see it (#819).
+    // One is left out: "one page at a time" is not a count.
+    const WORDS = 'two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty(?:-\\w+)?|thirty(?:-\\w+)?';
+    const SPELLED = new RegExp(`\\b(?:${WORDS}) (?:${NOUNS})\\b`, 'gi');
+    const offenders: string[] = [];
+    for (const f of ALL_SOURCES) {
+      const text = readFileSync(f, 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '');
+      for (const m of text.matchAll(SPELLED)) {
+        const line = text.slice(text.lastIndexOf('\n', m.index) + 1, text.indexOf('\n', m.index));
+        if (/\b(lovely|dnr): cell\(/.test(line)) continue;
+        offenders.push(`${path.relative(site, f)}: ${m[0]}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test('a count the build has not made says every rather than zero', () => {
     expect(counted(14, 'dashboard')).toBe('14 dashboards');
     expect(counted(1, 'theme')).toBe('1 theme');

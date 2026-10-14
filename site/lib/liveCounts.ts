@@ -1,5 +1,6 @@
 /**
- * The counts of the build being served, for the pages. Tests read `counts.ts`, not this.
+ * The counts and lists of the build being served, for the pages. Tests read `counts.ts` and pass
+ * lists of their own, not this.
  */
 import {
   BAND_D_PAGES,
@@ -16,7 +17,9 @@ import {
   THEMES,
   ZONE_A_PAGES,
 } from './content.generated';
+import type { Listed } from './compare';
 import type { Counts } from './counts';
+import { COMPANIONS, FACES, PIT_WALLS } from './faces';
 
 export const COUNTS: Counts = {
   packages: PACKAGES.length,
@@ -36,4 +39,12 @@ export const COUNTS: Counts = {
   ledProfiles: LED_PROFILE_COUNT,
   flags: FLAGS.length,
   glyphs: GLYPH_COUNT,
+};
+
+/** What the comparison lists: the screens in the order the pages list them, and the car themes beside the default (#819). */
+export const LISTED: Listed = {
+  faces: FACES,
+  companions: COMPANIONS,
+  pitWalls: PIT_WALLS,
+  themes: THEMES.filter((t) => t.id !== 'default'),
 };

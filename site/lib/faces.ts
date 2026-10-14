@@ -29,6 +29,10 @@ export const BASE_FACE: PackageOption | undefined = FACES.find((f) => f.folder =
 /** The 1280 x 480 face, the wide DDU. */
 export const LARGE_FACE: PackageOption | undefined = FACES.find((f) => f.folder === 'OpenDash 1280x480');
 
+/** The widest face and the narrowest, for a sentence that gives the range of sizes. */
+export const WIDEST_FACE: PackageOption | undefined = [...FACES].sort((a, b) => b.width - a.width)[0];
+export const NARROWEST_FACE: PackageOption | undefined = [...FACES].sort((a, b) => a.width - b.width)[0];
+
 export const byFolder = (folder: string): PackageOption | undefined => ALL.find((p) => p.folder === folder);
 
 /** The faces as the picker draws them: with their capture's URL when it has been photographed. */

@@ -7,7 +7,8 @@
  * the issue it is scheduled under) and what is not built, with the scope line where one exists. No
  * competitor image appears anywhere; the comparison is words and OpenDash's own captures.
  */
-import type { Counts } from './counts';
+import { and, counted, type Counts } from './counts';
+import { sizeLabel } from './packages';
 import { FREE_FOREVER, NOTHING_TO_UNLOCK, THEMES_FREE } from './site';
 
 /**
@@ -53,11 +54,62 @@ export const PRODUCTS: Product[] = [
 const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built' };
 const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
 
+/** A screen as the build makes it, for a cell that names its size. */
+export interface Screen {
+  width: number;
+  height: number;
+  round: boolean;
+}
+
+/** A car theme beside the default, as the catalogue has it. */
+export interface Theme {
+  name: string;
+  /** The cars it is drawn for. */
+  cars: readonly string[];
+  /** The face sizes it claims. */
+  sizes: readonly unknown[];
+}
+
 /**
- * The rows, as a function of the build's counts so that a number in a cell is read and not retyped
- * (#560). The pages call `rows(COUNTS)`; the tests call it with counts of their own.
+ * What a cell lists rather than counts, read from the build like the counts (#819): the faces, the
+ * companions and the pit walls in reading order, and the car themes beside the default. It is a
+ * parameter rather than an import so that this file still reads nothing generated, and the tests
+ * pass lists of their own.
  */
-export const rows = (c: Counts): CompareRow[] => [
+export interface Listed {
+  faces: readonly Screen[];
+  companions: readonly Screen[];
+  pitWalls: readonly Screen[];
+  themes: readonly Theme[];
+}
+
+/** The faces' cell: the count, then every size, so that the one cannot say ten and the other list nine. */
+const facesCell = (faces: readonly Screen[]): string =>
+  faces.length > 0 ? `${counted(faces.length, 'face')}: ${faces.map(sizeLabel).join(', ')}.` : 'A face for every size the build makes.';
+
+/** The pit walls' cell. The page count is the landscape package's; the portrait one has a page of its own. */
+function pitWallCell(walls: readonly Screen[], pages: number): string {
+  const landscape = walls.filter((w) => w.width >= w.height).map(sizeLabel);
+  const portrait = walls.filter((w) => w.width < w.height).map(sizeLabel);
+  const lead = landscape.length > 0 ? `${and(landscape)} with ${counted(pages, 'page')}` : `${counted(pages, 'page')}`;
+  return portrait.length > 0 ? `${lead}, and ${and(portrait)}.` : `${lead}.`;
+}
+
+/** The car themes' cell: how many, their names, how many cars they draw, and at which sizes. */
+function themesCell(themes: readonly Theme[], faces: readonly Screen[]): string {
+  if (themes.length === 0) return 'A face drawn like the car’s own display, at the sizes the theme claims.';
+  const cars = themes.reduce((n, t) => n + t.cars.length, 0);
+  const rectangular = faces.filter((f) => !f.round).length;
+  const where = rectangular > 0 && themes.every((t) => t.sizes.length === rectangular) ? 'at every rectangular size' : 'at the sizes each claims';
+  return `${counted(themes.length, 'car theme')}, ${and(themes.map((t) => t.name))}, for ${counted(cars, 'car')}, each drawn like the display those cars carry, ${where}.`;
+}
+
+/**
+ * The rows, as a function of the build's counts and lists so that a number or a size in a cell is
+ * read and not retyped (#560, #819). The pages call `rows(COUNTS, LISTED)`; the tests call it with
+ * counts and lists of their own.
+ */
+export const rows = (c: Counts, l: Listed): CompareRow[] => [
   {
     id: 'sims',
     label: 'Sims',
@@ -98,7 +150,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'sizes',
     label: 'Screen sizes',
     cells: {
-      opendash: cell('yes', `${c.faces} faces: 1920 × 480, 1280 × 720, 1280 × 480, 1280 × 400, 850 × 480, 800 × 480, 800 × 286, 600 × 686, 800 round, 480 round.`),
+      opendash: cell('yes', facesCell(l.faces)),
       lovely: cell('yes', '850 × 480, 1280 × 480, 1280 × 400, 1920 × 480, 800 × 286, 600 × 686, plus round and square.'),
       dnr: cell('yes', '800 × 480, 1280 × 400, 1920 × 480, 1920 × 720 and 1920 × 1080, across 7 dashboards.'),
     },
@@ -118,7 +170,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'companion',
     label: 'Second screen',
     cells: {
-      opendash: cell('yes', `850 × 480 and 480 × 850, ${c.pages} pages.`),
+      opendash: cell('yes', `${l.companions.length > 0 ? `${and(l.companions.map(sizeLabel))}, ` : ''}${counted(c.pages, 'page')}.`),
       lovely: cell('yes', 'A companion, landscape and portrait, free.'),
       dnr: cell('yes', 'Co-Pilot, 14 panels. Choosing which ones appear costs £3 a month.'),
     },
@@ -127,7 +179,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'pitWall',
     label: 'Pit wall',
     cells: {
-      opendash: cell('yes', `1920 × 1080 with ${c.pitWallPages} pages, and 1080 × 1920.`),
+      opendash: cell('yes', pitWallCell(l.pitWalls, c.pitWallPages)),
       lovely: cell('paid', 'Lovely Pit Wall, on the €3 tier and up.'),
       dnr: cell('yes', 'Race Control, free: the field, a track map and traces.'),
     },
@@ -199,11 +251,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'themes',
     label: 'Car themes',
     cells: {
-      opendash: cell(
-        'yes',
-        'A Porsche face drawn like the 992’s own display, at every rectangular size, which SimHub switches to when you drive one. More display families follow by ticket.',
-        { word: 'Free' },
-      ),
+      opendash: cell('yes', themesCell(l.themes, l.faces), { word: 'Free' }),
       lovely: cell('partial', 'Your car’s logo on the dash, fetched per car. No face drawn like the car’s own display.', { word: 'Logo' }),
       dnr: cell('partial', 'Not read against their pages yet.', { word: 'Not checked' }),
     },
@@ -310,4 +358,4 @@ export const rows = (c: Counts): CompareRow[] => [
 export const issuesOf = (all: readonly CompareRow[], id: string): number[] => all.find((r) => r.id === id)?.cells.opendash.issues ?? [];
 
 /** The coming-soon rows, for the list under the table. */
-export const scheduled = (c: Counts): CompareRow[] => rows(c).filter((r) => r.cells.opendash.mark === 'soon');
+export const scheduled = (c: Counts, l: Listed): CompareRow[] => rows(c, l).filter((r) => r.cells.opendash.mark === 'soon');

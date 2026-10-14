@@ -9,16 +9,22 @@ import { anatomyParts } from '../../lib/anatomy';
 import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
 import { HERO_FACE } from '../../lib/content.generated';
-import { ALL, BASE_FACE, LARGE_FACE, byFolder, pickerFaces } from '../../lib/faces';
-import { counted } from '../../lib/counts';
+import { ALL, BASE_FACE, LARGE_FACE, NARROWEST_FACE, WIDEST_FACE, byFolder, pickerFaces } from '../../lib/faces';
+import { and, counted } from '../../lib/counts';
 import { COUNTS } from '../../lib/liveCounts';
 import { sizeLabel } from '../../lib/packages';
 import { INSTALL, REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
+/** `from a 1920 × 480 to a 480 round`, read from the faces the build makes, or nothing when it has made none. */
+const RANGE = WIDEST_FACE && NARROWEST_FACE ? `from a ${sizeLabel(WIDEST_FACE)} to a ${sizeLabel(NARROWEST_FACE)}` : '';
+
+/** The round faces, which still draw the card layout. */
+const ROUND = ALL.filter((p) => p.round);
+
 export const metadata: Metadata = {
   title: 'Screens and sizes',
-  description: `${counted(COUNTS.faces, 'face size')} from 1920 × 480 to a 480 round, ${counted(COUNTS.companions, 'companion')} and ${counted(COUNTS.pitWalls, 'pit wall')}. Pick your screen and see it.`,
+  description: `${counted(COUNTS.faces, 'face size')}${RANGE ? ` ${RANGE}` : ''}, ${counted(COUNTS.companions, 'companion')} and ${counted(COUNTS.pitWalls, 'pit wall')}. Pick your screen and see it.`,
 };
 
 export default function Screens() {
@@ -53,7 +59,7 @@ export default function Screens() {
       <Section
         id="fit"
         title="Made for a wide range of screens"
-        lede="From a 1920 × 480 strip to a 480 round. Each size is laid out for its own pixels: a small screen keeps what matters, a large one shows more."
+        lede={`${RANGE ? `${RANGE.charAt(0).toUpperCase()}${RANGE.slice(1)}. ` : ''}Each size is laid out for its own pixels: a small screen keeps what matters, a large one shows more.`}
       >
         <div className={styles.pair}>
           {base ? <Capture file={packageFile(base.folder)} alt={`The ${sizeLabel(base)} face`} width={base.width} height={base.height} caption={sizeLabel(base)} /> : null}
@@ -83,7 +89,7 @@ export default function Screens() {
       <Section
         id="pit-wall"
         title="The pit wall"
-        lede="For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and four zones you fill from eleven pages or a web view. Three pages, and a portrait version."
+        lede={`For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and four zones you fill from ${counted(COUNTS.pitWallZonePages, 'page')} or a web view. ${counted(COUNTS.pitWallPages, 'page')} in landscape, and a portrait version.`}
       >
         <div className={styles.pitWalls}>
           {pitWall ? (
@@ -101,10 +107,10 @@ export default function Screens() {
 
       <Section
         id="round"
-        title="The two round faces"
+        title="The round faces"
         lede={
           <>
-            800 round and 480 round still draw the earlier card layout. What a round face does with zones is decided (
+            {and(ROUND.map(sizeLabel))} still draw the earlier card layout. What a round face does with zones is decided (
             <a href={issueUrl(145)} className="link" rel="noopener">
               #145
             </a>
@@ -113,7 +119,7 @@ export default function Screens() {
         }
       >
         <div className={styles.pair}>
-          {ALL.filter((p) => p.round).map((p) => (
+          {ROUND.map((p) => (
             <Capture key={p.folder} file={packageFile(p.folder)} alt={`The ${sizeLabel(p)} face`} width={p.width} height={p.height} round caption={sizeLabel(p)} />
           ))}
         </div>

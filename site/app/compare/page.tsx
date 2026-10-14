@@ -3,7 +3,7 @@ import { CompareTable } from '../../components/CompareTable';
 import { Section } from '../../components/Section';
 import { CHECKED_ON, scheduled } from '../../lib/compare';
 import { longDate } from '../../lib/captures';
-import { COUNTS } from '../../lib/liveCounts';
+import { COUNTS, LISTED } from '../../lib/liveCounts';
 import { REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
@@ -54,7 +54,7 @@ export default function Compare() {
 
       <Section id="scheduled" title="What is coming" lede="Each is an open issue, read from the table above so the two cannot disagree.">
         <ul className={`rows ${styles.scheduled}`}>
-          {scheduled(COUNTS).map((row) => (
+          {scheduled(COUNTS, LISTED).map((row) => (
             <li key={row.id} className={styles.item}>
               <span className={styles.itemLabel}>{row.label}</span>
               <span className={styles.itemText}>{row.cells.opendash.text}</span>
