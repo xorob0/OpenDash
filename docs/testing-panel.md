@@ -123,7 +123,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-14 | Flag animation / Full-strip spotter | | Flip | FlagAnimation, SpotterWhole; Full-strip hidden on the brow | J; V |
 | LD-14b | Infer wheel spin and wheel lock | Wheel rim / Dash brow | Flip off, then on; on the brow, observe | bar LedInferSlip false / true, on by default; no row on the brow (a bare run has no TC or ABS lamp); with it on and a wheel spun on iRacing, OpenDash.WheelSpin true and the TC lamp lit | U PanelLedsTests, SlipEstimateTests; J; N hardware |
 | LD-15 | Pit limiter lights #509 | | Hover | greyed | V |
-| LD-16 | Every strip Soon rows: Idle sweep #485, Engine start animation #743, Car data for AC, ACC and LMU #479 | | Hover | greyed | V |
+| LD-16 | Every strip Soon rows: Idle sweep #485, Engine start animation #743, Car data for LMU #479 | | Hover | greyed | V |
 | LD-17 | Car Data | network | Download (Update once a copy is held) | off the UI thread; "Downloading…" then the status line; attribution; log | J; V |
 | LD-18 | Rename / Remove | | Remove Dash brow | asks once (Remove it); strip gone; profile uninstalled | U; J |
 | AL-01 | A Fanatec device ticks Fanatec compatibility mode | FanaBridge wheel added | Open; pick the Arduino, then the wheel again, under SimHub device; then flip the switch on with the Arduino picked, and pick another device not named Fanatec | No Hardware step: the sheet opens on the Fanatec wheel with Fanatec compatibility mode on at 3 · 9 · 3, the ends offering 1 to 5 and no None; the Arduino turns it off and offers None again; the wheel turns it on; once flipped on by hand it stays on across a device not named Fanatec; name "Wheel rim" while on (#686) | U PanelLedsTests; V |

@@ -375,3 +375,27 @@ the ABS lamp on `ABSActive` or on `WheelLock`. Each strip has a switch, "Infer w
 (`LedInferSlip`), on by default, which a driver turns off to have the lamps light only on what the sim
 reports. The estimate is the car's and rig-wide; the switch is the strip's.
 
+## Amended, 2026-10-14: Assetto Corsa's and ACC's tables as well (#748)
+
+**What moved.** The archive carries ten games and the plugin used to keep iRacing's alone. It now
+keeps three: iRacing, Assetto Corsa and Assetto Corsa Competizione (`CarLightLibrary.Sims`). Each
+goes in a folder of its own under the cache, `CarLights/<game>/`, named as the archive names it.
+A car is looked up only among the running game's cars, which DataUpdate reads from
+`GameData.GameName`, so one id in two sims lights the right ladder in each. The fetch is the same
+single request for the same archive; only what is kept from it changed.
+
+**How the keys were checked.** A game's folder is SimHub's game code folded, and a file names its
+car the way `GameData.CarId` carries it there: iRacing's CarPath, Assetto Corsa's folder under
+`content/cars`, ACC's model name (`bmw_m4_gt3`). The last two were read out of SimHub 9.12.6's
+readers. Assetto Corsa's one table today says `rss_formula_hybrid_2023_AC` inside a file named
+`rss-formula-hybrid-2023.json`, so a table is found by its file's name as well as by its id.
+
+**What stays out.** Le Mans Ultimate's folder is in the archive and is left there. Its files key a
+car by team, so ten of them share one key and one key names both a hypercar and a GTE; a wrong
+car's ladder is worse than SimHub's bands. The panel's Soon row is now "Car data for LMU", under
+[#479](https://github.com/xorob0/OpenDash/issues/479).
+
+**What the panel says.** The car count is every sim's cars together, and an archive with iRacing's
+cars and none of Assetto Corsa's is a good copy. The car line speaks in the three games and says
+nothing in any other. A copy fetched before this, flat in the cache, still reads as iRacing's until
+the next download moves it into `iracing/`.

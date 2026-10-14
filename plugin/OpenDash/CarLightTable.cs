@@ -46,7 +46,13 @@ namespace OpenDashPlugin
     /// </summary>
     public sealed class CarLightTable
     {
-        /// <summary>SimHub's DataCorePlugin.CarId, verbatim: "stockcars chevycamarozl12022", spaces and all.</summary>
+        /// <summary>
+        /// The car's id as SimHub's GameData.CarId carries it, verbatim: "stockcars chevycamarozl12022",
+        /// spaces and all, on iRacing; the car's folder or model name ("bmw_m4_gt3") on Assetto Corsa and ACC.
+        ///
+        /// <para>Not DataCorePlugin.CarId, whatever the upstream README says: that one is empty on
+        /// iRacing, as measured on the VM and written down at CarLightLibrary.Key.</para>
+        /// </summary>
         public string CarId { get; set; }
 
         public string CarName { get; set; }
