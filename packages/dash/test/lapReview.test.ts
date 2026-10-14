@@ -183,7 +183,7 @@ describe('the fields, left to right', () => {
     expect(bound('lap.label')).toContain('CompletedLaps');
     expect(bound('lap.value')).toContain('LastLapTime');
     expect(bound('driver')).toContain('drivercarnumber');
-    // Slot zero's delta to the session best, addressed the way the lap history addresses its rows.
+    // Slot zero's delta to your best, addressed the way the lap history addresses its rows.
     expect(bound('vsBest.value')).toContain("'PersistantTrackerPlugin.PreviousLap_') + (format(0, '00')) + ('_DeltaToSessionBest'");
     // The lap before the one being reported, not the one being reported: slot zero is this lap, so
     // a difference against it would be nought on every lap of every race.
@@ -225,8 +225,8 @@ describe('the two deltas', () => {
   test('keep deltaColour’s third state, which the canvas does not state', () => {
     // The canvas gives the review a two-colour rule. The code has three: a delta inside the deadband
     // is `purpose.delta.zero`, and the reason it is kept for a finished lap as well as a live one is
-    // written beside DELTA_DEADBAND. What this pins is that the decision was made once: every
-    // surface that draws a delta goes through the same expression.
+    // written beside DELTA_DEADBAND. What this pins is that the decision was made once: both of the
+    // review's deltas go through the same expression.
     expect(DELTA_DEADBAND).toBeGreaterThan(0);
     expect(deltaColour('0')).toContain(ds.purpose.delta.zero);
     for (const name of ['vsBest', 'vsPrevious']) {
@@ -238,7 +238,15 @@ describe('the two deltas', () => {
 describe('the two deltas at the end of an in-lap (#886)', () => {
   const LAST = 'DataCorePlugin.GameData.LastLapTime';
   const BEFORE = 'PersistantTrackerPlugin.PreviousLap_01';
+  /** Slot zero, which is the lap just finished, so its time is the last lap's. */
+  const NOW = 'PersistantTrackerPlugin.PreviousLap_00';
   const TO_BEST = 'PersistantTrackerPlugin.PreviousLap_00_DeltaToSessionBest';
+  /**
+   * Slots zero and one both driven in this session, which is the frame every lap after the second of
+   * a session is drawn in. SimHub fills the ring from its lap database, and a slot it cannot place in
+   * this session is no lap at all to the review (#1011); the describe below is that case.
+   */
+  const TODAY: Props = { 'PersistantTrackerPlugin.PreviousLap_00_IsCurrentSession': 1, 'PersistantTrackerPlugin.PreviousLap_01_IsCurrentSession': 1 };
 
   /**
    * What a driver reads, written independently of `signedToFit`: a true minus or a plus, and as
@@ -259,8 +267,8 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
    * leaves both of them a time, since a lap with none is the placeholder and not a figure.
    */
   const SITES: readonly { name: string; frame: (seconds: number) => Props }[] = [
-    { name: 'vsBest', frame: (seconds) => ({ [LAST]: 2000 + seconds, [TO_BEST]: seconds }) },
-    { name: 'vsPrevious', frame: (seconds) => ({ [LAST]: 2000 + seconds, [BEFORE]: 2000 }) },
+    { name: 'vsBest', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [NOW]: 2000 + seconds, [TO_BEST]: seconds }) },
+    { name: 'vsPrevious', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [BEFORE]: 2000 }) },
   ];
 
   for (const { name, frame } of SITES) {
@@ -282,8 +290,96 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
   test('both say nothing rather than a figure while the lap they compare has no time', () => {
     for (const { name } of SITES) {
       const formula = String(textNamed(reference.items, `${name}.value`).bindings?.Text?.formula);
-      expect({ name, drawn: evalNcalc(formula, { [LAST]: 0, [TO_BEST]: 123.45, [BEFORE]: 100 }) }).toEqual({ name, drawn: '--' });
+      expect({ name, drawn: evalNcalc(formula, { ...TODAY, [LAST]: 0, [TO_BEST]: 123.45, [BEFORE]: 100 }) }).toEqual({ name, drawn: '--' });
     }
+  });
+
+  /** What a delta field draws, its figure and its colour, in one frame. */
+  const drawnIn = (name: string, props: Props): { text: unknown; colour: unknown } => {
+    const value = textNamed(reference.items, `${name}.value`);
+    return { text: evalNcalc(String(value.bindings?.Text?.formula), props), colour: evalNcalc(String(value.bindings?.TextColor?.formula), props) };
+  };
+
+  test('the placeholder is dim, not the colour of a comparison that was never made (#614)', () => {
+    // The first lap of a session: a last lap and nothing in slot one. The difference against an empty
+    // slot is the whole lap, so the ungated colour drew the `--` in the slower red.
+    expect(drawnIn('vsPrevious', { ...TODAY, [LAST]: 92.4, [TO_BEST]: 0 })).toEqual({ text: '--', colour: ds.color.text.dim });
+    // And no last lap at all, with a stale delta still published for slot zero.
+    for (const { name } of SITES) {
+      expect({ name, ...drawnIn(name, { ...TODAY, [LAST]: 0, [TO_BEST]: 1.5, [BEFORE]: 90 }) }).toEqual({ name, text: '--', colour: ds.color.text.dim });
+    }
+    // Once there is a lap to compare, the figure and its colour come back together.
+    expect(drawnIn('vsPrevious', { ...TODAY, [LAST]: 92.4, [BEFORE]: 92.1 })).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+    expect(drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [TO_BEST]: -0.21 })).toEqual({ text: '−0.21', colour: ds.purpose.delta.faster });
+  });
+
+  test('a figure drawn as a hundredth is coloured as one, and only a figure drawn as zero is level (#614)', () => {
+    // .NET rounds a half away from zero, so ±0.005 is drawn `±0.01`; a band that took its own edge in
+    // coloured a drawn hundredth white.
+    const at = (seconds: number) => drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [TO_BEST]: seconds }).colour;
+    expect(at(0.005)).toBe(ds.purpose.delta.slower);
+    expect(at(-0.005)).toBe(ds.purpose.delta.faster);
+    expect(at(0.0049)).toBe(ds.purpose.delta.zero);
+    expect(at(-0.0049)).toBe(ds.purpose.delta.zero);
+    expect(at(0)).toBe(ds.purpose.delta.zero);
+  });
+
+  /**
+   * #1011: SimHub fills the ring from its lap database, the last ten laps of this car at this track
+   * from any session, and says which of them were driven in this one by `_IsCurrentSession`. A driver
+   * back the next day crosses the line for the first time with yesterday's laps in slots one to nine.
+   */
+  describe('count only the laps of this session (#1011)', () => {
+    const FLAG_00 = 'PersistantTrackerPlugin.PreviousLap_00_IsCurrentSession';
+    const FLAG_01 = 'PersistantTrackerPlugin.PreviousLap_01_IsCurrentSession';
+    // A lap and the one before it, with a delta published for the lap: every figure is there to draw.
+    const LAPS: Props = { [LAST]: 92.4, [NOW]: 92.4, [BEFORE]: 92.1, [TO_BEST]: 0.3 };
+
+    test('a ring of earlier laps is no lap at all, and both say nothing', () => {
+      for (const { name } of SITES) {
+        expect({ name, ...drawnIn(name, { ...LAPS, [FLAG_00]: 0, [FLAG_01]: 0 }) }).toEqual({ name, text: '--', colour: ds.color.text.dim });
+        // And a ring SimHub publishes no flag for is not taken for one of this session.
+        expect({ name, ...drawnIn(name, LAPS) }).toEqual({ name, text: '--', colour: ds.color.text.dim });
+      }
+    });
+
+    test('at the first crossing the lap is today’s and the one before it is not: the best is a figure and the previous is not', () => {
+      const first: Props = { ...LAPS, [FLAG_00]: 1, [FLAG_01]: 0 };
+      expect(drawnIn('vsBest', first)).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+      expect(drawnIn('vsPrevious', first)).toEqual({ text: '--', colour: ds.color.text.dim });
+    });
+
+    test('with two laps of this session the readings are the ones the ring held', () => {
+      const second: Props = { ...LAPS, [FLAG_00]: 1, [FLAG_01]: 1 };
+      expect(drawnIn('vsBest', second)).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+      expect(drawnIn('vsPrevious', second)).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+    });
+
+    test('an emptied slot zero is no lap, though SimHub leaves its flag at 1', () => {
+      // On a car and track the lap database holds nothing for, SimHub writes slot zero's time and
+      // deltas to nought and leaves its flag from the last combination. A first lap there that SimHub
+      // does not add to the ring leaves the review reading that slot: a delta of nought is no reading.
+      const emptied: Props = { [LAST]: 92.4, [NOW]: 0, [TO_BEST]: 0, [FLAG_00]: 1, [FLAG_01]: 1 };
+      expect(drawnIn('vsBest', emptied)).toEqual({ text: '--', colour: ds.color.text.dim });
+      expect(drawnIn('vsPrevious', emptied)).toEqual({ text: '--', colour: ds.color.text.dim });
+    });
+  });
+});
+
+describe('deltaColour at the edge of its band (#614)', () => {
+  const colour = (seconds: number): unknown => evalNcalc(deltaColour('[X]'), { X: seconds });
+
+  test('is strict: exactly half a hundredth either way is a reading and is coloured', () => {
+    expect(colour(DELTA_DEADBAND)).toBe(ds.purpose.delta.slower);
+    expect(colour(-DELTA_DEADBAND)).toBe(ds.purpose.delta.faster);
+  });
+
+  test('is level strictly inside the band, and green or red past it', () => {
+    expect(colour(0)).toBe(ds.purpose.delta.zero);
+    expect(colour(0.0049)).toBe(ds.purpose.delta.zero);
+    expect(colour(-0.0049)).toBe(ds.purpose.delta.zero);
+    expect(colour(0.21)).toBe(ds.purpose.delta.slower);
+    expect(colour(-0.21)).toBe(ds.purpose.delta.faster);
   });
 });
 

@@ -35,7 +35,7 @@ import { ds } from '../tokens.ts';
 import { CHIP_WIDEST, chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  placesGainedCounted, positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, GAP_WIDEST, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { and, iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
@@ -488,6 +488,9 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
   ];
 }
 
+/** What the own row's name cell says in place of the driver's name. */
+const OWN_ROW_NAME = 'YOU';
+
 /**
  * A proportional text cell: the driver name, which is Barlow Medium and never monospaced.
  *
@@ -508,14 +511,17 @@ function cellValue(ctx: CellContext, id: string, sample: string, bind: Expr, cha
 function cellName(ctx: CellContext): Item[] {
   const fs = ctx.type.name;
   const chars = charsThatFit(NAME_FACE, fs, ctx.width);
-  const bind = iff(ctx.isPlayer, str('YOU'), nameText(ctx.idx, chars, fs));
+  const bind = iff(ctx.isPlayer, str(OWN_ROW_NAME), nameText(ctx.idx, chars, fs));
+  // A column cut to two characters declares WW, which is narrower than the own row's YOU.
+  const budget = widestOf(NAME_FACE, chars);
+  const widest = measureText(NAME_FACE, OWN_ROW_NAME, fs) > measureText(NAME_FACE, budget, fs) ? OWN_ROW_NAME : budget;
   return [
     withMoreBindings(
       label(`${ctx.name}.name`, nameSampleAt(fs), ctx.x, ctx.top + (ctx.height - fs) / 2, ctx.width, {
         size: fs,
         color: ds.color.text.secondary,
         bind,
-        widest: widestOf(NAME_FACE, chars),
+        widest,
       }),
       { TextColor: liftBind(ctx, inkBind(ctx)) },
     ),
@@ -527,7 +533,9 @@ const RANK_MARK = 10;
 
 /**
  * The rank column: the places a car has gained or lost, as the canvas's 10 px triangle with the
- * count beside it, and a short dash where the position has not moved.
+ * count beside it, and a short dash where the position has not moved. Where there is no count to
+ * give, which is counting in class in a field of several classes ({@link placesGainedCounted}), the
+ * cell is empty: the dash would say the car has not moved, which nobody knows.
  *
  * The triangle is a picture because SimHub draws rectangles, ellipses and text and a triangle is
  * none of the three; it is two pictures rather than one because an `ImageItem` has nothing that
@@ -555,7 +563,7 @@ function cellRank(ctx: CellContext): Item[] {
       image: asset.name,
       rect: assetBox(markerBox, imageOf(asset)),
     }, { Visible: visible })),
-    withMoreBindings(band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim), { Visible: not(moved) }),
+    withMoreBindings(band(`${ctx.name}.rank.flat`, rect(right - 8, ctx.top + ctx.height / 2 - 1, 8, 2), ds.color.text.dim), { Visible: and(placesGainedCounted(), not(moved)) }),
     numeral(`${ctx.name}.rank.count`, '2', right - countWidth, ctx.top + (ctx.height - fs) / 2, fs, { digits: 2, specials: 0 }, {
       bind: iff(moved, fmt(abs(change), '0'), str('')),
       colorBind: colour,
@@ -723,10 +731,10 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
             // the typographic minus `signed` substitutes, so that what Dash Studio shows at design
             // time is the glyph the bound value draws rather than .NET's hyphen.
             cellValue(ctx, 'gap', `${MINUS}5.886`, iff(ctx.isPlayer, str('0.000'), carRelativeGap(ctx.idx)), CHARS.relativeGap, { widest: RELATIVE_GAP_WIDEST, colorBind: liftBind(ctx, inkBind(ctx)) })
-          : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { colorBind: liftBind(ctx, inkBind(ctx)) }),
+          : cellValue(ctx, 'gap', '+12.6', measuredInList(ctx, carClassRaceGap, carRaceGap), CHARS.gap, { widest: GAP_WIDEST, colorBind: liftBind(ctx, inkBind(ctx)) }),
       ),
   },
-  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap) },
+  int: { header: 'Int', align: 'right', width: (row) => cellColumn(drawnWidth(row, 88, 84), row.type.lead, CHARS.gap), cell: (ctx) => cellValue(ctx, 'int', '+2.6', measuredInList(ctx, carClassInterval, carInterval), CHARS.gap, { widest: GAP_WIDEST }) },
   last: { header: 'Last', align: 'right', width: (row) => cellColumn(drawnWidth(row, 98, 92), row.type.lead, CHARS.lapTime), cell: (ctx) => cellValue(ctx, 'last', '1:42.905', carLastLap(ctx.idx), CHARS.lapTime, { widest: LAP_TIME_WIDEST }) },
   best: {
     header: 'Best',

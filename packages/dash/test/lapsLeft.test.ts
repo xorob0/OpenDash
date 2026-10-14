@@ -8,8 +8,9 @@
  * and the session page's Laps left both multiplied or drew it, and told a car on the lead lap with
  * half an hour to run that it needed no fuel.
  *
- * These tests evaluate the NCalc the build emits for the fuel module and the session module, on the
- * frames SimHub publishes: a timed race for a car on the lead lap and for a lapped car, the same race
+ * These tests evaluate the NCalc the build emits for the fuel module and the session module, with
+ * the generator's own evaluator and the properties in the types SimHub gives them, on the frames
+ * SimHub publishes: a timed race for a car on the lead lap and for a lapped car, the same race
  * before a lap has been timed, its laps after the clock, and a race counted in laps, where both
  * readings still come from `RemainingLaps`.
  */
@@ -21,7 +22,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { CHARS, LAP_WIDEST, NO_VALUE } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { evalTyped, type Props } from './ncalcEval.ts';
 
 /** A wide zone body, which is the shape that keeps every field of the page. */
 const pageItems = (id: string): TextItem[] => {
@@ -42,15 +43,25 @@ const formulaOf = (items: readonly TextItem[], name: string, target: 'Text' | 'V
 /** A week of remaining time is what iRacing publishes for a session with no limit. */
 const A_WEEK = 604800;
 
-/** Twenty litres in the tank at 2.8 a lap, in a race; the session's shape is the case's. */
+/**
+ * Twenty litres in the tank at 2.8 a lap, in a race; the session's shape is the case's.
+ *
+ * The car leads unless the case says otherwise, so the count is the leader's own and the flag waits
+ * for nobody: the cases that put the car behind the leader are the ones about that wait (#1027).
+ */
 const frame = (session: Props, car: Props = {}): Props => ({
   'DataCorePlugin.GameData.SessionTypeName': 'Race',
+  'driverisplayer(1)': true,
   'DataCorePlugin.GameData.Fuel': 20,
   'DataCorePlugin.Computed.Fuel_LitersPerLap': 2.8,
   'DataCorePlugin.Computed.Fuel_RemainingLaps': 7.1,
   'DataCorePlugin.Computed.Fuel_RemainingTime': 720,
   'DataCorePlugin.GameData.BestLapTime': 100,
   'DataCorePlugin.GameData.LastLapTime': 102.4,
+  // At the line unless a case puts the car round the lap. SimHub publishes the lap time on every
+  // frame of a running game, and `timespantoseconds` of a missing one is null.
+  'DataCorePlugin.GameData.CurrentLapTime': 0,
+  'DataCorePlugin.GameData.TrackPositionPercent': 0,
   ...session,
   ...car,
 });
@@ -70,6 +81,16 @@ const timed = (completed: number, extra: Props = {}): Props =>
     ...extra,
   });
 
+/**
+ * The overall leader as SimHub's leaderboard answers for row 1: how far round its lap it is, its best
+ * lap in seconds, and not the player.
+ */
+const leader = (position: number, best = 100): Props => ({
+  'driverisplayer(1)': false,
+  'drivertrackpositionpercent(1)': position,
+  'driverbestlap(1)': best,
+});
+
 /** A thirty-lap race on lap 13, with iRacing's week of time left. */
 const lapRace = (extra: Props = {}): Props =>
   frame({
@@ -82,10 +103,10 @@ const lapRace = (extra: Props = {}): Props =>
     ...extra,
   });
 
-const refuel = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
+const refuel = (props: Props): unknown => evalTyped(formulaOf(fuelItems, 'toAdd.value', 'Text'), props);
 const lapsLeft = (props: Props): unknown =>
-  evalNcalc(formulaOf(sessionItems, 'lapsLeft.value', 'Visible'), props) === true ? evalNcalc(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props) : null;
-const margin = (props: Props): unknown => evalNcalc(formulaOf(fuelItems, 'toEnd.value', 'Text'), { ...props, 'OpenDash.SessionProgress': 'laps' });
+  evalTyped(formulaOf(sessionItems, 'lapsLeft.value', 'Visible'), props) === true ? evalTyped(formulaOf(sessionItems, 'lapsLeft.value', 'Text'), props) : null;
+const margin = (props: Props): unknown => evalTyped(formulaOf(fuelItems, 'toEnd.value', 'Text'), { ...props, 'OpenDash.SessionProgress': 'laps' });
 
 describe('a timed race counts its laps left from the time left and a lap', () => {
   test('a car on the lead lap is told what to add, and how many laps are left', () => {
@@ -96,9 +117,11 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
 
   test('a lapped car is counted from the clock too, rather than by its laps behind the leader', () => {
     // `RemainingLaps` is 3 here, and drew `3` as the laps left with half an hour to run. The count
-    // is the car's own laps to its first crossing after the clock; a car behind the leader on track
-    // can run a lap more, where the clock runs out between the leader's crossing and its own.
-    expect({ lapsLeft: lapsLeft(timed(11)), refuel: refuel(timed(11)) }).toEqual({ lapsLeft: '19', refuel: '33.2' });
+    // is the car's own laps to its first crossing after the leader's; here the car is three laps
+    // down on the leader's own phase of the lap, so the two cross together and the count is the
+    // clock's. A car elsewhere on the lap is the next block's.
+    const lapped = timed(11, leader(0));
+    expect({ lapsLeft: lapsLeft(lapped), refuel: refuel(lapped) }).toEqual({ lapsLeft: '19', refuel: '33.2' });
   });
 
   test('mid-lap, the time already run in the lap counts, so the count is not a lap short', () => {
@@ -106,6 +129,10 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
     // with 10 s still on the clock, and one more. Twelve, where the time left alone made it eleven.
     const midLap = timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 1050, 'DataCorePlugin.GameData.CurrentLapTime': 60 });
     expect({ lapsLeft: lapsLeft(midLap), refuel: refuel(midLap) }).toEqual({ lapsLeft: '12', refuel: '13.6' });
+    // The count is whole, and the Refuel takes off the part of the lap already run, by distance,
+    // since that part is out of the tank already: 11.4 laps at 2.8, less the twenty litres (#1024).
+    const placed = { ...midLap, 'DataCorePlugin.GameData.TrackPositionPercent': 0.6 };
+    expect({ lapsLeft: lapsLeft(placed), refuel: refuel(placed) }).toEqual({ lapsLeft: '12', refuel: '11.9' });
     // 50 s to run and 40 s from the line: the line comes with 10 s on the clock, and a lap after it.
     expect(lapsLeft(timed(14, { 'DataCorePlugin.GameData.SessionTimeLeft': 50, 'DataCorePlugin.GameData.CurrentLapTime': 60 }))).toBe('2');
     // At the line the lap run is nought and the count is the time left's alone.
@@ -191,6 +218,107 @@ describe('a timed race counts its laps left from the time left and a lap', () =>
         expect({ seconds, perLap, text, fits: drawn.digits <= CHARS.fuel.digits && drawn.digits + drawn.specials <= CHARS.fuel.digits + CHARS.fuel.specials }).toMatchObject({ fits: true });
       }
     }
+  });
+});
+
+/**
+ * A timed race ends at the overall leader's first crossing after the clock, and every other car at
+ * its own first crossing after that, so a car that reaches the line between the clock and the leader
+ * runs one lap more than the clock alone counts (#1027). The cases put the car behind a leader on a
+ * 100 s lap unless they say otherwise, and as far round its own lap as the time it has run says.
+ */
+describe('a car behind the leader runs to its first crossing after the leader’s', () => {
+  /** The car `toLine` seconds from the line on a 100 s lap, with two litres in the tank. */
+  const car = (secondsLeft: number, toLine: number, extra: Props = {}): Props =>
+    timed(14, {
+      'DataCorePlugin.GameData.SessionTimeLeft': secondsLeft,
+      'DataCorePlugin.GameData.CurrentLapTime': 100 - toLine,
+      'DataCorePlugin.GameData.TrackPositionPercent': (100 - toLine) / 100,
+      'DataCorePlugin.GameData.Fuel': 2,
+      ...extra,
+    });
+
+  test('as the clock reaches nought, a car that reaches the line before the leader runs a lap more', () => {
+    // The leader is 60 s from the line and the car 20 s: the car crosses after the clock and before
+    // the flag, and runs one more lap. The Refuel counts it too: 1.2 laps at 2.8, less two litres.
+    const ahead = car(0, 20, leader(0.4));
+    expect({ lapsLeft: lapsLeft(ahead), refuel: refuel(ahead) }).toEqual({ lapsLeft: '2', refuel: '1.4' });
+    // On the leader's own phase of the lap the car crosses just behind it, takes the flag, and is done.
+    const level = car(0, 20, leader(0.8));
+    expect({ lapsLeft: lapsLeft(level), refuel: refuel(level) }).toEqual({ lapsLeft: '1', refuel: '0.0' });
+  });
+
+  test('before the clock, the lap is counted for a car that will cross between the clock and the flag', () => {
+    // The ticket's race: 300 s left and the leader 90 s from the line, so it crosses 10 s before the
+    // clock reaches nought and takes the flag 90 s after it. A car 30 s behind it on the road crosses
+    // 20 s after nought, before the flag, and runs five laps where the clock alone made it four.
+    expect(lapsLeft(car(300, 20, leader(0.1)))).toBe('5');
+    // A car 5 s behind the leader reaches the line 5 s after the flag, and finishes on the fourth.
+    expect(lapsLeft(car(300, 95, leader(0.1)))).toBe('4');
+  });
+
+  test('the leader is counted at its own lap, which is what a race of two classes needs', () => {
+    // 30 s left, a leader on a 90 s lap six tenths round, and the car 38 s from the line on its
+    // 100 s lap. The leader reaches the line 6 s after the clock and the car 2 s after the leader,
+    // so the car finishes on the lap it is on.
+    expect(lapsLeft(car(30, 38, leader(0.6, 90)))).toBe('1');
+    // Until the leader has a best lap it is taken to run at the car's own, and at that pace it would
+    // take the flag 10 s after the clock, after the car: a lap more, the side a fuel figure can afford.
+    expect(lapsLeft(car(30, 38, leader(0.6, 0)))).toBe('2');
+  });
+
+  test('after the clock, the lap waits for the leader, and the chequered flag ends the wait', () => {
+    const before = car(0, 20, { ...leader(0.4), 'DataCorePlugin.GameData.SessionTimeLeft': -5 });
+    expect(lapsLeft(before)).toBe('2');
+    // Once the leader has crossed, the flag is out and the lap the car is on is its last.
+    expect(lapsLeft({ ...before, 'DataCorePlugin.GameData.Flag_Checkered': 1 })).toBe('1');
+  });
+
+  test('the leader’s own count, and every count outside a race, is the clock’s', () => {
+    // The car leads: its own crossing is the flag, wherever row 1's figures put it.
+    expect(lapsLeft(car(0, 20, { ...leader(0.4), 'driverisplayer(1)': true }))).toBe('1');
+    // A qualifying session ends for each car at its own first crossing after the clock.
+    expect(lapsLeft(car(0, 20, { ...leader(0.4), 'DataCorePlugin.GameData.SessionTypeName': 'Qualify' }))).toBe('1');
+  });
+
+  test('the leader waited for is the one on the road, not the sim’s, which moves only at the line (#1063)', () => {
+    // The car, on row 2, has passed row 1 for the lead since the line, and the plugin has it first on
+    // the road: its own crossing is the flag, though row 1 is still the sim's leader, 20 s behind it.
+    const passed = car(0, 20, { ...leader(0.4), 'driverisplayer(2)': true, 'OpenDash.LiveOrder1': 2 });
+    expect({ lapsLeft: lapsLeft(passed), refuel: refuel(passed) }).toEqual({ lapsLeft: '1', refuel: '0.0' });
+    // With no live order published, row 1 is the leader and the car waits for it, as before.
+    const unpublished = car(0, 20, { ...leader(0.4), 'driverisplayer(2)': true });
+    expect({ lapsLeft: lapsLeft(unpublished), refuel: refuel(unpublished) }).toEqual({ lapsLeft: '2', refuel: '1.4' });
+  });
+
+  test('a road leader that is another car is read on its own row, where it is and at its own pace (#1063)', () => {
+    // Row 3 leads on the road 60 s from the line, and row 1, the sim's leader, is 5 s from it: the
+    // car, 20 s out, crosses before the road leader and runs a lap more. Row 1's figures would end it.
+    const behind = car(0, 20, {
+      ...leader(0.95),
+      'driverisplayer(3)': false,
+      'drivertrackpositionpercent(3)': 0.4,
+      'driverbestlap(3)': 100,
+      'OpenDash.LiveOrder1': 3,
+    });
+    expect({ lapsLeft: lapsLeft(behind), refuel: refuel(behind) }).toEqual({ lapsLeft: '2', refuel: '1.4' });
+    // Both at 0.8 of the lap, but the road leader on a 300 s lap is 60 s out and row 1 on a 50 s lap
+    // only 10 s: the wait is the road leader's pace, not the sim leader's.
+    const slower = car(0, 20, {
+      ...leader(0.8, 50),
+      'driverisplayer(3)': false,
+      'drivertrackpositionpercent(3)': 0.8,
+      'driverbestlap(3)': 300,
+      'OpenDash.LiveOrder1': 3,
+    });
+    expect(lapsLeft(slower)).toBe('2');
+  });
+
+  test('with no leader on the leaderboard, the most the wait can be is counted', () => {
+    // Nothing says where the leader is, so it may cross a whole lap after the clock: a lap more.
+    const unplaced = { 'driverisplayer(1)': null };
+    expect(lapsLeft(car(0, 60, unplaced))).toBe('2');
+    expect(lapsLeft(car(1050, 40, unplaced))).toBe('13');
   });
 });
 

@@ -121,10 +121,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Size", PanelAddScreen.SizeStep);
             Assert.Equal("Name", PanelAddScreen.NameStep);
             Assert.Equal("Next steps", PanelAddScreen.NextStepsTitle);
-            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("Rim"));
-            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("  Rim "));
+            Assert.Equal("Assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("Rim"));
+            Assert.Equal("Assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep("  Rim "));
             // The same step the line after Add says, so the foot and the message cannot disagree.
-            Assert.EndsWith(PanelAddScreen.NextStep("Rim"), PanelAddScreen.Added("Rim", "Rim"));
+            Assert.EndsWith(PanelAddScreen.NextStep("Rim"), PanelAddScreen.Added("Rim", "Rim", false));
 
             // The foot names what Add will call the screen: the rig's settings name a taken name apart and
             // give an empty box the size, and NameFor says the same before the press.
@@ -138,9 +138,9 @@ namespace OpenDashPlugin.Tests
             names = settings.RigScreens().Select(s => s.Name).ToList();
             Assert.Equal("850 × 480", PanelAddScreen.NameFor("  ", rim, names));
             Assert.Equal(settings.AddScreen(rim, "  ").Name, PanelAddScreen.NameFor("  ", rim, names));
-            Assert.Equal("Restart SimHub, then assign \"Rim (3)\" to this display in Dash Studio.",
+            Assert.Equal("Assign \"Rim (3)\" to this display in Dash Studio.",
                 PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, settings.RigScreens().Select(s => s.Name))));
-            Assert.Equal("Restart SimHub, then assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, null)));
+            Assert.Equal("Assign \"Rim\" to this display in Dash Studio.", PanelAddScreen.NextStep(PanelAddScreen.NameFor("Rim", rim, null)));
             Assert.Equal("Add screen", PanelAddScreen.AddButton);
             Assert.Equal("Adds the screen and installs its dashboard.", PanelAddScreen.AddTooltip);
             Assert.Equal("Cancel", PanelAddScreen.CancelButton);
@@ -366,14 +366,23 @@ namespace OpenDashPlugin.Tests
         /// chose. The line used to name the folder, which sent them looking through Dash Studio for a row
         /// that does not exist under that word.
         /// </summary>
+        /// <remarks>
+        /// It also used to ask for a restart first, on the belief that SimHub reads its dashboard list once at
+        /// startup. SimHub watches DashTemplates and lists a new folder two seconds after it is written (#664), so
+        /// the one step left is the assignment, and a restart is asked for only when the add put a font into
+        /// DashFonts, which a running SimHub does not draw (#441).
+        /// </remarks>
         [Fact]
-        public void What_is_said_after_adding_names_the_two_steps_SimHub_does_not_take()
+        public void What_is_said_after_adding_names_the_step_SimHub_does_not_take()
         {
-            var line = PanelAddScreen.Added("Rim", "Rim");
-            Assert.Contains("Restart SimHub", line);
-            Assert.Contains("Dash Studio", line);
-            Assert.Contains("\"Rim\"", line);
+            var line = PanelAddScreen.Added("Rim", "Rim", false);
+            Assert.Equal("Added Rim. Assign \"Rim\" to this display in Dash Studio.", line);
+            Assert.DoesNotContain("Restart", line);
             Assert.DoesNotContain("OpenDash 850x480", line);
+
+            var fonts = PanelAddScreen.Added("Rim", "Rim", true);
+            Assert.Equal("Added Rim. Restart SimHub to load its fonts, then assign \"Rim\" to this display in Dash Studio.", fonts);
+            Assert.Contains(PanelAddScreen.RestartForFonts, fonts);
         }
 
         /// <summary>An edit keeps everything but the name and the pixels, which is the only reason to
@@ -403,7 +412,7 @@ namespace OpenDashPlugin.Tests
             // fix box's Install it again keep theirs.
             Assert.Equal("Reinstalls this screen's dashboard, at its saved name and size.", PanelAddScreen.ReinstallCaption);
             Assert.StartsWith(PanelAddScreen.ReinstallButton + "s ", PanelAddScreen.ReinstallCaption);
-            Assert.StartsWith("Installed Rim's dashboard again.", PanelAddScreen.Reinstalled("Rim"));
+            Assert.StartsWith("Installed Rim's dashboard again.", PanelAddScreen.Reinstalled("Rim", false));
             var screens = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Screens.cs"));
             Assert.DoesNotContain("reinstall.ToolTip", screens);
             // A round screen keeps no settings and has no bindings, so its sheet promises neither.
@@ -420,7 +429,9 @@ namespace OpenDashPlugin.Tests
             // One whose folder was written before the install failed keeps the new size, and says it as Add does.
             Assert.Equal("Rim is now 1280 × 480, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.ResizedIncomplete("Rim", "1280 × 480"));
             Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
-            Assert.Contains("Restart SimHub", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim"));
+            Assert.Equal("Rim is now 1280 × 480. Assign \"Rim\" to this display again in Dash Studio.", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", false));
+            Assert.Equal("Rim is now 1280 × 480. Restart SimHub to load its fonts, then assign \"Rim\" to this display again in Dash Studio.",
+                PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", true));
         }
 
         /// <summary>
@@ -492,23 +503,26 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The three lines the edit panel can leave behind, each naming what the driver is now waiting for.
+        /// The three lines the edit panel can leave behind, each naming what is left for the driver.
         /// </summary>
         /// <remarks>
-        /// SimHub reads its dashboard list once, at startup, so a name that has just reached the disk is
-        /// not yet a name in Dash Studio. Saying so is the difference between a rename that looks broken
-        /// and one that is merely pending.
+        /// They used to ask for a restart, on the belief that SimHub reads its dashboard list once at startup. It
+        /// watches DashTemplates and reads a rewritten folder's title two seconds after the write (#664), so a
+        /// rename is in Dash Studio by itself. A restart is asked for only when the write put a font into DashFonts,
+        /// which a running SimHub does not draw (#441); a reinstall otherwise says what an update says, reopen it.
         /// </remarks>
         [Fact]
-        public void What_is_said_after_an_edit_names_the_restart()
+        public void What_is_said_after_an_edit_asks_for_a_restart_only_for_a_font()
         {
-            var renamed = PanelAddScreen.Renamed("Wheel");
-            Assert.Contains("Wheel", renamed);
-            Assert.Contains("Restart SimHub", renamed);
+            var renamed = PanelAddScreen.Renamed("Wheel", false);
+            Assert.Equal("Renamed to Wheel. Dash Studio lists it under the new name.", renamed);
+            Assert.DoesNotContain("Restart", renamed);
+            Assert.Equal("Renamed to Wheel. Restart SimHub to load its fonts.", PanelAddScreen.Renamed("Wheel", true));
 
-            var reinstalled = PanelAddScreen.Reinstalled("Rim");
-            Assert.Contains("Rim", reinstalled);
-            Assert.Contains("Restart SimHub", reinstalled);
+            var reinstalled = PanelAddScreen.Reinstalled("Rim", false);
+            Assert.Equal("Installed Rim's dashboard again. " + UpdateWording.Reopen, reinstalled);
+            Assert.DoesNotContain("Restart", reinstalled);
+            Assert.Equal("Installed Rim's dashboard again. " + UpdateWording.RestartToSee, PanelAddScreen.Reinstalled("Rim", true));
 
             // A failure names the screen and points at the log rather than repeating the installer's reason,
             // which can be a sentence of its own in the settings model's words, and claims nothing about
@@ -521,7 +535,7 @@ namespace OpenDashPlugin.Tests
             // line has to admit the half that did not land rather than report a plain failure, from the
             // name the screen now has, as the success line reads.
             Assert.Equal("Renamed to Wheel, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.RenameFailed("Wheel"));
-            Assert.StartsWith("Renamed to Wheel", PanelAddScreen.Renamed("Wheel"));
+            Assert.StartsWith("Renamed to Wheel", PanelAddScreen.Renamed("Wheel", false));
         }
 
         /// <summary>The reinstall says what it costs, and says more when there is something to lose.</summary>

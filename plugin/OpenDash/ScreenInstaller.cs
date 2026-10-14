@@ -30,6 +30,13 @@ namespace OpenDashPlugin
         /// <summary>The copy kept of a folder somebody had edited, when this call replaced or removed one; null
         /// otherwise, the ordinary backup of a folder OpenDash wrote included.</summary>
         public string KeptCopy { get; set; }
+
+        /// <summary>
+        /// True when the write also put a font into DashFonts, which a running SimHub does not draw until it restarts
+        /// (#441). The one restart a screen's write still asks for: SimHub lists the folder itself within seconds
+        /// (#664), but its fonts it reads once per run.
+        /// </summary>
+        public bool WroteFonts { get; set; }
     }
 
     public static class ScreenInstaller

@@ -4,12 +4,11 @@
  * remote steps and is proved by running it.
  */
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { BASE_FACE, LARGE_FACE } from '../packages/dash/src/zones/index.ts';
+import { built, readBuiltManifest, withBuild } from './buildOutput.ts';
 import { LIST_ORDER, packageSize, parseArgs } from './dev.ts';
 
-const MANIFEST = path.resolve(import.meta.dir, '../build/manifest.json');
+const manifest = readBuiltManifest<{ version: string; packages: { folder: string; width: number; height: number }[] }>();
 
 describe('reading the arguments', () => {
   test('nothing means the base face and a race', () => {
@@ -56,10 +55,9 @@ describe('the base face and the large one', () => {
 });
 
 describe('the size a dash window is given', () => {
-  test('it comes from the manifest the build writes', () => {
-    if (!existsSync(MANIFEST)) return; // `bun run build` has not run in this tree
-    const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8')) as { packages: { folder: string; width: number; height: number }[] };
-    for (const pkg of manifest.packages) {
+  // Skipped, not passed, when this tree has not built; on CI, which builds first, run either way (#909).
+  test.if(withBuild(manifest !== null))('it comes from the manifest the build writes', () => {
+    for (const pkg of built(manifest).packages) {
       expect({ folder: pkg.folder, size: packageSize(pkg.folder) }).toMatchObject({
         size: { width: pkg.width, height: pkg.height },
       });

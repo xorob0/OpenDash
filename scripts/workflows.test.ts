@@ -65,6 +65,19 @@ describe('the dash job', () => {
     expect(upload).toMatch(/^- name: Upload the test report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+uses: actions\/upload-artifact@v4/);
     expect(upload).toContain(`path: \${{ runner.temp }}/${outfile}`);
   });
+
+  // The tests that read build/ fail on CI when it is missing (scripts/buildOutput.ts), which holds
+  // only if the build has run by then. Tested first, they were skipped or passed having asserted
+  // nothing on every run, and the plugin job's two real-package tests never ran at all (#909).
+  test('builds every theme before it tests, in CI and in a release', () => {
+    for (const [name, workflow] of [['ci.yml', ci], ['release.yml', release]] as const) {
+      const dash = job(workflow, 'dash');
+      const build = dash.indexOf('run: bun run build --all-themes');
+      const test = dash.search(/run: bun test\b/);
+      expect([name, build > 0, test > 0]).toEqual([name, true, true]);
+      expect([name, build < test]).toEqual([name, true]);
+    }
+  });
 });
 
 describe('the development tools', () => {
@@ -77,6 +90,112 @@ describe('the development tools', () => {
     expect(tools).toContain('dotnet build tools/trace-recorder -c Release');
     expect(tools).toContain('dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll --selfcheck flagbox');
     expect(tools).not.toContain('continue-on-error');
+  });
+});
+
+describe('the site image', () => {
+  // The site hands out the zip this image compiles, so it is a release build in all but name, and
+  // the toolchain that builds it is held to the pins the other builds read (#915).
+  const dockerfile = read('site/Dockerfile');
+  const siteImage = read('.github/workflows/site-image.yml');
+
+  /** The Dockerfile's instructions, one to an entry, with comments dropped and continuations joined. */
+  const instructions = dockerfile
+    .split('\n')
+    .filter((line) => !line.trim().startsWith('#'))
+    .join('\n')
+    .replace(/\\\n/g, ' ')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '');
+  /** Each FROM's image and the stage it names, with the line it was read from. */
+  const froms = instructions
+    .filter((line) => line.startsWith('FROM '))
+    .map((line) => {
+      const [, image = '', as, stage] = line.split(/\s+/);
+      return { line, image, stage: as?.toUpperCase() === 'AS' ? stage : undefined };
+    });
+  const stages = froms.flatMap(({ stage }) => (stage === undefined ? [] : [stage]));
+  /** Each COPY's sources, its options and destination left out. */
+  const copies = instructions
+    .filter((line) => line.startsWith('COPY '))
+    .map((line) => {
+      const words = line.split(/\s+/).slice(1);
+      const from = words.find((word) => word.startsWith('--from='))?.slice('--from='.length);
+      const paths = words.filter((word) => !word.startsWith('--'));
+      return { from, sources: paths.slice(0, -1) };
+    });
+
+  test('names the line of every image it uses, and the Debian release of every stage', () => {
+    // A tag floats on patches, as the rest of the repository's toolchain does, but never on its line:
+    // no `latest`, no bare name, and a stage says which Debian it is, so that the system under the
+    // build changes when someone changes the tag rather than when a publisher moves its default. The
+    // stages name the same release: the build and runtime stages share a node_modules, and the SDK
+    // stage follows them for consistency. A digest is the strongest pin there is and passes both,
+    // though the SDK's keeps its tag beside it, because the next test reads the version from the tag.
+    const digest = /@sha256:[0-9a-f]{64}$/;
+    const images = [
+      ...froms.map(({ image }) => image),
+      ...copies.flatMap(({ from }) => (from !== undefined && !stages.includes(from) ? [from] : [])),
+    ];
+    expect(images.length).toBeGreaterThan(0);
+    for (const image of images) {
+      expect([image, digest.test(image) || /:\d+(\.\d+)*(-[a-z0-9.-]+)?$/.test(image)]).toEqual([image, true]);
+    }
+    const releases = froms.map(({ image }) => (digest.test(image) ? 'digest' : image.match(/[:-](bullseye|bookworm|trixie)(-|$)/)?.[1]));
+    for (const [i, release] of releases.entries()) expect([froms[i]?.image, release]).not.toEqual([froms[i]?.image, undefined]);
+    expect(new Set(releases.filter((release) => release !== 'digest')).size).toBeLessThanOrEqual(1);
+  });
+
+  test('compiles the plugin with an SDK global.json accepts, and with global.json beside it', () => {
+    const artifacts = froms.find(({ image }) => /^mcr\.microsoft\.com\/dotnet\/sdk[:@]/.test(image));
+    if (artifacts === undefined) throw new Error('no stage builds from the .NET SDK image');
+    // The stage that runs the release's own packaging copies the pin into the root it runs from, so
+    // the dotnet inside it reads the same global.json a local build and the runner do.
+    const stage = instructions.slice(instructions.indexOf(artifacts.line));
+    const next = stage.findIndex((line, i) => i > 0 && line.startsWith('FROM '));
+    const body = stage.slice(0, next < 0 ? undefined : next);
+    expect(body).toContain('WORKDIR /repo');
+    expect(body).toContain('RUN bun run package');
+    expect(body.some((line) => line.startsWith('COPY ') && line.split(/\s+/).includes('global.json'))).toBe(true);
+
+    // And the SDK the image carries is one that pin lets through, so the build cannot stop there
+    // either. The roll-forward policies are dotnet's own: each widens what may differ from the pin.
+    const { sdk } = JSON.parse(read('global.json')) as { sdk: { version: string; rollForward?: string } };
+    const parts = (version: string): number[] => {
+      const [major = NaN, minor = NaN, patch = NaN] = version.split('.').map(Number);
+      return [major, minor, Math.floor(patch / 100), patch % 100];
+    };
+    const tag = artifacts.image.match(/:(\d+\.\d+(?:\.\d+)?)/)?.[1];
+    if (tag === undefined) {
+      throw new Error(`${artifacts.image} names no SDK version: keep the tag beside a digest, as in sdk:8.0-bookworm-slim@sha256:...`);
+    }
+    // A floating tag such as `8.0` names the major and minor and leaves the feature band and patch to
+    // the publisher, so those count as unknown: the policy must not fix them, and the pin must ask for
+    // no more than the lowest of them, or only an exact tag can show the image satisfies it.
+    const named = tag.split('.').length === 2 ? 2 : 4;
+    const have = parts(tag).slice(0, named);
+    const want = parts(sdk.version);
+    const same = { disable: 4, patch: 3, latestPatch: 3, feature: 2, latestFeature: 2, minor: 1, latestMinor: 1, major: 0, latestMajor: 0 }[
+      sdk.rollForward ?? 'latestPatch'
+    ];
+    expect(same).toBeDefined();
+    expect(named).toBeGreaterThanOrEqual(same ?? 4);
+    expect(have.slice(0, same)).toEqual(want.slice(0, same));
+    const floor = [...have, ...want.slice(named).map(() => 0)];
+    expect(floor.map((n, i) => n - (want[i] ?? NaN)).find((d) => d !== 0) ?? 0).toBeGreaterThanOrEqual(0);
+  });
+
+  test('is rebuilt by CI on every push that changes something it copies', () => {
+    const paths = [...siteImage.slice(siteImage.indexOf('    paths:'), siteImage.indexOf('  workflow_dispatch:')).matchAll(/^\s+- "([^"]+)"$/gm)].map(
+      (m) => m[1],
+    );
+    expect(paths.length).toBeGreaterThan(0);
+    const sources = copies.filter(({ from }) => from === undefined).flatMap(({ sources }) => sources);
+    for (const source of sources) {
+      const watched = paths.includes(source) || paths.includes(`${source.replace(/\/$/, '')}/**`);
+      expect([source, watched]).toEqual([source, true]);
+    }
   });
 });
 

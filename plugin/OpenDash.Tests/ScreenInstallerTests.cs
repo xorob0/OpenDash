@@ -250,9 +250,10 @@ namespace OpenDashPlugin.Tests
         /// </summary>
         /// <remarks>
         /// #441 asked whether this path, which writes every screen a rig adds and never asks SimHub to reload its
-        /// fonts, was where a face went missing. It copies them: the panel asks for a restart after adding a
-        /// screen, because SimHub reads its dashboard list at startup, and that restart is also what loads a face
-        /// copied here. The same face a stock screen already brought is not copied twice.
+        /// fonts, was where a face went missing. It copies them, and says so (ScreenInstallResult.WroteFonts): a
+        /// running SimHub does not draw a face written after it started, so the panel asks for a restart after an
+        /// add that wrote one. It asks for none otherwise, since SimHub lists the new folder by itself (#664). The
+        /// same face a stock screen already brought is not copied twice, and the second add says no font.
         /// </remarks>
         [Fact]
         public void A_screen_added_from_the_rig_tab_copies_the_faces_its_package_carries()
@@ -280,6 +281,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.True(written.Ok, written.Error);
             Assert.True(written.Written);
+            Assert.True(written.WroteFonts);
             Assert.Equal("font-bold", File.ReadAllText(Path.Combine(fonts, "openDashDisplay-Bold.ttf")));
             Assert.Equal("font-light", File.ReadAllText(Path.Combine(fonts, "openDashDisplay-Light.ttf")));
 
@@ -287,8 +289,15 @@ namespace OpenDashPlugin.Tests
             {
                 Kind = Contract.KindFace, Width = 1280, Height = 480, Folder = "OpenDash Pod", Name = "Pod", Namespace = "Pod", Package = package,
             };
-            Assert.True(installer.Write(second).Written);
+            var again = installer.Write(second);
+            Assert.True(again.Written);
+            Assert.False(again.WroteFonts);
             Assert.Equal(2, Directory.GetFiles(fonts, "*.ttf").Length);
+
+            // A face that has gone from DashFonts since is written again, and said again.
+            File.Delete(Path.Combine(fonts, "openDashDisplay-Light.ttf"));
+            Assert.True(installer.Write(rim).WroteFonts);
+            Assert.False(installer.Write(rim).WroteFonts);
         }
     }
 }

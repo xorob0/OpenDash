@@ -57,6 +57,90 @@ namespace OpenDashPlugin
             }
             return new UpdatePlan { Items = items, NotCarried = missing };
         }
+
+        /// <summary>
+        /// Of the dashboards somebody has edited, which an update to this release replaces in its own run and which
+        /// the plugin it stages replaces as SimHub starts again.
+        /// </summary>
+        /// <remarks>
+        /// The two halves of <see cref="UpdateService"/>'s run, read the way it reads them: a folder the release
+        /// publishes is installed by the run itself, the moment the second press lands, and one it does not publish
+        /// follows the plugin, when there is a plugin to follow. The question before an update used to decide "when
+        /// SimHub restarts" from the plugin alone, which a release publishing its packages beside the plugin made
+        /// false: those were replaced straight away (#673). A folder in neither half is one the update does not
+        /// touch, so it is not asked about either.
+        /// </remarks>
+        public static EditedReplacing Edited(IEnumerable<PackageStatus> installed, ReleaseInfo release)
+        {
+            if (installed == null || release == null) return new EditedReplacing();
+            var packages = installed.Where(p => p != null).ToList();
+            var plan = For(packages, release);
+            var edited = packages.Where(p => p.Edited && !string.IsNullOrEmpty(p.FolderName)).Select(p => p.FolderName).ToList();
+            var published = plan.Items.Select(i => i.FolderName).ToList();
+            var following = release.PluginAsset() == null ? new string[0] : plan.NotCarried;
+            return new EditedReplacing
+            {
+                Now = edited.Where(f => published.Contains(f, StringComparer.OrdinalIgnoreCase)).ToList(),
+                OnRestart = edited.Where(f => following.Contains(f, StringComparer.OrdinalIgnoreCase)).ToList(),
+            };
+        }
+    }
+
+    /// <summary>The edited folders an update replaces, split by when (<see cref="UpdatePlan.Edited"/>).</summary>
+    public sealed class EditedReplacing
+    {
+        /// <summary>Replaced by the update's own run, from the packages the release publishes.</summary>
+        public IReadOnlyList<string> Now { get; set; } = new string[0];
+
+        /// <summary>Replaced by the staged plugin's first start, which is what writes the folders it carries.</summary>
+        public IReadOnlyList<string> OnRestart { get; set; } = new string[0];
+
+        /// <summary>Every edited folder the update replaces, those of its own run first.</summary>
+        public IReadOnlyList<string> All => Now.Concat(OnRestart).ToList();
+    }
+
+    /// <summary>
+    /// Whether what a download carries is what the release it came from says it is, and no older than what it would
+    /// replace (#862).
+    /// </summary>
+    /// <remarks>
+    /// The digest says the bytes are the ones GitHub published, which is not the same thing as the version the tag
+    /// names: a release tagged v0.4.0 whose zip was built from 0.3.0 passes every digest. Put in place, an older
+    /// plugin left the rig older than the release it was told it had, the next check offered the same release again,
+    /// and the next press downloaded and swapped the same older file, once a day until somebody noticed; an older
+    /// package was written over a current dashboard and reported as an update. Both are refused before anything on
+    /// disk is touched, and the run says why.
+    ///
+    /// The same version as what is installed is not refused. A rig whose plugin is already the release but which is
+    /// offered it because one of its screens was edited and held back (UpdateCheck.RigVersion) stages its twin, and
+    /// that run is how a yes to replacing the edited screen reaches the start that writes it (EditedConsent); the
+    /// twin itself is cleared at that start rather than swapped (PluginUpdate.Review).
+    /// </remarks>
+    public static class CarriedVersion
+    {
+        /// <summary>
+        /// Why <paramref name="name"/>, carrying <paramref name="carried"/>, may not be put in place by an update to
+        /// <paramref name="release"/> over <paramref name="current"/>, or null when it may. The words finish the
+        /// panel's "The update did not finish:" sentence.
+        /// </summary>
+        /// <param name="name">What was downloaded, as the sentence names it.</param>
+        /// <param name="carried">The version read out of the download, or null when none could be.</param>
+        /// <param name="release">The release's version, from its tag.</param>
+        /// <param name="current">The version installed here, or null when nothing is.</param>
+        public static string Refusal(string name, string carried, string release, string current)
+        {
+            if (string.IsNullOrWhiteSpace(carried)) return "no version could be read from " + name;
+            if (!string.IsNullOrWhiteSpace(release) && Versioning.VersionCompare(carried, release) != 0)
+            {
+                return name + " is " + carried + " in a release of " + release;
+            }
+            // A folder whose version cannot be read is older than anything, as Versioning.Decide reads it.
+            if (!string.IsNullOrWhiteSpace(current) && current != Versioning.UnknownVersion && Versioning.VersionCompare(carried, current) < 0)
+            {
+                return name + " is " + carried + ", older than the " + current + " installed here";
+            }
+            return null;
+        }
     }
 
     /// <summary>

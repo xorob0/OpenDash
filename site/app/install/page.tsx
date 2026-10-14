@@ -62,8 +62,8 @@ export default function Install() {
               body: 'Switch OpenDash on, then Show in left main menu, and press Ok. OpenDash appears in the left menu, with a sidebar of pages: Home, Rig, Screens, LEDs, Matrix, Shortcuts, Settings and Updates.',
             },
             {
-              title: 'Add your screens on the Screens page, then restart SimHub.',
-              body: 'The Screens page starts empty. Add asks the kind, the size, and the theme where the size has one. Each screen you add is written into SimHub as its own dashboard, and SimHub lists new dashboards when it starts.',
+              title: 'Add your screens on the Screens page, then restart SimHub once.',
+              body: 'The Screens page starts empty. Add asks the kind, the size, and the theme where the size has one. Each screen you add is written into SimHub as its own dashboard, which SimHub lists a couple of seconds later. The first one also brings the fonts, which SimHub loads only when it starts, and the panel says so.',
             },
           ]}
         />
@@ -75,7 +75,7 @@ export default function Install() {
             <strong>Add a screen on the Screens page.</strong> Add asks the kind, the size, and the theme where the size has one, and writes that screen into SimHub as a dashboard of its own.
           </li>
           <li>
-            <strong>Assign it to a display in Dash Studio.</strong> After the restart: a DDU, a USB screen, or a phone on the network, like any other dashboard. A themed screen also goes into SimHub’s per-car playlist, so the display follows the car.
+            <strong>Assign it to a display in Dash Studio.</strong> A DDU, a USB screen, or a phone on the network, like any other dashboard. A themed screen also goes into SimHub’s per-car playlist, so the display follows the car.
           </li>
           <li>
             <strong>Set each screen up on its own card.</strong> Choose the pages for each zone on a picture of the face, and bind the wheel buttons on the Shortcuts page.

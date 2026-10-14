@@ -22,7 +22,7 @@ import { temperatureColour } from '../src/second/wheel.ts';
 import * as values from '../src/second/values.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
-import type { EllipseItem, RectangleItem, TextItem } from '../src/generator.ts';
+import { ncalcEvaluator as E, type EllipseItem, type RectangleItem, type TextItem } from '../src/generator.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -277,6 +277,47 @@ describe('second-screen values', () => {
     expect(average).not.toContain("format(5, '00')");
     expect(average).toContain('/ (5)');
     expect(average).toContain(`'${values.NO_TIME}'`);
+  });
+
+  /**
+   * #1011: SimHub fills the ring from its lap database, the last ten laps of this car at this track
+   * from any session, and flags the ones driven in this session. On the out lap of a session at a
+   * track driven the day before, the ring holds yesterday's laps and Lap times read an average of them.
+   */
+  describe('the five-lap average counts the laps of this session and no other', () => {
+    const average = values.average5();
+    /** Five laps of 1:30.1 to 1:30.5 in slots zero to four, `today` of them flagged as this session's. */
+    const ring = (today: number, flagged = true): Record<string, E.Value> => {
+      const frame: Record<string, E.Value> = {};
+      for (let slot = 0; slot < 5; slot++) {
+        const name = `PersistantTrackerPlugin.PreviousLap_0${slot}`;
+        frame[name] = E.fromSeconds(90.1 + slot / 10);
+        if (flagged) frame[`${name}_IsCurrentSession`] = E.int(slot < today ? 1 : 0);
+      }
+      return frame;
+    };
+    const drawn = (frame: Record<string, E.Value>): unknown =>
+      E.toJs(
+        E.evaluate(average, {
+          properties: (name: string) => (Object.hasOwn(frame, name) ? frame[name] : undefined),
+          state: new E.CallState(),
+          now: 0,
+          rootScreenName: '',
+        }),
+      );
+
+    test('five earlier laps are no average, and neither are five laps with no flag', () => {
+      expect(drawn(ring(0))).toBe(values.NO_TIME);
+      expect(drawn(ring(0, false))).toBe(values.NO_TIME);
+    });
+
+    test('four laps into the session it still waits, with an earlier lap in the fifth slot', () => {
+      expect(drawn(ring(4))).toBe(values.NO_TIME);
+    });
+
+    test('five laps of this session are averaged as before', () => {
+      expect(drawn(ring(5))).toBe('1:30.300');
+    });
   });
 
   test("a tyre wears to its worst section, and to SimHub's own figure where there are no sections", () => {
@@ -708,10 +749,10 @@ describe('module expressions', () => {
 
   test('the delta draws its sign as U+2212, in the value and at the left end of the scale', () => {
     const value = moduleItem('delta', 'delta.value');
-    // To thousandths or to hundredths, hundredths at either setting from a hundred seconds on, and the
-    // minus is replaced in both.
+    // The bare zero inside the band, then to thousandths or to hundredths, hundredths at either setting
+    // from a hundred seconds on, and the minus is replaced in both.
     expect(formulaOf(value, 'Text')).toMatch(
-      /^if\(\(\(isnull\(\[OpenDash\.DeltaPrecision\], 'hundredths'\)\) = \('thousandths'\)\) and \(\(abs\(.*\)\) < \(99\.9995\)\), replace\(format\(.*, '0\.000', true\), '-', '\u2212'\), replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)\)$/,
+      /^if\(\(abs\(.*\)\) < \(if\(.*, 0\.0005, 0\.005\)\), if\(.*, '0\.000', '0\.00'\), if\(\(\(isnull\(\[OpenDash\.DeltaPrecision\], 'hundredths'\)\) = \('thousandths'\)\) and \(\(abs\(.*\)\) < \(99\.9995\)\), replace\(format\(.*, '0\.000', true\), '-', '\u2212'\), replace\(format\(.*, '0\.00', true\), '-', '\u2212'\)\)\)$/,
     );
     expect(value.text).toBe('\u22120.21');
     expect(moduleItem('delta', 'scale.0').text).toBe('\u22122.0');
