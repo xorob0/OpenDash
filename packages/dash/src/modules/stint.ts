@@ -25,11 +25,12 @@
  * is drawn in boxes from 249 x 158 to 437 x 510. On a tall face the three are promoted together
  * instead, which is the catalogue's own `tall` drawing, 76 over a 34 px rank; see `leadRankSize`.
  */
+import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, LAP_OF_TOTAL_WIDEST, LAP_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, settledFuelTimeLeft } from '../second/values.ts';
+import { CHARS, lapOfTotalWidest, LAP_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, isnull, num, driver, game } = ncalc;
@@ -48,7 +49,7 @@ export const stint = defineModule('stint', (ctx) => {
     [
       fieldsRow(
         [
-          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', widest: LAP_OF_TOTAL_WIDEST, bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: lead }),
+          fld(ctx, 'lap', 'Lap', { sample: '12 / 43', widest: lapOfTotalWidest(DATA_FACE.SemiBold), bind: lapOfTotal(), chars: CHARS.lapOfTotal, fs: lead }),
           // Gated on a completed lap for the reason `fuelIsSettled` gives: before one, SimHub is
           // extrapolating a partial lap and this clock runs backwards and forwards as you drive.
           // The gate is on the seconds, so an unsettled range reads `-:--:--` as the stint time

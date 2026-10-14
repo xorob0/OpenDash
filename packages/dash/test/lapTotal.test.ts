@@ -16,6 +16,7 @@ import { ncalc, type TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { UNTIMED_SECONDS, hasLapTotal, isTimedSession } from '../src/second/values.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
+import { widthAsDrawn } from './drawnStrings.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
 
@@ -271,6 +272,80 @@ describe('a right-hand lap without its length', () => {
     for (const { where, value, denominator } of ends) {
       const right = rightEdge(value, LAPPED);
       expect({ where, right, clear: right <= denominator.rect.left }).toEqual({ where, right: value.rect.left + value.rect.width, clear: true });
+    }
+  });
+});
+
+describe('every race length fits the box it is drawn in (#1117)', () => {
+  // The session page measured its `/ 30` by `/ 999`, and Barlow Condensed's 9 is narrower than its
+  // 4 and its 0: on the 1280 x 480 and 1280 x 400 session pages a 400-lap race lost its last 0. No
+  // fit test saw it, because each measures the declaration and the declaration was the short
+  // reading. So every length a race can have is drawn here, through the binding, in the face and the
+  // size each item is drawn in, and held to the box WPF clips it to and to the `widest` it declares.
+
+  /** A race of `laps` laps on its last lap, so that a lap drawn with its length is as long as it gets. */
+  const lapRace = (laps: number, lap = laps): Props => ({
+    'DataCorePlugin.GameData.SessionTimeLeft': A_WEEK,
+    'DataCorePlugin.GameData.TotalLaps': laps,
+    'DataCorePlugin.GameData.CurrentLap': lap,
+    'DataCorePlugin.GameData.CompletedLaps': lap - 1,
+    'DataCorePlugin.GameData.RemainingLaps': laps - lap + 1,
+  });
+
+  // One of each drawing: the packages repeat an item across pages and sizes, and a thousand race
+  // lengths through every copy would take minutes to say the same thing.
+  const shapes = [
+    ...new Map(
+      SITES.map((site) => {
+        const { item } = site;
+        const key = JSON.stringify([item.name.replace(/\d+/g, '#'), formulaOf(item, 'Text'), formulaOf(item, 'Visible'), item.font, item.fontWeight, item.fontSize, item.monospace, item.rect.width, item.widest]);
+        return [key, site] as const;
+      }),
+    ).values(),
+  ];
+
+  test('the session page, the session card, both headers and the stint page are among the drawings measured', () => {
+    for (const [surface, pattern] of [
+      ['the session page', /^session\.lap\.denominator$/],
+      ['the session card', /^session\.denominator$/],
+      ['the companion header', /\.header\.lap\.denominator$/],
+      ["the pit wall header's portrait `Lap 12 / 30`", /^portrait\.header\.lap\.\d+$/],
+      ["the pit wall header's `L12 of 30`", /\.header\.session\.\d+$/],
+      ['the stint page', /^stint\.lap\.value$/],
+    ] as const) {
+      expect({ surface, found: shapes.some((s) => pattern.test(s.item.name)) }).toEqual({ surface, found: true });
+    }
+  });
+
+  test('every total from `/ 1` to `/ 999` is inside its box and inside the widest it declares', () => {
+    const clipped: object[] = [];
+    for (const { where, item } of shapes) {
+      const declared = item.widest === undefined ? undefined : widthAsDrawn(item, item.widest);
+      for (let laps = 1; laps <= 999; laps++) {
+        const reading = drawn(item, lapRace(laps), 'laps');
+        if (reading === null || !writesTotal(reading)) continue;
+        const width = widthAsDrawn(item, reading);
+        // A run of advances has to stop short of the edge WPF clips at; cells are cut wider than
+        // the glyphs they hold, so a reading in cells may fill its box.
+        const inside = item.monospace ? width <= item.rect.width : width < item.rect.width;
+        if (!inside || (declared !== undefined && width > declared)) {
+          clipped.push({ where, item: item.name, reading, width: Math.round(width * 100) / 100, box: item.rect.width, widest: item.widest });
+          break;
+        }
+      }
+    }
+    expect(clipped).toEqual([]);
+  });
+
+  test('a total past three digits is not a length, so nothing draws one', () => {
+    // No race is run to a thousand laps. The rFactor 2 reader already drops such a total, and
+    // iRacing's count for a session with no lap limit is 32767, so the lap is drawn alone, as it is
+    // in a race with no length.
+    for (const { where, item } of shapes) {
+      for (const laps of [1000, 4444, 32767]) {
+        const reading = drawn(item, lapRace(laps, 12), 'laps');
+        expect({ where, item: item.name, laps, total: writesTotal(reading) }).toEqual({ where, item: item.name, laps, total: false });
+      }
     }
   });
 });

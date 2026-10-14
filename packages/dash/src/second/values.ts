@@ -1377,8 +1377,21 @@ export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SE
  * `SessionTimeLeft` of nought rather than iRacing's week, still has its laps counted. What it costs
  * is the iRacing race given both a lap count and a time limit, which is timed and so draws the clock
  * and no total, as the session card has always drawn it.
+ *
+ * Three digits at most, {@link MOST_LAPS}: a total of a thousand laps or more is not a length.
  */
-export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps(), num(0)));
+export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps(), num(0)), le(totalLaps(), num(MOST_LAPS)));
+
+/**
+ * The longest race a lap total is taken to be, and what every `/ 30` after a lap is measured for.
+ *
+ * No race is run to a thousand laps: the longest iRacing schedules are the 500-lap short tracks. The
+ * rFactor 2 reader already answers nought for a total outside 1 to 999 (`docs/research/sims.md`),
+ * and iRacing's count for a session with no lap limit is 32767 (`Defines.UnlimitedLaps`), which
+ * would be drawn as `/ 32767` and clipped in a box cut for three digits. A total past this is drawn
+ * as no total, the lap alone, rather than a box being cut for a length nobody drives (#1117).
+ */
+export const MOST_LAPS = 999;
 
 /** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
 export const NO_CLOCK = `-:--:--`;
@@ -2003,20 +2016,28 @@ export const fuelToEndColour = (): Expr =>
   );
 
 /**
- * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
- * three-digit lap of a three-digit race. Its sample is the short end, and a field measured by
- * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
+ * The widest race length a box in `face` has to hold after a lap, as `before` writes it: `/ 30` or
+ * `of 30`, of up to {@link MOST_LAPS} laps.
+ *
+ * Measured rather than written as `/ 999`, because the nine is not the widest figure: in Barlow
+ * Condensed SemiBold the 4 and the 0 are wider, so the session page's denominator was cut for
+ * `/ 999` and a 400-lap race drew `/ 40` on the 1280 x 480 and 1280 x 400 faces. #1117.
  */
-export const LAP_OF_TOTAL_WIDEST = '999 / 999';
+export const lapTotalWidest = (face: MeasuredFace, before = '/'): string => `${before} ${widestFigure(face, String(MOST_LAPS))}`;
+
+/**
+ * The widest reading {@link lapOfTotal} is budgeted for in `face`, and what its box is measured
+ * against: a three-digit lap of a three-digit race, each in the face's widest figures. Its sample is
+ * the short end, and a field measured by `12 / 43` passes every fit test while `12 / 120` is clipped
+ * on the screen.
+ */
+export const lapOfTotalWidest = (face: MeasuredFace): string => `${widestFigure(face, LAP_WIDEST)} ${lapTotalWidest(face)}`;
 
 /**
  * The widest lap count {@link CHARS.lap} is budgeted for, and what a lap field declares as its
  * `widest` so the fit tests measure the long end rather than the `12` of its sample. #596.
  */
 export const LAP_WIDEST = '999';
-
-/** The widest `/ 30` a lap count is followed by: the race's length, in three digits. #596. */
-export const LAP_TOTAL_WIDEST = '/ 999';
 
 /** The widest incident count, `x` and all, that {@link CHARS.incidents} is budgeted for. #596. */
 export const INCIDENTS_WIDEST = '999x';

@@ -30,7 +30,7 @@ import {
   CHARS,
   CLASS_AND_PLACE_WIDEST,
   INCIDENTS_WIDEST,
-  LAP_TOTAL_WIDEST,
+  lapTotalWidest,
   LAP_WIDEST,
   airTemperature,
   antiRollFront,
@@ -160,7 +160,7 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     numeralWidest: LAP_WIDEST,
     // Five full cells: the space and the slash are not among the narrow `.,:`, so `/ 120` is five
     // cells wide and the four and a narrow one this was cut from lost its last digit. #596.
-    denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 5, specials: 0 }, widest: LAP_TOTAL_WIDEST, when: hasLapTotal() },
+    denominator: { sample: '/ 32', bind: concat(str('/ '), fmt(totalLaps(), '0')), chars: { digits: 5, specials: 0 }, widest: lapTotalWidest(DATA_FACE.SemiBold), when: hasLapTotal() },
     drawn: drawnFigure({ value: currentLap(), digits: CHARS.lap.digits }),
   },
   { id: 'timeLeft', label: 'Time left', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },

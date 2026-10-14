@@ -34,7 +34,7 @@ import { inlineGroup, type InlinePart } from '../second/header.ts';
 import {
   CHARS,
   INCIDENTS_WIDEST,
-  LAP_TOTAL_WIDEST,
+  lapTotalWidest,
   LAP_WIDEST,
   GRIP_WIDEST,
   SESSION_NAME_WIDEST,
@@ -68,11 +68,14 @@ export const PAGE_SQUARE = { size: 8, gap: 6 } as const;
  */
 const WIDEST_INCIDENT_LIMIT = '/ unlimited';
 
-/** A lap total wider than three digits is not a race anyone drives. */
-const WIDEST_LAP_TOTAL = 'of 999';
+/**
+ * A lap total wider than three digits is not a race anyone drives, and of three the widest in the
+ * label's face, which is not `999`: Barlow's 4 and 0 are wider than its 9 (#1117).
+ */
+const WIDEST_LAP_TOTAL = lapTotalWidest('BarlowMedium', 'of');
 
 /** The same total after the portrait's "Lap 12 / 30", which writes it as a denominator. */
-const WIDEST_LAP_DENOMINATOR = LAP_TOTAL_WIDEST;
+const WIDEST_LAP_DENOMINATOR = lapTotalWidest('BarlowMedium');
 
 /**
  * The strongest wind the readout has room for, unit included. iRacing's weather generator stays

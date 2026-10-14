@@ -105,8 +105,10 @@ describe('card expressions', () => {
     const denominator = textItem('session', 'denominator');
     expect(formulaOf(denominator, 'Text')).toBe("('/ ') + (format([DataCorePlugin.GameData.TotalLaps], '0'))");
     // Not timed as well as a total above nought: a timed session's `TotalLaps` is the leader's laps,
-    // which is no length even with the lap forced on (#989).
-    expect(formulaOf(denominator, 'Visible')).toBe(`(!(${time})) and ((!(${timed})) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))`);
+    // which is no length even with the lap forced on (#989). Nor is a total of four figures, which
+    // the box is not cut for and no race runs to (#1117).
+    const laps = 'isnull([DataCorePlugin.GameData.TotalLaps], 0)';
+    expect(formulaOf(denominator, 'Visible')).toBe(`(!(${time})) and ((!(${timed})) and ((${laps}) > (0)) and ((${laps}) <= (999)))`);
     expect(formulaOf(denominator, 'Left')).toContain('>= (100), 3');
     for (const item of ['label', 'value', 'mark', 'denominator'] as const) {
       const expressions = Object.values(textItem('session', item).bindings ?? {}).map((b) => (b && typeof b.formula === 'string' ? b.formula : ''));
