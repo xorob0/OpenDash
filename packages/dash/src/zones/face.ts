@@ -266,11 +266,25 @@ interface SafetyLayer {
 /**
  * Every layer of `items` that draws a state of the pit family, known by its Visible being one of the
  * family's: the house's banners, and a theme's takeover shown on one of the family's conditions.
+ *
+ * Known by the text, so an item whose Visible joins something to a state's, say the limiter's and
+ * "in the car", would no longer be known as drawing it, and the boxes over it would stop waiting for
+ * it without a word; `popUpRegions.test.ts` finds the family the same way and would stop asking. Such
+ * an item stops the build instead, to be drawn inside a layer shown on the state alone.
  */
-const pitStatesDrawn = (items: readonly Item[]): SafetyLayer[] =>
-  [...walkItems(items)]
+const pitStatesDrawn = (items: readonly Item[]): SafetyLayer[] => {
+  for (const item of walkItems(items)) {
+    const visible = visibleOf(item);
+    if (visible === undefined || PIT_STATES.has(visible)) continue;
+    const joined = [...PIT_STATES].find((state) => visible.includes(state));
+    if (joined !== undefined) {
+      throw new Error(`face: ${item.name ?? item.kind} is shown on a state of the pit family joined to something else, so the pop-up family cannot tell it draws that state: ${visible}`);
+    }
+  }
+  return [...walkItems(items)]
     .filter((item): item is LayerItem => item.kind === 'layer' && PIT_STATES.has(visibleOf(item) ?? ''))
     .map((layer) => ({ out: visibleOf(layer)!, rects: drawnRects(layer.children), family: 'pit' }));
+};
 
 /**
  * How the pop-up family gives way to the safety layers drawn in the body (#1069, #1070): the returned
