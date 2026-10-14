@@ -101,8 +101,9 @@ namespace OpenDashPlugin
         /// <summary>Holds a resize's rebuild until the window has stopped moving.</summary>
         private DispatcherTimer resizeSettle;
 
-        /// <summary>Whether SimHub has taken the panel off screen since it was last shown.</summary>
-        private bool wasUnloaded;
+        /// <summary>Whether a drawing waits for the panel to be on screen again: it has been off screen since it was
+        /// last shown, or a press's ending asked for a redraw while it was (#802).</summary>
+        private readonly PanelOffScreen offScreen = new PanelOffScreen();
 
         /// <summary>Whether the first page has been built. It waits for the control's first real width, so
         /// the page is built once at the width it is shown at rather than at an assumed one and again.</summary>
@@ -138,9 +139,10 @@ namespace OpenDashPlugin
             // check's answer is taken before Loaded, since it can land before the page is shown: SimHub builds
             // a new control on every GetWPFSettingsControl, and one it builds and never shows raises no
             // Unloaded, so a static event taken here (InputMappingsChanged) would keep it alive and run its
-            // binding counts for the session behind a page nobody sees. The mappings and the wheel's lighting
-            // presses are taken at Loaded: the page reads both as it builds, and one loaded again catches up
-            // (CatchUp forgets the binding counts and rebuilds).
+            // binding counts for the session behind a page nobody sees. The mappings, the wheel's lighting
+            // presses and the per-car playlists' sync after SimHub lists a themed screen are taken at Loaded: the
+            // page reads all three as it builds, and one loaded again catches up (CatchUp forgets the binding
+            // counts and rebuilds).
             plugin.UpdateChecked += ShowUpdateAnswer;
             Loaded += (sender, args) =>
             {
@@ -150,20 +152,19 @@ namespace OpenDashPlugin
                 plugin.UpdateChecked += ShowUpdateAnswer;
                 plugin.RigLightingPressed -= ShowLightingChange;
                 plugin.RigLightingPressed += ShowLightingChange;
+                plugin.CarPlaylistsResynced -= ShowCarPlaylistsResynced;
+                plugin.CarPlaylistsResynced += ShowCarPlaylistsResynced;
                 StartClock();
                 // SizeChanged has built the first page by now; a host that never gave the control a width
                 // gets it at the assumed one rather than an empty column.
                 if (!pageBuilt) BuildFirstPage();
-                if (wasUnloaded)
-                {
-                    wasUnloaded = false;
-                    CatchUp();
-                }
+                if (offScreen.Returned()) CatchUp();
             };
             Unloaded += (sender, args) =>
             {
                 plugin.UpdateChecked -= ShowUpdateAnswer;
                 plugin.RigLightingPressed -= ShowLightingChange;
+                plugin.CarPlaylistsResynced -= ShowCarPlaylistsResynced;
                 PluginManager.InputMappingsChanged -= MappingsChanged;
                 StopClock();
                 // A resize that had not settled would otherwise rebuild the page off screen, and on Screens
@@ -172,7 +173,7 @@ namespace OpenDashPlugin
                 if (lightingSettle != null) lightingSettle.Stop();
                 // A page that is not on screen must not still be drawing a dashboard.
                 DropPreview();
-                wasUnloaded = true;
+                offScreen.Left();
             };
 
             // The first page is built by the first real size (Resize), or by Loaded when none comes: built
@@ -347,9 +348,9 @@ namespace OpenDashPlugin
         // closed), SheetFooter, CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
         // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags,
         // and every binding named through PanelBindings.TriggerLabel); issues, the answer RefreshAttention keeps,
-        // asked through PanelAttention.Has and Of with its rule constants (ScreenRestart, StripUnselected and the
+        // asked through PanelAttention.Has and Of with its rule constants (ScreenMissing, StripUnselected and the
         // rest), and ScreenFacts, StripFacts and MatrixFacts for each device's state -- whether a strip is
-        // Showing, a dashboard is waiting for a restart -- all read while building and never on the tick;
+        // Showing, a dashboard is installed -- all read while building and never on the tick;
         // CheckAgain, which asks SimHub again and redraws (SettingsControl.Status.cs); ProfileSelected;
         // updateStatus and Check(manual), the update check's answer and asking it (SettingsControl.Live.cs);
         // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
@@ -453,11 +454,17 @@ namespace OpenDashPlugin
         /// It was Go to the same page, which threw the page back to its top on every press. The lines are
         /// still cleared, because a press that redraws says its own line after, and two presses' lines would
         /// otherwise stack; Say brings the top into view when it has something to say.
+        ///
+        /// Off screen it draws nothing (PanelOffScreen, #802): a write's ending lands a second or more after its
+        /// press, by when the driver may be on another of SimHub's pages, and the Screens page rebuilt then started
+        /// a live preview nothing let go of. The lines are still cleared for the ending's own, which the return
+        /// keeps, and the return asks again and draws the page and the sidebar (CatchUp).
         /// </remarks>
         private void Redraw()
         {
             CloseSheet();
             ClearMessages();
+            if (!offScreen.Draws(IsLoaded)) return;
             RefreshAttention();
             RebuildPage();
             RefreshSidebar();
@@ -469,6 +476,10 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The page is not left, so its OnLeave actions are not run: a press it is waiting on survives a
         /// rebuild. What the discarded build held is let go of through OnDrop.
+        ///
+        /// Nor is it drawn off screen, by whatever asks (#802): the page is owed instead, and the return rebuilds
+        /// it (PanelOffScreen). Built with no window holding it, Screens started a live preview that no Unloaded
+        /// would dispose, since the last one had already run.
         /// </remarks>
         private void RebuildPage()
         {
@@ -476,6 +487,7 @@ namespace OpenDashPlugin
             // Nor inside a rebuild: CommitTyping raises the box's LostFocus, and a page whose save redraws
             // would otherwise rebuild the page inside the rebuild that is about to build it anyway.
             if (!pageBuilt || rebuilding) return;
+            if (!offScreen.Draws(IsLoaded)) return;
             rebuilding = true;
             try
             {
@@ -560,6 +572,20 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// The plugin synchronised the per-car playlists again once SimHub listed a themed screen's dashboard
+        /// (OpenDash.CarPlaylistsResynced, #664). Only the Screens page with a themed screen selected says what
+        /// its displays switch, so only that page is drawn again, in place; it happens once, a couple of seconds
+        /// after a themed screen is added or resized, and nowhere else.
+        /// </summary>
+        private void ShowCarPlaylistsResynced()
+        {
+            if (!IsLoaded || route == null || route.Page != PanelPage.Screens) return;
+            var screen = SelectedScreen;
+            if (screen == null || screen.Theme == null) return;
+            RebuildPage();
+        }
+
+        /// <summary>
         /// Called by a page while it is built when it draws night mode or a brightness as a control, so a
         /// change to either rebuilds it. A page that does not call it is not rebuilt by a wheel press. Not for
         /// a page whose build asks SimHub anything: that page repaints through <see cref="OnLighting"/>.
@@ -584,7 +610,8 @@ namespace OpenDashPlugin
         /// Brings the panel up to date after SimHub showed another page: an update answer that landed while
         /// it was away was not heard, the preview it had was let go of on the way out, and a binding made on
         /// SimHub's own Controls and events page -- the page a driver most often leaves this one for -- was
-        /// not heard either, because the mapping event is only listened to while the panel is on screen.
+        /// not heard either, because the mapping event is only listened to while the panel is on screen. A
+        /// press's ending that landed meanwhile drew nothing (PanelOffScreen, #802), so this is its drawing too.
         /// </summary>
         private void CatchUp()
         {

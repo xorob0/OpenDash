@@ -1,7 +1,8 @@
 /**
  * Every theme still shows everything (#200): at every size a theme claims, nothing it draws clips,
  * nothing escapes its frame, and nothing disappears; and a reading drawn over its unlit cells lights
- * no cell off them (#1029). `conformance.ts` holds the four properties; this file asks them of
+ * no cell off them (#1029), and every widest a face declares holds what its binding draws (#1030).
+ * `conformance.ts` holds the five properties; this file asks them of
  * every theme the run selects, which is how a theme added to the registry is held to them without a
  * line written here.
  *
@@ -17,7 +18,7 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { buildThemeFace, drawsInThisProcess, type ThemeFace } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
-import { clipped, disappeared, escaped, offGrid, themesToCheck } from './conformance.ts';
+import { clipped, disappeared, escaped, offGrid, themesToCheck, underDeclared } from './conformance.ts';
 import { GEAR_LEFT_THEME_ID, gearLeftTheme } from './fixtures/gearLeftTheme.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -30,7 +31,7 @@ afterAll(() => {
 });
 
 /** The properties a theme is held to, each a function of `conformance.ts`. */
-type Property = 'clipped' | 'escaped' | 'disappeared' | 'offGrid';
+type Property = 'clipped' | 'underDeclared' | 'escaped' | 'disappeared' | 'offGrid';
 
 /**
  * What a theme is known to get wrong, by property, pinned rather than tolerated: the property's
@@ -71,6 +72,10 @@ for (const id of here) {
 
       test('nothing lights off its unlit cell', () => {
         expect(unknown(id, 'offGrid', offGrid(id, face))).toEqual([]);
+      });
+
+      test('every widest holds what its binding draws', () => {
+        expect(unknown(id, 'underDeclared', underDeclared(id, face))).toEqual([]);
       });
 
       test('nothing escapes its frame', () => {

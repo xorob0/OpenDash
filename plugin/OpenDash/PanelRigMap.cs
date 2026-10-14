@@ -1058,8 +1058,8 @@ namespace OpenDashPlugin
         /// Whether a tile carries the warning dot after its name: the device has something on Home's list.
         /// </summary>
         /// <remarks>
-        /// The artboard puts it on a strip and a matrix. A screen whose dashboard is missing or not yet in
-        /// SimHub carries it too, since that is as much a device in trouble as a strip nobody selected.
+        /// The artboard puts it on a strip and a matrix. A screen whose dashboard is missing carries it too,
+        /// since that is as much a device in trouble as a strip nobody selected.
         /// </remarks>
         public static bool Warns(RigTile tile, IEnumerable<PanelIssue> issues)
         {
@@ -1072,7 +1072,7 @@ namespace OpenDashPlugin
                 case RigTileKind.Matrix:
                     return PanelAttention.Has(issues, PanelAttention.MatrixDark, key) || PanelAttention.Has(issues, PanelAttention.FlagBoxOutdated);
                 default:
-                    return PanelAttention.Has(issues, PanelAttention.ScreenMissing, key) || PanelAttention.Has(issues, PanelAttention.ScreenRestart, key);
+                    return PanelAttention.Has(issues, PanelAttention.ScreenMissing, key);
             }
         }
 

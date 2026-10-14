@@ -154,7 +154,7 @@ installing a dashboard writes it without assigning it to a display, and replacin
 an open dash window showing what it parsed when it opened. The sentence afterwards names the
 remaining step, in the order it has to be done.
 
-> "Added Rim. Restart SimHub, then assign "Rim" to this display in Dash Studio."
+> "Added Rim. Assign "Rim" to this display in Dash Studio."
 
 **A failure says what happened and where to look, without blame.** A rig with no network is a normal
 rig, so "error" and "failed" are reserved for something that actually failed and are never used
@@ -208,11 +208,11 @@ every other page that says the same thing reads that constant rather than typing
 | `PanelUpdates`, `PanelLightRows`, `PanelConfirmation`, `UpdateWording` | Updates, and the restart dialog |
 | `PanelNav`, `PanelSearch`, `PanelShell` | the sidebar and search |
 | `PanelSoon` | every greyed row, the Soon and New tags |
-| `PanelCopy` | a phrase two pages say alike with no first owner: "Restart SimHub to load it", "Installed", "Not installed", the glance captions |
+| `PanelCopy` | a phrase two pages say alike with no first owner: "Installed", "Not installed", the glance captions |
 
 So one state has one word wherever it is drawn: Home's line under a strip reads `PanelLeds.NotSelected`,
-and the Updates row for a screen waiting on a restart reads `PanelCopy.RestartToLoad`. A test that
-compares the two pages compares the constants.
+and Home's line under a screen whose folder is gone reads `PanelScreens.Missing`. A test that compares
+the two pages compares the constants.
 
 Two constraints come from outside this document. The module descriptions are mirrored between
 `Modules.cs` and `packages/dash/src/contract.ts`, and `ContractTests` fails a build in which the two

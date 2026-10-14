@@ -23,6 +23,19 @@
 # comes out of it on every push that touches anything it copies — see
 # .github/workflows/site-image.yml. A stage that stops copying something the site needs fails there,
 # on the branch that changed it, rather than in front of somebody pressing Redeploy.
+#
+# Every stage names its Debian release, every image names its line, and each floats on patches within
+# them, as the rest of the repository does: global.json takes any 8.0 SDK, CI installs 8.0.x, and a
+# redeploy picks up the security releases of node and Debian without a commit here. What a tag must
+# not do is change the line under the build. `sdk:8.0` cannot carry an SDK that global.json refuses,
+# as stage 1 says, and naming bookworm keeps the Debian, and with it glibc, openssl and the apt
+# packages, from changing under the build until someone changes the tag on purpose. The stages all
+# name the same release, which stage 4 needs and the others follow for consistency; stage 4 also
+# says what moving to the next one takes.
+# bun is the 1.4 line, which is the one place the image pins bun where CI does not (CONTRIBUTING.md):
+# a lockfile written by a newer bun stops `bun install --frozen-lockfile` here, loudly, and the fix
+# is to raise this tag. scripts/workflows.test.ts holds every image to its line and every stage to
+# its release (#915).
 
 # ---------------------------------------------------------------- 1. everything the site hands out
 # `bun run package` is the repository's own release command: it builds every .simhubdash and LED
@@ -35,13 +48,20 @@
 # It needs both toolchains, so bun is copied into the .NET SDK image rather than either being
 # reimplemented. That fuses what would be two cacheable layers into one; the alternative was two
 # stages that between them restate package.sh, and a stale download is worse than a slow build.
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS artifacts
+#
+# The SDK is the repository's as well as the image's: global.json is copied in with the manifests, so
+# the dotnet that runs here reads the same pin and roll-forward policy a local build and the CI runner
+# read, and a pin this image's SDK no longer satisfies fails the build rather than being ignored. The
+# image's own line is one global.json accepts, which scripts/workflows.test.ts checks; raising one is
+# a reason to look at the other. plugin/Directory.Build.props explains why the pin is there at all: a
+# newer compiler than the pinned one has cost this repository three fixes.
+FROM mcr.microsoft.com/dotnet/sdk:8.0-bookworm-slim AS artifacts
 COPY --from=oven/bun:1.4-debian /usr/local/bin/bun /usr/local/bin/bun
 RUN apt-get update \
  && apt-get install -y --no-install-recommends zip unzip \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /repo
-COPY package.json bun.lock bunfig.toml tsconfig.base.json VERSION ./
+COPY package.json bun.lock bunfig.toml tsconfig.base.json VERSION global.json ./
 COPY packages ./packages
 COPY design ./design
 COPY scripts ./scripts
@@ -54,7 +74,7 @@ RUN bun install --frozen-lockfile
 RUN bun run package
 
 # ---------------------------------------------------------------- 3. the site
-FROM node:22-slim AS build
+FROM node:22-bookworm-slim AS build
 WORKDIR /repo
 # The site's generators read design/tokens.json, packages/dash/src/contract.ts, scripts/changelog.ts,
 # VERSION and CHANGELOG.md, so those parts of the tree have to be here too.
@@ -109,7 +129,14 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN node node_modules/.bin/next build
 
 # ---------------------------------------------------------------- 4. what runs
-FROM node:22-slim AS runtime
+# On the same Debian as the build stage, bookworm, by name: the build stage writes the node_modules
+# this one runs, so the two agree on the system under them, and a release-less tag would let the
+# next Debian arrive whenever node's images move to it rather than when this file says so. Prisma
+# is not what holds the image to bookworm. It picks its engine by the openssl major and serves any
+# 3.x with the debian-openssl-3.0.x engine schema.prisma declares, so trixie's openssl 3.5 needs no
+# change to the schema; moving is a change to every stage's tag and a green run of the Site image
+# workflow.
+FROM node:22-bookworm-slim AS runtime
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
@@ -152,7 +179,7 @@ EXPOSE 3000
 
 # Without this the orchestrator has only the existence of the process to go on, and the process
 # exists about a second before Next answers anything; a rolling update would hand readers over to a
-# container that is not serving yet. node:22-slim carries neither curl nor wget, so the probe is
+# container that is not serving yet. The slim node image carries neither curl nor wget, so the probe is
 # node's own fetch against the home page, which is prerendered and costs a file read.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"

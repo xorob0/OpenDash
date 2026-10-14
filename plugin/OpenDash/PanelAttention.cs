@@ -1,7 +1,7 @@
 // PanelAttention.cs: what Home says needs fixing, and in what order.
 //
-// Home leads with the things a driver cannot see from the seat: a dashboard written into SimHub that SimHub
-// has not loaded, a folder that is gone, a strip whose profile is installed and not selected on its device,
+// Home leads with the things a driver cannot see from the seat: a dashboard folder that is gone, a strip whose
+// profile is installed and not selected on its device,
 // a matrix slot no device shows, an update waiting for a restart (#791), a settings file SimHub could not read
 // (#643). Each is said in the driver's terms and, where the fix is in SimHub, with the steps there.
 //
@@ -90,10 +90,6 @@ namespace OpenDashPlugin
         /// <summary>Whether its dashboard folder is in DashTemplates.</summary>
         public bool? Installed { get; set; }
 
-        /// <summary>Whether that folder was created in this session, after SimHub loaded its templates, so
-        /// SimHub has not read it (PackageExtractor.WaitsForRestart).</summary>
-        public bool? AddedSinceStart { get; set; }
-
         /// <summary>Whether it is a screen a migration made that nobody has kept or removed.</summary>
         public bool Unclaimed { get; set; }
     }
@@ -177,8 +173,7 @@ namespace OpenDashPlugin
         /// Every issue the facts show, most urgent first.
         /// </summary>
         /// <remarks>
-        /// The order is the order a driver has to act in. A folder that is gone comes before one SimHub has
-        /// not loaded, because restarting SimHub will not bring the first back; both come before the lights,
+        /// The order is the order a driver has to act in. A folder that is gone comes before the lights,
         /// because a screen is what most rigs have; an out-of-date profile and a waiting update come last,
         /// because the rig works while they wait.
         /// </remarks>
@@ -210,15 +205,6 @@ namespace OpenDashPlugin
                     screen.Name + "'s dashboard is missing from SimHub",
                     MissingDetail,
                     null, InstallAgain, PanelIssueAction.Reinstall));
-            }
-
-            foreach (var screen in screens.Where(s => s.Installed != false && s.AddedSinceStart == true))
-            {
-                issues.Add(new PanelIssue(
-                    ScreenRestart + screen.Namespace, PanelPage.Screens, screen.Namespace,
-                    screen.Name + " is not in SimHub yet",
-                    ScreenRestartDetail(screen.Name),
-                    null, Open(screen.Name), PanelIssueAction.Navigate));
             }
 
             foreach (var strip in strips.Where(s => s.Selected == false && IsInstalled(s.Profile)))
@@ -302,7 +288,6 @@ namespace OpenDashPlugin
         // The ids' rules, each followed by what the issue is about where it has a subject. A page that asks
         // whether an issue stands for its card reads these rather than typing the prefix again.
         public const string ScreenMissing = "screen-missing:";
-        public const string ScreenRestart = "screen-restart:";
         public const string StripUnselected = "strip-unselected:";
         public const string MatrixDark = "matrix-dark:";
         public const string ScreensUnclaimed = "screens-unclaimed";
@@ -312,7 +297,7 @@ namespace OpenDashPlugin
         public const string UpdateAvailable = "update-available";
         public const string SettingsUnreadable = "settings-unreadable";
 
-        /// <summary>Whether the issues hold one of that rule about that subject: ("screen-restart:", "Rim").</summary>
+        /// <summary>Whether the issues hold one of that rule about that subject: ("screen-missing:", "Rim").</summary>
         public static bool Has(IEnumerable<PanelIssue> issues, string rule, string subject = null)
         {
             var id = rule + (subject ?? string.Empty);
@@ -399,16 +384,6 @@ namespace OpenDashPlugin
         public const string UnselectedDetail = "Installed, but not selected in SimHub.";
 
         public const string RestartDetail = "Until then you are running the old version.";
-
-        /// <summary>
-        /// Under a screen SimHub has not read yet: the panel's one phrase for that state as the step
-        /// (PanelCopy.RestartToLoad), then the step after it in the Screens fix box's words. The
-        /// title names the screen, so a list of issues is read by what each is about.
-        /// </summary>
-        public static string ScreenRestartDetail(string name)
-        {
-            return PanelCopy.RestartToLoad + ". " + PanelScreens.RestartDetail(name);
-        }
 
         /// <summary>"1 screen came with an older OpenDash", "2 screens ...".</summary>
         public static string UnclaimedTitle(int count)

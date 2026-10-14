@@ -77,20 +77,29 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("1280 × 480", PanelAddScreen.DefaultName(Default1280));
         }
 
+        /// <summary>
+        /// What is left after adding a themed screen is the next car: SimHub lists its dashboard two seconds after
+        /// the write (#664), the plugin binds it once SimHub does (PanelCarPlaylist.ListingMoved), and a display
+        /// takes the entry at the next car it loads. A restart is asked for only when the add wrote a font (#441).
+        /// </summary>
         [Fact]
         public void A_themed_screen_is_not_assigned_by_hand_and_its_lines_say_what_is_left()
         {
-            Assert.Equal("Restart SimHub. A display showing a 1280 × 480 face then switches to \"Porsche 1280 × 480\" in the cars it is drawn for.",
+            Assert.Equal("A display showing a 1280 × 480 face switches to \"Porsche 1280 × 480\" when you next load a car it is drawn for.",
                 PanelAddScreen.NextStep("Porsche 1280 × 480", Porsche1280));
             Assert.Equal(PanelAddScreen.NextStep("Rim"), PanelAddScreen.NextStep("Rim", Default850));
 
             var themed = PackageCatalogue.NewScreen(Porsche1280, "Porsche 1280 × 480", new string[0]);
             Assert.Equal("porsche", themed.Theme);
-            Assert.Equal("Added Porsche 1280 × 480. Restart SimHub, and a display showing a 1280 × 480 face switches to it in the cars it is drawn for.",
-                PanelAddScreen.Added(themed));
+            Assert.Equal("Added Porsche 1280 × 480. A display showing a 1280 × 480 face switches to it when you next load a car it is drawn for.",
+                PanelAddScreen.Added(themed, false));
+            Assert.DoesNotContain("Restart", PanelAddScreen.Added(themed, false));
+            Assert.Equal("Added Porsche 1280 × 480. Restart SimHub to load its fonts, and a display showing a 1280 × 480 face switches to it in the cars it is drawn for.",
+                PanelAddScreen.Added(themed, true));
             var plain = PackageCatalogue.NewScreen(Default850, "Rim", new string[0]);
             Assert.Null(plain.Theme);
-            Assert.Equal(PanelAddScreen.Added("Rim", "Rim"), PanelAddScreen.Added(plain));
+            Assert.Equal(PanelAddScreen.Added("Rim", "Rim", false), PanelAddScreen.Added(plain, false));
+            Assert.Equal(PanelAddScreen.Added("Rim", "Rim", true), PanelAddScreen.Added(plain, true));
         }
 
         /// <summary>A themed screen's edit sheet offers the sizes its theme is drawn at, so a resize keeps the theme
@@ -109,6 +118,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("porsche", screen.Theme);
             Assert.Equal(porscheAt1920.Package, screen.Package);
             Assert.Equal("porsche", screen.Copy().Theme);
+
+            // The line after the resize: never "assign it in Dash Studio", which would put the Porsche face on the
+            // display in every car, but the next car, as after an add.
+            Assert.Equal("Porsche is now 1920 × 480. A display showing a 1920 × 480 face switches to it when you next load a car it is drawn for.",
+                PanelAddScreen.Resized(screen, false));
+            Assert.Equal("Porsche is now 1920 × 480. Restart SimHub to load its fonts, and a display showing a 1920 × 480 face switches to it in the cars it is drawn for.",
+                PanelAddScreen.Resized(screen, true));
+            Assert.DoesNotContain("Dash Studio", PanelAddScreen.Resized(screen, true));
+            var plain = new OpenDashSettings();
+            var rim = plain.AddScreen(Default850, "Rim");
+            plain.ResizeScreen(rim, Default1280);
+            Assert.Equal(PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", false), PanelAddScreen.Resized(rim, false));
+            Assert.Equal(PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", true), PanelAddScreen.Resized(rim, true));
         }
 
         [Fact]

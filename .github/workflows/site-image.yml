@@ -22,7 +22,8 @@ name: Site image
 # the root's manifests, so the list is most of the tree and a run is skipped only for a change to
 # docs/, traces/ or the repository's own prose. That is the honest version of a path filter — a
 # skipped run here means nothing the image reads has moved, rather than a green tick that proves
-# nothing.
+# nothing. scripts/workflows.test.ts holds the list to every COPY in the Dockerfile, because a file the
+# image reads and this list leaves out is a change that ships without a build (#915).
 #
 # On push and nothing else, unlike ci.yml above it. push and pull_request both fire for the same
 # commit of a branch in this repository, in two concurrency groups that cannot cancel each other,
@@ -49,6 +50,7 @@ on:
       - "bunfig.toml"
       - "tsconfig.base.json"
       - "VERSION"
+      - "global.json"
       - "CHANGELOG.md"
       - ".dockerignore"
       - ".github/workflows/site-image.yml"

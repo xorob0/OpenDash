@@ -88,6 +88,62 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("OpenDash.Pit.wall.portrait.simhubdash", plan.Items.Single().Asset.Name);
         }
 
+        // When an edited folder is replaced (#673)
+
+        private static ReleaseInfo WithPlugin(ReleaseInfo release)
+        {
+            release.Assets = release.Assets.Concat(new[]
+            {
+                new ReleaseAsset { Name = PluginUpdate.AssetName, DownloadUrl = "https://example.invalid/plugin", Size = 1 },
+            }).ToArray();
+            return release;
+        }
+
+        private static PackageStatus Edited(string folder) =>
+            new PackageStatus { FolderName = folder, InstalledVersion = "0.1.0", Edited = true };
+
+        /// <summary>
+        /// The run installs what the release publishes and leaves the rest to the plugin it stages, so an edited
+        /// folder is replaced on the press when its package is published beside the plugin, which v0.3.0-rc.7 and
+        /// every release before #438 did, and at the restart when only the plugin is.
+        /// </summary>
+        [Fact]
+        public void An_edited_folder_is_replaced_by_whichever_half_of_the_run_carries_it()
+        {
+            var rig = new[] { Edited("OpenDash"), Installed("OpenDash 1280x480"), Edited("OpenDash Phone") };
+
+            var pluginOnly = UpdatePlan.Edited(rig, WithPlugin(ReleaseWith()));
+            Assert.Empty(pluginOnly.Now);
+            Assert.Equal(new[] { "OpenDash", "OpenDash Phone" }, pluginOnly.OnRestart);
+
+            var everything = UpdatePlan.Edited(rig, WithPlugin(ReleaseWith("OpenDash", "OpenDash 1280x480", "OpenDash Phone")));
+            Assert.Equal(new[] { "OpenDash", "OpenDash Phone" }, everything.Now);
+            Assert.Empty(everything.OnRestart);
+
+            var some = UpdatePlan.Edited(rig, WithPlugin(ReleaseWith("OpenDash Phone")));
+            Assert.Equal(new[] { "OpenDash Phone" }, some.Now);
+            Assert.Equal(new[] { "OpenDash" }, some.OnRestart);
+            Assert.Equal(new[] { "OpenDash Phone", "OpenDash" }, some.All);
+        }
+
+        /// <summary>
+        /// Without a plugin to follow, a folder the release does not publish is one nothing in the update writes, so
+        /// it is not among those the question asks about.
+        /// </summary>
+        [Fact]
+        public void An_edited_folder_neither_half_carries_is_not_replaced()
+        {
+            var rig = new[] { Edited("OpenDash"), Edited("OpenDash Phone") };
+
+            var packagesOnly = UpdatePlan.Edited(rig, ReleaseWith("OpenDash"));
+            Assert.Equal(new[] { "OpenDash" }, packagesOnly.Now);
+            Assert.Empty(packagesOnly.OnRestart);
+
+            Assert.Empty(UpdatePlan.Edited(rig, ReleaseWith()).All);
+            Assert.Empty(UpdatePlan.Edited(null, ReleaseWith("OpenDash")).All);
+            Assert.Empty(UpdatePlan.Edited(rig, null).All);
+        }
+
         // The digest
 
         [Fact]
@@ -180,6 +236,32 @@ namespace OpenDashPlugin.Tests
             Assert.True(EditedConsent.Forget("0.3.0", "0.3.0-rc.7", swapPending: false));
             // Nothing to forget.
             Assert.False(EditedConsent.Forget(null, "0.3.0", swapPending: false));
+        }
+
+        /// <summary>
+        /// What a download may carry: the release's own version, and nothing older than what it replaces (#862). The
+        /// same version as what is installed is let through, for the edited screen that holds a rig back and the yes
+        /// to replacing it that only a run can carry to the start (EditedConsent).
+        /// </summary>
+        [Theory]
+        [InlineData("0.4.0", "0.4.0", "0.3.0", null)]
+        [InlineData("0.4.0", "v0.4.0", "0.3.0", null)]
+        [InlineData("0.4.0", "0.4.0", "0.4.0", null)]
+        [InlineData("0.4.0", "0.4.0", null, null)]
+        [InlineData("0.4.0", "0.4.0", Versioning.UnknownVersion, null)]
+        [InlineData("0.3.0-rc.7", "0.3.0-rc.7", "0.3.0-rc.6", null)]
+        // The packaging mistake, either way round.
+        [InlineData("0.3.0", "0.4.0", "0.2.0", "OpenDash is 0.3.0 in a release of 0.4.0")]
+        [InlineData("0.5.0", "0.4.0", "0.2.0", "OpenDash is 0.5.0 in a release of 0.4.0")]
+        [InlineData("0.3.0-rc.7", "0.3.0", "0.2.0", "OpenDash is 0.3.0-rc.7 in a release of 0.3.0")]
+        // A release older than what is here, which a rig held back by an older screen can be offered.
+        [InlineData("0.4.0", "0.4.0", "0.5.0", "OpenDash is 0.4.0, older than the 0.5.0 installed here")]
+        [InlineData("0.3.0-rc.6", "0.3.0-rc.6", "0.3.0-rc.7", "OpenDash is 0.3.0-rc.6, older than the 0.3.0-rc.7 installed here")]
+        [InlineData(null, "0.4.0", "0.3.0", "no version could be read from OpenDash")]
+        [InlineData("", "0.4.0", "0.3.0", "no version could be read from OpenDash")]
+        public void A_download_carries_the_release_s_version_and_nothing_older_than_what_is_here(string carried, string release, string current, string refusal)
+        {
+            Assert.Equal(refusal, CarriedVersion.Refusal("OpenDash", carried, release, current));
         }
     }
 }

@@ -30,7 +30,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 |---|---|---|---|---|---|
 | HM-01 | Heading count | RF | Open Home | "N things to fix", N the items drawn ("1 thing to fix" for one) | U PanelAttentionTests; V |
 | HM-02 | Nothing to fix | R1 after restart | Open Home | "Nothing to fix", no card | U; V |
-| HM-03 | Item: written, not restarted | R1, Add screen, no restart | Home | "<name> is not in SimHub yet", step "Restart SimHub to load it", "Open <name>" → Screens with it selected | U (written-since-start flag); V |
+| HM-03 | No item for a screen just added | R1, Add screen, no restart | Home | no item for it: SimHub lists the folder two seconds after the write (#664) | U PanelAttentionTests; V |
 | HM-04 | Item: folder missing | RF (Rim folder deleted) | Home | "Rim's dashboard is missing from SimHub", "Its settings are kept.", "Install it again" | U; V; J folder reappears |
 | HM-05 | Item: profile not selected | RF | Home | "<strip>'s profile is not selected", three steps + Check again; the answer starts "Checked again." | U over LedDeviceSurvey fixture; V wording; N resolved branch (no LED device on the VM) |
 | HM-06 | Item: matrix not shown | RF | Home | "Left pillar is not shown in SimHub", "No matrix device in SimHub is set to matrix 2.", "Open Left pillar" → Matrix with Left pillar selected | U; N on every rig until #521 (SimHub does not say which matrix a device shows, so the item is never drawn) |
@@ -58,12 +58,12 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 ## SC Screens · AS Add a screen
 | id | control | setup | action | expected | how |
 |---|---|---|---|---|---|
-| SC-01 | Cards | RF | Open | 5 cards (thumb by kind, name, kind, state: In SimHub / Missing / Restart SimHub to load it; the header carries "<kind> · <size>") + Add a screen tile | U PanelScreensTests; V |
+| SC-01 | Cards | RF | Open | 5 cards (thumb by kind, name, kind, state: In SimHub / Missing; the header carries "<kind> · <size>") + Add a screen tile | U PanelScreensTests; V |
 | SC-02 | Select | RF | Click Pit wall | header + pit pane | V |
 | SC-03 | Fix box | RF (Rim) | Select Rim | Missing; "This screen's settings are kept."; Install it again | U; V |
 | SC-04 | Edit sheet | RF | Click Edit | Name, Size or Orientation, Dashboard › Reinstall; prefilled; Cancel writes nothing | V; J hash unchanged |
 | SC-05 | Rename via Edit | RF | name via JSON, Save | card/header renamed; namespace and folder unchanged | J; N typing → U name rules |
-| SC-06 | Duplicate | RF | Click on Main dash | new card, own namespace/folder, settings copied, restart line | U DuplicateScreen tests; J; V |
+| SC-06 | Duplicate | RF | Click on Main dash | new card, own namespace/folder, settings copied, the Added line (a restart only when it wrote a font) | U DuplicateScreen tests; J; V |
 | SC-07 | Remove | RF | Remove Round | sheet "Remove Round": "Removes the screen and its dashboard." (a face also names its settings and "Any wheel button you bound to it stops working."); Remove it / Keep it; card and folder gone, the shared Cards kept | U PanelConfirmationTests; V; J |
 | SC-08 | Click zones and bar | Main dash | Click each | accent border; aside switches | U PanelFacePlanTests; V ×5 |
 | SC-09 | Zone page list | zone C | Observe | ticked first in order, First tag, "4 of 22", Show all reveals unticked + Not in iRacing + Soon Circle tracker #320 / Launch #741 | U; V |
@@ -98,10 +98,10 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | AS-03 | Flags screen #739 | sheet | Hover / click | greyed, "A second display for flags", tooltip, no selection | U; V |
 | AS-04 | Your displays #85 | sheet | Hover | tooltip | V |
 | AS-05 | Size tiles + Name prefill | sheet | Click 850×480 | selected; Name prefilled; second-copy note (PanelAddScreen.Note) when true | U; V |
-| AS-06 | Next steps | sheet | Observe | "Restart SimHub, then assign "{name}" to this display in Dash Studio." | U copy |
+| AS-06 | Next steps | sheet | Observe | "Assign "{name}" to this display in Dash Studio." | U copy |
 | AS-07 | Cancel | sheet | Click | closes, no write | V; J |
-| AS-08 | Add screen | sheet, R1 | Click | card "Restart SimHub to load it"; folder written; Say(Added); Home gains HM-03 | J; V |
-| AS-09 | Add screen then restart | AS-08 | stop + start | card In SimHub; listed in Dash Studio (`openDashboard` by name) | V; J |
+| AS-08 | Add screen | sheet, R1, Dash Studio already open | Click | card In SimHub; folder written; Say(Added), with "Restart SimHub to load its fonts" only when the add wrote a font; Home gains no item; within a few seconds Dash Studio lists it and it can be assigned, with no restart (#664) | J; V |
+| AS-09 | Add a themed screen | sheet, R1, a display showing a face of its size | Click | its page's Car switching row reads the displays it switches within a few seconds, with no restart; the display switches at the next car it loads (#664) | V; J |
 
 ## LD LEDs · AL Add an LED strip
 | id | control | setup | action | expected | how |
@@ -202,7 +202,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | UP-04 | Check for updates off | | Flip, Check now | nothing fetched; CheckForUpdates false | J |
 | UP-05 | Last checked | after UP-02 | Observe | "Last checked today, HH:MM" | J; V |
 | UP-06 | Download | B:old | Click | "Downloading" bar; staged DLL; restart dialog; the card turns Staged and the badge "Restart" | V; J; then `bun run vm plugin` restores the branch DLL |
-| UP-07 | In SimHub table | RF after AS-08; B:old profiles then B:cur | Observe | Item / Version / State per row: Up to date, Update available, Missing, Not installed, Restart SimHub to load it | U; V |
+| UP-07 | In SimHub table | RF after AS-08; B:old profiles then B:cur | Observe | Item / Version / State per row: Up to date, Update available, Missing, Not installed | U; V |
 | UP-08 | Reinstall everything | UP-07 | Click | rows Up to date; folders rewritten; backups kept; the line starts "Reinstalled N dashboards." | J; V |
 | UP-09 | Kept copy | edit a .djson by hand, Reinstall everything | Observe | "Kept copy" card, "Your edited <name> was kept."; Put mine back puts it back, its `_yours_` zip goes and the card with it; the replaced folder is `<folder>_backup.zip` (#608) | J; V |
 | UP-10 | Copy a support report | | Click | "Support report copied. Paste it into your issue."; clipboard holds versions, rig, devices, log tail; nothing sent (`Get-Clipboard` in run_in_desktop). The SimHub line names the installed release ("SimHub: 9.12.6, in C:\Program Files (x86)\SimHub\"), never 1.0.0.0 (#641) | J |
@@ -218,7 +218,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | RS-04 | RF | maximised 3840 | as RS-03 at 3840: no empty band on the right, the sheet at the control's right edge, no picture taller than the window can show | V |
 | RS-05 | RF | record achieved widths | SimHub may refuse 700; record the floor in run.json | J |
 | FL-01 | R0, B:cur, --menu | start, open | Home "Nothing to fix", the add tile and "Add the screen your rig has." in place of Right now and Quick controls; Screens "No screens yet." over the Add a screen tile; no wizard | V; U |
-| FL-02 | R0 | Add screen → restart | AS-08/AS-09; Home 1 → 0 | V; J |
+| FL-02 | R0 | Add screen | AS-08; Home stays at 0 | V; J |
 | FL-03 | RF minus Rim folder | start | HM-04; Updates row Missing | V; J |
 | FL-04 | not in left menu | install without --menu | under Additional plugins; identical | V |
 | FL-05 | old settings file | from the VM's _Backups | migrations hold; panel opens | U; V |

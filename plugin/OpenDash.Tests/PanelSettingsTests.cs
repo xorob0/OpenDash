@@ -1590,7 +1590,7 @@ namespace OpenDashPlugin.Tests
                 new[] { PanelDataTab.SectionTitle },
                 new[] { PanelDataTab.PositionTitle, "overall", "class" },
                 new[] { PanelDataTab.LivePositionsTitle, "position", "iracing", "line", "leaderboard" },
-                new[] { PanelDataTab.DeltaTitle, "session best", "all-time best", "last lap" },
+                new[] { PanelDataTab.DeltaTitle, "your best", "session best", "all-time best", "last lap" },
                 new[] { PanelDataTab.DeltaPrecisionTitle, "hundredths", "thousandths", "decimals" },
                 new[] { PanelDataTab.SessionTitle, "laps", "time" },
                 new[] { PanelDataTab.DriverNameTitle, "name format", "surname" },

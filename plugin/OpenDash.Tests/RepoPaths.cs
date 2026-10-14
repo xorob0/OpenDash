@@ -155,8 +155,30 @@ namespace OpenDashPlugin.Tests
 
         public static string Version() => File.ReadAllText(Path.Combine(Root(), "VERSION")).Trim();
 
-        /// <summary>The package `bun run build` writes; absent until the dash has been built.</summary>
-        public static string BuildPackage() => Path.Combine(Root(), "build", "OpenDash.simhubdash");
+        /// <summary>Whether this run is CI, where the dash has been built from this commit before any test
+        /// runs, so a built file that is missing is the build having gone wrong rather than a checkout
+        /// that has not built. GitHub Actions sets both variables; either alone is enough.</summary>
+        public static bool OnCI =>
+            !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("CI"))
+            || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GITHUB_ACTIONS"));
+
+        /// <summary>A file the dash build wrote, from build/ or from the folder the plugin embeds, or null
+        /// when neither holds it. build/ comes first because it is never the older of the two locally,
+        /// `bun run package` being what copies it into Resources/; the plugin job on CI has only
+        /// Resources/ (#909).</summary>
+        public static string BuiltFile(string name)
+        {
+            foreach (var folder in new[] { BuildOutput(), EmbeddedResources() })
+            {
+                var file = Path.Combine(folder, name);
+                if (File.Exists(file)) return file;
+            }
+            return null;
+        }
+
+        /// <summary>The main package the dash build writes, from build/ or Resources/, or null until the dash
+        /// has been built.</summary>
+        public static string BuildPackage() => BuiltFile("OpenDash.simhubdash");
 
         /// <summary>The folder whose contents the plugin embeds. It is gitignored build output, and CI
         /// fills it by downloading the dash job's artifact straight into it before `dotnet test` runs,

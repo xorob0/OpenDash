@@ -151,6 +151,31 @@ export function offGrid(themeId: string, face: ThemeFace): string[] {
 }
 
 /**
+ * Every `widest` holds what its binding can draw, which is `widest.test.ts`'s rule asked of a
+ * theme's face. {@link clipped} measures a bound text by its `widest`, so a theme that writes a
+ * label its own way and declares less than it draws passes it with a box that is fitted, and laid
+ * out, to the wrong string. The Porsche's delta caption did this when its short forms lost the one
+ * for the default caption (#1030), and only the house face was read against its bindings then.
+ */
+export function underDeclared(themeId: string, face: ThemeFace): string[] {
+  const at = `${themeId} ${named(face)}`;
+  const problems: string[] = [];
+  for (const { dashboard, screen, items } of screensOf(face)) {
+    for (const item of items) {
+      if (item.kind !== 'text' || item.widest === undefined) continue;
+      const limit = widthAsDrawn(item, item.widest);
+      for (const text of certainlyDrawn(item)) {
+        const width = widthAsDrawn(item, text);
+        if (width > limit) {
+          problems.push(`${at} ${dashboard.name} ${screen}: ${item.name} declares ${JSON.stringify(item.widest)} (${limit.toFixed(1)} px) and its binding draws ${JSON.stringify(text)} (${width.toFixed(1)} px)`);
+        }
+      }
+    }
+  }
+  return problems;
+}
+
+/**
  * Whether a drawn item stays in the box it was given.
  *
  * A text box is a WPF line box and it is taller than its ink at both ends. `textBox` puts its top a

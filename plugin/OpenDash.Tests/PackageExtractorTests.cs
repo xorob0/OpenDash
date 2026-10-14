@@ -37,36 +37,6 @@ namespace OpenDashPlugin.Tests
         private string Templates(string folder) => Path.Combine(root, "DashTemplates", folder);
 
         /// <summary>
-        /// A screen waits for a restart when this session created its folder, whatever rewrote it since, and
-        /// not because a file in it is newer than SimHub: a Dash Studio save, Reinstall and Edit all rewrite
-        /// the .djson of a dashboard SimHub has listed since it started.
-        /// </summary>
-        [Fact]
-        public void A_screen_waits_for_a_restart_only_when_this_session_created_its_folder()
-        {
-            PackageExtractor.Install(Package("OpenDash Rim", "0.1.0"), root, null);
-            Directory.CreateDirectory(Templates("Half written"));
-            var atStart = PackageExtractor.InstalledFolders(root);
-            Assert.Equal(new[] { "OpenDash Rim" }, atStart.ToArray());
-            Assert.Contains("opendash rim", atStart);
-
-            // Rewritten after startup, as Dash Studio's save and Reinstall do: still loaded.
-            PackageExtractor.Install(Package("OpenDash Rim", "0.2.0"), root, null);
-            File.SetLastWriteTimeUtc(PackageExtractor.InstalledDashboard(root, "OpenDash Rim"), DateTime.UtcNow.AddMinutes(5));
-            Assert.False(PackageExtractor.WaitsForRestart(atStart, "OpenDash Rim", PackageExtractor.IsInstalled(root, "OpenDash Rim")));
-
-            // Added in this session, however soon after SimHub started: waiting.
-            PackageExtractor.Install(Package("OpenDash Wheel", "0.1.0"), root, null);
-            Assert.True(PackageExtractor.WaitsForRestart(atStart, "OpenDash Wheel", PackageExtractor.IsInstalled(root, "OpenDash Wheel")));
-
-            // Missing is its own state, and an unread fact says nothing.
-            Assert.False(PackageExtractor.WaitsForRestart(atStart, "OpenDash Gone", false));
-            Assert.Null(PackageExtractor.WaitsForRestart(null, "OpenDash Wheel", true));
-            Assert.Null(PackageExtractor.WaitsForRestart(atStart, "OpenDash Wheel", null));
-            Assert.Empty(PackageExtractor.InstalledFolders(Path.Combine(root, "nowhere")));
-        }
-
-        /// <summary>
         /// The promise made when somebody consents to replacing their own work is that a copy is kept. A copy the
         /// next routine install reclaims is not kept, so an edited folder's copy goes somewhere no install claims.
         /// </summary>
@@ -296,11 +266,12 @@ namespace OpenDashPlugin.Tests
         [BuildOutputFact]
         public void The_real_build_output_is_OpenDash_at_the_repository_version()
         {
-            using (var zip = ZipFile.OpenRead(RepoPaths.BuildPackage()))
+            var path = BuiltPackage("OpenDash.simhubdash");
+            using (var zip = ZipFile.OpenRead(path))
             {
                 Assert.Equal("OpenDash", PackageExtractor.PackageFolderName(zip));
             }
-            using (var package = File.OpenRead(RepoPaths.BuildPackage()))
+            using (var package = File.OpenRead(path))
             {
                 string folder;
                 var built = PackageExtractor.ReadPackageVersion(package, out folder);
@@ -310,7 +281,7 @@ namespace OpenDashPlugin.Tests
                 // A bare Assert.Equal names neither the cause nor the remedy, and the misreading costs a diagnosis
                 // every time.
                 Assert.True(expected == built,
-                    "build/OpenDash.simhubdash carries version " + built + ", whereas VERSION says " + expected +
+                    path + " carries version " + built + ", whereas VERSION says " + expected +
                     ". That package is build output which a branch switch does not refresh, so the likely cause is " +
                     "a stale build rather than a regression: run `bun run build` and try again. Should the two " +
                     "still disagree after a fresh build, then the version written into the package is genuinely wrong.");
@@ -547,6 +518,47 @@ namespace OpenDashPlugin.Tests
 
             var written = File.GetLastWriteTimeUtc(Path.Combine(root, "DashFonts", "openDashDisplay-Light.ttf"));
             Assert.True(written > before, "the face kept the package's time, " + written.ToString("o"));
+        }
+
+        /// <summary>
+        /// A folder written over one SimHub already lists ends with a change inside it, which is what makes SimHub
+        /// read its title again (PackageExtractor.StampMetadata, #664). The folder arrives by a move, which SimHub
+        /// reports on DashTemplates and not on the folder, so without the stamp a rename kept its old title in
+        /// Dash Studio until a restart. The package's own times are old here so that only the stamp can pass.
+        /// </summary>
+        [Fact]
+        public void A_folder_written_over_another_has_its_metadata_stamped_after_the_move()
+        {
+            var packaged = new DateTimeOffset(2020, 1, 1, 0, 0, 0, TimeSpan.Zero);
+            MemoryStream Old(string version)
+            {
+                var stream = new MemoryStream();
+                using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
+                {
+                    foreach (var (name, content) in new[]
+                    {
+                        ("OpenDash/OpenDash.djson", "{\"Version\":2}"),
+                        ("OpenDash/OpenDash.djson.metadata", "{\"DashboardVersion\":\"" + version + "\"}"),
+                    })
+                    {
+                        var entry = zip.CreateEntry(name);
+                        entry.LastWriteTime = packaged;
+                        using (var writer = new StreamWriter(entry.Open())) writer.Write(content);
+                    }
+                }
+                stream.Position = 0;
+                return stream;
+            }
+
+            using (var package = Old("0.1.0")) PackageExtractor.Install(package, root, null);
+            var fingerprint = FolderFingerprint.Of(Templates("OpenDash"));
+            var before = DateTime.UtcNow.AddMinutes(-1);
+            using (var package = Old("0.1.0")) PackageExtractor.Install(package, root, null);
+
+            var metadata = File.GetLastWriteTimeUtc(Path.Combine(Templates("OpenDash"), "OpenDash.djson.metadata"));
+            Assert.True(metadata > before, "the metadata kept the package's time, " + metadata.ToString("o"));
+            Assert.True(File.GetLastWriteTimeUtc(Path.Combine(Templates("OpenDash"), "OpenDash.djson")) < before);
+            Assert.Equal(fingerprint, FolderFingerprint.Of(Templates("OpenDash")));
         }
 
         [Fact]
@@ -891,11 +903,10 @@ namespace OpenDashPlugin.Tests
             // the generator actually emits, which on 2026-09-13 held 716 references across four files.
             // ADR 0017 rests on that rewrite being total, so it is checked on the real thing rather
             // than only on a package shaped like it.
-            var package = Path.Combine(RepoPaths.BuildOutput(), "OpenDash 1280x480.simhubdash");
-            // Asserted rather than returned on. BuildOutputFact skips this class when there is no build
+            // Asserted rather than returned on. BuildOutputFact skips this test when there is no build
             // at all, but it looks at OpenDash.simhubdash, and this test reads a different package; a
             // quiet return would have let the whole case pass having checked nothing.
-            Assert.True(File.Exists(package), package + " is missing although the build output is present; run `bun run build`");
+            var package = BuiltPackage("OpenDash 1280x480.simhubdash");
 
             int before;
             string[] sidecars;
@@ -947,6 +958,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(before, after);
         }
 
+        /// <summary>A package the dash build wrote, where `RepoPaths.BuiltFile` finds it, or a failure that names
+        /// both folders it looked in. A BuildOutputFact runs on CI whether or not the build is there, so this
+        /// is what turns an artifact that never arrived into a red test rather than a crash on a null path.</summary>
+        private static string BuiltPackage(string name)
+        {
+            var path = RepoPaths.BuiltFile(name);
+            Assert.True(path != null,
+                name + " is in neither " + RepoPaths.BuildOutput() + " nor " + RepoPaths.EmbeddedResources() +
+                (RepoPaths.OnCI
+                    ? ". CI downloads the dash job's packages into Resources/ before the tests, so this is that step having gone wrong (#909)."
+                    : "; run `bun run build --all-themes`."));
+            return path;
+        }
+
         private static int Count(string text, string token)
         {
             var count = 0;
@@ -960,20 +985,24 @@ namespace OpenDashPlugin.Tests
         }
     }
 
-    /// <summary>A fact that needs build/OpenDash.simhubdash: reported as skipped, not failed, until `bun run build` has run.</summary>
+    /// <summary>A fact that needs a built package, in build/ or in Resources/: reported as skipped, not failed,
+    /// on a checkout that has not built. On CI it always runs, because the dash job has built the packages
+    /// and the plugin job has put them in Resources/ before the tests start, so a package missing there is
+    /// the pipeline having gone wrong. Until #909 it skipped on CI too, as it looked only in build/, which
+    /// the plugin job never creates, and the two tests that read a real package had never run there.</summary>
     public sealed class BuildOutputFactAttribute : FactAttribute
     {
         public BuildOutputFactAttribute()
         {
+            if (RepoPaths.OnCI) return;
             try
             {
-                if (!File.Exists(RepoPaths.BuildPackage())) Skip = "build/OpenDash.simhubdash is absent; run `bun run build` first.";
+                if (RepoPaths.BuildPackage() == null) Skip = "OpenDash.simhubdash is in neither build/ nor plugin/OpenDash/Resources/; run `bun run build` first.";
             }
             catch (Exception ex)
             {
                 Skip = "The dash build output cannot be located: " + ex.Message;
             }
         }
-
     }
 }

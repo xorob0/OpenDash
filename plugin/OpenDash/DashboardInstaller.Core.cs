@@ -128,6 +128,10 @@ namespace OpenDashPlugin
         /// <summary>Where the copy of what was there went, when this run replaced something. Null otherwise.</summary>
         public string KeptCopy { get; set; }
 
+        /// <summary>How many faces this run put into DashFonts for the package, new or replacing one whose bytes
+        /// differ (PackageExtractor.CopyFonts). A running SimHub draws none of them until it restarts (#441).</summary>
+        public int FontsCopied { get; set; }
+
         /// <summary>"OpenDash 1280x480: Up to date", with the error appended when there is one.</summary>
         public string Describe()
         {
@@ -390,6 +394,7 @@ namespace OpenDashPlugin
             result.Folder = screen.Folder;
             result.Error = entry.Error;
             result.Written = entry.Extracted;
+            result.WroteFonts = entry.FontsCopied > 0;
             if (entry.Extracted) log.Info("Wrote the screen " + screen.Name + " into " + screen.Folder + ".");
             return result;
         }
@@ -525,6 +530,7 @@ namespace OpenDashPlugin
                         var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork, planned.Screen);
                         log.Info("Fonts copied: " + result.FontsCopied);
                         entry.KeptCopy = result.BackupPath;
+                        entry.FontsCopied = result.FontsCopied;
                     }
                     entry.Extracted = true;
                     entry.InstalledVersion = ReadInstalled(folder);

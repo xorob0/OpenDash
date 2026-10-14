@@ -45,7 +45,7 @@ namespace OpenDashPlugin
                 Select(PanelPage.Screens, screen.Namespace);
                 Redraw();
                 if (!result.Ok) Log.Warn("Writing " + screen.Name + " again failed: " + result.Error);
-                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
+                Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, RestartOwed(result)) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);
             });
         }
 
@@ -125,7 +125,23 @@ namespace OpenDashPlugin
             {
                 result = write();
                 plugin.Installer.Refresh();
-            }, failure => done(result ?? new ScreenInstallResult { Error = failure == null ? "nothing was written" : failure.Message }));
+            }, failure =>
+            {
+                var outcome = result ?? new ScreenInstallResult { Error = failure == null ? "nothing was written" : failure.Message };
+                if (outcome.WroteFonts) plugin.FontsAwaitRestart = true;
+                done(outcome);
+            });
+        }
+
+        /// <summary>
+        /// Whether the line after a screen's write asks for SimHub's restart: when the write put a face into
+        /// DashFonts, or an earlier write in this run did and SimHub has not started again since (#441). Without the
+        /// second, a screen added before the restart the first add asked for would be said to need only assigning,
+        /// although its faces are not drawn yet either.
+        /// </summary>
+        private bool RestartOwed(ScreenInstallResult result)
+        {
+            return (result != null && result.WroteFonts) || plugin.FontsAwaitRestart;
         }
 
         private TextBlock flagBoxLine;

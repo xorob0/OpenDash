@@ -275,25 +275,25 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A card's three states and the fix box under the two that need one: one phrase for one state, a
-        /// missing folder before a waiting restart, since restarting will not bring a folder back (#791).
+        /// A card's two states and the fix box under the one that needs one: one phrase for one state (#791).
         /// </summary>
+        /// <remarks>
+        /// There was a third, "Restart SimHub to load it", for a folder written in this session, on the belief that
+        /// SimHub reads its dashboard list once at startup. It watches DashTemplates and lists a new folder two
+        /// seconds after it is written (#664), so a card that said it sent the driver to a restart they did not need.
+        /// </remarks>
         [Fact]
         public void A_card_says_whether_SimHub_has_its_screen_in_the_words_the_fix_box_uses()
         {
-            Assert.Equal(ScreenState.InSimHub, PanelScreens.StateOf(true, false));
-            Assert.Equal(ScreenState.Restart, PanelScreens.StateOf(true, true));
-            Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false, true));
-            Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false, false));
+            Assert.Equal(ScreenState.InSimHub, PanelScreens.StateOf(true));
+            Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false));
+            Assert.Equal(new[] { ScreenState.InSimHub, ScreenState.Missing }, (ScreenState[])System.Enum.GetValues(typeof(ScreenState)));
             Assert.Equal("In SimHub", PanelScreens.StateLabel(ScreenState.InSimHub));
-            Assert.Equal("Restart SimHub to load it", PanelScreens.StateLabel(ScreenState.Restart));
             Assert.Equal("Missing", PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal(Theme.StatusUpToDate, PanelScreens.StateHex(ScreenState.InSimHub));
-            Assert.Equal(Theme.Caution, PanelScreens.StateHex(ScreenState.Restart));
             Assert.Equal(Theme.StatusFailed, PanelScreens.StateHex(ScreenState.Missing));
-            Assert.Equal(PanelCopy.RestartToLoad, PanelScreens.StateLabel(ScreenState.Restart));
-            Assert.Equal("Then assign \"Rim\" to its display in Dash Studio.", PanelScreens.RestartDetail("Rim"));
-            // The fix box under each state is titled with the card's phrase.
+            Assert.Null(typeof(PanelCopy).GetField("RestartToLoad"));
+            // The fix box under the state is titled with the card's phrase.
             Assert.Equal(PanelScreens.MissingTitle, PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal("Its settings are kept.", PanelAttention.MissingDetail);
             Assert.Equal("Install it again", PanelAttention.InstallAgain);
@@ -425,7 +425,8 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelScreens.HasActions(new ScreenInstance { Kind = Contract.KindSlots }));
             Assert.Equal("Keep it", PanelScreens.KeepButton);
             Assert.Equal("Remove it", PanelScreens.RemoveItButton);
-            Assert.Equal("Removed Rim. Restart SimHub to take its dashboard out of Dash Studio.", PanelScreens.Removed("Rim"));
+            // SimHub takes the dashboard out of Dash Studio by itself, two seconds after the folder goes (#664).
+            Assert.Equal("Removed Rim.", PanelScreens.Removed("Rim"));
             Assert.Equal("Removed Rim, but its dashboard could not be removed. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
         }
 
@@ -1185,46 +1186,40 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A screen written after SimHub started is said one way on every page: the Screens
-        /// card's state and its fix box's title, Home's screen line, the first step under Home's issue and the
-        /// Updates table's state are all PanelCopy.RestartToLoad. Home's issue title names the screen ("Rim is
-        /// not in SimHub yet", the voice ruling on Main.dc.html's "Rim isn't in SimHub yet") and so does not
-        /// repeat the phrase its step says.
+        /// A screen just added is in SimHub on every page, since SimHub lists its folder two seconds after the
+        /// write (#664): no page tells the driver to restart for it. The Screens card, Home's line, Home's list and
+        /// the Updates table each used to say "Restart SimHub to load it" for a folder written in this session.
         /// </summary>
         [Fact]
-        public void A_screen_waiting_for_the_restart_is_said_one_way_on_every_page()
+        public void A_screen_just_added_is_in_SimHub_on_every_page()
         {
-            const string phrase = "Restart SimHub to load it";
-            Assert.Equal(phrase, PanelCopy.RestartToLoad);
+            // Screens: the card, and no fix box under it.
+            Assert.Equal(PanelScreens.InSimHub, PanelScreens.StateLabel(PanelScreens.StateOf(true)));
+            var screens = ScreensSource("SettingsControl.Screens.cs");
+            Assert.DoesNotContain("RestartToLoad", screens);
+            Assert.DoesNotContain("TemplatesAtStart", screens);
 
-            // Screens: the card, and the fix box under it.
-            Assert.Equal(phrase, PanelScreens.StateLabel(ScreenState.Restart));
-            Assert.Contains("return Ui.FixBox(PanelCopy.RestartToLoad,", ScreensSource("SettingsControl.Screens.cs"));
-
-            // Home: the screen's line, and the issue's step.
+            // Home: the screen's line, and nothing on the list.
             var rim = new ScreenInstance { Name = "Rim", Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 };
             rim.Normalise();
-            Assert.Equal(phrase, PanelHome.ScreenLine(new OpenDashSettings(), rim, true, true).Text);
-            var waiting = new AttentionInput();
-            waiting.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true, AddedSinceStart = true });
-            var issue = System.Linq.Enumerable.Single(PanelAttention.Find(waiting));
-            Assert.Equal("Rim is not in SimHub yet", issue.Title);
-            Assert.StartsWith(phrase + ". ", issue.Detail);
-            Assert.EndsWith(PanelScreens.RestartDetail("Rim"), issue.Detail);
-            Assert.DoesNotContain("Restart SimHub", issue.Title);
+            Assert.Equal(PanelHome.ScreenShows(new OpenDashSettings(), rim), PanelHome.ScreenLine(new OpenDashSettings(), rim, true).Text);
+            var added = new AttentionInput();
+            added.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = true });
+            Assert.Empty(PanelAttention.Find(added));
 
-            // Updates: the dashboard's row in the In SimHub table, whatever the installer last found.
+            // Updates: the dashboard's row in the In SimHub table is the installer's status.
             var package = new PackageStatus { FolderName = "Rim", Status = InstallStatus.UpToDate, InstalledVersion = "0.5.0", EmbeddedVersion = "0.5.0" };
-            Assert.Equal(phrase, PanelUpdates.DashboardRow(rim, package, true, true).State);
-            Assert.Null(typeof(PanelUpdates).GetField("WaitingForRestart"));
+            Assert.Equal(PanelUpdates.UpToDate, PanelUpdates.DashboardRow(rim, package, true).State);
 
-            // The step after the restart is one phrasing on all three: the fix box's detail, Home's issue and the
-            // Updates row's hover, with no "this display" where Home and Updates have no display to point at.
-            var step = PanelScreens.RestartDetail("Rim");
-            Assert.Contains("return Ui.FixBox(PanelCopy.RestartToLoad, PanelScreens.RestartDetail(screen.Name),", ScreensSource("SettingsControl.Screens.cs"));
-            Assert.Equal(phrase + ". " + step, issue.Detail);
-            Assert.Equal(step, PanelUpdates.DashboardRow(rim, package, true, true).Tooltip);
-            Assert.DoesNotContain("this display", step);
+            // And nothing in the panel's sources asks for the restart a new folder does not need.
+            foreach (var file in System.IO.Directory.GetFiles(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash"), "*.cs"))
+            {
+                var code = RepoPaths.Code(file);
+                Assert.DoesNotContain("\"Restart SimHub to load it\"", code);
+                Assert.DoesNotContain("Restart SimHub, then assign", code);
+                Assert.DoesNotContain("Restart SimHub to see the new name", code);
+                Assert.DoesNotContain("Restart SimHub to take its dashboard out", code);
+            }
         }
 
         /// <summary>
@@ -1432,14 +1427,13 @@ namespace OpenDashPlugin.Tests
                 "PanelScreens.CardMeta(captured), PanelScreens.StateLabel(state), PanelScreens.StateHex(state),",
                 "var facts = Ui.Prose(PanelScreens.Facts(screen));",
                 "title.ToolTip = screen.Name;",
-                // A screen written since SimHub started reads Restart SimHub to load it.
-                "return PanelScreens.StateOf(Installed(screen), PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace));",
+                // A screen whose folder is there is in SimHub, which lists it within seconds of the write (#664).
+                "return PanelScreens.StateOf(Installed(screen));",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");
             }
             Assert.NotEqual(PanelScreens.StateHex(ScreenState.InSimHub), PanelScreens.StateHex(ScreenState.Missing));
-            Assert.NotEqual(PanelScreens.StateHex(ScreenState.InSimHub), PanelScreens.StateHex(ScreenState.Restart));
         }
 
         /// <summary>
@@ -1500,20 +1494,23 @@ namespace OpenDashPlugin.Tests
                 "duplicate.Click += (sender, args) => DuplicateScreen(screen);",
                 "remove.Click += (sender, args) => ShowRemove(screen);",
                 "write.Click += (sender, args) => InstallScreenAgain(screen); return Ui.FixBox(PanelScreens.MissingTitle, PanelScreens.MissingDetailFor(screen), null, write);",
-                "case ScreenState.Restart:",
-                "return Ui.FixBox(PanelCopy.RestartToLoad, PanelScreens.RestartDetail(screen.Name), null, null, PanelIcons.Restart);",
                 "ShowSheet(PanelScreens.RemoveTitle(screen.Name), Ui.Prose(PanelScreens.RemoveBody(screen), Theme.SizeBody),",
                 // Keep it keeps a migrated screen as well as going back.
                 "keep.Click += (sender, args) => { Save(screen); Redraw(); };",
-                "Say(result.Ok ? PanelAddScreen.Added(screen) : PanelAddScreen.AddFailed(screen.Name), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Added(copy) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Resized(screen.Name, screen.SizeLabel, screen.Name) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
+                // Each line asks for the restart while any face written in this run waits for it (RestartOwed), and a
+                // resize says what its own add would (#664): a themed screen is never assigned by hand.
+                "Say(result.Ok ? PanelAddScreen.Added(screen, RestartOwed(result)) : PanelAddScreen.AddFailed(screen.Name), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Added(copy, RestartOwed(result)) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name, RestartOwed(result)) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, RestartOwed(result)) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
+                "Say(result.Ok ? PanelAddScreen.Resized(screen, RestartOwed(result)) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");
             }
+            var profiles = ScreensSource("SettingsControl.Profiles.cs");
+            AssertOnce(profiles, "if (outcome.WroteFonts) plugin.FontsAwaitRestart = true;", "Profiles.cs");
+            AssertOnce(profiles, "return (result != null && result.WroteFonts) || plugin.FontsAwaitRestart;", "Profiles.cs");
             // The empty rig returns before anything that needs a selected screen.
             TextOrder.Before(page, "Ui.Prose(PanelCopy.EmptyRig", "BuildScreenHeader(screen)");
             Assert.Equal(6, PanelScreens.CardColumns);
