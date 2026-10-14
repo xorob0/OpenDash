@@ -577,9 +577,35 @@ export const boxRaised: RaisedTest = readingFlags((condition) => conditionRaised
  * Band D's reading: null-safe, because a bare read of an absent property is not a boolean and the
  * band has to stay dark on a sim that publishes no `SessionFlagsDetails` rather than light up.
  */
-export const bandRaised: RaisedTest = readingFlags((condition) =>
-  condition.limiter ? eq(isnull(prop(`DataCorePlugin.GameData.${condition.limiter}`), num(0)), num(1)) : conditionRaised(condition, safeBitSet),
-);
+export const bandRaised: RaisedTest = readingFlags((condition) => bandFlagRaised(condition));
+
+/** Band D's reading of one flag before the pit lane is asked, which `bandRaised` and `anyBandRaised` share. */
+function bandFlagRaised(condition: FlagCondition): Expr {
+  return condition.limiter ? eq(isnull(prop(`DataCorePlugin.GameData.${condition.limiter}`), num(0)), num(1)) : conditionRaised(condition, safeBitSet);
+}
+
+/**
+ * Whether any condition of `only` is raised on band D's reading: `or(...only.map(bandRaised))`, with
+ * the pit lane asked once for all the flags rather than once for each of them.
+ *
+ * It is what a box drawn over the full-screen block asks before it opens (#1069), so it is written
+ * into the Visible of every member of the pop-up family, and sixteen copies of `flagsAllowedHere()`
+ * in each would be most of its length.
+ *
+ * **The flags are asked before the car alerts, and the order is load-bearing.** The incident's `when`
+ * opens with its `changed()` window, which the band's ranking leaves unasked while a flag above it
+ * holds the band, so that an incident taken under a yellow is told when the yellow clears (see
+ * `INCIDENT`). Asked first here, the window would be asked under the flag whenever a pop-up would be
+ * out, recording the move and spending it there, and the incident would never be told. With the flags
+ * first, a raised flag stops the `or` before any window is reached, and a window is asked only on a
+ * frame where the band's own ranking asks it too. Every flag term is stateless, so asking them early
+ * changes no answer; the car alerts keep their catalogue order among themselves for the same reason.
+ */
+export function anyBandRaised(only: readonly AlertCondition[]): Expr {
+  const alerts = only.filter((condition): condition is CarAlert => !isFlag(condition)).map((alert) => alert.when);
+  const flags = only.filter(isFlag);
+  return or(...(flags.length > 0 ? [and(flagsAllowedHere(), or(...flags.map(bandFlagRaised)))] : []), ...alerts);
+}
 
 /**
  * Whether a surface has the "critical flags only" switch, as an expression, or `false` for a

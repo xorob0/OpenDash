@@ -50,3 +50,7 @@ export const dashboards = (c: Counts): number => c.packages + c.themedPackages;
 export function counted(n: number, noun: string, plural = `${noun}s`): string {
   return n > 0 ? `${n} ${n === 1 ? noun : plural}` : `every ${noun}`;
 }
+
+/** A list in a sentence: `a`, `a and b`, `a, b and c`. */
+export const and = (words: readonly string[]): string =>
+  words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;

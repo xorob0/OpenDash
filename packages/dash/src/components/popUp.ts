@@ -28,6 +28,11 @@
  *   reaches into it, and the pit family has it first: a lasting pop-up is hidden while any state of
  *   the family is out. Low fuel and DRS are the two.
  *
+ * **Under the safety layers.** Every box of the family is drawn after the full-screen flag and the pit
+ * family, and none of them is drawn over either while it is out. The lasting pop-ups wait for the
+ * whole pit family here, being in its row; the rest of that ranking is the face's, which alone knows
+ * what it draws where (`givingWay` in `zones/face.ts`, #1069, #1070).
+ *
  * **One at a time of each kind**, by the exclusion chain the flags use: a pop-up is visible when its
  * own condition holds and no higher one of its kind's does. The two kinds draw in different places
  * and are not ranked against each other, so a lap time at the line no longer hides low fuel. An

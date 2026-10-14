@@ -4,7 +4,7 @@
  */
 import { PRODUCTS, rows } from '../lib/compare';
 import { VERSION } from '../lib/content.generated';
-import { COUNTS } from '../lib/liveCounts';
+import { COUNTS, LISTED } from '../lib/liveCounts';
 import { Mark } from './Mark';
 import styles from './CompareTable.module.css';
 
@@ -26,7 +26,7 @@ export function CompareTable() {
           </tr>
         </thead>
         <tbody>
-          {rows(COUNTS).map((row) => (
+          {rows(COUNTS, LISTED).map((row) => (
             <tr key={row.id} className={styles.row}>
               <th scope="row" className={styles.feature}>
                 {row.label}

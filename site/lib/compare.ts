@@ -7,13 +7,16 @@
  * the issue it is scheduled under) and what is not built, with the scope line where one exists. No
  * competitor image appears anywhere; the comparison is words and OpenDash's own captures.
  */
-import type { Counts } from './counts';
+import { and, counted, type Counts } from './counts';
+import { sizeLabel } from './packages';
 import { FREE_FOREVER, NOTHING_TO_UNLOCK, THEMES_FREE } from './site';
 
 /**
- * The date every competitor cell was last read against its product's own pages. The table prints
- * it, so that a reader knows how old a line about Lovely or DNR is; a cell changed after this date
- * moves it.
+ * The date the competitor cells were last read against their products' own pages. The table prints
+ * it, so that a reader knows how old a line about Lovely or DNR is. A whole table read again moves
+ * it; a row read again on its own, or written after this date, carries its own `readOn` instead,
+ * and the page prints that row's date beside this one, so neither date claims a reading the other
+ * row did not have.
  */
 export const CHECKED_ON = '2026-09-22';
 
@@ -28,7 +31,11 @@ export interface Cell {
   text: string;
   /** The issues a coming feature is scheduled under. Required when the mark is `soon`. */
   issues?: number[];
-  /** The line in docs/scope.md a refusal cites, when one exists. */
+  /**
+   * The line in docs/scope.md a refusal cites, when one exists: the refusal's name as the document
+   * sets it in bold, a colon, and words of that refusal's own paragraphs, quoted. A test holds both
+   * halves to the document, so a refusal that moves takes the cell with it (#548).
+   */
   scope?: string;
 }
 
@@ -42,6 +49,8 @@ export interface CompareRow {
   id: string;
   label: string;
   cells: Record<ProductId, Cell>;
+  /** The date this row's competitor cells were last read, when that is later than CHECKED_ON. */
+  readOn?: string;
 }
 
 export const PRODUCTS: Product[] = [
@@ -53,11 +62,62 @@ export const PRODUCTS: Product[] = [
 const WORD: Record<Mark, string> = { yes: 'Included', partial: 'Partly', no: 'No', paid: 'Paid', soon: 'Coming soon', notBuilt: 'Not built' };
 const cell = (mark: Mark, text: string, extra: Partial<Cell> = {}): Cell => ({ mark, word: WORD[mark], text, ...extra });
 
+/** A screen as the build makes it, for a cell that names its size. */
+export interface Screen {
+  width: number;
+  height: number;
+  round: boolean;
+}
+
+/** A car theme beside the default, as the catalogue has it. */
+export interface Theme {
+  name: string;
+  /** The cars it is drawn for. */
+  cars: readonly string[];
+  /** The face sizes it claims. */
+  sizes: readonly unknown[];
+}
+
 /**
- * The rows, as a function of the build's counts so that a number in a cell is read and not retyped
- * (#560). The pages call `rows(COUNTS)`; the tests call it with counts of their own.
+ * What a cell lists rather than counts, read from the build like the counts (#819): the faces, the
+ * companions and the pit walls in reading order, and the car themes beside the default. It is a
+ * parameter rather than an import so that this file still reads nothing generated, and the tests
+ * pass lists of their own.
  */
-export const rows = (c: Counts): CompareRow[] => [
+export interface Listed {
+  faces: readonly Screen[];
+  companions: readonly Screen[];
+  pitWalls: readonly Screen[];
+  themes: readonly Theme[];
+}
+
+/** The faces' cell: the count, then every size, so that the one cannot say ten and the other list nine. */
+const facesCell = (faces: readonly Screen[]): string =>
+  faces.length > 0 ? `${counted(faces.length, 'face')}: ${faces.map(sizeLabel).join(', ')}.` : 'A face for every size the build makes.';
+
+/** The pit walls' cell. The page count is the landscape package's; the portrait one has a page of its own. */
+function pitWallCell(walls: readonly Screen[], pages: number): string {
+  const landscape = walls.filter((w) => w.width >= w.height).map(sizeLabel);
+  const portrait = walls.filter((w) => w.width < w.height).map(sizeLabel);
+  const lead = landscape.length > 0 ? `${and(landscape)} with ${counted(pages, 'page')}` : `${counted(pages, 'page')}`;
+  return portrait.length > 0 ? `${lead}, and ${and(portrait)}.` : `${lead}.`;
+}
+
+/** The car themes' cell: how many, their names, how many cars they draw, and at which sizes. */
+function themesCell(themes: readonly Theme[], faces: readonly Screen[]): string {
+  if (themes.length === 0) return 'A face drawn like the car’s own display, at the sizes the theme claims.';
+  const cars = themes.reduce((n, t) => n + t.cars.length, 0);
+  const rectangular = faces.filter((f) => !f.round).length;
+  const where = rectangular > 0 && themes.every((t) => t.sizes.length === rectangular) ? 'at every rectangular size' : 'at the sizes each claims';
+  return `${counted(themes.length, 'car theme')}, ${and(themes.map((t) => t.name))}, for ${counted(cars, 'car')}, each drawn like the display those cars carry, ${where}.`;
+}
+
+/**
+ * The rows, as a function of the build's counts and lists so that a number or a size in a cell is
+ * read and not retyped (#560, #819). The pages call `rows(COUNTS, LISTED)`; the tests call it with
+ * counts and lists of their own.
+ */
+export const rows = (c: Counts, l: Listed): CompareRow[] => [
   {
     id: 'sims',
     label: 'Sims',
@@ -98,7 +158,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'sizes',
     label: 'Screen sizes',
     cells: {
-      opendash: cell('yes', `${c.faces} faces: 1920 × 480, 1280 × 720, 1280 × 480, 1280 × 400, 850 × 480, 800 × 480, 800 × 286, 600 × 686, 800 round, 480 round.`),
+      opendash: cell('yes', facesCell(l.faces)),
       lovely: cell('yes', '850 × 480, 1280 × 480, 1280 × 400, 1920 × 480, 800 × 286, 600 × 686, plus round and square.'),
       dnr: cell('yes', '800 × 480, 1280 × 400, 1920 × 480, 1920 × 720 and 1920 × 1080, across 7 dashboards.'),
     },
@@ -108,7 +168,7 @@ export const rows = (c: Counts): CompareRow[] => [
     label: 'Works without the plugin',
     cells: {
       opendash: cell('no', 'The plugin is the only way in. A screen whose plugin is not enabled yet still draws its defaults.', {
-        scope: 'a way in that does not begin with the plugin: a SimHub that cannot take a DLL into its own folder has no route in.',
+        scope: 'a way in that does not begin with the plugin: a user who cannot put a DLL into SimHub’s own folder, or who will not, has no route in at all.',
       }),
       lovely: cell('no', 'The dashboards cannot run without the plugin. Their words.'),
       dnr: cell('no', 'Without the plugin a dashboard draws a notice screen instead of your data.'),
@@ -118,7 +178,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'companion',
     label: 'Second screen',
     cells: {
-      opendash: cell('yes', `850 × 480 and 480 × 850, ${c.pages} pages.`),
+      opendash: cell('yes', `${l.companions.length > 0 ? `${and(l.companions.map(sizeLabel))}, ` : ''}${counted(c.pages, 'page')}.`),
       lovely: cell('yes', 'A companion, landscape and portrait, free.'),
       dnr: cell('yes', 'Co-Pilot, 14 panels. Choosing which ones appear costs £3 a month.'),
     },
@@ -127,7 +187,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'pitWall',
     label: 'Pit wall',
     cells: {
-      opendash: cell('yes', `1920 × 1080 with ${c.pitWallPages} pages, and 1080 × 1920.`),
+      opendash: cell('yes', pitWallCell(l.pitWalls, c.pitWallPages)),
       lovely: cell('paid', 'Lovely Pit Wall, on the €3 tier and up.'),
       dnr: cell('yes', 'Race Control, free: the field, a track map and traces.'),
     },
@@ -198,14 +258,15 @@ export const rows = (c: Counts): CompareRow[] => [
   {
     id: 'themes',
     label: 'Car themes',
+    // The row is younger than CHECKED_ON. Lovely's per-car logo fetch is what the privacy row read,
+    // and the car as DNR's idle screen is what the idle row read. That none of DNR's dashboards is
+    // drawn for a car was read in its own dashboards FAQ on 2026-10-14, which lists the seven by the
+    // racing each is for, and the page prints that date for the row (#811).
+    readOn: '2026-10-14',
     cells: {
-      opendash: cell(
-        'yes',
-        'A Porsche face drawn like the 992’s own display, at every rectangular size, which SimHub switches to when you drive one. More display families follow by ticket.',
-        { word: 'Free' },
-      ),
+      opendash: cell('yes', themesCell(l.themes, l.faces), { word: 'Free' }),
       lovely: cell('partial', 'Your car’s logo on the dash, fetched per car. No face drawn like the car’s own display.', { word: 'Logo' }),
-      dnr: cell('partial', 'Not read against their pages yet.', { word: 'Not checked' }),
+      dnr: cell('no', 'The car appears only as a picture on the idle screen, from £3 a month. No face drawn like the car’s own display.'),
     },
   },
   {
@@ -230,7 +291,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'flagsScreen',
     label: 'Flags screen for a second display',
     cells: {
-      opendash: cell('soon', '', { issues: [739] }),
+      opendash: cell('soon', 'Flags are on every face’s band and in the flag box today. A screen of nothing but flags is coming.', { issues: [739] }),
       lovely: cell('yes', 'Lovely Flags, free, in 3 shapes.'),
       dnr: cell('partial', 'A flags panel drawn over the game, on the £6 tier. No screen of its own.'),
     },
@@ -251,7 +312,10 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'invisible',
     label: 'Invisible dash',
     cells: {
-      opendash: cell('no', 'A see-through dash over the game is an overlay, and refused with it.', { word: 'Refused', scope: 'the invisible dash: a screen capture item drawn behind the face.' }),
+      opendash: cell('no', 'A see-through dash over the game is refused as a choice about focus. SimHub could draw one.', {
+        word: 'Refused',
+        scope: 'the invisible dash: the refusal is a choice about focus rather than a limitation of the format.',
+      }),
       lovely: cell('no', 'Nothing of the kind ships.'),
       dnr: cell('yes', 'Invisible: the sim drawn through your own dash screen, on a hotkey. Free.'),
     },
@@ -303,5 +367,11 @@ export const rows = (c: Counts): CompareRow[] => [
   },
 ];
 
+/**
+ * The issues a row's OpenDash cell is scheduled under, for a page that makes the same promise
+ * outside the table, so that its link is the table's and cannot point somewhere else (#813).
+ */
+export const issuesOf = (all: readonly CompareRow[], id: string): number[] => all.find((r) => r.id === id)?.cells.opendash.issues ?? [];
+
 /** The coming-soon rows, for the list under the table. */
-export const scheduled = (c: Counts): CompareRow[] => rows(c).filter((r) => r.cells.opendash.mark === 'soon');
+export const scheduled = (c: Counts, l: Listed): CompareRow[] => rows(c, l).filter((r) => r.cells.opendash.mark === 'soon');
