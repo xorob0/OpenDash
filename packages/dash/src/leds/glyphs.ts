@@ -296,10 +296,9 @@ export const CHEQUERED_INVERSE: Grid = [
  * where the digit's flag meets its stem, and glyphFit.test.ts compares both letters with every digit
  * a blocky face draws in the same cell.
  *
- * The spotter's bar is painted over any flag, and a car alongside therefore takes the S or the C. No
- * placement escapes it, since one bar two columns wide leaves six columns, two leave four, and the
- * pair needs seven; docs/design/flag-box.md leaves whether the bar should yield to the caution to the
- * author.
+ * The spotter's bar would take the S or the C, since one bar two columns wide leaves six columns, two
+ * leave four, and the pair needs seven. The author ruled that it gives way: on a panel drawing this
+ * picture the spotter is not painted, so the word stays whole (#515, `spotterOverlay` in profile.ts).
  */
 export const CAUTION: Grid = [
   'YYYYYYYY',

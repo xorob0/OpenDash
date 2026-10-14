@@ -12,14 +12,16 @@
  *           matrix 1..4                each offset onto its own panel
  *             flags                    the alert catalogue, in priority order
  *             below the flags          the pit family, the warnings, then the gear
- *             the spotter              an overlay on the edge, painted over all of it
+ *             the spotter              an overlay on the edge, painted over all of it but SC
  *
  * **The spotter is the one thing that is not a rank.** It was the second rank below the flags, so
  * any flag at all hid a car alongside and a car alongside blanked the warnings and the gear beneath
  * it. It is now the last container of the matrix, and it lights the edge columns and leaves the
  * rest of the panel absent; SimHub composes containers in order and drops an absent pixel rather
  * than clearing what is under it, so a standing yellow keeps columns three to six and the bar says
- * which side. Nothing suppresses it and it suppresses nothing, which is what an overlay is.
+ * which side. It suppresses nothing, which is what an overlay is, and one picture suppresses it: the
+ * full course yellow's SC runs to both edges, so on a panel drawing it the bar is not painted and the
+ * word stays whole (#515). See {@link spotterOverlay}.
  *
  * **Not racing is dark**, and that is the decision rather than a gap. Idle screens are a refusal
  * in scope.md, and a glowing logo on somebody's desk when nothing is running is the hardest
@@ -82,13 +84,26 @@ export const criticalOnly = (matrix: FlagBoxMatrix): Expr => ncalc.eq(flagBoxMat
  * switch has not silenced it.
  */
 export function flagContainers(matrix: FlagBoxMatrix): MatrixContainer[] {
-  const shown = drawnFlags(false);
-  return shown.map((condition) => ({
+  return drawnFlags(false).map((condition) => ({
     kind: 'when' as const,
     description: condition.id,
-    formula: conditionVisible(condition, criticalOnly(matrix), shown),
+    formula: flagVisible(matrix, condition),
     children: [{ kind: 'animation' as const, description: `${condition.id} glyph`, frames: flagFrames(condition.id) ?? [] }],
   }));
+}
+
+/** This condition is the flag the catalogue picks for this panel, whether or not the panel draws flags. */
+const flagVisible = (matrix: FlagBoxMatrix, condition: FlagCondition): Expr => conditionVisible(condition, criticalOnly(matrix), drawnFlags(false));
+
+/**
+ * The full course yellow is the picture on this panel: the panel draws flags, and the caution is the
+ * flag it is drawing, which a red flag above it or the pit lane's switch can each take away. The one
+ * condition the spotter gives way to (#515).
+ */
+export function cautionOnPanel(matrix: FlagBoxMatrix): Expr {
+  const caution = drawnFlags(false).find((condition) => condition.id === 'caution');
+  if (caution === undefined) throw new RangeError('the full course yellow has no glyph, so the spotter has nothing to give way to');
+  return ncalc.and(ncalc.eq(flagBoxMatrix(matrix).flags(), 'true'), flagVisible(matrix, caution));
 }
 
 /** The catalogue, in order. */
@@ -146,10 +161,17 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
 /**
  * The spotter, as the last thing painted on a panel.
  *
- * Gated on the panel's own Spotter switch and on nothing else: no flag bit, no pit condition, no
- * exclusion of anything above it. That is the machine-checkable form of "a car alongside is never
- * hidden by a yellow", and it is what the frames make safe — they light two edge columns and leave
- * the other six absent, so what was drawn underneath keeps them.
+ * Gated on the panel's own Spotter switch and on one picture, and on nothing else: no pit condition,
+ * no warning, no other flag. That is the machine-checkable form of "a car alongside is never hidden by
+ * a yellow", and it is what the frames make safe — they light two edge columns and leave the other
+ * six absent, so what was drawn underneath keeps them.
+ *
+ * The picture is the full course yellow's. SC runs to both edges of the panel, so a bar two columns
+ * wide takes the S or the C, and no placement of the pair escapes it; the author ruled that the bar
+ * gives way (#515). Under a full course yellow the field is slowed and overtaking is forbidden, so the
+ * flag is the more urgent of the two, and the car alongside is still in the mirrors and on the face's
+ * own spotter. The exception is on the panels that draw the caution and only while they do, so a red
+ * flag above it, or a panel with Flags off, keeps the bar.
  *
  * Two branches on the animation switch, the way {@link gearGroup} splits the redline band into
  * flashing and steady: an `AnimationContainer` has no condition on its own frames, so "grows only
@@ -186,9 +208,10 @@ export function matrixGroup(matrix: FlagBoxMatrix): MatrixContainer | undefined 
   const children = [
     { kind: 'when' as const, description: 'Flags', formula: eq(m.flags(), 'true'), children: [flagsGroup(matrix)] },
     { kind: 'when' as const, description: 'Below the flags', formula: flagsFree, children: belowFlags(matrix) },
-    // Last, and outside `flagsFree`: an overlay is painted over whatever the two above it drew. It
-    // needs no StartPositionMatrix of its own, since it sits inside the group that carries one.
-    { kind: 'when' as const, description: 'Spotter', formula: eq(m.spotter(), 'true'), children: spotterOverlay(matrix) },
+    // Last, and outside `flagsFree`: an overlay is painted over whatever the two above it drew, but
+    // the full course yellow's word (#515). It needs no StartPositionMatrix of its own, since it sits
+    // inside the group that carries one.
+    { kind: 'when' as const, description: 'Spotter', formula: and(eq(m.spotter(), 'true'), not(cautionOnPanel(matrix))), children: spotterOverlay(matrix) },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];
   if (children.length === 0) return undefined;
   return { kind: 'when', description: `Matrix ${matrix}`, matrix, formula: doesSomething, children };

@@ -31,8 +31,8 @@ import { revSegmentOptions, shiftBands } from '../src/components/revSegments.ts'
 import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRev, eitherLadder, eitherOf, GEAR_COUNT_PROPERTY, LEARNED_GEAR_COUNT_PROPERTY, mirrorAvailable, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
-import { flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
-import { buildFlagBoxProfile, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
+import { CAUTION, flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
+import { buildFlagBoxProfile, cautionOnPanel, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
 import { ds } from '../src/tokens.ts';
 import { evalNcalc } from './ncalcEval.ts';
@@ -1147,14 +1147,18 @@ describe('the pit family, the spotter and the warnings', () => {
     }
   });
 
-  test('the spotter container names no flag bit and no pit condition, which is what "never hidden by a yellow" means', () => {
+  test('the spotter is gated on its switch and on the full course yellow alone, which is what "never hidden by a yellow" means', () => {
     // The machine-checkable half of the overlay. The visual half -- that an absent pixel leaves the
-    // flag beneath it showing -- is a claim about SimHub's merge and belongs on the rig.
+    // flag beneath it showing -- is a claim about SimHub's merge and belongs on the rig. The one
+    // picture it gives way to is the caution's, whose word the bar would cut (#515), and it asks
+    // that the way the flags themselves ask which of them is drawn, so the two cannot disagree.
     const spotter = all.find((c) => c.description === 'Spotter');
     expect(spotter?.kind).toBe('when');
     const formula = spotter && 'formula' in spotter ? String(spotter.formula) : '';
-    expect(formula).toBe(`(isnull([OpenDash.FlagBoxMatrix1Spotter], true)) = (true)`);
-    const subtree = JSON.stringify(spotter);
+    expect(formula).toBe(`((isnull([OpenDash.FlagBoxMatrix1Spotter], true)) = (true)) and (!(${cautionOnPanel(1)}))`);
+    expect(cautionOnPanel(1)).toInclude(formulaText(flagContainers(1).find((c) => c.description === 'caution')));
+    // Below the gate, the bars read the cars alongside and nothing else.
+    const subtree = JSON.stringify(spotter && 'children' in spotter ? spotter.children : []);
     for (const forbidden of ['SessionFlagsDetails', 'PitLimiterOn', 'IsInPitLane', 'OilTemperature', 'Fuel_RemainingLaps']) {
       expect({ forbidden, named: subtree.includes(forbidden) }).toMatchObject({ named: false });
     }
@@ -1261,6 +1265,82 @@ describe('the pit family, the spotter and the warnings', () => {
     const b = buildContainerObject({ ...glyph, matrix: 2 }, 'p/0', 'matrix8x8');
     expect(b.StartPositionMatrix).toBe(2);
     expect(JSON.stringify({ ...b, StartPositionMatrix: 1 })).toBe(JSON.stringify(a));
+  });
+});
+
+describe('the spotter gives way to the full course yellow (#515)', () => {
+  /** One frame of telemetry: the bits raised, the cars alongside, and one panel's own switches. */
+  type Frame = Record<string, number | boolean | string>;
+
+  const CARS = { left: { Left: 1, Right: 0 }, right: { Left: 0, Right: 1 }, both: { Left: 1, Right: 1 } } as const;
+
+  /**
+   * A panel with flags and the spotter switched on and mounted for both sides, which is matrix 1's
+   * default and the one setup in which the bar can reach both letters; every bit of the catalogue is
+   * published, the named ones raised.
+   */
+  function frameFor(matrix: FlagBoxMatrix, bits: readonly SessionFlagBit[], cars: { Left: number; Right: number }, panel: { flags?: boolean } = {}): Frame {
+    const frame: Frame = {
+      [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Flags')}`]: panel.flags ?? true,
+      [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Spotter')}`]: true,
+      [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Side')}`]: 'both',
+      'DataCorePlugin.GameData.SpotterCarLeft': cars.Left,
+      'DataCorePlugin.GameData.SpotterCarRight': cars.Right,
+    };
+    for (const condition of FLAG_CATALOGUE) for (const bit of condition.bits) frame[flagBit(bit).replace(/^\[|\]$/g, '')] = bits.includes(bit) ? 1 : 0;
+    return frame;
+  }
+
+  /**
+   * What one panel shows on the first frame of every picture it draws: its containers walked as
+   * SimHub walks them, a condition entered only when it holds, and each animation painted over what
+   * is already there, an absent pixel leaving what is beneath it. A pixel is written as the letter
+   * its palette names it by, the flag yellow `Y` and the spotter's white `W`.
+   */
+  function panelShows(matrix: FlagBoxMatrix, frame: Frame): string[] {
+    const canvas: (Hex | null)[][] = Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => null));
+    const visit = (container: MatrixContainer): void => {
+      if (container.kind === 'when' && evalNcalc(formulaText(container), frame) !== true) return;
+      if (container.kind === 'animation') {
+        container.frames[0]?.pixels.forEach((row, y) => row.forEach((pixel, x) => {
+          if (pixel !== null) canvas[y]![x] = pixel;
+        }));
+      }
+      if ('children' in container) for (const child of container.children) visit(child);
+    };
+    const panel = flagBoxTree().flatMap((c) => [...walkContainers([c])]).find((c) => c.description === `Matrix ${matrix}`);
+    if (panel === undefined) throw new Error(`no Matrix ${matrix} in the tree`);
+    visit(panel);
+    const letter = (pixel: Hex | null): string => (pixel === null ? '.' : pixel === ds.purpose.flag.yellow ? 'Y' : pixel === ds.purpose.flag.white ? 'W' : '#');
+    return canvas.map((row) => row.map(letter).join(''));
+  }
+
+  const FULL_COURSE_YELLOW: SessionFlagBit[] = ['yellow', 'yellowWaving', 'caution', 'cautionWaving'];
+
+  test('with the full course yellow out and a car on either side, or on both, every panel draws SC whole', () => {
+    for (const matrix of FLAG_BOX_MATRICES) {
+      for (const [side, cars] of Object.entries(CARS)) {
+        expect({ matrix, side, shows: panelShows(matrix, frameFor(matrix, FULL_COURSE_YELLOW, cars)) }).toEqual({ matrix, side, shows: [...CAUTION] });
+      }
+    }
+  });
+
+  test('a car alongside still takes its edge over every other flag, and over the gear', () => {
+    // The ruling is about the one picture the bar destroys; the spotter is unchanged for the rest.
+    const bar = (shows: readonly string[]): string => shows.map((row) => `${row.slice(0, 2)}|${row.slice(6)}`).join('/');
+    for (const condition of FLAG_CATALOGUE) {
+      if (condition.id === 'caution') continue;
+      const shows = panelShows(1, frameFor(1, condition.bits, CARS.both));
+      expect({ flag: condition.id, bar: bar(shows) }).toEqual({ flag: condition.id, bar: bar(CAR_BOTH) });
+    }
+    expect(bar(panelShows(1, frameFor(1, [], CARS.left)))).toBe(bar(CAR_LEFT));
+  });
+
+  test('the bar comes back the moment a higher flag takes the panel, or on a panel that is not drawing flags', () => {
+    // A red flag outranks the caution, so SC is not on the panel and there is no word to keep whole.
+    expect(panelShows(1, frameFor(1, ['red', ...FULL_COURSE_YELLOW], CARS.left)).map((row) => row.slice(0, 2))).toEqual(CAR_LEFT.map((row) => row.slice(0, 2)));
+    // With Flags off the panel draws no caution, so it has nothing for the bar to give way to.
+    expect(panelShows(2, frameFor(2, FULL_COURSE_YELLOW, CARS.right, { flags: false })).map((row) => row.slice(6))).toEqual(CAR_RIGHT.map((row) => row.slice(6)));
   });
 });
 
