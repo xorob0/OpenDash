@@ -347,7 +347,7 @@ export interface RadarItem extends ItemBase {
 /**
  * The whole track drawn to fit the item (SimHub's `GeneratedStaticMapItem`), with a dot per car.
  * The outline comes from the PersistantTracker recorded map, so a track with no recorded lap
- * draws nothing.
+ * draws nothing, and no SimHub property says so (#555).
  */
 export interface StaticMapItem extends ItemBase {
   kind: 'staticMap';

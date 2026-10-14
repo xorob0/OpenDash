@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { CAR_HAS_PIT_LIMITER, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting } from '../contract.ts';
+import { CAR_HAS_PIT_LIMITER, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting, TRACK_MAP_RECORDED } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2303,6 +2303,20 @@ export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0))
 export const GRIP_WIDEST = 'Moderate';
 /** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
 export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
+/**
+ * Whether SimHub holds the outline its map item draws, for the track the car is on. #555.
+ *
+ * The plugin answers it from SimHub's own record ({@link TRACK_MAP_RECORDED} in `contract.ts`). Without the
+ * plugin, with no game running and on a game that records no outline, `true`: the map item is drawn as it
+ * always was, and nothing tells the driver to drive a lap that might not be what is missing.
+ */
+export const trackMapRecorded = (): Expr => isnull(prop(propertyName(TRACK_MAP_RECORDED)), 'true');
+/**
+ * What the track module says in place of a map SimHub has yet to record: the lap it needs, which is a whole
+ * one, from the line to the line and outside the pit lane, since leaving the pits records nothing until the
+ * car crosses the line. The name half goes when the box is short, as it does for every notice.
+ */
+export const TRACK_MAP_REASON = 'Drive a lap to record it';
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**

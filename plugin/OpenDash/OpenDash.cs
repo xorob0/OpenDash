@@ -709,6 +709,31 @@ namespace OpenDashPlugin
         /// </summary>
         private volatile SimReport simReport = SimReport.Unknown;
 
+        /// <summary>
+        /// Whether SimHub holds the outline of the track the car is on, boxed: what <see cref="Contract.TrackMapRecorded"/>
+        /// publishes. See TrackMap.cs. #555.
+        /// </summary>
+        private volatile object trackMapRecorded;
+
+        /// <summary>
+        /// Fills <see cref="trackMapRecorded"/> from the map SimHub's map item would draw, which is
+        /// PersistantTrackerPlugin.GetMap(): the local record, or the downloaded one where the driver turned
+        /// online maps on. SimHub loads a record on a background task when the track changes, so the answer
+        /// can read false for the moment that takes.
+        /// </summary>
+        private void UpdateTrackMap(GameData data)
+        {
+            var running = data != null && data.GameRunning && data.NewData != null;
+            if (!running)
+            {
+                trackMapRecorded = null;
+                return;
+            }
+            var map = SimHub.Plugins.DataPlugins.PersistantTracker.PersistantTrackerPlugin.GetMap();
+            var points = map == null || map.CarCoordinates == null ? (int?)null : map.CarCoordinates.Count;
+            trackMapRecorded = TrackMap.Recorded(true, data.NewData.MapAllowed, points);
+        }
+
         /// <summary>SimHub's property reader, made once rather than on every frame.</summary>
         private Func<string, object> readProperty;
 
@@ -838,6 +863,19 @@ namespace OpenDashPlugin
                 Report(simReportFault, e, nowMs);
             }
 
+            // And whether SimHub holds the track's outline (#555). A failure empties it, which every dashboard
+            // reads as no plugin and answers by drawing the map item as it always did.
+            try
+            {
+                UpdateTrackMap(data);
+                Report(trackMapFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                trackMapRecorded = null;
+                Report(trackMapFault, e, nowMs);
+            }
+
             // What the panel names, compared before anything is built and replaced only when
             // something in it moved, so a frame in which nothing did allocates nothing for the
             // panel's copy and the interface thread is not handed a new object sixty times a second.
@@ -914,6 +952,7 @@ namespace OpenDashPlugin
         private readonly FrameFault classBestFault = new FrameFault("Reading the class best lap", "dashboards show none");
         private readonly FrameFault livePositionFault = new FrameFault("Ranking the live positions", "dashboards order the field as the sim does");
         private readonly FrameFault simReportFault = new FrameFault("Reading what the running sim can report", "dashboards fall back on iRacing's own answers");
+        private readonly FrameFault trackMapFault = new FrameFault("Reading whether SimHub has recorded the track", "the track map says nothing about an outline it lacks");
         private readonly FrameFault liveCardFault = new FrameFault("Naming the game, car and track for the settings panel", "the panel's live card keeps what it last named");
         private readonly FrameFault carLightsFault = new FrameFault("Computing the car's own lights", "the strips and rev bars fall back to the ladder the sim publishes");
         private readonly FrameFault slipFault = new FrameFault("Estimating wheelspin and lock-up", "the slip lamps stay dark");
@@ -1216,6 +1255,9 @@ namespace OpenDashPlugin
                 var name = capability;
                 this.AttachDelegate(name, () => simReport.Read(name));
             }
+            // And whether SimHub holds the track's outline, filled by DataUpdate and null with no game running. Not
+            // a setting: see Contract.TrackMapRecorded. #555.
+            this.AttachDelegate(Contract.TrackMapRecorded, () => trackMapRecorded);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

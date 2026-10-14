@@ -465,8 +465,13 @@ deleted.
   log says why on the line beginning `[OpenDash] LED device not offered`, and the list names it
   underneath when OpenDash found any sign of LEDs on it. For a wheel made with FanaBridge, see
   [Wheels made with FanaBridge](#wheels-made-with-fanabridge).
-- The track map or the radar is empty: both are drawn from SimHub's recorded outline of the
-  track, which appears after a lap has been recorded there.
+- The track map says "Drive a lap to record it", or is empty: the map is SimHub's own recording
+  of the track, which it makes from one whole lap, from the line to the line, driven outside the
+  pit lane. Leaving the pits records nothing until you cross the line, and entering the pit lane
+  throws away a lap in progress. SimHub keeps one map per track and layout, so a layout you have not
+  driven needs its own lap. SimHub ships no maps; its online maps, off by default, can download one.
+- The radar is empty on iRacing: on iRacing the radar also waits for that recorded lap. On the other
+  sims it draws without one.
 - A tyre pressure or a temperature reads `--`: iRacing reports pressures from the last pit stop
   only, and reports nothing at all before the car has been on track.
 - A cell of the car settings strip is missing: your car does not publish that setting, and a strip

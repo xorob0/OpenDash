@@ -1270,6 +1270,54 @@ the VM showed a new session's out lap with an average of laps from an earlier ru
 - Beside the two the dashes read, each slot publishes `_DeltaToAllTimeBest` and a hidden
   `_DeltaToBest`, which is the same value.
 
+### The track map is SimHub's own recording, made from one whole lap (2026-10-14, #555)
+
+Established by decompiling `PersistantTrackerPlugin`, `GeneratedMapItemBase`, `RadarItem` and the
+readers of Assetto Corsa, Le Mans Ultimate and iRacing in SimHub 9.12.6 with ilspycmd, after the track
+map on Assetto Corsa was found empty on some tracks with nothing to say why. Read from the code and not
+yet watched on a drive: the VM capture the ticket asks for is still owed.
+
+- **The map item draws SimHub's recorded outline and nothing else.** `GeneratedStaticMapItem` loads
+  `PersistantTrackerPlugin.GetMap()` on every update and draws it only when it holds more than ten
+  points. Until then the box is empty, and it says nothing. `MapReady`, the item's own flag, is
+  `JsonIgnore`d and never a property.
+- **The outline is recorded from one whole lap.** `SaveTrackOutlineCoordinates` adds a point from the
+  car's own position each frame, but only while the car is out of the pit lane and the pit
+  (`IsInPitLane` and `IsInPit` both 0) and the driver is not spectating. Entering the pit lane, or going
+  back to the pits, throws away the outline in progress. The first point has to come at
+  `TrackPositionPercent` 0.1 or less, so an out lap from the pits records nothing until the car crosses
+  the line, and points are skipped where the position goes backwards or moves less than two metres.
+  Crossing the line again (from above 0.9 to below 0.1) saves it through `SaveMap`, which wants more
+  than ten points and checks neither the lap's validity nor its time. A saved map is replaced by a later
+  lap only when the old file was discarded by hand or when the new one scores higher and scoring is on,
+  which it is by default. Recording also needs the reader's `MapAllowed`, which the readers of
+  iRacing, Assetto Corsa, ACC and Le Mans Ultimate leave true and `SimpleGameManagerBase`, the base of
+  SimHub's simplest readers, sets false, and a `TrackIdWithConfig`. SimHub's log says `New map record saved` and `Map generated`
+  when it happens.
+- **It is kept per track and layout, not per car.** The file is
+  `MapRecords\<TrackIdWithConfig>.shtl` under the game's storage folder, where `TrackIdWithConfig` is the
+  track's id with `-<config>` after it when the track has a layout. On Assetto Corsa the id is the
+  track's folder name and the layout its config folder, so a layout of a track driven before is a map
+  never recorded. A file of ten points or fewer is ignored when it is loaded, and the load runs on a
+  background task when the car, the track or the game changes, so the map can be missing for a moment
+  after a session starts on a track that has one.
+- **SimHub ships no maps.** Its setting `UseOnlineMaps` is off by default. Turned on, it downloads a
+  map from SimHub's own server, keyed by the game, the track, its layout and its reported length, and
+  `GetMap()` then answers with the local or the downloaded map in the order the driver chose. Maps are
+  sent to that server only from a licensed copy.
+- **No property says whether a map exists.** `PersistantTrackerPluginAttachedData` attaches nothing of
+  the kind. `PersistantTrackerPlugin.GetMap()` is public and static, so a plugin can ask it, and the
+  OpenDash plugin does: `OpenDash.TrackMapRecorded` is true where SimHub holds an outline its map item
+  draws, false where it holds none, and null with no game running or where the reader forbids a map.
+  The track module draws `Track · Drive a lap to record it` in the map's box while it reads false, and
+  with no plugin reads true and draws the map item as it always did. See
+  `plugin/OpenDash/TrackMap.cs`.
+- **The radar needs the map only on iRacing.** `RadarItem` blanks where `GetMap()` is null *and* the
+  frame carries `RelativeCarCoordinates`, and only iRacing's reader fills those. Assetto Corsa, ACC and
+  Le Mans Ultimate leave them null, so their radar draws from the cars' own coordinates with no map at
+  all, and on iRacing it stays blank until the track has been recorded, with nothing on the screen to
+  say why.
+
 ## Sources
 
 - [Blumlaut/simhub-dashes](https://github.com/Blumlaut/simhub-dashes)
