@@ -2,8 +2,9 @@
  * The flag catalogue drawn sixty-four pixels at a time.
  *
  * Each glyph is eight strings of eight characters and a palette, so a reviewer reads the picture
- * rather than a pixel list. Every colour is a `purpose.flag.*` token; a hex value here is a bug.
- * They are drawn from the real flags, never from somebody else's grid.
+ * rather than a pixel list. Every colour is the lamp's flag colour from flagColours.ts, which the
+ * strips read too, and every one of those a token; a hex value here is a bug. They are drawn from the
+ * real flags, never from somebody else's grid.
  *
  * Sixty-four pixels is the whole design problem, and four decisions come out of it:
  *
@@ -25,19 +26,23 @@
  */
 import type { Hex, MatrixFrame } from '../generator.ts';
 import { ds } from '../tokens.ts';
+import { LAMP_FLAG } from './flagColours.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 
-/** Every character any grid below uses. One palette, so a typo is a build error. */
+/**
+ * Every character any grid below uses. One palette, so a typo is a build error, and every colour in
+ * it the strips' colour for the same flag, so the box and a strip never draw one flag two ways.
+ */
 export const FLAG_PALETTE: Palette = {
-  R: ds.purpose.flag.red,
-  Y: ds.purpose.flag.yellow,
-  S: ds.purpose.flag.debrisStripe,
-  B: ds.purpose.flag.blue,
-  W: ds.purpose.flag.white,
-  G: ds.purpose.flag.green,
-  C: ds.purpose.flag.chequer,
-  K: ds.purpose.flag.black,
-  O: ds.purpose.flag.orange,
+  R: LAMP_FLAG.red,
+  Y: LAMP_FLAG.yellow,
+  S: LAMP_FLAG.debrisStripe,
+  B: LAMP_FLAG.blue,
+  W: LAMP_FLAG.white,
+  G: LAMP_FLAG.green,
+  C: LAMP_FLAG.chequer,
+  K: LAMP_FLAG.black,
+  O: LAMP_FLAG.meatball,
 };
 
 /** How fast anything on this box blinks, from the token the face's band uses. */
@@ -210,7 +215,7 @@ export const FURLED_LOW: Grid = [
   '........',
 ];
 
-/** Meatball, first step. The same four pixels as the standby mark, but in amber and not alone. */
+/** Meatball, first step. The same four pixels as the standby mark, but in orange and not alone. */
 export const MEATBALL_2: Grid = [
   '........',
   '........',

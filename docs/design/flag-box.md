@@ -49,8 +49,13 @@ the band itself.
 | 14 | Ready | `startReady` | no | 22 | One bar of the start gantry. | Outlined green, "GREEN · READY". |
 | 15 | Chequered | `checkered` | no | 23 | A checkerboard of two-pixel squares. | The same board, half the band high, with no name. |
 
-Colour is `purpose.flag.*` from `design/tokens.json`, resolved to a literal at build time. The
-blink rate is `indicator.flagBand.flashHz`, so the box pulses at the same rate as the band on the
+Colour is a token from `design/tokens.json`, resolved to a literal at build time, through
+`LAMP_FLAG` in `leds/flagColours.ts`: the one table of the flags as a lamp draws them, which the
+strips' rows read too, so the box and a strip never draw one flag two ways (#733). It is
+`purpose.flag.*` but for the meatball's disc, which is `purpose.light.meatball`, the orange an RGB LED
+does not draw as the yellow flag; the box drew it in the caution amber until #733. The green, red, blue
+and white are still the face's state colours, and the flag hues that replace them on a lamp are owed
+by `design/tokens.json`. The blink rate is `indicator.flagBand.flashHz`, so the box pulses at the same rate as the band on the
 face.
 
 ### Where the rank departs from the canvas's numbering
