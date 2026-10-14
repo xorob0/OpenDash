@@ -162,6 +162,48 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.3.0-rc.5", UpdateCheck.RigVersion(mixed, new[] { "OpenDash 850x480", "OpenDash Companion" }, "0.3.0-rc.6"));
         }
 
+        /// <summary>
+        /// A screen the driver edited, which every start holds at the version it was edited from, does not hold the
+        /// rig behind a plugin that is already the release (#1083).
+        /// </summary>
+        /// <remarks>
+        /// Counted, it kept the rig at the old version for good: plugin 0.4.0 running, an edited folder at 0.3.0, so
+        /// v0.4.0 was offered by the check, by the idle screen's mark and by the Updates page, and a press that kept
+        /// the edit staged the same plugin and asked for a restart that changed nothing. The three read one value,
+        /// so they are held to agreeing here: nothing offered for the release that runs, and a newer one offered as
+        /// usual.
+        /// </remarks>
+        [Fact]
+        public void A_screen_the_driver_edited_does_not_hold_the_rig_behind_its_plugin()
+        {
+            var edited = new PackageStatus { FolderName = "OpenDash 850x480", InstalledVersion = "0.3.0", EmbeddedVersion = "0.4.0", Status = InstallStatus.UpdateAvailable, Edited = true, HeldBack = true };
+            var current = Folder("OpenDash Pit wall", "0.4.0");
+            var rig = new[] { "OpenDash 850x480", "OpenDash Pit wall" };
+            var running = UpdateCheck.RigVersion(new[] { edited, current }, rig, "0.4.0");
+            Assert.Equal("0.4.0", running);
+            // On its own as well, and after a read that did not install, which leaves it edited but not held back.
+            Assert.Equal("0.4.0", UpdateCheck.RigVersion(new[] { edited }, new[] { "OpenDash 850x480" }, "0.4.0"));
+            edited.HeldBack = false;
+            Assert.Equal("0.4.0", UpdateCheck.RigVersion(new[] { edited }, new[] { "OpenDash 850x480" }, "0.4.0"));
+
+            // The check, the idle screen's mark and the page's line, for the release the plugin already is.
+            Assert.Equal(UpdateState.UpToDate, UpdateCheck.Conclude(running, new[] { Release("v0.4.0") }, manual: false).State);
+            var offered = UpdateMark.Offered("0.4.0", running, pluginStaged: false);
+            Assert.Null(offered);
+            Assert.NotEqual(UpdateState.UpdateAvailable, UpdateMark.Opening(true, null, offered, running).State);
+
+            // A newer release is offered as usual, against the plugin.
+            var newer = UpdateCheck.Conclude(running, new[] { Release("v0.5.0"), Release("v0.4.0") }, manual: false);
+            Assert.Equal(UpdateState.UpdateAvailable, newer.State);
+            Assert.Equal("Version 0.5.0 is available. You have 0.4.0.", newer.Line);
+            Assert.Equal("0.5.0", UpdateMark.Offered("0.5.0", running, pluginStaged: false));
+
+            // An unedited screen behind the plugin still holds it back, since a start brings that one up.
+            Assert.Equal("0.3.0", UpdateCheck.RigVersion(new[] { Folder("OpenDash 850x480", "0.3.0"), current }, rig, "0.4.0"));
+            // And a plugin behind the release is still what the rig runs, edited screen or not.
+            Assert.Equal("0.3.0", UpdateCheck.RigVersion(new[] { edited, current }, rig, "0.3.0"));
+        }
+
         // IsPreRelease
 
         [Theory]

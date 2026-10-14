@@ -131,7 +131,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// The version a release is compared against: the older of what is installed and what the plugin is. What is
-        /// installed is the rig's oldest dashboard, which <see cref="RigVersion"/> finds.
+        /// installed is the rig's oldest dashboard that nobody has edited, which <see cref="RigVersion"/> finds.
         /// </summary>
         /// <remarks>
         /// **The older of the two, not the dashboards' alone.** An OpenDash install is two halves that move
@@ -162,7 +162,7 @@ namespace OpenDashPlugin
         /// <param name="rigFolders">The folders of the screens the rig holds.</param>
         /// <param name="pluginVersion">The version of the plugin that is running.</param>
         /// <remarks>
-        /// The oldest dashboard among the rig's own screens, reduced with the plugin by
+        /// The oldest dashboard among the rig's own screens, edited ones aside, reduced with the plugin by
         /// <see cref="ComparableInstalled"/>. It was the folder of one package, the 1920 x 480 `OpenDash`, which a
         /// rig has only when somebody added that face (ADR 0017), and each caller reduced it for itself: the check
         /// and the mark fell back to the plugin, whereas the panel named the raw value, and on a rig without that
@@ -173,6 +173,14 @@ namespace OpenDashPlugin
         /// what the driver is looking at. A screen whose folder is missing or unreadable is passed over, as
         /// ComparableInstalled passes over one dashboard, and with none left the plugin's version stands, which
         /// since #438 is the version every dashboard follows.
+        ///
+        /// **Nor does a folder the driver has edited** (#1083). Every start holds such a folder at the version it
+        /// was edited from rather than replace somebody's work without asking, so counted here it kept the rig
+        /// below the plugin for good: a rig whose plugin was already the release was offered that release on the
+        /// panel and the idle screen, and a press that kept the edit staged the same plugin again and asked for a
+        /// restart that changed nothing. The edit is the driver's choice, not an update owed to them, and the
+        /// Updates page's row for it says that Reinstall everything replaces it. A newer release is still offered,
+        /// since the plugin stands for the rig, and the Update button names the edited folder before replacing it.
         /// </remarks>
         public static string RigVersion(IEnumerable<PackageStatus> packages, IEnumerable<string> rigFolders, string pluginVersion)
         {
@@ -180,7 +188,7 @@ namespace OpenDashPlugin
             string oldest = null;
             foreach (var package in packages ?? Enumerable.Empty<PackageStatus>())
             {
-                if (package?.FolderName == null || !rig.Contains(package.FolderName)) continue;
+                if (package?.FolderName == null || !rig.Contains(package.FolderName) || package.Edited) continue;
                 var version = package.InstalledVersion;
                 if (string.IsNullOrWhiteSpace(version) || version == Versioning.UnknownVersion) continue;
                 if (oldest == null || Versioning.VersionCompare(version, oldest) < 0) oldest = version;
