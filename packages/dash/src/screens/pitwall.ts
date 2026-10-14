@@ -30,7 +30,7 @@ import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { assistField } from '../modules/carSettings.ts';
 import { airTemperature, bestLap, brake, brakeBias, carPosition,
-  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, YOUR_BEST_CAPTION, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, gear, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, YOUR_BEST_CAPTION, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
@@ -290,8 +290,8 @@ const present = (expr: Expr): Expr => ncalc.not(ncalc.isNull(expr));
 
 const gearNumber = (): Expr =>
   FORWARD_GEARS.reduce<Expr>(
-    (fallback, g) => iff(eq(game('Gear'), str(g)), num(Number(g)), fallback),
-    iff(eq(game('Gear'), str('R')), num(GEAR_RANGE.min), num(0)),
+    (fallback, g) => iff(eq(gear(), str(g)), num(Number(g)), fallback),
+    iff(eq(gear(), str('R')), num(GEAR_RANGE.min), num(0)),
   );
 
 /**

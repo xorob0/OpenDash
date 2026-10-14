@@ -296,6 +296,41 @@ export const LIVE_SLOTS = 64;
 export const liveSettingNames = (): string[] =>
   LIVE_FAMILIES.flatMap((family) => Array.from({ length: LIVE_SLOTS }, (_, i) => `${family}${i + 1}`));
 
+/**
+ * What the running sim can report, which the plugin publishes so that a dashboard never names a game
+ * (ADR 0021, #1101).
+ *
+ * Most of what OpenDash reads SimHub normalises for every game, and most of the rest is iRacing's raw
+ * telemetry, which is simply absent on another sim, so an `isnull()` already tells "not reported" from a
+ * value. These are the questions it cannot tell apart, each named for what a dashboard asks:
+ *
+ * - `CarHasPitLimiter`: the car has a pit limiter to engage. A car without one reads SimHub's
+ *   `PitLimiterOn` 0 like one switched off; iRacing answers by the car's own limiter control being there,
+ *   and on Assetto Corsa and ACC every car has one.
+ * - `PitLimiterOn`: the limiter is engaged, which SimHub's own member is not on Assetto Corsa, where it
+ *   is the pit lane.
+ * - `DamageReported`: the sim reports damage at all. iRacing fills `CarDamage1..5` with zeros, which
+ *   cannot be told from an undamaged car.
+ * - `DriverInCar`: the driver is in the car with the physics running, iRacing's `IsOnTrack`, which each
+ *   sim says under a name and in a shape of its own.
+ *
+ * Published rather than chosen, true or false, and null with no game running or on a game the plugin's
+ * table (`plugin/OpenDash/SimCapabilities.cs`) has no row for. So each is read through
+ * {@link setting.reported} with iRacing's own answer as the fallback, and a package with no plugin draws
+ * what it always drew. `sim` in `second/values.ts` is where they are read.
+ */
+export const CAR_HAS_PIT_LIMITER = 'CarHasPitLimiter';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const PIT_LIMITER_ON = 'PitLimiterOn';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const DAMAGE_REPORTED = 'DamageReported';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const DRIVER_IN_CAR = 'DriverInCar';
+
+/** Every capability, in the order the plugin attaches them. */
+export const CAPABILITIES = [CAR_HAS_PIT_LIMITER, PIT_LIMITER_ON, DAMAGE_REPORTED, DRIVER_IN_CAR] as const;
+export type Capability = (typeof CAPABILITIES)[number];
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -451,6 +486,9 @@ export function dashProperties(): string[] {
     // sixty-four cars: published rather than chosen and shared because every screen that draws a place,
     // a list or a gap reads them. #1063.
     ...liveSettingNames(),
+    // And what the running sim can report after that, published rather than chosen and shared because every
+    // screen that asks one of the questions asks it of the same sim. #1101.
+    ...CAPABILITIES,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -846,6 +884,11 @@ export const setting = {
    * itself an expression, or SimHub's own answer where the plugin publishes none. See {@link LIVE_POSITION}.
    */
   live: (family: LiveFamily, n: Expr, fallback: Expr): Expr => isnull(propByName(concat(str(propertyName(family)), n)), fallback),
+  /**
+   * `isnull([OpenDash.CarHasPitLimiter], <fallback>)`: what the running sim reports, or iRacing's own answer,
+   * which the caller hands in, where the plugin publishes none. See {@link CAR_HAS_PIT_LIMITER}.
+   */
+  reported: (capability: Capability, fallback: Expr): Expr => isnull(prop(propertyName(capability)), fallback),
   /** `isnull([OpenDash.ThemeAimBacklight], 'white')`: the id of the choice the driver made of a theme's setting, or its default. #715. */
   themeSetting: (themeId: string, settingId: string): Expr => isnull(prop(propertyName(themeSettingName(themeId, settingId))), str(themeSetting(themeId, settingId).default)),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */
@@ -1588,9 +1631,10 @@ export interface ModuleMeta {
 
 /**
  * The 22 modules in page order. Three are off by default because iRacing does not carry their
- * data: virtual energy is a Le Mans Ultimate feature, iRacing reports no damage values at all,
- * and per-segment rival timing is not a SimHub property. They ship as honest "not available"
- * pages rather than as invented numbers, so a user on another sim can still switch them on.
+ * data: virtual energy is a Le Mans Ultimate feature, iRacing reports no damage values at all
+ * where Assetto Corsa and ACC do, and per-segment rival timing is not a SimHub property. They say
+ * so on a sim without the data rather than invent numbers, so a user on another sim can still
+ * switch them on, and damage draws the car on the sims that report it (#582).
  *
  * Module 17 draws the gear alone. The design sheet paired it with the speed, but a module shows
  * one thing: the speed has the speedo module, and the dash face settled the same question when
@@ -1619,7 +1663,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 17, id: 'gear', name: 'Gear', description: 'The gear, as large as the screen allows.', enabled: true, needsSession: false },
   { number: 18, id: 'stint', name: 'Stint', description: 'Stint laps and time, stops and the last stop.', enabled: true, needsSession: true },
   { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to your best.', enabled: true, needsSession: true },
-  { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false, needsSession: false },
+  { number: 20, id: 'damage', name: 'Damage', description: 'Body damage panel by panel. Assetto Corsa and ACC only.', enabled: false, needsSession: false },
   { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false, needsSession: false },
   { number: 22, id: 'engineReadings', name: 'Engine readings', description: 'Water and oil temperatures, oil and fuel pressure, voltage and manifold pressure.', enabled: true, needsSession: false },
 ];

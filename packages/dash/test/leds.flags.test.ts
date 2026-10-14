@@ -18,6 +18,7 @@ import { BLINK_OFF, FAST_BLINK_MS, FLAG_ROWS, SLOW_BLINK_MS, SPOTTER_EFFECTS, fl
 import { FLAG_TAKEOVER_MS } from '../src/components/flagStrip.ts';
 import { FLAG_CATALOGUE, flagBit, type FlagCondition, type SessionFlagBit } from '../src/flags.ts';
 import { drawnFlags } from '../src/leds/profile.ts';
+import { flagFrames } from '../src/leds/glyphs.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
 
@@ -312,6 +313,22 @@ describe('what one flag looks like beside another', () => {
       // are equal has never moved: that was every flag but the yellow, and the yellow's off phase
       // was its own hex.
       expect({ id, blinks: e.blinkWhen !== undefined }).toMatchObject({ blinks: true });
+    }
+  });
+
+  test('the flag box and the strips draw every flag in the same colours (#733)', () => {
+    // Two LED surfaces on one rig, and a flag is one thing to a driver: the colours a row lights,
+    // the ground of a blink aside, are exactly the colours the box draws that flag's picture in. The
+    // meatball's disc was the caution amber on the box and the strip's orange on the race lamp, and
+    // an RGB LED draws that amber as the yellow flag.
+    for (const row of FLAG_ROWS) {
+      const lamp = new Set([row.color, row.blinkColor].filter((c): c is string => c !== undefined && c !== BLINK_OFF));
+      for (const id of row.conditions) {
+        const frames = flagFrames(id);
+        if (frames === undefined) continue;
+        const box = new Set(frames.flatMap((f) => f.pixels.flat()).flatMap((p) => (p === null ? [] : [String(p)])));
+        expect({ row: row.id, flag: id, box: [...box].sort() }).toEqual({ row: row.id, flag: id, box: [...lamp].sort() });
+      }
     }
   });
 });

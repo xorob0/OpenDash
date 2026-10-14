@@ -218,14 +218,18 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The sentence beside the switch. It is the author's, from design/canvas/Plugin.dc.html, and it is the
-        /// only place a user is told in full what leaves their machine, so it says both halves: what is asked for,
-        /// and that nothing else goes.
+        /// The sentence beside the switch says what the check asks for and that nothing about the user is in it.
+        /// The artboard's second sentence, "Nothing else leaves your machine.", was false on any rig with a Porsche
+        /// screen, which fetches the crest at a start without a press whatever this switch says (#1116), so the
+        /// caption speaks for the check alone and claims nothing about the plugin's other requests.
         /// </summary>
         [Fact]
-        public void The_setting_says_in_one_sentence_what_leaves_the_machine()
+        public void The_setting_says_in_one_sentence_what_the_check_sends()
         {
-            Assert.Equal("Asks GitHub for the newest release once a day. Nothing else leaves your machine.", UpdateWording.CheckCaption);
+            Assert.Equal("Asks GitHub for the newest release once a day, and sends nothing about you.", UpdateWording.CheckCaption);
+            Assert.DoesNotContain("else", UpdateWording.CheckCaption);
+            Assert.DoesNotContain("only", UpdateWording.CheckCaption);
+            Assert.Single(UpdateWording.CheckCaption.Split(new[] { ". " }, System.StringSplitOptions.None));
         }
 
         /// <summary>

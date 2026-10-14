@@ -199,6 +199,18 @@ except on the frame on which a car crosses the line and the sim reorders it, and
 can name its neighbour's car; the next frame puts it right. A list a lap behind is the defect; a row
 wrong for a frame at a line crossing is the price of mending it, and it is accepted here.
 
+### What the running sim can report
+
+Added 2026-10-14 for #1101, and recorded in full in [ADR 0021](0021-a-dashboard-never-names-a-game.md).
+1.0 claims three sims beside iRacing, and a few questions a dashboard asks have an answer that differs by
+sim in a way no expression can see: whether the car has a pit limiter, whether it is on, whether the sim
+reports damage, and whether the driver is in the car. Answering them in the expression would mean naming
+the game, which the author turned down, so the plugin answers them from a table with a row per game and
+publishes one property per question. It is this record's rule applied: a feature needs each answer,
+SimHub publishes the game's code and nothing that says what the game can report, and every dashboard
+reads each answer with iRacing's own reading as its fallback, so a package with no plugin draws what it
+drew before.
+
 ## Where the line falls in practice
 
 An expression is not a good place for arithmetic that is long, shared between many items, or
@@ -239,3 +251,23 @@ family is honestly labelled rather than quietly empty.
 
 Whether a JavaScript binding can hold state between frames (#167). The answer decides nothing
 in this record but sets the terms on which it could be revisited.
+
+---
+
+## Amended, 2026-10-14: what the dash package emits, and #167 (#1139)
+
+**What moved.** "Where the line falls in practice" says a JavaScript binding is "what the second
+screens already use". The dash package emits none: `Expr` is a string and `formula()` in `bind.ts`
+builds NCalc only, the generator's `interpreter: 'js'` has no caller under `packages/dash/src`, and
+`leds/rpmStrip.ts` records that a JavaScript body was turned down because the validator cannot read
+one. The first move for a shared derivation is therefore still available and has not been taken.
+
+**What did not move.** The order stands: the expression first, a JavaScript binding before the
+plugin, and the plugin only through the three conditions above. #167, which "Unresolved" names as
+the question that could reopen this record, was closed on 2026-09-22 as cancelled, the four tickets
+it gated having been built by comparing two published numbers; whether a JavaScript binding can hold
+state between frames is still not known, and the sentence above should be read as unanswered rather
+than open.
+
+[ADR 0022](0022-core-and-theme.md) applies this record to the split between a core of signals and
+the themes that draw them, and asks nothing of the plugin.

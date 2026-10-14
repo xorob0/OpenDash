@@ -35,8 +35,9 @@ import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS, FLAG_TAKEOVER_MS } from '../components/flagStrip.ts';
 import { propertyName, setting, WHEEL_LOCK, WHEEL_SPIN } from '../contract.ts';
 import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
-import { isInPitLane, pitLimiterOn, pitSpeeding, rpm, spotterCar, tankIsLow } from '../second/values.ts';
+import { engineRunning, isInPitLane, pitLimiterOn, pitSpeeding, spotterCar, tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
+import { LAMP_FLAG } from './flagColours.ts';
 import { type EffectRole, type Lamp, type LampRole } from './lamps.ts';
 
 const { and, changed, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
@@ -144,14 +145,6 @@ const inferred = (name: string): Expr => and(eq(setting.ledInferSlip(), 'true'),
 const lowFuel = (): Expr => tankIsLow();
 
 /**
- * The engine turning, which is what an engine warning has to be read against. `EngineWarnings` sets
- * its oil-pressure bit on an engine that is merely stopped as readily as on one that is failing, so
- * without this the car lamp is red in every garage and on every grid, and a lamp that is red when
- * nothing is wrong is a lamp the driver stops reading by the third session.
- */
-const engineRunning = (): Expr => gt(rpm(), num(0));
-
-/**
  * What a race lamp can draw, highest rank first: one row per appearance, each taking the catalogue
  * conditions a lamp cannot tell apart.
  *
@@ -177,7 +170,8 @@ const engineRunning = (): Expr => gt(rpm(), num(0));
  * does not, the off phase is {@link BLINK_OFF}.
  *
  * Every row is drawn in the flag's own colour, which is the one convention on a strip that is
- * universal (the FIA's flags, and every wheel and dash on the market). What a lamp beside it draws is
+ * universal (the FIA's flags, and every wheel and dash on the market), read from `LAMP_FLAG` in
+ * flagColours.ts, the table the flag box draws its glyphs from too (#733). What a lamp beside it draws is
  * kept off those colours where the two can share an LED: the car warnings are red and orange, the
  * spotter purple, and nothing outside this table is the flag yellow (#794).
  *
@@ -210,29 +204,29 @@ interface FlagRow {
 export const FLAG_ROWS: readonly FlagRow[] = [
   // The session is stopped. 2 Hz, which is FIA 3504's rate for the red panel; oil pressure is the
   // same red at 4 Hz and the temperature warning the same red held, so the three are three rhythms.
-  { id: 'red', label: 'Red flag', conditions: ['red'], color: ds.purpose.flag.red, blinkDelayMs: SLOW_BLINK_MS, spread: { while: 'out' } },
+  { id: 'red', label: 'Red flag', conditions: ['red'], color: LAMP_FLAG.red, blinkDelayMs: SLOW_BLINK_MS, spread: { while: 'out' } },
   // The disqualification and the furled black are the black flag's own family and draw as it does.
   {
     id: 'black',
     label: 'Black flag',
     conditions: ['disqualify', 'black', 'furled'],
-    color: ds.purpose.flag.black,
+    color: LAMP_FLAG.black,
     blinkDelayMs: FAST_BLINK_MS,
     spread: { while: 'new' },
   },
   // A black flag with an orange disc: the disc's orange, at the black family's rate.
-  { id: 'meatball', label: 'Meatball flag', conditions: ['meatball'], color: ds.purpose.light.meatball, blinkDelayMs: FAST_BLINK_MS, spread: { while: 'new' } },
+  { id: 'meatball', label: 'Meatball flag', conditions: ['meatball'], color: LAMP_FLAG.meatball, blinkDelayMs: FAST_BLINK_MS, spread: { while: 'new' } },
   // The whole track rather than this corner: the flag yellow at the fast rate, where the yellow in
   // one corner is the slow one. It used to alternate the yellow with the caution amber, and an RGB
   // LED draws those two as one colour, so what reached the driver was a yellow that did not blink.
-  { id: 'caution', label: 'Full course yellow', conditions: ['caution'], color: ds.purpose.flag.yellow, blinkDelayMs: FAST_BLINK_MS, spread: { while: 'new' } },
+  { id: 'caution', label: 'Full course yellow', conditions: ['caution'], color: LAMP_FLAG.yellow, blinkDelayMs: FAST_BLINK_MS, spread: { while: 'new' } },
   // The waved yellow spreads while it is new and the standing one does not: a yellow being waved is
   // the danger being in front of the car now.
   {
     id: 'yellow',
     label: 'Yellow flag',
     conditions: ['yellowWaving', 'yellow'],
-    color: ds.purpose.flag.yellow,
+    color: LAMP_FLAG.yellow,
     blinkDelayMs: SLOW_BLINK_MS,
     spread: { while: 'new', conditions: ['yellowWaving'] },
   },
@@ -246,13 +240,13 @@ export const FLAG_ROWS: readonly FlagRow[] = [
     id: 'debris',
     label: 'Debris flag',
     conditions: ['debris'],
-    color: ds.purpose.flag.debris,
-    blinkColor: ds.purpose.flag.debrisStripe,
+    color: LAMP_FLAG.debris,
+    blinkColor: LAMP_FLAG.debrisStripe,
     blinkDelayMs: FAST_BLINK_MS,
   },
-  { id: 'blue', label: 'Blue flag', conditions: ['blue'], color: ds.purpose.flag.blue, blinkDelayMs: SLOW_BLINK_MS },
-  { id: 'white', label: 'White flag', conditions: ['white'], color: ds.purpose.flag.white, blinkDelayMs: SLOW_BLINK_MS },
-  { id: 'green', label: 'Green flag', conditions: ['green'], color: ds.purpose.flag.green, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'blue', label: 'Blue flag', conditions: ['blue'], color: LAMP_FLAG.blue, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'white', label: 'White flag', conditions: ['white'], color: LAMP_FLAG.white, blinkDelayMs: SLOW_BLINK_MS },
+  { id: 'green', label: 'Green flag', conditions: ['green'], color: LAMP_FLAG.green, blinkDelayMs: SLOW_BLINK_MS },
   // Last, because the catalogue ranks the chequer last: it is news where everything above it is an
   // instruction, and a chequer that outranked them hid a yellow thrown at a race finishing under
   // one. The drawing is the reverse assignment of the black: ground steady, white on the blink.
@@ -264,7 +258,7 @@ export const FLAG_ROWS: readonly FlagRow[] = [
     label: 'Chequered flag',
     conditions: ['chequered'],
     color: BLINK_OFF,
-    blinkColor: ds.purpose.flag.chequer,
+    blinkColor: LAMP_FLAG.chequer,
     blinkDelayMs: SLOW_BLINK_MS,
   },
 ];

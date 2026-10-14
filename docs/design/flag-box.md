@@ -49,9 +49,14 @@ the band itself.
 | 14 | Ready | `startReady` | no | 22 | One bar of the start gantry. | Outlined green, "GREEN · READY". |
 | 15 | Chequered | `checkered` | no | 23 | A checkerboard of two-pixel squares. | The same board, half the band high, with no name. |
 
-Colour is `purpose.flag.*` from `design/tokens.json`, resolved to a literal at build time. The
-blink rate is `indicator.flagBand.flashHz`, so the box pulses at the same rate as the band on the
-face.
+Colour is a token from `design/tokens.json`, resolved to a literal at build time, through
+`LAMP_FLAG` in `leds/flagColours.ts`: the one table of the flags as a lamp draws them, which the
+strips' rows read too, so the box and a strip never draw one flag two ways (#733). It is
+`purpose.flag.*` but for the meatball's disc, which is `purpose.light.meatball`, the orange an RGB LED
+does not draw as the yellow flag; the box drew it in the caution amber until #733. The green, red, blue
+and white are still the face's state colours, and the flag hues that replace them on a lamp are owed
+by `design/tokens.json`. The blink rate is `indicator.flagBand.flashHz`, so the box pulses at the
+same rate as the band on the face.
 
 ### Where the rank departs from the canvas's numbering
 
@@ -270,22 +275,29 @@ double yellow; a picture that carries two meanings teaches a driver the wrong on
 left to the flag they belong to, [below](#what-is-not-drawn-and-why). The box writes SC instead, in
 unlit pixels on a yellow panel, each letter three columns by six rows with a column of yellow between
 them. Seven columns of letter in eight leave one edge without a margin, and it is the C's, since its
-open side is the only side of either letter with no stroke on it. The picture blinks against the dark
-at the band's rate, as the yellow being waved does, because the condition moves; consequently the letters
-are the whole of the difference between the two, which is deliberate. They are SC, which is the
-author's choice for a panel eight columns wide, whatever the band calls the condition (#497).
+open side is the only side of either letter with no stroke on it, so the pair sits half a pixel right
+of centre. The S is rounded, its top-left and bottom-right corners lit, because drawn square it was the
+blocky 5 pixel for pixel and the pair read as 5C, a car number (#516); the top-left is the corner a 5
+never rounds, and `glyphFit.test.ts` compares both letters with every digit a blocky face draws in the
+same cell. The picture blinks against the dark at the band's rate, as the yellow being waved does,
+because the condition moves; consequently the letters are the whole of the difference between the
+two, which is deliberate. They are SC, which is the author's choice for a panel eight columns wide,
+whatever the band calls the condition (#497).
 Whether strokes one unlit pixel wide survive a diffuser, which spreads the light of the pixels around
 them into the letter, has not been seen on a panel. The canvas's Flag box page still draws the caution
 as the two halves, captioned as the double yellow a marshal post flies, and owes a redrawn tile.
 
-The spotter's bar takes part of the word, since it is painted over any flag, [below](#the-spotter): a
-car on the left removes the S's left stroke, a car on the right reduces the C to a single unlit
-column, and cars on both sides leave neither letter readable. That is likeliest under the caution
-itself, when a double-file restart lines the field up two abreast. The picture still differs from a
-plain yellow, so the two conditions are not confused, but the word is lost for as long as the bar is
-lit, and no placement of the letters avoids it, because one bar two columns wide leaves six columns
-and two leave four, where the pair needs seven. Whether the bar should yield to the caution, or the damaged word be
-accepted while a car is alongside, is the author's decision and is not taken here.
+The spotter's bar would take part of the word, since it is painted over the flags,
+[below](#the-spotter): a car on the left would remove the S's left stroke, a car on the right reduce
+the C to a single unlit column, and cars on both sides leave neither letter readable. That is
+likeliest under the caution itself, when a double-file restart lines the field up two abreast, and no
+placement of the letters avoids it, because one bar two columns wide leaves six columns and two leave
+four, where the pair needs seven. The author has ruled that the bar gives way (#515): on a panel
+drawing the caution the spotter is not painted, so the word stays whole. One could think the spotter
+is safety information and should win; under a full course yellow, however, the field is slowed and
+overtaking is forbidden, so the flag is the more urgent of the two, and the car alongside remains
+visible in the mirrors and on the face's own spotter. Whether the bar should yield to any other flag
+is a separate question, and it does not.
 
 The rule this file used to state here, namely that the whole-track condition must never look like
 one corner's yellow, no longer holds on every surface. On the face the caution is a filled yellow band
@@ -353,15 +365,24 @@ A bar two pixels wide down the edge the car is on: left, right, or both edges at
 **It is an overlay rather than a rank**, and that is a correction rather than a refinement. It used
 to be the second layer below the flags, so any flag at all hid a car alongside, and a car alongside
 blanked the warnings and the gear beneath it. It is now the last container of the panel, gated on
-that panel's own Spotter switch and on nothing else: no flag bit, no pit condition, and nothing
-below it excludes it in turn. Its frames light two columns of an edge and leave the rest of the
-panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
-it, so a standing yellow keeps columns three to six while the bar says which side. A full course
-yellow does not come through whole, on the other hand, because SC runs to both edges and the bar
-takes the S or the C; [its own paragraph](#the-four-decisions-sixty-four-pixels-forced) says why no
-placement avoids that and leaves the remedy to the author. The consequence
-worth stating is that on a rig with one box the gear now shows through the middle of the panel
-while a car is alongside, which is the behaviour this is for.
+that panel's own Spotter switch and on one picture, below, and on nothing else: no other flag, no
+pit condition, and nothing below it excludes it in turn. Its frames light two columns of an edge
+and leave the rest of the panel absent, and SimHub drops an absent pixel when it merges rather
+than clearing what is under it, so a standing yellow keeps columns three to six while the bar says
+which side. The full course yellow is the one exception, because SC runs to both edges and the bar
+would take the S or the C: while a panel draws it, that panel's bar is gated off, and it returns
+when the caution ends, when a higher flag takes the panel, and on a panel with Flags off. [Its own
+paragraph](#the-four-decisions-sixty-four-pixels-forced) says why no placement avoids the cut and
+why the flag wins. `flagBox.test.ts` paints every panel with the caution out and a car on either
+side, or both, and finds SC whole. The consequence worth stating is that on a rig with one box the
+gear now shows through the middle of the panel while a car is alongside, which is the behaviour
+this is for.
+
+That gate reads the flag bits null-safely, where the flag containers read them bare. Assetto Corsa
+publishes no `SessionFlagsDetails` and does publish the cars alongside, and a `when` whose formula
+throws is inactive, so a bare read there would take away the bar, which is all such a panel can
+draw. Where the bits are published the two readings agree, so the bar gives way exactly while SC is
+drawn.
 
 The composition itself has not been watched on hardware. No 8x8 panel is plugged into the test rig,
 so "a transparent pixel does not clear what is beneath it" rests on the format notes rather than on

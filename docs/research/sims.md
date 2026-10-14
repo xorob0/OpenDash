@@ -337,7 +337,6 @@ section). What a null does to the reading:
 | `Telemetry.SessionTimeOfDay` | the sim clock on the bar and band D | **`00:00`, drawn as a value** | none, reported with this page |
 | `Telemetry.SessionTimeTotal` | the untimed-session mark | rests on `SessionTimeLeft` alone | none needed |
 | `Telemetry.EngineWarnings` | the engine telltale, the AiM and Porsche engine warnings, the oil pressure LED | dark | none needed |
-| `Telemetry.FuelLevel` | the Porsche's low-fuel alarm | **never lights** though `GameData.Fuel` is filled | none, reported with this page |
 | `Telemetry.FuelPress`, `ManifoldPress`, `Voltage` | the engine readings page | `--` | none needed |
 | `Telemetry.VirtualEnergy`, `VirtualEnergyLaps`, `VirtualEnergyPerLap`, `VirtualEnergyRefuel` | the energy module and band D's energy fields | not available (LMU has it raw) | #962 |
 | `Telemetry.PushToPass` | band D's P2P chip | dark, rightly | none needed |
@@ -347,6 +346,10 @@ section). What a null does to the reading:
 
 `DataCorePlugin.GameData.TrackGripStatus` belongs here too although it is spelled as a `GameData`
 member: no reader publishes it, iRacing's included, because `StatusDataBase` has no such member.
+
+The Porsche's low-fuel alarm read `Telemetry.FuelLevel` when this page was written, so it never lit on
+the other three. It reads `GameData.Fuel` now, turned back into litres on a gallons profile, which on
+iRacing is the same `FuelLevel` (#1126).
 
 ## What the raw blocks carry that `GameData` does not
 

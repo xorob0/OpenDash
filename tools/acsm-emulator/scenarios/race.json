@@ -119,6 +119,8 @@
       {"name": "Elena Petrova", "car": "ks_lamborghini_huracan_gt3", "lap": 12, "pct": 0.16, "best": 98.402},
       {"name": "Tom Hughes", "car": "ks_mclaren_650_gt3", "lap": 12, "pct": 0.09, "best": 98.517},
       {"name": "Nina Berg", "car": "bmw_z4_gt3", "lap": 12, "pct": 0.03, "best": 98.640},
+      // In his box for the whole race, so every scenario built on this one has a PIT chip in its table
+      // before its own cars go in (#1138).
       {"name": "Diego Ramos", "car": "ks_porsche_911_gt3_r_2016", "lap": 11, "pct": 0.985, "best": 98.702, "pit": true},
       {"name": "Kofi Mensah", "car": "ks_ferrari_488_gt3", "lap": 11, "pct": 0.97, "best": 98.755},
       {"name": "Hanna Kowalska", "car": "ks_audi_r8_lms_2016", "lap": 11, "pct": 0.91, "best": 98.811},

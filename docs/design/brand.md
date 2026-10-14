@@ -118,7 +118,7 @@ the pop-ups and the panel alike:
 
 - A label is in sentence case: `Fuel left`, `Best lap`, `Session best`, `Est. laps`. A label that
   continues after a middot continues the sentence, `Tyres °C · last stop`, and a half that is drawn
-  on its own is a sentence of its own, `Damage · Not available in iRacing`.
+  on its own is a sentence of its own, `Damage · Not published by this sim`.
 - A unit is in the case its symbol has: `km/h`, `mph`, `kPa`, `psi`, `bar`, `L`, `gal`, `°C`, `s`.
   The spelling lives in one place, the unit words in `packages/dash/src/second/values.ts`, which is
   where a sim's enum (`KMH`, `Kpa`, `Gallons`) becomes the symbol a driver reads.

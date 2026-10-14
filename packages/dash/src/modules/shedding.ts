@@ -261,7 +261,7 @@ export const SHEDDING: Record<string, Shedding> = {
     tall: ['lap', 'fuelTime', 'stintTime', 'stintLaps', 'completed', 'stops', 'lastStop', 'avgLap'],
   }),
   lapHistory: nothing('lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops'),
-  damage: nothing('one line of prose: iRacing publishes no damage'),
+  damage: nothing('a drawing cut from its box (rule 18) with the four panels beside it, or one line of prose where the sim reports no damage'),
   trackRivals: nothing('one line of prose: SimHub times sectors, not segments'),
   // The order #752 gives: the two temperatures and the oil pressure are what an engine dash is
   // read for, the fuel pressure and the voltage say why the engine has stopped, and the manifold

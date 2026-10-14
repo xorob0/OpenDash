@@ -599,7 +599,7 @@ namespace OpenDashPlugin.Tests
                 "var limiter = LedsRow(PanelSoon.PitLimiterLights.Title, BuildSegmented(PanelLeds.PitLimiterLightsValues, PanelLeds.PitLimiterLightsLabels, PanelLeds.PitLimiterLightsValues[1], value => { }));",
                 "return Ui.VStack(0, head, grid, under);");
             Holds(Body(leds, "private FrameworkElement LedsEveryStripSection(", "private FrameworkElement BuildCarTablesRow("), "LedsEveryStripSection",
-                "var carData = Ui.SettingRow(PanelSoon.CarDataForAcAccLmu.Title, null);",
+                "var carData = Ui.SettingRow(PanelSoon.CarDataForLmu.Title, null);",
                 "Ui.Anchor(LedsHeading(PanelLeds.EveryStripTitle), PanelLeds.AnchorEveryStrip),",
                 "Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables),");
             var preview = Body(leds, "private FrameworkElement LedsPreview(", "private static UIElement LedsRowControl(");
@@ -1235,15 +1235,19 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelLeds.CarTablesMissing, PanelLeds.CarLine(true, car, false, false, PanelLeds.TablesMissing(0, PanelLights.CarTablesNone), true));
         }
 
-        /// <summary>The plugin reads iRacing's tables alone, so in any other game a car the archive does carry
-        /// would read as missing: the line says nothing there, tables or not.</summary>
+        /// <summary>The plugin reads iRacing's, Assetto Corsa's and ACC's tables (#748), so in any other game a car
+        /// the archive does carry would read as missing: the line says nothing there, tables or not.</summary>
         [Theory]
         [InlineData("iRacing", true)]
         [InlineData("IRacing", true)]
         [InlineData(" iracing ", true)]
-        [InlineData("Assetto Corsa Competizione", false)]
-        [InlineData("AssettoCorsaCompetizione", false)]
+        [InlineData("Assetto Corsa", true)]
+        [InlineData("AssettoCorsa", true)]
+        [InlineData("Assetto Corsa Competizione", true)]
+        [InlineData("AssettoCorsaCompetizione", true)]
         [InlineData("Le Mans Ultimate", false)]
+        [InlineData("LMU", false)]
+        [InlineData("Assetto Corsa EVO", false)]
         [InlineData(null, false)]
         public void The_car_line_speaks_only_in_the_game_the_tables_cover(string game, bool covered)
         {
@@ -1819,7 +1823,7 @@ namespace OpenDashPlugin.Tests
                 "PanelLeds.SpotterCaption), PanelLeds.AnchorSpotter)));",
                 // The greyed rows are drawn greyed: a live control whose writer writes nothing is a lie.
                 "rows.Add(Ui.SubRow(Ui.Soon(limiter, PanelSoon.PitLimiterLights)));",
-                "Ui.Soon(carData, PanelSoon.CarDataForAcAccLmu)",
+                "Ui.Soon(carData, PanelSoon.CarDataForLmu)",
                 "LedsSoonRow(PanelSoon.IdleSweep, Ui.Switch(true, on => { })),",
                 "LedsSoonRow(PanelSoon.EngineStartAnimation, Ui.Switch(true, on => { })),",
                 "rows.Add(LedsSoonRow(PanelSoon.EachLedInTurn, Ui.Button(PanelLeds.EachLedStart, PanelButtonKind.Outline, PanelButtonSize.Small)));",
@@ -1827,7 +1831,7 @@ namespace OpenDashPlugin.Tests
             {
                 Assert.True(leds.Contains(read), "the page no longer carries: " + read);
             }
-            // The limiter and the AC, ACC and LMU car data rows are drawn nowhere but greyed.
+            // The limiter and the LMU car data rows are drawn nowhere but greyed.
             Assert.Equal(1, Occurrences(leds, "Ui.SubRow(Ui.Soon(limiter,"));
             Assert.DoesNotContain("rows.Add(Ui.SubRow(limiter));", leds);
             // The car data row is declared and drawn once, inside Ui.Soon.

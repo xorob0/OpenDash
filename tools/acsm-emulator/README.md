@@ -144,7 +144,8 @@ sees:
 
 With `extends`, `values` and `pin` are merged key by key and everything else is replaced. Timeline
 events take `log`, `set`, `pin`, `unpin` (a list of names) and `driver` (one object or a list), as the
-irsdk emulator's do.
+irsdk emulator's do. The events at 0 are applied before any driver moves, so a driver a scenario turns
+off at 0 never runs, not even for the first frame (#1138).
 
 ### Drivers
 
@@ -185,7 +186,7 @@ three seconds in memory, reads every page back with `Marshal.PtrToStructure` as 
 what SimHub's reader needs: `Graphics.Status` `AC_LIVE`, revs above 300 so `EngineStarted` is true, the
 player named, the track length and the maximum revs set, the car and the track present in the fake
 install, the car's files parsing the way SimHub parses them (and the TC and ABS levels SimHub will read
-from them), and, with a field, every car connected, exactly one of them the player, and a running order
+from them), that no driver the timeline turns off at 0 ran, and, with a field, every car connected, exactly one of them the player, and a running order
 with no gap. CI runs it on every scenario through the net8.0 build in `devcheck/`:
 
 ```bash

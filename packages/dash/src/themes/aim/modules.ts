@@ -90,8 +90,10 @@ export const SHORT: Readonly<Record<string, string>> = {
  * 467 px, the columns the LCD lays are 360 and 440, and a name cannot be set smaller, the register
  * having one value size per zone. So the qualifier goes, as the captions lose what the unit has no
  * room for, and what is left is iRacing's own word for the session. `Consolation` is eleven cells
- * and two pixels past a 360 px column, and is written as the dirt ovals that run one call it. A
- * name not listed is written as iRacing writes it.
+ * and two pixels past a 360 px column, and is written as the dirt ovals that run one call it.
+ * Assetto Corsa's `TIME_ATTACK` is eleven cells too, a cell more than `Time Trial`, which is what the
+ * cell is cut to, and is written as its own last word, in the capitals the sim writes it in (#1127).
+ * A name not listed is written as the sim writes it.
  */
 export const SHORT_SESSION: Readonly<Record<string, string>> = {
   'Offline Testing': 'Testing',
@@ -100,6 +102,7 @@ export const SHORT_SESSION: Readonly<Record<string, string>> = {
   'Lone Qualify': 'Qualify',
   'Open Qualify': 'Qualify',
   'Consolation': 'Consi',
+  'TIME_ATTACK': 'ATTACK',
 };
 
 /** True for the session's name, which is the one reading the LCD writes in its own words. */

@@ -68,6 +68,7 @@ import {
   PORSCHE_CREST,
   LIVE_SLOTS,
   liveSettingNames,
+  CAPABILITIES,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -186,6 +187,7 @@ describe('settings', () => {
         SLOT_MAX +
         12 +
         4 * LIVE_SLOTS +
+        CAPABILITIES.length +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -235,8 +237,9 @@ describe('settings', () => {
     // the AiM's backlight became the driver's choice (#715), and 405 before the catalogue gained the
     // engine readings, and with them a companion switch (#752). And 406 before the plugin had to
     // publish the race as it stands on the road, a place and a row in each of two counts for sixty-four
-    // cars, because iRacing moves it only at the line (#1063).
-    expect(props).toHaveLength(662);
+    // cars, because iRacing moves it only at the line (#1063). And 662 before the plugin had to say what
+    // the running sim can report, four answers that let no dashboard name a game (#1101).
+    expect(props).toHaveLength(666);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -380,6 +383,12 @@ describe('settings', () => {
         // And the race as it stands on the road, published rather than chosen and read by every screen
         // that draws a place, a list or a gap. #1063.
         ...liveSettingNames(),
+        // And what the running sim can report, published rather than chosen and asked of the same sim by
+        // every screen. #1101.
+        'CarHasPitLimiter',
+        'PitLimiterOn',
+        'DamageReported',
+        'DriverInCar',
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 
