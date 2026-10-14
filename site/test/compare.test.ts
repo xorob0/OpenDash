@@ -23,6 +23,12 @@ describe('the comparison', () => {
     }
   });
 
+  test('a coming feature says what is there today and what is coming', () => {
+    // The list under the table prints the sentence beside the label, so an empty one is a blank line there (#813).
+    const blank = ROWS.filter((r) => r.cells.opendash.mark === 'soon' && r.cells.opendash.text.trim().length < 10).map((r) => r.id);
+    expect(blank).toEqual([]);
+  });
+
   test('a refusal has a reason, and a word that is not the mark repeated', () => {
     for (const row of ROWS) {
       const c = row.cells.opendash;

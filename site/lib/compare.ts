@@ -230,7 +230,7 @@ export const rows = (c: Counts): CompareRow[] => [
     id: 'flagsScreen',
     label: 'Flags screen for a second display',
     cells: {
-      opendash: cell('soon', '', { issues: [739] }),
+      opendash: cell('soon', 'Flags are on every face’s band and in the flag box today. A screen of nothing but flags is coming.', { issues: [739] }),
       lovely: cell('yes', 'Lovely Flags, free, in 3 shapes.'),
       dnr: cell('partial', 'A flags panel drawn over the game, on the £6 tier. No screen of its own.'),
     },
@@ -302,6 +302,12 @@ export const rows = (c: Counts): CompareRow[] => [
     },
   },
 ];
+
+/**
+ * The issues a row's OpenDash cell is scheduled under, for a page that makes the same promise
+ * outside the table, so that its link is the table's and cannot point somewhere else (#813).
+ */
+export const issuesOf = (all: readonly CompareRow[], id: string): number[] => all.find((r) => r.id === id)?.cells.opendash.issues ?? [];
 
 /** The coming-soon rows, for the list under the table. */
 export const scheduled = (c: Counts): CompareRow[] => rows(c).filter((r) => r.cells.opendash.mark === 'soon');
