@@ -144,12 +144,17 @@ namespace OpenDashPlugin
         /// What the update-check setting says about itself, which is the user-facing form of ADR 0012's promise.
         /// </summary>
         /// <remarks>
-        /// Taken verbatim from design/canvas/Plugin.dc.html, where the author wrote it. The canvas is the design
-        /// source and is not edited from code, so when the two disagree this is what moves. It is here rather than
-        /// in the panel because it is copy, and because the whole of what OpenDash discloses ought to be readable
-        /// in one sentence beside the switch that turns it off.
+        /// design/canvas/Plugin.dc.html, where the author wrote it, goes on "Nothing else leaves your machine.", and
+        /// that stopped being true when the Porsche crest began to be fetched at a start without a press (#714): a
+        /// rig with a Porsche screen has asked the crest's host for it before the driver opens this page, and
+        /// switching the check off does not stop it (#1116). So the sentence says what the check sends rather than
+        /// what else stays, in the terms docs/scope.md and the site's install page use: nothing about the user.
+        /// The plugin's other requests are listed in scope.md, which a caption cannot hold. It is one sentence
+        /// where the artboard has two, as voice.md asks, and the departures table in docs/design/plugin.md records
+        /// the difference until the author settles the words on the canvas. It is here rather than in the panel
+        /// because it is copy.
         /// </remarks>
-        public const string CheckCaption = "Asks GitHub for the newest release once a day. Nothing else leaves your machine.";
+        public const string CheckCaption = "Asks GitHub for the newest release once a day, and sends nothing about you.";
 
         /// <summary>
         /// What a press of Update says when there is no release behind it.
