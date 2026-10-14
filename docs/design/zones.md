@@ -869,7 +869,7 @@ Pages with nothing to shed, and why:
 - **Radar** (`radar`) — the cars beside you, cut from the box; rule 18.
 - **Track** (`track`) — the map, cut from the box; rule 18.
 - **Lap history** (`lapHistory`) — lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops.
-- **Damage** (`damage`) — one line of prose: iRacing publishes no damage.
+- **Damage** (`damage`) — a drawing cut from its box (rule 18) with the four panels beside it, or one line of prose where the sim reports no damage.
 - **Track rivals** (`trackRivals`) — one line of prose: SimHub times sectors, not segments.
 
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is

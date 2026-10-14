@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79321,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter"]}
+{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79321,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -14,6 +14,10 @@
 {"p":"DataCorePlugin.GameData.BestLapTime","t":"timespan","v":"00:01:37.9050000"}
 {"p":"DataCorePlugin.GameData.Brake","v":0}
 {"p":"DataCorePlugin.GameData.BrakeBias","v":54.5}
+{"p":"DataCorePlugin.GameData.CarDamage1","v":0}
+{"p":"DataCorePlugin.GameData.CarDamage2","v":0}
+{"p":"DataCorePlugin.GameData.CarDamage3","v":0}
+{"p":"DataCorePlugin.GameData.CarDamage4","v":0}
 {"p":"DataCorePlugin.GameData.CarSettings_CurrentDisplayedRPMPercent","v":80}
 {"p":"DataCorePlugin.GameData.CarSettings_CurrentGearRedLineRPM","v":8550}
 {"p":"DataCorePlugin.GameData.CarSettings_MaxGears","v":6}
@@ -179,6 +183,7 @@
 {"p":"OpenDash.CompanionModule21","v":null}
 {"p":"OpenDash.CompanionModule22","v":null}
 {"p":"OpenDash.CompanionOpenOn","v":null}
+{"p":"OpenDash.DamageReported","v":false}
 {"p":"OpenDash.DeltaPrecision","v":"hundredths"}
 {"p":"OpenDash.DeltaReference","v":"session"}
 {"p":"OpenDash.DriverNameFormat","v":"full"}

@@ -2264,7 +2264,7 @@ export const sim = {
   pitLimiterOn: (): Expr => setting.reported(PIT_LIMITER_ON, pitLimiterOn()),
   /**
    * The sim reports the car's damage. Without the plugin, false: iRacing fills SimHub's `CarDamage1..5` with
-   * zeros, which is no report at all. Not yet read: #582 gates the damage module on it.
+   * zeros, which is no report at all. The damage module draws the car or says the sim reports none by it. #582.
    */
   damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
   /**

@@ -285,7 +285,7 @@ has not arrived yet.
 | Not drawn | Why |
 |---|---|
 | Virtual energy (module 6) | A Le Mans Ultimate feature. SimHub's ERS members are never filled by the iRacing reader. |
-| Damage (module 20) | iRacing publishes no damage values. SimHub's damage members are filled with zeros, so a body diagram drawn from them would show an undamaged car after a crash. |
+| Damage on iRacing and Le Mans Ultimate (module 20) | Neither publishes damage to SimHub. SimHub's damage members are filled with zeros, so a body diagram drawn from them would show an undamaged car after a crash, and the page says the sim reports none instead. On Assetto Corsa and ACC, which do publish it, the page draws the car with its front, rear and sides coloured by how badly each is hit, and a word for each beside it. Where a light hit ends and a heavy one starts is provisional until a drive measures the range the sims' figures reach. |
 | Track rivals (module 21) | SimHub times sectors, not segments, and has no notion of a rival's time over the stretch of track you are on. |
 | Fuel pressure, voltage and manifold pressure off iRacing (module 22) | SimHub normalises the water and oil temperatures and the oil pressure for every sim, and has no name for the other three, so they are read from iRacing's own telemetry and read as no data on any other sim. |
 | Mini-sectors | SimHub has no subdivision below a sector. The sector strip has one cell per real sector. |
