@@ -50,6 +50,10 @@ namespace OpenDashPlugin
 
         public int FontsCopied { get; set; }
 
+        /// <summary>Why the package's fonts could not be copied into DashFonts, null when they were. The folder is
+        /// written by then, which is why this is reported here rather than thrown.</summary>
+        public string FontsError { get; set; }
+
         /// <summary>Path of the zip made from the previous folder, null when there was none.</summary>
         public string BackupPath { get; set; }
     }

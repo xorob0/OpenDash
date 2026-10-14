@@ -6,6 +6,7 @@
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using Xunit;
 
 namespace OpenDashPlugin.Tests
@@ -95,6 +96,104 @@ namespace OpenDashPlugin.Tests
             // which is the bias PackageStatus.Edited already takes.
             Assert.False(ScreenInstaller.Retitle(Screen("Main dash"), root, new MemoryFolderRecord(), null));
             Assert.False(ScreenInstaller.Retitle(Screen("Main dash"), root, null, null));
+        }
+
+        /// <summary>
+        /// A folder SimHub holds a file of is not removed at all, rather than part of the way (#861): the remove fails
+        /// with the dashboard whole, so the panel can keep the screen that owns it.
+        /// </summary>
+        [Fact]
+        public void A_held_folder_is_left_whole_and_its_remove_reported_as_failed()
+        {
+            var record = new MemoryFolderRecord();
+            InstallStock(record);
+            var folder = PackageExtractor.InstalledFolder(root, Folder);
+            var disk = RefusingDisk.Holding(folder);
+
+            var result = ScreenInstaller.Remove(Screen("Main dash"), root, record, null, disk);
+
+            Assert.False(result.Ok);
+            Assert.False(result.Written);
+            Assert.True(disk.Refused > 0, "the held folder was reached");
+            Assert.Equal("1.0.0", PackageExtractor.ReadInstalledVersion(root, Folder));
+            Assert.Empty(PackageExtractor.KeptCopies(root, Folder));
+            Assert.Equal(new[] { Folder }, Directory.GetDirectories(Path.Combine(root, PackageExtractor.DashTemplates)).Select(Path.GetFileName));
+        }
+
+        /// <summary>
+        /// Removing a screen whose dashboard somebody edited in Dash Studio used to delete the edit with it (#861). A copy
+        /// is kept first, under a name no install reclaims, as a reinstall over the edit keeps one.
+        /// </summary>
+        [Fact]
+        public void An_edited_dashboard_is_kept_as_a_copy_when_its_screen_is_removed()
+        {
+            var record = new MemoryFolderRecord();
+            InstallStock(record);
+            var main = Path.Combine(PackageExtractor.InstalledFolder(root, Folder), Folder + ".djson");
+            File.WriteAllText(main, "{\"Version\":2,\"Title\":\"Mine\",\"Mine\":true}");
+
+            var result = ScreenInstaller.Remove(Screen("Main dash"), root, record, null);
+
+            Assert.True(result.Ok, result.Error);
+            Assert.True(result.Written);
+            Assert.False(Directory.Exists(PackageExtractor.InstalledFolder(root, Folder)));
+            Assert.NotNull(result.KeptCopy);
+            Assert.Contains(PackageExtractor.EditedSuffix, result.KeptCopy);
+            using (var zip = ZipFile.OpenRead(result.KeptCopy))
+            using (var reader = new StreamReader(zip.GetEntry(Folder + ".djson").Open()))
+            {
+                Assert.Contains("\"Mine\":true", reader.ReadToEnd());
+            }
+            Assert.Empty(Directory.GetDirectories(Path.Combine(root, PackageExtractor.DashTemplates)));
+        }
+
+        /// <summary>A dashboard nobody touched is OpenDash's own and goes without a copy, as it would at a reinstall
+        /// (which keeps only the ordinary backup the next install reclaims).</summary>
+        [Fact]
+        public void An_untouched_dashboard_is_removed_without_a_copy()
+        {
+            var record = new MemoryFolderRecord();
+            InstallStock(record);
+
+            var result = ScreenInstaller.Remove(Screen("Main dash"), root, record, null);
+
+            Assert.True(result.Ok, result.Error);
+            Assert.Null(result.KeptCopy);
+            Assert.Empty(Directory.GetFileSystemEntries(Path.Combine(root, PackageExtractor.DashTemplates)));
+            // And a folder already gone is a remove that worked, with nothing written.
+            var again = ScreenInstaller.Remove(Screen("Main dash"), root, record, null);
+            Assert.True(again.Ok);
+            Assert.False(again.Written);
+        }
+
+        /// <summary>
+        /// The panel takes a screen off the rig before it removes the folder, and puts it back where it was when the
+        /// folder stayed (#861), with everything set on it, since RemoveScreen dropped nothing else.
+        /// </summary>
+        [Fact]
+        public void A_screen_whose_folder_stayed_goes_back_where_it_was_on_the_rig()
+        {
+            var settings = new OpenDashSettings();
+            var catalogue = new[]
+            {
+                new PackageEntry { Package = "a", Folder = "OpenDash 1280x480", Kind = Contract.KindFace, Width = 1280, Height = 480 },
+                new PackageEntry { Package = "b", Folder = "OpenDash 850x480", Kind = Contract.KindFace, Width = 850, Height = 480 },
+            };
+            var first = settings.AddScreen(catalogue[0], "First");
+            var second = settings.AddScreen(catalogue[1], "Second");
+            var third = settings.AddScreen(catalogue[0], "Third");
+
+            var at = settings.Rig.IndexOf(second);
+            Assert.True(settings.RemoveScreen(second.Namespace));
+            settings.PutScreenBack(second, at);
+            Assert.Equal(new[] { first, second, third }, settings.Rig);
+
+            // Put back once only, whatever happened meanwhile.
+            settings.PutScreenBack(second, 0);
+            Assert.Equal(3, settings.Rig.Count);
+            settings.RemoveScreen(third.Namespace);
+            settings.PutScreenBack(third, 99);
+            Assert.Same(third, settings.Rig.Last());
         }
 
         /// <summary>Nothing to put a name into is not a failure to report, on any of the three ways a

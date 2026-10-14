@@ -129,6 +129,33 @@ namespace OpenDashPlugin.Tests
             Assert.True(settings.RemoveScreen(copy.Namespace));
             Assert.NotSame(withFace, settings.Rig);
             Assert.Equal(count + 2, withFace.Count);
+
+            // A remove whose folder stayed puts the screen back (#861), and that too is a new rig rather than an insert
+            // into the one SimHub's threads may be walking.
+            var withoutCopy = settings.Rig;
+            settings.PutScreenBack(copy, 1);
+            Assert.NotSame(withoutCopy, settings.Rig);
+            Assert.Equal(count + 1, withoutCopy.Count);
+            Assert.Same(copy, settings.Rig[1]);
+        }
+
+        [Fact]
+        public void Looking_a_screen_up_while_the_panel_removes_a_screen_and_puts_it_back_never_throws()
+        {
+            var settings = Rig();
+            var thrown = RaceOf(round =>
+            {
+                var added = settings.AddScreen(Rim, "Added");
+                var at = settings.Rig.IndexOf(added);
+                settings.RemoveScreen(added.Namespace);
+                settings.PutScreenBack(added, at);
+                settings.RemoveScreen(added.Namespace);
+            }, () =>
+            {
+                settings.ScreenByNamespace("NoSuchScreen");
+                Assert.NotNull(settings.ScreenFace(settings.RigScreens()[0].Namespace));
+            });
+            Assert.Null(thrown);
         }
 
         [Fact]

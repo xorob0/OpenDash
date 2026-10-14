@@ -525,18 +525,23 @@ namespace OpenDashPlugin
                         return entry;
                     }
                     var replacingAuthoredWork = entry.Edited;
+                    InstallResult result;
                     using (var package = packages.Open(name))
                     {
-                        var result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork, planned.Screen);
+                        result = PackageExtractor.Install(package, SimHubRoot, log, replacingAuthoredWork, planned.Screen);
                         log.Info("Fonts copied: " + result.FontsCopied);
                         entry.KeptCopy = result.BackupPath;
                         entry.FontsCopied = result.FontsCopied;
                     }
+                    // Extracted from here on, whatever fails after: the folder is the new one, and a caller that undoes
+                    // a press when nothing was written reads this (ScreenInstaller.Resize). The record is written
+                    // before a font failure is reported, so the next start does not read the folder as edited.
                     entry.Extracted = true;
                     entry.InstalledVersion = ReadInstalled(folder);
                     entry.Status = Versioning.Decide(entry.InstalledVersion, entry.EmbeddedVersion);
                     record.Set(folder, FolderFingerprint.Of(installedFolder));
                     entry.Edited = false;
+                    if (result.FontsError != null) throw new IOException("its fonts could not be copied: " + result.FontsError);
                 }
                 else if (entry.InstalledVersion != null && string.IsNullOrWhiteSpace(remembered))
                 {

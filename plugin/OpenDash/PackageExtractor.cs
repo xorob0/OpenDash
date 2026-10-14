@@ -3,6 +3,7 @@
 // Framework-only IO with an injected log, so that the tests exercise it on Linux against a fake SimHub root.
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -10,6 +11,33 @@ using System.Threading;
 
 namespace OpenDashPlugin
 {
+    /// <summary>
+    /// The two things done to a whole dashboard folder under DashTemplates: moving it and deleting it.
+    /// </summary>
+    /// <remarks>
+    /// An interface so that a test can refuse one where Windows would. Windows will not rename or delete a folder
+    /// while a file in it is held open, and Linux, where the tests run, does both, so a held file cannot be staged
+    /// there with a handle; a test hands the extractor one of these that throws instead.
+    /// </remarks>
+    public interface IFolderMoves
+    {
+        /// <summary>Directory.Move.</summary>
+        void Move(string from, string to);
+
+        /// <summary>A recursive Directory.Delete.</summary>
+        void Delete(string folder);
+    }
+
+    /// <summary>The disk itself.</summary>
+    public sealed class DiskFolders : IFolderMoves
+    {
+        public static readonly DiskFolders Instance = new DiskFolders();
+
+        public void Move(string from, string to) => Directory.Move(from, to);
+
+        public void Delete(string folder) => Directory.Delete(folder, true);
+    }
+
     public static class PackageExtractor
     {
         public const string DashTemplates = "DashTemplates";
@@ -390,7 +418,11 @@ namespace OpenDashPlugin
         /// <param name="screen">
         /// The screen this copy belongs to, or null to write the package as it is embedded.
         /// </param>
-        public static InstallResult Install(Stream package, string simHubRoot, IInstallLog log, bool holdsAuthoredWork = false, ScreenTarget screen = null)
+        /// <param name="disk">
+        /// How the folder is moved and deleted; the disk itself when omitted. The tests hand in one that refuses a move
+        /// where Windows would.
+        /// </param>
+        public static InstallResult Install(Stream package, string simHubRoot, IInstallLog log, bool holdsAuthoredWork = false, ScreenTarget screen = null, IFolderMoves disk = null)
         {
             log = log ?? NullInstallLog.Instance;
             var templates = Path.Combine(simHubRoot, DashTemplates);
@@ -418,17 +450,23 @@ namespace OpenDashPlugin
                     Version = ReadVersionFile(Path.Combine(extracted, folderName + MetadataExtension)),
                 };
 
-                if (Directory.Exists(target))
-                {
-                    // Where the copy goes decides whether it survives (BackupPathFor).
-                    result.BackupPath = Backup(target, BackupPathFor(templates, folderName, holdsAuthoredWork), log);
-                    DeleteDirectory(target);
-                }
-                Directory.Move(extracted, target);
+                // Where the copy goes decides whether it survives (BackupPathFor).
+                var keepAs = Directory.Exists(target) ? BackupPathFor(templates, folderName, holdsAuthoredWork) : null;
+                result.BackupPath = Replace(extracted, target, keepAs, disk ?? DiskFolders.Instance, log);
                 StampMetadata(target, folderName, log);
                 log.Info("Installed " + folderName + " " + (result.Version ?? "(no version)") + " into " + target);
 
-                result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
+                // The folder is in by now, so a font that cannot be copied is reported on the result rather than thrown:
+                // a caller told "failed" would take the folder for the one that was there before (#588).
+                try
+                {
+                    result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
+                }
+                catch (Exception ex)
+                {
+                    result.FontsError = ex.Message;
+                    log.Error("Installed " + folderName + ", but could not copy its fonts into " + DashFonts + ": " + ex.Message);
+                }
                 return result;
             }
             finally
@@ -476,15 +514,36 @@ namespace OpenDashPlugin
         /// <summary>Prefix of the folder an install extracts into before moving it into place.</summary>
         public const string StagingPrefix = "_OpenDash_staging_";
 
+        /// <summary>Suffix of a copy written beside the ordinary backup, which takes the backup's name once a replace is
+        /// done (Replace).</summary>
+        public const string PartialSuffix = ".partial";
+
+        /// <summary>Prefix of the folder a restore extracts a kept copy into before moving it into place.</summary>
+        public const string RestorePrefix = "_OpenDash_restore_";
+
+        /// <summary>Prefix of the folder a dashboard is moved into, under its own name, while its replacement is moved
+        /// in (Replace).</summary>
+        public const string AsidePrefix = "_OpenDash_aside_";
+
         /// <summary>
-        /// Removes staging folders an earlier install did not clean up, and reports how many.
+        /// Removes the working folders an earlier install or restore did not clean up, puts back a dashboard that an
+        /// interrupted replace had moved aside, and reports how many folders it dealt with.
         /// </summary>
         /// <remarks>
         /// Install extracts into DashTemplates/_OpenDash_staging_&lt;guid&gt; and removes it in a finally. That finally
         /// does not run when the process exits, because a thread-pool thread is a background thread the CLR
         /// terminates without unwinding, so every update abandoned by a SimHub that closed mid-install leaves a
         /// complete extracted dashboard behind. They accumulate, they are invisible, and nothing else would ever
-        /// remove them. A folder with this prefix is OpenDash's own working space and is never a user's dashboard.
+        /// remove them. A folder with one of these prefixes is OpenDash's own working space and is never a user's
+        /// dashboard. A restore's was left out, so an interrupted Put mine back left a whole dashboard in
+        /// DashTemplates for good (#580).
+        ///
+        /// An aside folder is not swept blindly. It holds the dashboard that was there before a replace, which is
+        /// all that is left of it when the process stopped before its replacement was moved in, so it is moved back
+        /// under its own name when that name is free. When the name is taken, the replace got as far as moving the
+        /// new folder in, and the aside copy is deleted as the replace would have deleted it. A replace that got further
+        /// renames its aside folder to a staging name before it deletes it, so a delete cut short is never put back.
+        /// A copy left beside the ordinary backup is removed too, since the backup it was to replace is still there.
         /// </remarks>
         public static int RemoveOrphanedStaging(string simHubRoot, IInstallLog log)
         {
@@ -492,7 +551,32 @@ namespace OpenDashPlugin
             var templates = Path.Combine(simHubRoot ?? string.Empty, DashTemplates);
             if (!Directory.Exists(templates)) return 0;
             var removed = 0;
-            foreach (var folder in Directory.GetDirectories(templates, StagingPrefix + "*"))
+            foreach (var aside in Directory.GetDirectories(templates, AsidePrefix + "*"))
+            {
+                try
+                {
+                    foreach (var folder in Directory.GetDirectories(aside))
+                    {
+                        var name = Path.GetFileName(folder);
+                        var target = Path.Combine(templates, name);
+                        if (Directory.Exists(target)) continue;
+                        Directory.Move(folder, target);
+                        log.Info("Put back " + name + ", which an interrupted install had moved aside.");
+                    }
+                    // What is left is spent, and is renamed as such before it is deleted, as Replace does, so that a
+                    // delete cut short here is never put back by a later sweep.
+                    var spent = Path.Combine(templates, StagingPrefix + Guid.NewGuid().ToString("N"));
+                    Directory.Move(aside, spent);
+                    Directory.Delete(spent, true);
+                    removed++;
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not put back or remove " + aside + ": " + ex.Message);
+                }
+            }
+            var working = Directory.GetDirectories(templates, StagingPrefix + "*").Concat(Directory.GetDirectories(templates, RestorePrefix + "*"));
+            foreach (var folder in working)
             {
                 try
                 {
@@ -503,6 +587,21 @@ namespace OpenDashPlugin
                 catch (Exception ex)
                 {
                     log.Warn("Could not remove " + folder + ": " + ex.Message);
+                }
+            }
+            // A copy written beside the ordinary backup and never renamed over it, because the process stopped first
+            // (Replace). The backup it was to replace is still there.
+            foreach (var partial in Directory.GetFiles(templates, "*" + BackupSuffix + PartialSuffix))
+            {
+                try
+                {
+                    File.Delete(partial);
+                    removed++;
+                    log.Info("Removed a copy an interrupted install left unfinished: " + Path.GetFileName(partial));
+                }
+                catch (Exception ex)
+                {
+                    log.Warn("Could not remove " + partial + ": " + ex.Message);
                 }
             }
             return removed;
@@ -543,7 +642,8 @@ namespace OpenDashPlugin
         /// where no install reclaims it and the panel offers it back. False for a folder OpenDash wrote and nobody
         /// has touched, whose copy is the ordinary one-deep backup. Unknown is somebody's work.
         /// </param>
-        public static bool Restore(string simHubRoot, string folderName, IInstallLog log, string from = null, bool holdsAuthoredWork = true)
+        /// <param name="disk">How the folder is moved and deleted; the disk itself when omitted.</param>
+        public static bool Restore(string simHubRoot, string folderName, IInstallLog log, string from = null, bool holdsAuthoredWork = true, IFolderMoves disk = null)
         {
             log = log ?? NullInstallLog.Instance;
             var templates = Path.Combine(simHubRoot, DashTemplates);
@@ -555,7 +655,7 @@ namespace OpenDashPlugin
             }
 
             var target = Path.Combine(templates, folderName);
-            var staging = Path.Combine(templates, "_OpenDash_restore_" + Guid.NewGuid().ToString("N"));
+            var staging = Path.Combine(templates, RestorePrefix + Guid.NewGuid().ToString("N"));
             try
             {
                 using (var zip = ZipFile.OpenRead(copy))
@@ -566,14 +666,10 @@ namespace OpenDashPlugin
                 {
                     throw new InvalidDataException("The kept copy of " + folderName + " has no " + folderName + DashExtension + ".");
                 }
-                // Backup throws when the copy cannot be taken, and the folder is then left as it is.
-                string keptAs = null;
-                if (Directory.Exists(target))
-                {
-                    keptAs = Backup(target, BackupPathFor(templates, folderName, holdsAuthoredWork), log);
-                    DeleteDirectory(target);
-                }
-                Directory.Move(staging, target);
+                // Replace throws when the folder cannot be moved aside or its copy cannot be taken, and the folder is
+                // then left as it is.
+                var keepAs = Directory.Exists(target) ? BackupPathFor(templates, folderName, holdsAuthoredWork) : null;
+                var keptAs = Replace(staging, target, keepAs, disk ?? DiskFolders.Instance, log);
                 log.Info("Put back the previous copy of " + folderName + " from " + copy);
                 // The ordinary backup restored over an untouched folder has just been rewritten with what it
                 // replaced, a swap, and is not spent.
@@ -628,7 +724,151 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Sets the existing folder aside. Throws when it cannot, which stops the install.
+        /// Puts a staged folder in the place of <paramref name="target"/>, keeping a copy of what was there, so that a
+        /// failure at any step leaves the dashboard that was there whole. Throws when the replace did not happen.
+        /// </summary>
+        /// <remarks>
+        /// It used to take the copy, delete the target and move the new folder in. A recursive delete removes one
+        /// file at a time and stops at the first it cannot, so a file SimHub or a virus scanner still held left the
+        /// folder half deleted, and a move that failed after a delete that had worked left nothing under the name
+        /// but a zip (#580, #869). Renames are what can be undone. The old folder is moved aside in one step, which
+        /// Windows refuses whole while a file in it is open, so a held file now stops the replace before anything
+        /// has changed. The copy is taken from the folder aside, the new folder is moved in, and only then is the old
+        /// one renamed as spent (Retire) and deleted, as a best effort, since by then it is no longer a dashboard.
+        /// When the copy or the move in fails, the old folder is moved back. When even that fails it is left whole in the aside folder, which
+        /// RemoveOrphanedStaging puts back at the next start, and the log says where it is.
+        ///
+        /// A copy that would overwrite one already on the shelf, which is the ordinary one-deep backup, is written
+        /// beside it and takes its name only once the new folder is in. A replace that is undone therefore leaves the
+        /// shelf as it found it: the backup a restore was about to put back is still there to put back, and no copy of
+        /// somebody's work is offered for a folder that still holds it.
+        /// </remarks>
+        /// <param name="keepAs">Where the copy of the folder being replaced goes, or null when nothing is replaced.</param>
+        /// <returns>Where the copy went, or null when there was nothing to replace.</returns>
+        private static string Replace(string staged, string target, string keepAs, IFolderMoves disk, IInstallLog log)
+        {
+            if (!Directory.Exists(target))
+            {
+                Retrying(() => disk.Move(staged, target));
+                return null;
+            }
+
+            var name = Path.GetFileName(target);
+            var holder = Path.Combine(Path.GetDirectoryName(target), AsidePrefix + Guid.NewGuid().ToString("N"));
+            var aside = Path.Combine(holder, name);
+            Directory.CreateDirectory(holder);
+            try
+            {
+                Retrying(() => disk.Move(target, aside));
+            }
+            catch (Exception ex)
+            {
+                TryDeleteEmpty(holder);
+                log.Error("Could not move " + name + " aside to replace it, so it was left as it is: " + ex.Message);
+                throw new IOException(name + " is in use and was left as it is: " + ex.Message, ex);
+            }
+
+            var pending = keepAs == null ? null : File.Exists(keepAs) ? keepAs + PartialSuffix : keepAs;
+            try
+            {
+                if (pending != null) Backup(aside, pending, log);
+                Retrying(() => disk.Move(staged, target));
+            }
+            catch (Exception)
+            {
+                if (pending != null) TryDeleteFile(pending, log);
+                try
+                {
+                    Retrying(() => disk.Move(aside, target));
+                    TryDeleteEmpty(holder);
+                    log.Warn("Put " + name + " back as it was, since its replacement could not be moved in.");
+                }
+                catch (Exception back)
+                {
+                    log.Error("Could not put " + name + " back, so it is kept whole in " + aside
+                        + ", where the next start of SimHub puts it back: " + back.Message);
+                }
+                throw;
+            }
+
+            var kept = pending;
+            if (pending != null && !string.Equals(pending, keepAs, StringComparison.Ordinal))
+            {
+                try
+                {
+                    // In one step, so that the older copy goes only as the newer one takes its name.
+                    if (File.Exists(keepAs)) File.Replace(pending, keepAs, null);
+                    else File.Move(pending, keepAs);
+                    kept = keepAs;
+                }
+                catch (Exception ex)
+                {
+                    // The older copy is the one left on the shelf, since a refused replace takes nothing away, and the
+                    // folder it is a copy of is OpenDash's own, since a copy of somebody's work always has a name of
+                    // its own.
+                    log.Warn("Could not keep the previous copy of " + name + " as " + keepAs + ": " + ex.Message);
+                    TryDeleteFile(pending, log);
+                    kept = null;
+                }
+            }
+            if (kept != null) log.Info("Previous copy kept as " + kept);
+            var spent = Retire(holder, disk, log);
+            if (spent != null) Discard(spent, disk, log);
+            return kept;
+        }
+
+        /// <summary>
+        /// Deletes a dashboard folder, keeping a copy of it first when it holds somebody's work, and returns where that
+        /// copy went. Throws when the folder could not be taken out of DashTemplates, which then holds it as it was.
+        /// </summary>
+        /// <remarks>
+        /// The screen's Remove used to be a bare recursive delete, which a file SimHub held stopped part of the way
+        /// through, leaving a folder that was no longer a dashboard and that no screen owned (#861). The folder is
+        /// moved out in one step instead, which Windows refuses whole while a file in it is open, and deleted once it
+        /// is out. Out means a working folder RemoveOrphanedStaging sweeps, so a delete that fails there, or that a
+        /// closing SimHub cuts short, is finished at the next start.
+        ///
+        /// The copy is taken while the folder is still in place, so that nothing a closing SimHub interrupts can lose
+        /// the work: either the folder is still there or its copy is. It is kept under a name of its own, as Install
+        /// keeps one, and removed again when the folder could not be moved, since the folder still holds the work.
+        /// </remarks>
+        /// <param name="holdsAuthoredWork">Whether somebody has edited the folder, so that a copy of it is kept.</param>
+        /// <param name="disk">How the folder is moved and deleted; the disk itself when omitted.</param>
+        /// <returns>The copy kept, or null when none was.</returns>
+        public static string Remove(string simHubRoot, string folderName, bool holdsAuthoredWork, IInstallLog log, IFolderMoves disk = null)
+        {
+            log = log ?? NullInstallLog.Instance;
+            disk = disk ?? DiskFolders.Instance;
+            var templates = Path.Combine(simHubRoot, DashTemplates);
+            var target = Path.Combine(templates, folderName);
+            if (!Directory.Exists(target)) return null;
+
+            string kept = null;
+            if (holdsAuthoredWork)
+            {
+                kept = BackupPathFor(templates, folderName, true);
+                Backup(target, kept, log);
+            }
+            var holder = Path.Combine(templates, StagingPrefix + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(holder);
+            try
+            {
+                Retrying(() => disk.Move(target, Path.Combine(holder, folderName)));
+            }
+            catch (Exception ex)
+            {
+                if (kept != null) TryDeleteFile(kept, log);
+                TryDeleteEmpty(holder);
+                log.Error("Could not move " + folderName + " out of DashTemplates, so it was left as it is: " + ex.Message);
+                throw new IOException(folderName + " is in use and was left as it is: " + ex.Message, ex);
+            }
+            if (kept != null) log.Info("Your copy of " + folderName + " is kept as " + kept);
+            Discard(holder, disk, log);
+            return kept;
+        }
+
+        /// <summary>
+        /// Zips a folder into a copy. Throws when it cannot, which stops the replace or the remove.
         /// </summary>
         /// <remarks>
         /// It used to warn and return null, and the caller deleted the folder regardless, so the one case the backup
@@ -636,19 +876,81 @@ namespace OpenDashPlugin
         /// and the dashboard went anyway. Failing here leaves the installed dashboard where it is, which is the whole
         /// point of taking a copy first.
         /// </remarks>
-        private static string Backup(string folder, string backupPath, IInstallLog log)
+        private static void Backup(string folder, string backupPath, IInstallLog log)
         {
             try
             {
                 if (File.Exists(backupPath)) File.Delete(backupPath);
                 ZipFile.CreateFromDirectory(folder, backupPath);
-                log.Info("Previous copy kept as " + backupPath);
-                return backupPath;
             }
             catch (Exception ex)
             {
-                log.Error("Could not set aside the copy of " + folder + ", so it was left as it is: " + ex.Message);
+                log.Error("Could not set aside the copy of " + Path.GetFileName(folder) + ", so it was left as it is: " + ex.Message);
                 throw new IOException("Could not set aside the existing " + Path.GetFileName(folder) + ": " + ex.Message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Renames the aside folder of a replace that is done to a staging name, and returns that name, or null when the
+        /// rename was refused.
+        /// </summary>
+        /// <remarks>
+        /// Once the new folder is in, the old one is spent, and a delete of it that stops part of the way through must
+        /// not leave anything the sweep would put back. The sweep puts an aside folder back whenever its name is free,
+        /// so a half-deleted one would have come back as a dashboard of nobody's once the screen was removed or resized
+        /// in the same session. A staging folder is only ever deleted. A refused rename has deleted nothing, so the
+        /// aside folder is left whole, and the sweep deletes it while the name is taken.
+        /// </remarks>
+        private static string Retire(string holder, IFolderMoves disk, IInstallLog log)
+        {
+            var spent = Path.Combine(Path.GetDirectoryName(holder), StagingPrefix + Guid.NewGuid().ToString("N"));
+            try
+            {
+                Retrying(() => disk.Move(holder, spent));
+                return spent;
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not set " + holder + " out for removal; the next start of SimHub removes it: " + ex.Message);
+                return null;
+            }
+        }
+
+        /// <summary>Deletes a folder a dashboard was moved into, as a best effort: it is no longer a dashboard, and
+        /// what is left of it is a working folder the next start sweeps.</summary>
+        private static void Discard(string holder, IFolderMoves disk, IInstallLog log)
+        {
+            try
+            {
+                Retrying(() => disk.Delete(holder));
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not remove " + holder + " yet; the next start of SimHub does: " + ex.Message);
+            }
+        }
+
+        private static void TryDeleteEmpty(string folder)
+        {
+            try
+            {
+                if (Directory.Exists(folder) && !Directory.EnumerateFileSystemEntries(folder).Any()) Directory.Delete(folder);
+            }
+            catch (Exception)
+            {
+                // An empty folder with a working prefix, which the next start sweeps.
+            }
+        }
+
+        private static void TryDeleteFile(string path, IInstallLog log)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                log.Warn("Could not remove " + path + ": " + ex.Message);
             }
         }
 
@@ -666,7 +968,7 @@ namespace OpenDashPlugin
         private static string BackupPathFor(string templates, string folderName, bool holdsAuthoredWork)
         {
             if (!holdsAuthoredWork) return Path.Combine(templates, folderName + BackupSuffix);
-            var at = DateTime.Now;
+            var at = DateTime.UtcNow;
             while (true)
             {
                 var path = Path.Combine(templates, folderName + EditedSuffix + Stamp(at) + ".zip");
@@ -691,24 +993,26 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A stamp that sorts, so a person can tell which copy is which without opening them.</summary>
-        private static string Stamp(DateTime at) => at.ToString("yyyyMMdd-HHmmss");
+        /// <remarks>
+        /// In UTC and in the invariant culture's calendar (#580). The current culture's wrote 2569 on a Thai system
+        /// and a Hijri year on a Saudi one, which sorted a copy among the others by a year no other copy had, and
+        /// local time runs back an hour every autumn, which sorted a copy taken after the change under one taken
+        /// before it. The Z says which clock it is.
+        /// </remarks>
+        internal static string Stamp(DateTime at) => at.ToUniversalTime().ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "Z";
 
-        /// <summary>Deletes recursively, retrying once: SimHub may still hold a file of a dashboard it just released.</summary>
-        private static void DeleteDirectory(string folder)
+        /// <summary>Runs a move or a delete, once more after a quarter of a second when it is refused: SimHub may still
+        /// hold a file of a dashboard it has just released, and a virus scanner one it has just been handed.</summary>
+        private static void Retrying(Action step)
         {
             try
             {
-                Directory.Delete(folder, true);
+                step();
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
                 Thread.Sleep(250);
-                Directory.Delete(folder, true);
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Thread.Sleep(250);
-                Directory.Delete(folder, true);
+                step();
             }
         }
 
