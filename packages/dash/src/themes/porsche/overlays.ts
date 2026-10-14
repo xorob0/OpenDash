@@ -9,8 +9,8 @@
  * drawn over the banner, which therefore never shows in this theme; the four states of the family
  * that are mistakes keep the house's banner at the top of the gear. The blue box is the house's
  * change notification, one per watched setting under the same exclusion chain, moved from the hero
- * to zone C as the car draws it. The alarm is the car's own threshold, `FuelLevel` under ten litres,
- * which iRacing publishes in litres whatever the display unit; it is the one condition here the
+ * to zone C as the car draws it. The alarm is the car's own threshold, the tank under ten litres,
+ * read in litres from the `Fuel` every sim fills (#1126); it is the one condition here the
  * house does not already draw, and the house's own low-fuel pop-up, which asks about laps rather
  * than litres, is still drawn when its condition holds, in the pit banner's row at the top of the
  * gear's tile, above the gear (#1047). The alarm waits as that pop-up does: the face hides it while
@@ -31,7 +31,7 @@ import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
 import { TRACKED_VALUES } from '../../second/tracked.ts';
-import { overPitLimit, pitLimitText, speed } from '../../second/values.ts';
+import { fuelLitres, overPitLimit, pitLimitText, speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { gearSizeIn } from '../../zones/zoneAPages.ts';
 import { regionRect, zoneRect } from '../anatomy.ts';
@@ -40,7 +40,7 @@ import { panelOf } from './body.ts';
 import { picture } from './pictograms.ts';
 import { BORDER, BOX_PAD, centredY, lowFuelAlarm, RADIUS, runWidth } from './register.ts';
 
-const { fmt, game, iff, raw, str, concat } = ncalc;
+const { fmt, game, iff, str, concat } = ncalc;
 
 /**
  * The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side,
@@ -124,7 +124,7 @@ function limiterBody(frame: Rect, gear: Rect): Item {
 function lowFuel(frame: Rect): Item {
   const ink = ds.color.surface.base;
   const ALARM = scaled(ALARM_AT_REFERENCE, shrink(frame, PANEL));
-  const fuel = raw('FuelLevel');
+  const fuel = fuelLitres();
   const top = frame.top + (frame.height - (ALARM.triangle.height + ALARM.gap + ALARM.word + ALARM.gap + ALARM.reading)) / 2;
   const triangle = rect(frame.left + (frame.width - ALARM.triangle.width) / 2, top, ALARM.triangle.width, ALARM.triangle.height);
   const words = top + ALARM.triangle.height + ALARM.gap;
