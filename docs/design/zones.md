@@ -258,6 +258,24 @@ ships, each theme in a process of its own: with every box in the frame that brin
 drawn over a condition of the block or of the settled flag, or over a layer of the pit family, is
 hidden while that layer is shown.
 
+**A theme's takeovers of the car give way the same way** (#1097, #1098). A takeover is a state a
+theme draws over its regions while the zones stay built beneath, after the pit family, the flag and
+the lasting pop-ups. One shown on a condition of the pit family is that family, as the Porsche's
+limiter body and the AiM's `Pit Speed` are, and is drawn over the flag like the house's banner. The
+others are states of the car that hold for laps, the Porsche's fuel alarm under ten litres in zone
+C's panel and the AiM's engine warning over zone C, and they are ranked as the house's low-fuel
+pop-up is: under both safety layers, by condition, wherever they would cover them. So the AiM's
+engine warning, whose box covers the banner row at the top of zone C, is hidden while any state of
+the family is out, and `Disengage limiter`, `Engage limiter`, `Ignition off` and `Engine off` read
+whole with a warning lit; the Porsche's alarm is hidden while the limiter body is out, whose right it
+would cover in red beside a body that says the car is under the limit. With the flag format at
+`full`, both are hidden while the block draws a condition, so the flag's name reads whole; the
+engine warning ranks under the flag as the fuel alarm does, being a state of the car the driver
+reads again when the flag clears, where the flag is the one the driver chose not to miss. Each comes
+back when the layer over it clears, its condition still holding. In the band format neither reaches
+the rectangle a flag settles into. `popUpRegions.test.ts` holds this as it holds the pop-ups, with
+each takeover of the car brought out by its own condition and the takeovers each theme draws pinned.
+
 ---
 
 ## 2. The shape model

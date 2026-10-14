@@ -13,7 +13,9 @@
  * which iRacing publishes in litres whatever the display unit; it is the one condition here the
  * house does not already draw, and the house's own low-fuel pop-up, which asks about laps rather
  * than litres, is still drawn when its condition holds, in the pit banner's row at the top of the
- * gear's tile, above the gear (#1047).
+ * gear's tile, above the gear (#1047). The alarm waits as that pop-up does: the face hides it while
+ * the limiter body is out, whose right it would cover in red, and while the full-screen flag is out,
+ * whose name it would cover (#1097, #1098).
  *
  * The alarm's warning triangle is the telltale column's hazard pictogram, drawn in the alarm's ink.
  */
