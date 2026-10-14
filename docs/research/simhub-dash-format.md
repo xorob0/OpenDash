@@ -724,6 +724,10 @@ it has not. Neither is set on the leader's own row, which is null. The combined 
 seconds formatted `0.00` with a `+` when positive, so a car on the lead lap reads two decimals. The
 Gap columns read the counts and spell both cases themselves. The NCalc names are `driverlapstoleader`
 and `driverlapstoclassleader`, registered as `Lapstoleader` and `Lapstoclassleader` and lower-cased.
+The distance itself is `drivercurrentlaphighprecision`, registered as `CurrentLapHighPrecision` in
+`NCalcEngineMethodsRegistry` (9.12.6) and null where SimHub has none for the car. Nothing counts laps
+from a car other than the leader, so the Int column truncates the difference of two of these itself
+(#1077).
 
 ### What the leaderboard says about the race leader (2026-10-10, #1027)
 
