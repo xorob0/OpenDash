@@ -152,10 +152,12 @@ namespace OpenDashPlugin.Tests
                 [scoring + "mGamePhase"] = (byte)5,
                 [scoring + "mMaxLaps"] = 20,
                 [scoring + "mSessionTimeRemaining"] = 1800f,
-                [scoring + "mSectorFlag01"] = (sbyte)0,
-                [scoring + "mSectorFlag02"] = (sbyte)0,
-                [scoring + "mSectorFlag03"] = (sbyte)0,
-                [player + "mSector"] = (sbyte)1,
+                // The sector flags and the sector they are read for come from the rFactor 2 plugin's page, the only
+                // one SimHub publishes them on (see LmuPropertiesSimHubDeclares).
+                [PluginScoring + "mSectorFlag01"] = (sbyte)0,
+                [PluginScoring + "mSectorFlag02"] = (sbyte)0,
+                [PluginScoring + "mSectorFlag03"] = (sbyte)0,
+                [PluginPlayer + "mSector"] = (sbyte)1,
                 [player + "mTotalLaps"] = (short)4,
                 [player + "mFinishStatus"] = (sbyte)0,
                 [player + "mNumPenalties"] = (short)0,
@@ -174,6 +176,8 @@ namespace OpenDashPlugin.Tests
 
         private const string Scoring = Raw + "LMUNativeTelemetry.scoring.scoringInfo.";
         private const string Player = Raw + "PlayerNativeScoring.";
+        private const string PluginScoring = Raw + "Data.";
+        private const string PluginPlayer = Raw + "CurrentPlayer.";
 
         [Fact]
         public void On_Le_Mans_Ultimate_a_green_race_shows_no_flag_the_plugin_answers_for()
@@ -214,15 +218,85 @@ namespace OpenDashPlugin.Tests
         {
             // LMUManager.GD_Flag_Yellow is any mSectorFlag at 1. The player is in the first sector, mSector 1,
             // which is mSectorFlag02 in SimHub's one-based numbering; a yellow in the third is not theirs.
-            var elsewhere = Lmu((Scoring + "mSectorFlag01", (sbyte)1), (GameData + "Flag_Yellow", 1));
+            var elsewhere = Lmu((PluginScoring + "mSectorFlag01", (sbyte)1), (GameData + "Flag_Yellow", 1));
             Assert.False(elsewhere.YellowFlagShown);
-            Assert.False(Lmu((Scoring + "mSectorFlag03", (sbyte)1), (GameData + "Flag_Yellow", 1)).YellowFlagShown);
-            var here = Lmu((Scoring + "mSectorFlag02", (sbyte)1), (GameData + "Flag_Yellow", 1));
+            Assert.False(Lmu((PluginScoring + "mSectorFlag03", (sbyte)1), (GameData + "Flag_Yellow", 1)).YellowFlagShown);
+            var here = Lmu((PluginScoring + "mSectorFlag02", (sbyte)1), (GameData + "Flag_Yellow", 1));
             Assert.True(here.YellowFlagShown);
             // mSector 0 is the third sector, and its flag the first of the three.
-            Assert.True(Lmu((Player + "mSector", (sbyte)0), (Scoring + "mSectorFlag01", (sbyte)1)).YellowFlagShown);
+            Assert.True(Lmu((PluginPlayer + "mSector", (sbyte)0), (PluginScoring + "mSectorFlag01", (sbyte)1)).YellowFlagShown);
             // With no sector to read, no answer: the dashboards fall back on SimHub's any-sector yellow.
-            Assert.Null(Lmu((Player + "mSector", null)).YellowFlagShown);
+            Assert.Null(Lmu((PluginPlayer + "mSector", null)).YellowFlagShown);
+            // LMU's native page publishes no sector flag, so a name there is not one the plugin reads.
+            Assert.False(Lmu((Scoring + "mSectorFlag02", (sbyte)1)).YellowFlagShown);
+        }
+
+        /// <summary>
+        /// Every GameRawData name the Le Mans Ultimate row may read, as SimHub publishes it. DataCorePlugin declares
+        /// GameRawData once, from LMUManager.GetDataSample, and declares nothing for an array that is null there
+        /// (DeclareObject returns on a null value). The sample's LMUNativeTelemetry is a default SharedMemoryObjectOut,
+        /// so its scalars are published and its arrays (scoringInfo.mSectorFlag, vehScoringInfo) are not;
+        /// PlayerNativeScoring and PlayerNativeTelemetry are default structs, scalars only. The rFactor 2 plugin's
+        /// Data is built with mSectorFlag = new sbyte[3], so Data.mSectorFlag01 to 03 are published, and
+        /// CurrentPlayer is a default rF2VehicleScoring. Read from the decompiled RfactorReader of SimHub 9.12.6;
+        /// a name added here has to be found there first.
+        /// </summary>
+        private static readonly HashSet<string> LmuPropertiesSimHubDeclares = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // ScoringInfoV01's scalars.
+            Scoring + "mSession",
+            Scoring + "mGamePhase",
+            Scoring + "mMaxLaps",
+            Scoring + "mSessionTimeRemaining",
+            Scoring + "mInRealtime",
+            // VehicleScoringInfoV01's scalars.
+            Player + "mTotalLaps",
+            Player + "mFinishStatus",
+            Player + "mNumPenalties",
+            // TelemInfoV01's scalars.
+            Raw + "PlayerNativeTelemetry.mSpeedLimiterAvailable",
+            // rF2ScoringInfo with the sample's three sector flags, and rF2VehicleScoring.
+            PluginScoring + "mSectorFlag01",
+            PluginScoring + "mSectorFlag02",
+            PluginScoring + "mSectorFlag03",
+            PluginPlayer + "mSector",
+        };
+
+        [Fact]
+        public void On_Le_Mans_Ultimate_the_plugin_reads_only_raw_names_SimHub_publishes()
+        {
+            // A frame built by hand can hold any name, but a name SimHub never declares reads null in the game, and
+            // the answer it feeds is never given there: #1129's local yellow first read LMUNativeTelemetry's
+            // mSectorFlag, which is not published. Every raw name the row asks for, on every branch, is held to the
+            // names the sample declares.
+            var asked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            Func<string, object> Recording((string Name, object Value)[] properties)
+            {
+                var frame = Frame(properties);
+                return name =>
+                {
+                    asked.Add(name);
+                    return frame(name);
+                };
+            }
+            var frames = new[]
+            {
+                LmuRace(),
+                LmuRace((PluginPlayer + "mSector", (sbyte)0)),
+                LmuRace((PluginPlayer + "mSector", (sbyte)2)),
+                LmuRace((Player + "mTotalLaps", (short)19)),
+                LmuRace((Scoring + "mMaxLaps", int.MaxValue)),
+                LmuRace((Scoring + "mGamePhase", (byte)8)),
+                LmuRace((Player + "mFinishStatus", (sbyte)1)),
+                LmuRace((Scoring + "mSession", 5)),
+                LmuRace((Raw + "PlayerNativeTelemetry.mSpeedLimiterAvailable", (byte)1), (Scoring + "mInRealtime", true)),
+            };
+            foreach (var frame in frames) SimCapabilities.Read(SimCapabilities.LeMansUltimate, Recording(frame));
+            var raw = asked.Where(name => name.StartsWith(Raw, StringComparison.OrdinalIgnoreCase)).ToList();
+            Assert.Contains(PluginScoring + "mSectorFlag01", raw);
+            Assert.Contains(PluginScoring + "mSectorFlag02", raw);
+            Assert.Contains(PluginScoring + "mSectorFlag03", raw);
+            Assert.Empty(raw.Where(name => !LmuPropertiesSimHubDeclares.Contains(name)));
         }
 
         [Fact]

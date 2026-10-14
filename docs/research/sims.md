@@ -165,7 +165,8 @@ array or object that is null in the sample. An `IExposable` raw object (ACC's) p
   physics sample twice and the graphics sample never, so ACC's graphics arrays (`CarCoordinates`,
   `CarIDs`) are not published; the scalars are.
 - LMU (`LMUWrapV2`): LMU's native page as `LMUNativeTelemetry.*` (scalars only: the per-vehicle arrays
-  are null in the sample), the player's native entries as `PlayerNativeTelemetry.*` and
+  and `scoringInfo.mSectorFlag` are null in the sample, so the sector flags are published only as the
+  plugin's `Data.mSectorFlag01..03`), the player's native entries as `PlayerNativeTelemetry.*` and
   `PlayerNativeScoring.*` (scalars), and the rFactor 2 plugin's page as `Data.*`, `CurrentPlayer.*`,
   `CurrentPlayerTelemetry.*` (with `mWheels01` to `04`), `extended.*`, `rules.*` and so on.
 
@@ -427,7 +428,7 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 |---|---|---|---|---|
 | The car has a pit limiter | `dcPitSpeedLimiterToggle` present | yes | yes | `mSpeedLimiterAvailable` |
 | The limiter is on | `GameData.PitLimiterOn` | raw `Physics.PitLimiterOn` | `GameData.PitLimiterOn` | `GameData.PitLimiterOn` |
-| Flags, by kind | `SessionFlagsDetails` | `Graphics.Flags`, no green; `Flag_*` read as they are (#551) | `Graphics.Flag` and the globals, a sector yellow; `Flag_*` read as they are | the plugin answers four (#1129): the yellow from the own sector's `mSectorFlag`, the black from `mNumPenalties`, the white from the last lap, the chequer from `mGamePhase` 8; blue and green are SimHub's |
+| Flags, by kind | `SessionFlagsDetails` | `Graphics.Flags`, no green; `Flag_*` read as they are (#551) | `Graphics.Flag` and the globals, a sector yellow; `Flag_*` read as they are | the plugin answers four (#1129): the yellow from the plugin page's `Data.mSectorFlag` for the sector `CurrentPlayer.mSector` names, the black from `mNumPenalties`, the white from the last lap, the chequer from `mGamePhase` 8; blue and green are SimHub's |
 | In the car | `IsOnTrack` | `Graphics.Status == 2` | `Graphics.Status == 2` | `mInRealtime` |
 | Pit service | yes | no | the MFD's fuel and tyre set | no |
 | Incidents | yes | no | no | no |

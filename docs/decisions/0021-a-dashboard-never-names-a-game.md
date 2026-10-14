@@ -62,12 +62,13 @@ game, `plugin/OpenDash/SimCapabilities.cs`, filled from the research page, and p
 
 Four more were added for the flags (#1129), and they are the one kind of question a row may leave
 unanswered: null there means "SimHub's own `Flag_*` is right here", which it is on every claimed sim but
-Le Mans Ultimate. A flag's capability is read only where none of iRacing's bits for the condition is
-published, so on iRacing it could not change a thing even if it were answered.
+Le Mans Ultimate. Band D, the box and the strips read a flag's capability only where none of iRacing's
+bits for the condition is published. The round faces' ring reads it ahead of the summary on every sim,
+bits or none, so on iRacing it is the row's null for all four that keeps the ring as it was.
 
 | Capability | iRacing | Assetto Corsa | ACC | Le Mans Ultimate | Without the plugin |
 |---|---|---|---|---|---|
-| `YellowFlagShown` | null | null | null | the `mSectorFlag` of the player's own `mSector` is 1 | `Flag_Yellow` |
+| `YellowFlagShown` | null | null | null | the rFactor 2 plugin's `Data.mSectorFlag` of the player's own `CurrentPlayer.mSector` is 1 | `Flag_Yellow` |
 | `BlackFlagShown` | null | null | null | the player's `mNumPenalties` is above 0 | `Flag_Black` |
 | `WhiteFlagShown` | null | null | null | the player has begun the race's last lap | `Flag_White` |
 | `ChequeredFlagShown` | null | null | null | `mGamePhase` is 8, or the player's `mFinishStatus` is 1 | `Flag_Checkered` |
@@ -149,7 +150,10 @@ that read them.
   dial can hide on another sim without one; following the wheel on Assetto Corsa needs AC's unit and sign,
   which is the author's test on a real wheel. It joins the table as a reading once that is known.
 - **The flags' Le Mans Ultimate answers** (#1129) were read from SimHub's LMU reader and the game's shared
-  memory layout, not from a drive. The three sector flags are assumed to be indexed as `mSector` is, which
+  memory layout, not from a drive. The sector flags are read from the rFactor 2 plugin's page, `Data.*`,
+  because SimHub publishes LMU's raw data from the reader's empty sample and LMU's own page has no sector
+  flags there; that page is the one `LMUManager.IsGameRunning` requires, so it is there whenever the game
+  is. The three sector flags are assumed to be indexed as `mSector` is, which
   counts the last sector as 0; rFactor 2's own header says the order is to be tested. The white flag is the player's own last lap,
   which a car lapped by the leader sees a lap late; and the black is read from the penalty count, since the
   game's own `mFlag` carries only the blue. A drive (#962) settles all three.

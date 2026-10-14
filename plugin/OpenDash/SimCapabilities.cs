@@ -154,6 +154,17 @@ namespace OpenDashPlugin
         /// <summary>Where Le Mans Ultimate publishes the player's own car's scoring.</summary>
         public const string LmuPlayer = GameRawData + "PlayerNativeScoring.";
 
+        /// <summary>
+        /// Where SimHub publishes the session's scoring from the rFactor 2 plugin's page, which Le Mans Ultimate
+        /// also runs. SimHub declares GameRawData once, from LMUManager.GetDataSample, and nothing for an array
+        /// that is null there: the sample's LMUNativeTelemetry holds no mSectorFlag, so only this page's
+        /// Data.mSectorFlag01 to 03 are published.
+        /// </summary>
+        public const string LmuPluginScoring = GameRawData + "Data.";
+
+        /// <summary>The player's own car's scoring on the rFactor 2 plugin's page, the same frame as <see cref="LmuPluginScoring"/>.</summary>
+        public const string LmuPluginPlayer = GameRawData + "CurrentPlayer.";
+
         /// <summary>rFactor 2's mGamePhase while the race is green.</summary>
         public const int LmuGreen = 5;
 
@@ -222,14 +233,16 @@ namespace OpenDashPlugin
         /// Whether a yellow is out in the sector the player's car is in, rather than anywhere on the track. rFactor 2
         /// numbers the player's mSector 0 for the third sector, 1 for the first and 2 for the second, and orders
         /// mSectorFlag the same way, which SimHub publishes one-based as mSectorFlag01 to mSectorFlag03; a flag of 1
-        /// is a yellow, as LMUManager.GD_Flag_Yellow reads it. Null while either is absent, so a dashboard falls
-        /// back on SimHub's own any-sector Flag_Yellow rather than read "no yellow".
+        /// is a yellow, as LMUManager.GD_Flag_Yellow reads it. Both are read from the rFactor 2 plugin's page, the
+        /// only one on which SimHub publishes the sector flags (<see cref="LmuPluginScoring"/>), and which
+        /// LMUManager.IsGameRunning requires, so it is there whenever the game is. Null while either is absent, so a
+        /// dashboard falls back on SimHub's own any-sector Flag_Yellow rather than read "no yellow".
         /// </summary>
         public static bool? LmuLocalYellow(Func<string, object> property)
         {
-            var sector = Number(property(LmuPlayer + "mSector"));
+            var sector = Number(property(LmuPluginPlayer + "mSector"));
             if (!sector.HasValue || sector.Value < 0 || sector.Value > 2) return null;
-            var flag = Number(property(LmuScoring + "mSectorFlag0" + (sector.Value + 1).ToString(CultureInfo.InvariantCulture)));
+            var flag = Number(property(LmuPluginScoring + "mSectorFlag0" + (sector.Value + 1).ToString(CultureInfo.InvariantCulture)));
             return flag.HasValue ? flag.Value == 1 : (bool?)null;
         }
 
