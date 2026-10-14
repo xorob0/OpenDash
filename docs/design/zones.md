@@ -37,8 +37,9 @@ pit alert is out, and never over the gear (#1047, §10 *The pop-up's place*). No
 is drawn over the full-screen flag or a state of the pit family while it is out (*The pop-ups give
 way to the safety layers*, below).
 
-Under the default theme, the same five parts are on every rectangular face, and only their sizes
-change.
+Under the default theme, every rectangular face has the same five parts but 800 × 286, which has no
+room for the bar. From one face to the next only their sizes change, except at 600 × 686, which
+stacks zone A above B above C.
 
 | | |
 |---|---|
@@ -257,6 +258,24 @@ section above gives. `popUpRegions.test.ts` holds the rule on every face of ever
 ships, each theme in a process of its own: with every box in the frame that brings it out, a box
 drawn over a condition of the block or of the settled flag, or over a layer of the pit family, is
 hidden while that layer is shown.
+
+**A theme's takeovers of the car give way the same way** (#1097, #1098). A takeover is a state a
+theme draws over its regions while the zones stay built beneath, after the pit family, the flag and
+the lasting pop-ups. One shown on a condition of the pit family is that family, as the Porsche's
+limiter body and the AiM's `Pit Speed` are, and is drawn over the flag like the house's banner. The
+others are states of the car that hold for laps, the Porsche's fuel alarm under ten litres in zone
+C's panel and the AiM's engine warning over zone C, and they are ranked as the house's low-fuel
+pop-up is: under both safety layers, by condition, wherever they would cover them. So the AiM's
+engine warning, whose box covers the banner row at the top of zone C, is hidden while any state of
+the family is out, and `Disengage limiter`, `Engage limiter`, `Ignition off` and `Engine off` read
+whole with a warning lit; the Porsche's alarm is hidden while the limiter body is out, whose right it
+would cover in red beside a body that says the car is under the limit. With the flag format at
+`full`, both are hidden while the block draws a condition, so the flag's name reads whole; the
+engine warning ranks under the flag as the fuel alarm does, being a state of the car the driver
+reads again when the flag clears, where the flag is the one the driver chose not to miss. Each comes
+back when the layer over it clears, its condition still holding. In the band format neither reaches
+the rectangle a flag settles into. `popUpRegions.test.ts` holds this as it holds the pop-ups, with
+each takeover of the car brought out by its own condition and the takeovers each theme draws pinned.
 
 ---
 
@@ -850,7 +869,7 @@ Pages with nothing to shed, and why:
 - **Radar** (`radar`) — the cars beside you, cut from the box; rule 18.
 - **Track** (`track`) — the map, cut from the box; rule 18.
 - **Lap history** (`lapHistory`) — lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops.
-- **Damage** (`damage`) — one line of prose: iRacing publishes no damage.
+- **Damage** (`damage`) — a drawing cut from its box (rule 18) with the four panels beside it, or one line of prose where the sim reports no damage.
 - **Track rivals** (`trackRivals`) — one line of prose: SimHub times sectors, not segments.
 
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
@@ -1168,6 +1187,16 @@ against what it kept before.
 Every face keeps
 the estimate; the margin outranks it in the declaration and no width has yet had to spend it.
 `bandPages.test.ts` pins this table, because nothing else would notice it going stale.
+
+**D4's four temperatures are the carcass on iRacing and the core elsewhere** ([#556](https://github.com/xorob0/OpenDash/issues/556)).
+On iRacing they are the raw `LFtempCM` and its three siblings, the carcass in the middle of the tread,
+which is Celsius whatever the driver has set, so the label says `Tyres °C` there in every unit
+([#384](https://github.com/xorob0/OpenDash/issues/384)). Every other sim has no raw block, and the page
+reads SimHub's own `TyreTemperature*` instead: on Assetto Corsa and ACC that is the core temperature
+the sim publishes, on Le Mans Ultimate the mean of the three tread readings, and on all three it is
+already in the driver's unit, so the label follows it as `°C`, `°F` or `K`. `°C` is the widest of the
+three in either case, so the label is measured as the catalogue writes it. A sim that publishes
+neither draws `--` in each of the four cells, never four zeros, which would read as four cold tyres.
 
 **The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
 its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three

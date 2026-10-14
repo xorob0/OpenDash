@@ -44,6 +44,37 @@ its columns.
 Read the diff before committing. A trace is a reviewed artefact rather than build output, and the
 diff is the only place a scenario change shows itself in numbers.
 
+## Traces per sim
+
+```bash
+bun run record --sim ac green yellow pit   # Assetto Corsa's, from tools/acsm-emulator
+bun run trace list --sim ac
+```
+
+Each sim has a folder of its own: iRacing's traces are here, where the nine of them always were, and
+Assetto Corsa's are in `ac/`, one per scenario of [tools/acsm-emulator](../tools/acsm-emulator/README.md)
+and under the same names as their iRacing twins. A folder rather than a suffix, so that `green` is
+`green` on either sim and everything that lists this folder for iRacing's traces goes on seeing exactly
+those. [scripts/sims.ts](../scripts/sims.ts) holds each sim's list of scenarios that have no trace,
+with the reason for each.
+
+Both are held to the same list of properties, everything any package reads, because a package reads
+the same properties whichever sim is driven. An Assetto Corsa trace therefore carries iRacing's raw
+`Telemetry.*` and `SessionData.*` columns, and they are null: SimHub's AC reader publishes no such
+thing, and that null is what a dashboard on AC is handed, which is the point of replaying one. On top
+of that, `scripts/trace.test.ts` checks what is particular to a sim:
+
+* the header's `game`, which the recording reads off `DataCorePlugin.CurrentGame` rather than taking
+  from the command line, names the sim; a trace from before the field, all nine of iRacing's, reads as
+  `IRacing`;
+* the sim's own tick column is there, `Telemetry.SessionTick` for iRacing and `Graphics.PacketId` for
+  Assetto Corsa, which the emulator steps once a tick in the same way;
+* no other sim's raw column holds a value, since a value there means SimHub was reading another game
+  than the header says.
+
+When the plugin publishes per-reading `OpenDash.*` properties where the games differ (#1101), those
+enter `propertiesRead()` like any other and every trace of every sim has to carry them.
+
 ## Reading
 
 ```bash
@@ -190,3 +221,18 @@ on main, and the two could not both be kept, so the traces are main's recording 
 carried over from the branch's: 2700 in the race scenarios, 1800 in `notc` and 900 in `quali`, the
 emulator's own scenario lengths, which do not move within a session or between two recordings of one.
 The next `bun run record` reads it from SimHub and drops the entry.
+
+#1101 asserts one more in each, `OpenDash.CarHasPitLimiter`, whether the car has a pit limiter to engage,
+which the plugin answers per sim so that no dashboard names a game (ADR 0021). The pit family reads it in
+place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On iRacing the plugin's answer
+is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
+in each: a constant, and the value a recording with the plugin installed will write. The next
+`bun run record` reads it from the plugin and drops the entry.
+
+#582 asserts five more in each. The damage page reads `OpenDash.DamageReported`, whether the sim reports
+the car's damage at all, which the plugin answers per sim, and on a sim that does it reads
+`DataCorePlugin.GameData.CarDamage1` to `4`, the front, rear, left and right members. iRacing reports none:
+the plugin's answer is `false` on every frame of all nine, and SimHub's iRacing reader marks the four
+members not available and returns 0 for each (`docs/research/sims.md`). Both are constants, and the values
+a recording with the plugin installed will write. The next `bun run record` reads them from SimHub and the
+plugin and drops the entries.

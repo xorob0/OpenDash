@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { rows, scheduled } from '../lib/compare.ts';
-import { QUESTIONS, RETIRED, parseSubmission, questionNumber } from '../lib/survey.ts';
+import { QUESTIONS, RETIRED, SURVEY, parseSubmission, questionNumber } from '../lib/survey.ts';
 import { SAMPLE_COUNTS, SAMPLE_LISTED } from './sampleCounts.ts';
 
 const NEEDED = QUESTIONS.find((q) => q.label === 'Needed before daily use');
@@ -28,6 +28,38 @@ describe('what the survey offers as coming', () => {
     expect(offered.filter((o) => refused.some((r) => o.includes(r)))).toEqual([]);
     // The two refusals the survey offered before, by its own words.
     expect(offered.filter((o) => /stream overlay|changing the layout/.test(o))).toEqual([]);
+  });
+});
+
+/**
+ * What the survey says OpenDash intends. Its OpenDash section said it aimed at feature parity with the
+ * dashboards the survey lists, which ship features docs/scope.md refuses and the comparison marks
+ * Refused, so a visitor read one aim on the survey and the opposite on /compare (#1095). Every word the
+ * form shows is read: the section titles, the notes, the prompts, the hints and the options.
+ */
+const PARITY = /\bparity\b|\bon par with\b|feature for feature|\bevery feature\b|\bsame features\b|everything (?:they|those dashboards|the others) (?:do|does|offer|ship)/i;
+const SHOWN = SURVEY.flatMap((s) => [s.title, s.note ?? '', ...s.questions.flatMap((q) => [q.prompt, q.hint ?? '', ...(q.options ?? []), ...(q.scaleEnds ?? [])])]);
+
+describe('what the survey says OpenDash intends', () => {
+  test.each(['it aims at feature parity with them', 'Parity with the paid ones', 'on par with the paid ones', 'matching them feature for feature', 'every feature they ship', 'everything those dashboards do, for free'])(
+    '%p is a parity claim',
+    (text) => {
+      expect(PARITY.test(text)).toBe(true);
+    },
+  );
+
+  test('claims no parity with the dashboards it lists', () => {
+    expect(SHOWN.filter((text) => PARITY.test(text))).toEqual([]);
+  });
+
+  test('calls refused what the comparison refuses, wherever a note names it', () => {
+    const refused = rows(SAMPLE_COUNTS, SAMPLE_LISTED)
+      .filter((r) => r.cells.opendash.word === 'Refused')
+      .map((r) => r.label.toLowerCase());
+    const wrong = SURVEY.flatMap((s) =>
+      refused.filter((label) => (s.note ?? '').toLowerCase().includes(label) && !/\brefused\b/i.test(s.note ?? '')).map((label) => `${s.title}: ${label}`),
+    );
+    expect(wrong).toEqual([]);
   });
 });
 

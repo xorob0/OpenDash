@@ -13,8 +13,15 @@ set -uo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 follows=0
+sim=()
+previous=
 for arg in "$@"; do
   [ "$arg" = "--follow" ] && follows=1
+  # The trap stops the emulator that was started, which is the sim's own: an AC run followed and
+  # stopped with Ctrl-C would otherwise ask after iRacing's and leave acs.exe running.
+  [ "$previous" = "--sim" ] && sim=(--sim "$arg")
+  case "$arg" in --sim=*) sim=("$arg") ;; esac
+  previous="$arg"
 done
 
 if [ "${1:-}" != "start" ] || [ "$follows" -eq 0 ]; then
@@ -30,7 +37,8 @@ cleanup() {
   wait "$child" 2>/dev/null
   echo
   echo "stopping the emulator"
-  bun "$here/emulator.ts" stop
+  # The ${sim[@]+...} form, because bash 3.2, which macOS ships, calls an empty array unbound under -u.
+  bun "$here/emulator.ts" stop ${sim[@]+"${sim[@]}"}
   exit 0
 }
 trap cleanup INT TERM

@@ -7,8 +7,9 @@
 import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { lapsCompleted, scenarios, start, stop } from './emulator.ts';
+import { filesToUpload, lapsCompleted, scenarios, start, stop, withoutSim } from './emulator.ts';
 import { withFakeHost, type Answer } from './fakeHost.ts';
+import { ASSETTO_CORSA, IRACING, SIMS, simFromArgs, simNamed } from './sims.ts';
 
 const SCENARIO_DIR = path.resolve(import.meta.dir, '../tools/irsdk-emulator/scenarios');
 
@@ -46,6 +47,103 @@ describe('the scenarios a run may name', () => {
   });
 });
 
+describe('the sims', () => {
+  test('--sim names one by its id or its SimHub game, and naming none is iRacing', () => {
+    expect(simFromArgs([])).toBe(IRACING);
+    expect(simFromArgs(['--sim', 'ac'])).toBe(ASSETTO_CORSA);
+    expect(simFromArgs(['--sim=AssettoCorsa'])).toBe(ASSETTO_CORSA);
+    expect(simNamed('IRACING')).toBe(IRACING);
+    expect(() => simFromArgs(['--sim', 'lmu'])).toThrow();
+    expect(() => simFromArgs(['--sim'])).toThrow();
+  });
+
+  test('the sim is taken off the command line before a scenario is looked for in it', () => {
+    expect(withoutSim(['start', '--sim', 'ac', 'green', '--follow'])).toEqual(['start', 'green', '--follow']);
+    expect(withoutSim(['start', 'green', '--sim=ac'])).toEqual(['start', 'green']);
+  });
+
+  test('each has its own emulator, process, guest folder, tick and traces', () => {
+    for (const key of ['sourceDir', 'process', 'guestDir', 'shareDir', 'tickProperty', 'traceSubdir', 'banner', 'game'] as const) {
+      const values = SIMS.map((s) => s[key]);
+      expect({ key, distinct: new Set(values).size }).toEqual({ key, distinct: SIMS.length });
+    }
+  });
+
+  test("Assetto Corsa's emulator is acs.exe, the process SimHub's AC reader looks for", () => {
+    // ACHelper.acProcessNames in SimHub 9.12.6: acs, acs_x86, acs_pro, acs_dmm.
+    expect(ASSETTO_CORSA.exe).toBe('acs.exe');
+    expect(['acs', 'acs_x86', 'acs_pro', 'acs_dmm']).toContain(ASSETTO_CORSA.process);
+  });
+
+  test("Assetto Corsa's emulator travels with the fake install SimHub reads the car and the track from", () => {
+    const files = filesToUpload(ASSETTO_CORSA);
+    expect(files).toContain('content/tracks/spa/ui/ui_track.json');
+    expect(files).toContain('content/cars/ks_porsche_911_gt3_r_2016/data/drivetrain.ini');
+    expect(files.filter((f) => f.startsWith('scenarios/') && f.endsWith('.json')).map((f) => f.slice('scenarios/'.length).replace(/\.json$/, '')).sort()).toEqual(scenarios(ASSETTO_CORSA));
+    expect(filesToUpload(IRACING).every((f) => f.startsWith('scenarios/'))).toBe(true);
+  });
+
+  test("Assetto Corsa's scenarios mirror iRacing's where AC publishes the state", () => {
+    // The three the ticket's acceptance names, and the race they extend.
+    for (const name of ['race', 'green', 'yellow', 'pit']) expect(scenarios(ASSETTO_CORSA)).toContain(name);
+    // Two have no twin, being states iRacing has no word for: an install without SimHub's app, and a
+    // time attack.
+    for (const name of scenarios(ASSETTO_CORSA).filter((n) => n !== 'noapp' && n !== 'timeattack')) expect({ name, inIracing: scenarios(IRACING).includes(name) }).toEqual({ name, inIracing: true });
+  });
+
+  test("every name on a sim's untraced list is a scenario it ships", () => {
+    for (const sim of SIMS) for (const name of sim.untraced) expect({ sim: sim.id, name, ships: scenarios(sim).includes(name) }).toEqual({ sim: sim.id, name, ships: true });
+  });
+
+  test('a scenario of each sim that extends another names one beside it', async () => {
+    for (const sim of SIMS) {
+      const dir = path.resolve(import.meta.dir, '..', sim.sourceDir, 'scenarios');
+      for (const name of scenarios(sim)) {
+        const text = await Bun.file(path.join(dir, `${name}.json`)).text();
+        const extend = /"extends"\s*:\s*"([^"]+)"/.exec(text)?.[1];
+        if (extend) expect({ sim: sim.id, scenario: name, extends: extend, exists: existsSync(path.join(dir, extend)) }).toMatchObject({ exists: true });
+      }
+    }
+  });
+});
+
+describe('an Assetto Corsa emulator', () => {
+  const isAcQuery = (script: string) => script.startsWith('$p = Get-Process acs ');
+  const isLaunch = (script: string) => script.includes('New-ScheduledTaskAction');
+
+  test('is asked after, launched and stopped as acs, not as iRacing\'s', () => {
+    const { r, scripts } = withFakeHost(
+      (script) => (script.startsWith('$p = Get-Process ') ? { stdout: '' } : { stdout: 'launched' }),
+      (host, calls) => ({ r: start(host, { scenario: 'green', sim: ASSETTO_CORSA, waitSeconds: 0 }), scripts: calls.flatMap((c) => (c.script ? [c.script] : [])) }),
+    );
+    // Nothing answered "running" within no seconds, so the start reports it did not appear.
+    expect(r.ok).toBe(false);
+    expect(scripts.some(isAcQuery)).toBe(true);
+    // iRacing's is asked after, to be sure it is not running beside this one, and nothing more.
+    expect(scripts.filter((s) => s.includes('IrsdkEmulator')).every((s) => s.startsWith('$p = Get-Process IrsdkEmulator '))).toBe(true);
+    const launch = scripts.find(isLaunch) ?? '';
+    expect(launch).toContain('C:\\Temp\\acsm-emulator\\acs.exe');
+    expect(launch).toContain('green --log C:\\Temp\\acsm-emulator\\emulator.log');
+  });
+
+  test('refuses a scenario only iRacing has', () => {
+    const r = withFakeHost(() => ({}), (host) => start(host, { scenario: 'flagbox', sim: ASSETTO_CORSA, waitSeconds: 0 }));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('unknown Assetto Corsa scenario "flagbox"');
+  });
+
+  test('is stopped through its own stop file', () => {
+    const scripts = withFakeHost(
+      (script) => (isAcQuery(script) ? { stdout: '5151' } : { stdout: 'stopped cleanly' }),
+      (host, calls) => {
+        stop(host, ASSETTO_CORSA);
+        return calls.flatMap((c) => (c.script ? [c.script] : []));
+      },
+    );
+    expect(scripts.some((s) => s.includes('C:\\Temp\\acsm-emulator\\stop.txt') && s.includes('Get-Process acs '))).toBe(true);
+  });
+});
+
 describe('an emulator that cannot be asked whether it is running', () => {
   const isQuery = (script: string) => script.startsWith('$p = Get-Process IrsdkEmulator');
   const isLaunch = (script: string) => script.includes('New-ScheduledTaskAction');
@@ -72,11 +170,70 @@ describe('an emulator that cannot be asked whether it is running', () => {
   test('one that answers is still told apart: none running is stopped, one running is refused', () => {
     expect(withFakeHost((script) => (isQuery(script) ? { stdout: '' } : {}), (host) => stop(host))).toMatchObject({ ok: true, stdout: 'not running' });
     const refused = withFakeHost(
-      (script) => (isQuery(script) ? { stdout: '4242' } : { stdout: 'launched' }),
+      (script) => (isQuery(script) ? { stdout: '4242' } : script.startsWith('$p = Get-Process acs ') ? { stdout: '' } : { stdout: 'launched' }),
       (host) => start(host, { scenario: 'race', waitSeconds: 0 }),
     );
     expect(refused.ok).toBe(false);
     expect(refused.stderr).toContain('already running (pid 4242)');
+  });
+});
+
+describe("the other sim's emulator", () => {
+  /**
+   * A guest where each sim's emulator is running or not, as `running` says, which stops one when its
+   * stop file is written and launches one when asked, so that what a start leaves can be read.
+   */
+  function guest(running: Record<string, number | null>) {
+    const said: string[] = [];
+    const answer = (script: string): Answer => {
+      said.push(script);
+      for (const sim of SIMS) {
+        if (script.startsWith(`$p = Get-Process ${sim.process} `)) return { stdout: running[sim.id] === null ? '' : String(running[sim.id]) };
+        if (script.startsWith(`New-Item -ItemType File -Force -Path '${sim.guestDir}\\stop.txt'`)) {
+          running[sim.id] = null;
+          return { stdout: 'stopped cleanly' };
+        }
+      }
+      return { stdout: 'launched' };
+    };
+    return { answer, said, running };
+  }
+  const isLaunch = (script: string) => script.includes('New-ScheduledTaskAction');
+
+  test.each([
+    ['an iRacing start', IRACING, ASSETTO_CORSA],
+    ['an Assetto Corsa start', ASSETTO_CORSA, IRACING],
+  ] as const)('%s stops it before launching its own, when it may replace', (_, sim, other) => {
+    // A licensed SimHub switches to whichever game it finds running, so the other emulator left
+    // running by an earlier run could pull this one's SimHub onto its game mid-check (#1138).
+    const g = guest({ [sim.id]: null, [other.id]: 4242 });
+    withFakeHost(g.answer, (host) => start(host, { scenario: 'race', sim, replace: true, waitSeconds: 0 }));
+    expect(g.running[other.id]).toBeNull();
+    const stoppedAt = g.said.findIndex((s) => s.startsWith(`New-Item -ItemType File -Force -Path '${other.guestDir}\\stop.txt'`));
+    const launchedAt = g.said.findIndex(isLaunch);
+    expect(stoppedAt).toBeGreaterThanOrEqual(0);
+    expect(launchedAt).toBeGreaterThan(stoppedAt);
+    expect(g.said[launchedAt]).toContain(`${sim.guestDir}\\${sim.exe}`);
+  });
+
+  test('is a refusal when the start may not replace, as a second copy of its own is', () => {
+    const g = guest({ iracing: null, ac: 4242 });
+    const r = withFakeHost(g.answer, (host) => start(host, { scenario: 'race', waitSeconds: 0 }));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('the Assetto Corsa emulator is running (pid 4242)');
+    expect(g.running.ac).toBe(4242);
+    expect(g.said.filter(isLaunch)).toEqual([]);
+  });
+
+  test('that cannot be asked after is not started beside blind', () => {
+    const g = guest({ iracing: null, ac: null });
+    const r = withFakeHost(
+      (script) => (script.startsWith('$p = Get-Process acs ') ? { status: 255, stderr: 'ssh: connect to host 127.0.0.1 port 2222: Connection timed out' } : g.answer(script)),
+      (host) => start(host, { scenario: 'race', replace: true, waitSeconds: 0 }),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('could not tell whether an emulator is running');
+    expect(g.said.filter(isLaunch)).toEqual([]);
   });
 });
 
@@ -122,5 +279,13 @@ describe('the laps the running scenario has completed', () => {
 
   test('a run that has completed none has none', () => {
     expect(withFakeHost(holding(emulatorLog([{ laps: 5 }, { laps: 0 }])), (host) => lapsCompleted(host))).toBe(0);
+  });
+
+  test("Assetto Corsa's are counted from its own banner, in its own log", () => {
+    const log = emulatorLog([{ laps: 4 }]).map((l) => l.replace("IrsdkEmulator - scenario 'race' (C:\\Temp\\irsdk-emulator", "AcsmEmulator - scenario 'race' (C:\\Temp\\acsm-emulator"));
+    const guest = (script: string): Answer => (script.includes('acsm-emulator\\emulator.log') ? holding(log)(script) : {});
+    expect(withFakeHost(guest, (host) => lapsCompleted(host, ASSETTO_CORSA))).toBe(4);
+    // iRacing's log is another file, which this guest does not have.
+    expect(withFakeHost(guest, (host) => lapsCompleted(host))).toBe(0);
   });
 });

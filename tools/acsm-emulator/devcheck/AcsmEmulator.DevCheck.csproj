@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Linux-side build of the same sources (net8.0), used only to run the selfcheck and dry-run modes on the dev box
+       and in CI. The deliverable is ../AcsmEmulator.csproj (net48). Named kernel objects are Windows-only, so only
+       the in-memory modes work here. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>acs</AssemblyName>
+    <RootNamespace>AcsmEmulator</RootNamespace>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../*.cs" />
+    <Compile Include="../../irsdk-emulator/Json.cs" Link="Json.cs" />
+  </ItemGroup>
+</Project>

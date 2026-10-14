@@ -925,14 +925,14 @@ namespace OpenDashPlugin
 
         private FrameworkElement LedsEveryStripSection()
         {
-            var carData = Ui.SettingRow(PanelSoon.CarDataForAcAccLmu.Title, null);
+            var carData = Ui.SettingRow(PanelSoon.CarDataForLmu.Title, null);
             return LedsBlock(Ui.VStack(0,
                 Ui.Anchor(LedsHeading(PanelLeds.EveryStripTitle), PanelLeds.AnchorEveryStrip),
                 Ui.Rows(
                     LedsSoonRow(PanelSoon.IdleSweep, Ui.Switch(true, on => { })),
                     LedsSoonRow(PanelSoon.EngineStartAnimation, Ui.Switch(true, on => { })),
                     Ui.Anchor(BuildCarTablesRow(), PanelLeds.AnchorCarTables),
-                    Ui.Soon(carData, PanelSoon.CarDataForAcAccLmu))));
+                    Ui.Soon(carData, PanelSoon.CarDataForLmu))));
         }
 
         /// <summary>

@@ -109,15 +109,23 @@ describe('scripts/interruptible.sh', () => {
 const ME = 'tester@host:~/OpenDash';
 const isEmulatorQuery = (script: string) => script.startsWith('$p = Get-Process IrsdkEmulator');
 const isEmulatorStop = (script: string) => script.includes('Get-Process IrsdkEmulator') && script.includes('Stop-Process');
+// Assetto Corsa's emulator is acs.exe (scripts/sims.ts), asked after and stopped the same way.
+const isAcQuery = (script: string) => script.startsWith('$p = Get-Process acs ');
+const isAcStop = (script: string) => script.includes('Get-Process acs ') && script.includes('Stop-Process');
 const isRecorderRemoval = (script: string) => script.includes('Remove-Item') && script.includes('OpenDashTraceRecorder.dll');
 const RECORDER_ENTRY = { ClassName: 'OpenDashTraceRecorder.TraceRecorderPlugin', IsEnabled: true, ShowInMainMenu: false, ShowInMainMenuPosition: 0 };
 const OPENDASH_ENTRY = { ClassName: 'OpenDash.OpenDashPlugin', IsEnabled: true, ShowInMainMenu: true, ShowInMainMenuPosition: 0 };
 
-/** A guest with the emulator running and the recorder activated, as an interrupted `record` leaves it. */
-function interruptedGuest(activationWritten: string[]): (script: string, share: string) => Answer {
+/**
+ * A guest with the emulator running and the recorder activated, as an interrupted `record` leaves it:
+ * iRacing's emulator, or Assetto Corsa's when `sim` says so.
+ */
+function interruptedGuest(activationWritten: string[], sim: 'iracing' | 'ac' = 'iracing'): (script: string, share: string) => Answer {
   return (script, share) => {
-    if (isEmulatorQuery(script)) return { stdout: '4242' };
+    if (isEmulatorQuery(script)) return { stdout: sim === 'iracing' ? '4242' : '' };
     if (isEmulatorStop(script)) return { stdout: 'stopped cleanly' };
+    if (isAcQuery(script)) return { stdout: sim === 'ac' ? '5151' : '' };
+    if (isAcStop(script)) return { stdout: 'stopped cleanly' };
     if (script.startsWith('$p = Get-Process SimHubWPF')) return { stdout: 'stopped' };
     if (script.includes('Start-ScheduledTask')) return { stdout: 'started (pid 7)' };
     if (script.includes("'copied' } else { 'missing' }")) {
@@ -167,6 +175,19 @@ describe('scripts/interrupted.ts', () => {
     expect(r.code).toBe(0);
     expect(r.scripts.some(isEmulatorStop)).toBe(true);
     expect(r.scripts.some(isRecorderRemoval)).toBe(false);
+    expect(r.locked).toBe(false);
+  });
+
+  test('an Assetto Corsa run has acs.exe stopped, since the wrapper cannot say which sim it played', () => {
+    const r = withFakeHost(interruptedGuest([], 'ac'), (host, calls, share) => {
+      lockedBy(share, ME);
+      const code = quietly(() => interrupted(host, 'dev'));
+      return { code, scripts: calls.flatMap((c) => (c.script ? [c.script] : [])), locked: existsSync(path.join(share, 'vm.lock')) };
+    });
+    expect(r.code).toBe(0);
+    expect(r.scripts.some(isAcStop)).toBe(true);
+    // iRacing's was asked after and found not running, so nothing was sent to stop it.
+    expect(r.scripts.some(isEmulatorStop)).toBe(false);
     expect(r.locked).toBe(false);
   });
 

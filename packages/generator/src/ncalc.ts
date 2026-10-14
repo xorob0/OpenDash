@@ -255,6 +255,13 @@ export type DriverFunction =
    */
   | 'currentlap'
   /**
+   * The laps begun and the fraction of the lap run, which is distance: `Opponent.CurrentLapHighPrecision`,
+   * which `GameManagerBase` in 9.12.6 sets to `CurrentLap - 1` plus the track position where the reader
+   * does not set it, and smooths across the line. `lapstoleader` is the truncated difference of two of
+   * these, and the Int column takes the same difference between a car and the car in front (#1077).
+   */
+  | 'currentlaphighprecision'
+  /**
    * Seconds behind the first car of the leaderboard, which every gap is measured from. Null on that
    * car's own row unless it is the player's, `GameManagerBase` in 9.12.6 setting it to 0 only then
    * (#1041). It is distance run in every session, so outside a race, where the first car is the

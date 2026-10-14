@@ -83,7 +83,9 @@ export interface ThemeDrawing {
    * States the theme draws over its regions: after the pit family and the lasting pop-ups in the pit
    * banner's row, and before the transient pop-ups, which are over everything for their seconds. A
    * takeover shown on one of the pit family's conditions is that family, and the face keeps every box
-   * of the pop-up family it would be drawn under shut while it is out (#1053, #1070).
+   * of the pop-up family it would be drawn under shut while it is out (#1053, #1070). Any other
+   * takeover is a state of the car, and the face keeps it shut while the full-screen flag or a state
+   * of the pit family it would be drawn over is out, as it does a lasting pop-up (#1097, #1098).
    */
   takeovers?(ctx: FaceContext): Item[];
   /** The change notifications, in place of the house's box on the hero. */

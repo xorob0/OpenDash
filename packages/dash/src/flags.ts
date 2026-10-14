@@ -40,7 +40,7 @@ import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
 import { setting } from './contract.ts';
-import { engineStopped, hasIncidentLimit, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
+import { engineStopped, hasHeadlightFlashControl, hasIncidentLimit, headlightFlashed, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
 
 const { and, changed, concat, eq, fmt, game, gt, iff, isNull, isnull, not, num, or, prop, raw, str } = ncalc;
 
@@ -408,7 +408,7 @@ const HEADLIGHT_FLASH: CarAlert = {
   id: 'headlightFlash',
   name: 'Headlight flash',
   neutral: true,
-  when: and(changed(num(ALERT_EVENT_MS), raw('dcHeadlightFlash')), driving(), not(isNull(raw('dcHeadlightFlash')))),
+  when: and(headlightFlashed(), driving(), hasHeadlightFlashControl()),
   band: { shape: 'outlined', colour: ds.purpose.alert.p2p, label: 'FLASH' },
 };
 
@@ -572,6 +572,16 @@ const readingFlags =
 
 /** The box's reading, and the default: the bits, as they are. */
 export const boxRaised: RaisedTest = readingFlags((condition) => conditionRaised(condition));
+
+/**
+ * The box's reading, null-safe: false for every flag on a sim that publishes no `SessionFlagsDetails`,
+ * and the same answer as {@link boxRaised} wherever the bits are published, which on iRacing is always.
+ *
+ * It is for a gate that has to hold when there are no flags to read, which the box's own containers
+ * are not: the spotter gives way to the full course yellow (#515), and a bare read there would throw
+ * on Assetto Corsa, which `when` takes for false, and take away a bar that sim does draw.
+ */
+export const boxRaisedSafely: RaisedTest = readingFlags((condition) => conditionRaised(condition, safeBitSet));
 
 /**
  * Band D's reading: null-safe, because a bare read of an absent property is not a boolean and the

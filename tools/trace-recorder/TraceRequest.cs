@@ -16,6 +16,9 @@ namespace OpenDashTraceRecorder
         /// </summary>
         public const int Decimals = 4;
 
+        /// <summary>The tick property of a request that names none: iRacing's.</summary>
+        public const string DefaultTick = "DataCorePlugin.GameRawData.Telemetry.SessionTick";
+
         public string Scenario { get; private set; }
         public int Hz { get; private set; }
         public int Frames { get; private set; }
@@ -28,6 +31,12 @@ namespace OpenDashTraceRecorder
         /// thousand in a race half run, so no fixed number could serve every scenario.
         /// </summary>
         public long WarmUpTicks { get; private set; }
+        /// <summary>
+        /// The property the emulator steps once a tick, which frames are taken on. Each sim's reader names
+        /// it differently: iRacing's SessionTick, Assetto Corsa's Graphics.PacketId. A request that names none
+        /// is iRacing's, as every request was before there was a second sim.
+        /// </summary>
+        public string Tick { get; private set; }
         public string Out { get; private set; }
         /// <summary>Written once the last frame is on disk; the caller waits on it.</summary>
         public string DoneFile { get; private set; }
@@ -55,6 +64,7 @@ namespace OpenDashTraceRecorder
                 Frames = Whole(json, "frames", 200),
                 Step = Whole(json, "step", 6),
                 WarmUpTicks = Whole(json, "warmUpTicks", 7200),
+                Tick = Text(json, "tick", DefaultTick),
                 Out = Text(json, "out", null),
                 Properties = properties,
             };

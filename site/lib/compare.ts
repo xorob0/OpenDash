@@ -351,7 +351,12 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
     id: 'privacy',
     label: 'What leaves your machine',
     cells: {
-      opendash: cell('yes', 'An update check to GitHub, and the car tables when you press the button. Nothing about you, ever.', { word: 'Nothing' }),
+      // Every request in lib/wire.ts, which test/wire.test.ts holds to the plugin and to docs/scope.md (#1096).
+      opendash: cell(
+        'yes',
+        'An update check to GitHub, and the Porsche crest: one file, once, from the address on the panel, only with a screen that draws it, and never once you clear the address. The car tables and a new release when you press for them. Nothing about you, ever.',
+        { word: 'Nothing' },
+      ),
       lovely: cell('partial', 'Your key and PC name every 15 minutes, and the car you are driving, to fetch its logo. No privacy statement covers the plugin.', { word: 'Some' }),
       dnr: cell('partial', 'Your name, your email, every machine you sign in on with the IP it came from, and a count of which locked buttons you press.', { word: 'Some' }),
     },

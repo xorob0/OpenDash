@@ -169,7 +169,10 @@ with **Warnings** off, it goes on showing the gear on the last laps of fuel.
 drawn *over* whatever else the matrix is showing rather than instead of it, so a car alongside is
 never hidden by a yellow and never hides the gear. With one box you will see the gear in the middle
 of the matrix with a bar down one edge, which is two facts at once and is what you want at that
-moment.
+moment. The one exception is a full course yellow: its **SC** runs to both edges, so the bar would
+cut a letter off, and on a matrix showing it the bar steps aside until the caution ends or a higher
+flag takes over. The field is slowed and passing is forbidden then, and the car is still in your
+mirrors and on the screen's own spotter.
 
 A black flag is an **outline** because black is the absence of light: a black panel is a box that
 is off. A yellow being waved is the yellow flag **blinking**, which is how you tell it from a

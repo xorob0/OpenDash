@@ -278,3 +278,31 @@ date and not in this release, and cannot carry a yes across the restart, so an e
 held back on that start and "Reinstall" is how to replace it. A plugin older than 0.3.0-rc.3 cannot
 replace itself at all, and against a release with no dashboards it finds nothing to replace: it has
 to be updated by hand from `OpenDash-plugin.zip`, as `plugin/INSTALL.md` describes.
+
+## Amended, 2026-10-14: a dashboard the driver kept is not an update they are owed
+
+The version a release is compared against is the older of the plugin and the rig's oldest dashboard, and
+every start holds an edited dashboard at the version it was edited from rather than replace somebody's
+work without asking. Put together, a driver who edited a stock dashboard and kept the edit was offered
+the release their plugin already was, on the panel and on the idle screen, for good (#1083). Pressing
+Update and keeping the edit staged that same plugin again and said "Restart SimHub to finish updating";
+the restart cleared it, as a plugin no newer than the one running is cleared, and the offer came back.
+
+**An edited dashboard does not count towards what the rig runs** (`UpdateCheck.RigVersion`). The plugin
+stands for it, as it does for a dashboard whose version cannot be read, so a newer release is offered as
+usual and the Update button asks before replacing the edit. A driver who does want it replaced has
+Reinstall everything, which asks the same question, and the dashboard's row on the Updates page says so.
+
+**A release that is the plugin already running is not fetched unless a yes needs carrying.** The one
+thing staging such a plugin does is carry a yes to replacing edited dashboards to the start that writes
+them (`EditedConsent`), and only for an edited dashboard behind the release, since that start leaves a
+current one alone. Without such a yes nothing is downloaded or staged. With the edited dashboards set
+aside, such a rig is offered the release only when an unedited dashboard is behind the plugin, which is
+what a start whose install of it failed leaves, so the press does what that start would: it writes the
+rig's dashboards from the plugin running, holding the edited ones back. The line says the rig already
+has the version and names what was written and the reopen rather than a restart. A dashboard that fails
+again says why, as any update does. The panel asks before a press that meets an edited dashboard, so the
+run it sends here either has no edit to keep or has a yes, and a yes for an edited dashboard behind the
+release stages the plugin as above. The service still holds an edited dashboard back on a run with no
+yes, and its line then names Reinstall everything, but that guards a caller other than the panel, which
+has none today.

@@ -14,8 +14,8 @@ capture from the next.
 | | What it holds still |
 |---|---|
 | `green` | A clean racing lap, P3 of 24. The baseline every other capture is compared against. The flag is held green from the first tick; `race.json` cycles the flags for the first two minutes, which is useful for watching the flag band and useless for a capture. |
-| `yellow` | A yellow-flag lap on low fuel: the flag band out, fuel under a lap, a hot right front and a cold left front, and P6 overall. |
-| `pit` | In the stall with the limiter on and the service order set to four tyres, fuel and a tear-off. The car is stationary, so the rev sweep, the gear model, the lap timer and the fuel burn are all off. Three other cars are put in the pit lane so the table has PIT chips in it. |
+| `yellow` | A yellow-flag lap on low fuel: the flag band out, fuel under a lap, a hot right front and a cold left front, and P6 overall. Two more cars go into the pits at 2 s, three with car 8, which `race.json` keeps in its stall. |
+| `pit` | In the stall with the limiter on and the service order set to four tyres, fuel and a tear-off. The car is stationary, so the rev sweep, the gear model, the lap timer and the fuel burn are all off. Three other cars are put in the pit lane, so the table has four PIT chips with car 8, which `race.json` keeps in its stall throughout. |
 | `gallery` | The green lap arranged so every page has something to draw, for the website's captures: a longer session, two cars held at an exact gap for the radar, a pass through the pit lane so the stint counters start, the next stop's service order pinned, and the heading swept a full turn per lap so SimHub records a closed outline. Photograph it after two laps have gone by; `bun run shots` waits for them. |
 | `clip` | The gallery lap with the rev sweep run from 5000 to 9100 over three seconds, so a six-second clip catches two gear changes and the shift lights at the top of each sweep. `bun run clips` uses it. |
 | `quali` | A timed qualifying run in a car with no in-car TC or ABS, so the settings strip has to close over two cells that are simply not there, and the session counts time rather than laps. It selects the weekend's qualifying session, session 1 of `race-session.yaml`, so SimHub names it `Lone Qualify` and the pit wall header reads it; until #307 it was a timed race under a qualifying name. |
@@ -100,6 +100,19 @@ scenario drives it with is symmetric, so nothing else shows which way the dial t
 inputs module's mark sits at nine o'clock and the pit wall's steering trace runs under its centre
 line (#1057). It has no trace: it is looked at, and a trace of it would be `green`'s with one value
 held.
+
+## The engine stopped with a warning
+
+`oilpressure` holds the car on the circuit, off the pit road with the limiter off, and sets the
+oil-pressure bit of `EngineWarnings` for twenty seconds round: ten with `RPM` at nought and ten at
+3000. iRacing raises that bit on an engine that is merely stopped as readily as on one that is
+failing, so every engine warning OpenDash draws reads it only while the engine turns (#1115). In the
+first half the AiM draws no ENGINE box over zone C and the Porsche's oil and warning pictograms are
+dim; in the second the AiM reads ENGINE / OIL PRESS LOW and both pictograms are lit. It is off the
+pit road because in the lane a state of the pit family is always out, ENGAGE LIMITER at the least,
+and the AiM draws its limiter over the warning and, from #1097, keeps the warning shut under every
+state of that family, so the turning half would show nothing there either. It has no trace: it is
+looked at, and its states are pinned in `packages/dash/test/engineWarnings.test.ts`.
 
 ## The other scenarios
 

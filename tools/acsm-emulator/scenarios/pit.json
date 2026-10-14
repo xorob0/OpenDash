@@ -1,0 +1,42 @@
+{
+  // In the pit box with the limiter on, the twin of the irsdk pit. AC publishes no service order, so
+  // there is no pit menu to show: what this holds still is the car stationary in its box, in the pit
+  // lane, with the raw limiter on. SimHub's GameData.PitLimiterOn reads on here for the wrong reason,
+  // since on AC it is the pit lane (#558); the raw Physics.PitLimiterOn is the limiter itself.
+  "extends": "race.json",
+  "name": "In the pit box, limiter on",
+  "values": {
+    // Ninth on the road, just past the line: eight cars of race.json's field are further round.
+    "Graphics.NormalizedCarPosition": 0.003,
+    // Half a minute into the lap, as the irsdk pit inherits it: the lap timer is stopped below, so this
+    // is the current lap time for the whole run, and under the lap pop-up's three seconds it would
+    // hold the pop-up over the gear from start to end (#1138). A car stopped in its box this close
+    // past the line crossed it in the pit lane on the way in.
+    "Graphics.iCurrentTime": 36162,
+    "Graphics.SessionTimeLeft": 1010000,
+  },
+  "pin": {
+    "Graphics.Flags": "AC_NO_FLAG",
+    "Graphics.IsInPit": 1,
+    "Graphics.isInPitLane": 1,
+    "Physics.PitLimiterOn": 1,
+    "Physics.SpeedKmh": 0,
+    "Physics.Rpms": 1350,
+    // Neutral: AC counts from reverse, 0 R, 1 N, 2 first.
+    "Physics.Gear": 1,
+    "Physics.Gas": 0,
+    "Physics.Brake": 0,
+    "Physics.SteerAngle": 0,
+    "Physics.Fuel": 8.6,
+    "Physics.LocalVelocity": [0, 0, 0],
+  },
+  "timeline": [
+    {"at": 0, "log": "the car is stationary: stop the rev sweep, the gears, the lap and the fuel", "driver": {"type": "rpmSweep", "enabled": false}},
+    {"at": 0, "driver": {"type": "gearFromRpm", "enabled": false}},
+    {"at": 0, "driver": {"type": "lapTimer", "enabled": false}},
+    {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}},
+    {"at": 0, "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 1, "log": "three more cars in the pit lane, four PIT chips in the table with race.json's Diego Ramos", "driver": {"type": "field", "pitCars": ["Sophie Laurent", "Hanna Kowalska", "Omar Haddad"]}},
+  ],
+}

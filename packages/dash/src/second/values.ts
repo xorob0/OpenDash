@@ -10,9 +10,9 @@
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
-import { MINUS, type Chars } from '../design/metrics.ts';
+import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { CLASS_BEST_LAP, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, propertyName, setting } from '../contract.ts';
+import { CAR_HAS_PIT_LIMITER, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -795,22 +795,54 @@ export const classAndPlace = (idx: Expr): Expr => {
 };
 
 /**
- * The widest {@link classAndPlace} draws: the widest four capitals a real class name is cut to, and
- * the widest of the ninety-nine places and the placeholder.
+ * The readings that can be the widest {@link classAndPlace} draws, one for each data face a theme
+ * sets it in: the widest four capitals a real class name is cut to, and the widest of the
+ * ninety-nine places and the placeholder.
  *
  * `MUST`, from Mustang, and not the chip's `LMP2`: the cut keeps whatever four letters a class starts
  * with, and four letters with an `M` among them are wider than LMP2's, so a Mustang, a Mercedes or a
- * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit.
- * `LMDH` draws exactly as wide in SemiBold and is a hair narrower in Bold. `44` and not `99` or
- * `24`, because the face is proportional and its `4` is the widest digit it has.
+ * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit. In
+ * the house's Barlow Condensed, `LMDH` draws exactly as wide in SemiBold and is a hair narrower in
+ * Bold. In Barlow Medium, which the Porsche sets its numerals in, the order turns: `LMDH` is the
+ * widest, then `LAMB`, `MERC` and `MCLA`, and `MUST` is narrower than all four, so the Porsche's
+ * faces were cut from a reading a Hypercar's `LMDH · P44` drew a pixel past (#1058). `44` and not
+ * `99` or `24` in both, because both faces are proportional and the `4` is the widest digit each has.
+ */
+const CLASS_AND_PLACE_CANDIDATES = ['MUST · P44', 'LMDH · P44'] as const;
+
+/**
+ * Of a few readings, the one at least as wide as every other in both data weights of this process's
+ * face, a tie going to the first. None being so is an error rather than a guess, since a declaration
+ * narrower than another reading in either weight is the very defect a declaration is there to prevent.
+ */
+function widestInDataFace(readings: readonly string[]): string {
+  const width = (weight: DataWeight, text: string): number => measureText(DATA_FACE[weight], text, 100);
+  // The advances are summed in floating point, and `LMDH` and `MUST` come to the same width in the
+  // house's SemiBold by different sums, so a tie is read as a tie rather than as the last bit of a sum.
+  const holds = (text: string): boolean => readings.every((other) => (['SemiBold', 'Bold'] as const).every((w) => width(w, other) <= width(w, text) + 1e-9));
+  const widest = readings.find(holds);
+  if (widest === undefined) throw new Error(`none of ${JSON.stringify(readings)} is the widest in both of ${JSON.stringify(DATA_FACE)}`);
+  return widest;
+}
+
+/**
+ * The widest {@link classAndPlace} draws, in the data face of the theme this process builds: `MUST ·
+ * P44` in the house's face and the AiM's, `LMDH · P44` in the Porsche's.
+ *
+ * Read from {@link CLASS_AND_PLACE_CANDIDATES} in the face {@link DATA_FACE} names rather than
+ * written once, because a theme's package is built in a process of its own whose overlay changes the
+ * face, and a widest measured in the house's face is a promise about the house's face only.
  * `classAndPlace.test.ts` holds a list of class names from iRacing, Assetto Corsa and ACC and
- * measures every cut of them at every place against this, in SemiBold and in Bold.
+ * measures every cut of them at every place against this, in SemiBold and in Bold, in the process of
+ * every theme; a class some theme's face draws wider than every candidate is found there, and its
+ * reading belongs among them.
  *
  * It also sets the width of the bar's ends, and at 600 x 686 the strip's five cells now fill what
- * the ends leave to the pixel. A class wider than `MUST` added to that list is therefore a decision
- * about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`, would cost it.
+ * the ends leave to the pixel. A class wider than `MUST` in the house's face added to that list is
+ * therefore a decision about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`,
+ * would cost it.
  */
-export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
+export const CLASS_AND_PLACE_WIDEST: string = widestInDataFace(CLASS_AND_PLACE_CANDIDATES);
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it, and 0 where there is no
@@ -1134,13 +1166,49 @@ export const carRelativeGap = (idx: Expr): Expr =>
  */
 export const RELATIVE_GAP_WIDEST = `${MINUS}99.999`;
 
-/** The difference of two gaps to the leader, or nothing where SimHub has not measured either. */
-const raceInterval = (here: Expr, ahead: Expr): Expr =>
-  iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
+/**
+ * The whole laps a car is behind the car in front of it by distance: the truncated difference of the
+ * two cars' `currentlaphighprecision`, which is how SimHub counts `lapstoleader` from its leader, and 0
+ * where SimHub has no distance for either car (#1077).
+ *
+ * No count SimHub publishes answers it. `lapstoleader` is truncated before it reaches the dash, so the
+ * difference of two of them is a lap off whenever the leader's lap falls between the two cars: with
+ * the leader at 10.9 laps, cars at 9.95 and 9.85 count 0 and 1, and are a tenth of a lap apart.
+ */
+const lapsBehind = (idx: Expr, ahead: Expr): Expr => {
+  const here = driver('currentlaphighprecision', idx);
+  const there = driver('currentlaphighprecision', ahead);
+  return iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(there)), num(0), truncate(sub(there, here)));
+};
+
+/**
+ * The race interval between a car and the car in front of it: the difference of the two gaps to the
+ * leader, `+1L` where the car is a whole lap or more behind the car in front by distance, and nothing
+ * where SimHub has not measured either gap.
+ *
+ * A gap to the leader carries the whole laps a lapped car is down, so the difference of two gaps on
+ * different laps is those laps in seconds: on the pit wall a car five laps down read `+484.6` beside
+ * a Gap of `+5L`, which is neither the time to the car in front on the road nor a lap count (#1077).
+ * So the laps are asked first, by distance and not by the lap counters for the reason
+ * {@link carRaceGap} gives, and spelled as the Gap column spells them. A lapped car on the lap of the
+ * car in front still reads the seconds between them, which are true.
+ */
+const raceInterval = (idx: Expr, above: Expr): Expr => {
+  const here = referenceGap(idx);
+  const ahead = referenceGap(above);
+  const laps = lapsBehind(idx, above);
+  return iff(
+    and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))),
+    iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, ahead), '0.0')),
+    str(''),
+  );
+};
 
 /**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
- * leader. The leader's own row is empty, there being nothing in front of it.
+ * leader, or the laps between the two cars where the car is a lap or more behind it by distance,
+ * through {@link raceInterval} (#1077). The leader's own row is empty, there being nothing in front
+ * of it.
  *
  * The car in front is the one a place ahead as it stands on the road, found through the car's own
  * place and {@link liveRow} rather than the row number, `idx` being a leaderboard row: with no live
@@ -1163,15 +1231,13 @@ const raceInterval = (here: Expr, ahead: Expr): Expr =>
 export const carInterval = (idx: Expr): Expr => {
   const place = carOverallPosition(idx);
   const above = liveRow(sub(place, num(1)));
-  const ahead = referenceGap(above);
-  const here = referenceGap(idx);
   // The car with nothing in front of it: the leader by place once the sim has placed the car, and the
   // first row before then, every other unplaced row reading `--` (#1028).
   const first = iff(hasPosition(idx), eq(place, num(1)), eq(idx, num(1)));
   return iff(
     first,
     str(''),
-    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
+    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(idx, above)), str(NO_VALUE)),
   );
 };
 
@@ -1187,17 +1253,16 @@ export const carInterval = (idx: Expr): Expr => {
  * Below the class's first row it reads `--` until {@link gapIsMeasured} holds, as
  * {@link carInterval} does (#1028), and the car in front is read through {@link referenceGap}, as
  * it is there: the class leader is the race leader in every single-class race (#1041). So is the
- * car's own, which is that first car in the lap after it is passed for the class lead. Outside a
- * race it measures best laps, as {@link carInterval} does (#1040).
+ * car's own, which is that first car in the lap after it is passed for the class lead. A car a lap
+ * or more behind the car in front by distance reads the laps, through {@link raceInterval}, as on
+ * the overall list (#1077). Outside a race it measures best laps, as {@link carInterval} does (#1040).
  */
 export const carClassInterval = (idx: Expr): Expr => {
   const place = carClassPosition(idx);
   const above = liveClassRow(sub(place, num(1)));
-  const ahead = referenceGap(above);
-  const here = referenceGap(idx);
   return iff(
     gt(place, num(1)),
-    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
+    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(idx, above)), str(NO_VALUE)),
     str(''),
   );
 };
@@ -1472,6 +1537,12 @@ export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsC
 export const fieldSize = (): Expr => iff(classMode(), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
+/**
+ * The gear as the sim writes it, `N`, `R` or a digit, and the one place `Gear` is read for a screen:
+ * zone A, the gear card, the pit wall and the LED profiles draw this, and the two car themes do too.
+ * `shift.ts` reads the property on its own, since this file reads its ladders.
+ */
+export const gear = (): Expr => game('Gear');
 
 /**
  * The unit words the faces draw.
@@ -1481,7 +1552,12 @@ export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
  * for `km/h` and `L`. The written form is what the canvas draws and what the box was measured
  * against, so the enum is mapped here rather than in each follower.
  */
-export const speedUnit = (): Expr => iff(eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH')), str('mph'), str('km/h'));
+/**
+ * Whether SimHub is set to miles an hour, which is the one switch every speed figure follows. A
+ * theme that writes the unit in its own words (the AiM writes `kph`) asks this rather than the sim.
+ */
+export const speedInMph = (): Expr => eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH'));
+export const speedUnit = (): Expr => iff(speedInMph(), str('mph'), str('km/h'));
 // Engine speed has one body, `rpms` in `shift.ts`, because the speedo prints it directly above a
 // rev bar that reads the same value: two spellings of one expression is how the redline came to
 // disagree with the bar it sits on. ADR 0014.
@@ -1494,6 +1570,20 @@ export const rpm = rpms;
 const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
 export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
+/** The sim has published a tank at all, which is what tells no tank from an empty one. */
+export const fuelIsPublished = (): Expr => not(isNull(game('Fuel')));
+/**
+ * The tank in litres whatever the driver's unit, for a figure a car fixes in litres, as the Porsche
+ * fixes its low-fuel alarm at ten (#1126). Null where no sim is running, so a caller can tell no tank
+ * from an empty one.
+ *
+ * SimHub fills `Fuel` on every sim, from the reader's own litres (`FuelLevel` on iRacing, `Physics.Fuel`
+ * on Assetto Corsa and ACC, `mFuel` on Le Mans Ultimate), and converts it to gallons on a gallons
+ * profile by {@link LITRES_TO_GALLONS}, so dividing by the same ratio gives the litres back. The
+ * unconverted figure, `FuelRaw`, is not published. iRacing's raw `FuelLevel` is the same litres on
+ * iRacing alone and null on every other sim, which is why nothing reads it.
+ */
+export const fuelLitres = (): Expr => iff(fuelInGallons(), div(game('Fuel'), num(LITRES_TO_GALLONS)), game('Fuel'));
 /**
  * How full the tank is, 0..100.
  *
@@ -2141,6 +2231,24 @@ export const ignitionOff = (): Expr => eq(isnull(ignitionOn(), num(1)), num(0));
 export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)), num(0));
 
 /**
+ * The engine turning: `Rpms` above zero. This is what an engine warning has to be read against, and
+ * the one definition of it, which the LED strip's car lamp, band D's engine lamp, the AiM's engine
+ * warning and the Porsche's telltales all read (#1115).
+ *
+ * iRacing's `EngineWarnings` sets its oil-pressure bit on an engine that is merely stopped as readily
+ * as on one that is failing, so without this gate the lamp is red in every garage, on every grid and
+ * after every stall, and a lamp that is red when nothing is wrong is a lamp the driver stops reading
+ * by the third session.
+ *
+ * The turning of the engine rather than {@link engineStopped}, because the question is whether there
+ * is anything to make the pressure, and that is the crank: SimHub's `EngineStarted` holds over five
+ * frames and guesses about hybrids, and a pressure warning on a car that has just stalled is not one
+ * a driver can act on. It was the strip's alone until the dash surfaces were found reading the bit
+ * ungated.
+ */
+export const engineRunning = (): Expr => gt(rpm(), num(0));
+
+/**
  * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
  * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
  * change to this line.
@@ -2164,6 +2272,45 @@ export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)
  * flags already are.
  */
 export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
+
+/**
+ * What the running sim can report, read from the plugin with iRacing's own answer as each one's fallback.
+ * ADR 0021, #1101.
+ *
+ * A dashboard never names a game. Where a question has a different answer on another sim and no `isnull()`
+ * over the properties already read can tell "not reported" from a value, the plugin answers it from its
+ * table (`plugin/OpenDash/SimCapabilities.cs`) and publishes the answer; {@link CAR_HAS_PIT_LIMITER} in
+ * `contract.ts` lists the four. Each helper here reads one, and falls back on the reading OpenDash made
+ * before the plugin answered it, which is iRacing's: so with no plugin, with no game running and on a game
+ * the table does not know, a package draws exactly what it drew before.
+ *
+ * Every answer is a boolean, `true` or `false` as a raw telemetry boolean is, and so is every fallback, so
+ * the caller reads one shape whichever answered.
+ */
+export const sim = {
+  /**
+   * The car has a pit limiter to engage. Without the plugin, iRacing's test: the car's own limiter control,
+   * `dcPitSpeedLimiterToggle`, is there at all. A car with no limiter has no such control, where SimHub's
+   * `PitLimiterOn` reads 0 for it exactly as for a limiter switched off. #558.
+   */
+  carHasPitLimiter: (): Expr => setting.reported(CAR_HAS_PIT_LIMITER, not(isNull(raw('dcPitSpeedLimiterToggle')))),
+  /**
+   * The limiter is engaged, as the sim reports it. Without the plugin, SimHub's `PitLimiterOn`, which is
+   * iRacing's limiter bit and, on Assetto Corsa, the pit lane rather than the limiter. Not yet read by any
+   * binding: {@link pitLimiterOn} is, until #558 moves the pit family onto this.
+   */
+  pitLimiterOn: (): Expr => setting.reported(PIT_LIMITER_ON, pitLimiterOn()),
+  /**
+   * The sim reports the car's damage. Without the plugin, false: iRacing fills SimHub's `CarDamage1..5` with
+   * zeros, which is no report at all. The damage module draws the car or says the sim reports none by it. #582.
+   */
+  damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
+  /**
+   * The driver is in the car, physics running. Without the plugin, {@link inTheCar}, with the caller's answer
+   * for a sim that says nothing. Not yet read: #561 moves `inTheCar`'s callers onto this.
+   */
+  driverInCar: (ifUnknown = true): Expr => setting.reported(DRIVER_IN_CAR, inTheCar(ifUnknown)),
+};
 
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
@@ -2198,20 +2345,31 @@ export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**
  * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
+ * Each sim's reader writes its own words, in its own case, which is the case they are drawn in, so
+ * the list is every reader's words together.
  *
- * SimHub passes iRacing's own words through. Its `IRacingManager.GD_SessionTypeName` (ICarsReader,
- * decompiled) answers the `SessionType` of the entry in `SessionInfo.Sessions` the telemetry's
- * `SessionNum` points at, and falls back to the weekend's `EventType` where there is none, so the
- * list is both: the session types an iRacing weekend is made of, as the pit wall header listed them
- * before this list existed, and the event types a weekend can be. They are written in iRacing's
- * case, which is the case they are drawn in.
+ * On iRacing SimHub passes iRacing's own words through. Its `IRacingManager.GD_SessionTypeName`
+ * (ICarsReader, decompiled) answers the `SessionType` of the entry in `SessionInfo.Sessions` the
+ * telemetry's `SessionNum` points at, and falls back to the weekend's `EventType` where there is
+ * none, so iRacing's part is both: the session types an iRacing weekend is made of, as the pit wall
+ * header listed them before this list existed, and the event types a weekend can be. `Open
+ * Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029 rather
+ * than of a recording, which has only ever shown `Lone Qualify` and `Race`.
  *
- * `Open Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029
- * rather than of a recording, which has only ever shown `Lone Qualify` and `Race`. A name missing
- * from this list is not measured by anything that cuts its box from the list, the AiM's above all,
- * so a name that might be written is listed rather than left out.
+ * Assetto Corsa and ACC are read by `ACManager` and `ACCManager` (ACSharedMemory, decompiled), whose
+ * `GD_SessionTypeName` is the shared memory's `Graphics.Session.ToString().Replace("AC_", "")`, in
+ * capitals with the underscore kept: the seven names of `AC_SESSION_TYPE` and its `UNKNOWN`. That
+ * enum stops at `AC_DRAG`, which is 6, and ACC numbers its hot stint 7 and its superpole hot lap 8,
+ * so on ACC those two are written as the digit. Le Mans Ultimate is read by `LMUManager`
+ * (RfactorReader, decompiled), which maps `scoringInfo.mSession` to `Test day`, `Practice`,
+ * `Qualify`, `Warmup` and `Race`; the last four are iRacing's words too (#1127).
+ *
+ * A name missing from this list is not measured by anything that cuts its box from the list, the
+ * AiM's above all, which drew Assetto Corsa's `TIME_ATTACK` a cell wider than its box, so a name
+ * that might be written is listed rather than left out.
  */
 export const SESSION_NAMES: readonly string[] = [
+  // iRacing
   'Offline Testing',
   'Practice',
   'Open Practice',
@@ -2225,6 +2383,19 @@ export const SESSION_NAMES: readonly string[] = [
   'Race',
   'Test',
   'Time Trial',
+  // Assetto Corsa and ACC
+  'PRACTICE',
+  'QUALIFY',
+  'RACE',
+  'HOTLAP',
+  'TIME_ATTACK',
+  'DRIFT',
+  'DRAG',
+  'UNKNOWN',
+  '7',
+  '8',
+  // Le Mans Ultimate, whose other four are iRacing's words
+  'Test day',
 ];
 
 /**
@@ -2406,6 +2577,26 @@ export const tyreWearMin = (corner: Corner): Expr => {
   return iff(ncalc.isNull(section('M')), tyreWear(corner), mul(min(section('L'), min(section('M'), section('R'))), num(100)));
 };
 
+/**
+ * The tyre temperature band D's tyre page draws, or null where the sim publishes none (#556).
+ *
+ * iRacing's raw `*tempCM` first, which is the carcass in the middle of the tread and in degrees
+ * Celsius whatever the driver has set, and which is what the page has always drawn there. Where it is
+ * absent, which is every sim but iRacing, SimHub's own `TyreTemperature*`, which is already in the
+ * driver's unit: on Assetto Corsa and ACC that is the core temperature the sim publishes, and on Le
+ * Mans Ultimate the mean of the three tread readings. Neither is defaulted, so a sim that publishes
+ * no tyre temperature at all, or no game running, is a null the page draws as {@link NO_VALUE}
+ * rather than a row of zeros that read as four cold tyres.
+ */
+export const bandTyreTemperature = (corner: Corner): Expr => isnull(raw(`${CORNER_PREFIX[corner]}tempCM`), game(`TyreTemperature${corner}`));
+
+/**
+ * The unit over {@link bandTyreTemperature}: `°C` while iRacing's raw carcass is what is drawn, since
+ * that is Celsius whatever the setting says, and the driver's own mark where SimHub's converted
+ * figure is. One corner answers for all four, the raw block being published whole or not at all.
+ */
+export const bandTyreTemperatureMark = (): Expr => iff(isNull(raw('LFtempCM')), temperatureMark(), str('°C'));
+
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**
@@ -2422,7 +2613,7 @@ export const perTemperatureUnit = (f: Expr, k: Expr, c: Expr): Expr => iff(eq(te
  * Every temperature SimHub publishes is already converted to whichever of the three the driver has
  * set, so a page drawing `TyreTemperature*` follows this and a page reading iRacing's raw telemetry
  * does not: `LFtempCM` is degrees Celsius whatever the setting says, which is why band D's tyre
- * page writes its own `°C` rather than asking here.
+ * page asks {@link bandTyreTemperatureMark} instead, and writes `°C` while it draws the raw figure.
  */
 export const temperatureMark = (): Expr => {
   const unit = temperatureUnit();
@@ -2485,6 +2676,21 @@ export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)),
 
 /** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
 export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
+
+/**
+ * The car has a headlight-flash control: iRacing's `dcHeadlightFlash`, the in-car control itself,
+ * absent on a car without one and on every other sim.
+ */
+export const hasHeadlightFlashControl = (): Expr => not(isNull(raw('dcHeadlightFlash')));
+
+/**
+ * The driver has flashed the headlights within the alert window: `changed()` over the control, which
+ * is SimHub's own clock (ADR 0009), open for `indicator.alert.durationMs` after the control last
+ * moved. Asked before anything else in an `and`, so that the window is recorded on the first frame
+ * it could open; `flags.ts` says why the order is load-bearing. iRacing publishes the flash control
+ * and no headlight state, so a flash is all that can light a headlight lamp.
+ */
+export const headlightFlashed = (): Expr => ncalc.changed(num(dsTokens.indicator.alert.durationMs), raw('dcHeadlightFlash'));
 
 /**
  * What {@link pitLimit} reads when the sim publishes no limit: a speed nothing reaches in either

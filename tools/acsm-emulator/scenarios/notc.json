@@ -1,0 +1,22 @@
+{
+  // The race in a car with its traction control and ABS off, in a timed race rather than a lap race.
+  // AC publishes the systems as amounts, and SimHub reads an amount of 0 as preset 0 whatever the car's
+  // curves hold, so TCLevel and ABSLevel are 0 and a dash shows its no-data state. On AC that is the
+  // same reading as a car without the systems, which is #549's question from the other side.
+  "extends": "race.json",
+  "name": "Timed race (1800 s), TC and ABS at 0",
+  "values": {
+    "StaticInfo.IsTimedRace": 1,
+    "Graphics.NumberOfLaps": 0,
+    "Graphics.SessionTimeLeft": 1130000,
+  },
+  "pin": {
+    "Physics.TC": 0,
+    "Physics.Abs": 0,
+  },
+  // race.json's timeline turns TC up at sixty seconds, which this car must not do.
+  "timeline": [
+    {"at": 15, "log": "brake bias +0.5", "set": {"Physics.BrakeBias": 0.55}},
+    {"at": 120, "log": "stop the flag cycle, no flag out", "driver": {"type": "flagCycle", "enabled": false}, "set": {"Graphics.Flags": "AC_NO_FLAG"}},
+  ],
+}

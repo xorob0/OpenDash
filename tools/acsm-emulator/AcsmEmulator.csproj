@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <!-- The executable is acs.exe on purpose. SimHub's Assetto Corsa reader looks for a process named
+         acs (ACHelper.acProcessNames) and takes the folder it runs from as the game's install, so the
+         emulator is that process and carries a content\ folder beside it. See README.md. -->
+    <AssemblyName>acs</AssemblyName>
+    <RootNamespace>AcsmEmulator</RootNamespace>
+    <StartupObject>AcsmEmulator.Program</StartupObject>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
+    <GenerateSupportedRuntime>false</GenerateSupportedRuntime>
+    <DefaultItemExcludes>$(DefaultItemExcludes);devcheck/**</DefaultItemExcludes>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Remove="devcheck/**" />
+    <!-- The scenario reader is the irsdk emulator's, which tolerates comments and trailing commas. -->
+    <Compile Include="../irsdk-emulator/Json.cs" Link="Json.cs" />
+    <!-- The scenarios and the fake install travel with the exe: a scenario name resolves next to it,
+         and SimHub reads content\cars and content\tracks from the folder acs.exe runs in. -->
+    <None Include="scenarios/**" CopyToOutputDirectory="PreserveNewest" LinkBase="scenarios" />
+    <None Include="content/**" CopyToOutputDirectory="PreserveNewest" LinkBase="content" />
+  </ItemGroup>
+</Project>

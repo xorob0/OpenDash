@@ -20,6 +20,7 @@
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { IRACING } from './sims.ts';
 
 /** Where the VM's files live on whichever host runs the container. */
 const WINVM_DIR = '/opt/winvm';
@@ -245,14 +246,59 @@ Start-Sleep -Seconds 3
 }
 
 /**
+ * Where SimHub keeps the game it selected last, `ContextSettings.LastGame`, which it reads once at
+ * start to choose the game it opens on (`MainWindow.LoadData`, `SettingsEx.ContextSettings`).
+ */
+const SIMHUB_CONTEXT = `${SIMHUB_DIR}\\PluginsData\\ContextSimhubSettings.json`;
+
+/** SimHub's `LastGame` entry in that file, as a PowerShell regular expression whose group is the code. */
+const LAST_GAME = '"LastGame"\\s*:\\s*"([^"]*)"';
+
+/**
+ * The PowerShell that makes SimHub open on `game` at its next start, by writing `LastGame` into its
+ * context settings while it is stopped. SimHub reads one game at a time and only switches by itself
+ * with a licence and a game process it recognises, and the VM's emulators are neither iRacing's
+ * process nor always Assetto Corsa's, so the loop chooses rather than hoping (#579). Written only
+ * when it differs, and SimHub's own copies under `_Backups` are left alone.
+ *
+ * The one entry is replaced in the file's text and every other byte is left as SimHub wrote it. Not
+ * a round trip through `ConvertTo-Json`, which {@link editGuestJson} explains is the one tool on the
+ * guest that can write a settings file SimHub dies on, and not through the share either, since done
+ * in the same script as the start it costs the start nothing.
+ */
+export function selectGameScript(game: string): string {
+  const entry = `"LastGame": "${game}"`;
+  return `$ctx = ${psq(SIMHUB_CONTEXT)}
+$text = if (Test-Path -LiteralPath $ctx) { [IO.File]::ReadAllText($ctx) } else { '' }
+if ($text -match ${psq(LAST_GAME)}) {
+  if ($Matches[1] -ne ${psq(game)}) { [IO.File]::WriteAllText($ctx, ($text -replace ${psq(LAST_GAME)}, ${psq(entry)})) }
+} elseif ($text -match '^\\s*(\\{\\s*\\})?\\s*$') {
+  [IO.File]::WriteAllText($ctx, ${psq(`{${entry}}`)})
+} else {
+  [IO.File]::WriteAllText($ctx, ($text -replace '^\\s*\\{', ${psq(`{${entry},`)}))
+}`;
+}
+
+/**
  * Starts SimHub through its scheduled task and waits for the process. Only a process the guest saw
  * is a start: a guest that waited it out, or could not be asked, is a failure, whatever it exited
  * with, so that a SimHub that never came up stops the step rather than being reported as installed.
+ *
+ * It opens on `game`, SimHub's code for it (`scripts/sims.ts`), which is iRacing unless a caller says
+ * otherwise: whatever a previous run left selected, every command of the loop that starts SimHub
+ * gets the game it was written for. A SimHub already running is left as it is, and is a failure
+ * when it reads another game, since a recording or a capture taken from it would be of the wrong sim
+ * and switching it would be a restart nobody asked for.
  */
-export function simhubStart(host: Host, waitSeconds = 40): RunResult {
+export function simhubStart(host: Host, game: string = IRACING.game, waitSeconds = 40): RunResult {
   const r = powershell(
     host,
-    `if (Get-Process SimHubWPF -ErrorAction SilentlyContinue) { 'already running'; exit 0 }
+    `if (Get-Process SimHubWPF -ErrorAction SilentlyContinue) {
+  $last = if ((Test-Path -LiteralPath ${psq(SIMHUB_CONTEXT)}) -and ([IO.File]::ReadAllText(${psq(SIMHUB_CONTEXT)}) -match ${psq(LAST_GAME)})) { $Matches[1] } else { '' }
+  if ($last -and $last -ne ${psq(game)}) { "already running, on $last rather than ${game}; stop it first to switch"; exit 1 }
+  'already running'; exit 0
+}
+${selectGameScript(game)}
 Start-ScheduledTask -TaskName 'SimHub'
 $deadline = (Get-Date).AddSeconds(${waitSeconds})
 while ((Get-Date) -lt $deadline) {
@@ -309,9 +355,10 @@ Get-Content $log.FullName -Tail ${Math.max(1, Math.trunc(lines))}`,
 /**
  * Expands the named packages into DashTemplates and restarts SimHub so the template list is
  * rescanned. Reports what reached the guest, because a silent copy to the wrong place is the
- * failure this command exists to prevent.
+ * failure this command exists to prevent. SimHub comes back on `game`, iRacing unless a caller
+ * names another (see {@link simhubStart}).
  */
-export function install(host: Host, packages: readonly string[], buildDir = path.join(repoRoot, 'build')): RunResult {
+export function install(host: Host, packages: readonly string[], buildDir = path.join(repoRoot, 'build'), game: string = IRACING.game): RunResult {
   if (!existsSync(buildDir)) return { ok: false, code: 1, stdout: '', stderr: 'build/ does not exist; run `bun run build` first' };
 
   const wanted = packages.length > 0 ? packages : ['*'];
@@ -358,7 +405,7 @@ Get-ChildItem (Join-Path $dt 'OpenDash*\\_SHFonts\\*.ttf') -ErrorAction Silently
     300,
   );
   if (!expand.ok) return expand;
-  const started = simhubStart(host);
+  const started = simhubStart(host, game);
   if (!started.ok) return { ...started, stdout: expand.stdout };
   return { ...expand, stdout: `${expand.stdout}\n${started.stdout}` };
 }

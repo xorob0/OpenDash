@@ -37,6 +37,18 @@ export interface TraceHeader {
   /** The SimHub whose mapping this is. A trace is only as truthful as the build that produced it. */
   simHub: string;
   /**
+   * The game SimHub was reading, as its own code for it: `IRacing`, `AssettoCorsa`. Read off
+   * `DataCorePlugin.CurrentGame` in the recording, so it says what SimHub did rather than what the
+   * recording asked for.
+   *
+   * Absent from the traces recorded before Assetto Corsa joined the loop (#579), which are all of
+   * iRacing; {@link traceGame} reads an absent one as `IRacing`. It is what says which columns of a
+   * trace are meaningful: every trace carries every property any package reads, and on Assetto Corsa
+   * iRacing's raw `Telemetry.*` and `SessionData.*` are null, truthfully, since that is what a
+   * dashboard on AC is handed.
+   */
+  game?: string;
+  /**
    * Columns in this file that were written by hand rather than observed, and are therefore claims
    * rather than recordings.
    *
@@ -102,6 +114,7 @@ export function parseHeader(line: string): TraceHeader {
   }
   if (typeof h.recorded !== 'string') throw new TraceError('the header says nothing about when it was recorded');
   if (typeof h.simHub !== 'string') throw new TraceError('the header says nothing about which SimHub produced it');
+  if (h.game !== undefined && (typeof h.game !== 'string' || h.game === '')) throw new TraceError('game must name the game SimHub was reading');
   const asserted = h.asserted;
   if (asserted !== undefined && (!Array.isArray(asserted) || !asserted.every((p) => typeof p === 'string' && p !== ''))) {
     throw new TraceError('asserted must be a list of property names');
@@ -114,9 +127,13 @@ export function parseHeader(line: string): TraceHeader {
     ticks: [ticks[0] as number, ticks[1] as number],
     recorded: h.recorded,
     simHub: h.simHub,
+    ...(h.game === undefined ? {} : { game: h.game as string }),
     ...(asserted === undefined ? {} : { asserted: asserted as string[] }),
   };
 }
+
+/** The game a trace was recorded from: its header's, and iRacing's for a trace from before there was a choice. */
+export const traceGame = (trace: Trace): string => trace.header.game ?? 'IRacing';
 
 /**
  * Parses a trace. Everything the readers downstream rely on is checked here rather than left to

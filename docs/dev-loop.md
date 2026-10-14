@@ -20,6 +20,8 @@ bun run dev --scenario flagbox                # walk every state the flag box dr
 bun run dev --scenario alerts --keep          # walk the alert catalogue on band D, one condition every 7 s
 bun run dev --scenario nosession               # the game running with no session, for #406's notices
 bun run dev --scenario untimed                 # a lap race with no clock: #387's laps form, #439's mark
+bun run dev --sim ac                           # the same loop on Assetto Corsa, SimHub switched to it
+bun run dev --sim ac --scenario yellow         # an AC scenario; the names mirror iRacing's
 ```
 
 ## The pieces underneath
@@ -29,9 +31,9 @@ bun run dev --scenario untimed                 # a lap race with no clock: #387'
 | | |
 |---|---|
 | [`bun run vm`](../scripts/vm.ts) | the VM and SimHub: `status`, `up`, `down`, `wait`, `install`, `plugin`, `logs`, `shot`, `bind`, `unbind`, `claim`, `release` |
-| [`bun run emulator`](../scripts/emulator.ts) | the telemetry: `start <scenario> [--follow]`, `stop`, `status`, `tail` |
+| [`bun run emulator`](../scripts/emulator.ts) | the telemetry: `start <scenario> [--follow]`, `stop`, `status`, `tail`, each with `--sim ac` for Assetto Corsa's |
 | [`scripts/gui.ts`](../scripts/gui.ts) | the clicking, which is how a dashboard gets opened |
-| [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/` |
+| [`bun run record`](../scripts/record.ts) | the telemetry traces: one recording of a scenario, committed under `traces/`, or `traces/ac/` with `--sim ac` |
 | [`bun run shots`](../scripts/shots.ts) | several packages photographed on one claim, into `build/shots/` |
 | [`bun run modules`](../scripts/modules.ts) | the twenty-two companion modules, one to a picture, on one claim |
 | [`bun run previews`](../scripts/previews.ts) | the same captures, scaled and committed as the thumbnails SimHub's dashboard list draws |
@@ -40,6 +42,42 @@ bun run dev --scenario untimed                 # a lap race with no clock: #387'
 
 [testing-vm.md](testing-vm.md) describes the VM itself and is what to read when something in it
 breaks.
+
+## Assetto Corsa is the same loop with another emulator
+
+```bash
+bun run dev --sim ac                           # race, SimHub on Assetto Corsa
+bun run dev 'OpenDash Pit wall' --sim ac --scenario pit
+bun run record --sim ac green yellow pit       # traces into traces/ac/
+bun run emulator start noapp --sim ac --follow # the emulator alone; SimHub must already read AC
+```
+
+1.0 claims Assetto Corsa as well as iRacing (#479), and an AC dashboard is checked the way an iRacing
+one is: against a synthetic feed SimHub cannot tell from the game. `--sim ac` swaps three things and
+nothing else, all of them in [scripts/sims.ts](../scripts/sims.ts): the emulator, which is
+[tools/acsm-emulator](../tools/acsm-emulator/README.md) instead of the irsdk one; the scenarios a run
+may name, which are its own and mirror iRacing's names where AC publishes the state; and the game
+SimHub opens on. The claim, the build, the install, the clicking and the capture are the same steps.
+
+The game is the part that is easy to get wrong. SimHub runs one game's reader at a time, and switches
+by itself only with a licence and a game process it recognises. So every start of SimHub the loop
+makes writes the game it wants as `LastGame` in SimHub's `PluginsData\ContextSimhubSettings.json`
+first, while SimHub is stopped: Assetto Corsa for `--sim ac`, iRacing for everything else, so that an
+iRacing run after an AC one gets iRacing whatever was left selected. A SimHub found already running on
+the other game is refused rather than used. A recording checks the result as well: the trace's header
+carries the game SimHub said it was reading, and a recording of the wrong game is not written.
+
+The game process is the other half of it, since a licensed SimHub follows whichever game it finds
+running, and to SimHub an emulator is a game. So one emulator runs at a time. `bun run dev` and
+`bun run record` stop both before SimHub restarts, and every start of an emulator stops the other
+sim's first; `bun run emulator start` without `--replace` refuses while the other's runs instead (#1138).
+
+SimHub's AC reader needs more than the shared memory, which is why the emulator is called `acs.exe`:
+the reader looks for a process of that name, takes its folder as the game's install, and reads the
+car and the track from `content\` there every frame. The emulator carries that `content\` beside it.
+Without SimHub's own AC app the reader knows no other car, and `--scenario noapp` is that state on
+purpose: a leaderboard of one, named `Me`. What the AC reader publishes reading by reading, and how it
+differs from iRacing's, is the research of #1100.
 
 ## The settings panel is the same loop without Dash Studio
 
@@ -77,7 +115,8 @@ knows the mapping. So `bun run record` runs each scenario past a recorder plugin
 what SimHub saw, and the preview renderer, the per-pull-request video and the goldens replay that
 file instead of claiming the VM. [traces/README.md](../traces/README.md) is the format and when to
 re-record -- including the header's `asserted` list, which names any column of a trace that was
-written by hand rather than observed, and which the next re-record of that scenario removes.
+written by hand rather than observed, and which the next re-record of that scenario removes. Each
+sim records into its own folder, iRacing's into `traces/` and Assetto Corsa's into `traces/ac/`.
 
 ## Recording a clip is the same loop with a recorder in place of the camera
 

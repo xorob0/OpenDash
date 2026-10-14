@@ -43,22 +43,23 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { ALERT_BAND_BORDER } from './alertBand.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
-import { engineStopped, ignitionOff, isInPitLane, pitLimiterOn } from '../second/values.ts';
+import { engineStopped, ignitionOff, isInPitLane, pitLimiterOn, sim } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { PIT_LIMITER_BLINK_MS } from './pitLimiter.ts';
 
-const { and, isNull, not, or, raw } = ncalc;
+const { and, not, or } = ncalc;
 
 /**
  * This car has a limiter to engage.
  *
- * `PitLimiterOn` is one bit of iRacing's `EngineWarnings` and reads 0 on a car that has no limiter,
- * which is indistinguishable from a limiter switched off: a reminder read off that alone would nag
- * every lap in the lane of a car that cannot comply. `dcPitSpeedLimiterToggle` is the in-car control
- * itself and is simply absent on a car without one, which is the same presence test the bar's strip
+ * `PitLimiterOn` reads 0 on a car that has no limiter, which is indistinguishable from a limiter
+ * switched off: a reminder read off that alone would nag every lap in the lane of a car that cannot
+ * comply. Which cars have one is a question each sim answers its own way, so the plugin answers it
+ * (`sim.carHasPitLimiter`, ADR 0021); without the plugin it is iRacing's answer, the car's own
+ * `dcPitSpeedLimiterToggle` control being there at all, which is the same presence test the bar's strip
  * cells use for traction control and ABS.
  */
-const hasLimiter = (): Expr => not(isNull(raw('dcPitSpeedLimiterToggle')));
+const hasLimiter = (): Expr => sim.carHasPitLimiter();
 
 /** One state of the pit family: what it says, how it is dressed and when it is out. */
 export interface PitAlertSpec {

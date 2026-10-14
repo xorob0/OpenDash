@@ -1,0 +1,150 @@
+{
+  // AcsmEmulator scenario. Comments and trailing commas are allowed.
+  //
+  // The Assetto Corsa twin of the irsdk emulator's race.json: Spa, 24 cars, a 30-lap race with 12
+  // done, the player in a Porsche 911 GT3 R in P3. AC has no classes, so the field is one class, and
+  // what SimHub knows of it is what its AC app publishes (see the field driver).
+  //
+  // A value is named as SimHub publishes it after DataCorePlugin.GameRawData. ("Physics.Rpms",
+  // "Graphics.Flags", "StaticInfo.CarModel"); an array takes a list, or one element as
+  // "Physics.TyreWear[2]". "values" are written once at the start, "pin" ones are held there too and
+  // no driver may move them. An enum takes its name, with or without AC_.
+  "name": "Race at Spa, 30 laps, player P3 of 24",
+  "tickRate": 60,
+  "seed": 12345,
+
+  "values": {
+    // --- the static page: the car, the track, the player. SimHub reads content\cars\<CarModel> and
+    // content\tracks\<Track> beside acs.exe, so both have to name a folder under content\.
+    "StaticInfo.SMVersion": "1.7",
+    "StaticInfo.ACVersion": "1.16.4",
+    "StaticInfo.NumberOfSessions": 3,
+    "StaticInfo.NumCars": 24,
+    "StaticInfo.CarModel": "ks_porsche_911_gt3_r_2016",
+    "StaticInfo.Track": "spa",
+    "StaticInfo.TrackConfiguration": "",
+    // SimHub finds the player in its AC app's car list by this name, compared whole.
+    "StaticInfo.PlayerName": "OpenDash Tester",
+    "StaticInfo.PlayerSurname": "",
+    "StaticInfo.PlayerNick": "ODT",
+    "StaticInfo.SectorCount": 3,
+    "StaticInfo.MaxTorque": 470,
+    "StaticInfo.MaxPower": 368000,
+    "StaticInfo.MaxRpm": 9000,
+    "StaticInfo.MaxFuel": 120,
+    "StaticInfo.SuspensionMaxTravel": [0.08, 0.08, 0.09, 0.09],
+    "StaticInfo.TyreRadius": [0.34, 0.34, 0.355, 0.355],
+    "StaticInfo.PenaltiesEnabled": 1,
+    "StaticInfo.AidFuelRate": 1,
+    "StaticInfo.AidTireRate": 1,
+    "StaticInfo.AidMechanicalDamage": 1,
+    "StaticInfo.AidAllowTyreBlankets": true,
+    "StaticInfo.TrackSPlineLength": 7004,
+    "StaticInfo.IsTimedRace": 0,
+    "StaticInfo.carSkin": "00_official",
+
+    // --- the session
+    "Graphics.Status": "AC_LIVE",
+    "Graphics.Session": "AC_RACE",
+    "Graphics.NumberOfLaps": 30,
+    "Graphics.CompletedLaps": 12,
+    "Graphics.Position": 3,
+    "Graphics.SessionTimeLeft": 1520000,
+    "Graphics.iCurrentTime": 36162,
+    "Graphics.iLastTime": 98412,
+    "Graphics.iBestTime": 97905,
+    "Graphics.NormalizedCarPosition": 0.369,
+    "Graphics.TyreCompound": "Slick Medium (M)",
+    "Graphics.ReplayTimeMultiplier": 1,
+    "Graphics.Flags": "AC_NO_FLAG",
+    "Graphics.surfaceGrip": 0.98,
+
+    // --- the car
+    "Physics.Gear": 5,
+    "Physics.Rpms": 7200,
+    "Physics.SpeedKmh": 187,
+    "Physics.Gas": 1.0,
+    "Physics.Brake": 0.0,
+    // AC's clutch is 1 when engaged; SimHub publishes 100 - Clutch * 100 as the pedal.
+    "Physics.Clutch": 1.0,
+    "Physics.Fuel": 38.4,
+    // The amounts the car's electronics.ini curves turn into presets: 0.06 is TC 3 and 0.2 is ABS 2.
+    "Physics.TC": 0.06,
+    "Physics.Abs": 0.2,
+    "Physics.BrakeBias": 0.545,
+    "Physics.AirTemp": 22.8,
+    "Physics.RoadTemp": 31.5,
+    "Physics.AirDensity": 1.19,
+    "Physics.CgHeight": 0.32,
+    // Live pressures in psi, which is what SimHub publishes for AC (iRacing's are the cold ones).
+    "Physics.WheelsPressure": [27.6, 27.9, 27.2, 27.5],
+    // The core, which is SimHub's TyreTemperature on AC; the tread surface is TyreTempI/M/O.
+    "Physics.TyreCoreTemperature": [85.4, 85.9, 84.8, 85.1],
+    "Physics.TyreTempI": [86.1, 84.6, 85.7, 83.9],
+    "Physics.TyreTempM": [85.4, 85.9, 84.8, 85.1],
+    "Physics.TyreTempO": [84.2, 87.0, 83.5, 86.3],
+    // AC's wear runs from 100 down; SimHub maps 93.75..100 to 0..100, so 99.8 is some 97 per cent.
+    "Physics.TyreWear": [99.8, 99.79, 99.83, 99.81],
+    "Physics.BrakeTemp": [420, 425, 310, 315],
+    "Physics.CarDamage": [0, 0, 0, 0, 0],
+    "Physics.DrsAvailable": 0,
+    "Physics.PitLimiterOn": 0,
+  },
+
+  // Drivers run in this order every tick, after the clock that moves both PacketIds.
+  "drivers": [
+    {"type": "rpmSweep", "min": 3000, "max": 8000, "period": 6},
+    {"type": "gearFromRpm", "minGear": 2, "maxGear": 6, "redline": 9000,
+     "speedAtRedline": [0, 85, 125, 160, 195, 235, 275]},
+    {"type": "lapTimer", "lapTime": 98.0, "jitter": 0.6},
+    {"type": "fuelBurn", "litersPerLap": 2.9},
+    // One flag at a time, as AC shows them: none, yellow, blue, white, black, chequered.
+    {"type": "flagCycle", "period": 8},
+    // The raw limiter. SimHub's GameData.PitLimiterOn on AC is the pit lane, so it does not follow.
+    {"type": "pitLimiterToggle", "period": 5},
+    {"type": "sine", "var": "Physics.SteerAngle", "min": -0.35, "max": 0.35, "period": 5},
+    {"type": "sine", "var": "Physics.Gas", "min": 0.6, "max": 1.0, "period": 3},
+    {"type": "sine", "var": "Physics.Brake", "min": 0.0, "max": 0.35, "period": 3, "phase": 3.14159},
+    {"type": "sine", "var": "Physics.AccG", "index": 0, "min": -1.2, "max": 1.2, "period": 5},
+    {"type": "sine", "var": "Physics.TyreCoreTemperature", "index": 0, "min": 84.8, "max": 86.0, "period": 20},
+    // SimHub's AC app page. "lap" is laps completed; the running order is by laps plus "pct", so the
+    // player, at 12 laps and 0.369 of the thirteenth, starts third. Equal paces keep the order still.
+    {"type": "field", "pace": 98.0, "jitter": 0.5, "cars": [
+      {"name": "Lena Vogel", "car": "ks_porsche_911_gt3_r_2016", "lap": 12, "pct": 0.52, "best": 97.512},
+      {"name": "Marco Bianchi", "car": "ks_ferrari_488_gt3", "lap": 12, "pct": 0.43, "best": 97.801},
+      {"name": "OpenDash Tester", "car": "ks_porsche_911_gt3_r_2016"},
+      {"name": "Sophie Laurent", "car": "ks_audi_r8_lms_2016", "lap": 12, "pct": 0.31, "best": 98.104},
+      {"name": "James Okafor", "car": "ks_mercedes_amg_gt3", "lap": 12, "pct": 0.27, "best": 98.233},
+      {"name": "Akira Tanaka", "car": "ks_nissan_gtr_gt3", "lap": 12, "pct": 0.22, "best": 98.351},
+      {"name": "Elena Petrova", "car": "ks_lamborghini_huracan_gt3", "lap": 12, "pct": 0.16, "best": 98.402},
+      {"name": "Tom Hughes", "car": "ks_mclaren_650_gt3", "lap": 12, "pct": 0.09, "best": 98.517},
+      {"name": "Nina Berg", "car": "bmw_z4_gt3", "lap": 12, "pct": 0.03, "best": 98.640},
+      // In his box for the whole race, so every scenario built on this one has a PIT chip in its table
+      // before its own cars go in (#1138).
+      {"name": "Diego Ramos", "car": "ks_porsche_911_gt3_r_2016", "lap": 11, "pct": 0.985, "best": 98.702, "pit": true},
+      {"name": "Kofi Mensah", "car": "ks_ferrari_488_gt3", "lap": 11, "pct": 0.97, "best": 98.755},
+      {"name": "Hanna Kowalska", "car": "ks_audi_r8_lms_2016", "lap": 11, "pct": 0.91, "best": 98.811},
+      {"name": "Luca Moretti", "car": "ks_mercedes_amg_gt3", "lap": 11, "pct": 0.84, "best": 98.893},
+      {"name": "Sara Lindqvist", "car": "ks_nissan_gtr_gt3", "lap": 11, "pct": 0.80, "best": 98.954},
+      {"name": "Omar Haddad", "car": "ks_lamborghini_huracan_gt3", "lap": 11, "pct": 0.66, "best": 99.012},
+      {"name": "Grace Chen", "car": "ks_mclaren_650_gt3", "lap": 11, "pct": 0.60, "best": 99.105},
+      {"name": "Pieter de Vries", "car": "bmw_z4_gt3", "lap": 11, "pct": 0.58, "best": 99.188},
+      {"name": "Ines Duarte", "car": "ks_porsche_911_gt3_r_2016", "lap": 11, "pct": 0.50, "best": 99.240},
+      {"name": "Mateo Silva", "car": "ks_ferrari_488_gt3", "lap": 11, "pct": 0.41, "best": 99.301},
+      {"name": "Aino Virtanen", "car": "ks_audi_r8_lms_2016", "lap": 11, "pct": 0.33, "best": 99.388},
+      {"name": "Ryan Walsh", "car": "ks_mercedes_amg_gt3", "lap": 11, "pct": 0.24, "best": 99.452},
+      {"name": "Yuki Sato", "car": "ks_nissan_gtr_gt3", "lap": 11, "pct": 0.15, "best": 99.517},
+      {"name": "Clara Weiss", "car": "ks_lamborghini_huracan_gt3", "lap": 11, "pct": 0.06, "best": 99.603},
+      {"name": "Ben Adeyemi", "car": "ks_mclaren_650_gt3", "lap": 10, "pct": 0.95, "best": 99.721},
+    ]},
+  ],
+
+  "timeline": [
+    {"at": 15, "log": "brake bias +0.5", "set": {"Physics.BrakeBias": 0.55}},
+    {"at": 45, "log": "car damage at the front", "set": {"Physics.CarDamage[0]": 12.5}},
+    {"at": 60, "log": "TC 3 -> 5", "set": {"Physics.TC": 0.10}},
+    {"at": 90, "log": "the leader into the pit lane and its box", "driver": {"type": "field", "pitCars": ["Lena Vogel"]}},
+    {"at": 110, "log": "the leader leaves the pits", "driver": {"type": "field", "pitCars": []}},
+    {"at": 120, "log": "stop the flag cycle, no flag out", "driver": {"type": "flagCycle", "enabled": false}, "set": {"Graphics.Flags": "AC_NO_FLAG"}},
+  ],
+}

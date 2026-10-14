@@ -81,6 +81,42 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What to say when the release is the plugin already running, so the press downloaded nothing and wrote the
+        /// running plugin's own dashboards instead.
+        /// </summary>
+        /// <remarks>
+        /// Such a run stages nothing (UpdateService.Apply), since the plugin the release carries is the one SimHub has
+        /// loaded. It used to stage that same plugin and say <see cref="RestartWithDashboards"/>, so a driver who kept
+        /// an edited screen was told to restart SimHub to finish updating, restarted, and found the same screen and
+        /// the same offer (#1083). What it does instead is what the start does: write each dashboard that is behind,
+        /// which is how a rig on the release comes to be offered it at all, so the line names those and the reopen
+        /// rather than a restart. An edited dashboard is named with the press that does replace it, which is the
+        /// one place that does, since no update will.
+        ///
+        /// The panel never reaches that edited form: it asks before any press that meets an edited dashboard, and a
+        /// yes for one behind the release stages the plugin instead. It is there for a caller that sends a run with no
+        /// yes, so that such a run says what it left rather than nothing.
+        /// </remarks>
+        /// <param name="version">The version running, which is the release's.</param>
+        /// <param name="updated">How many dashboards were behind it and were written.</param>
+        /// <param name="edited">How many dashboards behind it somebody has edited, which were left alone.</param>
+        /// <param name="wroteFonts">Whether the dashboards written brought a font, which only a restart draws.</param>
+        public static string AlreadyRunning(string version, int updated, int edited, bool wroteFonts)
+        {
+            var line = "You already have OpenDash " + Show(version) + ".";
+            if (updated > 0)
+            {
+                line += updated == 1 ? " Updated the dashboard that was behind it." : " Updated the " + updated + " dashboards that were behind it.";
+            }
+            if (edited > 0)
+            {
+                line += edited == 1 ? " The one you edited is left alone, and " + PanelConfirmation.ReinstallLabel + " replaces it."
+                    : " The " + edited + " you edited are left alone, and " + PanelConfirmation.ReinstallLabel + " replaces them.";
+            }
+            return updated > 0 ? line + " " + ToSee(wroteFonts) : line;
+        }
+
+        /// <summary>
         /// What the Update button says before it replaces a dashboard somebody has edited.
         /// </summary>
         /// <remarks>
@@ -144,12 +180,17 @@ namespace OpenDashPlugin
         /// What the update-check setting says about itself, which is the user-facing form of ADR 0012's promise.
         /// </summary>
         /// <remarks>
-        /// Taken verbatim from design/canvas/Plugin.dc.html, where the author wrote it. The canvas is the design
-        /// source and is not edited from code, so when the two disagree this is what moves. It is here rather than
-        /// in the panel because it is copy, and because the whole of what OpenDash discloses ought to be readable
-        /// in one sentence beside the switch that turns it off.
+        /// design/canvas/Plugin.dc.html, where the author wrote it, goes on "Nothing else leaves your machine.", and
+        /// that stopped being true when the Porsche crest began to be fetched at a start without a press (#714): a
+        /// rig with a Porsche screen has asked the crest's host for it before the driver opens this page, and
+        /// switching the check off does not stop it (#1116). So the sentence says what the check sends rather than
+        /// what else stays, in the terms docs/scope.md and the site's install page use: nothing about the user.
+        /// The plugin's other requests are listed in scope.md, which a caption cannot hold. It is one sentence
+        /// where the artboard has two, as voice.md asks, and the departures table in docs/design/plugin.md records
+        /// the difference until the author settles the words on the canvas. It is here rather than in the panel
+        /// because it is copy.
         /// </remarks>
-        public const string CheckCaption = "Asks GitHub for the newest release once a day. Nothing else leaves your machine.";
+        public const string CheckCaption = "Asks GitHub for the newest release once a day, and sends nothing about you.";
 
         /// <summary>
         /// What a press of Update says when there is no release behind it.

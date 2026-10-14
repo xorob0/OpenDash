@@ -16,6 +16,7 @@
 import { describe, expect, test } from 'bun:test';
 import { COLUMNS, ROWS } from '../src/leds/profile.ts';
 import { buildFlagBoxProfile } from '../src/leds/profile.ts';
+import { CAUTION } from '../src/leds/glyphs.ts';
 import { contactSheet, glyphCatalogue, type Glyph } from '../src/leds/sheet.ts';
 import { walkContainers } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
@@ -118,7 +119,83 @@ describe('no two glyphs can be confused', () => {
       expect({ names, ok: allSolidFlags || allOneGear }).toEqual({ names, ok: true });
     }
   });
+
+  test('the letters the box writes are no digit, so SC never reads as a car number', () => {
+    // #516: the S was the blocky 5 pixel for pixel, and "5C" is a car number rather than a flag.
+    // Every letter cell the full course yellow cuts out is compared, side by side, with every digit
+    // a blocky face draws in the same cell.
+    const letters = CAUTION_LETTERS.map((at) => ({ ...at, ink: letterCell(CAUTION, at) }));
+    expect(letters.map((l) => l.letter)).toEqual(['S', 'C']);
+    for (const letter of letters) {
+      for (const digit of BLOCKY_DIGITS) {
+        expect({ letter: letter.letter, digit: digit.name, same: letter.ink.join('/') === digit.ink.join('/') }).toMatchObject({ same: false });
+      }
+    }
+    // ...and the two letters are two letters, not one drawn twice.
+    expect(letters[0]?.ink).not.toEqual(letters[1]?.ink);
+  });
 });
+
+/** Where each letter of the full course yellow sits on its grid: three columns by six rows. */
+const CAUTION_LETTERS = [
+  { letter: 'S', row: 1, column: 1 },
+  { letter: 'C', row: 1, column: 5 },
+] as const;
+
+const LETTER_ROWS = 6;
+const LETTER_COLUMNS = 3;
+
+/** One letter's cell, as ink: the letters are the unlit pixels cut out of the yellow. */
+const letterCell = (grid: readonly string[], at: { row: number; column: number }): string[] =>
+  grid.slice(at.row, at.row + LETTER_ROWS).map((line) =>
+    [...line.slice(at.column, at.column + LETTER_COLUMNS)].map((ch) => (ch === '.' ? '#' : '.')).join(''),
+  );
+
+/**
+ * The ten digits as a blocky face draws them in a cell of three by six: the seven segments of a
+ * display, with the cell's two spare rows given to the lower strokes or to the upper ones, every bar
+ * running the cell's width, and each form again with either or both bottom corners rounded off where
+ * the digit has a bowl there, which is how a pixel face draws the 5 and the 3. The top-left corner of
+ * a 5 is never rounded, since it is where the digit's flag meets its stem, and that corner is the
+ * whole of what tells the S from it.
+ */
+const BLOCKY_DIGITS: { name: string; ink: string[] }[] = (() => {
+  // a top, b upper right, c lower right, d bottom, e lower left, f upper left, g middle.
+  const segments: Record<string, string> = { '0': 'abcdef', '1': 'bc', '2': 'abdeg', '3': 'abcdg', '4': 'bcfg', '5': 'acdfg', '6': 'acdefg', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg' };
+  const out: { name: string; ink: string[] }[] = [];
+  for (const [digit, on] of Object.entries(segments)) {
+    for (const upper of [1, 2]) {
+      const lower = LETTER_ROWS - 3 - upper;
+      const has = (s: string): boolean => on.includes(s);
+      const px = (lit: boolean): string => (lit ? '#' : '.');
+      // A bar's end pixel is lit by the bar or by any stroke that reaches it, which is what squares it.
+      const bar = (s: string, left: string, right: string): string =>
+        `${px(has(s) || [...left].some(has))}${px(has(s))}${px(has(s) || [...right].some(has))}`;
+      const stroke = (left: string, right: string): string => `${px(has(left))}.${px(has(right))}`;
+      const square = [
+        bar('a', 'f', 'b'),
+        ...Array.from({ length: upper }, () => stroke('f', 'b')),
+        bar('g', 'fe', 'bc'),
+        ...Array.from({ length: lower }, () => stroke('e', 'c')),
+        bar('d', 'e', 'c'),
+      ];
+      out.push({ name: `${digit} (${upper} over ${lower})`, ink: square });
+      // A bottom corner rounds off where the bottom bar turns into a stroke above it.
+      const roundLeft = has('d') && has('e');
+      const roundRight = has('d') && has('c');
+      const rounded = (left: boolean, right: boolean): string[] => {
+        const last = [...(square[LETTER_ROWS - 1] ?? '')];
+        if (left) last[0] = '.';
+        if (right) last[LETTER_COLUMNS - 1] = '.';
+        return [...square.slice(0, -1), last.join('')];
+      };
+      if (roundLeft) out.push({ name: `${digit} (${upper} over ${lower}, bottom left rounded)`, ink: rounded(true, false) });
+      if (roundRight) out.push({ name: `${digit} (${upper} over ${lower}, bottom right rounded)`, ink: rounded(false, true) });
+      if (roundLeft && roundRight) out.push({ name: `${digit} (${upper} over ${lower}, bowl rounded)`, ink: rounded(true, true) });
+    }
+  }
+  return out;
+})();
 
 describe('the contact sheet', () => {
   test('renders every glyph in the catalogue', () => {

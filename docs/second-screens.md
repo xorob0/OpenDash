@@ -226,6 +226,15 @@ lap after a pass for the lead the count can be one short: a car a lap down on th
 not on the sim's reads its seconds to the road leader, which are true, and a car two laps down on
 the one and one on the other reads `+1L`.
 
+The Int column asks the same question of the car in front. A gap to the leader carries the whole
+laps a car is down, so the difference of two gaps on different laps is those laps in seconds, and a
+car five laps down read `+484.6` beside a Gap of `+5L` (#1077). Where a car is a whole lap or more
+behind the car in front by distance the Int cell reads the laps between them, spelled as the Gap
+spells them, and a lapped car on the lap of the car in front still reads the seconds. No count SimHub
+publishes is measured from the car in front, and the difference of two truncated counts to the
+leader is a lap off whenever the leader's lap falls between the two cars, so the two cars'
+`currentlaphighprecision` are subtracted directly, which is how SimHub counts `lapstoleader` itself.
+
 All of that is a race. SimHub's gaps measure distance run in every session, and in practice and
 qualifying the leaderboard is ordered by best lap, so its first car is the fastest rather than the
 furthest round and the distance between two cars says only how long each has been out: a car 0.4 s
@@ -276,7 +285,7 @@ has not arrived yet.
 | Not drawn | Why |
 |---|---|
 | Virtual energy (module 6) | A Le Mans Ultimate feature. SimHub's ERS members are never filled by the iRacing reader. |
-| Damage (module 20) | iRacing publishes no damage values. SimHub's damage members are filled with zeros, so a body diagram drawn from them would show an undamaged car after a crash. |
+| Damage on iRacing and Le Mans Ultimate (module 20) | Neither publishes damage to SimHub. SimHub's damage members are filled with zeros, so a body diagram drawn from them would show an undamaged car after a crash, and the page says the sim reports none instead. On Assetto Corsa and ACC, which do publish it, the page draws the car with its front, rear and sides coloured by how badly each is hit, and a word for each beside it. Where a light hit ends and a heavy one starts is provisional until a drive measures the range the sims' figures reach. |
 | Track rivals (module 21) | SimHub times sectors, not segments, and has no notion of a rival's time over the stretch of track you are on. |
 | Fuel pressure, voltage and manifold pressure off iRacing (module 22) | SimHub normalises the water and oil temperatures and the oil pressure for every sim, and has no name for the other three, so they are read from iRacing's own telemetry and read as no data on any other sim. |
 | Mini-sectors | SimHub has no subdivision below a sector. The sector strip has one cell per real sector. |

@@ -2,16 +2,17 @@
 #
 # The site serves OpenDash-plugin.zip itself rather than linking to a release, so the file has to
 # come from somewhere. It is the one file: the plugin is the only way in (docs/scope.md, #438), and
-# the packages and LED profiles the build writes reach a user inside it. They come from this image: the first two
-# stages are the repository's own build commands, run against the source the site is being built
-# from, and the third copies what they produced into the site's public folder. That means the
-# download button always hands over exactly what this commit produces — there is no second place
-# holding a stale artifact, nothing to upload by hand, and no token to keep.
+# the packages and LED profiles the build writes reach a user inside it. They come from this image:
+# the first of its three stages runs the repository's own release command against the source the
+# site is being built from, the second copies what that produced into the site's public folder and
+# builds the site around it, and the third runs the result. That means the download button always
+# hands over exactly what this commit produces: there is no second place holding a stale artifact,
+# nothing to upload by hand, and no token to keep.
 #
 # It also means the site can only ever offer one version, which is the whole reason the Downloads
 # page pairs the current build with the changelog rather than with an archive.
 #
-# Build from the REPOSITORY ROOT, not from site/, because stages 1 and 2 need the whole tree:
+# Build from the REPOSITORY ROOT, not from site/, because stages 1 and 2 read most of the tree:
 #
 #   docker build -f site/Dockerfile --build-arg NEXT_PUBLIC_SITE_URL=https://example.com -t opendash-site .
 #   docker run -p 3000:3000 opendash-site
@@ -30,7 +31,7 @@
 # not do is change the line under the build. `sdk:8.0` cannot carry an SDK that global.json refuses,
 # as stage 1 says, and naming bookworm keeps the Debian, and with it glibc, openssl and the apt
 # packages, from changing under the build until someone changes the tag on purpose. The stages all
-# name the same release, which stage 4 needs and the others follow for consistency; stage 4 also
+# name the same release, which stage 3 needs and the others follow for consistency; stage 3 also
 # says what moving to the next one takes.
 # bun is the 1.4 line, which is the one place the image pins bun where CI does not (CONTRIBUTING.md):
 # a lockfile written by a newer bun stops `bun install --frozen-lockfile` here, loudly, and the fix
@@ -73,7 +74,7 @@ RUN bun install --frozen-lockfile
 # build/OpenDash-plugin.zip.
 RUN bun run package
 
-# ---------------------------------------------------------------- 3. the site
+# ---------------------------------------------------------------- 2. the site
 FROM node:22-bookworm-slim AS build
 WORKDIR /repo
 # The site's generators read design/tokens.json, packages/dash/src/contract.ts, scripts/changelog.ts,
@@ -94,7 +95,9 @@ COPY VERSION CHANGELOG.md package.json bun.lock bunfig.toml ./
 # costs a second rather than the copy of a node_modules whose workspace links would have to survive
 # the move intact.
 RUN bun install --frozen-lockfile
-COPY media ./media
+# media/ stays out: site/test/mark.test.ts reads the logo from it, but nothing the build runs does,
+# and the mark the pages draw is a copy of its path. A local site/.env stays out too, through
+# .dockerignore, because next build would write it into the standalone server stage 3 runs.
 COPY site ./site
 # The build output the generators read (the manifest says which screens exist), and the one file the
 # site hands out, in the one place next/static serves from. Only the zip is copied into downloads:
@@ -128,7 +131,7 @@ ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 # and the runtime stage is node anyway, so building on the same engine keeps them honest.
 RUN node node_modules/.bin/next build
 
-# ---------------------------------------------------------------- 4. what runs
+# ---------------------------------------------------------------- 3. what runs
 # On the same Debian as the build stage, bookworm, by name: the build stage writes the node_modules
 # this one runs, so the two agree on the system under them, and a release-less tag would let the
 # next Debian arrive whenever node's images move to it rather than when this file says so. Prisma

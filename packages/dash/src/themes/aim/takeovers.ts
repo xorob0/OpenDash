@@ -13,8 +13,12 @@
  * it, so that the four states of the family that are mistakes keep the house's banner at the top of
  * zone C. The warning is iRacing's `EngineWarnings` bits for water temperature, oil pressure and fuel
  * pressure, which band D's car page lights its engine lamp on; a stalled engine is left out, since
- * a car sitting in its pit box is stalled and is not in trouble. When both hold, the limiter is
- * drawn over the warning, being the one that ends in seconds.
+ * a car sitting in its pit box is stalled and is not in trouble.
+ *
+ * The warning is a state of the car rather than a safety layer, and the face ranks it under both:
+ * it is hidden while a state of the pit family is out, since its box covers the banner row at the
+ * top of zone C and the limiter's `Pit Speed`, and while the full-screen flag is out, whose name it
+ * would cover (#1097, #1098). It comes back when they clear, the engine still being in trouble.
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
@@ -22,19 +26,16 @@ import { withMoreBindings, type Expr } from '../../bind.ts';
 import { pitAlertVisible } from '../../components/pitAlerts.ts';
 import { rect } from '../../design/geometry.ts';
 import { inTheCar, pitLimitText } from '../../second/values.ts';
-import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
+import { ENGINE_WARNING_BITS, engineWarning } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
 import { lcdColour, reading, segment, segmentWidth } from './register.ts';
 
-const { and, div, gt, iff, isnull, mod, num, or, raw, str, truncate } = ncalc;
+const { and, iff, or, str } = ncalc;
 
 /** The canvas's takeovers at 440 x 284: `Pit Speed` 30 over the limit 64, 24 apart; the warning box 6 in, 3 px of ink, two lines of 26, 16 apart. */
 const LIMITER = { label: 30, value: 64, gap: 24 } as const;
 const WARNING = { inset: 6, border: 3, line: 26, gap: 16, pad: 16 } as const;
-
-/** One of iRacing's `EngineWarnings` bits, read by dividing and taking the remainder, as the band's telltales read it. */
-const engineWarning = (bit: number): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(bit))), num(2)), num(0));
 
 const WARNINGS = [
   { bit: ENGINE_WARNING_BITS.oilPressure, text: 'OIL PRESS LOW' },

@@ -1,0 +1,37 @@
+{
+  // A yellow-flag lap on low fuel, the twin of the irsdk yellow: the flag out, fuel under a lap, a hot
+  // right front and a cold left front, worn right-hand tyres and P6. AC's yellow is one value of
+  // Graphics.Flags, with no waving or caution beside it.
+  "extends": "race.json",
+  "name": "Yellow flag, low fuel, uneven tyre temperatures",
+  "values": {
+    // Sixth on the road: behind the five cars of race.json's field that are further round lap 13.
+    "Graphics.NormalizedCarPosition": 0.20,
+    "Graphics.iCurrentTime": 19600,
+    "Graphics.SessionTimeLeft": 640000,
+    "Graphics.iLastTime": 101884,
+    "Graphics.iBestTime": 97905,
+  },
+  "pin": {
+    "Graphics.Flags": "AC_YELLOW_FLAG",
+    "Physics.Fuel": 2.1,
+    "Physics.PitLimiterOn": 0,
+    // A hot right front and a cold left front, so the tyre card shows all three of its colours.
+    "Physics.TyreCoreTemperature": [52.2, 112.7, 88.4, 94.6],
+    "Physics.TyreTempI": [53.8, 109.4, 88.0, 94.0],
+    "Physics.TyreTempM": [52.2, 112.7, 88.4, 94.6],
+    "Physics.TyreTempO": [51.5, 114.1, 88.9, 95.2],
+    // Worn on the right: SimHub maps AC's 93.75..100 to 0..100, so these read some 82, 61, 79 and 63.
+    "Physics.TyreWear": [98.875, 97.56, 98.69, 97.69],
+    // TC 7 and ABS 4 on the car's curves.
+    "Physics.TC": 0.14,
+    "Physics.Abs": 0.4,
+    "Physics.BrakeBias": 0.565,
+  },
+  "timeline": [
+    {"at": 0, "log": "hold the yellow: the flag cycle would move it", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "log": "the fuel burn would refill the pinned level", "driver": {"type": "fuelBurn", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 2, "log": "two more cars in the pits, three with race.json's Diego Ramos", "driver": {"type": "field", "pitCars": ["Tom Hughes", "Nina Berg"]}},
+  ],
+}
