@@ -238,7 +238,7 @@ describe('the Track panel carries the session best', () => {
 
     test(`${page} names the track and its state over the map`, () => {
       expect(texts(items, `${page}.map.title`)).toHaveLength(1);
-      expect(texts(items, `${page}.map.state`)[0]!.widest).toBe('Moderate');
+      expect(texts(items, `${page}.map.state`)[0]!.widest).toBe('Very wet');
     });
 
     test(`${page} orders the conditions as both sheets do, road before air`, () => {

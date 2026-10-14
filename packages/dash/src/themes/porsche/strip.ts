@@ -16,7 +16,7 @@ import { ncalc } from '../../generator.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
-import { currentLap, GRIP_WIDEST, pitLimiterOn, rpm, sessionType, speed, trackGrip } from '../../second/values.ts';
+import { currentLap, GRIP_WIDEST, hasTrackState, pitLimiterOn, rpm, sessionType, speed, trackGrip } from '../../second/values.ts';
 import { ds } from '../../tokens.ts';
 import { regionRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
@@ -76,21 +76,24 @@ export function porscheStrip(ctx: FaceContext): Item[] {
   const lapValue: Rect = rect(lapCell.left + lap.pad + lap.title, lapCell.top + 4, lapCell.width - lap.pad - lap.title - 4, lapCell.height - 8);
   items.push(...namedCell('strip.lap', lapCell, 'Lap', lapValue, lap.value, { sample: '16', bind: fmt(currentLap(), '0'), widest: '888' }, lap.label));
 
-  // The track state in the car's teal outline, written in capitals as the car writes DRY.
+  // The track state in the car's teal outline, written in capitals as the car writes DRY. Outline and
+  // word are both hidden where the sim reports no track state, rather than an outline round `--` (#1128).
   const track = placed(strip, parts.track);
+  const trackKnown = hasTrackState();
   // DRY and WET fit the car's 27 px with room to spare; the widest state iRacing reports does not,
   // so the box is set at the largest size that holds it rather than clipping it.
   const trackRoom = track.width - 2 * BORDER;
   let trackSize = parts.track.size;
   while (runWidth(TRACK_WIDEST, trackSize) > trackRoom) trackSize--;
   items.push(
-    band('strip.track.box', track, ds.color.surface.base, { border: { color: carColour('compound'), width: BORDER }, radius: RADIUS }),
+    band('strip.track.box', track, ds.color.surface.base, { border: { color: carColour('compound'), width: BORDER }, radius: RADIUS, visibleBind: trackKnown }),
     label('strip.track.value', 'OPTIMUM', track.left + BORDER, centredY(track, trackSize), trackRoom, {
       size: trackSize,
       color: ds.color.text.primary,
       hAlign: 'center',
       bind: ucase(trackGrip()),
       widest: TRACK_WIDEST,
+      visibleBind: trackKnown,
     }),
   );
   return items;

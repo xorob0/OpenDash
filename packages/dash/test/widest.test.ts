@@ -57,7 +57,7 @@ describe('the reading of a binding', () => {
   test('what the sim sends is unknowable, and what is written around it is a floor', () => {
     // The hash is certain and the number is not, so `#` is what a `widest` has to hold at least.
     expect(drawnFloors("('#') + (drivercarnumber(1))")).toEqual(['#']);
-    expect(drawnFloors("isnull([DataCorePlugin.GameData.TrackGripStatus], '--')")).toEqual(['--']);
+    expect(drawnFloors("isnull([DataCorePlugin.GameData.CarModel], '--')")).toEqual(['--']);
     // Wholly the sim's: nothing to hold a `widest` to, and nothing invented to hold it to either.
     expect(drawnFloors("format([DataCorePlugin.GameData.SpeedKmh], '0')")).toEqual([]);
     expect(drawnFloors('[DataCorePlugin.GameData.Gear]')).toEqual([]);

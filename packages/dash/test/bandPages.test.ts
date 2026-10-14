@@ -648,7 +648,7 @@ describe('the corner blocks at the ends of the band', () => {
     expect(named(items, 'corner.incidents.value').textColor).toBe(ds.color.caution.primary);
     expect(named(items, 'corner.incidents.value').text).toBe('3x');
     const track = named(items, 'corner.trackState.value');
-    expect({ text: track.text, widest: track.widest }).toEqual({ text: 'Dry', widest: 'Moderate' });
+    expect({ text: track.text, widest: track.widest }).toEqual({ text: 'Dry', widest: 'Very wet' });
     expect(bound(track, 'Text')).not.toContain('ucase');
   });
 

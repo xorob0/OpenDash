@@ -17,7 +17,7 @@ import { densityOf, type Density } from '../second/density.ts';
 import { label } from '../elements/label.ts';
 import type { StaticMapItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
-import { GRIP_WIDEST, trackGrip, trackLengthKm, trackName } from '../second/values.ts';
+import { GRIP_WIDEST, hasTrackState, trackGrip, trackLengthKm, trackName } from '../second/values.ts';
 import { defineModule } from './module.ts';
 
 const { concat, fmt, str } = ncalc;
@@ -92,6 +92,8 @@ export const track = defineModule('track', (ctx) => {
       hAlign: 'right',
       bind: trackGrip(),
       widest: GRIP_WIDEST,
+      // Hidden where the sim reports no track state, rather than `--` beside the track's name (#1128).
+      visibleBind: hasTrackState(),
     }),
     map,
   ];

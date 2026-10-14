@@ -88,9 +88,9 @@ describe('the pit wall header', () => {
     const track = partsOf(header(1920, false), 'track');
     expect(track.map((i) => i.text)).toEqual(['Track', 'Dry']);
     const state = track[1]!;
-    // Measured from "MODERATE", the longest grip status iRacing reports, and proportional for the
-    // same reason as the wind: the "m" overruns the digit cell the numerals are built from.
-    expect({ widest: state.widest, fontSize: state.fontSize, monospace: state.monospace }).toEqual({ widest: 'Moderate', fontSize: 24, monospace: undefined });
+    // Measured from "Very wet", the widest of the five track states, and proportional for the same
+    // reason as the wind: the "W" overruns the digit cell the numerals are built from.
+    expect({ widest: state.widest, fontSize: state.fontSize, monospace: state.monospace }).toEqual({ widest: 'Very wet', fontSize: 24, monospace: undefined });
   });
 
   test('reads the lap rather than the session on the portrait page, and drops the wind and the track state', () => {
