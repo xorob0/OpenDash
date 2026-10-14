@@ -46,7 +46,7 @@
  */
 import type { Expr } from '../bind.ts';
 import { flagBox, flagBoxMatrix, FLAG_BOX_MATRICES, type FlagBoxMatrix } from '../contract.ts';
-import { conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
+import { boxRaisedSafely, conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
 // The ignition read is telemetry and lives with the rest of it; the two *gates* composed from it
 // live in gates.ts, because the strip asks the same question above its own tree and the answer has
@@ -99,11 +99,16 @@ const flagVisible = (matrix: FlagBoxMatrix, condition: FlagCondition): Expr => c
  * The full course yellow is the picture on this panel: the panel draws flags, and the caution is the
  * flag it is drawing, which a red flag above it or the pit lane's switch can each take away. The one
  * condition the spotter gives way to (#515).
+ *
+ * Ranked as the caution's own container ranks it, but read null-safely. Where the bits are published
+ * the two agree, so the bar gives way exactly while SC is drawn; where they are not, as on Assetto
+ * Corsa, the bare read would throw, a `when` takes a throw for false, and the bar that sim does draw
+ * would go with it.
  */
 export function cautionOnPanel(matrix: FlagBoxMatrix): Expr {
   const caution = drawnFlags(false).find((condition) => condition.id === 'caution');
   if (caution === undefined) throw new RangeError('the full course yellow has no glyph, so the spotter has nothing to give way to');
-  return ncalc.and(ncalc.eq(flagBoxMatrix(matrix).flags(), 'true'), flagVisible(matrix, caution));
+  return ncalc.and(ncalc.eq(flagBoxMatrix(matrix).flags(), 'true'), conditionVisible(caution, criticalOnly(matrix), drawnFlags(false), boxRaisedSafely));
 }
 
 /** The catalogue, in order. */
@@ -170,10 +175,11 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
 /**
  * The spotter, as the last thing painted on a panel.
  *
- * Gated on the panel's own Spotter switch and on one picture, and on nothing else: no pit condition,
- * no warning, no other flag. That is the machine-checkable form of "a car alongside is never hidden by
- * a yellow", and it is what the frames make safe — they light two edge columns and leave the other
- * six absent, so what was drawn underneath keeps them.
+ * Gated, in {@link matrixGroup}, on the panel's own Spotter switch and on one picture, and on nothing
+ * else: no pit condition, no warning, no other flag. That is the machine-checkable form of "a car
+ * alongside is never hidden by a yellow", the full course yellow below excepted, and it is what the
+ * frames make safe: they light two edge columns and leave the other six absent, so what was drawn
+ * underneath keeps them.
  *
  * The picture is the full course yellow's. SC runs to both edges of the panel, so a bar two columns
  * wide takes the S or the C, and no placement of the pair escapes it; the author ruled that the bar

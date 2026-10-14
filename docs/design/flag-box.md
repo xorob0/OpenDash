@@ -367,15 +367,22 @@ to be the second layer below the flags, so any flag at all hid a car alongside, 
 blanked the warnings and the gear beneath it. It is now the last container of the panel, gated on
 that panel's own Spotter switch and on one picture, below, and on nothing else: no other flag, no
 pit condition, and nothing below it excludes it in turn. Its frames light two columns of an edge
-and leave the rest of the panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
-it, so a standing yellow keeps columns three to six while the bar says which side. The full course
-yellow is the one exception, because SC runs to both edges and the bar would take the S or the C:
-while a panel draws it, that panel's bar is gated off, and it returns when the caution ends, when a
-higher flag takes the panel, and on a panel with Flags off. [Its own
-paragraph](#the-four-decisions-sixty-four-pixels-forced) says why no placement avoids the cut and why
-the flag wins. `flagBox.test.ts` paints every panel with the caution out and a car on either side, or
-both, and finds SC whole. The consequence worth stating is that on a rig with one box the gear now
-shows through the middle of the panel while a car is alongside, which is the behaviour this is for.
+and leave the rest of the panel absent, and SimHub drops an absent pixel when it merges rather
+than clearing what is under it, so a standing yellow keeps columns three to six while the bar says
+which side. The full course yellow is the one exception, because SC runs to both edges and the bar
+would take the S or the C: while a panel draws it, that panel's bar is gated off, and it returns
+when the caution ends, when a higher flag takes the panel, and on a panel with Flags off. [Its own
+paragraph](#the-four-decisions-sixty-four-pixels-forced) says why no placement avoids the cut and
+why the flag wins. `flagBox.test.ts` paints every panel with the caution out and a car on either
+side, or both, and finds SC whole. The consequence worth stating is that on a rig with one box the
+gear now shows through the middle of the panel while a car is alongside, which is the behaviour
+this is for.
+
+That gate reads the flag bits null-safely, where the flag containers read them bare. Assetto Corsa
+publishes no `SessionFlagsDetails` and does publish the cars alongside, and a `when` whose formula
+throws is inactive, so a bare read there would take away the bar, which is all such a panel can
+draw. Where the bits are published the two readings agree, so the bar gives way exactly while SC is
+drawn.
 
 The composition itself has not been watched on hardware. No 8x8 panel is plugged into the test rig,
 so "a transparent pixel does not clear what is beneath it" rests on the format notes rather than on

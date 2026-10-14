@@ -303,7 +303,8 @@ export const CHEQUERED_INVERSE: Grid = [
  *
  * The spotter's bar would take the S or the C, since one bar two columns wide leaves six columns, two
  * leave four, and the pair needs seven. The author ruled that it gives way: on a panel drawing this
- * picture the spotter is not painted, so the word stays whole (#515, `spotterOverlay` in profile.ts).
+ * picture the spotter is not painted, so the word stays whole (#515, `cautionOnPanel` and the
+ * Spotter gate in `matrixGroup`, profile.ts).
  */
 export const CAUTION: Grid = [
   'YYYYYYYY',

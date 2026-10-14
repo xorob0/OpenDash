@@ -35,7 +35,7 @@ import { CAUTION, flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_
 import { belowFlags, buildFlagBoxProfile, cautionOnPanel, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
 import { ds } from '../src/tokens.ts';
-import { evalNcalc } from './ncalcEval.ts';
+import { evalNcalc, evalTyped } from './ncalcEval.ts';
 
 /** Every colour `ds` resolves, so "is this a token" is a question about tokens.json rather than
  * about one branch of it. */
@@ -1214,7 +1214,13 @@ describe('the pit family, the spotter and the warnings', () => {
     expect(spotter?.kind).toBe('when');
     const formula = spotter && 'formula' in spotter ? String(spotter.formula) : '';
     expect(formula).toBe(`((isnull([OpenDash.FlagBoxMatrix1Spotter], true)) = (true)) and (!(${cautionOnPanel(1)}))`);
-    expect(cautionOnPanel(1)).toInclude(formulaText(flagContainers(1).find((c) => c.description === 'caution')));
+    // ...read null-safely, so that on a sim with no flag bits the gate is false rather than a throw,
+    // which SimHub would take for false and take the bar away with it. Put the bare reads back and it
+    // is the caution's own container, word for word.
+    const gate = String(cautionOnPanel(1));
+    expect(gate).not.toMatch(/(?<!isnull\()\[DataCorePlugin\.GameRawData\.Telemetry\.SessionFlagsDetails\./);
+    const bare = gate.replace(/isnull\((\[DataCorePlugin\.GameRawData\.Telemetry\.SessionFlagsDetails\.\w+\]), 0\)/g, '$1');
+    expect(bare).toInclude(formulaText(flagContainers(1).find((c) => c.description === 'caution')));
     // Below the gate, the bars read the cars alongside and nothing else.
     const subtree = JSON.stringify(spotter && 'children' in spotter ? spotter.children : []);
     for (const forbidden of ['SessionFlagsDetails', 'PitLimiterOn', 'IsInPitLane', 'OilTemperature', 'Fuel_RemainingLaps']) {
@@ -1337,7 +1343,7 @@ describe('the spotter gives way to the full course yellow (#515)', () => {
    * default and the one setup in which the bar can reach both letters; every bit of the catalogue is
    * published, the named ones raised.
    */
-  function frameFor(matrix: FlagBoxMatrix, bits: readonly SessionFlagBit[], cars: { Left: number; Right: number }, panel: { flags?: boolean } = {}): Frame {
+  function frameFor(matrix: FlagBoxMatrix, bits: readonly SessionFlagBit[] | 'unpublished', cars: { Left: number; Right: number }, panel: { flags?: boolean } = {}): Frame {
     const frame: Frame = {
       [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Flags')}`]: panel.flags ?? true,
       [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Spotter')}`]: true,
@@ -1345,8 +1351,21 @@ describe('the spotter gives way to the full course yellow (#515)', () => {
       'DataCorePlugin.GameData.SpotterCarLeft': cars.Left,
       'DataCorePlugin.GameData.SpotterCarRight': cars.Right,
     };
+    if (bits === 'unpublished') return frame;
     for (const condition of FLAG_CATALOGUE) for (const bit of condition.bits) frame[flagBit(bit).replace(/^\[|\]$/g, '')] = bits.includes(bit) ? 1 : 0;
     return frame;
+  }
+
+  /**
+   * Whether a gate holds, read by the typed evaluator because it throws on a comparison with an
+   * absent property as NCalc does, and a throw answered false as SimHub answers it.
+   */
+  function holds(formula: string, frame: Frame): boolean {
+    try {
+      return evalTyped(formula, frame) === true;
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -1358,7 +1377,9 @@ describe('the spotter gives way to the full course yellow (#515)', () => {
   function panelShows(matrix: FlagBoxMatrix, frame: Frame): string[] {
     const canvas: (Hex | null)[][] = Array.from({ length: 8 }, () => Array.from({ length: 8 }, () => null));
     const visit = (container: MatrixContainer): void => {
-      if (container.kind === 'when' && evalNcalc(formulaText(container), frame) !== true) return;
+      // A throw is false: `CustomConditionalGroupContainer.IsActive` reads its formula through
+      // `ParseValueOrDefault(..., 0.0)`, which is how a sim without the flag bits reaches the gates.
+      if (container.kind === 'when' && !holds(formulaText(container), frame)) return;
       if (container.kind === 'animation') {
         container.frames[0]?.pixels.forEach((row, y) => row.forEach((pixel, x) => {
           if (pixel !== null) canvas[y]![x] = pixel;
@@ -1399,6 +1420,19 @@ describe('the spotter gives way to the full course yellow (#515)', () => {
     expect(panelShows(1, frameFor(1, ['red', ...FULL_COURSE_YELLOW], CARS.left)).map((row) => row.slice(0, 2))).toEqual(CAR_LEFT.map((row) => row.slice(0, 2)));
     // With Flags off the panel draws no caution, so it has nothing for the bar to give way to.
     expect(panelShows(2, frameFor(2, FULL_COURSE_YELLOW, CARS.right, { flags: false })).map((row) => row.slice(6))).toEqual(CAR_RIGHT.map((row) => row.slice(6)));
+  });
+
+  test('on a sim that publishes no flag bits, a car alongside still paints its bar', () => {
+    // Assetto Corsa publishes no SessionFlagsDetails and does publish the cars alongside. A gate that
+    // read the bits bare would throw there, SimHub would take the throw for false, and the bar, which
+    // is the one thing such a panel can draw, would go dark.
+    for (const matrix of FLAG_BOX_MATRICES) {
+      for (const [side, cars] of Object.entries(CARS)) {
+        const expected = { left: CAR_LEFT, right: CAR_RIGHT, both: CAR_BOTH }[side as keyof typeof CARS];
+        const edges = (shows: readonly string[]): string => shows.map((row) => `${row.slice(0, 2)}|${row.slice(6)}`).join('/');
+        expect({ matrix, side, bar: edges(panelShows(matrix, frameFor(matrix, 'unpublished', cars))) }).toEqual({ matrix, side, bar: edges(expected) });
+      }
+    }
   });
 });
 
