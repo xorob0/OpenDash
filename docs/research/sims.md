@@ -388,7 +388,8 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
 - **Sector times.** SimHub computes three: the first two from `lastSectorTime` on entering sectors 2 and
   3, the third from the lap. The three best times are filled.
 - **Session.** The names arrive in capitals with underscores (above). `inSession()` works, since none is
-  empty. `untimedMark` reads `SessionTimeTotal`, which AC does not have, so it rests on `SessionTimeLeft`.
+  empty. Every comparison of the name goes through `sessionIs()`, which compares it in capitals, and
+  `ncalcCoverage.test.ts` refuses one that does not, so the Porsche strip reads `RACE` and `QUAL` (#1125). `untimedMark` reads `SessionTimeTotal`, which AC does not have, so it rests on `SessionTimeLeft`.
 - **Spotter.** Fires from car coordinates within 10 m beside the car, only with SimHub's AC app running.
 - **Grip.** `TrackGripStatus` is not published by SimHub for any game; the band and the pit wall header
   draw `--` everywhere, iRacing included.

@@ -973,7 +973,7 @@ export const BEST_LAP_SESSIONS = [
  * Whether the session's leaderboard is ordered by best lap, which {@link BEST_LAP_SESSIONS} lists,
  * and so whether the Gap and Int columns measure best laps rather than distance (#1040).
  */
-export const rankedByBestLap = (): Expr => isIn(ucase(sessionType()), ...BEST_LAP_SESSIONS.map((name) => str(name.toUpperCase())));
+export const rankedByBestLap = (): Expr => sessionIs(...BEST_LAP_SESSIONS);
 
 /**
  * The gap outside a race: a car's best lap less the best lap of the car it is measured from, signed
@@ -1587,7 +1587,7 @@ const lapTimeRun = (): Expr => isnull(timespanToSeconds(game('CurrentLapTime')),
 export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(timedLapSeconds(), num(0)));
 
 /** Whether the session is a race, the one session name OpenDash matches with certainty. */
-const isRace = (): Expr => eq(ucase(sessionType()), str('RACE'));
+const isRace = (): Expr => sessionIs('Race');
 
 /**
  * The overall leader's row on SimHub's leaderboard: the car first on the road, {@link liveRow} of 1.
@@ -2235,6 +2235,23 @@ export const GRIP_WIDEST = 'Moderate';
 /** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
 export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
+
+/**
+ * Whether the session is one of `names`, whichever case the sim writes it in (#1125).
+ *
+ * SimHub passes each sim's own spelling through: iRacing's `Race` and `Lone Qualify`, and Assetto
+ * Corsa's and ACC's enum names with their `AC_` taken off, `RACE` and `QUALIFY`
+ * (`ACManager.GD_SessionTypeName`, decompiled `ACSharedMemory.dll`). NCalc's `=` and `in` compare
+ * two strings with `Comparer.Default`, which minds the case, so the name is put in capitals and
+ * compared with the names in capitals. `names` are written as iRacing writes them, and one name is
+ * an `=` rather than an `in` of one. `ncalcCoverage.test.ts` refuses a comparison of the session
+ * name made any other way.
+ */
+export const sessionIs = (...names: readonly string[]): Expr => {
+  const [first, ...rest] = names.map((name) => str(name.toUpperCase()));
+  if (first === undefined) throw new Error('sessionIs() takes at least one session name');
+  return rest.length === 0 ? eq(ucase(sessionType()), first) : isIn(ucase(sessionType()), first, ...rest);
+};
 
 /**
  * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
