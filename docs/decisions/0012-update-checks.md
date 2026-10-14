@@ -295,5 +295,10 @@ Reinstall everything, which asks the same question, and the dashboard's row on t
 
 **A release that is the plugin already running is not fetched unless a yes needs carrying.** The one
 thing staging such a plugin does is carry a yes to replacing edited dashboards to the start that writes
-them (`EditedConsent`), so without that yes nothing is downloaded or staged, and the line says the rig
-already has the version and names Reinstall everything for the dashboard that was kept.
+them (`EditedConsent`), and only for an edited dashboard behind the release, since that start leaves a
+current one alone. Without such a yes nothing is downloaded or staged. With the edited dashboards set
+aside, such a rig is offered the release only when an unedited dashboard is behind the plugin, which is
+what a start whose install of it failed leaves, so the press does what that start would: it writes the
+rig's dashboards from the plugin running, holding the edited ones back. The line says the rig already
+has the version, names what was written and the reopen rather than a restart, and names Reinstall
+everything for a dashboard that was kept. A dashboard that fails again says why, as any update does.

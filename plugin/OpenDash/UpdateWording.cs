@@ -81,24 +81,35 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// What to say when the release is the plugin already running and the press gave a restart nothing to do.
+        /// What to say when the release is the plugin already running, so the press downloaded nothing and wrote the
+        /// running plugin's own dashboards instead.
         /// </summary>
         /// <remarks>
-        /// Such a run downloads nothing and stages nothing (UpdateService.Apply), since the plugin the release carries
-        /// is the one SimHub has loaded and its start has already written every dashboard it was going to. It used
-        /// to stage that same plugin and say <see cref="RestartWithDashboards"/>, so a driver who kept an edited
-        /// screen was told to restart SimHub to finish updating, restarted, and found the same screen and the same
-        /// offer (#1083). An edited dashboard is named with the press that does replace it, which is the one place
-        /// that does, since no update will.
+        /// Such a run stages nothing (UpdateService.Apply), since the plugin the release carries is the one SimHub has
+        /// loaded. It used to stage that same plugin and say <see cref="RestartWithDashboards"/>, so a driver who kept
+        /// an edited screen was told to restart SimHub to finish updating, restarted, and found the same screen and
+        /// the same offer (#1083). What it does instead is what the start does: write each dashboard that is behind,
+        /// which is how a rig on the release comes to be offered it at all, so the line names those and the reopen
+        /// rather than a restart. An edited dashboard is named with the press that does replace it, which is the
+        /// one place that does, since no update will.
         /// </remarks>
         /// <param name="version">The version running, which is the release's.</param>
-        /// <param name="edited">How many of the dashboards the release carries inside the plugin somebody has edited.</param>
-        public static string AlreadyRunning(string version, int edited)
+        /// <param name="updated">How many dashboards were behind it and were written.</param>
+        /// <param name="edited">How many dashboards behind it somebody has edited, which were left alone.</param>
+        /// <param name="wroteFonts">Whether the dashboards written brought a font, which only a restart draws.</param>
+        public static string AlreadyRunning(string version, int updated, int edited, bool wroteFonts)
         {
             var line = "You already have OpenDash " + Show(version) + ".";
-            if (edited <= 0) return line;
-            return line + (edited == 1 ? " The one you edited is left alone, and " + PanelConfirmation.ReinstallLabel + " replaces it."
-                : " The " + edited + " you edited are left alone, and " + PanelConfirmation.ReinstallLabel + " replaces them.");
+            if (updated > 0)
+            {
+                line += updated == 1 ? " Updated the dashboard that was behind it." : " Updated the " + updated + " dashboards that were behind it.";
+            }
+            if (edited > 0)
+            {
+                line += edited == 1 ? " The one you edited is left alone, and " + PanelConfirmation.ReinstallLabel + " replaces it."
+                    : " The " + edited + " you edited are left alone, and " + PanelConfirmation.ReinstallLabel + " replaces them.";
+            }
+            return updated > 0 ? line + " " + ToSee(wroteFonts) : line;
         }
 
         /// <summary>
