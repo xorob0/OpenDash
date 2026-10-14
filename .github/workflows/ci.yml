@@ -212,6 +212,11 @@ jobs:
       - name: Typecheck
         run: cd site && bun run typecheck
 
+      # The dash job's bun test runs site/test too, but without site/node_modules, so a test that
+      # renders a component with React skips there and runs here.
+      - name: Test
+        run: bun test site/test
+
       # next build is the step that catches a page referring to a token, a package or a module that
       # no longer exists.
       - name: Build
