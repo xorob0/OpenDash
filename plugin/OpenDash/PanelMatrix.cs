@@ -761,7 +761,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// What may take the matrix over, first first, as Matrix.dc.html numbers it, fixed until #505 lets a
         /// driver change it. This is not quite the box's own order: flag-box.md and profile.ts (belowFlags)
-        /// paint the spotter as an overlay over everything, a standing yellow included, and rank the rest
+        /// paint the spotter as an overlay over everything, a standing yellow included, but not over the SC
+        /// of a full course yellow, which it gives way to (#515), and rank the rest
         /// flags, pit lane, warnings, gear. The numbers are the artboard's; the disagreement is the author's
         /// to settle, not this page's.
         /// </summary>

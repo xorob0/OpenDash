@@ -574,6 +574,16 @@ const readingFlags =
 export const boxRaised: RaisedTest = readingFlags((condition) => conditionRaised(condition));
 
 /**
+ * The box's reading, null-safe: false for every flag on a sim that publishes no `SessionFlagsDetails`,
+ * and the same answer as {@link boxRaised} wherever the bits are published, which on iRacing is always.
+ *
+ * It is for a gate that has to hold when there are no flags to read, which the box's own containers
+ * are not: the spotter gives way to the full course yellow (#515), and a bare read there would throw
+ * on Assetto Corsa, which `when` takes for false, and take away a bar that sim does draw.
+ */
+export const boxRaisedSafely: RaisedTest = readingFlags((condition) => conditionRaised(condition, safeBitSet));
+
+/**
  * Band D's reading: null-safe, because a bare read of an absent property is not a boolean and the
  * band has to stay dark on a sim that publishes no `SessionFlagsDetails` rather than light up.
  */

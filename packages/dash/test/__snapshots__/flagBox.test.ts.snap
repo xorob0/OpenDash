@@ -894,12 +894,12 @@ DDDDDDDD
 
 caution
 EEEEEEEE
-E...E...
+EE..E...
 E.EEE.EE
 E...E.EE
 EEE.E.EE
 EEE.E.EE
-E...E...
+E..EE...
 EEEEEEEE
   --
 ........
@@ -1068,23 +1068,23 @@ GGGGGGGG
 GGGGGGGG
 
 Warning oilHot
-.......D
-......D.
-.....D..
-.DDDDD..
-DDDDDDD.
-DDDDDDD.
-.DDDDD..
-...D....
+.......I
+......I.
+.....I..
+.IIIII..
+IIIIIII.
+IIIIIII.
+.IIIII..
+...I....
 
 Warning waterHot
-..DD..DD
-.D..DD..
-D....DD.
+..II..II
+.I..II..
+I....II.
 ........
-..DD..DD
-.D..DD..
-D....DD.
+..II..II
+.I..II..
+I....II.
 ........
 
 Warning lowFuel
@@ -1307,114 +1307,114 @@ Gear 9 redline
 ........
 
 Gear R stage2
-.DDDDD..
-.DDDDD..
-.DD..DD.
-.DD..DD.
-.DDDDD..
-.DDDDD..
-.DD.DD..
-.DD.DD..
+.IIIII..
+.IIIII..
+.II..II.
+.II..II.
+.IIIII..
+.IIIII..
+.II.II..
+.II.II..
 
 Gear N stage2
-.DD..DD.
-.DD..DD.
-.DDD.DD.
-.DDD.DD.
-.DD.DDD.
-.DD.DDD.
-.DD..DD.
-.DD..DD.
+.II..II.
+.II..II.
+.III.II.
+.III.II.
+.II.III.
+.II.III.
+.II..II.
+.II..II.
 
 Gear 1 stage2
-..DDD...
-..DDD...
-...DD...
-...DD...
-...DD...
-...DD...
-.DDDDDD.
-.DDDDDD.
+..III...
+..III...
+...II...
+...II...
+...II...
+...II...
+.IIIIII.
+.IIIIII.
 
 Gear 2 stage2
-.DDDDDD.
-.DDDDDD.
-.....DD.
-.DDDDDD.
-.DDDDDD.
-.DD.....
-.DDDDDD.
-.DDDDDD.
+.IIIIII.
+.IIIIII.
+.....II.
+.IIIIII.
+.IIIIII.
+.II.....
+.IIIIII.
+.IIIIII.
 
 Gear 3 stage2
-.DDDDDD.
-.DDDDDD.
-.....DD.
-.DDDDDD.
-.DDDDDD.
-.....DD.
-.DDDDDD.
-.DDDDDD.
+.IIIIII.
+.IIIIII.
+.....II.
+.IIIIII.
+.IIIIII.
+.....II.
+.IIIIII.
+.IIIIII.
 
 Gear 4 stage2
-.DD..DD.
-.DD..DD.
-.DD..DD.
-.DDDDDD.
-.DDDDDD.
-.....DD.
-.....DD.
-.....DD.
+.II..II.
+.II..II.
+.II..II.
+.IIIIII.
+.IIIIII.
+.....II.
+.....II.
+.....II.
 
 Gear 5 stage2
-.DDDDDD.
-.DDDDDD.
-.DD.....
-.DDDDDD.
-.DDDDDD.
-.....DD.
-.DDDDDD.
-.DDDDDD.
+.IIIIII.
+.IIIIII.
+.II.....
+.IIIIII.
+.IIIIII.
+.....II.
+.IIIIII.
+.IIIIII.
 
 Gear 6 stage2
-.DDDDDD.
-.DDDDDD.
-.DD.....
-.DDDDDD.
-.DDDDDD.
-.DD..DD.
-.DDDDDD.
-.DDDDDD.
+.IIIIII.
+.IIIIII.
+.II.....
+.IIIIII.
+.IIIIII.
+.II..II.
+.IIIIII.
+.IIIIII.
 
 Gear 7 stage2
-.DDDDDD.
-.DDDDDD.
-....DD..
-....DD..
-...DD...
-...DD...
-..DD....
-..DD....
+.IIIIII.
+.IIIIII.
+....II..
+....II..
+...II...
+...II...
+..II....
+..II....
 
 Gear 8 stage2
-.DDDDDD.
-.DDDDDD.
-.DD..DD.
-.DDDDDD.
-.DDDDDD.
-.DD..DD.
-.DDDDDD.
-.DDDDDD.
+.IIIIII.
+.IIIIII.
+.II..II.
+.IIIIII.
+.IIIIII.
+.II..II.
+.IIIIII.
+.IIIIII.
 
 Gear 9 stage2
-.DDDDDD.
-.DDDDDD.
-.DD..DD.
-.DDDDDD.
-.DDDDDD.
-.....DD.
-.DDDDDD.
-.DDDDDD.
+.IIIIII.
+.IIIIII.
+.II..II.
+.IIIIII.
+.IIIIII.
+.....II.
+.IIIIII.
+.IIIIII.
 
 Gear R stage1
 .HHHHH..
@@ -1754,9 +1754,10 @@ legend
 A #33383F
 B #FF2D46
 C #F5F7FA
-D #FFB300
+D #FF6A00
 E #FFD400
 F #2E7BFF
 G #FFFFFF
-H #00D96A"
+H #00D96A
+I #FFB300"
 `;
