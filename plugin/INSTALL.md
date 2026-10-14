@@ -470,8 +470,8 @@ deleted.
   pit lane. Leaving the pits records nothing until you cross the line, and entering the pit lane
   throws away a lap in progress. SimHub keeps one map per track and layout, so a layout you have not
   driven needs its own lap. SimHub ships no maps; its online maps, off by default, can download one.
-- The radar is empty on iRacing: on iRacing the radar also waits for that recorded lap. On the other
-  sims it draws without one.
+- The radar is empty on iRacing: on iRacing the radar also waits for that recorded lap. On Assetto
+  Corsa, ACC and Le Mans Ultimate it draws without one.
 - A tyre pressure or a temperature reads `--`: iRacing reports pressures from the last pit stop
   only, and reports nothing at all before the car has been on track.
 - A cell of the car settings strip is missing: your car does not publish that setting, and a strip

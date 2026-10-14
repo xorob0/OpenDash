@@ -20,15 +20,15 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// True where SimHub holds an outline its map item will draw, false where it holds none for the track
-        /// the car is on, and null where the question does not arise: no game running, or a game that does not
-        /// allow a map to be recorded, where driving a lap would not record one.
+        /// the car is on, and null where driving a lap would not record one: SimHub's recorder runs only when
+        /// the frame names a track and the sim allows a map, and the caller answers null with no game running.
         /// </summary>
-        /// <param name="gameRunning">Whether a game is running, which is SimHub's own GameRunning.</param>
+        /// <param name="trackNamed">Whether the frame's TrackIdWithConfig is set, which SimHub's recorder needs.</param>
         /// <param name="mapAllowed">The sim's own MapAllowed for the frame.</param>
         /// <param name="points">How many points the map SimHub would draw holds, or null where it holds none.</param>
-        public static bool? Recorded(bool gameRunning, bool mapAllowed, int? points)
+        public static bool? Recorded(bool trackNamed, bool mapAllowed, int? points)
         {
-            if (!gameRunning || !mapAllowed) return null;
+            if (!trackNamed || !mapAllowed) return null;
             return points.HasValue && points.Value > MinimumPoints;
         }
     }

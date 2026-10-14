@@ -1299,8 +1299,9 @@ yet watched on a drive: the VM capture the ticket asks for is still owed.
   track's id with `-<config>` after it when the track has a layout. On Assetto Corsa the id is the
   track's folder name and the layout its config folder, so a layout of a track driven before is a map
   never recorded. A file of ten points or fewer is ignored when it is loaded, and the load runs on a
-  background task when the car, the track or the game changes, so the map can be missing for a moment
-  after a session starts on a track that has one.
+  background task when the car, the track or its reported length changes, so the map can be missing for
+  a moment after a session starts on a track that has one. With online maps on, that task first waits on
+  the download, which may take up to two seconds, so the gap is longer.
 - **SimHub ships no maps.** Its setting `UseOnlineMaps` is off by default. Turned on, it downloads a
   map from SimHub's own server, keyed by the game, the track, its layout and its reported length, and
   `GetMap()` then answers with the local or the downloaded map in the order the driver chose. Maps are
@@ -1308,7 +1309,8 @@ yet watched on a drive: the VM capture the ticket asks for is still owed.
 - **No property says whether a map exists.** `PersistantTrackerPluginAttachedData` attaches nothing of
   the kind. `PersistantTrackerPlugin.GetMap()` is public and static, so a plugin can ask it, and the
   OpenDash plugin does: `OpenDash.TrackMapRecorded` is true where SimHub holds an outline its map item
-  draws, false where it holds none, and null with no game running or where the reader forbids a map.
+  draws, false where it holds none, and null where SimHub's recorder would not run: no game running,
+  no `TrackIdWithConfig`, or a reader that forbids a map.
   The track module draws `Track · Drive a lap to record it` in the map's box while it reads false, and
   with no plugin reads true and draws the map item as it always did. See
   `plugin/OpenDash/TrackMap.cs`.

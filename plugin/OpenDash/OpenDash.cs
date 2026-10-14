@@ -718,8 +718,10 @@ namespace OpenDashPlugin
         /// <summary>
         /// Fills <see cref="trackMapRecorded"/> from the map SimHub's map item would draw, which is
         /// PersistantTrackerPlugin.GetMap(): the local record, or the downloaded one where the driver turned
-        /// online maps on. SimHub loads a record on a background task when the track changes, so the answer
-        /// can read false for the moment that takes.
+        /// online maps on. SimHub loads a record on a background task when the car, the track or its reported
+        /// length changes, and with online maps on that task first waits on a download of up to two seconds, so
+        /// the answer can read false for that long on a track that is recorded. Null where SimHub's recorder
+        /// would not run: no game, no TrackIdWithConfig, or a sim that does not allow a map.
         /// </summary>
         private void UpdateTrackMap(GameData data)
         {
@@ -731,7 +733,7 @@ namespace OpenDashPlugin
             }
             var map = SimHub.Plugins.DataPlugins.PersistantTracker.PersistantTrackerPlugin.GetMap();
             var points = map == null || map.CarCoordinates == null ? (int?)null : map.CarCoordinates.Count;
-            trackMapRecorded = TrackMap.Recorded(true, data.NewData.MapAllowed, points);
+            trackMapRecorded = TrackMap.Recorded(data.NewData.TrackIdWithConfig != null, data.NewData.MapAllowed, points);
         }
 
         /// <summary>SimHub's property reader, made once rather than on every frame.</summary>

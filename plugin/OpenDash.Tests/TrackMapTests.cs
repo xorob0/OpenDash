@@ -24,13 +24,16 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void With_no_game_or_none_to_record_it_is_null_so_the_map_draws_as_it_did()
+        public void Where_a_lap_would_record_nothing_it_is_null_so_the_map_draws_as_it_did()
         {
             // Null falls through to the dashboard's fallback, which draws the map item as it was drawn before
             // the plugin answered: telling a driver to drive a lap that cannot record anything would be wrong.
+            // SimHub's recorder runs only with a TrackIdWithConfig and the sim's MapAllowed, so either missing
+            // answers null.
             Assert.Null(TrackMap.Recorded(false, true, 2400));
             Assert.Null(TrackMap.Recorded(false, true, null));
             Assert.Null(TrackMap.Recorded(true, false, null));
+            Assert.Null(TrackMap.Recorded(false, false, null));
         }
 
         [Fact]
