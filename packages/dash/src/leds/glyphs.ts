@@ -288,6 +288,13 @@ export const CHEQUERED_INVERSE: Grid = [
  * a black flag, having no lit field around it, is drawn in near-white instead. Seven columns of letter
  * in eight leave one edge without a margin, and it is the C's: its open side is the only side of
  * either letter with no stroke on it, so the edge of the panel takes nothing the letter is read by.
+ * The pair therefore sits half a pixel right of centre, which seven columns in eight cannot avoid.
+ *
+ * The S is rounded: its top-left and bottom-right corners are lit, so neither bar meets its stroke
+ * at a right angle. Square, it was the blocky 5 pixel for pixel and the pair could read as 5C, a car
+ * number rather than a flag (#516). The top-left corner is the one a 5 never rounds, since it is
+ * where the digit's flag meets its stem, and glyphFit.test.ts compares both letters with every digit
+ * a blocky face draws in the same cell.
  *
  * The spotter's bar is painted over any flag, and a car alongside therefore takes the S or the C. No
  * placement escapes it, since one bar two columns wide leaves six columns, two leave four, and the
@@ -296,12 +303,12 @@ export const CHEQUERED_INVERSE: Grid = [
  */
 export const CAUTION: Grid = [
   'YYYYYYYY',
-  'Y...Y...',
+  'YY..Y...',
   'Y.YYY.YY',
   'Y...Y.YY',
   'YYY.Y.YY',
   'YYY.Y.YY',
-  'Y...Y...',
+  'Y..YY...',
   'YYYYYYYY',
 ];
 

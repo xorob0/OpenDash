@@ -270,9 +270,12 @@ double yellow; a picture that carries two meanings teaches a driver the wrong on
 left to the flag they belong to, [below](#what-is-not-drawn-and-why). The box writes SC instead, in
 unlit pixels on a yellow panel, each letter three columns by six rows with a column of yellow between
 them. Seven columns of letter in eight leave one edge without a margin, and it is the C's, since its
-open side is the only side of either letter with no stroke on it. The picture blinks against the dark
-at the band's rate, as the yellow being waved does, because the condition moves; consequently the letters
-are the whole of the difference between the two, which is deliberate. They are SC, which is the
+open side is the only side of either letter with no stroke on it, so the pair sits half a pixel right
+of centre. The S is rounded, its top-left and bottom-right corners lit, because drawn square it was the
+blocky 5 pixel for pixel and the pair read as 5C, a car number (#516); the top-left is the corner a 5
+never rounds, and `glyphFit.test.ts` compares both letters with every digit a blocky face draws in the
+same cell. The picture blinks against the dark at the band's rate, as the yellow being waved does,
+because the condition moves; consequently the letters are the whole of the difference between the two, which is deliberate. They are SC, which is the
 author's choice for a panel eight columns wide, whatever the band calls the condition (#497).
 Whether strokes one unlit pixel wide survive a diffuser, which spreads the light of the pixels around
 them into the letter, has not been seen on a panel. The canvas's Flag box page still draws the caution

@@ -438,12 +438,12 @@ describe('sixty-four pixels', () => {
     const picture = (frame: MatrixFrame | undefined): string[] => (frame?.pixels ?? []).map((row) => row.map((p) => (p === null ? '.' : 'Y')).join(''));
     expect(picture(caution[0])).toEqual([
       'YYYYYYYY',
-      'Y...Y...',
+      'YY..Y...',
       'Y.YYY.YY',
       'Y...Y.YY',
       'YYY.Y.YY',
       'YYY.Y.YY',
-      'Y...Y...',
+      'Y..YY...',
       'YYYYYYYY',
     ]);
     expect(new Set(caution[0]?.pixels.flat().filter((p) => p !== null))).toEqual(new Set([ds.purpose.flag.yellow]));
