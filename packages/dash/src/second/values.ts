@@ -2228,7 +2228,25 @@ export const antiRollRear = (): Expr => raw('dcAntiRollRear');
 
 export const airTemperature = (): Expr => isnull(game('AirTemperature'), num(0));
 export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0));
-export const trackName = (): Expr => isnull(game('TrackName'), str(''));
+/**
+ * Where Assetto Corsa publishes the track's name for people: the `name` of the track's own
+ * `ui_track.json`, which SimHub's AC reader loads into its raw `Track.TrackInfo` (`TrackDesc` and
+ * `TrackInfo` in `ACSharedMemory.dll`, decompiled). No other sim's reader has a `Track.TrackInfo`, so
+ * everywhere else it is null.
+ */
+export const TRACK_NAME_FOR_PEOPLE = 'DataCorePlugin.GameRawData.Track.TrackInfo.name';
+
+/**
+ * The track as a driver names it, `Red Bull Ring` rather than `ks_red_bull_ring`.
+ *
+ * `GameData.TrackName` is that on iRacing, ACC and LMU, and on Assetto Corsa it is not:
+ * `ACManager.GD_TrackName` answers `TrackDesc.Track`, the track's folder, lower-cased as
+ * `TrackDesc.GetFromAPI` finds it under `content\tracks` (#1124). So the name the track's
+ * `ui_track.json` gives is read first where it is set, and `TrackName` where it is not, which is every
+ * other sim and an AC track that ships no `ui_track.json`. Neither read names a game: the first is
+ * simply null wherever SimHub does not fill it.
+ */
+export const trackName = (): Expr => isnull(prop(TRACK_NAME_FOR_PEOPLE), isnull(game('TrackName'), str('')));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
 /** The widest word the grip status takes, which is what a field measures its box against. */
 export const GRIP_WIDEST = 'Moderate';

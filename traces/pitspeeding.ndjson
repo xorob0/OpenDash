@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79311,6],"recorded":"2026-10-13","simHub":"unknown"}
+{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79311,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["DataCorePlugin.GameRawData.Track.TrackInfo.name"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -143,6 +143,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpLRTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRFTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
+{"p":"DataCorePlugin.GameRawData.Track.TrackInfo.name","v":null}
 {"p":"DataCorePlugin.GameRunning","v":1}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CarLadderChosen","v":true}

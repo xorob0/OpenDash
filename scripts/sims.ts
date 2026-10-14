@@ -116,7 +116,14 @@ export const ASSETTO_CORSA: Sim = {
   banner: 'AcsmEmulator - scenario',
   defaultScenario: 'race',
   tickProperty: 'DataCorePlugin.GameRawData.Graphics.PacketId',
-  rawPrefixes: ['DataCorePlugin.GameRawData.Physics.', 'DataCorePlugin.GameRawData.Graphics.', 'DataCorePlugin.GameRawData.StaticInfo.'],
+  // Track is the reader's own: the track it found under content\tracks and its ui_track.json, which is
+  // where the track module's header reads the name for people from (#1124).
+  rawPrefixes: [
+    'DataCorePlugin.GameRawData.Physics.',
+    'DataCorePlugin.GameRawData.Graphics.',
+    'DataCorePlugin.GameRawData.StaticInfo.',
+    'DataCorePlugin.GameRawData.Track.',
+  ],
   traceSubdir: 'ac',
   untraced: [
     // shiftlights swaps the car at forty seconds to show the lights following it, which is watched on
