@@ -12,6 +12,10 @@
  * Choosing one plays its clip in the cell it is already in. The picture the cell was showing is
  * the clip's first frame, so nothing jumps; with motion reduced, or with no clip for that size,
  * the picture simply stays. The choice is written to the URL hash, so a link can point at a size.
+ *
+ * Motion starts off and is turned on once the page has asked the reader's preference, as in Clip:
+ * the server cannot know it, so the markup it sends carries no video, and a reader who asked for
+ * reduced motion, or who has no JavaScript, never sees one start.
  */
 import Image from 'next/image';
 import Link from 'next/link';
@@ -29,13 +33,13 @@ export interface ScreenPickerProps {
 
 export function ScreenPicker({ faces, initial }: ScreenPickerProps) {
   const [selected, setSelected] = useState(initial);
-  const [motion, setMotion] = useState(true);
+  const [motion, setMotion] = useState(false);
   const group = useRef<HTMLDivElement>(null);
   const face = faces.find((f) => f.slug === selected) ?? faces[0]!;
 
   useEffect(() => {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setMotion(!reduced.matches);
+    if (!reduced.matches) setMotion(true);
     const hash = window.location.hash.slice(1);
     if (faces.some((f) => f.slug === hash)) setSelected(hash);
   }, [faces]);
