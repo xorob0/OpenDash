@@ -338,9 +338,10 @@ describe('every race length fits the box it is drawn in (#1117)', () => {
   });
 
   test('a total past three digits is not a length, so nothing draws one', () => {
-    // No race is run to a thousand laps. The rFactor 2 reader already drops such a total, and
-    // iRacing's count for a session with no lap limit is 32767, so the lap is drawn alone, as it is
-    // in a race with no length.
+    // No race is run to a thousand laps, and the boxes are cut for three digits, so a longer total
+    // from any reader is drawn as the lap alone, as it is in a race with no length. The 32767 here is
+    // iRacing's count for no lap limit, which SimHub does not pass through (traces/notc.ndjson reads
+    // the leader's 15); it stays here only as one more long total.
     for (const { where, item } of shapes) {
       for (const laps of [1000, 4444, 32767]) {
         const reading = drawn(item, lapRace(laps, 12), 'laps');

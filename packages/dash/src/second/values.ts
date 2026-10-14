@@ -1385,11 +1385,15 @@ export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps()
 /**
  * The longest race a lap total is taken to be, and what every `/ 30` after a lap is measured for.
  *
- * No race is run to a thousand laps: the longest iRacing schedules are the 500-lap short tracks. The
- * rFactor 2 reader already answers nought for a total outside 1 to 999 (`docs/research/sims.md`),
- * and iRacing's count for a session with no lap limit is 32767 (`Defines.UnlimitedLaps`), which
- * would be drawn as `/ 32767` and clipped in a box cut for three digits. A total past this is drawn
+ * No race is run to a thousand laps: the longest iRacing schedules are the 500-lap short tracks. A
+ * box after a lap is cut for three digits, `/ 444` in Barlow, and this cap is the guard that keeps
+ * that a declaration the binding can reach: a total past it, from whatever reader sends one, is drawn
  * as no total, the lap alone, rather than a box being cut for a length nobody drives (#1117).
+ *
+ * It is a guard and not a known case. The rFactor 2 reader already answers nought for a total outside
+ * 1 to 999 (`docs/research/sims.md`). iRacing writes 32767 for a session with no lap limit, but SimHub
+ * does not pass it through: in `traces/notc.ndjson`, a timed race where the sim writes 32767 to
+ * `SessionLapsTotal`, `TotalLaps` reads 15, the leader's laps.
  */
 export const MOST_LAPS = 999;
 
