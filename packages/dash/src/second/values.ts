@@ -2539,6 +2539,26 @@ export const tyreWearMin = (corner: Corner): Expr => {
   return iff(ncalc.isNull(section('M')), tyreWear(corner), mul(min(section('L'), min(section('M'), section('R'))), num(100)));
 };
 
+/**
+ * The tyre temperature band D's tyre page draws, or null where the sim publishes none (#556).
+ *
+ * iRacing's raw `*tempCM` first, which is the carcass in the middle of the tread and in degrees
+ * Celsius whatever the driver has set, and which is what the page has always drawn there. Where it is
+ * absent, which is every sim but iRacing, SimHub's own `TyreTemperature*`, which is already in the
+ * driver's unit: on Assetto Corsa and ACC that is the core temperature the sim publishes, and on Le
+ * Mans Ultimate the mean of the three tread readings. Neither is defaulted, so a sim that publishes
+ * no tyre temperature at all, or no game running, is a null the page draws as {@link NO_VALUE}
+ * rather than a row of zeros that read as four cold tyres.
+ */
+export const bandTyreTemperature = (corner: Corner): Expr => isnull(raw(`${CORNER_PREFIX[corner]}tempCM`), game(`TyreTemperature${corner}`));
+
+/**
+ * The unit over {@link bandTyreTemperature}: `°C` while iRacing's raw carcass is what is drawn, since
+ * that is Celsius whatever the setting says, and the driver's own mark where SimHub's converted
+ * figure is. One corner answers for all four, the raw block being published whole or not at all.
+ */
+export const bandTyreTemperatureMark = (): Expr => iff(isNull(raw('LFtempCM')), temperatureMark(), str('°C'));
+
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**
@@ -2555,7 +2575,7 @@ export const perTemperatureUnit = (f: Expr, k: Expr, c: Expr): Expr => iff(eq(te
  * Every temperature SimHub publishes is already converted to whichever of the three the driver has
  * set, so a page drawing `TyreTemperature*` follows this and a page reading iRacing's raw telemetry
  * does not: `LFtempCM` is degrees Celsius whatever the setting says, which is why band D's tyre
- * page writes its own `°C` rather than asking here.
+ * page asks {@link bandTyreTemperatureMark} instead, and writes `°C` while it draws the raw figure.
  */
 export const temperatureMark = (): Expr => {
   const unit = temperatureUnit();
