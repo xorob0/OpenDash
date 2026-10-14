@@ -141,6 +141,132 @@ namespace OpenDashPlugin.Tests
             Assert.Null(SimCapabilities.Read(SimCapabilities.LeMansUltimate, Frame()).CarHasPitLimiter);
         }
 
+        /// <summary>A Le Mans Ultimate frame: a race of 20 laps, green, the player on lap 5 in the first sector with no penalty.</summary>
+        private static (string, object)[] LmuRace(params (string Name, object Value)[] overrides)
+        {
+            var scoring = Raw + "LMUNativeTelemetry.scoring.scoringInfo.";
+            var player = Raw + "PlayerNativeScoring.";
+            var frame = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
+            {
+                [scoring + "mSession"] = 10,
+                [scoring + "mGamePhase"] = (byte)5,
+                [scoring + "mMaxLaps"] = 20,
+                [scoring + "mSessionTimeRemaining"] = 1800f,
+                [scoring + "mSectorFlag01"] = (sbyte)0,
+                [scoring + "mSectorFlag02"] = (sbyte)0,
+                [scoring + "mSectorFlag03"] = (sbyte)0,
+                [player + "mSector"] = (sbyte)1,
+                [player + "mTotalLaps"] = (short)4,
+                [player + "mFinishStatus"] = (sbyte)0,
+                [player + "mNumPenalties"] = (short)0,
+                // SimHub's own summaries, as LMUManager computes them from the same frame.
+                [GameData + "Flag_Yellow"] = 0,
+                [GameData + "Flag_Black"] = 0,
+                [GameData + "Flag_White"] = 0,
+                [GameData + "Flag_Checkered"] = 0,
+            };
+            foreach (var (name, value) in overrides) frame[name] = value;
+            return frame.Select(p => (p.Key, p.Value)).ToArray();
+        }
+
+        private static SimReport Lmu(params (string Name, object Value)[] overrides) =>
+            SimCapabilities.Read(SimCapabilities.LeMansUltimate, Frame(LmuRace(overrides)));
+
+        private const string Scoring = Raw + "LMUNativeTelemetry.scoring.scoringInfo.";
+        private const string Player = Raw + "PlayerNativeScoring.";
+
+        [Fact]
+        public void On_Le_Mans_Ultimate_a_green_race_shows_no_flag_the_plugin_answers_for()
+        {
+            var green = Lmu();
+            Assert.False(green.YellowFlagShown);
+            Assert.False(green.BlackFlagShown);
+            Assert.False(green.WhiteFlagShown);
+            Assert.False(green.ChequeredFlagShown);
+        }
+
+        [Fact]
+        public void On_Le_Mans_Ultimate_the_session_being_over_raises_the_chequer_SimHub_never_does()
+        {
+            // LMUManager.GD_Flag_Checkered is [NotAvailable]: SimHub reads 0 however the race ends.
+            var over = Lmu((Scoring + "mGamePhase", (byte)8));
+            Assert.True(over.ChequeredFlagShown);
+            Assert.False(over.WhiteFlagShown);
+            // The player across the line is shown it too, whatever the phase reads on that frame.
+            Assert.True(Lmu((Player + "mFinishStatus", (sbyte)1)).ChequeredFlagShown);
+            Assert.False(Lmu((Scoring + "mGamePhase", (byte)6)).ChequeredFlagShown);
+        }
+
+        [Fact]
+        public void On_Le_Mans_Ultimate_a_retirement_raises_no_black_and_a_penalty_does()
+        {
+            // LMUManager.GD_Flag_Black is mFinishStatus 2 or 3: it lights for a car that has stopped, which is not
+            // a flag shown to a driver still racing.
+            var retired = Lmu((Player + "mFinishStatus", (sbyte)2), (GameData + "Flag_Black", 1));
+            Assert.False(retired.BlackFlagShown);
+            var disqualified = Lmu((Player + "mFinishStatus", (sbyte)3), (GameData + "Flag_Black", 1));
+            Assert.False(disqualified.BlackFlagShown);
+            Assert.True(Lmu((Player + "mNumPenalties", (short)1)).BlackFlagShown);
+        }
+
+        [Fact]
+        public void On_Le_Mans_Ultimate_a_yellow_in_another_sector_raises_no_local_yellow()
+        {
+            // LMUManager.GD_Flag_Yellow is any mSectorFlag at 1. The player is in the first sector, mSector 1,
+            // which is mSectorFlag02 in SimHub's one-based numbering; a yellow in the third is not theirs.
+            var elsewhere = Lmu((Scoring + "mSectorFlag01", (sbyte)1), (GameData + "Flag_Yellow", 1));
+            Assert.False(elsewhere.YellowFlagShown);
+            Assert.False(Lmu((Scoring + "mSectorFlag03", (sbyte)1), (GameData + "Flag_Yellow", 1)).YellowFlagShown);
+            var here = Lmu((Scoring + "mSectorFlag02", (sbyte)1), (GameData + "Flag_Yellow", 1));
+            Assert.True(here.YellowFlagShown);
+            // mSector 0 is the third sector, and its flag the first of the three.
+            Assert.True(Lmu((Player + "mSector", (sbyte)0), (Scoring + "mSectorFlag01", (sbyte)1)).YellowFlagShown);
+            // With no sector to read, no answer: the dashboards fall back on SimHub's any-sector yellow.
+            Assert.Null(Lmu((Player + "mSector", null)).YellowFlagShown);
+        }
+
+        [Fact]
+        public void On_Le_Mans_Ultimate_the_last_lap_raises_the_white_SimHub_never_does()
+        {
+            // LMUManager.GD_Flag_White is [NotAvailable]. Nineteen of twenty laps done is the last lap begun.
+            Assert.True(Lmu((Player + "mTotalLaps", (short)19)).WhiteFlagShown);
+            Assert.False(Lmu((Player + "mTotalLaps", (short)18)).WhiteFlagShown);
+            // A timed race writes a huge lap count, and its last lap is the one begun after the clock ran out.
+            var timed = new[] { (Scoring + "mMaxLaps", (object)int.MaxValue), (Player + "mTotalLaps", (object)(short)19) };
+            Assert.False(Lmu(timed).WhiteFlagShown);
+            Assert.True(Lmu(timed.Append((Scoring + "mSessionTimeRemaining", (object)0f)).ToArray()).WhiteFlagShown);
+            // Not before a race, and not once the player has taken the chequer or stopped.
+            Assert.False(Lmu((Player + "mTotalLaps", (short)19), (Scoring + "mSession", 5)).WhiteFlagShown);
+            Assert.False(Lmu((Player + "mTotalLaps", (short)19), (Player + "mFinishStatus", (sbyte)1)).WhiteFlagShown);
+            Assert.False(Lmu((Player + "mTotalLaps", (short)19), (Scoring + "mGamePhase", (byte)8)).WhiteFlagShown);
+        }
+
+        [Fact]
+        public void With_no_scoring_page_Le_Mans_Ultimate_answers_no_flag_so_the_dashboards_read_SimHubs()
+        {
+            var empty = SimCapabilities.Read(SimCapabilities.LeMansUltimate, Frame());
+            Assert.Null(empty.YellowFlagShown);
+            Assert.Null(empty.BlackFlagShown);
+            Assert.Null(empty.WhiteFlagShown);
+            Assert.Null(empty.ChequeredFlagShown);
+        }
+
+        [Fact]
+        public void On_iRacing_Assetto_Corsa_and_ACC_the_plugin_answers_no_flag()
+        {
+            // iRacing's bits are asked before any answer, and AC's and ACC's Flag_* are the one flag the game shows
+            // the driver, so the dashboards read SimHub's own there; the plugin answering would only add a way to
+            // be wrong. The LMU frame's properties are there too, to show they are not read.
+            foreach (var game in new[] { SimCapabilities.IRacing, SimCapabilities.AssettoCorsa, SimCapabilities.AssettoCorsaCompetizione })
+            {
+                var report = SimCapabilities.Read(game, Frame(LmuRace((Scoring + "mGamePhase", (byte)8), (Player + "mNumPenalties", (short)2))));
+                Assert.Null(report.YellowFlagShown);
+                Assert.Null(report.BlackFlagShown);
+                Assert.Null(report.WhiteFlagShown);
+                Assert.Null(report.ChequeredFlagShown);
+            }
+        }
+
         [Fact]
         public void A_game_with_no_row_answers_nothing_so_the_dashboards_read_what_they_read_without_the_plugin()
         {
@@ -161,6 +287,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(claimed.OrderBy(g => g), SimCapabilities.Games.OrderBy(g => g));
             var damage = claimed.ToDictionary(g => g, g => SimCapabilities.Read(g, Frame()).DamageReported);
             Assert.Equal(new bool?[] { false, true, true, false }, claimed.Select(g => damage[g]).ToArray());
+            // A flag is the one question a row may leave unanswered on purpose: null there means "read SimHub's own
+            // summary", which is right everywhere but Le Mans Ultimate, and only its row answers one (#1129).
+            var shownOnLmu = SimCapabilities.Read(SimCapabilities.LeMansUltimate, Frame(
+                (Raw + "LMUNativeTelemetry.scoring.scoringInfo.mGamePhase", (byte)8),
+                (Raw + "PlayerNativeScoring.mNumPenalties", (short)0)));
+            Assert.Equal(true, shownOnLmu.ChequeredFlagShown);
+            Assert.Equal(false, shownOnLmu.BlackFlagShown);
         }
 
         [Fact]
@@ -210,7 +343,18 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(false, a.Read(Contract.DamageReported));
             Assert.Equal(true, a.Read(Contract.DriverInCar));
             Assert.Null(a.Read("ShiftLights"));
-            Assert.Equal("limiter yes, on unknown, damage no, in the car yes", a.ToString());
+            // An answer left off the end is unknown, so a report of the first four is the same instance as one
+            // that says the flags are unknown.
+            Assert.Null(a.Read(Contract.YellowFlagShown));
+            Assert.Same(a, SimReport.Of(true, null, false, true, null, null, null, null));
+            Assert.Equal("limiter yes, on unknown, damage no, in the car yes, yellow unknown, black unknown, white unknown, chequered unknown", a.ToString());
+            var flags = SimReport.Of(null, null, null, null, true, false, null, true);
+            Assert.Same(flags, SimReport.Of(null, null, null, null, true, false, null, true));
+            Assert.Equal(true, flags.YellowFlagShown);
+            Assert.Equal(false, flags.BlackFlagShown);
+            Assert.Null(flags.WhiteFlagShown);
+            Assert.Equal(true, flags.ChequeredFlagShown);
+            Assert.Equal(true, flags.Read(Contract.ChequeredFlagShown));
         }
 
         [Fact]
@@ -218,7 +362,11 @@ namespace OpenDashPlugin.Tests
         {
             // Appended to the shared group, which is pinned in order on both sides of the contract, and named for
             // the question a dashboard asks rather than for a game.
-            Assert.Equal(new[] { "CarHasPitLimiter", "PitLimiterOn", "DamageReported", "DriverInCar" }, Contract.Capabilities);
+            Assert.Equal(new[]
+            {
+                "CarHasPitLimiter", "PitLimiterOn", "DamageReported", "DriverInCar",
+                "YellowFlagShown", "BlackFlagShown", "WhiteFlagShown", "ChequeredFlagShown",
+            }, Contract.Capabilities);
             var shared = Contract.SharedPropertyNames().ToList();
             Assert.Equal(Contract.Capabilities, shared.Skip(shared.Count - Contract.Capabilities.Length));
             Assert.Equal(shared.IndexOf("LiveClassOrder" + LivePosition.Slots) + 1, shared.IndexOf(Contract.CarHasPitLimiter));

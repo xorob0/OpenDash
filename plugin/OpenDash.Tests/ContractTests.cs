@@ -129,8 +129,9 @@ namespace OpenDashPlugin.Tests
             // And 406 before the plugin had to publish the race as it stands on the road, a place and a row in
             // each of two counts for sixty-four cars, because iRacing moves it only at the line (#1063). And 662
             // before the plugin had to say what the running sim can report, four answers that let no dashboard
-            // name a game (#1101).
-            Assert.Equal(666, names.Count);
+            // name a game (#1101). And 666 before four more said which flag a sim whose own summary is wrong is
+            // showing (#1129).
+            Assert.Equal(670, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -190,6 +191,9 @@ namespace OpenDashPlugin.Tests
             // sim by every screen. #1101.
             Assert.Equal("CarHasPitLimiter", names[28 + 4 * LivePosition.Slots]);
             Assert.Equal("DriverInCar", names[28 + 4 * LivePosition.Slots + 3]);
+            // And the flags the plugin answers for where SimHub's summary is wrong. #1129.
+            Assert.Equal("YellowFlagShown", names[28 + 4 * LivePosition.Slots + 4]);
+            Assert.Equal("ChequeredFlagShown", names[28 + 4 * LivePosition.Slots + 7]);
             Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length, Contract.SharedPropertyNames().Count());
             Assert.True(Contract.DefaultFlagsInPitLane);
 

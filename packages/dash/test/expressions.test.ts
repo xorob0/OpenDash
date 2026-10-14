@@ -23,6 +23,7 @@ import * as values from '../src/second/values.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { ds } from '../src/tokens.ts';
 import { ncalcEvaluator as E, type EllipseItem, type RectangleItem, type TextItem } from '../src/generator.ts';
+import { withEveryBitPublished } from './flagReads.ts';
 
 const slot = rect(0, 0, 255, 187);
 const textItem = (id: string, name: string): TextItem => {
@@ -677,11 +678,15 @@ describe('hero expressions', () => {
   test('flags are visible by priority', () => {
     // The ring and the pit wall header still read the six SimHub normalises, ranked in the
     // catalogue's order: the chequer is last of them now, where it used to be second. Each asks
-    // first whether a flag may show where the car is, which is the pit lane switch (#791).
+    // first whether a flag may show where the car is, which is the pit lane switch (#791). A flag the
+    // plugin answers for is read through its answer first (#1129), which iRacing's row leaves null, so
+    // there the ring reads exactly the summary it read before.
     const here = '(((isnull([OpenDash.FlagsInPitLane], true)) = (true)) or (!((isnull([DataCorePlugin.GameData.IsInPitLane], 0)) > (0))))';
     expect(flagsAllowedHere()).toBe(here.slice(1, -1));
-    expect(flagVisible('Flag_Black')).toBe(`${here} and (([DataCorePlugin.GameData.Flag_Black]) = (1))`);
-    expect(flagVisible('Flag_Yellow')).toBe(`${here} and (([DataCorePlugin.GameData.Flag_Black]) = (0)) and (([DataCorePlugin.GameData.Flag_Yellow]) = (1))`);
+    const black = 'isnull([OpenDash.BlackFlagShown], ([DataCorePlugin.GameData.Flag_Black]) = (1))';
+    expect(flagVisible('Flag_Black')).toBe(`${here} and (${black})`);
+    expect(flagVisible('Flag_Yellow')).toBe(`${here} and (!(${black})) and (isnull([OpenDash.YellowFlagShown], ([DataCorePlugin.GameData.Flag_Yellow]) = (1)))`);
+    expect(flagVisible('Flag_Blue')).toInclude('and (([DataCorePlugin.GameData.Flag_Blue]) = (1))');
     expect(flagVisible('Flag_Checkered').split(' and ')).toHaveLength(7);
     expect(flagVisible('Flag_Green').split(' and ')).toHaveLength(6);
   });
@@ -695,7 +700,10 @@ describe('hero expressions', () => {
     const yellow = conditionVisible(flagCondition('yellow'), false, FLAG_CATALOGUE, bandRaised);
     expect(yellow).toContain('SessionFlagsDetails.IsyellowWaving');
     expect(yellow).toContain('SessionFlagsDetails.Isred');
-    expect(yellow).not.toContain('GameData.Flag_');
+    // The summary is read only where none of a condition's bits is published (#551), so with the
+    // bits there, as on iRacing, nothing else is read.
+    expect(yellow).toContain('isnull([DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow])');
+    expect(withEveryBitPublished(yellow)).not.toContain('GameData.Flag_');
     // The green is the exception, and the only one: SimHub limits Flag_Green where the bit is held
     // all race, so the band reads the limited property and a green flag is an event again.
     const green = conditionVisible(flagCondition('green'), false, FLAG_CATALOGUE, bandRaised);

@@ -238,8 +238,9 @@ describe('settings', () => {
     // engine readings, and with them a companion switch (#752). And 406 before the plugin had to
     // publish the race as it stands on the road, a place and a row in each of two counts for sixty-four
     // cars, because iRacing moves it only at the line (#1063). And 662 before the plugin had to say what
-    // the running sim can report, four answers that let no dashboard name a game (#1101).
-    expect(props).toHaveLength(666);
+    // the running sim can report, four answers that let no dashboard name a game (#1101), and 666
+    // before four more said which flag a sim whose own summary is wrong is showing (#1129).
+    expect(props).toHaveLength(670);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -389,6 +390,11 @@ describe('settings', () => {
         'PitLimiterOn',
         'DamageReported',
         'DriverInCar',
+        // And which flag the driver is being shown, where SimHub's summary of it is wrong. #1129.
+        'YellowFlagShown',
+        'BlackFlagShown',
+        'WhiteFlagShown',
+        'ChequeredFlagShown',
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 

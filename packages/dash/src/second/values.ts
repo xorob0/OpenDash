@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { CAR_HAS_PIT_LIMITER, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting } from '../contract.ts';
+import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2242,7 +2242,7 @@ export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifU
  * A dashboard never names a game. Where a question has a different answer on another sim and no `isnull()`
  * over the properties already read can tell "not reported" from a value, the plugin answers it from its
  * table (`plugin/OpenDash/SimCapabilities.cs`) and publishes the answer; {@link CAR_HAS_PIT_LIMITER} in
- * `contract.ts` lists the four. Each helper here reads one, and falls back on the reading OpenDash made
+ * `contract.ts` lists them. Each helper here reads one, and falls back on the reading OpenDash made
  * before the plugin answered it, which is iRacing's: so with no plugin, with no game running and on a game
  * the table does not know, a package draws exactly what it drew before.
  *
@@ -2272,7 +2272,16 @@ export const sim = {
    * for a sim that says nothing. Not yet read: #561 moves `inTheCar`'s callers onto this.
    */
   driverInCar: (ifUnknown = true): Expr => setting.reported(DRIVER_IN_CAR, inTheCar(ifUnknown)),
+  /**
+   * A flag is out for this driver, by the capability that answers for it, with the caller's reading of
+   * SimHub's own member as the fallback. The four flags whose `Flag_*` is wrong somewhere, #1129: read by
+   * `flagRaised` and `faceFlagRaised` in `flags.ts`, behind iRacing's bits, which answer first.
+   */
+  flagShown: (capability: FlagCapability, fallback: Expr): Expr => setting.reported(capability, fallback),
 };
+
+/** The capabilities that answer for a flag. See {@link sim}'s `flagShown`. */
+export type FlagCapability = typeof YELLOW_FLAG_SHOWN | typeof BLACK_FLAG_SHOWN | typeof WHITE_FLAG_SHOWN | typeof CHEQUERED_FLAG_SHOWN;
 
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));

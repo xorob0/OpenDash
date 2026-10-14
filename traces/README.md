@@ -228,3 +228,11 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+#1129 asserts four more in each, `OpenDash.YellowFlagShown`, `OpenDash.BlackFlagShown`,
+`OpenDash.WhiteFlagShown` and `OpenDash.ChequeredFlagShown`, which flag the plugin says the driver is
+being shown where SimHub's own `Flag_*` summary is wrong. Band D, the flag box, the strips and the round
+faces' ring read each of them ahead of the summary it stands for. Only Le Mans Ultimate's row answers
+them; iRacing's leaves all four null so that its dashboards read what they read before, and the column is
+null on every frame of all nine: a constant, and the value a recording with the plugin installed will
+write. The next `bun run record` reads them from the plugin and drops the entries.

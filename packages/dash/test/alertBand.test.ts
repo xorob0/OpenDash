@@ -24,6 +24,7 @@ import { BLUE_FLAG_DETAILS, setting } from '../src/contract.ts';
 import { carBehindClass, carBehindPositionClass, NO_VALUE } from '../src/second/values.ts';
 import { CLASS_CUTS } from './classNames.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
+import { withEveryBitPublished } from './flagReads.ts';
 import { measureText } from '../src/design/advances.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { ALERT_CATALOGUE, flagBit, flagsAllowedHere, isFlag, type SessionFlagBit } from '../src/flags.ts';
@@ -62,10 +63,11 @@ type Raised = SessionFlagBit | 'ignition' | 'engine' | 'incident' | 'pushToPass'
  * Evaluates one band's `Visible` with the named bits set, the named car alerts raised and the named
  * normalised properties at 1. Handles exactly what flags.ts emits for the band: parenthesised `and`,
  * `or`, `!`, `isnull([prop], 0) = 1`, a car alert's `when` and the pit lane gate, the last two of
- * which it replaces whole. Anything else throws rather than guessing.
+ * which it replaces whole. Anything else throws rather than guessing. Every bit is published, as on
+ * iRacing, so the summary a sim with no bits is read by is false (`flagReads.ts`).
  */
 function visible(layer: LayerItem, set: readonly Raised[], normalised: readonly string[] = []): boolean {
-  let s = String(layer.bindings?.Visible?.formula ?? '');
+  let s = withEveryBitPublished(String(layer.bindings?.Visible?.formula ?? ''));
   s = s.split(flagsAllowedHere()).join(set.includes('silencedHere') ? '0 = 1' : '1 = 1');
   // The alerts first, whole: their conditions are the only text here that is not a bit read.
   for (const condition of ALERT_CATALOGUE) {

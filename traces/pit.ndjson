@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79470,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[79470,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -144,6 +144,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRFTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
 {"p":"DataCorePlugin.GameRunning","v":1}
+{"p":"OpenDash.BlackFlagShown","v":null}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CarHasPitLimiter","v":true}
 {"p":"OpenDash.CarLadderChosen","v":true}
@@ -153,6 +154,7 @@
 {"p":"OpenDash.CarLadderOverRev","v":false}
 {"p":"OpenDash.CarLadderStage","v":0}
 {"p":"OpenDash.CarLadderTopRpm","v":8000}
+{"p":"OpenDash.ChequeredFlagShown","v":null}
 {"p":"OpenDash.ClassBestLap","t":"timespan","v":"00:01:37.2680000"}
 {"p":"OpenDash.ClockFormat","v":"24h"}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
@@ -616,6 +618,8 @@
 {"p":"OpenDash.UpdateAvailable","v":false}
 {"p":"OpenDash.UpdateVersion","v":""}
 {"p":"OpenDash.WebViewUrl","v":""}
+{"p":"OpenDash.WhiteFlagShown","v":null}
+{"p":"OpenDash.YellowFlagShown","v":null}
 {"p":"PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds","v":36.14}
 {"p":"PersistantTrackerPlugin.EstimatedLapTime","t":"timespan","v":"00:00:46.1400000"}
 {"p":"PersistantTrackerPlugin.PreviousLap_00","t":"timespan","v":"00:01:38.4190000"}

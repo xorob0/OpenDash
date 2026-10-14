@@ -37,6 +37,7 @@ import { warningStates } from '../src/leds/states.ts';
 import { lastGear, SHIFT_RPM_PROPERTIES } from '../src/shift.ts';
 import { SHIFT_TABLE, tabledStageLit, tabledOverRev, validateShiftTable, type CarShiftPoints } from '../src/leds/shiftPoints.ts';
 import { ds } from '../src/tokens.ts';
+import { withEveryBitPublished } from './flagReads.ts';
 
 const profileFor = (id: string): leds.LedProfile => {
   const shape = shapeById(id);
@@ -407,9 +408,10 @@ describe('the effect catalogue', () => {
     // ...and it is the catalogue's own ranking, so a black flag still beats a yellow.
     expect(yellow.when).toContain('SessionFlagsDetails.Isblack');
     expect(yellow.blinkWhen).toBeTruthy();
-    // Nothing anywhere in a profile reads a Flag_* summary any more.
+    // Nothing in a profile reads a Flag_* summary where the bits are published: the summary is read
+    // only behind every bit of its condition being absent, which on iRacing they never are (#551).
     for (const shape of ALL_SHAPES) {
-      const text = leds.serializeProfile(rpmStripProfile(shape, stableGuid(`t/flags/${shape.id}`)));
+      const text = withEveryBitPublished(leds.serializeProfile(rpmStripProfile(shape, stableGuid(`t/flags/${shape.id}`))));
       expect({ shape: shape.id, summaries: text.includes('DataCorePlugin.GameData.Flag_') }).toMatchObject({ summaries: false });
     }
     // A flag lives on the race lamp and on nothing else, so none of them takes the strip any more:

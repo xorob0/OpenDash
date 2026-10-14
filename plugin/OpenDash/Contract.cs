@@ -150,8 +150,37 @@ namespace OpenDashPlugin
         /// </summary>
         public const string DriverInCar = "DriverInCar";
 
+        /// <summary>
+        /// Whether the driver is being shown a yellow, a local one in their own sector rather than one anywhere on
+        /// the track. See <see cref="CarHasPitLimiter"/>. Answered only where SimHub's Flag_Yellow is the wrong
+        /// question: on Le Mans Ultimate it is raised for a yellow in any sector. #1129.
+        /// </summary>
+        public const string YellowFlagShown = "YellowFlagShown";
+
+        /// <summary>
+        /// Whether the driver is being shown the black flag, a penalty to serve. See <see cref="YellowFlagShown"/>:
+        /// on Le Mans Ultimate SimHub's Flag_Black is raised for a car that has retired or been disqualified.
+        /// </summary>
+        public const string BlackFlagShown = "BlackFlagShown";
+
+        /// <summary>
+        /// Whether the driver is being shown the white flag, the last lap. See <see cref="YellowFlagShown"/>: on Le
+        /// Mans Ultimate SimHub never raises Flag_White.
+        /// </summary>
+        public const string WhiteFlagShown = "WhiteFlagShown";
+
+        /// <summary>
+        /// Whether the driver is being shown the chequered flag. See <see cref="YellowFlagShown"/>: on Le Mans
+        /// Ultimate SimHub never raises Flag_Checkered.
+        /// </summary>
+        public const string ChequeredFlagShown = "ChequeredFlagShown";
+
         /// <summary>Every capability, in the order they are attached. ADR 0021.</summary>
-        public static readonly string[] Capabilities = { CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar };
+        public static readonly string[] Capabilities =
+        {
+            CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar,
+            YellowFlagShown, BlackFlagShown, WhiteFlagShown, ChequeredFlagShown,
+        };
 
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;

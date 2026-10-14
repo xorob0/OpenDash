@@ -96,26 +96,26 @@ interface PitLane {
 const ON_CIRCUIT: PitLane = { inLane: false, flagsInPitLane: true };
 
 /**
- * Evaluates one of these conditions with the named bits set. Handles exactly what flags.ts emits:
- * parenthesised `and`, `or`, `!`, `[prop] = 1`, and the two reads `flagsAllowedHere` makes, taken
- * whole from the expressions that write them. Anything else throws rather than guessing, so a
- * change to how the conditions are built fails here instead of passing wrongly.
+ * Evaluates one of these conditions with the named bits set, on a sim that publishes every bit, as
+ * iRacing does. Handles exactly what flags.ts emits, through the shared evaluator: the bits, the two
+ * reads `flagsAllowedHere` makes, taken whole from the expressions that write them, the panel's
+ * critical-only switch, and the summaries and the plugin's flag answers `flagRaised` falls back on
+ * where no bit is published (#551), which are absent here. A property outside those throws rather than
+ * reading as absent, so a change to how the conditions are built fails here instead of passing wrongly.
  */
 function evaluate(expression: string, set: readonly SessionFlagBit[], criticalOnly = false, pit: PitLane = ON_CIRCUIT): boolean {
-  const truths = new Map<string, string>();
+  const frame: Record<string, unknown> = { 'OpenDash.FlagBoxMatrix1CriticalOnly': criticalOnly };
   for (const condition of FLAG_CATALOGUE) {
-    for (const bit of condition.bits) truths.set(flagBit(bit), set.includes(bit) ? '1' : '0');
+    for (const bit of condition.bits) frame[flagBit(bit).slice(1, -1)] = set.includes(bit) ? 1 : 0;
   }
-  let s = expression;
-  s = s.split(isInPitLane()).join(String(pit.inLane));
-  s = s.split(setting.flagsInPitLane()).join(String(pit.flagsInPitLane));
-  for (const [property, value] of truths) s = s.split(property).join(value);
-  s = s.split('isnull([OpenDash.FlagBoxMatrix1CriticalOnly], false)').join(criticalOnly ? 'true' : 'false');
-  // NCalc's operators to JavaScript's, on a string that now holds only literals and operators.
-  s = s.replace(/\band\b/g, '&&').replace(/\bor\b/g, '||').replace(/([^!<>=])=([^=])/g, '$1===$2');
-  if (!/^[\s()!&|=01a-z]+$/.test(s)) throw new Error(`the condition holds something this cannot evaluate: ${s}`);
-  // eslint-disable-next-line no-new-func
-  return Boolean(new Function(`return (${s});`)());
+  const s = expression.split(isInPitLane()).join(String(pit.inLane)).split(setting.flagsInPitLane()).join(String(pit.flagsInPitLane));
+  const unread = [...s.matchAll(/\[([A-Za-z0-9_.]+)\]/g)]
+    .map((m) => m[1]!)
+    .filter((name) => !(name in frame) && !/^DataCorePlugin\.GameData\.Flag_[A-Za-z]+$/.test(name) && !/^OpenDash\.[A-Za-z]+FlagShown$/.test(name));
+  if (unread.length > 0) throw new Error(`the condition holds something this cannot evaluate: ${unread.join(', ')} in ${s}`);
+  const result = evalNcalc(s, frame);
+  if (typeof result !== 'boolean') throw new Error(`not a condition: ${s}`);
+  return result;
 }
 
 /** A container's condition as text, whichever of the two shapes a formula comes in. */
@@ -1215,12 +1215,11 @@ describe('the pit family, the spotter and the warnings', () => {
     const formula = spotter && 'formula' in spotter ? String(spotter.formula) : '';
     expect(formula).toBe(`((isnull([OpenDash.FlagBoxMatrix1Spotter], true)) = (true)) and (!(${cautionOnPanel(1)}))`);
     // ...read null-safely, so that on a sim with no flag bits the gate is false rather than a throw,
-    // which SimHub would take for false and take the bar away with it. Put the bare reads back and it
-    // is the caution's own container, word for word.
+    // which SimHub would take for false and take the bar away with it. The box reads every flag that
+    // way since #551, so the gate is the caution's own container, word for word.
     const gate = String(cautionOnPanel(1));
     expect(gate).not.toMatch(/(?<!isnull\()\[DataCorePlugin\.GameRawData\.Telemetry\.SessionFlagsDetails\./);
-    const bare = gate.replace(/isnull\((\[DataCorePlugin\.GameRawData\.Telemetry\.SessionFlagsDetails\.\w+\]), 0\)/g, '$1');
-    expect(bare).toInclude(formulaText(flagContainers(1).find((c) => c.description === 'caution')));
+    expect(gate).toInclude(formulaText(flagContainers(1).find((c) => c.description === 'caution')));
     // Below the gate, the bars read the cars alongside and nothing else.
     const subtree = JSON.stringify(spotter && 'children' in spotter ? spotter.children : []);
     for (const forbidden of ['SessionFlagsDetails', 'PitLimiterOn', 'IsInPitLane', 'OilTemperature', 'Fuel_RemainingLaps']) {

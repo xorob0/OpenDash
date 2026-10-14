@@ -313,6 +313,11 @@ export const liveSettingNames = (): string[] =>
  *   cannot be told from an undamaged car.
  * - `DriverInCar`: the driver is in the car with the physics running, iRacing's `IsOnTrack`, which each
  *   sim says under a name and in a shape of its own.
+ * - `YellowFlagShown`, `BlackFlagShown`, `WhiteFlagShown` and `ChequeredFlagShown`: that flag is out for
+ *   this driver, where SimHub's own `Flag_*` says something else (#1129). On Le Mans Ultimate SimHub
+ *   never raises the chequer or the white, raises the black for a car that has retired or been
+ *   disqualified, and raises the yellow for a yellow anywhere on the track. iRacing's bits answer before
+ *   any of them, so iRacing's row leaves them null; `flagRaised` in `flags.ts` is where they are read.
  *
  * Published rather than chosen, true or false, and null with no game running or on a game the plugin's
  * table (`plugin/OpenDash/SimCapabilities.cs`) has no row for. So each is read through
@@ -326,9 +331,26 @@ export const PIT_LIMITER_ON = 'PitLimiterOn';
 export const DAMAGE_REPORTED = 'DamageReported';
 /** See {@link CAR_HAS_PIT_LIMITER}. */
 export const DRIVER_IN_CAR = 'DriverInCar';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const YELLOW_FLAG_SHOWN = 'YellowFlagShown';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const BLACK_FLAG_SHOWN = 'BlackFlagShown';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const WHITE_FLAG_SHOWN = 'WhiteFlagShown';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const CHEQUERED_FLAG_SHOWN = 'ChequeredFlagShown';
 
 /** Every capability, in the order the plugin attaches them. */
-export const CAPABILITIES = [CAR_HAS_PIT_LIMITER, PIT_LIMITER_ON, DAMAGE_REPORTED, DRIVER_IN_CAR] as const;
+export const CAPABILITIES = [
+  CAR_HAS_PIT_LIMITER,
+  PIT_LIMITER_ON,
+  DAMAGE_REPORTED,
+  DRIVER_IN_CAR,
+  YELLOW_FLAG_SHOWN,
+  BLACK_FLAG_SHOWN,
+  WHITE_FLAG_SHOWN,
+  CHEQUERED_FLAG_SHOWN,
+] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
