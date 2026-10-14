@@ -24,8 +24,26 @@ namespace OpenDashPlugin.Tests
             Directory.CreateDirectory(root);
         }
 
+        /// <summary>What this test holds background work on, opened when it ends (<see cref="Hold"/>).</summary>
+        private readonly List<System.Threading.ManualResetEventSlim> holds = new List<System.Threading.ManualResetEventSlim>();
+
+        /// <summary>
+        /// An event background work waits on until the test sets it, set anyway when the test ends. A test that fails
+        /// before it lets its work go used to leave a write holding the static write lock for the whole of its wait,
+        /// and the next test to write failed on that rather than on anything of its own (#1002).
+        /// </summary>
+        private System.Threading.ManualResetEventSlim Hold()
+        {
+            var hold = new System.Threading.ManualResetEventSlim();
+            holds.Add(hold);
+            return hold;
+        }
+
         public void Dispose()
         {
+            foreach (var hold in holds) hold.Set();
+            // And what was let go has finished writing before the folder goes and the next test starts.
+            UpdateService.WaitForIdle(TimeSpan.FromSeconds(10));
             try { Directory.Delete(root, true); } catch { }
         }
 
@@ -754,7 +772,7 @@ namespace OpenDashPlugin.Tests
         private (UpdateService service, Fetcher fetcher, DashboardInstaller installer) HeldRun(IFolderRecord record = null)
         {
             var installer = Installed("0.1.0", record ?? new MemoryFolderRecord(), "OpenDash");
-            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash"), Gate = new System.Threading.ManualResetEventSlim() };
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash"), Gate = Hold() };
             fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -985,7 +1003,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_check_is_never_waited_for_because_abandoning_a_read_costs_nothing()
         {
-            var release = new System.Threading.ManualResetEventSlim();
+            var release = Hold();
             var started = new System.Threading.ManualResetEventSlim();
             UpdateService.InBackground(() => { started.Set(); release.Wait(TimeSpan.FromSeconds(10)); });
 
@@ -1020,7 +1038,7 @@ namespace OpenDashPlugin.Tests
         {
             var service = new UpdateService(new Fetcher());
             var caller = System.Threading.Thread.CurrentThread.ManagedThreadId;
-            var release = new System.Threading.ManualResetEventSlim();
+            var release = Hold();
             var running = new System.Threading.ManualResetEventSlim();
             var finished = new System.Threading.ManualResetEventSlim();
             var ranOn = 0;
@@ -1056,7 +1074,7 @@ namespace OpenDashPlugin.Tests
         public void A_second_panel_write_waits_for_the_first()
         {
             var service = new UpdateService(new Fetcher());
-            var release = new System.Threading.ManualResetEventSlim();
+            var release = Hold();
             var firstRunning = new System.Threading.ManualResetEventSlim();
             var bothDone = new System.Threading.CountdownEvent(2);
             var order = new List<string>();
@@ -1145,6 +1163,41 @@ namespace OpenDashPlugin.Tests
             System.Threading.Thread.Sleep(100);
             Assert.False(ran);
             Assert.False(ended);
+        }
+
+        /// <summary>
+        /// Every test class that hands work to the background is in the collection that runs alone, for the reason
+        /// the collection gives (#1002): the work waits in the thread pool's queue with whatever the rest of the suite
+        /// has put there, and a test that waits a fixed time for it is otherwise a test of how busy the runner is.
+        /// The tests are read rather than listed, so that a new class that starts such work cannot be left out.
+        /// </summary>
+        [Fact]
+        public void The_tests_that_wait_on_background_work_run_alone()
+        {
+            // xUnit reads its attributes as metadata, so they are read here the same way.
+            var definition = typeof(UpdateServiceWriters).GetCustomAttributesData().Single(a => a.AttributeType == typeof(CollectionDefinitionAttribute));
+            Assert.True(definition.NamedArguments.Any(a => a.MemberName == "DisableParallelization" && (bool)a.TypedValue.Value), UpdateServiceWriters.Name + " runs beside the other collections");
+
+            // A call such as service.WriteInBackground( or UpdateService.InBackground(, outside a string or a comment.
+            var handsOver = new System.Text.RegularExpressions.Regex(@"\.\w*InBackground\(");
+            var noise = new System.Text.RegularExpressions.Regex(@"""(?:[^""\\\n]|\\.)*""|//[^\n]*");
+            var topLevel = new System.Text.RegularExpressions.Regex(@"^    (?:public |internal )?(?:sealed |static |partial )*class (\w+)", System.Text.RegularExpressions.RegexOptions.Multiline);
+            var outside = new List<string>();
+            var seen = 0;
+            foreach (var path in Directory.GetFiles(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash.Tests"), "*.cs"))
+            {
+                var code = noise.Replace(RepoPaths.Code(path), string.Empty);
+                foreach (System.Text.RegularExpressions.Match call in handsOver.Matches(code))
+                {
+                    seen++;
+                    var name = topLevel.Matches(code.Substring(0, call.Index)).Cast<System.Text.RegularExpressions.Match>().Last().Groups[1].Value;
+                    var type = typeof(UpdateServiceTests).Assembly.GetType("OpenDashPlugin.Tests." + name, throwOnError: true);
+                    var named = type.GetCustomAttributesData().Where(a => a.AttributeType == typeof(CollectionAttribute)).Select(a => (string)a.ConstructorArguments[0].Value).SingleOrDefault();
+                    if (named != UpdateServiceWriters.Name) outside.Add(Path.GetFileName(path) + ": " + name);
+                }
+            }
+            Assert.True(seen >= 10, "found only " + seen + " calls that hand work to the background; the pattern no longer matches the tests");
+            Assert.True(outside.Count == 0, "Tests that hand work to the background outside " + UpdateServiceWriters.Name + ":\n" + string.Join("\n", outside.Distinct()));
         }
     }
 }
