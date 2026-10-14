@@ -64,7 +64,10 @@ namespace OpenDashPlugin
 
         public const string DeltaTitle = "Delta reference";
 
-        public const string DeltaCaption = "Which lap the delta compares against.";
+        /// <summary>The one value that needs unpacking, as voice.md has a caption do: Last lap is iRacing's own
+        /// live delta, and no other sim publishes one, so there the dashes draw the delta to your best and
+        /// caption it so. The artboard's "Which lap the delta compares against." described the set. #575.</summary>
+        public const string DeltaCaption = "Last lap needs iRacing. Other sims compare against your best.";
 
         /// <summary>One label per reference, in the contract's order.</summary>
         /// <remarks>

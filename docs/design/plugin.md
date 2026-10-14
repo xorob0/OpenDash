@@ -472,7 +472,7 @@ one thing the control cannot: the sim's time of day follows it too
 
 **Delta reference has a third value, Last lap**, iRacing's own live delta to the lap before
 ([#322](https://github.com/xorob0/OpenDash/issues/322)). No other sim publishes one, and there the dashes
-draw the delta to your best and caption it so
+draw the delta to your best and caption it so, and the row's caption names iRacing
 ([#575](https://github.com/xorob0/OpenDash/issues/575)). **Delta precision** sits under it because it
 qualifies the same number, and its values are words, Hundredths and Thousandths. Neither resizes a box:
 every box that draws the delta is cut for three places
@@ -692,6 +692,7 @@ row names is in its built column.
 | Settings: "Delta against" | "Delta reference" | a label is a noun phrase. `PanelDataTab.DeltaTitle` |
 | Settings: "Delta decimals · 0.00 \| 0.000" | "Delta precision · Hundredths \| Thousandths" | the values are words, with no digits. `PanelDataTab.DeltaPrecisionTitle`, `PanelDataTab.DeltaPrecisionLabels` |
 | Settings: the delta reference's "Session best" | "Your best \| All-time best \| Last lap" | SimHub's session best is the driver's own best lap of the session, the lap Lap times draws as Your best, and every page that draws a session best means the field's; the dashes caption the delta "vs your best" ([#1030](https://github.com/xorob0/OpenDash/issues/1030)). `PanelDataTab.DeltaLabels` |
+| Settings: the delta reference's "Which lap the delta compares against." | "Last lap needs iRacing. Other sims compare against your best." | the caption explains the one value that needs it, and no other sim publishes a last-lap delta ([#575](https://github.com/xorob0/OpenDash/issues/575)). `PanelDataTab.DeltaCaption` |
 | Settings: "Show team names" | "Team names" | a switch names the thing. `PanelDataTab.TeamNameTitle` |
 | Settings: "Next to a blue flag" | "Blue flag detail" | a noun phrase, not a prepositional fragment. `PanelDataTab.BlueFlagTitle` |
 | Settings: the oil and water captions | "In SimHub's unit.", the default as the placeholder | the row says which unit to type. `PanelSettings.TemperatureCaption` |

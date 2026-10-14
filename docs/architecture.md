@@ -149,8 +149,8 @@ if(isnull([OpenDash.DeltaReference], 'session') = 'alltime',
 That is abridged: the emitted binding also defaults each reading to zero where its property is
 absent and reads the last-lap delta only while iRacing's `LapDeltaToSessionLastlLap_OK` says it has
 a lap to compare against. On a sim that publishes no `_OK` at all, which is every sim but iRacing,
-the last lap reference draws the session best's delta, and its captions say so (#575). `referenceDelta()` in `packages/dash/src/second/values.ts` is the whole of
-it.
+the last lap reference draws the session best's delta, and its captions say so (#575).
+`referenceDelta()` in `packages/dash/src/second/values.ts` is the whole of it.
 
 Slots use SimHub's widget mechanism, which is the established way, and the runtime screen switch
 was verified on SimHub 9.12.6 during the spike. The cards live in a second file, `cards.djson`,

@@ -118,8 +118,10 @@ namespace OpenDashPlugin.Tests
         public void The_delta_row_names_every_reference_the_contract_declares()
         {
             Assert.Equal("Delta reference", PanelDataTab.DeltaTitle);
-            // Still true of three references: each of them is a lap.
-            Assert.Equal("Which lap the delta compares against.", PanelDataTab.DeltaCaption);
+            // The panel says which sim Last lap needs, and what the others draw instead (#575).
+            Assert.Equal("Last lap needs iRacing. Other sims compare against your best.", PanelDataTab.DeltaCaption);
+            Assert.StartsWith(PanelDataTab.DeltaLabels[2], PanelDataTab.DeltaCaption, StringComparison.Ordinal);
+            Assert.Contains(PanelDataTab.DeltaLabels[0].ToLowerInvariant(), PanelDataTab.DeltaCaption, StringComparison.Ordinal);
             Assert.Equal(new[] { "Your best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
             Assert.Equal(Contract.DeltaReferences.Length, PanelDataTab.DeltaLabels.Length);
             var source = string.Concat(RepoPaths.SettingsControlCode());
