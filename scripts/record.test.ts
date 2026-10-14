@@ -15,11 +15,14 @@ import {
   parseEmulatorScenario,
   parseRecording,
   parseSimHubVersion,
+  provenanceProperties,
   recordedProperties,
   toTrace,
   untracedWarnings,
+  wrongGame,
 } from './record.ts';
-import { TRACE_DIR, TRACE_VERSION } from './trace.ts';
+import { ASSETTO_CORSA, GAME_PROPERTY, IRACING } from './sims.ts';
+import { TRACE_DIR, TRACE_VERSION, traceDirOf } from './trace.ts';
 import type { RecordOptions } from './record.ts';
 
 /** parseArgs answers --help instead of options; every case below passes real arguments. */
@@ -96,6 +99,23 @@ describe('transposing a recording into a trace', () => {
     expect(toTrace(parseRecording(late), '2026-09-13', '9.12.6').header.ticks).toEqual([72721, 6]);
   });
 
+  test('the game SimHub was reading becomes the header\'s, and a recording that never asked has none', () => {
+    // The sample above asks for no game, as every recording did before #579, so its header names none.
+    expect(trace.header.game).toBeUndefined();
+    const ac = [
+      JSON.stringify({ ...header, frames: 2 }),
+      JSON.stringify({ tick: 300, v: { [GAME_PROPERTY]: 'AssettoCorsa', 'A.X': 1 } }),
+      JSON.stringify({ tick: 306, v: { [GAME_PROPERTY]: 'AssettoCorsa', 'A.X': 2 } }),
+      JSON.stringify({ types: {} }),
+    ].join('\n');
+    const recorded = toTrace(parseRecording(ac), '2026-10-14', '9.12.6');
+    expect(recorded.header.game).toBe('AssettoCorsa');
+    expect(wrongGame(recorded, ASSETTO_CORSA)).toBeNull();
+    expect(wrongGame(recorded, IRACING)).toMatch(/reading AssettoCorsa while it recorded, not iRacing/);
+    // A recording that says nothing is not taken for the sim it was meant to be.
+    expect(wrongGame(trace, IRACING)).toMatch(/no game it named/);
+  });
+
   test('a property missing from a frame is recorded as null rather than dropped', () => {
     const patchy = [JSON.stringify({ ...header, frames: 2 }), JSON.stringify({ tick: 300, v: { 'A.X': 1 } }), JSON.stringify({ tick: 306, v: {} }), JSON.stringify({ types: {} })].join('\n');
     expect(toTrace(parseRecording(patchy), '2026-09-13', '9.12.6').columns).toEqual([{ p: 'A.X', v: [1, null] }]);
@@ -137,11 +157,42 @@ describe('what a recording asks SimHub for', () => {
   test('it is sorted and holds no duplicate, since it is written into a request as it is', () => {
     expect(recorded).toEqual([...new Set(recorded)].sort());
   });
+
+  test('each sim records its own tick and the game, and otherwise the same list', () => {
+    const ac = recordedProperties(ASSETTO_CORSA);
+    expect(provenanceProperties(ASSETTO_CORSA)).toEqual(['DataCorePlugin.GameRawData.Graphics.PacketId', GAME_PROPERTY]);
+    expect(ac).toContain('DataCorePlugin.GameRawData.Graphics.PacketId');
+    expect(ac).toContain(GAME_PROPERTY);
+    expect(ac).not.toContain(IRACING.tickProperty);
+    // What the packages read is asked of every sim, iRacing's raw names included: on AC SimHub
+    // answers them with null, and that null is what a dashboard there is handed.
+    for (const property of read) expect(ac).toContain(property);
+  });
 });
 
 describe('the command line', () => {
   test('with no argument it records every scenario a committed trace is expected for', () => {
-    expect(parseArgs([])).toEqual({ scenarios: tracedScenarioNames(), hz: DEFAULT_HZ, frames: DEFAULT_FRAMES, warmUpSeconds: DEFAULT_WARM_UP_SECONDS, noBuild: false, keep: false, outDir: TRACE_DIR });
+    expect(parseArgs([])).toEqual({ sim: IRACING, scenarios: tracedScenarioNames(), hz: DEFAULT_HZ, frames: DEFAULT_FRAMES, warmUpSeconds: DEFAULT_WARM_UP_SECONDS, noBuild: false, keep: false, outDir: TRACE_DIR });
+  });
+
+  test('--sim ac records Assetto Corsa\'s scenarios into a folder of their own, and is not a scenario', () => {
+    const ac = opts(['--sim', 'ac', 'green', 'pit']);
+    expect(ac.sim).toBe(ASSETTO_CORSA);
+    expect(ac.scenarios).toEqual(['green', 'pit']);
+    expect(ac.outDir).toBe(traceDirOf(ASSETTO_CORSA));
+    expect(ac.outDir).not.toBe(TRACE_DIR);
+    expect(opts(['green', '--sim=ac']).sim).toBe(ASSETTO_CORSA);
+    expect(opts(['--sim', 'ac']).scenarios).toEqual(tracedScenarioNames(ASSETTO_CORSA));
+  });
+
+  test('a sim nobody wrote an emulator for is refused rather than recorded as iRacing', () => {
+    expect(() => parseArgs(['--sim', 'lmu'])).toThrow(/iracing, ac/);
+  });
+
+  test('an Assetto Corsa scenario with no trace yet is warned about by the AC list, not iRacing\'s', () => {
+    expect(untracedWarnings(['green'], ASSETTO_CORSA)).toHaveLength(ASSETTO_CORSA.untraced.includes('green') ? 1 : 0);
+    expect(untracedWarnings(['shiftlights'], ASSETTO_CORSA)[0]).toMatch(/^shiftlights is in Assetto Corsa's untraced list/);
+    expect(untracedWarnings(['shiftlights'], IRACING)).toEqual([]);
   });
 
   test('with no argument it leaves out the scenarios meant to have no trace', () => {
@@ -156,7 +207,7 @@ describe('the command line', () => {
     expect(opts(['alerts', 'green']).scenarios).toEqual(['alerts', 'green']);
     const warnings = untracedWarnings(['alerts', 'green']);
     expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toMatch(/^alerts is in UNTRACED_SCENARIOS/);
+    expect(warnings[0]).toMatch(/^alerts is in iRacing's untraced list/);
   });
 
   test('scenarios are positional and flags are not mistaken for them', () => {

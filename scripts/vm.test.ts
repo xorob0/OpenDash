@@ -509,6 +509,31 @@ describe('a SimHub that does not start', () => {
     expect(r.stderr).toContain('SimHub did not start');
   });
 
+  test('a start opens SimHub on the game asked for, written before the task is started', () => {
+    for (const [game, expected] of [[undefined, 'IRacing'], ['AssettoCorsa', 'AssettoCorsa']] as const) {
+      const script = withFakeHost(
+        (s) => (isStart(s) ? { stdout: 'started (pid 4242)' } : {}),
+        (host, calls) => {
+          simhubStart(host, game);
+          return calls.find((c) => c.script !== null && isStart(c.script))?.script ?? '';
+        },
+      );
+      // LastGame is what SimHub opens on (MainWindow.LoadData), so it is written while SimHub is
+      // still stopped, after the check that it is, and before the task that starts it.
+      const write = script.indexOf(`'"LastGame": "${expected}"'`);
+      expect(write).toBeGreaterThan(script.indexOf("if (Get-Process SimHubWPF"));
+      expect(write).toBeLessThan(script.indexOf("Start-ScheduledTask -TaskName 'SimHub'"));
+      expect(script).toContain('ContextSimhubSettings.json');
+    }
+  });
+
+  test('a SimHub already running on another game is a failure, not a start', () => {
+    const said = 'already running, on IRacing rather than AssettoCorsa; stop it first to switch';
+    const r = withFakeHost((script) => (isStart(script) ? { status: 1, stdout: said } : {}), (host) => simhubStart(host, 'AssettoCorsa'));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain(said);
+  });
+
   test('a start the guest saw is a success, and so is one already running', () => {
     for (const stdout of ['started (pid 4242)', 'already running']) {
       const r = withFakeHost((script) => (isStart(script) ? { stdout } : {}), (host) => simhubStart(host));
