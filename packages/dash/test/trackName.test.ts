@@ -10,6 +10,8 @@
  * its own raw name and `TrackName`, and the other sim's raw block does not exist and reads as null.
  */
 import { describe, expect, test } from 'bun:test';
+import { SIMS } from '../../../scripts/sims.ts';
+import { frame, readTrace, traceDirOf, tracedScenarios } from '../../../scripts/trace.ts';
 import { composePackages } from '../src/build.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 import { rect } from '../src/design/geometry.ts';
@@ -60,6 +62,25 @@ describe("the track module's header", () => {
   test('on a sim that fills neither raw name it reads TrackName, as it always did', () => {
     expect(drawn({ [TRACK_NAME]: 'Monza', [TRACK_LENGTH]: 5793 })).toBe('Monza · 5.8 km');
   });
+});
+
+describe("the track module's header, replayed from every committed trace", () => {
+  // The frames above are written by hand; these are the files the preview, the video and the goldens
+  // replay. Each sim's traces must carry both raw names, or a replay draws the code a driver never
+  // sees: an AC trace without `Track.TrackInfo.name` reads `spa`, an iRacing one without
+  // `TrackDisplayShortName` reads `spa gp`. Every scenario of both emulators is at Spa.
+  for (const sim of SIMS) {
+    const dir = traceDirOf(sim);
+    for (const scenario of tracedScenarios(dir)) {
+      test(`${sim.id} ${scenario}`, () => {
+        const trace = readTrace(scenario, dir);
+        for (const name of [AC_TRACK_NAME, IRACING_TRACK_NAME]) {
+          expect({ scenario, name, carried: trace.columns.some((c) => c.p === name) }).toEqual({ scenario, name, carried: true });
+        }
+        expect(drawn(frame(trace, 0))).toBe('Spa · 7.0 km');
+      });
+    }
+  }
 });
 
 describe("no package reads TrackName without each sim's name for people in front of it", () => {
