@@ -61,7 +61,6 @@ namespace OpenDashPlugin
         {
             var current = settings();
             if (current == null || string.IsNullOrEmpty(folderName)) return;
-            if (current.FolderFingerprints == null) current.FolderFingerprints = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             // A fingerprint that could not be computed is not a reason to forget the one we had. Erasing it turned
             // "cannot vouch for this folder" into "this folder is not ours", which is the opposite bias, and the
             // adoption branch would then have recorded whatever was on disk as OpenDash's own work.
@@ -71,11 +70,19 @@ namespace OpenDashPlugin
             // read the rig's folders from those keys; a record that follows what was written stops handing the old
             // spelling on (#467). The comparison is made here rather than left to the dictionary, whose comparer is
             // whatever the settings were deserialised with.
-            var stale = current.FolderFingerprints.Keys
+            //
+            // Written into a copy that then replaces the record, because the lock guards only this class: a save on
+            // the interface thread serialises the dictionary and Normalise() reads its keys, neither under the lock,
+            // while an update applying on a thread-pool thread records a folder (#572).
+            var record = current.FolderFingerprints == null
+                ? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                : new Dictionary<string, string>(current.FolderFingerprints, current.FolderFingerprints.Comparer);
+            var stale = record.Keys
                 .Where(key => string.Equals(key, folderName, StringComparison.OrdinalIgnoreCase) && !string.Equals(key, folderName, StringComparison.Ordinal))
                 .ToList();
-            foreach (var key in stale) current.FolderFingerprints.Remove(key);
-            current.FolderFingerprints[folderName] = fingerprint;
+            foreach (var key in stale) record.Remove(key);
+            record[folderName] = fingerprint;
+            current.FolderFingerprints = record;
         }
     }
 
@@ -183,8 +190,13 @@ namespace OpenDashPlugin
         /// <summary>Makes a choice of a theme's setting; one the setting does not offer is its default.</summary>
         public void SetThemeSetting(Contract.ThemeSetting setting, string choice)
         {
-            if (ThemeSettings == null) ThemeSettings = new Dictionary<string, string>(StringComparer.Ordinal);
-            ThemeSettings[setting.Property] = setting.Normalise(choice);
+            // A new dictionary rather than a write into this one: the theme's delegate reads it on SimHub's thread,
+            // and a Dictionary read while another thread inserts can throw or, on .NET Framework, spin (#572).
+            var choices = ThemeSettings == null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(ThemeSettings, StringComparer.Ordinal);
+            choices[setting.Property] = setting.Normalise(choice);
+            ThemeSettings = choices;
         }
 
         // --- The lights ------------------------------------------------------------------------
@@ -242,6 +254,10 @@ namespace OpenDashPlugin
         /// means "this file has never named bars", which is every file written before they existed and
         /// every new install; both start with none, because a profile paints hardware somebody owns and
         /// OpenDash does not guess at what that is (ADR 0013).
+        ///
+        /// Replaced and never written into, for the reason <see cref="Rig"/> gives: every strip's delegates,
+        /// DataUpdate and CarLadderChosen walk it on SimHub's threads while the panel adds and removes strips
+        /// (#572).
         /// </remarks>
         public List<LedBar> LedBars { get; set; }
 
@@ -383,8 +399,10 @@ namespace OpenDashPlugin
 
         public LedBar LedBarByNamespace(string ns)
         {
-            if (ns == null || LedBars == null) return null;
-            foreach (var bar in LedBars)
+            // Read once: the panel may swap the list between a test of it and a walk of it (#572).
+            var bars = LedBars;
+            if (ns == null || bars == null) return null;
+            foreach (var bar in bars)
             {
                 if (bar != null && string.Equals(bar.Namespace, ns, StringComparison.Ordinal)) return bar;
             }
@@ -589,10 +607,10 @@ namespace OpenDashPlugin
         /// </remarks>
         public LedBar AddLedBar(string shape, string name, string device)
         {
-            if (LedBars == null) LedBars = new List<LedBar>();
+            var bars = LedBarList();
             var names = new List<string>();
             var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var bar in LedBars)
+            foreach (var bar in bars)
             {
                 if (bar == null) continue;
                 names.Add(bar.Name);
@@ -618,22 +636,17 @@ namespace OpenDashPlugin
                 EffectsOff = new List<string>(),
             };
             added.Normalise();
-            LedBars.Add(added);
+            LedBars = new List<LedBar>(bars) { added };
             return added;
         }
 
         public bool RemoveLedBar(string ns)
         {
-            if (LedBars == null) return false;
-            for (var i = 0; i < LedBars.Count; i++)
-            {
-                if (LedBars[i] != null && string.Equals(LedBars[i].Namespace, ns, StringComparison.Ordinal))
-                {
-                    LedBars.RemoveAt(i);
-                    return true;
-                }
-            }
-            return false;
+            var bars = LedBarList();
+            var kept = bars.Where(bar => bar == null || !string.Equals(bar.Namespace, ns, StringComparison.Ordinal)).ToList();
+            if (kept.Count == bars.Count) return false;
+            LedBars = kept;
+            return true;
         }
 
         public void RenameLedBar(string ns, string name)
@@ -1031,6 +1044,13 @@ namespace OpenDashPlugin
         /// already holds rather than replacing it. Null therefore means "this file has never named a
         /// rig", which is what a file written before ADR 0017 looks like, and is the signal MigrateRig()
         /// reads.
+        ///
+        /// Replaced and never written into (#572). The panel adds and removes screens on the interface
+        /// thread while SimHub's threads walk this list in every screen's delegates, and a List changed
+        /// under a foreach throws at the reader: in DataUpdate the frame was skipped, in a delegate the
+        /// exception reached SimHub's property evaluation. A change builds the new list and swaps the
+        /// reference, so a reader walks either the rig before it or the rig after it. The writes all come
+        /// from the one interface thread, which is what makes the swap enough without a lock.
         /// </remarks>
         public List<ScreenInstance> Rig { get; set; }
 
@@ -1474,8 +1494,10 @@ namespace OpenDashPlugin
         /// <summary>The screen a namespace names, or null when the rig has none.</summary>
         public ScreenInstance ScreenByNamespace(string ns)
         {
-            if (ns == null || Rig == null) return null;
-            foreach (var screen in Rig)
+            // Read once: the panel may swap the list between a test of it and a walk of it (#572).
+            var rig = Rig;
+            if (ns == null || rig == null) return null;
+            foreach (var screen in rig)
             {
                 if (screen != null && string.Equals(screen.Namespace, ns, StringComparison.Ordinal)) return screen;
             }
@@ -1485,8 +1507,9 @@ namespace OpenDashPlugin
         /// <summary>The first screen of a kind, which is what a setting that was global before ADR 0017 reads.</summary>
         public ScreenInstance FirstOfKind(string kind)
         {
-            if (Rig == null) return null;
-            foreach (var screen in Rig)
+            var rig = Rig;
+            if (rig == null) return null;
+            foreach (var screen in rig)
             {
                 if (screen != null && string.Equals(screen.Kind, kind, StringComparison.Ordinal)) return screen;
             }
@@ -1777,10 +1800,11 @@ namespace OpenDashPlugin
             if (entry == null) throw new ArgumentNullException(nameof(entry));
             var source = ScreenByNamespace(ns);
             if (source == null) return null;
+            var rig = RigScreens();
             var taken = new List<string>();
             var names = new List<string>();
             var folders = new List<string>();
-            foreach (var screen in Rig)
+            foreach (var screen in rig)
             {
                 if (screen == null) continue;
                 taken.Add(screen.Namespace);
@@ -1800,7 +1824,7 @@ namespace OpenDashPlugin
             copy.LayoutY = null;
             copy.Normalise();
             if (copy.Face != null) copy.Face.OpenOnStartPages();
-            Rig.Add(copy);
+            Rig = new List<ScreenInstance>(rig) { copy };
             return copy;
         }
 
@@ -1808,10 +1832,10 @@ namespace OpenDashPlugin
         public ScreenInstance AddScreen(PackageEntry entry, string name)
         {
             if (entry == null) throw new ArgumentNullException(nameof(entry));
-            if (Rig == null) Rig = new List<ScreenInstance>();
+            var rig = RigScreens();
             var taken = new List<string>();
             var names = new List<string>();
-            foreach (var screen in Rig)
+            foreach (var screen in rig)
             {
                 if (screen == null) continue;
                 taken.Add(screen.Namespace);
@@ -1822,14 +1846,14 @@ namespace OpenDashPlugin
             // means removing one deletes the other's dashboard, which is what "OpenDash rim" twice on one
             // rig did.
             var folders = new List<string>();
-            foreach (var screen in Rig)
+            foreach (var screen in rig)
             {
                 if (screen != null && screen.Folder != null) folders.Add(screen.Folder);
             }
             var added = PackageCatalogue.NewScreen(entry, PackageCatalogue.UniqueName(wanted, names), taken, folders);
             // Chosen, which is the one thing a screen the migration made is not.
             added.Unclaimed = false;
-            Rig.Add(added);
+            Rig = new List<ScreenInstance>(rig) { added };
             return added;
         }
 
@@ -1901,16 +1925,16 @@ namespace OpenDashPlugin
                 return;
             }
             var taken = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            for (var i = LedBars.Count - 1; i >= 0; i--)
-            {
-                if (LedBars[i] == null) LedBars.RemoveAt(i);
-            }
-            foreach (var bar in LedBars)
+            var kept = LedBars.Where(bar => bar != null).ToList();
+            foreach (var bar in kept)
             {
                 bar.Normalise();
                 if (taken.Contains(bar.Namespace)) bar.Namespace = FreeBarNamespace(bar.Name, taken);
                 taken.Add(bar.Namespace);
             }
+            // A new list even when nothing was dropped, as NormaliseRig() makes one: a save never writes into
+            // the list SimHub's threads are walking (#572).
+            LedBars = kept;
         }
 
         /// <summary>
@@ -1954,16 +1978,11 @@ namespace OpenDashPlugin
         /// <summary>Removes a screen and its settings. The folder it owned is the installer's to delete.</summary>
         public bool RemoveScreen(string ns)
         {
-            if (Rig == null) return false;
-            for (var i = 0; i < Rig.Count; i++)
-            {
-                if (Rig[i] != null && string.Equals(Rig[i].Namespace, ns, StringComparison.Ordinal))
-                {
-                    Rig.RemoveAt(i);
-                    return true;
-                }
-            }
-            return false;
+            var rig = RigScreens();
+            var kept = rig.Where(screen => screen == null || !string.Equals(screen.Namespace, ns, StringComparison.Ordinal)).ToList();
+            if (kept.Count == rig.Count) return false;
+            Rig = kept;
+            return true;
         }
 
         /// <summary>
@@ -1987,7 +2006,6 @@ namespace OpenDashPlugin
             var screen = ScreenByNamespace(ns);
             if (screen == null)
             {
-                if (Rig == null) Rig = new List<ScreenInstance>();
                 screen = new ScreenInstance
                 {
                     Kind = Contract.KindFace,
@@ -1998,7 +2016,7 @@ namespace OpenDashPlugin
                     Unclaimed = false,
                 };
                 screen.Normalise();
-                Rig.Add(screen);
+                Rig = new List<ScreenInstance>(RigScreens()) { screen };
             }
             if (screen.Face == null)
             {

@@ -219,7 +219,11 @@ namespace OpenDashPlugin
             var normal = hex == null ? null : Contract.NormaliseLedHex(hex);
             if (hex != null && normal == null) return false;
             var before = ColourOf(key);
-            var colours = Colours ?? new Dictionary<string, string>(StringComparer.Ordinal);
+            // Into a copy that then replaces the bar's, so that nothing walking the colours sees them change under it
+            // (#572).
+            var colours = Colours == null
+                ? new Dictionary<string, string>(StringComparer.Ordinal)
+                : new Dictionary<string, string>(Colours, StringComparer.Ordinal);
             if (normal == null || string.Equals(normal, colour.DefaultHex, StringComparison.Ordinal)) colours.Remove(key);
             else colours[key] = normal;
             Colours = colours;
