@@ -89,7 +89,7 @@ export default function Screens() {
       <Section
         id="pit-wall"
         title="The pit wall"
-        lede={`For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and four zones you fill from ${counted(COUNTS.pitWallZonePages, 'page')} or a web view. ${counted(COUNTS.pitWallPages, 'page')} in landscape, and a portrait version.`}
+        lede="For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and four zones you fill from eleven pages or a web view. Three pages, and a portrait version."
       >
         <div className={styles.pitWalls}>
           {pitWall ? (
@@ -107,7 +107,7 @@ export default function Screens() {
 
       <Section
         id="round"
-        title="The round faces"
+        title="The two round faces"
         lede={
           <>
             {and(ROUND.map(sizeLabel))} still draw the earlier card layout. What a round face does with zones is decided (
