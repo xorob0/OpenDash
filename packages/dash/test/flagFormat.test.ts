@@ -21,7 +21,7 @@ import { zone as zoneSetting } from '../src/contract.ts';
 import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
 import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize, flagFullOut } from '../src/components/flagFull.ts';
 import { flagTakingBand } from '../src/components/flagStrip.ts';
-import { ALERT_CATALOGUE, bandRaised, bandVisible, isFlag } from '../src/flags.ts';
+import { ALERT_CATALOGUE, anyBandRaised, bandRaised, bandVisible, isFlag } from '../src/flags.ts';
 import { ncalc } from '../src/generator.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
@@ -426,26 +426,110 @@ describe('the full-screen format costs the gear', () => {
  * alert or a flag silenced in the lane is asked about as well as a flag.
  */
 describe('flagFullOut is true exactly while the block draws a condition', () => {
+  const block = ALERT_CATALOGUE.filter((c) => !NEUTRAL.has(c.id));
+  // Every property the whole catalogue reads, the neutral alerts' included, so that a frame can raise
+  // one of those under a flag or alone.
+  const names = [...new Set([...ncalc.or(...ALERT_CATALOGUE.map(bandRaised)).matchAll(/\[([A-Za-z0-9_.]+)\]/g)].map((m) => m[1]!))];
+  // A small seeded generator, so a failure names a frame that can be asked again.
+  let seed = 1069;
+  const next = (): number => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+  const value = (name: string, raised: boolean): unknown => (name.endsWith('FlagsInPitLane') ? String(raised) : name.endsWith('IsOnTrack') ? !raised : raised ? 1 : 0);
+  const frames: Props[] = [
+    {},
+    ...names.map((name) => ({ [name]: value(name, true) })),
+    ...Array.from({ length: 400 }, () => Object.fromEntries(names.map((name) => [name, value(name, next() < 0.12)]))),
+  ];
+
   test('in every frame, on band D\'s own reading', () => {
-    const block = ALERT_CATALOGUE.filter((c) => !NEUTRAL.has(c.id));
     const drawn = ncalc.or(...block.map(bandVisible));
-    // Every property the whole catalogue reads, the neutral alerts' included, so that a frame can raise
-    // one of those under a flag or alone.
-    const names = [...new Set([...ncalc.or(...ALERT_CATALOGUE.map(bandRaised)).matchAll(/\[([A-Za-z0-9_.]+)\]/g)].map((m) => m[1]!))];
     const windows = { changed: () => true };
-    // A small seeded generator, so a failure names a frame that can be asked again.
-    let seed = 1069;
-    const next = (): number => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
-    const value = (name: string, raised: boolean): unknown => (name.endsWith('FlagsInPitLane') ? String(raised) : name.endsWith('IsOnTrack') ? !raised : raised ? 1 : 0);
-    const frames: Props[] = [
-      {},
-      ...names.map((name) => ({ [name]: value(name, true) })),
-      ...Array.from({ length: 400 }, () => Object.fromEntries(names.map((name) => [name, value(name, next() < 0.12)]))),
-    ];
     for (const frame of frames) {
       const out = { frame, out: Boolean(evalNcalc(flagFullOut(), frame, windows)) };
       expect(out).toEqual({ frame, out: Boolean(evalNcalc(drawn, frame, windows)) });
     }
+  });
+
+  // The truth value is not all a box asks. SimHub keeps one `changed()` window per expression text per
+  // dashboard, and the first ask on the frame a value moves is the one that opens it, so a window asked
+  // where the block would not ask it is a window spent. Each of the block's layers is asked every
+  // frame, so asking a window on a frame where one of them asks it too costs nothing, and asking it on
+  // any other frame is what lost an incident taken under a flag.
+  //
+  // The settled flag's out is the same expression over the whole catalogue, the neutral alerts and the
+  // headlight's own window among them, and is held to the settled layers the same way.
+  test('asks a window only on a frame where one of the layers it stands for asks it', () => {
+    // Each window's text, so that a window asked is told from another: the incident's and the
+    // headlight's are both three seconds long.
+    const windows = (expression: string): string[] => {
+      const found: string[] = [];
+      for (let at = expression.indexOf('changed('); at >= 0; at = expression.indexOf('changed(', at + 1)) {
+        let depth = 0;
+        let end = at + 'changed'.length;
+        do depth += expression[end] === '(' ? 1 : expression[end] === ')' ? -1 : 0;
+        while (depth > 0 && ++end < expression.length);
+        found.push(expression.slice(at, end + 1));
+      }
+      return found;
+    };
+    const asked = (expression: string, frame: Props): Set<string> => {
+      const texts = [...new Set(windows(expression))];
+      let marked = expression;
+      texts.forEach((text, i) => (marked = marked.split(text).join(`ASK(${i})`)));
+      const seen = new Set<string>();
+      evalNcalc(marked, frame, {
+        ASK: (i: number) => {
+          seen.add(texts[i]!);
+          return true;
+        },
+      });
+      return seen;
+    };
+    const cases = [
+      { out: flagFullOut(), layers: block },
+      { out: anyBandRaised(ALERT_CATALOGUE), layers: ALERT_CATALOGUE },
+    ];
+    for (const { out, layers } of cases) {
+      for (const frame of frames) {
+        const byLayers = new Set(layers.flatMap((condition) => [...asked(bandVisible(condition), frame)]));
+        const unasked = [...asked(out, frame)].filter((text) => !byLayers.has(text));
+        expect({ frame, unasked }).toEqual({ frame, unasked: [] });
+      }
+    }
+  });
+
+  test('so an incident taken under a yellow is told when the yellow clears, with a box waiting all along', () => {
+    // One window, kept as SimHub keeps it: the first ask records the value and answers false, a moved
+    // value opens it, and it holds for its milliseconds.
+    let now = 0;
+    let window: { last: unknown; at: number } | undefined;
+    const changed = (ms: number, v: unknown): boolean => {
+      if (window === undefined) {
+        window = { last: v, at: -Infinity };
+        return false;
+      }
+      if (v !== window.last) window = { last: v, at: now };
+      return now - window.at < ms;
+    };
+    const incident = block.find((condition) => condition.id === 'incident')!;
+    const shown: number[] = [];
+    // A frame every quarter second for 25 s, in the car on the circuit: a standing yellow from 2 s to
+    // 20 s, and the incident count moving from 0 to 1 at 5 s, under the yellow. A box of the pop-up
+    // family, low fuel say, is out throughout, so it asks `flagFullOut` on every frame, after the
+    // block's layers, which are drawn before it.
+    for (now = 0; now < 25_000; now += 250) {
+      const frame: Props = {
+        'DataCorePlugin.GameRawData.Telemetry.IsOnTrack': true,
+        'DataCorePlugin.GameData.IsInPitLane': 0,
+        'DataCorePlugin.GameData.EngineIgnitionOn': 1,
+        'DataCorePlugin.GameData.EngineStarted': 1,
+        'DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Isyellow': now >= 2_000 && now < 20_000 ? 1 : 0,
+        'DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount': now >= 5_000 ? 1 : 0,
+      };
+      if (evalNcalc(bandVisible(incident), frame, { changed })) shown.push(now);
+      evalNcalc(flagFullOut(), frame, { changed });
+    }
+    // The incident's three seconds, from the frame the yellow clears.
+    expect(shown).toEqual(Array.from({ length: 12 }, (_, i) => 20_000 + i * 250));
   });
 });
 

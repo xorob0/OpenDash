@@ -591,11 +591,20 @@ function bandFlagRaised(condition: FlagCondition): Expr {
  * It is what a box drawn over the full-screen block asks before it opens (#1069), so it is written
  * into the Visible of every member of the pop-up family, and sixteen copies of `flagsAllowedHere()`
  * in each would be most of its length.
+ *
+ * **The flags are asked before the car alerts, and the order is load-bearing.** The incident's `when`
+ * opens with its `changed()` window, which the band's ranking leaves unasked while a flag above it
+ * holds the band, so that an incident taken under a yellow is told when the yellow clears (see
+ * `INCIDENT`). Asked first here, the window would be asked under the flag whenever a pop-up would be
+ * out, recording the move and spending it there, and the incident would never be told. With the flags
+ * first, a raised flag stops the `or` before any window is reached, and a window is asked only on a
+ * frame where the band's own ranking asks it too. Every flag term is stateless, so asking them early
+ * changes no answer; the car alerts keep their catalogue order among themselves for the same reason.
  */
 export function anyBandRaised(only: readonly AlertCondition[]): Expr {
   const alerts = only.filter((condition): condition is CarAlert => !isFlag(condition)).map((alert) => alert.when);
   const flags = only.filter(isFlag);
-  return or(...alerts, ...(flags.length > 0 ? [and(flagsAllowedHere(), or(...flags.map(bandFlagRaised)))] : []));
+  return or(...(flags.length > 0 ? [and(flagsAllowedHere(), or(...flags.map(bandFlagRaised)))] : []), ...alerts);
 }
 
 /**
