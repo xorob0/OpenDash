@@ -6,6 +6,14 @@
  * cells that an `M` overruns (#603). So the tests below evaluate the one helper on the states that
  * went wrong, measure what it can draw against the widest it declares, and then hold every surface
  * and every package the build composes to that helper rather than to a fourth copy of it.
+ *
+ * **The widest is measured in each theme's own process.** A theme's package is built in a process of
+ * its own, whose overlay changes the face the numerals are set in, and a widest measured in the
+ * house's Barlow Condensed held nothing in the Porsche's Barlow Medium, where `LMDH · P44` is wider
+ * than the `MUST · P44` its boxes were cut from (#1058). So the default process starts this file
+ * again in a process drawing each other theme, as `themeFuelPage.test.ts` does, and there the
+ * declaration is measured in that theme's face and every face of that theme is held to the class
+ * list. What pins the house's own surfaces runs in the default process alone.
  */
 import { describe, expect, test } from 'bun:test';
 import { composePackages } from '../src/build.ts';
@@ -18,12 +26,27 @@ import { MODULES } from '../src/modules/index.ts';
 import { sessionPanel } from '../src/screens/pitwall.ts';
 import { CHIP_CHARS } from '../src/second/chip.ts';
 import { CLASS_AND_PLACE_WIDEST, classAndPlace, NO_VALUE, player } from '../src/second/values.ts';
+import { buildThemeFace, drawsInThisProcess } from '../src/themes/faces.ts';
+import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
+import { THEME_ID } from '../src/tokens.ts';
 import { expressionsIn, walkItems } from '../src/walk.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
 import { CLASS_CUTS } from './classNames.ts';
+import { widthAsDrawn } from './drawnStrings.ts';
+import { bindingExpression } from './monoGlyphs.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const { num } = ncalc;
+
+/** Whether this process draws the house's face, which is where the house's own surfaces are pinned. */
+const HOUSE = THEME_ID === DEFAULT_THEME_ID;
+
+// The face is proportional, so the widest place is not the longest-looking one: its `4` is the
+// widest digit Barlow Condensed has, which is why the bar's `LMP2 · P24` was a pixel short.
+const PLACES = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE];
+// Every class name a driver meets, as the helper cuts it, so a class longer than four letters is
+// measured as it is drawn. The list is `classNames.ts`'s, which the blue flag band reads as well.
+const READINGS = CLASS_CUTS.flatMap((cut) => PLACES.map((place) => `${cut} · P${place}`));
 
 /**
  * What the pair reads for the car on row 3 of the leaderboard, of the class and class place given,
@@ -80,36 +103,72 @@ describe('the helper', () => {
   });
 });
 
-describe('the widest it declares', () => {
-  // The face is proportional, so the widest place is not the longest-looking one: its `4` is the
-  // widest digit Barlow Condensed has, which is why the bar's `LMP2 · P24` was a pixel short.
-  const places = [...Array.from({ length: 99 }, (_, i) => String(i + 1)), NO_VALUE];
-  // Every class name a driver meets, as the helper cuts it, so a class longer than four letters is
-  // measured as it is drawn. The list is `classNames.ts`'s, which the blue flag band reads as well.
-  const readings = CLASS_CUTS.flatMap((cut) => places.map((place) => `${cut} · P${place}`));
-
+describe(`the widest it declares, in ${THEME_ID}'s face`, () => {
   test('is a reading the helper draws for a real class, not a made-up bound', () => {
-    expect(readings).toContain(CLASS_AND_PLACE_WIDEST);
+    expect(READINGS).toContain(CLASS_AND_PLACE_WIDEST);
   });
 
-  test("is wider than LMP2, the chip's widest until #569, which a Mustang or a Mercedes overran", () => {
-    for (const weight of ['SemiBold', 'Bold'] as const) {
-      expect(measureText(DATA_FACE[weight], `MUST · P44`, 100)).toBeGreaterThan(measureText(DATA_FACE[weight], `LMP2 · P44`, 100));
-    }
-  });
+  if (HOUSE) {
+    test("is wider than LMP2, the chip's widest until #569, which a Mustang or a Mercedes overran", () => {
+      expect(CLASS_AND_PLACE_WIDEST).toBe('MUST · P44');
+      for (const weight of ['SemiBold', 'Bold'] as const) {
+        expect(measureText(DATA_FACE[weight], CLASS_AND_PLACE_WIDEST, 100)).toBeGreaterThan(measureText(DATA_FACE[weight], `LMP2 · P44`, 100));
+      }
+    });
+  }
 
   for (const weight of ['SemiBold', 'Bold'] as const) {
-    test(`holds every class at every place from 1 to 99 and the placeholder, in ${weight}`, () => {
+    test(`holds every class at every place from 1 to 99 and the placeholder, in ${weight}, which is ${DATA_FACE[weight]} here`, () => {
       // The advances are summed in floating point, and `LMDH` and `MUST` come to the same width in
       // SemiBold by different sums, so a tie is read as a tie rather than as the last bit of a sum.
       const limit = measureText(DATA_FACE[weight], CLASS_AND_PLACE_WIDEST, 100) + 1e-9;
-      const wider = readings.filter((text) => measureText(DATA_FACE[weight], text, 100) > limit);
+      const wider = READINGS.filter((text) => measureText(DATA_FACE[weight], text, 100) > limit);
       expect(wider).toEqual([]);
     });
   }
 });
 
-describe('every surface draws the helper, proportionally', () => {
+/**
+ * Every face of every theme this process draws, as it ships: every text bound to the helper holds
+ * every reading of the class list at every place, in the face and at the size it is drawn in,
+ * whatever its theme declares for it. The theme's own declaration is what its box is cut from, and
+ * `conformance.ts` measures the box by that declaration alone, so a declaration the class list
+ * outgrows passes there with a box cut to the wrong string.
+ */
+describe('on every face of every theme, the class box holds every class at every place', () => {
+  const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
+  const helper = classAndPlace(player());
+  for (const id of Object.keys(THEMES).filter(drawsInThisProcess)) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const { main, zones } = buildThemeFace(id, size, OPTS).built;
+        let found = 0;
+        const over: string[] = [];
+        for (const dashboard of [main, ...zones]) {
+          for (const screen of dashboard.screens) {
+            for (const item of walkItems(screen.items)) {
+              if (item.kind !== 'text' || !bindingExpression(item, 'Text').includes(helper)) continue;
+              found += 1;
+              const where = `${dashboard.name} ${screen.name}: ${item.name}`;
+              if (item.widest === undefined) {
+                over.push(`${where} declares no widest`);
+                continue;
+              }
+              const limit = widthAsDrawn(item, item.widest) + 1e-9;
+              const wider = READINGS.filter((text) => widthAsDrawn(item, text) > limit);
+              if (wider.length > 0) over.push(`${where} declares ${JSON.stringify(item.widest)} and draws ${wider.map((t) => JSON.stringify(t)).join(', ')} wider`);
+              if (widthAsDrawn(item, item.widest) > item.rect.width) over.push(`${where} draws its widest past a ${item.rect.width} px box`);
+            }
+          }
+        }
+        expect(found).toBeGreaterThan(0);
+        expect(over).toEqual([]);
+      });
+    }
+  }
+});
+
+if (HOUSE) describe('every surface draws the helper, proportionally', () => {
   const expected = classAndPlace(player());
 
   /** The class value as it is drawn: bound to the helper, set in advances rather than cells, measured from its widest. */
@@ -156,3 +215,17 @@ describe('every surface draws the helper, proportionally', () => {
     expect([...stray]).toEqual([]);
   });
 });
+
+if (HOUSE) {
+  for (const id of Object.keys(THEMES).filter((each) => !drawsInThisProcess(each))) {
+    test(
+      `the ${id} theme's class and place, in a process drawing its faces`,
+      () => {
+        const run = Bun.spawnSync([process.execPath, 'test', import.meta.path], { env: { ...process.env, [THEME_ENV]: id }, stdout: 'pipe', stderr: 'pipe' });
+        const output = run.exitCode === 0 ? '' : `${run.stdout.toString()}${run.stderr.toString()}`;
+        expect({ theme: id, exit: run.exitCode, output }).toEqual({ theme: id, exit: 0, output: '' });
+      },
+      120_000,
+    );
+  }
+}

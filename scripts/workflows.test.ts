@@ -81,8 +81,8 @@ describe('the dash job', () => {
 });
 
 describe('the development tools', () => {
-  // What `bun run dev` and `bun run record` build on their way to the VM, and the Linux build of the
-  // emulator that runs its selfcheck, which docs/dev-loop.md says CI checks.
+  // What `bun run dev` and `bun run record` build on their way to the VM, and the Linux builds of the
+  // emulators that run their selfchecks, which docs/dev-loop.md says CI checks.
   test('are built in Release on every pull request, and the emulator checks itself', () => {
     const tools = job(ci, 'tools');
     expect(tools).toContain('dotnet build tools/irsdk-emulator -c Release');
@@ -90,6 +90,15 @@ describe('the development tools', () => {
     expect(tools).toContain('dotnet build tools/trace-recorder -c Release');
     expect(tools).toContain('dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll --selfcheck flagbox');
     expect(tools).not.toContain('continue-on-error');
+  });
+
+  test("Assetto Corsa's emulator is built for both and checks itself on every scenario it ships (#579)", () => {
+    const tools = job(ci, 'tools');
+    expect(tools).toContain('dotnet build tools/acsm-emulator -c Release');
+    expect(tools).toContain('dotnet build tools/acsm-emulator/devcheck -c Release');
+    // A loop that stops at the first scenario that fails, rather than one line per scenario that a
+    // new scenario would have to remember to add.
+    expect(tools).toContain('for scenario in scenarios/*.json; do dotnet devcheck/bin/Release/net8.0/acs.dll --selfcheck "$scenario" || exit 1; done');
   });
 });
 
@@ -195,6 +204,35 @@ describe('the site image', () => {
     for (const source of sources) {
       const watched = paths.includes(source) || paths.includes(`${source.replace(/\/$/, '')}/**`);
       expect([source, watched]).toEqual([source, true]);
+    }
+  });
+
+  test('keeps a local .env out of git and out of the image', () => {
+    // The site's Next and Prisma read site/.env and site/.env.local, which is where DATABASE_URL and
+    // SURVEY_ADMIN_KEY go to try the survey locally, and bun reads a .env wherever it runs. Ignored by
+    // git, such a file is not one `git add -A` from a commit; ignored by Docker, `COPY site ./site`
+    // does not carry it into the build stage, where next build would write it into the standalone
+    // server the runtime stage runs (#554).
+    const secrets = ['.env', '.env.local', 'site/.env', 'site/.env.local', 'site/.env.production.local', 'site/prisma/.env'];
+    const git = spawnSync('git', ['check-ignore', '--no-index', ...secrets], { cwd: root, encoding: 'utf8' });
+    expect(git.stdout.split('\n').filter((line) => line !== '')).toEqual(secrets);
+
+    // Docker's own rule: the last pattern that matches a path decides, a `!` pattern lets it back in,
+    // and a pattern that matches a directory takes everything under it.
+    const patterns = read('.dockerignore')
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#'))
+      .map((line) => ({ keep: line.startsWith('!'), glob: new Bun.Glob(line.replace(/^!/, '').replace(/^\//, '').replace(/\/$/, '')) }));
+    const ignored = (path: string): boolean => {
+      const prefixes = path.split('/').map((_, i, parts) => parts.slice(0, i + 1).join('/'));
+      const last = patterns.filter(({ glob }) => prefixes.some((prefix) => glob.match(prefix))).at(-1);
+      return last !== undefined && !last.keep;
+    };
+    for (const secret of secrets) expect([secret, ignored(secret)]).toEqual([secret, true]);
+    // And the matcher is not simply ignoring everything: what the image copies still reaches it.
+    for (const kept of ['site/package.json', 'site/app/page.tsx', 'package.json', 'design/tokens.json']) {
+      expect([kept, ignored(kept)]).toEqual([kept, false]);
     }
   });
 });

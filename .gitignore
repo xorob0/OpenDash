@@ -19,6 +19,12 @@ obj/
 .DS_Store
 Thumbs.db
 
+# Local settings and their secrets, never committed. bun loads a .env from wherever it runs, and the
+# site's Next and Prisma read site/.env and site/.env.local, which is where DATABASE_URL and
+# SURVEY_ADMIN_KEY go to try the survey locally. .dockerignore keeps them out of the image as well.
+.env
+.env.*
+
 # The dash build output the plugin embeds; CI copies it in before building the plugin.
 plugin/OpenDash/Resources/*.simhubdash
 plugin/OpenDash/Resources/*.ledsprofile

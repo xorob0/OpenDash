@@ -58,6 +58,7 @@
     <Compile Include="../OpenDash/CarLightService.cs" Link="Plugin/CarLightService.cs" />
     <Compile Include="../OpenDash/CarCrest.cs" Link="Plugin/CarCrest.cs" />
     <Compile Include="../OpenDash/LiveStatus.cs" Link="Plugin/LiveStatus.cs" />
+    <Compile Include="../OpenDash/FrameFault.cs" Link="Plugin/FrameFault.cs" />
     <Compile Include="../OpenDash/SettingsRescue.cs" Link="Plugin/SettingsRescue.cs" />
   </ItemGroup>
 

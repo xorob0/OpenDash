@@ -8,3 +8,8 @@ build/
 traces/
 site/out
 site/public/downloads
+# A local .env holds secrets, and COPY site ./site would carry site/.env into the build stage, where
+# next build reads it and writes it into the standalone server the runtime stage runs. The image's
+# settings are build arguments and the deployment's environment (docs/deploy.md), never a file.
+**/.env
+**/.env.*

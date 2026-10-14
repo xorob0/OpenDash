@@ -846,8 +846,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A rig whose plugin is already the release, offered it because an edited screen holds the rig's version
-        /// back, still stages the twin: that run is what carries the yes to replacing the screen to the start that
+        /// A rig whose plugin is already the release, offered it because a screen it did not edit is behind, still
+        /// stages the twin on a yes to replacing an edited screen: that run is what carries the yes to the start that
         /// writes it, and the start clears the twin rather than swapping it (PluginUpdate.Review).
         /// </summary>
         [Fact]
@@ -867,6 +867,176 @@ namespace OpenDashPlugin.Tests
             Assert.True(outcome.Ok, outcome.Reason);
             Assert.True(outcome.PluginStaged);
             Assert.True(outcome.ReplaceEditedOnRestart);
+        }
+
+        /// <summary>
+        /// The rig's folders at <paramref name="installed"/>, read by an installer whose packages are this build's, as
+        /// the running plugin's are: what a rig on the release looks like with dashboards behind it.
+        /// </summary>
+        private DashboardInstaller OnBuilt(string installed, IFolderRecord record, params string[] folders)
+        {
+            Installed(installed, record, folders);
+            var source = new DownloadedPackageSource();
+            foreach (var folder in folders) source.Add(folder + ".simhubdash", SyntheticPackage.Zip(folder, Built).ToArray());
+            var installer = new DashboardInstaller(root, null, source, record);
+            installer.Refresh();
+            return installer;
+        }
+
+        /// <summary>
+        /// A press that keeps the edit, on a rig whose plugin is already the release, downloads and stages nothing and
+        /// does not ask for a restart (#1083).
+        /// </summary>
+        /// <remarks>
+        /// It staged the same plugin and said "Restart SimHub to finish updating. The one you edited is left alone.",
+        /// the card said the same for as long as the twin waited, and the restart cleared the twin and changed
+        /// nothing. With no yes to carry, a restart has nothing to finish. An unedited screen behind the plugin, which
+        /// is how such a rig comes to be offered the release at all, is written now from the plugin running, as its
+        /// start would, and the line names the version the rig already has and the press that does replace the
+        /// edited screen. The panel asks before such a press and sends a yes, so this run with no yes is a caller
+        /// other than the panel's; the service keeps the edit for it all the same.
+        /// </remarks>
+        [Fact]
+        public void A_press_that_keeps_the_edit_on_the_plugin_already_running_stages_nothing()
+        {
+            var installer = OnBuilt("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            var mine = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
+            File.WriteAllText(mine, "{\"mine\":true}");
+            installer.Refresh();
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: Built);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            fetcher.Requested.Clear();
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.False(outcome.PluginStaged);
+            Assert.False(outcome.ReplaceEditedOnRestart);
+            Assert.Equal(Built, outcome.AlreadyRunning);
+            Assert.Equal(new[] { SmallFolder }, outcome.Updated);
+            Assert.Equal(new[] { "OpenDash" }, outcome.HeldBack);
+            Assert.Equal(UpdateWording.AlreadyRunning(Built, 1, 1, outcome.FontsWritten), outcome.Line);
+            Assert.DoesNotContain("Restart SimHub to finish", outcome.Line);
+            Assert.Empty(fetcher.Requested);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.False(File.Exists(PluginUpdate.ScriptPath(root)), "a swap was armed for the plugin already running");
+            Assert.Equal("{\"mine\":true}", File.ReadAllText(mine));
+            Assert.Equal(Built, PackageExtractor.ReadInstalledVersion(root, SmallFolder));
+            // The rig now runs the release, the edited screen aside, so nothing offers it again.
+            installer.Refresh();
+            Assert.Equal(Built, UpdateCheck.RigVersion(installer.Packages, new[] { "OpenDash", SmallFolder }, Built));
+
+            // A second press has nothing behind to write, and says so without a restart.
+            var again = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+            Assert.True(again.Ok, again.Reason);
+            Assert.Empty(again.Updated);
+            Assert.Equal(UpdateWording.AlreadyRunning(Built, 0, 1, false), again.Line);
+
+            // A yes with nothing edited to carry has nothing for a restart to do either.
+            installer.EnsureInstalled(true, replaceEdited: true);
+            Assert.Empty(installer.EditedFolders);
+            var nothing = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+            Assert.False(nothing.PluginStaged);
+            Assert.Equal(UpdateWording.AlreadyRunning(Built, 0, 0, false), nothing.Line);
+            Assert.False(PluginUpdate.Pending(root));
+
+            // A release newer than the plugin is staged as it always was, an edit kept or not: the restart puts it in place.
+            var newer = new UpdateService(fetcher, null, pluginVersion: "0.0.1");
+            newer.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            var staged = newer.Apply(installer, newer.LastReleases[0], replaceEdited: false);
+            Assert.True(staged.PluginStaged);
+            Assert.Null(staged.AlreadyRunning);
+            Assert.True(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// A rig on the release with an unedited screen behind it, as a start whose install of that screen failed
+        /// leaves one, and nothing edited: the press writes the screen now from the plugin running, so the offer goes,
+        /// rather than saying the rig already has the release under a card that goes on offering it (#1083).
+        /// </summary>
+        [Fact]
+        public void A_screen_behind_the_plugin_already_running_is_written_by_the_press()
+        {
+            var installer = OnBuilt("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            var rig = new[] { "OpenDash", SmallFolder };
+            Assert.Equal("0.1.0", UpdateCheck.RigVersion(installer.Packages, rig, Built));
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: Built);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            fetcher.Requested.Clear();
+            var progress = new List<double>();
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false, progress.Add);
+
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.False(outcome.PluginStaged);
+            Assert.Equal(Built, outcome.AlreadyRunning);
+            Assert.Equal(new[] { "OpenDash", SmallFolder }, outcome.Updated.OrderBy(f => f, StringComparer.Ordinal));
+            Assert.Empty(outcome.HeldBack);
+            Assert.Equal(UpdateWording.AlreadyRunning(Built, 2, 0, outcome.FontsWritten), outcome.Line);
+            Assert.DoesNotContain("Restart SimHub to finish", outcome.Line);
+            Assert.Empty(fetcher.Requested);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.Equal(1, progress.Last());
+
+            // What the panel reads after the run: the rig is on the release, the mark offers nothing and the card is
+            // up to date rather than offering what the line says the rig already has.
+            installer.Refresh();
+            var running = UpdateCheck.RigVersion(installer.Packages, rig, Built);
+            Assert.Equal(Built, running);
+            Assert.Null(UpdateMark.Offered(Built, running, pluginStaged: false));
+            Assert.NotEqual(UpdateState.UpdateAvailable, UpdateMark.Applied(UpdateCheck.Conclude("0.1.0", service.LastReleases, manual: true), outcome.Ok, Built, running).State);
+        }
+
+        /// <summary>
+        /// A yes to replacing an edited screen that is already at the release, on a rig whose plugin is the release and
+        /// whose other screen is behind, carries nothing to a restart: the start leaves a current screen alone whatever
+        /// the driver said, so the twin is not staged and the press writes the screen behind now (#1083).
+        /// </summary>
+        /// <remarks>
+        /// The panel asks before any press that meets an edited screen (UpdatePlan.Edited), so this yes is the one it
+        /// sends here. Counting every edited screen rather than those behind the release staged the twin and asked for
+        /// a restart that wrote nothing, which is the fault this ticket is about.
+        /// </remarks>
+        [Fact]
+        public void A_yes_to_an_edit_already_at_the_release_stages_nothing_and_writes_the_screen_behind()
+        {
+            var record = new MemoryFolderRecord();
+            Installed(Built, record, "OpenDash");
+            Installed("0.1.0", record, SmallFolder);
+            var source = new DownloadedPackageSource();
+            foreach (var folder in new[] { "OpenDash", SmallFolder }) source.Add(folder + ".simhubdash", SyntheticPackage.Zip(folder, Built).ToArray());
+            var installer = new DashboardInstaller(root, null, source, record);
+            var mine = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
+            File.WriteAllText(mine, "{\"mine\":true}");
+            installer.Refresh();
+            Assert.Equal(new[] { "OpenDash" }, installer.EditedFolders);
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: Built);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            fetcher.Requested.Clear();
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.False(outcome.PluginStaged);
+            Assert.False(outcome.ReplaceEditedOnRestart);
+            Assert.Equal(Built, outcome.AlreadyRunning);
+            Assert.Equal(new[] { SmallFolder }, outcome.Updated);
+            Assert.Empty(outcome.HeldBack);
+            Assert.Empty(fetcher.Requested);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.Equal("{\"mine\":true}", File.ReadAllText(mine));
+            Assert.Equal(Built, PackageExtractor.ReadInstalledVersion(root, SmallFolder));
+            installer.Refresh();
+            Assert.Equal(Built, UpdateCheck.RigVersion(installer.Packages, new[] { "OpenDash", SmallFolder }, Built));
         }
 
         /// <summary>The plugin hands the service its own version, without which a staged plugin is held to the

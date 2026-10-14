@@ -171,9 +171,9 @@ ratio still needs a design decision, which is why the canvas under `design/canva
 planned size first, and why [docs/design/zones.md](docs/design/zones.md) carries every rectangle
 of every face read off those artboards rather than rounded.
 
-A rectangular face declares the rects of its five parts and nothing else. What each zone shows is
-the plugin's business, and the pages themselves are written once and answer to whatever box they
-are given.
+A rectangular face declares the rects of its parts and nothing else: the five of them, or four at
+800 x 286, which has no room for the bar. What each zone shows is the plugin's business, and the
+pages themselves are written once and answer to whatever box they are given.
 
 ## Writing a car theme
 

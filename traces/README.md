@@ -44,6 +44,37 @@ its columns.
 Read the diff before committing. A trace is a reviewed artefact rather than build output, and the
 diff is the only place a scenario change shows itself in numbers.
 
+## Traces per sim
+
+```bash
+bun run record --sim ac green yellow pit   # Assetto Corsa's, from tools/acsm-emulator
+bun run trace list --sim ac
+```
+
+Each sim has a folder of its own: iRacing's traces are here, where the nine of them always were, and
+Assetto Corsa's are in `ac/`, one per scenario of [tools/acsm-emulator](../tools/acsm-emulator/README.md)
+and under the same names as their iRacing twins. A folder rather than a suffix, so that `green` is
+`green` on either sim and everything that lists this folder for iRacing's traces goes on seeing exactly
+those. [scripts/sims.ts](../scripts/sims.ts) holds each sim's list of scenarios that have no trace,
+with the reason for each.
+
+Both are held to the same list of properties, everything any package reads, because a package reads
+the same properties whichever sim is driven. An Assetto Corsa trace therefore carries iRacing's raw
+`Telemetry.*` and `SessionData.*` columns, and they are null: SimHub's AC reader publishes no such
+thing, and that null is what a dashboard on AC is handed, which is the point of replaying one. On top
+of that, `scripts/trace.test.ts` checks what is particular to a sim:
+
+* the header's `game`, which the recording reads off `DataCorePlugin.CurrentGame` rather than taking
+  from the command line, names the sim; a trace from before the field, all nine of iRacing's, reads as
+  `IRacing`;
+* the sim's own tick column is there, `Telemetry.SessionTick` for iRacing and `Graphics.PacketId` for
+  Assetto Corsa, which the emulator steps once a tick in the same way;
+* no other sim's raw column holds a value, since a value there means SimHub was reading another game
+  than the header says.
+
+When the plugin publishes per-reading `OpenDash.*` properties where the games differ (#1101), those
+enter `propertiesRead()` like any other and every trace of every sim has to carry them.
+
 ## Reading
 
 ```bash

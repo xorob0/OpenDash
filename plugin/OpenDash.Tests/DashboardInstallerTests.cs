@@ -259,6 +259,12 @@ namespace OpenDashPlugin.Tests
             Assert.True(installer.Packages.Single(p => p.FolderName == FaceFolder).Extracted);
             Assert.Equal(InstallStatus.UpdateAvailable, installer.Status);
             Assert.Contains(RimFolder + ": Update available (you have edited this one, so it was left alone)", installer.PackageReport());
+            // And the folder it held back does not hold the rig behind the plugin that wrote the other, which would
+            // offer that plugin's own release for good (#1083); nor after a read that installs nothing.
+            var folders = new[] { FaceFolder, RimFolder };
+            Assert.Equal("0.3.0-rc.8", UpdateCheck.RigVersion(installer.Packages, folders, "0.3.0-rc.8"));
+            installer.Refresh();
+            Assert.Equal("0.3.0-rc.8", UpdateCheck.RigVersion(installer.Packages, folders, "0.3.0-rc.8"));
 
             // A yes replaces it, and the copy of their work goes where no later install reclaims it.
             installer.EnsureInstalled(false, replaceEdited: true);
