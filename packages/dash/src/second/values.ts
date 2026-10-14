@@ -1520,6 +1520,12 @@ export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsC
 export const fieldSize = (): Expr => iff(classMode(), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
+/**
+ * The gear as the sim writes it, `N`, `R` or a digit, and the one place `Gear` is read for a screen:
+ * zone A, the gear card, the pit wall and the LED profiles draw this, and the two car themes do too.
+ * `shift.ts` reads the property on its own, since this file reads its ladders.
+ */
+export const gear = (): Expr => game('Gear');
 
 /**
  * The unit words the faces draw.
@@ -1529,7 +1535,12 @@ export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
  * for `km/h` and `L`. The written form is what the canvas draws and what the box was measured
  * against, so the enum is mapped here rather than in each follower.
  */
-export const speedUnit = (): Expr => iff(eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH')), str('mph'), str('km/h'));
+/**
+ * Whether SimHub is set to miles an hour, which is the one switch every speed figure follows. A
+ * theme that writes the unit in its own words (the AiM writes `kph`) asks this rather than the sim.
+ */
+export const speedInMph = (): Expr => eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH'));
+export const speedUnit = (): Expr => iff(speedInMph(), str('mph'), str('km/h'));
 // Engine speed has one body, `rpms` in `shift.ts`, because the speedo prints it directly above a
 // rev bar that reads the same value: two spellings of one expression is how the redline came to
 // disagree with the bar it sits on. ADR 0014.
@@ -1542,6 +1553,8 @@ export const rpm = rpms;
 const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
 export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
+/** The sim has published a tank at all, which is what tells no tank from an empty one. */
+export const fuelIsPublished = (): Expr => not(isNull(game('Fuel')));
 /**
  * The tank in litres whatever the driver's unit, for a figure a car fixes in litres, as the Porsche
  * fixes its low-fuel alarm at ten (#1126). Null where no sim is running, so a caller can tell no tank
@@ -2264,7 +2277,7 @@ export const sim = {
   pitLimiterOn: (): Expr => setting.reported(PIT_LIMITER_ON, pitLimiterOn()),
   /**
    * The sim reports the car's damage. Without the plugin, false: iRacing fills SimHub's `CarDamage1..5` with
-   * zeros, which is no report at all. Not yet read: #582 gates the damage module on it.
+   * zeros, which is no report at all. The damage module draws the car or says the sim reports none by it. #582.
    */
   damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
   /**
@@ -2548,6 +2561,26 @@ export const tyreWearMin = (corner: Corner): Expr => {
   return iff(ncalc.isNull(section('M')), tyreWear(corner), mul(min(section('L'), min(section('M'), section('R'))), num(100)));
 };
 
+/**
+ * The tyre temperature band D's tyre page draws, or null where the sim publishes none (#556).
+ *
+ * iRacing's raw `*tempCM` first, which is the carcass in the middle of the tread and in degrees
+ * Celsius whatever the driver has set, and which is what the page has always drawn there. Where it is
+ * absent, which is every sim but iRacing, SimHub's own `TyreTemperature*`, which is already in the
+ * driver's unit: on Assetto Corsa and ACC that is the core temperature the sim publishes, and on Le
+ * Mans Ultimate the mean of the three tread readings. Neither is defaulted, so a sim that publishes
+ * no tyre temperature at all, or no game running, is a null the page draws as {@link NO_VALUE}
+ * rather than a row of zeros that read as four cold tyres.
+ */
+export const bandTyreTemperature = (corner: Corner): Expr => isnull(raw(`${CORNER_PREFIX[corner]}tempCM`), game(`TyreTemperature${corner}`));
+
+/**
+ * The unit over {@link bandTyreTemperature}: `°C` while iRacing's raw carcass is what is drawn, since
+ * that is Celsius whatever the setting says, and the driver's own mark where SimHub's converted
+ * figure is. One corner answers for all four, the raw block being published whole or not at all.
+ */
+export const bandTyreTemperatureMark = (): Expr => iff(isNull(raw('LFtempCM')), temperatureMark(), str('°C'));
+
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**
@@ -2564,7 +2597,7 @@ export const perTemperatureUnit = (f: Expr, k: Expr, c: Expr): Expr => iff(eq(te
  * Every temperature SimHub publishes is already converted to whichever of the three the driver has
  * set, so a page drawing `TyreTemperature*` follows this and a page reading iRacing's raw telemetry
  * does not: `LFtempCM` is degrees Celsius whatever the setting says, which is why band D's tyre
- * page writes its own `°C` rather than asking here.
+ * page asks {@link bandTyreTemperatureMark} instead, and writes `°C` while it draws the raw figure.
  */
 export const temperatureMark = (): Expr => {
   const unit = temperatureUnit();
@@ -2627,6 +2660,21 @@ export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)),
 
 /** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
 export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
+
+/**
+ * The car has a headlight-flash control: iRacing's `dcHeadlightFlash`, the in-car control itself,
+ * absent on a car without one and on every other sim.
+ */
+export const hasHeadlightFlashControl = (): Expr => not(isNull(raw('dcHeadlightFlash')));
+
+/**
+ * The driver has flashed the headlights within the alert window: `changed()` over the control, which
+ * is SimHub's own clock (ADR 0009), open for `indicator.alert.durationMs` after the control last
+ * moved. Asked before anything else in an `and`, so that the window is recorded on the first frame
+ * it could open; `flags.ts` says why the order is load-bearing. iRacing publishes the flash control
+ * and no headlight state, so a flash is all that can light a headlight lamp.
+ */
+export const headlightFlashed = (): Expr => ncalc.changed(num(dsTokens.indicator.alert.durationMs), raw('dcHeadlightFlash'));
 
 /**
  * What {@link pitLimit} reads when the sim publishes no limit: a speed nothing reaches in either

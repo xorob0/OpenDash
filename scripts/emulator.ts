@@ -15,7 +15,8 @@
  *
  * The second is a second copy. Two processes writing the same shared memory make SimHub drop the
  * connection, and the symptom is a disconnection with no cause in any log. Starting refuses while
- * one is running unless it is asked to replace it.
+ * one is running unless it is asked to replace it. The other sim's emulator counts as well: it
+ * writes other memory, but it is a game SimHub can switch to, so one emulator runs at a time.
  *
  * Stopping uses the stop file rather than killing the process, because the emulator says the
  * session is over on the way out (iRacing's header status 0, Assetto Corsa's AC_OFF) and SimHub
@@ -201,13 +202,48 @@ export interface StartOptions {
   waitSeconds?: number;
 }
 
-/** Starts the sim's emulator in the interactive desktop on the named scenario. */
+/**
+ * Stops every emulator but the sim's own, or with `replace` unset refuses when one is running.
+ *
+ * Another sim's emulator does not share this one's memory, but it is a game SimHub can see: with a
+ * licence SimHub switches to whichever game it finds running, so a stray `acs.exe` left by an
+ * Assetto Corsa run can take an iRacing run's SimHub onto AC halfway through a check (#1138).
+ */
+export function stopOthers(host: Host, sim: Sim, replace = true): RunResult {
+  const said: string[] = [];
+  for (const other of SIMS) {
+    if (other === sim) continue;
+    const running = runningPid(host, other);
+    if (!running.ok) return running;
+    if (running.pid === null) continue;
+    if (!replace) {
+      return {
+        ok: false,
+        code: 1,
+        stdout: '',
+        stderr: `the ${other.label} emulator is running (pid ${running.pid}), and SimHub can switch to the game it finds running.\nStop it with \`bun run emulator stop --sim ${other.id}\`, or start with --replace.`,
+      };
+    }
+    const stopped = stop(host, other);
+    if (!stopped.ok) return stopped;
+    said.push(`${other.label} ${stopped.stdout.trim()}`);
+  }
+  return { ok: true, code: 0, stdout: said.join(', ') || 'no other emulator running', stderr: '' };
+}
+
+/**
+ * Starts the sim's emulator in the interactive desktop on the named scenario, alone: every other
+ * sim's emulator is stopped first, or with `replace` unset is a refusal like a second copy of its own.
+ */
 export function start(host: Host, opts: StartOptions): RunResult {
   const sim = opts.sim ?? IRACING;
   const known = scenarios(sim);
   if (known.length > 0 && !known.includes(opts.scenario)) {
     return { ok: false, code: 1, stdout: '', stderr: `unknown ${sim.label} scenario "${opts.scenario}"; the repository ships ${known.join(', ')}` };
   }
+
+  const others = stopOthers(host, sim, opts.replace ?? false);
+  if (!others.ok) return others;
 
   const running = runningPid(host, sim);
   if (!running.ok) {
@@ -348,7 +384,8 @@ ${SIMS.filter((s) => s !== IRACING)
   .join('\n')}
 
 Starting refuses while one is already running: two writers to the shared memory make SimHub drop
-the connection. --follow prints the per-second status line here; Ctrl-C stops the emulator on the
+the connection. It refuses too while the other sim's emulator runs, which SimHub could switch to;
+--replace stops either. --follow prints the per-second status line here; Ctrl-C stops the emulator on the
 VM and returns, which is handled by scripts/emulator.sh rather than here.
 
 An emulator plays to SimHub only while SimHub reads its game, and SimHub reads one game at a time.

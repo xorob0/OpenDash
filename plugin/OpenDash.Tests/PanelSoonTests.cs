@@ -135,7 +135,7 @@ namespace OpenDashPlugin.Tests
             ("Each LED in turn", 747, PanelPage.Leds, false),
             ("Idle sweep", 485, PanelPage.Leds, false),
             ("Engine start animation", 743, PanelPage.Leds, false),
-            ("Car data for AC, ACC and LMU", 479, PanelPage.Leds, false),
+            ("Car data for LMU", 479, PanelPage.Leds, false),
             ("Pit limiter lights", 509, PanelPage.Leds, false),
             ("RPM colour for everything", 371, PanelPage.Matrix, false),
             ("SimHub device", 363, PanelPage.Matrix, false),

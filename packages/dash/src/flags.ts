@@ -55,7 +55,7 @@ import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
 import { BLACK_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, setting, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from './contract.ts';
-import { engineStopped, hasIncidentLimit, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane, sim, type FlagCapability } from './second/values.ts';
+import { engineStopped, hasHeadlightFlashControl, hasIncidentLimit, headlightFlashed, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane, sim, type FlagCapability } from './second/values.ts';
 
 const { and, changed, concat, eq, fmt, game, gt, iff, isNull, isnull, not, num, or, prop, raw, str } = ncalc;
 
@@ -452,7 +452,7 @@ const HEADLIGHT_FLASH: CarAlert = {
   id: 'headlightFlash',
   name: 'Headlight flash',
   neutral: true,
-  when: and(changed(num(ALERT_EVENT_MS), raw('dcHeadlightFlash')), driving(), not(isNull(raw('dcHeadlightFlash')))),
+  when: and(headlightFlashed(), driving(), hasHeadlightFlashControl()),
   band: { shape: 'outlined', colour: ds.purpose.alert.p2p, label: 'FLASH' },
 };
 

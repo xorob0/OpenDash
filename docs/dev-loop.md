@@ -67,6 +67,11 @@ iRacing run after an AC one gets iRacing whatever was left selected. A SimHub fo
 the other game is refused rather than used. A recording checks the result as well: the trace's header
 carries the game SimHub said it was reading, and a recording of the wrong game is not written.
 
+The game process is the other half of it, since a licensed SimHub follows whichever game it finds
+running, and to SimHub an emulator is a game. So one emulator runs at a time. `bun run dev` and
+`bun run record` stop both before SimHub restarts, and every start of an emulator stops the other
+sim's first; `bun run emulator start` without `--replace` refuses while the other's runs instead (#1138).
+
 SimHub's AC reader needs more than the shared memory, which is why the emulator is called `acs.exe`:
 the reader looks for a process of that name, takes its folder as the game's install, and reads the
 car and the track from `content\` there every frame. The emulator carries that `content\` beside it.

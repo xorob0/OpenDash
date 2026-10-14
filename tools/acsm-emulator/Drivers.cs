@@ -27,6 +27,8 @@ namespace AcsmEmulator
         public string Type;
         public string Name;
         public bool Enabled = true;
+        /// <summary>How many times the runner has ticked it, which the selfcheck reads.</summary>
+        public long Ticks;
         public Dictionary<string, object> Params = new Dictionary<string, object>(StringComparer.Ordinal);
 
         protected double P(string key, double def) { return Json.GetDouble(Params, key, def); }

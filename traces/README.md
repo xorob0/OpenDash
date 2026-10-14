@@ -229,6 +229,14 @@ is whether the toggle is there at all, and it is there on every frame of all nin
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
 
+#582 asserts five more in each. The damage page reads `OpenDash.DamageReported`, whether the sim reports
+the car's damage at all, which the plugin answers per sim, and on a sim that does it reads
+`DataCorePlugin.GameData.CarDamage1` to `4`, the front, rear, left and right members. iRacing reports none:
+the plugin's answer is `false` on every frame of all nine, and SimHub's iRacing reader marks the four
+members not available and returns 0 for each (`docs/research/sims.md`). Both are constants, and the values
+a recording with the plugin installed will write. The next `bun run record` reads them from SimHub and the
+plugin and drops the entries.
+
 #1129 asserts four more in each, `OpenDash.YellowFlagShown`, `OpenDash.BlackFlagShown`,
 `OpenDash.WhiteFlagShown` and `OpenDash.ChequeredFlagShown`, which flag the plugin says the driver is
 being shown where SimHub's own `Flag_*` summary is wrong. Band D, the flag box, the strips and the round
@@ -236,3 +244,8 @@ faces' ring read each of them ahead of the summary it stands for. Only Le Mans U
 them; iRacing's leaves all four null so that its dashboards read what they read before, and the column is
 null on every frame of all nine: a constant, and the value a recording with the plugin installed will
 write. The next `bun run record` reads them from the plugin and drops the entries.
+
+Assetto Corsa's seven in `ac/` assert the same four. Its row leaves them null too, since ACManager's
+`Flag_*` read `Graphics.Flag`, the one flag the game shows the driver, so the column is null on every
+frame of all seven for the same reason. The next `bun run record --sim ac` reads them from the plugin and
+drops the entries.

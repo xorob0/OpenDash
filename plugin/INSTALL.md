@@ -202,7 +202,8 @@ second after the release a tap does nothing while it moves back.
 Three modules are off when you install: **Energy**, **Damage** and **Track rivals**. iRacing
 publishes no virtual energy, no damage values at all and nothing a segment-by-segment rival
 comparison could be built from, so those pages say what they cannot show rather than drawing
-zeros. Switch them on for a sim that does carry the data.
+zeros. Switch them on for a sim that does carry the data: Damage draws the car on Assetto Corsa
+and ACC.
 
 ## The pit wall
 
