@@ -1543,6 +1543,18 @@ const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), st
 export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
 /**
+ * The tank in litres whatever the driver's unit, for a figure a car fixes in litres, as the Porsche
+ * fixes its low-fuel alarm at ten (#1126). Null where no sim is running, so a caller can tell no tank
+ * from an empty one.
+ *
+ * SimHub fills `Fuel` on every sim, from the reader's own litres (`FuelLevel` on iRacing, `Physics.Fuel`
+ * on Assetto Corsa and ACC, `mFuel` on Le Mans Ultimate), and converts it to gallons on a gallons
+ * profile by {@link LITRES_TO_GALLONS}, so dividing by the same ratio gives the litres back. The
+ * unconverted figure, `FuelRaw`, is not published. iRacing's raw `FuelLevel` is the same litres on
+ * iRacing alone and null on every other sim, which is why nothing reads it.
+ */
+export const fuelLitres = (): Expr => iff(fuelInGallons(), div(game('Fuel'), num(LITRES_TO_GALLONS)), game('Fuel'));
+/**
  * How full the tank is, 0..100.
  *
  * **Not `GameData.FuelPercent`.** SimHub's game reader sets that one from the fuel the sim reports,
