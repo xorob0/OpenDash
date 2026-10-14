@@ -38,7 +38,7 @@ export default function Lights() {
           <div className={styles.column}>
             <h2 className="h3">Lit like the real car</h2>
             <p className="prose">
-              A Porsche lights like a Porsche and a Ferrari like a Ferrari. The shift points come from Car Data, an open table of measured cars. One
+              A Porsche lights like a Porsche and a Ferrari like a Ferrari. The shift points come from Car Data, an open table of cars measured in iRacing, Assetto Corsa and Assetto Corsa Competizione. One
               click on the LEDs page fetches it, and nothing about you or your car leaves your machine.
             </p>
             <Attribution className={`prose ${styles.credit}`} />
@@ -47,7 +47,7 @@ export default function Lights() {
             <h2 className="h3">Every strip, every wheel</h2>
             <p className="prose">
               Pick your strip by counting its LEDs: sides and centre. {STRIP_SHAPES.length} shapes are included, from a 3/9/3 rim to a 25-LED brow, and any
-              device SimHub drives can have one. Every shape on the grid can be wired from either end. A car without a table still gets the shift points iRacing publishes for it.
+              device SimHub drives can have one. Every shape on the grid can be wired from either end. A car without a table still lights, on the shift points iRacing publishes for it or, in another sim, on SimHub’s own.
             </p>
           </div>
         </div>

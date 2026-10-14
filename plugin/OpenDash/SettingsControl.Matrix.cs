@@ -476,7 +476,7 @@ namespace OpenDashPlugin
                 Action readCar = () =>
                 {
                     var live = plugin.Live ?? LiveStatus.None;
-                    var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.CarId) != null;
+                    var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.GameName, live.CarId) != null;
                     var count = plugin.CarLights.CarCount;
                     var tables = count > 0;
                     var missing = PanelMatrix.TablesMissing(count, plugin.CarLights.Status);

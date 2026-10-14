@@ -13,7 +13,7 @@
 // #AARRGGBB. Twelve names instead of a hundred and forty-nine.
 //
 // The fallback for every failure is the same and is already built: the strip goes back to the
-// ladder iRacing publishes. Nothing on the thread pool throws, because an unobserved exception there
+// ladder the sim publishes. Nothing on the thread pool throws, because an unobserved exception there
 // takes SimHub down on .NET Framework. Update is the one exception: it publishes no mirror and then
 // throws on, so that DataUpdate, which guards it, can say in SimHub's log what went wrong.
 using System;
@@ -30,13 +30,14 @@ namespace OpenDashPlugin
         private readonly string folder;
         private readonly object fetchLock = new object();
 
-        private volatile Dictionary<string, CarLightTable> cars = new Dictionary<string, CarLightTable>(StringComparer.Ordinal);
+        private volatile CarLightCars cars = CarLightCars.None;
         private volatile Frame frame = Frame.Dark();
         private volatile string status = "not loaded";
         private volatile string error;
         private DateTime? fetchedAt;
 
-        /// <summary>The car last looked up, so that a lookup happens on a car change and not every frame.</summary>
+        /// <summary>The game and car last looked up, so that a lookup happens on a change of either and not every frame.</summary>
+        private string lastGame;
         private string lastCarId;
         private CarLightTable lastTable;
 
@@ -46,10 +47,17 @@ namespace OpenDashPlugin
             this.folder = folder;
         }
 
-        /// <summary>How many cars are readable. Zero before the first fetch, and on a machine that never reaches it.</summary>
+        /// <summary>How many cars are readable, in every sim the tables cover. Zero before the first fetch, and on a
+        /// machine that never reaches it.</summary>
         public int CarCount
         {
             get { return cars.Count; }
+        }
+
+        /// <summary>How many cars one sim's tables hold, by the game as SimHub codes it or names it. Zero for a game they do not cover.</summary>
+        public int CarCountFor(string game)
+        {
+            return cars.CountFor(CarLightLibrary.SimFor(game));
         }
 
         /// <summary>When the tables were last fetched, or null if they never have been.</summary>
@@ -182,10 +190,10 @@ namespace OpenDashPlugin
         /// <summary>The half both share: take the folder as it now stands and say what is in it.</summary>
         private CarLightRefresh Read(CarLightRefresh fetch, DateTime nowUtc)
         {
-            Dictionary<string, CarLightTable> loaded;
+            CarLightCars loaded;
             try
             {
-                loaded = CarLightLibrary.ReadFolder(folder);
+                loaded = CarLightLibrary.ReadLibrary(folder);
             }
             catch (Exception e)
             {
@@ -197,6 +205,7 @@ namespace OpenDashPlugin
             cars = loaded;
             fetchedAt = CarLightLibrary.FetchedAt(folder);
             // The car on screen may now have a table, or may have lost one.
+            lastGame = null;
             lastCarId = null;
             lastTable = null;
 
@@ -265,11 +274,13 @@ namespace OpenDashPlugin
             return cars.Count > 0 && CarLightLibrary.IsStale(folder, nowUtc);
         }
 
-        /// <summary>The table for a car, or null when there is none. Keyed the folded way, so spelling does not matter.</summary>
-        public CarLightTable For(string carId)
+        /// <summary>
+        /// The table for a car in a game, or null when there is none. The game picks the sim's own tables
+        /// (#748), as SimHub codes it or names it; the car is keyed the folded way, so spelling does not matter.
+        /// </summary>
+        public CarLightTable For(string game, string carId)
         {
-            CarLightTable table;
-            return cars.TryGetValue(CarLightLibrary.Key(carId), out table) ? table : null;
+            return cars.For(game, carId);
         }
 
         /// <summary>
@@ -279,7 +290,8 @@ namespace OpenDashPlugin
         /// frame SimHub is already drawing — so there is no caching on RPM here, and the flash stays
         /// exact.</para>
         /// </summary>
-        public void Update(string carId, string gear, double rpm, MirrorFit fit, bool enabled, long clockMs)
+        /// <param name="game">The running game as SimHub codes it, GameData.GameName: whose tables the car is looked up in.</param>
+        public void Update(string game, string carId, string gear, double rpm, MirrorFit fit, bool enabled, long clockMs)
         {
             if (!enabled)
             {
@@ -288,11 +300,13 @@ namespace OpenDashPlugin
             }
             try
             {
-                // Looked up on a car change rather than per frame: the fold allocates and this runs at 60 Hz.
-                if (!string.Equals(carId, lastCarId, StringComparison.Ordinal))
+                // Looked up on a change of game or car rather than per frame: the fold allocates and this
+                // runs at 60 Hz. The game as well as the car, since one id may name a car in two sims.
+                if (!string.Equals(carId, lastCarId, StringComparison.Ordinal) || !string.Equals(game, lastGame, StringComparison.Ordinal))
                 {
+                    lastGame = game;
                     lastCarId = carId;
-                    lastTable = For(carId);
+                    lastTable = For(game, carId);
                 }
                 var table = lastTable;
                 frame = table == null ? Frame.Dark() : Compute(table, gear, rpm, fit, clockMs);

@@ -738,13 +738,14 @@ namespace OpenDashPlugin
         public LiveStatus Live => live;
 
         /// <summary>Whether the car in the session is one the fetched tables have measured, which is what
-        /// the LEDs page says beside the car's own rev lights. False with no car or no tables.</summary>
+        /// the LEDs page says beside the car's own rev lights. False with no car or no tables, and in a game
+        /// whose tables are not read. Looked up among the running game's own tables (#748).</summary>
         public bool LiveCarHasTable
         {
             get
             {
-                var carId = live.CarId;
-                return !string.IsNullOrEmpty(carId) && CarLights.For(carId) != null;
+                var current = live;
+                return !string.IsNullOrEmpty(current.CarId) && CarLights.For(current.GameName, current.CarId) != null;
             }
         }
 
@@ -865,7 +866,10 @@ namespace OpenDashPlugin
             {
                 var on = data != null && data.GameRunning && telemetry != null
                     && (Settings.AnyCarLadderWanted() || Settings.AnyMatrixCarLadderWanted());
+                // The game picks whose tables the car is looked up in (#748): SimHub's code for it, read
+                // from GameData rather than from telemetry, so it is there whenever a car is.
                 CarLights.Update(
+                    on ? data.GameName : null,
                     on ? telemetry.CarId : null,
                     on ? telemetry.Gear : null,
                     on ? telemetry.Rpms : 0,

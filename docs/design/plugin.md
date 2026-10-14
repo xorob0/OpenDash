@@ -378,9 +378,13 @@ migration; OpenDash has no store, since a setting is a SimHub property.
   after the Full-strip spotter, on every shape with a TC or an ABS lamp, and is on by default. With
   it on, the TC lamp also lights on the plugin's wheelspin estimate and the ABS lamp on its lock-up
   estimate (`PanelLeds.InferSlipTitle`; ADR 0018, amended 2026-10-04).
-- **The car line says nothing outside iRacing**, because the car data the plugin reads is
-  iRacing's. When nothing was ever downloaded it says "Car Data is not downloaded yet. Download it
-  under Every strip." (`PanelLeds.CarTablesMissing`).
+- **The car line speaks in iRacing, Assetto Corsa and ACC alone**, because those are the sims
+  whose car data the plugin reads (`CarLightLibrary.Sims`, #748). The archive carries ten games;
+  each of the three is kept in a folder of its own and a car is looked up only among its own
+  sim's cars. LMU's folder is left in the archive, since its files key a car by team and one key
+  can name two cars, so in LMU and every other game the line says nothing. When nothing was ever
+  downloaded it says "Car Data is not downloaded yet. Download it under Every strip."
+  (`PanelLeds.CarTablesMissing`).
 - **A failed download beside a working copy** says "Could not download a newer copy." and the count
   and age of the copy that still works, as voice.md's "Could not reach GitHub. You have
   0.3.0-rc.4." does. With no copy on disk it is `PanelLights.CarTablesDownloadFailed`.
@@ -571,7 +575,7 @@ registry, in the order the pages draw them, and `PanelSoonTests` holds it to thi
 | LEDs | Each LED in turn | [#747](https://github.com/xorob0/OpenDash/issues/747) |
 | LEDs | Idle sweep | [#485](https://github.com/xorob0/OpenDash/issues/485) |
 | LEDs | Engine start animation | [#743](https://github.com/xorob0/OpenDash/issues/743) |
-| LEDs | Car data for AC, ACC and LMU | [#479](https://github.com/xorob0/OpenDash/issues/479) |
+| LEDs | Car data for LMU | [#479](https://github.com/xorob0/OpenDash/issues/479) |
 | LEDs | Pit limiter lights | [#509](https://github.com/xorob0/OpenDash/issues/509) |
 | Matrix | RPM colour for everything | [#371](https://github.com/xorob0/OpenDash/issues/371) |
 | Matrix | SimHub device | [#363](https://github.com/xorob0/OpenDash/issues/363) |

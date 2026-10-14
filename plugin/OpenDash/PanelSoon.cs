@@ -91,7 +91,7 @@ namespace OpenDashPlugin
         public static readonly SoonItem EachLedInTurn = new SoonItem(747, "Each LED in turn", PanelPage.Leds);
         public static readonly SoonItem IdleSweep = new SoonItem(485, "Idle sweep", PanelPage.Leds);
         public static readonly SoonItem EngineStartAnimation = new SoonItem(743, "Engine start animation", PanelPage.Leds);
-        public static readonly SoonItem CarDataForAcAccLmu = new SoonItem(479, "Car data for AC, ACC and LMU", PanelPage.Leds);
+        public static readonly SoonItem CarDataForLmu = new SoonItem(479, "Car data for LMU", PanelPage.Leds);
         public static readonly SoonItem PitLimiterLights = new SoonItem(509, "Pit limiter lights", PanelPage.Leds);
 
         // Matrix.
@@ -131,7 +131,7 @@ namespace OpenDashPlugin
         {
             RevFill, SpotterAtRevBarEnds, PitPageInPitLane, PopUps, DeltaEdgeLights, ScreenCare, Fit, CircleTracker, Launch,
             FlagsScreen, YourDisplays, ZonesInsteadOfCards,
-            EachLedInTurn, IdleSweep, EngineStartAnimation, CarDataForAcAccLmu, PitLimiterLights,
+            EachLedInTurn, IdleSweep, EngineStartAnimation, CarDataForLmu, PitLimiterLights,
             RpmColourForEverything, SimHubDevice, PriorityOrder,
             RealHardware,
             RigTest, AlertDismissal,
