@@ -228,3 +228,12 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+That recording was 2026-10-14, for #555, whose track page reads `OpenDash.TrackMapRecorded`: whether
+SimHub holds an outline of the track the car is on. It is `true` on every frame of all nine, because
+the test VM has lapped the emulator's track before and SimHub keeps an outline per track and
+layout between sessions, so like the lap history it is the rig's state rather than the scenario's,
+and the `false` a fresh install shows before its first whole lap is in no trace. `CarHasPitLimiter`
+was `true` as asserted and no entry is asserted in any of the nine. The raw
+`Telemetry.FuelLevel` column is gone, since #1126 moved the Porsche's low-fuel alarm onto the tank
+SimHub fills on every sim and nothing reads the raw one any more.
