@@ -296,11 +296,12 @@ namespace OpenDashPlugin.Tests
         [BuildOutputFact]
         public void The_real_build_output_is_OpenDash_at_the_repository_version()
         {
-            using (var zip = ZipFile.OpenRead(RepoPaths.BuildPackage()))
+            var path = BuiltPackage("OpenDash.simhubdash");
+            using (var zip = ZipFile.OpenRead(path))
             {
                 Assert.Equal("OpenDash", PackageExtractor.PackageFolderName(zip));
             }
-            using (var package = File.OpenRead(RepoPaths.BuildPackage()))
+            using (var package = File.OpenRead(path))
             {
                 string folder;
                 var built = PackageExtractor.ReadPackageVersion(package, out folder);
@@ -310,7 +311,7 @@ namespace OpenDashPlugin.Tests
                 // A bare Assert.Equal names neither the cause nor the remedy, and the misreading costs a diagnosis
                 // every time.
                 Assert.True(expected == built,
-                    "build/OpenDash.simhubdash carries version " + built + ", whereas VERSION says " + expected +
+                    path + " carries version " + built + ", whereas VERSION says " + expected +
                     ". That package is build output which a branch switch does not refresh, so the likely cause is " +
                     "a stale build rather than a regression: run `bun run build` and try again. Should the two " +
                     "still disagree after a fresh build, then the version written into the package is genuinely wrong.");
@@ -891,11 +892,10 @@ namespace OpenDashPlugin.Tests
             // the generator actually emits, which on 2026-09-13 held 716 references across four files.
             // ADR 0017 rests on that rewrite being total, so it is checked on the real thing rather
             // than only on a package shaped like it.
-            var package = Path.Combine(RepoPaths.BuildOutput(), "OpenDash 1280x480.simhubdash");
-            // Asserted rather than returned on. BuildOutputFact skips this class when there is no build
+            // Asserted rather than returned on. BuildOutputFact skips this test when there is no build
             // at all, but it looks at OpenDash.simhubdash, and this test reads a different package; a
             // quiet return would have let the whole case pass having checked nothing.
-            Assert.True(File.Exists(package), package + " is missing although the build output is present; run `bun run build`");
+            var package = BuiltPackage("OpenDash 1280x480.simhubdash");
 
             int before;
             string[] sidecars;
@@ -947,6 +947,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(before, after);
         }
 
+        /// <summary>A package the dash build wrote, where `RepoPaths.BuiltFile` finds it, or a failure that names
+        /// both folders it looked in. A BuildOutputFact runs on CI whether or not the build is there, so this
+        /// is what turns an artifact that never arrived into a red test rather than a crash on a null path.</summary>
+        private static string BuiltPackage(string name)
+        {
+            var path = RepoPaths.BuiltFile(name);
+            Assert.True(path != null,
+                name + " is in neither " + RepoPaths.BuildOutput() + " nor " + RepoPaths.EmbeddedResources() +
+                (RepoPaths.OnCI
+                    ? ". CI downloads the dash job's packages into Resources/ before the tests, so this is that step having gone wrong (#909)."
+                    : "; run `bun run build --all-themes`."));
+            return path;
+        }
+
         private static int Count(string text, string token)
         {
             var count = 0;
@@ -960,20 +974,24 @@ namespace OpenDashPlugin.Tests
         }
     }
 
-    /// <summary>A fact that needs build/OpenDash.simhubdash: reported as skipped, not failed, until `bun run build` has run.</summary>
+    /// <summary>A fact that needs a built package, in build/ or in Resources/: reported as skipped, not failed,
+    /// on a checkout that has not built. On CI it always runs, because the dash job has built the packages
+    /// and the plugin job has put them in Resources/ before the tests start, so a package missing there is
+    /// the pipeline having gone wrong. Until #909 it skipped on CI too, as it looked only in build/, which
+    /// the plugin job never creates, and the two tests that read a real package had never run there.</summary>
     public sealed class BuildOutputFactAttribute : FactAttribute
     {
         public BuildOutputFactAttribute()
         {
+            if (RepoPaths.OnCI) return;
             try
             {
-                if (!File.Exists(RepoPaths.BuildPackage())) Skip = "build/OpenDash.simhubdash is absent; run `bun run build` first.";
+                if (RepoPaths.BuildPackage() == null) Skip = "OpenDash.simhubdash is in neither build/ nor plugin/OpenDash/Resources/; run `bun run build` first.";
             }
             catch (Exception ex)
             {
                 Skip = "The dash build output cannot be located: " + ex.Message;
             }
         }
-
     }
 }

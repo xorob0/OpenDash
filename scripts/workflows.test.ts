@@ -65,6 +65,19 @@ describe('the dash job', () => {
     expect(upload).toMatch(/^- name: Upload the test report\n\s+if: \$\{\{ !cancelled\(\) \}\}\n\s+uses: actions\/upload-artifact@v4/);
     expect(upload).toContain(`path: \${{ runner.temp }}/${outfile}`);
   });
+
+  // The tests that read build/ fail on CI when it is missing (scripts/buildOutput.ts), which holds
+  // only if the build has run by then. Tested first, they were skipped or passed having asserted
+  // nothing on every run, and the plugin job's two real-package tests never ran at all (#909).
+  test('builds every theme before it tests, in CI and in a release', () => {
+    for (const [name, workflow] of [['ci.yml', ci], ['release.yml', release]] as const) {
+      const dash = job(workflow, 'dash');
+      const build = dash.indexOf('run: bun run build --all-themes');
+      const test = dash.search(/run: bun test\b/);
+      expect([name, build > 0, test > 0]).toEqual([name, true, true]);
+      expect([name, build < test]).toEqual([name, true]);
+    }
+  });
 });
 
 describe('the development tools', () => {

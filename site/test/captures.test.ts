@@ -17,6 +17,7 @@ import path from 'node:path';
 import { MODULE_CATALOGUE } from '../../packages/dash/src/contract.ts';
 import { pageFile, packageFile, provenanceNote, readCaptures, staleCaptures, upgradeCaptures, type CapturesSidecar } from '../lib/captures.ts';
 import { onSite, readBuildManifest, type Manifest } from '../scripts/content.ts';
+import { built, withBuild } from '../../scripts/buildOutput.ts';
 
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const shots = path.resolve(import.meta.dir, '..', 'public', 'shots');
@@ -95,8 +96,11 @@ describe('every page is photographed', () => {
 describe('every package is photographed', () => {
   const packages = manifest ? manifest.packages.filter(onSite) : [];
 
-  test.if(manifest === null)('skipped: build/manifest.json is absent, run bun run build at the repository root', () => {
-    expect(manifest).toBeNull();
+  // The packages below come from the manifest, so without one there are none to iterate and the
+  // describe would be silently empty. This reports a skip instead when the tree has not built, and
+  // fails on CI, which builds first (#909).
+  test.if(withBuild(manifest !== null))('are the packages build/manifest.json lists for the site', () => {
+    expect(built(manifest).packages.filter(onSite).length).toBeGreaterThan(0);
   });
 
   test.each(packages.map((p) => [p.folder] as const))('%s', (folder) => {
