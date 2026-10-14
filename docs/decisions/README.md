@@ -27,6 +27,7 @@ the thing that is wrong when the two disagree.
 | 0017 | [A screen is an instance](0017-a-screen-is-an-instance.md) | A rig is any number of named screens in any mix of sizes; the namespace is allocated once and the installer rewrites it into the copy. Amends 0003 and narrows 0011 |
 | 0018 | [The car's own lights, from a table OpenDash does not carry](0018-the-cars-own-lights.md) | The pattern and the colours are mirrored too, from a table the plugin fetches and OpenDash never ships; the style is now a switch per strip. Amends 0014, reopens 0009, extends 0012 |
 | 0020 | [The panel draws what it configures](0020-the-panel-draws-what-it-configures.md) | The Screens page hosts SimHub's own renderer, one screen at a time, so the preview is the dashboard rather than a picture of one; the Rig page draws schematics only. Amends 0003, leaves 0001 standing, owes 0008 no fidelity check |
+| 0021 | [A dashboard never names a game](0021-a-dashboard-never-names-a-game.md) | Where a reading differs by sim and no `isnull()` can tell, the plugin publishes a capability named for the question, from a table with a row per game; every dashboard reads it with iRacing's answer as the fallback. Applies 0009 |
 
 ## Reserved
 

@@ -199,6 +199,18 @@ except on the frame on which a car crosses the line and the sim reorders it, and
 can name its neighbour's car; the next frame puts it right. A list a lap behind is the defect; a row
 wrong for a frame at a line crossing is the price of mending it, and it is accepted here.
 
+### What the running sim can report
+
+Added 2026-10-14 for #1101, and recorded in full in [ADR 0021](0021-a-dashboard-never-names-a-game.md).
+1.0 claims three sims beside iRacing, and a few questions a dashboard asks have an answer that differs by
+sim in a way no expression can see: whether the car has a pit limiter, whether it is on, whether the sim
+reports damage, and whether the driver is in the car. Answering them in the expression would mean naming
+the game, which the author turned down, so the plugin answers them from a table with a row per game and
+publishes one property per question. It is this record's rule applied: a feature needs each answer,
+SimHub publishes the game's code and nothing that says what the game can report, and every dashboard
+reads each answer with iRacing's own reading as its fallback, so a package with no plugin draws what it
+drew before.
+
 ## Where the line falls in practice
 
 An expression is not a good place for arithmetic that is long, shared between many items, or

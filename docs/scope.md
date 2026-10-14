@@ -224,6 +224,9 @@ attaches every setting as a SimHub property under the `OpenDash` prefix, and dra
 page in SimHub's left menu. It does not render, and it computes only what a feature needs and nothing
 else can provide; [ADR 0003](decisions/0003-plugin-settings-through-properties.md) is why it started
 inert, and [ADR 0009](decisions/0009-does-the-plugin-compute.md) is the rule for when it may compute.
+It also says what the running sim can report where that differs by sim and an expression cannot tell,
+such as whether the car has a pit limiter, so that no dashboard names a game;
+[ADR 0021](decisions/0021-a-dashboard-never-names-a-game.md) is the rule.
 
 The Screens page does now show the screen it is configuring, and that is not a reversal of the sentence
 above. The panel hosts SimHub's own renderer, handed the `.djson` under `DashTemplates` that the

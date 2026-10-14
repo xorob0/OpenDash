@@ -702,6 +702,32 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What the running sim can report on the last frame SimHub finished: what the
+        /// <see cref="Contract.Capabilities"/> publish. Interned and replaced whole, so a reader sees one frame's
+        /// answers or the next one's, and a frame allocates nothing for it. See SimCapabilities.cs and ADR 0021.
+        /// </summary>
+        private volatile SimReport simReport = SimReport.Unknown;
+
+        /// <summary>SimHub's property reader, made once rather than on every frame.</summary>
+        private Func<string, object> readProperty;
+
+        /// <summary>
+        /// Fills <see cref="simReport"/> from the running game's row of the table, or empties it with no game
+        /// running, so that every dashboard falls back on iRacing's own answer exactly as it does with no plugin.
+        /// </summary>
+        private void UpdateSimReport(PluginManager pluginManager, GameData data)
+        {
+            if (data == null || !data.GameRunning || data.NewData == null || pluginManager == null)
+            {
+                simReport = SimReport.Unknown;
+                return;
+            }
+            var read = readProperty;
+            if (read == null) readProperty = read = pluginManager.GetPropertyValue;
+            simReport = SimCapabilities.Read(data.GameName, read);
+        }
+
+        /// <summary>
         /// The game, car, track and session SimHub last reported, for the settings panel. Written on the
         /// data thread only when one of them changed, and read on the interface thread as one reference.
         /// </summary>
@@ -775,6 +801,9 @@ namespace OpenDashPlugin
 
                 // And the live place, from the same finished frame and before anything below can throw.
                 UpdateLivePosition(data);
+
+                // And what the sim can report, from the same frame and for the same reason. #1101.
+                UpdateSimReport(pluginManager, data);
 
                 // What the panel names, compared before anything is built and replaced only when
                 // something in it moved, so a frame in which nothing did allocates nothing for the
@@ -1084,6 +1113,13 @@ namespace OpenDashPlugin
                         return race == null ? null : race.Read(name, at);
                     });
                 }
+            }
+            // And what the running sim can report, filled by DataUpdate from the frame SimHub has finished and null
+            // with no game running or for a game SimCapabilities.cs has no row for. Not a setting: see ADR 0021. #1101.
+            foreach (var capability in Contract.Capabilities)
+            {
+                var name = capability;
+                this.AttachDelegate(name, () => simReport.Read(name));
             }
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
