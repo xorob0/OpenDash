@@ -5,7 +5,9 @@
 // second; logging none, which is what the plugin did until #865, left a strip drawing the published
 // ladder with nothing anywhere to say why. So the first failure is logged whole, with its stack, a
 // failure that keeps happening is counted and summed up once a minute, and the frame that completes
-// again says so once.
+// again says so once. A cause the log has not yet been given whole is given whole when its line comes
+// round, so a part that fails again half an hour later for another reason leaves that reason's stack
+// as well.
 //
 // One of these per part of the frame, so that the class best lap failing is not reported as the lights
 // failing, and so that a fault in one part is counted without silencing another's.
@@ -54,6 +56,9 @@ namespace OpenDashPlugin
         /// <summary>When the last line about failing was handed out, or null before the first.</summary>
         private long? lastLineMs;
 
+        /// <summary>The cause the log was last given whole, as type and message, or null before the first.</summary>
+        private string loggedWhole;
+
         /// <summary>Failures since the last line about failing, which the next one reports.</summary>
         private long unreported;
 
@@ -89,16 +94,26 @@ namespace OpenDashPlugin
             if (lastLineMs.HasValue && nowMs - lastLineMs.Value < IntervalMs) return null;
 
             FaultLine line;
+            var cause = Describe(error);
             if (!lastLineMs.HasValue)
             {
                 // The first is the one worth reading, so it carries the whole exception, stack and all.
                 line = new FaultLine(FaultLevel.Error, what + " failed, so " + fallback + " until it recovers. " +
                     "A failure that repeats is counted and logged once a minute: " + error);
+                loggedWhole = cause;
+            }
+            else if (cause != loggedWhole)
+            {
+                // A cause the log has only been told by name, or not at all: its stack is worth reading too.
+                line = new FaultLine(FaultLevel.Error, what + " failed " + Times(unreported) +
+                    " since the last line about it, most recently for a reason not logged before, so " + fallback +
+                    " until it recovers: " + error);
+                loggedWhole = cause;
             }
             else
             {
                 line = new FaultLine(FaultLevel.Warn, what + " failed " + Times(unreported) +
-                    " since the last line about it, most recently with " + Describe(error));
+                    " since the last line about it, most recently with " + cause);
             }
             lastLineMs = nowMs;
             unreported = 0;
@@ -130,7 +145,9 @@ namespace OpenDashPlugin
 
         private static string Times(long count)
         {
-            return count == 1 ? "once" : count + " times";
+            if (count == 1) return "once";
+            if (count == 2) return "twice";
+            return count + " times";
         }
 
         private static string Frames(long count)

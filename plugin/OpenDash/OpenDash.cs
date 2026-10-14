@@ -836,8 +836,10 @@ namespace OpenDashPlugin
             catch (Exception e)
             {
                 // Update clears its own frame when it is what threw. This is for a throw before it was
-                // reached, which would otherwise leave the last frame published as well.
-                CarLights.Clear();
+                // reached, which would otherwise leave the last frame published as well. The field and not
+                // the getter, so that a service that could not be built is not built again here, where a
+                // throw would leave DataUpdate for SimHub's loop; one never built has published nothing.
+                carLights?.Clear();
                 Report(carLightsFault, e, nowMs);
             }
 

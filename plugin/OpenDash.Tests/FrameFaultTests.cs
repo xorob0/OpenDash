@@ -117,7 +117,56 @@ namespace OpenDashPlugin.Tests
             // And the next line about failing says it, a minute after the last.
             var later = fault.Failed(new InvalidOperationException("third"), FrameFault.IntervalMs);
             Assert.NotNull(later);
-            Assert.StartsWith("Computing the car's own lights failed 2 times since the last line about it", later.Text);
+            Assert.StartsWith("Computing the car's own lights failed twice since the last line about it", later.Text);
+        }
+
+        [Fact]
+        public void A_fault_that_comes_back_later_for_another_reason_is_logged_whole_again()
+        {
+            var fault = Lights();
+            var first = fault.Failed(new KeyNotFoundException("The given key '6' was not present"), 0);
+            Assert.Equal(FaultLevel.Error, first.Level);
+            Assert.NotNull(fault.Succeeded());
+
+            // Half an hour later, for a reason the log has never been given: an Error with the whole exception.
+            var other = Thrown(new InvalidOperationException("The table disagrees with itself"));
+            var line = fault.Failed(other, 30 * 60 * 1000);
+            Assert.Equal(FaultLevel.Error, line.Level);
+            Assert.Equal("Computing the car's own lights failed once since the last line about it, most recently for a reason " +
+                "not logged before, so the strips fall back to the ladder the sim publishes until it recovers: " + other, line.Text);
+            // The stack, which a line naming only the type and message would have dropped.
+            Assert.Contains(nameof(Thrown), line.Text);
+
+            // The same reason again after another minute is a Warn by name, its stack being in the log already.
+            var again = fault.Failed(new InvalidOperationException("The table disagrees with itself"), 31 * 60 * 1000);
+            Assert.Equal(FaultLevel.Warn, again.Level);
+            Assert.EndsWith("most recently with InvalidOperationException: The table disagrees with itself", again.Text);
+        }
+
+        [Fact]
+        public void The_same_fault_coming_back_after_a_recovery_is_named_rather_than_logged_whole_again()
+        {
+            var fault = Lights();
+            fault.Failed(new KeyNotFoundException("The given key '6' was not present"), 0);
+            fault.Succeeded();
+
+            var line = fault.Failed(new KeyNotFoundException("The given key '6' was not present"), 30 * 60 * 1000);
+            Assert.Equal(FaultLevel.Warn, line.Level);
+            Assert.Equal("Computing the car's own lights failed once since the last line about it, " +
+                "most recently with KeyNotFoundException: The given key '6' was not present", line.Text);
+        }
+
+        /// <summary>An exception that has been thrown, so that it carries a stack trace naming this method.</summary>
+        private static Exception Thrown(Exception error)
+        {
+            try
+            {
+                throw error;
+            }
+            catch (Exception e)
+            {
+                return e;
+            }
         }
     }
 }
