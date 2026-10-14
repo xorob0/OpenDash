@@ -118,6 +118,12 @@ namespace OpenDashPlugin
         /// <summary>AC_LIVE in Assetto Corsa's and ACC's AC_STATUS: a session running with the player driving.</summary>
         public const int AcLive = 2;
 
+        /// <summary>PSS_STOPPED in rFactor 2's and Le Mans Ultimate's mPitState: the car stopped at its box.</summary>
+        public const int PitStateStopped = 3;
+
+        /// <summary>The speed under which SimHub counts an opponent of Le Mans Ultimate as stopped in its box, in km/h.</summary>
+        public const double StoppedKmh = 5.0;
+
         /// <summary>How one sim answers one question, given a way to read a property by its full name.</summary>
         public delegate bool? Answer(Func<string, object> property);
 
@@ -128,6 +134,12 @@ namespace OpenDashPlugin
             public Answer PitLimiterOn { get; set; }
             public Answer DamageReported { get; set; }
             public Answer DriverInCar { get; set; }
+
+            /// <summary>
+            /// Whether the car stands in its pit box, which is what PitStopClock times. Left null where SimHub's
+            /// own IsInPit is the box, so its timer stands; answered where IsInPit is something else. #1130.
+            /// </summary>
+            public Answer InPitBox { get; set; }
         }
 
         /// <summary>The same answer for every car on every frame.</summary>
@@ -194,6 +206,19 @@ namespace OpenDashPlugin
                 DamageReported = Always(false),
                 // mInRealtime: in the car rather than in the monitor.
                 DriverInCar = Truth(GameRawData + "LMUNativeTelemetry.scoring.scoringInfo.mInRealtime"),
+                // LMUManager.GD_IsInPit is mInPits, the whole lane, so SimHub's timer counts the lane. This is
+                // the test SimHub itself puts to an opponent (IsCarInPit): in the garage, or in the lane with the
+                // pit state stopped and under 5 km/h. #1130.
+                InPitBox = property =>
+                {
+                    var garage = Truthy(property(GameRawData + "PlayerNativeScoring.mInGarageStall"));
+                    var lane = Truthy(property(GameRawData + "PlayerNativeScoring.mInPits"));
+                    var state = Number(property(GameRawData + "PlayerNativeScoring.mPitState"));
+                    var speed = Real(property(GameData + "SpeedKmh"));
+                    if (garage == true) return true;
+                    if (!garage.HasValue || !lane.HasValue || !state.HasValue || !speed.HasValue) return null;
+                    return lane.Value && state.Value == PitStateStopped && speed.Value < StoppedKmh;
+                },
             },
         };
 
@@ -212,6 +237,18 @@ namespace OpenDashPlugin
             if (gameName == null || property == null || !Table.TryGetValue(gameName, out row)) return SimReport.Unknown;
             return SimReport.Of(Ask(row.CarHasPitLimiter, property), Ask(row.PitLimiterOn, property),
                 Ask(row.DamageReported, property), Ask(row.DriverInCar, property));
+        }
+
+        /// <summary>
+        /// Whether the car stands in its pit box on this frame of <paramref name="gameName"/>, for
+        /// <see cref="PitStopClock"/>: null for a game whose row leaves it to SimHub's own timer, or has no row,
+        /// and wherever the answer cannot be read. Never throws.
+        /// </summary>
+        public static bool? InPitBox(string gameName, Func<string, object> property)
+        {
+            Row row;
+            if (gameName == null || property == null || !Table.TryGetValue(gameName, out row)) return null;
+            return Ask(row.InPitBox, property);
         }
 
         private static bool? Ask(Answer answer, Func<string, object> property)
@@ -250,7 +287,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A value as a number: an enum by its value, a number as it is, a string parsed; null otherwise.</summary>
-        private static double? Real(object value)
+        public static double? Real(object value)
         {
             if (value == null || value is bool) return null;
             try

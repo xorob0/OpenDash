@@ -153,6 +153,24 @@ namespace OpenDashPlugin
         /// <summary>Every capability, in the order they are attached. ADR 0021.</summary>
         public static readonly string[] Capabilities = { CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar };
 
+        /// <summary>
+        /// The seconds the car has stood in its pit box on this stop, 0 outside it, timed by PitStopClock.cs on a
+        /// sim whose own pit timer counts something else; null everywhere else. #1130.
+        /// </summary>
+        /// <remarks>
+        /// SimHub times a stop from its IsInPit, which is the box on iRacing, Assetto Corsa and ACC and the whole
+        /// pit lane on Le Mans Ultimate. Not a capability, being a reading, but published the way one is: null
+        /// where SimHub's own timer is the box, so a dashboard reads it with SimHub's IsInPitSince as the
+        /// isnull() fallback and iRacing reads what it read before.
+        /// </remarks>
+        public const string PitStopSeconds = "PitStopSeconds";
+
+        /// <summary>How long the last stop lasted, the box alone. See <see cref="PitStopSeconds"/>.</summary>
+        public const string LastPitStopSeconds = "LastPitStopSeconds";
+
+        /// <summary>Both, in the order they are attached. #1130.</summary>
+        public static readonly string[] PitStopTimes = { PitStopSeconds, LastPitStopSeconds };
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1577,6 +1595,9 @@ namespace OpenDashPlugin
             // And what the running sim can report, appended for the same reason, published rather than chosen
             // and shared because every screen that asks one of the questions asks it of the same sim. #1101.
             foreach (var capability in Capabilities) yield return capability;
+            // And the pit stop as the plugin times it, appended for the same reason, published rather than chosen
+            // and shared because every screen that draws the stop's time draws the same stop. #1130.
+            foreach (var time in PitStopTimes) yield return time;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

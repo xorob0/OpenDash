@@ -728,6 +728,26 @@ namespace OpenDashPlugin
             simReport = SimCapabilities.Read(data.GameName, read);
         }
 
+        /// <summary>The stop timed in the pit box, where the running sim's own timer counts something else. #1130.</summary>
+        private readonly PitStopClock pitStop = new PitStopClock();
+
+        /// <summary>
+        /// One frame of the pit box clock, by the running sim's row of SimCapabilities.cs: a game whose row leaves
+        /// the box to SimHub, and a frame with no game running, publish null. Wall time, as SimHub's own timer is
+        /// on a reader that stamps no packet time, which Le Mans Ultimate's does not.
+        /// </summary>
+        private void UpdatePitStop(PluginManager pluginManager, GameData data)
+        {
+            if (data == null || !data.GameRunning || data.NewData == null || pluginManager == null)
+            {
+                pitStop.Reset();
+                return;
+            }
+            var read = readProperty;
+            if (read == null) readProperty = read = pluginManager.GetPropertyValue;
+            pitStop.Update(SimCapabilities.InPitBox(data.GameName, read), DateTime.UtcNow);
+        }
+
         /// <summary>
         /// The game, car, track and session SimHub last reported, for the settings panel. Written on the
         /// data thread only when one of them changed, and read on the interface thread as one reference.
@@ -838,6 +858,19 @@ namespace OpenDashPlugin
                 Report(simReportFault, e, nowMs);
             }
 
+            // And the stop timed in the pit box, on a sim whose own timer counts the lane (#1130). A failure
+            // empties it, which every dashboard reads as no plugin and answers with SimHub's own timer.
+            try
+            {
+                UpdatePitStop(pluginManager, data);
+                Report(pitStopFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                pitStop.Reset();
+                Report(pitStopFault, e, nowMs);
+            }
+
             // What the panel names, compared before anything is built and replaced only when
             // something in it moved, so a frame in which nothing did allocates nothing for the
             // panel's copy and the interface thread is not handed a new object sixty times a second.
@@ -914,6 +947,7 @@ namespace OpenDashPlugin
         private readonly FrameFault classBestFault = new FrameFault("Reading the class best lap", "dashboards show none");
         private readonly FrameFault livePositionFault = new FrameFault("Ranking the live positions", "dashboards order the field as the sim does");
         private readonly FrameFault simReportFault = new FrameFault("Reading what the running sim can report", "dashboards fall back on iRacing's own answers");
+        private readonly FrameFault pitStopFault = new FrameFault("Timing the stop in the pit box", "dashboards read SimHub's own pit timer");
         private readonly FrameFault liveCardFault = new FrameFault("Naming the game, car and track for the settings panel", "the panel's live card keeps what it last named");
         private readonly FrameFault carLightsFault = new FrameFault("Computing the car's own lights", "the strips and rev bars fall back to the ladder the sim publishes");
         private readonly FrameFault slipFault = new FrameFault("Estimating wheelspin and lock-up", "the slip lamps stay dark");
@@ -1216,6 +1250,9 @@ namespace OpenDashPlugin
                 var name = capability;
                 this.AttachDelegate(name, () => simReport.Read(name));
             }
+            // And the stop timed in the pit box, null where SimHub's own timer is the box. #1130.
+            this.AttachDelegate(Contract.PitStopSeconds, () => pitStop.PitStopSeconds);
+            this.AttachDelegate(Contract.LastPitStopSeconds, () => pitStop.LastPitStopSeconds);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

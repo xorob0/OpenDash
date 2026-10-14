@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { CAR_HAS_PIT_LIMITER, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting } from '../contract.ts';
+import { CAR_HAS_PIT_LIMITER, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, setting } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2661,8 +2661,18 @@ export const overPitLimit = (): Expr => and(gt(pitLimit(), num(0)), gt(speed(), 
  */
 export const pitSpeeding = (): Expr => and(isInPitLane(), overPitLimit());
 
-export const inPitSeconds = (): Expr => isnull(game('IsInPitSince'), num(0));
-export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), num(0));
+/**
+ * The seconds the car has stood in its pit box on this stop, 0 outside it.
+ *
+ * SimHub's `IsInPitSince`, which runs while its `IsInPit` holds: the box on iRacing, Assetto Corsa and
+ * ACC, and the whole pit lane on Le Mans Ultimate, where the pit view drew the time from the entry line
+ * and a 30 s stop read nearer a minute. The plugin times the box there and publishes it, and is read
+ * first; it publishes null where SimHub's own is the box, so iRacing reads what it always read. #1130.
+ */
+export const inPitSeconds = (): Expr => setting.pitStopTime(PIT_STOP_SECONDS, isnull(game('IsInPitSince'), num(0)));
+
+/** How long the last stop lasted, the box alone: SimHub's `LastPitStopDuration`, read as {@link inPitSeconds} is. #1130. */
+export const lastPitDuration = (): Expr => setting.pitStopTime(LAST_PIT_STOP_SECONDS, isnull(game('LastPitStopDuration'), num(0)));
 
 /**
  * The words the catalogue writes beside `Tyres`, longest first is not the order: this is the set,

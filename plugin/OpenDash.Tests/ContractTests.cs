@@ -86,7 +86,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + 4 * LivePosition.Slots + Contract.Capabilities.Length + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + 4 * LivePosition.Slots + Contract.Capabilities.Length + Contract.PitStopTimes.Length + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -129,8 +129,9 @@ namespace OpenDashPlugin.Tests
             // And 406 before the plugin had to publish the race as it stands on the road, a place and a row in
             // each of two counts for sixty-four cars, because iRacing moves it only at the line (#1063). And 662
             // before the plugin had to say what the running sim can report, four answers that let no dashboard
-            // name a game (#1101).
-            Assert.Equal(666, names.Count);
+            // name a game (#1101). And 666 before the plugin timed the stop in the pit box on a sim whose own timer
+            // counts the lane (#1130).
+            Assert.Equal(668, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -190,7 +191,10 @@ namespace OpenDashPlugin.Tests
             // sim by every screen. #1101.
             Assert.Equal("CarHasPitLimiter", names[28 + 4 * LivePosition.Slots]);
             Assert.Equal("DriverInCar", names[28 + 4 * LivePosition.Slots + 3]);
-            Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length, Contract.SharedPropertyNames().Count());
+            // And the pit stop as the plugin times it after that. #1130.
+            Assert.Equal("PitStopSeconds", names[28 + 4 * LivePosition.Slots + Contract.Capabilities.Length]);
+            Assert.Equal("LastPitStopSeconds", names[28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1]);
+            Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + Contract.PitStopTimes.Length, Contract.SharedPropertyNames().Count());
             Assert.True(Contract.DefaultFlagsInPitLane);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a

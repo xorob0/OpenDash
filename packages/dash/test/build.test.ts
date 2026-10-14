@@ -7,7 +7,7 @@ import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts'
 import { sweep } from '../src/build.ts';
 import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV,
   CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP,
-  FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PORSCHE_CREST, PROPERTY_PREFIX, CAPABILITIES, liveSettingNames, themeSettingNames, zoneProperties, declaredProperties, defaultCardForSlot,
+  FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PORSCHE_CREST, PROPERTY_PREFIX, CAPABILITIES, PIT_STOP_TIMES, liveSettingNames, themeSettingNames, zoneProperties, declaredProperties, defaultCardForSlot,
   secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { IDLE_SCREEN_NAME } from '../src/idle.ts';
@@ -117,10 +117,12 @@ describe('contract', () => {
     // of the expressions can see: `COMPUTED_PROPERTIES` in properties.ts lists them instead. #1063.
     // What the running sim can report is shared and unread here: only the zone faces' pit family asks
     // whether the car has a limiter, and the other three wait on the tickets that move their bindings. #1101.
+    // The pit stop as the plugin times it is shared and unread here too: pit view draws it, and neither of
+    // these packages carries pit view. #1130.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
     const unread = new Set([
       ...zoneProperties(),
-      ...[DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP, PORSCHE_CREST, ...themeSettingNames(), ...liveSettingNames(), ...CAPABILITIES].map((n) => `${PROPERTY_PREFIX}.${n}`),
+      ...[DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP, PORSCHE_CREST, ...themeSettingNames(), ...liveSettingNames(), ...CAPABILITIES, ...PIT_STOP_TIMES].map((n) => `${PROPERTY_PREFIX}.${n}`),
     ]);
     const zoneProps = new Set(zoneProperties());
     const carBar = [CAR_LADDER_STAGE, CAR_LADDER_OVER_REV, CAR_LADDER_LIT, CAR_LADDER_LAMPS, CAR_LADDER_FLASHES, CAR_LADDER_CHOSEN].map((n) => `${PROPERTY_PREFIX}.${n}`);

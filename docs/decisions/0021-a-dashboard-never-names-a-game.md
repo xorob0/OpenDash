@@ -77,6 +77,14 @@ read can answer does not get one. When one is needed, it is named for the questi
 of the table, declared on both sides of the contract and in `declared-properties.txt`, given its helper in
 `values.ts` with iRacing's reading as the fallback, and added to the table above.
 
+**A reading that means another thing on one game is published the same way** (#1130). SimHub times a
+pit stop from its `IsInPit`, which is the box on iRacing, Assetto Corsa and ACC and the whole pit lane on
+Le Mans Ultimate, so there the stop read from the entry line. The plugin keeps the same clock on the box
+where the game's row answers `InPitBox`, which no dashboard asks, and publishes `PitStopSeconds` and
+`LastPitStopSeconds`, null where SimHub's own timer is the box. They are read through
+`setting.pitStopTime` with `IsInPitSince` and `LastPitStopDuration` as the fallback, so iRacing and a
+package with no plugin read what they read before.
+
 ADR 0009's three conditions hold. A feature needs each answer: the four tickets cited above draw a wrong
 value without one. Nothing else provides it: SimHub publishes the running game's code and nothing that
 says what a game can report, and its own list of what each reader cannot answer, the `[NotAvailable]`

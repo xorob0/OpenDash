@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"quali","frames":200,"hz":10,"ticks":[79667,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter"]}
+{"trace":1,"scenario":"quali","frames":200,"hz":10,"ticks":[79667,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","OpenDash.PitStopSeconds","OpenDash.LastPitStopSeconds"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -323,6 +323,7 @@
 {"p":"OpenDash.Face850x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
 {"p":"OpenDash.FlagsInPitLane","v":true}
+{"p":"OpenDash.LastPitStopSeconds","v":null}
 {"p":"OpenDash.LightsLowFuelLaps","v":2}
 {"p":"OpenDash.LiveClassOrder1","v":null}
 {"p":"OpenDash.LiveClassOrder10","v":null}
@@ -580,6 +581,7 @@
 {"p":"OpenDash.LivePosition7","v":null}
 {"p":"OpenDash.LivePosition8","v":null}
 {"p":"OpenDash.LivePosition9","v":null}
+{"p":"OpenDash.PitStopSeconds","v":null}
 {"p":"OpenDash.PitWallClassOnly","v":false}
 {"p":"OpenDash.PitWallFlagFormat","v":"band"}
 {"p":"OpenDash.PitWallPage","v":0}

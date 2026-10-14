@@ -331,6 +331,27 @@ export const DRIVER_IN_CAR = 'DriverInCar';
 export const CAPABILITIES = [CAR_HAS_PIT_LIMITER, PIT_LIMITER_ON, DAMAGE_REPORTED, DRIVER_IN_CAR] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
+/**
+ * How long the car has stood in its pit box on this stop, and how long the last stop lasted, in seconds,
+ * timed by the plugin on a sim whose own pit timer counts something else (#1130).
+ *
+ * SimHub times a stop for every game from its `IsInPit`: `IsInPitSince` while it holds and
+ * `LastPitStopDuration` when it drops. That is the box on iRacing, Assetto Corsa and ACC; on Le Mans
+ * Ultimate the reader answers it with the whole pit lane, so the pit view's time ran from the entry line.
+ * There the plugin keeps the same clock on the box, which is the test SimHub itself puts to an opponent,
+ * and publishes it. Not a capability, being a reading rather than a yes or a no, but read the way one is:
+ * null where SimHub's own timer is the box, with no game running and with no plugin, so each is read
+ * through {@link setting.pitStopTime} with SimHub's member as the fallback, and iRacing reads exactly
+ * what it read before. `inPitSeconds` and `lastPitDuration` in `second/values.ts` are where.
+ */
+export const PIT_STOP_SECONDS = 'PitStopSeconds';
+/** See {@link PIT_STOP_SECONDS}. */
+export const LAST_PIT_STOP_SECONDS = 'LastPitStopSeconds';
+
+/** Both, in the order the plugin attaches them. */
+export const PIT_STOP_TIMES = [PIT_STOP_SECONDS, LAST_PIT_STOP_SECONDS] as const;
+export type PitStopTime = (typeof PIT_STOP_TIMES)[number];
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -489,6 +510,9 @@ export function dashProperties(): string[] {
     // And what the running sim can report after that, published rather than chosen and shared because every
     // screen that asks one of the questions asks it of the same sim. #1101.
     ...CAPABILITIES,
+    // And the pit stop as the plugin times it after that, published rather than chosen and shared because
+    // every screen that draws the stop's time draws the same stop. #1130.
+    ...PIT_STOP_TIMES,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }
@@ -889,6 +913,11 @@ export const setting = {
    * which the caller hands in, where the plugin publishes none. See {@link CAR_HAS_PIT_LIMITER}.
    */
   reported: (capability: Capability, fallback: Expr): Expr => isnull(prop(propertyName(capability)), fallback),
+  /**
+   * `isnull([OpenDash.PitStopSeconds], <fallback>)`: the stop as the plugin times it in the box, or SimHub's
+   * own timer, which the caller hands in, where the plugin publishes none. See {@link PIT_STOP_SECONDS}.
+   */
+  pitStopTime: (time: PitStopTime, fallback: Expr): Expr => isnull(prop(propertyName(time)), fallback),
   /** `isnull([OpenDash.ThemeAimBacklight], 'white')`: the id of the choice the driver made of a theme's setting, or its default. #715. */
   themeSetting: (themeId: string, settingId: string): Expr => isnull(prop(propertyName(themeSettingName(themeId, settingId))), str(themeSetting(themeId, settingId).default)),
   /** `isnull([OpenDash.LedMirrorFit], 'stretch')`. Read by the plugin rather than by a profile. */

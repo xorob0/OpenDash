@@ -297,7 +297,7 @@ and `PreParseDataBase` adds the player alone, **named `Me`**, with the player's 
 | `TCLevel`, `ABSLevel` | filled | `mTC`, `mABS` |
 | `DRSAvailable`, `PushToPassActive` | empty | `[NotAvailable]` |
 | `IsInPitLane` | filled | the player's `mInPits` |
-| `IsInPitSince`, `LastPitStopDuration` | **differs** | `GD_IsInPit` is `mInPits` too, so the "in the box" timer runs from the pit entry line and the last stop is the whole pit lane |
+| `IsInPitSince`, `LastPitStopDuration` | **differs** | `GD_IsInPit` is `mInPits` too, so the "in the box" timer runs from the pit entry line and the last stop is the whole pit lane. The plugin times the box itself, by the test SimHub puts to an opponent, and publishes `OpenDash.PitStopSeconds` and `LastPitStopSeconds` (#1130) |
 | `PitLimiterOn` | filled | `mSpeedLimiter > 0` |
 | `PitLimiterSpeed` | empty | `GD_PitLimiterSpeed` calls the base's null |
 | `Flag_Blue` | filled | the player's `mFlag == 6` |
@@ -442,7 +442,7 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 | Virtual energy | no | no | no | yes |
 | Engine warnings | yes | no | no | overheating only |
 | Session names | iRacing's words | capitals, `AC_` stripped | capitals | `Test day`, `Practice`, `Qualify`, `Warmup`, `Race` |
-| The pit-box timer is the box | yes | yes | yes | no, it is the lane |
+| The pit-box timer is the box | yes | yes | yes | no, it is the lane; the plugin times the box (#1130) |
 
 Two readings need no capability, only a different property: the tyre temperature page (#556) can read
 `GameData.TyreTemperature*`, which is `LFtempCM` on iRacing and each game's own elsewhere, and the gear

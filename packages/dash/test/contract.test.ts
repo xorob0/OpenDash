@@ -69,6 +69,7 @@ import {
   LIVE_SLOTS,
   liveSettingNames,
   CAPABILITIES,
+  PIT_STOP_TIMES,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -188,6 +189,7 @@ describe('settings', () => {
         12 +
         4 * LIVE_SLOTS +
         CAPABILITIES.length +
+        PIT_STOP_TIMES.length +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -238,8 +240,9 @@ describe('settings', () => {
     // engine readings, and with them a companion switch (#752). And 406 before the plugin had to
     // publish the race as it stands on the road, a place and a row in each of two counts for sixty-four
     // cars, because iRacing moves it only at the line (#1063). And 662 before the plugin had to say what
-    // the running sim can report, four answers that let no dashboard name a game (#1101).
-    expect(props).toHaveLength(666);
+    // the running sim can report, four answers that let no dashboard name a game (#1101). And 666 before
+    // the plugin timed the stop in the pit box on a sim whose own timer counts the lane (#1130).
+    expect(props).toHaveLength(668);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -389,6 +392,10 @@ describe('settings', () => {
         'PitLimiterOn',
         'DamageReported',
         'DriverInCar',
+        // And the pit stop as the plugin times it in the box, published rather than chosen and drawn the
+        // same by every screen that draws the stop. #1130.
+        'PitStopSeconds',
+        'LastPitStopSeconds',
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 

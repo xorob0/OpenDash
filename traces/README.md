@@ -228,3 +228,10 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+#1130 asserts two more in each, `OpenDash.PitStopSeconds` and `OpenDash.LastPitStopSeconds`, the stop as
+the plugin times it in the pit box on a sim whose own pit timer counts the lane. The pit view and the pit
+service gauge read them in place of SimHub's `IsInPitSince` and `LastPitStopDuration`, with those as the
+fallback. On iRacing SimHub's own timer is the box, so the plugin's row leaves the question to it and
+publishes null on every frame of all nine: a constant, and the value a recording with the plugin installed
+will write. The next `bun run record` reads them from the plugin and drops the entries.
