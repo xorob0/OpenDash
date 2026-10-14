@@ -81,6 +81,42 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What to say when the release is the plugin already running, so the press downloaded nothing and wrote the
+        /// running plugin's own dashboards instead.
+        /// </summary>
+        /// <remarks>
+        /// Such a run stages nothing (UpdateService.Apply), since the plugin the release carries is the one SimHub has
+        /// loaded. It used to stage that same plugin and say <see cref="RestartWithDashboards"/>, so a driver who kept
+        /// an edited screen was told to restart SimHub to finish updating, restarted, and found the same screen and
+        /// the same offer (#1083). What it does instead is what the start does: write each dashboard that is behind,
+        /// which is how a rig on the release comes to be offered it at all, so the line names those and the reopen
+        /// rather than a restart. An edited dashboard is named with the press that does replace it, which is the
+        /// one place that does, since no update will.
+        ///
+        /// The panel never reaches that edited form: it asks before any press that meets an edited dashboard, and a
+        /// yes for one behind the release stages the plugin instead. It is there for a caller that sends a run with no
+        /// yes, so that such a run says what it left rather than nothing.
+        /// </remarks>
+        /// <param name="version">The version running, which is the release's.</param>
+        /// <param name="updated">How many dashboards were behind it and were written.</param>
+        /// <param name="edited">How many dashboards behind it somebody has edited, which were left alone.</param>
+        /// <param name="wroteFonts">Whether the dashboards written brought a font, which only a restart draws.</param>
+        public static string AlreadyRunning(string version, int updated, int edited, bool wroteFonts)
+        {
+            var line = "You already have OpenDash " + Show(version) + ".";
+            if (updated > 0)
+            {
+                line += updated == 1 ? " Updated the dashboard that was behind it." : " Updated the " + updated + " dashboards that were behind it.";
+            }
+            if (edited > 0)
+            {
+                line += edited == 1 ? " The one you edited is left alone, and " + PanelConfirmation.ReinstallLabel + " replaces it."
+                    : " The " + edited + " you edited are left alone, and " + PanelConfirmation.ReinstallLabel + " replaces them.";
+            }
+            return updated > 0 ? line + " " + ToSee(wroteFonts) : line;
+        }
+
+        /// <summary>
         /// What the Update button says before it replaces a dashboard somebody has edited.
         /// </summary>
         /// <remarks>

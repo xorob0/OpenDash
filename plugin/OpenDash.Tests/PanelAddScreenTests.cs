@@ -424,8 +424,10 @@ namespace OpenDashPlugin.Tests
             // A failure says what happened and points at the log, where the installer's reason is written
             // (voice.md), as Duplicate and Remove do.
             Assert.Equal("Added Rim, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.AddFailed("Rim"));
-            // The resize happened before the write failed: the screen is its new size, and the line says so.
-            Assert.Equal("Rim is now 1280 × 480, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.ResizeFailed("Rim", "1280 × 480"));
+            // A resize whose write failed is undone, the old dashboard still in place (#588), and the line says so.
+            Assert.Equal("Could not resize Rim to 1280 × 480. See SimHub's log.", PanelAddScreen.ResizeFailed("Rim", "1280 × 480"));
+            // One whose folder was written before the install failed keeps the new size, and says it as Add does.
+            Assert.Equal("Rim is now 1280 × 480, but its dashboard could not be installed. See SimHub's log.", PanelAddScreen.ResizedIncomplete("Rim", "1280 × 480"));
             Assert.DoesNotContain("properties", PanelAddScreen.EditCaption);
             Assert.Equal("Rim is now 1280 × 480. Assign \"Rim\" to this display again in Dash Studio.", PanelAddScreen.Resized("Rim", "1280 × 480", "Rim", false));
             Assert.Equal("Rim is now 1280 × 480. Restart SimHub to load its fonts, then assign \"Rim\" to this display again in Dash Studio.",

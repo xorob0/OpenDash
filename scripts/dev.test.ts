@@ -7,6 +7,7 @@ import { describe, expect, test } from 'bun:test';
 import { BASE_FACE, LARGE_FACE } from '../packages/dash/src/zones/index.ts';
 import { built, readBuiltManifest, withBuild } from './buildOutput.ts';
 import { LIST_ORDER, packageSize, parseArgs } from './dev.ts';
+import { ASSETTO_CORSA, IRACING } from './sims.ts';
 
 const manifest = readBuiltManifest<{ version: string; packages: { folder: string; width: number; height: number }[] }>();
 
@@ -33,6 +34,26 @@ describe('reading the arguments', () => {
 
   test('the switches are read', () => {
     expect(parseArgs(['--no-build', '--keep'])).toMatchObject({ noBuild: true, keep: true });
+  });
+
+  test('nothing names iRacing, as every run did before there was a second sim', () => {
+    expect(parseArgs([])).toMatchObject({ sim: IRACING });
+  });
+
+  test('--sim ac plays Assetto Corsa, and its value is not taken for a package', () => {
+    // A flag's value used to be dropped only when it was the scenario, so `--sim ac` would have
+    // opened a package called "ac".
+    expect(parseArgs(['--sim', 'ac'])).toMatchObject({ sim: ASSETTO_CORSA, packageName: 'OpenDash 850x480', scenario: 'race' });
+    expect(parseArgs(['OpenDash Pit wall', '--sim', 'ac', '--scenario', 'pit'])).toMatchObject({ sim: ASSETTO_CORSA, packageName: 'OpenDash Pit wall', scenario: 'pit' });
+    expect(parseArgs(['--sim=ac', '--scenario=yellow'])).toMatchObject({ sim: ASSETTO_CORSA, scenario: 'yellow' });
+  });
+
+  test('a scenario named like its package is still the scenario', () => {
+    expect(parseArgs(['--scenario', 'green', 'OpenDash'])).toMatchObject({ packageName: 'OpenDash', scenario: 'green' });
+  });
+
+  test('a sim with no emulator is refused rather than played as iRacing', () => {
+    expect(() => parseArgs(['--sim', 'acc'])).toThrow(/iracing, ac/);
   });
 
   test('help wins over everything else', () => {

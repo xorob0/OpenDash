@@ -3,8 +3,9 @@
  * HERO_FACE, which is read from the layout module, so the highlight lands on the part it names and
  * a layout change moves it. Only the words live here.
  */
-import type { FacePartId, SiteFace } from '../scripts/content';
-import type { Counts } from './counts';
+import type { FacePartId, SiteFace, SiteFaceParts } from '../scripts/content';
+import { and, type Counts } from './counts';
+import { sizeLabel } from './packages';
 
 export interface AnatomyPart {
   id: FacePartId;
@@ -52,3 +53,31 @@ export const anatomyParts = (face: SiteFace, c: Counts): AnatomyPart[] => {
   const words = copy(c);
   return face.parts.map((p) => ({ id: p.id, rect: p.rect, ...words[p.id] }));
 };
+
+/** A part as a sentence names it: the face `has no bar`. */
+const NOUN: Record<FacePartId, string> = {
+  revBar: 'rev bar',
+  bar: 'bar',
+  zoneB: 'zone B',
+  zoneA: 'zone A',
+  zoneC: 'zone C',
+  band: 'band D',
+};
+
+const or = (words: readonly string[]): string =>
+  words.length < 2 ? (words[0] ?? '') : `${words.slice(0, -1).join(', ')} or ${words[words.length - 1]}`;
+
+/**
+ * The anatomy's lede, held to every rectangular face rather than to the one it shows. A face that
+ * lacks a part the anatomy offers is named with what it lacks, and then the sentence no longer says
+ * every: the 800 × 286 face has no room for the bar (#1094).
+ */
+export function anatomyLede(shown: SiteFace, faces: readonly SiteFaceParts[]): string {
+  const offered = shown.parts.map((p) => p.id);
+  const short = faces
+    .map((f) => ({ face: f, missing: offered.filter((id) => !f.parts.includes(id)) }))
+    .filter((f) => f.missing.length > 0)
+    .map(({ face, missing }) => `the ${sizeLabel({ ...face, round: false })} face has no ${or(missing.map((id) => NOUN[id]))}`);
+  const built = short.length === 0 ? 'Every rectangular face is built the same way.' : `The rectangular faces are built the same way, but ${and(short)}.`;
+  return `${built} Hover or tap a part.`;
+}

@@ -427,7 +427,11 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Remove it", PanelScreens.RemoveItButton);
             // SimHub takes the dashboard out of Dash Studio by itself, two seconds after the folder goes (#664).
             Assert.Equal("Removed Rim.", PanelScreens.Removed("Rim"));
-            Assert.Equal("Removed Rim, but its dashboard could not be removed. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
+            Assert.Equal("Could not remove Rim. See SimHub's log.", PanelScreens.RemoveFailed("Rim"));
+            // The copy is said and not named: a file under DashTemplates is a name from inside the code (voice.md).
+            Assert.Equal("Removed Rim. A copy of your edited dashboard is kept, and SimHub's log says where.",
+                PanelScreens.Removed("Rim", System.IO.Path.Combine("DashTemplates", "OpenDash Rim_yours_20261014-103000Z.zip")));
+            Assert.DoesNotContain("DashTemplates", PanelScreens.EditsKept);
         }
 
         /// <summary>A face's rows, in voice.md's words where the artboard's differ, which voice.md wins (#791).</summary>
@@ -1461,7 +1465,9 @@ namespace OpenDashPlugin.Tests
                 "edited ? PanelAddScreen.ReinstallEditedCaption : PanelAddScreen.ReinstallCaption",
                 "reinstall.Click += (sender, args) => ReinstallScreen(screen);",
                 "Select(PanelPage.Screens, copy.Namespace);",
-                "Say(result.Ok ? PanelScreens.Removed(screen.Name) : PanelScreens.RemoveFailed(screen.Name), result.Ok);",
+                "Say(result.Ok ? PanelScreens.Removed(screen.Name, result.KeptCopy) : PanelScreens.RemoveFailed(screen.Name), result.Ok);",
+                // Off the rig before the folder goes, and back where it was when the folder stayed (#861).
+                "var at = Settings.Rig?.IndexOf(screen) ?? -1; Settings.RemoveScreen(screen.Namespace); Save(); WriteScreenThen(() => ScreenInstaller.Remove(screen, plugin.Installer.SimHubRoot, plugin.Installer.Record, new SimHubInstallLog()), result => { if (!result.Ok) Settings.PutScreenBack(screen, at);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");
@@ -1503,7 +1509,12 @@ namespace OpenDashPlugin.Tests
                 "Say(result.Ok ? PanelAddScreen.Added(copy, RestartOwed(result)) : PanelAddScreen.AddFailed(copy.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Renamed(screen.Name, RestartOwed(result)) : PanelAddScreen.RenameFailed(screen.Name), result.Ok);",
                 "Say(result.Ok ? PanelAddScreen.Reinstalled(screen.Name, RestartOwed(result)) : PanelAddScreen.ReinstallFailed(screen.Name, result.Error), result.Ok);",
-                "Say(result.Ok ? PanelAddScreen.Resized(screen, RestartOwed(result)) : PanelAddScreen.ResizeFailed(screen.Name, screen.SizeLabel), result.Ok);",
+                "var said = result.Ok ? PanelAddScreen.Resized(screen, RestartOwed(result)) : result.Written ? PanelAddScreen.ResizedIncomplete(screen.Name, screen.SizeLabel) : PanelAddScreen.ResizeFailed(screen.Name, entry.SizeLabel);",
+                "Say(result.Written ? PanelScreens.WithEditsKept(said, result.KeptCopy) : said, result.Ok);",
+                // The new folder before the old one goes, and the screen back on the old one when the write wrote
+                // nothing (#588), with the name it had before the sheet renamed it.
+                "WriteScreenThen(() => ScreenInstaller.Resize(before.Folder, screen, plugin.Installer.Write, plugin.Installer.SimHubRoot, plugin.Installer.Record, log), result => { if (!result.Written) Settings.ResizeScreenBack(screen, before);",
+                "var named = screen.Name; RenameScreen(screen, wanted); ResizeScreen(screen, entry, named);",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");

@@ -12,6 +12,10 @@
  * scenario changes or when a package starts reading a property that was not recorded; everything
  * afterwards replays the committed file and needs no Windows at all.
  *
+ * Each sim records into a folder of its own (`traceDirOf` in `scripts/trace.ts`), from its own
+ * emulator, with SimHub switched to its game first; `--sim ac` is Assetto Corsa (#579), and a
+ * recording that comes back from another game than the one asked for is refused rather than written.
+ *
  * Frames are taken on the emulator's tick rather than on the wall clock, so two recordings of an
  * unchanged scenario cover the same span of it. What still moves between them is what SimHub keeps
  * its own history of, the lap deltas and the fuel averages, and the wall clock it publishes.
@@ -29,12 +33,12 @@ import {
   upload as uploadEmulator,
   scenarios,
   tracedScenarioNames,
-  UNTRACED_SCENARIOS,
 } from './emulator.ts';
+import { GAME_PROPERTY, IRACING, simFromArgs, type Sim } from './sims.ts';
 import {
-  TRACE_DIR,
   TRACE_VERSION,
   formatTrace,
+  traceDirOf,
   traceFile,
   type Trace,
   type TraceColumn,
@@ -77,7 +81,7 @@ const SHARE_UNC = '\\\\host.lan\\Data';
 /** Where the recorder writes on the guest's own disk; the share is read, not written. */
 const GUEST_OUT = 'C:\\Temp\\opendash-trace\\trace.ndjson';
 
-/** The emulator's tick rate. Every scenario shipped runs at 60 Hz; the header records what was used. */
+/** The emulators' tick rate. Every scenario of either sim runs at 60 Hz; the header records what was used. */
 export const TICK_RATE = 60;
 /** Frames per second of recorded telemetry: smooth enough for a video, and a sixth of what the sim publishes. */
 export const DEFAULT_HZ = 10;
@@ -99,16 +103,25 @@ export const DEFAULT_FRAMES = 200;
 export const DEFAULT_WARM_UP_SECONDS = 120;
 
 /**
- * Recorded beyond what the packages read, so that a trace says which tick each of its frames came
- * from. It costs one column and it is the only thing that makes a re-recording comparable.
+ * Recorded beyond what the packages read: the tick each frame came from, which is the only thing
+ * that makes a re-recording comparable, and the game SimHub was reading, which is what the header's
+ * `game` is read from and what refuses a recording of the wrong sim. Two columns. The tick is the
+ * sim's own property, iRacing's `SessionTick` or Assetto Corsa's `Graphics.PacketId`.
  */
-export const PROVENANCE_PROPERTIES: readonly string[] = ['DataCorePlugin.GameRawData.Telemetry.SessionTick'];
+export const provenanceProperties = (sim: Sim = IRACING): string[] => [sim.tickProperty, GAME_PROPERTY];
+
+/** iRacing's, which is what a recording asks for when it names no sim. */
+export const PROVENANCE_PROPERTIES: readonly string[] = provenanceProperties(IRACING);
 
 /** Emulator ticks between frames. The rate has to divide the tick rate, which `parseArgs` checks. */
 export const stepFor = (hz: number): number => TICK_RATE / hz;
 
-/** Every property a recording asks SimHub for: what the packages read, plus the provenance column. */
-export const recordedProperties = (): string[] => [...new Set([...propertiesRead(), ...PROVENANCE_PROPERTIES])].sort();
+/**
+ * Every property a recording asks SimHub for: what the packages read, plus the provenance columns.
+ * The same list for every sim but those, since a package reads the same properties whatever is
+ * being driven, and SimHub answering null for one its reader does not fill is itself the recording.
+ */
+export const recordedProperties = (sim: Sim = IRACING): string[] => [...new Set([...propertiesRead(), ...provenanceProperties(sim)])].sort();
 
 // --------------------------------------------------------------- the recorder's own file format
 
@@ -175,6 +188,9 @@ export function parseRecording(text: string): Recording {
  */
 export function toTrace(recording: Recording, recorded: string, simHub: string): Trace {
   const { header, frames, types } = recording;
+  // The game SimHub said it was reading, off the first frame that says; a recording from before the
+  // column was asked for has none, and its header then names none.
+  const game = frames.map((f) => f.v[GAME_PROPERTY]).find((g) => typeof g === 'string' && g !== '') as string | undefined;
   const names = [...new Set(frames.flatMap((f) => Object.keys(f.v)))].sort();
   const columns: TraceColumn[] = names.map((name) => {
     const values = frames.map((f) => (f.v[name] === undefined ? null : (f.v[name] as TraceValue)));
@@ -192,6 +208,7 @@ export function toTrace(recording: Recording, recorded: string, simHub: string):
       ticks: [frames[0]?.tick ?? 0, header.step],
       recorded,
       simHub,
+      ...(game === undefined ? {} : { game }),
     },
     columns,
   };
@@ -220,6 +237,8 @@ export function parseEmulatorScenario(log: string): string | undefined {
 // ------------------------------------------------------------------------------ the recording
 
 export interface RecordOptions {
+  /** Which sim's emulator plays, which game SimHub reads, and which folder the traces go to. */
+  sim: Sim;
   scenarios: readonly string[];
   hz: number;
   frames: number;
@@ -302,6 +321,7 @@ function writeRequest(host: Host, scenario: string, opts: RecordOptions, propert
     frames: opts.frames,
     step: stepFor(opts.hz),
     warmUpTicks: opts.warmUpSeconds * TICK_RATE,
+    tick: opts.sim.tickProperty,
     out: GUEST_OUT,
     properties,
   };
@@ -332,7 +352,7 @@ function waitForRecording(host: Host, timeoutSeconds: number): RunResult {
 }
 
 /** Brings the recorded file back and writes the committed trace. */
-function collect(host: Host, scenario: string, outDir: string, simHub: string): RunResult {
+function collect(host: Host, scenario: string, sim: Sim, outDir: string, simHub: string): RunResult {
   const copied = powershell(host, `$ErrorActionPreference = 'Stop'
 Copy-Item ${psq(GUEST_OUT)} ${psq(`${SHARE_UNC}\\opendash-trace.ndjson`)} -Force
 'copied'`, 180);
@@ -350,6 +370,11 @@ Copy-Item ${psq(GUEST_OUT)} ${psq(`${SHARE_UNC}\\opendash-trace.ndjson`)} -Force
   // Every scenario records to the same file on the guest, so a recording that never happened would
   // otherwise be committed under the next scenario's name.
   if (trace.header.scenario !== scenario) return fail(`the recording on the VM is of ${JSON.stringify(trace.header.scenario)}, not ${JSON.stringify(scenario)}`);
+  // SimHub reads one game at a time and was told which before it started; a trace of another game's
+  // reader would carry the right scenario's name and the wrong sim's nulls, and nothing downstream
+  // could tell.
+  const problem = wrongGame(trace, sim);
+  if (problem) return fail(problem);
   mkdirSync(outDir, { recursive: true });
   const file = traceFile(scenario, outDir);
   writeFileSync(file, formatTrace(trace), 'utf8');
@@ -365,18 +390,19 @@ Copy-Item ${psq(GUEST_OUT)} ${psq(`${SHARE_UNC}\\opendash-trace.ndjson`)} -Force
 
 /** One scenario, from a stopped SimHub to a written trace. */
 function recordOne(host: Host, scenario: string, opts: RecordOptions, properties: readonly string[]): RunResult {
-  console.log(`\n${scenario}: asking SimHub for ${opts.frames} frames at ${opts.hz} Hz`);
-  stopEmulator(host);
+  console.log(`\n${scenario}: asking SimHub for ${opts.frames} frames at ${opts.hz} Hz of ${opts.sim.label}`);
+  stopEmulator(host, opts.sim);
   const stopped = simhubStop(host);
   if (!stopped.ok) return stopped;
   const requested = writeRequest(host, scenario, opts, properties);
   if (!requested.ok) return requested;
-  // SimHub reads the request once, in Init, so it has to start after the request is in place.
-  const started = simhubStart(host);
+  // SimHub reads the request once, in Init, so it has to start after the request is in place, and
+  // on the sim's game, which it also reads once at start.
+  const started = simhubStart(host, opts.sim.game);
   if (!started.ok) return started;
   const simHub = parseSimHubVersion(simhubLogs(host, 400).stdout);
 
-  const emulator = startEmulator(host, { scenario, replace: true });
+  const emulator = startEmulator(host, { scenario, sim: opts.sim, replace: true });
   if (!emulator.ok) return emulator;
 
   // There is one VM and two sessions will fight over it, which is what the claim is for; but the
@@ -385,11 +411,11 @@ function recordOne(host: Host, scenario: string, opts: RecordOptions, properties
   // scenario that was asked for and holding the telemetry of the one somebody else started, and
   // nothing downstream could ever tell. So the emulator is asked what it is running, and the
   // process it answered as is checked again once the recording is done.
-  const running = parseEmulatorScenario(emulatorLog(host, 400).stdout);
+  const running = parseEmulatorScenario(emulatorLog(host, 400, opts.sim).stdout);
   if (running !== scenario) {
     return fail(`the emulator on the VM is running ${running === undefined ? 'a scenario it does not name' : JSON.stringify(running)}, not ${JSON.stringify(scenario)}; something else is driving the VM, see \`bun run vm who\``);
   }
-  const pid = runningPid(host);
+  const pid = runningPid(host, opts.sim);
   if (!pid.ok) return pid;
 
   // The warm-up plus the recorded span, and two minutes more. The VM has two virtual processors and
@@ -401,18 +427,18 @@ function recordOne(host: Host, scenario: string, opts: RecordOptions, properties
   if (!waited.ok) return waited;
   console.log(`  recorded ${waited.stdout}`);
 
-  const after = runningPid(host);
+  const after = runningPid(host, opts.sim);
   if (!after.ok) return fail(`could not tell whether the emulator was replaced while the recording ran, so the trace may be of somebody else's scenario: ${after.stderr}`);
   if (after.pid !== pid.pid) return fail('the emulator was replaced while the recording ran, so the trace is of somebody else\'s scenario; see `bun run vm who`');
-  stopEmulator(host);
-  return collect(host, scenario, opts.outDir, simHub);
+  stopEmulator(host, opts.sim);
+  return collect(host, scenario, opts.sim, opts.outDir, simHub);
 }
 
 export async function record(host: Host, opts: RecordOptions): Promise<number> {
-  const known = scenarios();
+  const known = scenarios(opts.sim);
   const unknown = opts.scenarios.filter((s) => !known.includes(s));
   if (unknown.length > 0) {
-    console.error(`unknown scenario${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`);
+    console.error(`unknown ${opts.sim.label} scenario${unknown.length > 1 ? 's' : ''}: ${unknown.join(', ')}`);
     console.error(`one of ${known.join(', ')}`);
     return 1;
   }
@@ -423,7 +449,7 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
     console.error('There is one VM. Wait, or ask them to run `bun run vm release`.');
     return 1;
   }
-  const claimed = claim(host, `record ${opts.scenarios.join(' ')}`);
+  const claimed = claim(host, `record ${opts.sim === IRACING ? '' : `--sim ${opts.sim.id} `}${opts.scenarios.join(' ')}`);
   if (!claimed.ok) {
     console.error(claimed.stderr);
     return 1;
@@ -451,7 +477,7 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
         return 1;
       }
     }
-    const properties = recordedProperties();
+    const properties = recordedProperties(opts.sim);
     console.log(`recording ${properties.length} properties`);
 
     const recorder = buildRecorder();
@@ -470,12 +496,12 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
       return 1;
     }
 
-    const emulator = buildEmulator();
+    const emulator = buildEmulator(opts.sim);
     if (!emulator.ok) {
       console.error(emulator.stderr || emulator.stdout);
       return 1;
     }
-    const uploaded = uploadEmulator(host);
+    const uploaded = uploadEmulator(host, opts.sim);
     if (!uploaded.ok) {
       console.error(uploaded.stderr || uploaded.stdout);
       return 1;
@@ -491,7 +517,7 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
       console.log(`  ${one.stdout}`);
     }
   } finally {
-    stopEmulator(host);
+    stopEmulator(host, opts.sim);
     if (!opts.keep) {
       const back = putBack(host);
       if (!back.ok) console.error(back.stderr);
@@ -505,12 +531,14 @@ export async function record(host: Host, opts: RecordOptions): Promise<number> {
 
 const USAGE = `record: turn an emulator scenario into a committed telemetry trace.
 
-  bun run record [scenario ...] [--hz 10] [--frames 200] [--warm-up 120] [--no-build] [--keep]
+  bun run record [scenario ...] [--sim ac] [--hz 10] [--frames 200] [--warm-up 120] [--no-build] [--keep]
 
-  scenario      one or more; default every scenario a committed trace is expected for
-                ${tracedScenarioNames().join(', ') || '(none)'}
-                ${UNTRACED_SCENARIOS.join(', ')} are recorded only when named,
-                and nothing replays one until it comes off UNTRACED_SCENARIOS in scripts/emulator.ts
+  scenario      one or more; default every scenario of the sim a committed trace is expected for
+                iRacing: ${tracedScenarioNames(IRACING).join(', ') || '(none)'}
+                ${IRACING.untraced.join(', ')} are recorded only when named,
+                and nothing replays one until it comes off the sim's untraced list in scripts/sims.ts
+  --sim         iracing, the default, into traces/, or ac for Assetto Corsa into traces/ac/;
+                SimHub is restarted on that game, and a recording of any other is refused
   --hz          frames per second of recorded telemetry; default ${DEFAULT_HZ}
   --frames      how many frames; default ${DEFAULT_FRAMES}, which is ${DEFAULT_FRAMES / DEFAULT_HZ} seconds
   --warm-up     seconds of telemetry to let pass before the first frame; default ${DEFAULT_WARM_UP_SECONDS},
@@ -519,19 +547,29 @@ const USAGE = `record: turn an emulator scenario into a committed telemetry trac
   --keep        leave the recorder installed and the VM claimed
 
 It claims the VM, installs a recorder plugin into SimHub, runs each scenario past it once and
-writes traces/<scenario>.ndjson. Read the diff before committing: a trace is a reviewed artefact,
-not a build output.
+writes traces/<scenario>.ndjson, or traces/ac/<scenario>.ndjson. Read the diff before committing:
+a trace is a reviewed artefact, not a build output.
 `;
 
 /**
  * What to say about a scenario named on the command line that is meant to have no trace. It is
- * recorded all the same, since naming one is how it leaves UNTRACED_SCENARIOS, but until it does
- * nothing replays the file and `trace.test.ts` fails on it.
+ * recorded all the same, since naming one is how it leaves the sim's untraced list, but until it
+ * does nothing replays the file and `trace.test.ts` fails on it.
  */
-export function untracedWarnings(names: readonly string[]): string[] {
+export function untracedWarnings(names: readonly string[], sim: Sim = IRACING): string[] {
   return names
-    .filter((name) => UNTRACED_SCENARIOS.includes(name))
-    .map((name) => `${name} is in UNTRACED_SCENARIOS: nothing replays its trace, and trace.test.ts fails on it until the name comes off that list in scripts/emulator.ts`);
+    .filter((name) => sim.untraced.includes(name))
+    .map((name) => `${name} is in ${sim.label}'s untraced list: nothing replays its trace, and trace.test.ts fails on it until the name comes off that list in scripts/sims.ts`);
+}
+
+/**
+ * Why a recording is not of the sim it was made for, or null when it is. SimHub reads one game at a
+ * time, and the header's `game` is what it said it was reading, frame by frame, rather than what was
+ * asked of it.
+ */
+export function wrongGame(trace: Trace, sim: Sim): string | null {
+  if (trace.header.game === sim.game) return null;
+  return `SimHub was reading ${trace.header.game === undefined ? 'no game it named' : trace.header.game} while it recorded, not ${sim.label} (${sim.game}); see \`bun run vm logs 80\``;
 }
 
 export function parseArgs(argv: readonly string[]): RecordOptions | { help: true } {
@@ -548,7 +586,7 @@ export function parseArgs(argv: readonly string[]): RecordOptions | { help: true
     if (!Number.isInteger(value) || value < 1) throw new RecordingError(`--${name} needs a whole number, got ${JSON.stringify(raw)}`);
     return value;
   };
-  const flagNames = new Set(['hz', 'frames', 'warm-up']);
+  const flagNames = new Set(['hz', 'frames', 'warm-up', 'sim']);
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] as string;
@@ -559,18 +597,25 @@ export function parseArgs(argv: readonly string[]): RecordOptions | { help: true
     }
     positional.push(arg);
   }
+  let sim: Sim;
+  try {
+    sim = simFromArgs(argv);
+  } catch (e) {
+    throw new RecordingError(e instanceof Error ? e.message : String(e));
+  }
   const hz = whole('hz', DEFAULT_HZ);
   if (TICK_RATE % hz !== 0) throw new RecordingError(`--hz must divide the emulator's ${TICK_RATE} Hz tick, and ${hz} does not`);
   return {
+    sim,
     // Only the scenarios a trace is expected for: the others would cost the VM two and a half
     // minutes each and write files trace.test.ts refuses (#519).
-    scenarios: positional.length > 0 ? positional : tracedScenarioNames(),
+    scenarios: positional.length > 0 ? positional : tracedScenarioNames(sim),
     hz,
     frames: whole('frames', DEFAULT_FRAMES),
     warmUpSeconds: whole('warm-up', DEFAULT_WARM_UP_SECONDS),
     noBuild: argv.includes('--no-build'),
     keep: argv.includes('--keep'),
-    outDir: TRACE_DIR,
+    outDir: traceDirOf(sim),
   };
 }
 
@@ -587,10 +632,10 @@ export async function main(argv: readonly string[]): Promise<number> {
     return 0;
   }
   if (opts.scenarios.length === 0) {
-    console.error('there is no scenario to record');
+    console.error(`there is no ${opts.sim.label} scenario a trace is expected for; name the ones to record`);
     return 1;
   }
-  for (const warning of untracedWarnings(opts.scenarios)) console.warn(warning);
+  for (const warning of untracedWarnings(opts.scenarios, opts.sim)) console.warn(warning);
   return record(resolveHost(), opts);
 }
 

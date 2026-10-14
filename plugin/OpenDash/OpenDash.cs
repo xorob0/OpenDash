@@ -455,9 +455,10 @@ namespace OpenDashPlugin
             }
             try
             {
-                // The crest is the one thing fetched at a start without a press, and only on a rig with a Porsche
-                // screen that draws the badge and no crest from the address yet: the theme's default (#714, the
-                // trade dress paragraph of scope.md). A copy already on disk is read and nothing is asked.
+                // Beside the update check, the crest is the one thing fetched at a start without a press, and
+                // only on a rig with a Porsche screen that draws the badge and no crest from the address yet: the
+                // theme's default (#714, the trade dress paragraph of scope.md). A copy already on disk is read
+                // and nothing is asked.
                 RefreshCrest();
             }
             catch (Exception ex)
@@ -768,15 +769,17 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// One frame of what OpenDash reads from SimHub. Each frame it copies the class best lap out
-        /// of the leaderboard, compares the game, car, track and session names the panel shows with
+        /// of the leaderboard, reads what the running sim can report (ADR 0021), compares the game, car,
+        /// track and session names the panel shows with
         /// the copy it holds and replaces that copy only when one of them moved, and runs the car's own
         /// bar, the only thing OpenDash computes (ADR 0018).
         ///
         /// <para>It is called at SimHub's data rate, so it does the least it can: with the mirror off
         /// or the sim closed the bar is handed nothing to compute, and the table lookup happens on a
         /// car change rather than per frame. Nothing here may throw -- SimHub calls this from its own
-        /// loop and an exception here would be one per frame -- so the whole body is guarded and a
-        /// failure leaves the strip on the published ladder.</para>
+        /// loop and an exception here would be one per frame -- so each part is guarded on its own.
+        /// A part that fails publishes its fallback rather than its last good frame, the others carry
+        /// on, and SimHub's log is told once and then once a minute (#577, #865).</para>
         /// </summary>
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
         {
@@ -791,37 +794,75 @@ namespace OpenDashPlugin
                     Log.Warn("The per-car playlists were not synchronised at start: " + e.Message);
                 }
             }
+
+            var nowMs = clock.ElapsedMilliseconds;
+            var telemetry = data == null ? null : data.NewData;
+
+            // First and on its own, so that nothing the lights do below can leave it stale. A frame
+            // without the game running holds no leaderboard, and neither does the dashboard's field.
             try
             {
-                // First and on its own, so that nothing the lights do below can leave it stale. A frame
-                // without the game running holds no leaderboard, and neither does the dashboard's field.
-                classBestLap = data != null && data.GameRunning && data.NewData != null
-                    ? ClassBestLap.Of(data.NewData.BestLapSameClassOpponent?.BestLapTime)
+                classBestLap = data != null && data.GameRunning && telemetry != null
+                    ? ClassBestLap.Of(telemetry.BestLapSameClassOpponent?.BestLapTime)
                     : null;
+                Report(classBestFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                classBestLap = null;
+                Report(classBestFault, e, nowMs);
+            }
 
-                // And the live place, from the same finished frame and before anything below can throw.
+            // And the live place, from the same finished frame.
+            try
+            {
                 UpdateLivePosition(data);
+                Report(livePositionFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                liveRace = null;
+                Report(livePositionFault, e, nowMs);
+            }
 
-                // And what the sim can report, from the same frame and for the same reason. #1101.
+            // And what the sim can report, from the same frame and for the same reason (#1101). A
+            // failure empties it, which every dashboard reads as no plugin and answers as iRacing does.
+            try
+            {
                 UpdateSimReport(pluginManager, data);
+                Report(simReportFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                simReport = SimReport.Unknown;
+                Report(simReportFault, e, nowMs);
+            }
 
-                // What the panel names, compared before anything is built and replaced only when
-                // something in it moved, so a frame in which nothing did allocates nothing for the
-                // panel's copy and the interface thread is not handed a new object sixty times a second.
-                var named = data == null ? null : data.NewData;
+            // What the panel names, compared before anything is built and replaced only when
+            // something in it moved, so a frame in which nothing did allocates nothing for the
+            // panel's copy and the interface thread is not handed a new object sixty times a second.
+            try
+            {
                 var gameName = GameDisplayName(pluginManager, data);
                 var gameRunning = data != null && data.GameRunning;
-                var carId = named == null ? null : named.CarId;
-                var carModel = named == null ? null : named.CarModel;
-                var trackName = named == null ? null : named.TrackName;
-                var sessionType = named == null ? null : named.SessionTypeName;
+                var carId = telemetry == null ? null : telemetry.CarId;
+                var carModel = telemetry == null ? null : telemetry.CarModel;
+                var trackName = telemetry == null ? null : telemetry.TrackName;
+                var sessionType = telemetry == null ? null : telemetry.SessionTypeName;
                 if (!live.Is(gameName, gameRunning, carId, carModel, trackName, sessionType))
                     live = new LiveStatus(gameName, gameRunning, carId, carModel, trackName, sessionType);
+                Report(liveCardFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                Report(liveCardFault, e, nowMs);
+            }
 
-                var telemetry = data == null ? null : data.NewData;
-                // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
-                // opinion falls back to: the mirror is one computation feeding every strip, so gating it
-                // on one setting would leave a second bar set to the car's own reading a run nothing fills.
+            // Any bar asking for the car's own is enough, and so is the rig-wide answer a bar with no
+            // opinion falls back to: the mirror is one computation feeding every strip, so gating it
+            // on one setting would leave a second bar set to the car's own reading a run nothing fills.
+            try
+            {
                 var on = data != null && data.GameRunning && telemetry != null
                     && (Settings.AnyCarLadderWanted() || Settings.AnyMatrixCarLadderWanted());
                 CarLights.Update(
@@ -830,11 +871,24 @@ namespace OpenDashPlugin
                     on ? telemetry.Rpms : 0,
                     Settings.LedMirrorFit == Contract.LedMirrorFitExact ? MirrorFit.Exact : MirrorFit.Stretch,
                     on,
-                    clock.ElapsedMilliseconds);
+                    nowMs);
+                Report(carLightsFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                // Update clears its own frame when it is what threw. This is for a throw before it was
+                // reached, which would otherwise leave the last frame published as well. The field and not
+                // the getter, so that a service that could not be built is not built again here, where a
+                // throw would leave DataUpdate for SimHub's loop; one never built has published nothing.
+                carLights?.Clear();
+                Report(carLightsFault, e, nowMs);
+            }
 
-                // The slip estimate, every frame a car is on the road and whether or not a strip reads
-                // it: it compares this frame with the last one, so a gap in what it is shown would be read
-                // as the engine running away. A frame with no game, or with the game paused, resets it.
+            // The slip estimate, every frame a car is on the road and whether or not a strip reads
+            // it: it compares this frame with the last one, so a gap in what it is shown would be read
+            // as the engine running away. A frame with no game, or with the game paused, resets it.
+            try
+            {
                 var driving = data != null && data.GameRunning && telemetry != null && !data.GamePaused;
                 slip.Update(
                     driving,
@@ -845,12 +899,53 @@ namespace OpenDashPlugin
                     driving ? telemetry.Brake : 0,
                     driving ? telemetry.Clutch : 0,
                     driving ? telemetry.TCLevel : 0,
-                    clock.ElapsedMilliseconds);
+                    nowMs);
+                Report(slipFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                // Dark rather than held: a lamp lit on the frame that failed would stay lit for the fault.
+                slip.Reset();
+                Report(slipFault, e, nowMs);
+            }
+        }
+
+        // The parts of DataUpdate, each counted on its own, and what a driver sees while one of them fails.
+        private readonly FrameFault classBestFault = new FrameFault("Reading the class best lap", "dashboards show none");
+        private readonly FrameFault livePositionFault = new FrameFault("Ranking the live positions", "dashboards order the field as the sim does");
+        private readonly FrameFault simReportFault = new FrameFault("Reading what the running sim can report", "dashboards fall back on iRacing's own answers");
+        private readonly FrameFault liveCardFault = new FrameFault("Naming the game, car and track for the settings panel", "the panel's live card keeps what it last named");
+        private readonly FrameFault carLightsFault = new FrameFault("Computing the car's own lights", "the strips and rev bars fall back to the ladder the sim publishes");
+        private readonly FrameFault slipFault = new FrameFault("Estimating wheelspin and lock-up", "the slip lamps stay dark");
+
+        /// <summary>A frame on which a part threw: counted, and logged when <see cref="FrameFault"/> says a line is owed.</summary>
+        private static void Report(FrameFault fault, Exception error, long nowMs)
+        {
+            try
+            {
+                Report(fault.Failed(error, nowMs));
             }
             catch (Exception)
             {
-                // Once a frame, silently, and the strip falls back on its own: there is nothing useful
-                // to log sixty times a second and nothing to recover.
+                // Saying that the frame failed must not be what fails it.
+            }
+        }
+
+        /// <summary>Writes a line <see cref="FrameFault"/> handed out, which on almost every frame is none.</summary>
+        private static void Report(FaultLine line)
+        {
+            if (line == null) return;
+            switch (line.Level)
+            {
+                case FaultLevel.Error:
+                    Log.Error(line.Text);
+                    break;
+                case FaultLevel.Warn:
+                    Log.Warn(line.Text);
+                    break;
+                default:
+                    Log.Info(line.Text);
+                    break;
             }
         }
 

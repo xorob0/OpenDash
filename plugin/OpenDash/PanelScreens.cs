@@ -292,18 +292,39 @@ namespace OpenDashPlugin
         public const string RemoveItButton = "Remove it";
 
         /// <summary>After a remove, which leaves no step: SimHub takes the dashboard out of Dash Studio by itself,
-        /// two seconds after its folder goes (#664).</summary>
-        public static string Removed(string name)
+        /// two seconds after its folder goes (#664). The copy kept of a dashboard somebody had edited is said after it
+        /// (#861).</summary>
+        public static string Removed(string name, string keptCopy = null)
         {
-            return "Removed " + name + ".";
+            return WithEditsKept("Removed " + name + ".", keptCopy);
         }
 
-        /// <summary>A remove whose folder stayed: "removed", as the sheet says, and the reason in the log, as
-        /// PanelAddScreen.DuplicateFailed points there.</summary>
+        /// <summary>A remove whose folder could not be taken out, which leaves the screen on the rig as it was (#861):
+        /// it used to say "removed" and drop the screen over a folder still there, which then belonged to nothing.
+        /// The reason is in the log, as PanelAddScreen.DuplicateFailed points there.</summary>
         public static string RemoveFailed(string name)
         {
-            return "Removed " + name + ", but its dashboard could not be removed. See SimHub's log.";
+            return "Could not remove " + name + ". See SimHub's log.";
         }
+
+        /// <summary>
+        /// The line after a press, with the copy kept of a dashboard somebody had edited named after it, when the press
+        /// took one out of DashTemplates (#861, #588).
+        /// </summary>
+        /// <remarks>
+        /// Said, because nothing on the panel offers it back: Put mine back reads the rig's folders, and the folder
+        /// this copy is of is no longer one of them. Not named, because a file under DashTemplates is a name from
+        /// inside the code (voice.md), and the line points at SimHub's log, which names it, as a failure points there
+        /// for its detail.
+        /// </remarks>
+        public static string WithEditsKept(string line, string keptCopy)
+        {
+            if (string.IsNullOrEmpty(keptCopy)) return line;
+            return line + " " + EditsKept;
+        }
+
+        /// <summary>The sentence <see cref="WithEditsKept"/> adds.</summary>
+        public const string EditsKept = "A copy of your edited dashboard is kept, and SimHub's log says where.";
 
         // --- A face's rows ------------------------------------------------------------------------------
 

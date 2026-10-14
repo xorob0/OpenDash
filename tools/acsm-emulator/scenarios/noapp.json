@@ -1,0 +1,10 @@
+{
+  // The clear-track lap without SimHub's AC app, which is the state of an AC install SimHub has not
+  // configured. The app is what publishes the other cars (Local\acpmf_simhub_v2), so without it
+  // SimHub's AC reader adds the player alone, named "Me", and every leaderboard, relative and gap
+  // reads a field of one. iRacing has no equivalent: its field is in the session string whatever is
+  // installed. This is the state to look at when a dash on AC shows an empty table.
+  "extends": "green.json",
+  "name": "Clear track race lap, without SimHub's AC app",
+  "app": false,
+}

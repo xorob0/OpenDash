@@ -249,6 +249,63 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_frame_that_throws_leaves_the_strip_on_the_published_ladder_rather_than_on_its_last_frame()
+        {
+            var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
+            service.Download(DateTime.UtcNow);
+            service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0);
+            Assert.True(service.Ready);
+
+            // A table that disagrees with itself, which the reader refuses and so has to be made by hand:
+            // one colour for a two-LED bar is an IndexOutOfRangeException in the middle of the frame.
+            service.For("test one").Colors = new[] { "#FFFF0000" };
+            Assert.ThrowsAny<Exception>(() => service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0));
+
+            // The frame before was lit, and a failure used to leave it published: a strip frozen on its last
+            // good frame for as long as the fault lasted (#577). Now it is no mirror at all, which is what
+            // sends the profile back to the ladder the sim publishes.
+            Assert.False(service.Ready);
+            Assert.Equal(0, service.Lamps);
+            Assert.Equal(-1, service.Stage);
+            Assert.Equal(CarLightService.Packed(CarLightMirror.Dark(14)), service.Run(14));
+        }
+
+        [Fact]
+        public void A_frame_the_caller_could_not_work_out_is_cleared_the_same_way()
+        {
+            var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
+            service.Download(DateTime.UtcNow);
+            service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0);
+            Assert.True(service.Ready);
+
+            // What DataUpdate does when something before Update throws, such as reading the telemetry.
+            service.Clear();
+            Assert.False(service.Ready);
+            Assert.Equal(0, service.Lamps);
+        }
+
+        [Fact]
+        public void A_table_whose_gears_are_zero_padded_mirrors_in_every_gear()
+        {
+            // End to end, from the file on disk: "01" ... "06" is how one car's gears might be written, and
+            // the reader takes keys as given, so the mirror has to read them (#577).
+            Directory.CreateDirectory(root);
+            var rows = string.Join(", ", Enumerable.Range(1, 6).Select(g => "\"0" + g + "\": [7000, " + (g * 1000) + ", " + (g * 1000 + 500) + "]"));
+            File.WriteAllText(Path.Combine(root, "test-padded.json"),
+                "{ \"carName\": \"test padded\", \"carId\": \"test padded\", \"ledNumber\": 2, \"redlineBlinkInterval\": 0, " +
+                "\"ledColor\": [\"#00000000\", \"#FF00FF00\", \"#FFFF0000\"], \"ledRpm\": [{ " + rows + " }] }");
+            var service = new CarLightService(new Source { Failure = "should not be asked" }, root);
+            Assert.True(service.Load(DateTime.UtcNow).Ok);
+
+            foreach (var gear in new[] { "1", "3", "6", "7" })
+            {
+                service.Update("test padded", gear, 6900, MirrorFit.Stretch, true, 0);
+                Assert.True(service.Ready);
+                Assert.Equal(2, service.Lamps);
+            }
+        }
+
+        [Fact]
         public void Startup_reads_what_is_on_disk_and_asks_for_nothing()
         {
             CarLightLibrary.Extract(Archive("test one"), root);

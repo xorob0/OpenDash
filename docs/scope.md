@@ -74,8 +74,9 @@ A page is never scaled. It is laid out for the **shape** of the box it is given,
 secondary ranks before it shrinks its numerals, so a bigger screen shows more in each zone rather
 than more regions of the same size.
 
-Ten faces ship. Eight are rectangular and take the same five parts; the two round ones are still the
-card model, on purpose, and what they become is noted below.
+Ten faces ship. Eight are rectangular and take the same five parts, but for 800 x 286, which has no
+room for the bar; the two round ones are still the card model, on purpose, and what they become is
+noted below.
 
 | Package | Size | |
 |---|---|---|
@@ -336,15 +337,26 @@ cannot put a DLL into SimHub's own folder, or who will not, has no route in at a
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
 **Telemetry about the user.** Nothing about the user leaves their machine: no identifier, no
-installation id, no usage counting, no error reporting. The one exception is the update check, and
-it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
+installation id, no usage counting, no error reporting. The update check is one of the two requests
+a rig makes without a press, and it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
 What is sent is an anonymous request to GitHub asking what the newest release is, carrying the
 user's IP address, which reaches GitHub and not us, and a `User-Agent` naming the product. It can
-be switched off, and switching it off means nothing is fetched at all. The car's crest is the other
+be switched off, and switching it off means the check fetches nothing at all. The car's crest is the other
 request a rig makes without a press ([#714](https://github.com/xorob0/OpenDash/issues/714), the trade dress
 section below): one file, once, from the address on the panel, carrying the same `User-Agent` and the
 user's IP address to that address's host, and only on a rig with a screen that draws the crest. Clearing
 the address stops it and removes the copy.
+
+Those two and the two a press asks for are every request the plugin makes. Each carries the same
+`User-Agent` and the user's IP address and nothing else, and `site/test/wire.test.ts` holds the
+plugin's code, this table and the comparison on the site to the one list in `site/lib/wire.ts`.
+
+| Request | To | When |
+|---|---|---|
+| The update check | GitHub's list of OpenDash releases | once a day without a press, and never once **Check for updates** is off |
+| The crest | the address on the panel, Wikipedia's copy by default | once without a press, on a rig with a screen that draws the crest and no copy of it yet, and never once the address is cleared |
+| The car tables | the Car Data archive on GitHub | when the button on the LEDs page is pressed |
+| A new release | the files of the release on GitHub | when **Download** is pressed |
 
 **Copying a visual design.** OpenDash's design is independently derived, and every screenshot in
 OpenDash material is its own.
@@ -392,9 +404,9 @@ the mark, which is a different question from shipping it; it is accepted knowing
 reference to the car whose display the theme draws, and the fetch is not offered as the reason it is
 allowed. And the Porsche theme is free, so the question of a sold product drawing the mark, which is the
 case trade mark law cares about most, does not arise for it; what a paid theme does is answered when one
-exists, and until then the default fetch belongs to the free themes alone. The request is the one thing
-OpenDash fetches at a start without a press: one file, from the address on the panel, on a rig with a
-screen that draws the crest and no copy of it yet.
+exists, and until then the default fetch belongs to the free themes alone. The request is, beside the
+update check, the one thing OpenDash fetches at a start without a press: one file, from the address on
+the panel, on a rig with a screen that draws the crest and no copy of it yet.
 
 A theme is named after the display family as a driver says it, as a nominative reference to the
 product and in OpenDash's own type, never styled as the manufacturer presents it. The Porsche theme is

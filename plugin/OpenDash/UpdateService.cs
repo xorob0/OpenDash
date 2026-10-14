@@ -46,6 +46,19 @@ namespace OpenDashPlugin
         /// </summary>
         public bool ReplaceEditedOnRestart { get; set; }
 
+        /// <summary>
+        /// The release's version when it is the plugin already running and the run had no yes to carry to a restart,
+        /// so it downloaded and staged nothing and wrote the running plugin's own dashboards instead, as the start
+        /// does (#1083). Null otherwise.
+        /// </summary>
+        /// <remarks>
+        /// Such a run's <see cref="Updated"/> are the rig's dashboards that were behind the plugin, as one whose
+        /// install failed at the start is, and its <see cref="HeldBack"/> are the edited ones behind it, which it
+        /// leaves alone. The panel's run never has any: it asks before a press that meets an edited dashboard, and a
+        /// yes for one behind the release stages the plugin rather than coming here.
+        /// </remarks>
+        public string AlreadyRunning { get; set; }
+
         /// <summary>Folders that were meant to be replaced and could not be.</summary>
         public IReadOnlyList<string> Failed { get; set; } = new string[0];
 
@@ -69,6 +82,7 @@ namespace OpenDashPlugin
                     // What did land still has to be said, or a person cannot tell what state they are in.
                     return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.ToSee(FontsWritten);
                 }
+                if (AlreadyRunning != null) return UpdateWording.AlreadyRunning(AlreadyRunning, Updated.Count, HeldBack.Count, FontsWritten);
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : Updated.Count > 1 ? "Updated " + Updated.Count + " dashboards. " : string.Empty;
                 if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced: you have edited all of them. ";
                 else if (Updated.Count == 0 && !PluginStaged) return "There was nothing to replace.";
@@ -207,8 +221,16 @@ namespace OpenDashPlugin
             // and not the other is the mismatch this whole path exists to avoid -- and it fails silently,
             // as a field drawing its fallback for ever with nothing in any log.
             var pluginAsset = release.PluginAsset();
+            // The release's own plugin is the one running, so staging it changes nothing at the restart but one thing:
+            // it carries a yes to replacing edited dashboards to the start that writes them (EditedConsent, #862).
+            // Without that yes it is not fetched at all. Staged, it put "Restart SimHub to finish updating" on the
+            // line, on the card for as long as it waited and in the dialog, for a restart that then cleared it and
+            // finished nothing (#1083). Only an edited folder behind the release is one that start would replace.
+            var alreadyRunning = pluginAsset != null && IsRunning(release.Version) && !(replaceEdited && EditedBehind(installer, release).Count > 0);
+            if (alreadyRunning) pluginAsset = null;
             if (plan.IsEmpty && pluginAsset == null)
             {
+                if (alreadyRunning) return WriteRunning(installer, release, progress, settings);
                 return new UpdateOutcome { Ok = true, NotCarried = plan.NotCarried };
             }
 
@@ -285,6 +307,70 @@ namespace OpenDashPlugin
             {
                 FinishWriting();
             }
+        }
+
+        /// <summary>
+        /// What <see cref="Apply"/> does for the release that is the plugin already running: write the rig's dashboards
+        /// from the running plugin, as its start does, and download nothing (#1083).
+        /// </summary>
+        /// <remarks>
+        /// Such a release is offered only when an unedited dashboard is behind the plugin, since an edited one no
+        /// longer holds the rig back (UpdateCheck.RigVersion), and that happens when the start's install of it failed.
+        /// The plugin running carries the release's dashboards, so the run writes them now, and a dashboard that
+        /// fails again says why on the line. It used to stage the same plugin and ask for a restart, which retried the
+        /// install only because every start does. Saying nothing and writing nothing instead left the card offering
+        /// the release under a line saying the rig already had it, for every press after.
+        ///
+        /// Exactly the start's run: every rig folder that is missing or behind, an edited one held back. Over an
+        /// installer of the run's own, for the reason Reinstall everything uses one (#611).
+        /// </remarks>
+        private UpdateOutcome WriteRunning(DashboardInstaller installer, ReleaseInfo release, Action<double> progress, OpenDashSettings settings)
+        {
+            if (!StartWriting()) return new UpdateOutcome { Reason = StoppedReason };
+            try
+            {
+                lock (WriteLock)
+                {
+                    var target = new DashboardInstaller(installer.SimHubRoot, log, installer.PackageSource, installer.Record) { Rig = installer.Rig };
+                    var writing = DateTime.UtcNow;
+                    target.EnsureInstalled(force: false, replaceEdited: false, progress: progress);
+                    var failed = target.Packages
+                        .Where(p => p.Status == InstallStatus.Failed)
+                        .Select(p => p.FolderName ?? p.Name)
+                        .ToList();
+                    var outcome = new UpdateOutcome
+                    {
+                        Ok = failed.Count == 0,
+                        AlreadyRunning = release.Version,
+                        Updated = target.Packages.Where(p => p.Extracted).Select(p => p.FolderName).ToList(),
+                        HeldBack = target.Packages.Where(p => p.HeldBack).Select(p => p.FolderName).ToList(),
+                        Failed = failed,
+                        Reason = failed.Count == 0 ? null : (target.LastError ?? string.Join(", ", failed) + " could not be installed"),
+                        FontsWritten = PackageExtractor.FacesWrittenSince(installer.SimHubRoot, writing) > 0,
+                    };
+                    if (settings != null) Settle(outcome, release, installer, settings, log);
+                    return outcome;
+                }
+            }
+            finally
+            {
+                FinishWriting();
+            }
+        }
+
+        /// <summary>
+        /// Of the edited folders an update to <paramref name="release"/> replaces as SimHub starts again, those behind
+        /// it, which are the only ones that start writes: one already at the release is current and is left alone
+        /// whatever the driver said.
+        /// </summary>
+        private static IReadOnlyList<string> EditedBehind(DashboardInstaller installer, ReleaseInfo release)
+        {
+            var behind = new HashSet<string>(
+                installer.Packages
+                    .Where(p => p?.FolderName != null && Versioning.NeedsInstall(Versioning.Decide(p.InstalledVersion, release.Version)))
+                    .Select(p => p.FolderName),
+                StringComparer.OrdinalIgnoreCase);
+            return UpdatePlan.Edited(installer.Packages, release).OnRestart.Where(behind.Contains).ToList();
         }
 
         /// <summary>The half of <see cref="Apply"/> that writes: the plugin staged, then the packages installed.</summary>
@@ -407,6 +493,10 @@ namespace OpenDashPlugin
                 ?.InstalledVersion;
             return CarriedVersion.Refusal(item.FolderName, carried, release.Version, installed);
         }
+
+        /// <summary>Whether <paramref name="version"/> is the plugin running. False for a caller that named none.</summary>
+        private bool IsRunning(string version) =>
+            !string.IsNullOrWhiteSpace(pluginVersion) && !string.IsNullOrWhiteSpace(version) && Versioning.VersionCompare(version, pluginVersion) == 0;
 
         /// <summary>The folder an asset was fetched for, when the package itself could not be read.</summary>
         private static string FolderOf(UpdatePlan plan, string assetName) =>
@@ -614,8 +704,9 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Called from the plugin's End, which SimHub runs on shutdown. Waiting there is the opposite of the usual
-        /// advice and is right here: the alternative is the process exiting between a DeleteDirectory and the
-        /// Directory.Move that replaces what it deleted. A check or a download is never waited for, since abandoning
+        /// advice and is right here: the alternative is the process exiting between the move that takes a dashboard
+        /// aside and the one that brings its replacement in, which leaves the dashboard missing until the next start
+        /// puts it back (PackageExtractor.RemoveOrphanedStaging). A check or a download is never waited for, since abandoning
         /// a read costs nothing and a socket that never answers would hold SimHub's shutdown for its whole timeout.
         /// </remarks>
         public static bool WaitForIdle(TimeSpan timeout) => Idle.Wait(timeout);

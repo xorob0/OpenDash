@@ -10,7 +10,7 @@
  * to release. A claim nobody holds (none was taken yet, or this run's went stale) is not released,
  * but the rest is still put back, as the `finally` would have.
  */
-import { stop as stopEmulator } from './emulator.ts';
+import { stopAll as stopEmulators } from './emulator.ts';
 import { putBack } from './record.ts';
 import { readClaim, release, resolveHost, whoAmI, type Host, type RunResult } from './vm.ts';
 
@@ -27,7 +27,7 @@ export function interrupted(host: Host, script: Interruptible): number {
     console.log(`the VM is claimed by ${held.who} since ${held.since}${held.note ? ` (${held.note})` : ''}, so it is left as it is`);
     return 0;
   }
-  const steps: [string, () => RunResult][] = [['stopping the emulator', () => stopEmulator(host)]];
+  const steps: [string, () => RunResult][] = [['stopping the emulators', () => stopEmulators(host)]];
   if (script === 'record') steps.push(['taking the recorder out of SimHub', () => putBack(host)]);
   if (held) steps.push(['releasing the VM', () => release(host)]);
   let code = 0;

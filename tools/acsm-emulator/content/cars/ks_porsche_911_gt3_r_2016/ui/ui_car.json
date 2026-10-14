@@ -1,0 +1,7 @@
+{
+  "name": "Porsche 911 GT3 R 2016",
+  "brand": "Porsche",
+  "class": "race",
+  "description": "A stand-in for the acsm-emulator: only the files SimHub's Assetto Corsa reader opens, written for OpenDash and not taken from the game.",
+  "tags": ["#GT3", "rwd", "semiauto"]
+}

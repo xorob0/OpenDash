@@ -6,6 +6,11 @@
  * `scripts/emulator.ts`, and the clicking is `scripts/gui.ts`; this file decides the order, holds
  * the claim on the VM while it works, and says at the end what it did.
  *
+ * It plays one sim, iRacing unless `--sim ac` asks for Assetto Corsa (`scripts/sims.ts`). The sim
+ * decides three things and nothing else: which emulator runs, which of its scenarios may be named,
+ * and which game SimHub is told to open on when the install restarts it, since SimHub reads one
+ * game at a time and the emulators are not processes it would switch to by itself.
+ *
  * The order matters in two places. SimHub reads its fonts once at startup, so a package that brings
  * a face it does not have has to be installed before SimHub is started rather than after (its
  * dashboard list it watches, #664). And the emulator has to be
@@ -15,6 +20,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
+import { IRACING, SIMS, simFromArgs, type Sim } from './sims.ts';
 import { captureDashboard, guiProblem, openDashboard, placeDashboards } from './gui.ts';
 import { BASE_FACE } from '../packages/dash/src/zones/index.ts';
 import { claim, claimLost, install, readClaim, release, resolveHost, screenshot, sleep, status, up, waitReady, whoAmI, type Host } from './vm.ts';
@@ -80,6 +86,8 @@ export const LIST_ORDER = [
 export interface DevOptions {
   /** Which package to install and open. */
   packageName: string;
+  /** Which sim's emulator plays, and which game SimHub opens on. */
+  sim: Sim;
   scenario: string;
   /** Skip the dashboard build, for when only the scenario changed. */
   noBuild: boolean;
@@ -87,19 +95,25 @@ export interface DevOptions {
   keep: boolean;
 }
 
+/** The flags that take a value, whose value is therefore not a package name. */
+const VALUED_FLAGS = ['--scenario', '--sim'];
+
+/** Reads the command line. An unknown `--sim` throws, since playing iRacing in its place would look like a pass. */
 export function parseArgs(argv: readonly string[]): DevOptions | { help: true } {
   if (argv.includes('--help') || argv.includes('-h')) return { help: true };
-  const positional = argv.filter((a) => !a.startsWith('--'));
+  // A flag's value is positional-looking, so it is taken out by where it stands rather than by what
+  // it says: `--scenario race` once made a package named race, and `--sim ac` would make one named ac.
+  const positional = argv.filter((a, i) => !a.startsWith('--') && !VALUED_FLAGS.includes(argv[i - 1] ?? ''));
   const flagValue = (name: string): string | undefined => {
     const index = argv.indexOf(`--${name}`);
     if (index >= 0 && argv[index + 1] && !argv[index + 1]!.startsWith('--')) return argv[index + 1];
     return argv.find((a) => a.startsWith(`--${name}=`))?.split('=').slice(1).join('=');
   };
-  const scenario = flagValue('scenario') ?? 'race';
-  // The scenario is also positional-looking once `--scenario race` has been read, so it is removed.
-  const named = positional.filter((a) => a !== scenario);
+  const sim = simFromArgs(argv);
+  const scenario = flagValue('scenario') ?? sim.defaultScenario;
   return {
-    packageName: named[0] ?? BASE_FACE.folder,
+    packageName: positional[0] ?? BASE_FACE.folder,
+    sim,
     scenario,
     noBuild: argv.includes('--no-build'),
     keep: argv.includes('--keep'),
@@ -108,13 +122,15 @@ export function parseArgs(argv: readonly string[]): DevOptions | { help: true } 
 
 const USAGE = `dev: bring the whole rig up and leave a dash rendering live telemetry.
 
-  bun run dev [package] [--scenario <name>] [--no-build] [--keep]
+  bun run dev [package] [--sim ac] [--scenario <name>] [--no-build] [--keep]
 
   package     which one to install and open; default "${BASE_FACE.folder}", the base size
               (docs/scope.md: 850 x 480 is the base, 1280 x 480 the large one)
               ${LIST_ORDER.join(', ')}
+  --sim       which sim to play: iracing, the default, or ac for Assetto Corsa. SimHub is
+              restarted on that game, and the sim's own emulator plays
   --scenario  which telemetry to replay; default "race"
-              ${scenarios().join(', ') || '(none built)'}
+${SIMS.map((s) => `              ${s.id === IRACING.id ? 'iRacing' : `with --sim ${s.id}`}: ${scenarios(s).join(', ') || '(none)'}`).join('\n')}
   --no-build  skip the dashboard build, when only the scenario changed
   --keep      leave the emulator running and the VM claimed when this returns
 
@@ -138,6 +154,11 @@ function step(n: number, of: number, what: string): void {
 export async function dev(host: Host, opts: DevOptions): Promise<number> {
   const steps = 8;
   const shot = path.join(repoRoot, 'build/dev.png');
+  // Asked before the VM is claimed: a scenario the sim does not have is a typo, and costs nothing to refuse.
+  if (!scenarios(opts.sim).includes(opts.scenario)) {
+    console.error(`${opts.sim.label} has no scenario "${opts.scenario}"; one of ${scenarios(opts.sim).join(', ')}`);
+    return 1;
+  }
 
   step(1, steps, 'claiming the VM');
   const held = readClaim(host);
@@ -147,7 +168,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     return 1;
   }
   const mine = new Date();
-  const claimed = claim(host, `dev ${opts.packageName}`, mine);
+  const claimed = claim(host, `dev ${opts.packageName}${opts.sim === IRACING ? '' : ` --sim ${opts.sim.id}`}`, mine);
   if (!claimed.ok) {
     console.error(claimed.stderr);
     return 1;
@@ -184,26 +205,26 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
       }
     }
 
-    step(4, steps, `installing ${opts.packageName} and restarting SimHub`);
-    const installed = install(host, [opts.packageName]);
+    step(4, steps, `installing ${opts.packageName} and restarting SimHub on ${opts.sim.label}`);
+    const installed = install(host, [opts.packageName], undefined, opts.sim.game);
     if (!installed.ok) {
       console.error(installed.stderr || installed.stdout);
       return 1;
     }
     console.log(`      ${installed.stdout.split('\n').join('\n      ')}`);
 
-    step(5, steps, `starting the emulator on "${opts.scenario}"`);
-    const emulatorBuilt = buildEmulator();
+    step(5, steps, `starting the ${opts.sim.label} emulator on "${opts.scenario}"`);
+    const emulatorBuilt = buildEmulator(opts.sim);
     if (!emulatorBuilt.ok) {
       console.error(emulatorBuilt.stderr || emulatorBuilt.stdout);
       return 1;
     }
-    const uploaded = uploadEmulator(host);
+    const uploaded = uploadEmulator(host, opts.sim);
     if (!uploaded.ok) {
       console.error(uploaded.stderr);
       return 1;
     }
-    const running = startEmulator(host, { scenario: opts.scenario, replace: true });
+    const running = startEmulator(host, { scenario: opts.scenario, sim: opts.sim, replace: true });
     if (!running.ok) {
       console.error(running.stderr);
       return 1;
@@ -242,23 +263,29 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
 
     console.log('');
     console.log(`  package   ${opts.packageName}, installed and open`);
-    console.log(`  telemetry ${opts.scenario}, emulator pid ${runningPid(host).pid ?? 'unknown'}`);
+    console.log(`  telemetry ${opts.sim.label}, ${opts.scenario}, emulator pid ${runningPid(host, opts.sim).pid ?? 'unknown'}`);
     console.log(`  screen    ${captured.ok ? shot : '(not captured)'}`);
     console.log(`  logs      bun run vm logs 80        SimHub`);
-    console.log(`            bun run emulator tail 20  the telemetry being replayed`);
+    console.log(`            bun run emulator tail 20${opts.sim === IRACING ? '' : ` --sim ${opts.sim.id}`}  the telemetry being replayed`);
     console.log('');
     console.log(opts.keep ? '  the emulator is still running and the VM is still claimed' : '  stopping the emulator and releasing the VM');
     return 0;
   } finally {
     if (!opts.keep) {
-      stopEmulator(host);
+      stopEmulator(host, opts.sim);
       release(host);
     }
   }
 }
 
 if (import.meta.main) {
-  const opts = parseArgs(process.argv.slice(2));
+  let opts: DevOptions | { help: true };
+  try {
+    opts = parseArgs(process.argv.slice(2));
+  } catch (e) {
+    console.error(e instanceof Error ? e.message : String(e));
+    process.exit(2);
+  }
   if ('help' in opts) {
     console.log(USAGE);
   } else {

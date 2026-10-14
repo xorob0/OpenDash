@@ -28,9 +28,6 @@ namespace OpenDashTraceRecorder
         /// <summary>The request, beside this DLL. No request means the plugin does nothing at all.</summary>
         public const string RequestFileName = "opendash-trace-request.json";
 
-        /// <summary>The property carrying the emulator's tick. Frames are taken on it, not on the clock.</summary>
-        private const string TickProperty = "DataCorePlugin.GameRawData.Telemetry.SessionTick";
-
         public PluginManager PluginManager { get; set; }
 
         private TraceRequest request;
@@ -89,8 +86,8 @@ namespace OpenDashTraceRecorder
             }
 
             SimHub.Logging.Current.Info(string.Format(CultureInfo.InvariantCulture,
-                "OpenDash trace recorder: {0} frames of {1} properties every {2} ticks, {3} ticks after the game appears, into {4}",
-                request.Frames, request.Properties.Count, request.Step, request.WarmUpTicks, request.Out));
+                "OpenDash trace recorder: {0} frames of {1} properties every {2} ticks of {5}, {3} ticks after the game appears, into {4}",
+                request.Frames, request.Properties.Count, request.Step, request.WarmUpTicks, request.Out, request.Tick));
         }
 
         public void DataUpdate(PluginManager pluginManager, ref GameData data)
@@ -99,7 +96,9 @@ namespace OpenDashTraceRecorder
             // A sample taken while the game is not running is SimHub's defaults, not the scenario.
             if (data == null || !data.GameRunning) return;
 
-            var tick = AsLong(pluginManager.GetPropertyValue(TickProperty));
+            // The emulator's tick, which frames are taken on rather than on the clock: the property the
+            // request names, since each sim's reader publishes it under a name of its own.
+            var tick = AsLong(pluginManager.GetPropertyValue(request.Tick));
             if (tick == null)
             {
                 // Without the tick nothing is ever recorded, and the caller would only see a wait
@@ -108,7 +107,7 @@ namespace OpenDashTraceRecorder
                 if (!warnedAboutTick && ++updatesWithoutTick > 300)
                 {
                     warnedAboutTick = true;
-                    SimHub.Logging.Current.Error("OpenDash trace recorder: " + TickProperty + " is not published; nothing will be recorded");
+                    SimHub.Logging.Current.Error("OpenDash trace recorder: " + request.Tick + " is not published; nothing will be recorded. Is SimHub reading the game the recording is for?");
                 }
                 return;
             }
