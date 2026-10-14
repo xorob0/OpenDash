@@ -11,7 +11,6 @@
  * are declared at `wide` alone and the height of the box takes off what it cannot hold.
  */
 import { ncalc } from '../generator.ts';
-import { setting } from '../contract.ts';
 import { ds } from '../tokens.ts';
 import { stack } from '../second/layout.ts';
 import { densityOf } from '../second/density.ts';
@@ -24,6 +23,7 @@ import {
   carPosition,
   positionDigits,
   currentLap,
+  drawsLastLapDelta,
   estimatedLap,
   fieldSize,
   LAP_TIME_WIDEST,
@@ -91,7 +91,9 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
   /**
    * The canvas's "Delta to your best" is true of two of the three references, SimHub's session best
    * and all-time best both being the driver's own, and false of the third. So the label follows the
-   * setting the value does, and the canvas's words stay for the two it was drawn for. #322. The
+   * setting the value does, and the canvas's words stay for the two it was drawn for. #322. It
+   * follows the value on a sim with no last-lap delta too, where the value is the session best's
+   * (#575). The
    * session best drawn above it is the field's and not the delta's reference, which is why every
    * other caption of this delta says `vs your best` as well (#1030).
    */
@@ -100,7 +102,7 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
     'delta',
     DELTA_LABEL_WIDEST,
     { sample: '\u22120.21', widest: REFERENCE_DELTA_WIDEST, bind: referenceDeltaText(delta), chars: CHARS.referenceDelta, fs: d.mid, colorBind: referenceDeltaColour(delta) },
-    { labelBind: iff(setting.deltaReferenceIs('lastlap'), str('Delta to last lap'), str(DELTA_LABEL_WIDEST)), labelWidest: DELTA_LABEL_WIDEST },
+    { labelBind: iff(drawsLastLapDelta(), str('Delta to last lap'), str(DELTA_LABEL_WIDEST)), labelWidest: DELTA_LABEL_WIDEST },
   );
   /**
    * The companion draws each rank as three equal columns rather than as three fields of their own

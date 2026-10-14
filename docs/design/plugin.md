@@ -471,7 +471,9 @@ one thing the control cannot: the sim's time of day follows it too
 ([#324](https://github.com/xorob0/OpenDash/issues/324)).
 
 **Delta reference has a third value, Last lap**, iRacing's own live delta to the lap before
-([#322](https://github.com/xorob0/OpenDash/issues/322)). **Delta precision** sits under it because it
+([#322](https://github.com/xorob0/OpenDash/issues/322)). No other sim publishes one, and there the dashes
+draw the delta to your best and caption it so
+([#575](https://github.com/xorob0/OpenDash/issues/575)). **Delta precision** sits under it because it
 qualifies the same number, and its values are words, Hundredths and Thousandths. Neither resizes a box:
 every box that draws the delta is cut for three places
 ([ADR 0011](../decisions/0011-personalisation.md)).

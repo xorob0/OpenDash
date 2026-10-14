@@ -26,7 +26,7 @@ import { MODULES } from '../src/modules/index.ts';
 import { lapDeltaPanel } from '../src/screens/pitwall.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import type { Density } from '../src/second/density.ts';
-import { LAST_LAP_DELTA, REFERENCE_LABEL_WIDEST, lastLapDelta, referenceDelta, referenceLabel } from '../src/second/values.ts';
+import { LAST_LAP_DELTA, REFERENCE_LABEL_WIDEST, drawsLastLapDelta, lastLapDelta, referenceDelta, referenceLabel } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { evalNcalc, Single, type Props } from './ncalcEval.ts';
@@ -165,16 +165,14 @@ describe('the delta reference (#322)', () => {
   }
 
   test('the last lap is read only while iRacing says it has one, and is level otherwise', () => {
-    // `_OK` false is iRacing before a lap has been completed; absent is another sim, or no
-    // telemetry at all. Level is what the session and all-time references draw with no lap to
+    // `_OK` false is iRacing before a lap has been completed, and true with no reading is a frame
+    // iRacing never sends. Level is what the session and all-time references draw with no lap to
     // compare against, since SimHub publishes 0 there, so the three agree about "nothing yet".
     const level = [
       { last: -0.4, ok: false },
-      { last: -0.4, ok: undefined },
-      { last: -0.4, ok: null },
+      { last: undefined, ok: false },
       { last: undefined, ok: true },
       { last: null, ok: true },
-      { last: undefined, ok: undefined },
     ] as const;
     for (const s of SITES) {
       expect(drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, last: -0.4, ok: true })).text).toBe(figure(Math.fround(-0.4)));
@@ -185,6 +183,31 @@ describe('the delta reference (#322)', () => {
       }
     }
     expect(evalNcalc(lastLapDelta(), {})).toBe(0);
+  });
+
+  test('on a sim with no last-lap delta, the last lap reference draws the session best and says so (#575)', () => {
+    // Assetto Corsa, ACC and Le Mans Ultimate publish neither the reading nor its flag. The setting is
+    // the rig's, so a driver who chose Last lap on iRacing keeps it there; elsewhere every site drew a
+    // level +0.00 under "vs last lap" for the whole session. It draws the delta SimHub does publish.
+    const elsewhere = [{ last: undefined, ok: undefined }, { last: undefined, ok: null }, { last: -0.4, ok: undefined }] as const;
+    for (const s of SITES) {
+      for (const reading of READINGS) {
+        for (const values of elsewhere) {
+          const got = drawn(s, frame('lastlap', { session: reading, alltime: reading + 4.44, ...values }));
+          expect({ site: s.name, reading, values, text: got.text }).toEqual({ site: s.name, reading, values, text: figure(reading) });
+          if (got.colour !== undefined) expect({ site: s.name, reading, values, colour: got.colour }).toEqual({ site: s.name, reading, values, colour: colourOf(figure(reading)) });
+        }
+      }
+    }
+    expect(evalNcalc(drawsLastLapDelta(), frame('lastlap', {}))).toBe(false);
+    expect(evalNcalc(drawsLastLapDelta(), frame('lastlap', { ok: false }))).toBe(true);
+    expect(evalNcalc(drawsLastLapDelta(), frame('session', { ok: true }))).toBe(false);
+    // And every caption says what is drawn rather than what was chosen.
+    expect(evalNcalc(referenceLabel(), frame('lastlap', {}))).toBe('vs your best');
+    const label = formula(text(moduleItems('lapTimes', 'zone', wide.width, wide.height), 'lapTimes.delta.label'), 'Text');
+    if (label === undefined) throw new Error('the Lap times delta label is not bound');
+    expect(evalNcalc(label, frame('lastlap', {}))).toBe('Delta to your best');
+    expect(evalNcalc(label, frame('lastlap', { ok: false }))).toBe('Delta to last lap');
   });
 
   test("the last lap is signed although iRacing's float is not", () => {
@@ -222,12 +245,13 @@ describe('the delta reference (#322)', () => {
     expect(caption(undefined)).toBe('vs your best');
     expect(caption('session')).toBe('vs your best');
     expect(caption('alltime')).toBe('vs all-time best');
-    expect(caption('lastlap')).toBe('vs last lap');
+    expect(evalNcalc(referenceLabel(), frame('lastlap', { ok: true }))).toBe('vs last lap');
+    expect(evalNcalc(referenceLabel(), frame('lastlap', { ok: false }))).toBe('vs last lap');
     expect(caption('previous')).toBe('vs your best');
   });
 
   test('every caption fits the one widest the delta module and the pit wall are measured by', () => {
-    const captions = DELTA_REFERENCES.map((reference) => evalNcalc(referenceLabel(), frame(reference, {})) as string);
+    const captions = DELTA_REFERENCES.map((reference) => evalNcalc(referenceLabel(), frame(reference, { ok: true })) as string);
     for (const size of [12, 13, 15]) {
       const room = measureText('BarlowMedium', REFERENCE_LABEL_WIDEST, size);
       for (const c of captions) expect({ caption: c, size, fits: measureText('BarlowMedium', c, size) <= room }).toEqual({ caption: c, size, fits: true });
@@ -251,7 +275,7 @@ describe('the delta reference (#322)', () => {
     expect(evalNcalc(bound, frame(undefined, {}))).toBe('Delta to your best');
     expect(evalNcalc(bound, frame('session', {}))).toBe('Delta to your best');
     expect(evalNcalc(bound, frame('alltime', {}))).toBe('Delta to your best');
-    expect(evalNcalc(bound, frame('lastlap', {}))).toBe('Delta to last lap');
+    expect(evalNcalc(bound, frame('lastlap', { ok: true }))).toBe('Delta to last lap');
     expect(measureText('BarlowMedium', 'Delta to last lap', 13)).toBeLessThan(measureText('BarlowMedium', 'Delta to your best', 13));
   });
 });

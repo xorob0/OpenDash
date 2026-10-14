@@ -1074,6 +1074,11 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   nothing reads. The value is not meaningful while `_OK` is false, so `lastLapDelta` in
   `packages/dash/src/second/values.ts` reads it only behind `isnull(..._OK, false)` and draws a level
   delta otherwise, as SimHub's two draw 0 when they have no lap to compare against.
+- **iRacing alone publishes it**, and `_OK` with it on every frame, true or false. Assetto Corsa, ACC
+  and Le Mans Ultimate publish neither, so the flag's absence is what tells a sim without the reading
+  apart, with no capability: `drawsLastLapDelta` reads `!isnull(..._OK)`, and the last lap reference
+  draws the session best's delta and the caption `vs your best` where it is false. Before #575 it
+  drew a level `+0.00` under `vs last lap` for the whole session there.
 - **A raw iRacing float is a boxed System.Single, and `format` does not sign one.** iRacing publishes
   the delta as an irsdk_float; the SDK reads it with `ReadSingle`, the raw telemetry is a dictionary
   of objects that SimHub exposes unchanged, and NCalc's `if` and SimHub's `isnull` hand their

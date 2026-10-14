@@ -762,8 +762,11 @@ describe('module expressions', () => {
   test('the lap times delta names the best it is against and is signed the same way', () => {
     const label = moduleItem('lapTimes', 'delta.label');
     expect(label.text).toBe('Delta to your best');
-    // "your best" is true of the session best and the all-time best, and not of the last lap (#322).
-    expect(formulaOf(label, 'Text')).toBe("if((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap'), 'Delta to last lap', 'Delta to your best')");
+    // "your best" is true of the session best and the all-time best, and not of the last lap (#322),
+    // which is drawn only on a sim that publishes it; elsewhere the delta is to your best (#575).
+    expect(formulaOf(label, 'Text')).toBe(
+      "if(((isnull([OpenDash.DeltaReference], 'session')) = ('lastlap')) and (!(isnull([DataCorePlugin.GameRawData.Telemetry.LapDeltaToSessionLastlLap_OK]))), 'Delta to last lap', 'Delta to your best')",
+    );
     const value = moduleItem('lapTimes', 'delta.value');
     expect(formulaOf(value, 'Text')).toContain("'-', '\u2212'");
     expect(value.text).toBe('\u22120.21');

@@ -2850,8 +2850,9 @@ export const LAST_LAP_DELTA = 'LapDeltaToSessionLastlLap';
  * Gated on `_OK` and zero without it, which is what the other two references draw when they have no
  * lap to compare against: SimHub publishes 0 there. The flag's fallback is the bare literal `false`
  * and not the string, because a raw telemetry boolean arrives as `true` or `false` (see `inTheCar`
- * in `components/changeNotification.ts`), so a sim that publishes neither field, or no telemetry at
- * all, reads a level delta rather than an error.
+ * in `components/changeNotification.ts`), so a frame with no telemetry at all reads a level delta
+ * rather than an error. A sim that publishes neither field never reaches this reading: the screens
+ * draw the session best's delta there instead (see {@link drawsLastLapDelta}).
  *
  * Multiplied by `1.0` to make it a double. iRacing publishes the reading as an irsdk_float, and it
  * reaches the binding as a boxed System.Single: SimHub's raw telemetry passes it through unchanged,
@@ -2866,9 +2867,24 @@ export const lastLapDelta = (): Expr =>
   iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), mul(isnull(raw(LAST_LAP_DELTA), num(0)), '1.0'), num(0));
 
 /**
+ * Whether the delta is drawn against the last lap: the driver chose it, and the sim publishes it.
+ *
+ * Only iRacing publishes a live delta to the last lap, and it publishes `_OK` beside it on every frame,
+ * true or false, so the flag's presence is what says the sim has the reading at all. On Assetto Corsa,
+ * ACC and Le Mans Ultimate neither field exists, and a Last lap reference read there drew a level
+ * `+0.00` under "vs last lap" for the whole session (#575). Without the reading the delta is the one
+ * SimHub publishes on every sim, the session best's, and every caption says so, which is the same
+ * fallback an unknown reference takes. No capability is needed to tell the sims apart, ADR 0021's
+ * last resort: the property's absence is what `isnull` reads, and iRacing, which always has it, reads
+ * the last lap exactly as before, level while `_OK` is false.
+ */
+export const drawsLastLapDelta = (): Expr => and(setting.deltaReferenceIs('lastlap'), not(isNull(raw(`${LAST_LAP_DELTA}_OK`))));
+
+/**
  * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
  * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
- * different laps. An unknown value reads the `session` reference, which is the default.
+ * different laps. An unknown value reads the `session` reference, which is the default, and so does
+ * the last lap on a sim that does not publish it ({@link drawsLastLapDelta}).
  *
  * The `session` reference is SimHub's live delta to its session best, which is the player's own best
  * lap of this session and not the field's: SimHub's lap tracker follows the player's laps and nobody
@@ -2876,7 +2892,7 @@ export const lastLapDelta = (): Expr =>
  * session best a page draws beside it in purple is the field's (#1030).
  */
 export const referenceDelta = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(drawsLastLapDelta(), lastLapDelta(), sessionBestDelta()));
 
 /** The caption of a delta to the player's own best lap of the session, which is what SimHub's session best is. */
 export const YOUR_BEST_CAPTION = 'vs your best';
@@ -2893,7 +2909,7 @@ export const YOUR_BEST_CAPTION = 'vs your best';
  * laps most of a second apart (#1030).
  */
 export const referenceLabel = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str(YOUR_BEST_CAPTION)));
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(drawsLastLapDelta(), str('vs last lap'), str(YOUR_BEST_CAPTION)));
 
 /**
  * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is

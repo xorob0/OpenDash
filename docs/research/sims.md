@@ -330,7 +330,7 @@ Le Mans Ultimate: their raw blocks have other names (next section). What a null 
 | `Telemetry.LFtempCM`, `RFtempCM`, `LRtempCM`, `RRtempCM` | band D's tyre page | `0 0 0 0` | #556 |
 | `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service | a stop nobody set | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |
-| `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | a level `+0.00` | #575 |
+| `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | the session best's delta, captioned `vs your best` (a level `+0.00` before #575) | #575 |
 | `Telemetry.WindVel` | the wind on band D and the pit wall header | **`0 km/h`, drawn as a value** | none, reported with this page |
 | `Telemetry.SessionTimeOfDay` | the sim clock on the bar and band D | **`00:00`, drawn as a value** | none, reported with this page |
 | `Telemetry.SessionTimeTotal` | the untimed-session mark | rests on `SessionTimeLeft` alone | none needed |
