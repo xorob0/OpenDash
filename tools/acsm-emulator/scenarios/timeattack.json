@@ -1,0 +1,11 @@
+{
+  // quali in AC's time attack. SimHub writes the session as AC_TIME_ATTACK with AC_ taken off,
+  // TIME_ATTACK, the widest name any of the sims writes in cells, which the AiM's Session cell was
+  // cut a cell too short for while it knew iRacing's names alone (#1127). iRacing has no time attack,
+  // so like noapp it has no twin there.
+  "extends": "quali.json",
+  "name": "Time attack, TC and ABS at 0",
+  "values": {
+    "Graphics.Session": "AC_TIME_ATTACK",
+  },
+}

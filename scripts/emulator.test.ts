@@ -86,7 +86,9 @@ describe('the sims', () => {
   test("Assetto Corsa's scenarios mirror iRacing's where AC publishes the state", () => {
     // The three the ticket's acceptance names, and the race they extend.
     for (const name of ['race', 'green', 'yellow', 'pit']) expect(scenarios(ASSETTO_CORSA)).toContain(name);
-    for (const name of scenarios(ASSETTO_CORSA).filter((n) => n !== 'noapp')) expect({ name, inIracing: scenarios(IRACING).includes(name) }).toEqual({ name, inIracing: true });
+    // Two have no twin, being states iRacing has no word for: an install without SimHub's app, and a
+    // time attack.
+    for (const name of scenarios(ASSETTO_CORSA).filter((n) => n !== 'noapp' && n !== 'timeattack')) expect({ name, inIracing: scenarios(IRACING).includes(name) }).toEqual({ name, inIracing: true });
   });
 
   test("every name on a sim's untraced list is a scenario it ships", () => {

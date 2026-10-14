@@ -2307,20 +2307,31 @@ export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**
  * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
+ * Each sim's reader writes its own words, in its own case, which is the case they are drawn in, so
+ * the list is every reader's words together.
  *
- * SimHub passes iRacing's own words through. Its `IRacingManager.GD_SessionTypeName` (ICarsReader,
- * decompiled) answers the `SessionType` of the entry in `SessionInfo.Sessions` the telemetry's
- * `SessionNum` points at, and falls back to the weekend's `EventType` where there is none, so the
- * list is both: the session types an iRacing weekend is made of, as the pit wall header listed them
- * before this list existed, and the event types a weekend can be. They are written in iRacing's
- * case, which is the case they are drawn in.
+ * On iRacing SimHub passes iRacing's own words through. Its `IRacingManager.GD_SessionTypeName`
+ * (ICarsReader, decompiled) answers the `SessionType` of the entry in `SessionInfo.Sessions` the
+ * telemetry's `SessionNum` points at, and falls back to the weekend's `EventType` where there is
+ * none, so iRacing's part is both: the session types an iRacing weekend is made of, as the pit wall
+ * header listed them before this list existed, and the event types a weekend can be. `Open
+ * Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029 rather
+ * than of a recording, which has only ever shown `Lone Qualify` and `Race`.
  *
- * `Open Practice` and `Lone Practice` are here on the word of the fuel margin's tests and of #1029
- * rather than of a recording, which has only ever shown `Lone Qualify` and `Race`. A name missing
- * from this list is not measured by anything that cuts its box from the list, the AiM's above all,
- * so a name that might be written is listed rather than left out.
+ * Assetto Corsa and ACC are read by `ACManager` and `ACCManager` (ACSharedMemory, decompiled), whose
+ * `GD_SessionTypeName` is the shared memory's `Graphics.Session.ToString().Replace("AC_", "")`, in
+ * capitals with the underscore kept: the seven names of `AC_SESSION_TYPE` and its `UNKNOWN`. That
+ * enum stops at `AC_DRAG`, which is 6, and ACC numbers its hot stint 7 and its superpole hot lap 8,
+ * so on ACC those two are written as the digit. Le Mans Ultimate is read by `LMUManager`
+ * (RfactorReader, decompiled), which maps `scoringInfo.mSession` to `Test day`, `Practice`,
+ * `Qualify`, `Warmup` and `Race`; the last four are iRacing's words too (#1127).
+ *
+ * A name missing from this list is not measured by anything that cuts its box from the list, the
+ * AiM's above all, which drew Assetto Corsa's `TIME_ATTACK` a cell wider than its box, so a name
+ * that might be written is listed rather than left out.
  */
 export const SESSION_NAMES: readonly string[] = [
+  // iRacing
   'Offline Testing',
   'Practice',
   'Open Practice',
@@ -2334,6 +2345,19 @@ export const SESSION_NAMES: readonly string[] = [
   'Race',
   'Test',
   'Time Trial',
+  // Assetto Corsa and ACC
+  'PRACTICE',
+  'QUALIFY',
+  'RACE',
+  'HOTLAP',
+  'TIME_ATTACK',
+  'DRIFT',
+  'DRAG',
+  'UNKNOWN',
+  '7',
+  '8',
+  // Le Mans Ultimate, whose other four are iRacing's words
+  'Test day',
 ];
 
 /**
