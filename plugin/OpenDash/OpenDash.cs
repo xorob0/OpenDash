@@ -807,7 +807,9 @@ namespace OpenDashPlugin
                 var gameRunning = data != null && data.GameRunning;
                 var carId = telemetry == null ? null : telemetry.CarId;
                 var carModel = telemetry == null ? null : telemetry.CarModel;
-                var trackName = telemetry == null ? null : telemetry.TrackName;
+                var trackName = telemetry == null ? null : LiveStatus.TrackShown(
+                    pluginManager == null ? null : pluginManager.GetPropertyValue(LiveStatus.TrackNameForPeopleProperty) as string,
+                    telemetry.TrackName);
                 var sessionType = telemetry == null ? null : telemetry.SessionTypeName;
                 if (!live.Is(gameName, gameRunning, carId, carModel, trackName, sessionType))
                     live = new LiveStatus(gameName, gameRunning, carId, carModel, trackName, sessionType);

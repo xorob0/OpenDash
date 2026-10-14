@@ -24,6 +24,27 @@ namespace OpenDashPlugin
             SessionType = sessionType;
         }
 
+        /// <summary>
+        /// Where Assetto Corsa publishes the track's name for people: the name in the track's own
+        /// ui_track.json, which SimHub's AC reader loads into its raw Track.TrackInfo. No other sim's reader
+        /// has one, so everywhere else SimHub answers null.
+        /// </summary>
+        public const string TrackNameForPeopleProperty = "DataCorePlugin.GameRawData.Track.TrackInfo.name";
+
+        /// <summary>
+        /// The track as a person names it: the name for people where the sim gives one, and SimHub's
+        /// TrackName where it does not.
+        /// </summary>
+        /// <remarks>
+        /// TrackName is the circuit's name on iRacing, ACC and LMU, and on Assetto Corsa the track's folder
+        /// in lower case, "ks_red_bull_ring", because ACManager answers TrackDesc.Track (#1124). The dash
+        /// reads the same two properties in the same order (trackName() in packages/dash/src/second/values.ts).
+        /// </remarks>
+        public static string TrackShown(string nameForPeople, string trackName)
+        {
+            return string.IsNullOrWhiteSpace(nameForPeople) ? trackName : nameForPeople;
+        }
+
         /// <summary>Nothing reported yet: no game, not running, and no car or track to name.</summary>
         public static readonly LiveStatus None = new LiveStatus(null, false, null, null, null, null);
 
