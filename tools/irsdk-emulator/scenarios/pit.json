@@ -45,6 +45,6 @@
     {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}},
     {"at": 0, "driver": {"type": "flagCycle", "enabled": false}},
     {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
-    {"at": 1, "log": "three more cars in the pit lane, for the PIT chips in the table", "driver": {"type": "field", "pitCars": [4, 9, 17]}}
+    {"at": 1, "log": "three more cars in the pit lane, four PIT chips in the table with race.json's car 8", "driver": {"type": "field", "pitCars": [4, 9, 17]}}
   ]
 }

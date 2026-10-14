@@ -19,7 +19,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, upload as uploadEmulator, scenarios } from './emulator.ts';
+import { build as buildEmulator, runningPid, start as startEmulator, stop as stopEmulator, stopAll as stopEmulators, upload as uploadEmulator, scenarios } from './emulator.ts';
 import { IRACING, SIMS, simFromArgs, type Sim } from './sims.ts';
 import { captureDashboard, guiProblem, openDashboard, placeDashboards } from './gui.ts';
 import { BASE_FACE } from '../packages/dash/src/zones/index.ts';
@@ -147,12 +147,43 @@ export function packageSize(name: string): { width: number; height: number } | u
   return found ? { width: found.width, height: found.height } : undefined;
 }
 
+/**
+ * The remote steps a run takes, in one object so that a test can answer them in place of the guest,
+ * as `steps` in shots.ts and modules.ts do.
+ */
+export const steps = {
+  readClaim,
+  claim,
+  release,
+  status,
+  up,
+  waitReady,
+  guiProblem,
+  install,
+  buildEmulator,
+  uploadEmulator,
+  startEmulator,
+  stopEmulator,
+  stopEmulators,
+  runningPid,
+  openDashboard,
+  placeDashboards,
+  captureDashboard,
+  screenshot,
+  sleep,
+  /** Read from build/manifest.json, which a test has no reason to have built. */
+  packageSize,
+};
+
 function step(n: number, of: number, what: string): void {
   console.log(`[${n}/${of}] ${what}`);
 }
 
 export async function dev(host: Host, opts: DevOptions): Promise<number> {
-  const steps = 8;
+  const { readClaim, claim, release, status, up, waitReady, guiProblem, install } = steps;
+  const { buildEmulator, uploadEmulator, startEmulator, stopEmulator, stopEmulators, runningPid } = steps;
+  const { openDashboard, placeDashboards, captureDashboard, screenshot, sleep, packageSize } = steps;
+  const count = 8;
   const shot = path.join(repoRoot, 'build/dev.png');
   // Asked before the VM is claimed: a scenario the sim does not have is a typo, and costs nothing to refuse.
   if (!scenarios(opts.sim).includes(opts.scenario)) {
@@ -160,7 +191,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     return 1;
   }
 
-  step(1, steps, 'claiming the VM');
+  step(1, count, 'claiming the VM');
   const held = readClaim(host);
   if (held && held.who !== whoAmI()) {
     console.error(`the VM is claimed by ${held.who} since ${held.since}${held.note ? ` (${held.note})` : ''}`);
@@ -175,7 +206,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
   }
 
   try {
-    step(2, steps, 'starting the VM if it is down, and reading the display it will be clicked on');
+    step(2, count, 'starting the VM if it is down, and reading the display it will be clicked on');
     if (!status(host).stdout.includes('guest-ssh: up')) {
       up(host);
       if (!waitReady(host, 300)) {
@@ -196,7 +227,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
       return 1;
     }
 
-    step(3, steps, opts.noBuild ? 'skipping the build' : 'building the packages');
+    step(3, count, opts.noBuild ? 'skipping the build' : 'building the packages');
     if (!opts.noBuild) {
       const built = Bun.spawnSync(['bun', 'run', 'build', '--all-themes'], { cwd: repoRoot, stdout: 'pipe', stderr: 'pipe' });
       if (built.exitCode !== 0) {
@@ -205,7 +236,16 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
       }
     }
 
-    step(4, steps, `installing ${opts.packageName} and restarting SimHub on ${opts.sim.label}`);
+    step(4, count, `stopping every emulator, installing ${opts.packageName} and restarting SimHub on ${opts.sim.label}`);
+    // Every sim's, not only this one's: SimHub with a licence switches to whichever game it finds
+    // running, so an emulator left by a run on the other sim could take this one's SimHub onto that
+    // game as it starts (#1138). Its own is stopped too, since SimHub is about to restart under it.
+    const stopped = stopEmulators(host);
+    if (!stopped.ok) {
+      console.error(stopped.stderr);
+      return 1;
+    }
+    console.log(`      ${stopped.stdout}`);
     const installed = install(host, [opts.packageName], undefined, opts.sim.game);
     if (!installed.ok) {
       console.error(installed.stderr || installed.stdout);
@@ -213,7 +253,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     }
     console.log(`      ${installed.stdout.split('\n').join('\n      ')}`);
 
-    step(5, steps, `starting the ${opts.sim.label} emulator on "${opts.scenario}"`);
+    step(5, count, `starting the ${opts.sim.label} emulator on "${opts.scenario}"`);
     const emulatorBuilt = buildEmulator(opts.sim);
     if (!emulatorBuilt.ok) {
       console.error(emulatorBuilt.stderr || emulatorBuilt.stdout);
@@ -231,7 +271,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     }
     console.log(`      ${running.stdout.split('\n').join('\n      ')}`);
 
-    step(6, steps, `opening ${opts.packageName}`);
+    step(6, count, `opening ${opts.packageName}`);
     const opened = openDashboard(host, { name: opts.packageName });
     if (!opened.ok) {
       console.error(opened.stderr);
@@ -244,7 +284,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     }
     console.log(`      ${opened.stdout}`);
 
-    step(7, steps, 'letting the dash settle, then sizing it to the dashboard it holds');
+    step(7, count, 'letting the dash settle, then sizing it to the dashboard it holds');
     sleep(5);
     // Fully on screen, because the capture below asks the window to draw itself and an off-screen
     // edge comes back cut. Sized too, because SimHub reopens a windowed dash at whatever size it
@@ -253,7 +293,7 @@ export async function dev(host: Host, opts: DevOptions): Promise<number> {
     placeDashboards(host, 0, 0, size ? { name: opts.packageName, ...size } : undefined);
     sleep(2);
 
-    step(8, steps, 'photographing the dash');
+    step(8, count, 'photographing the dash');
     let captured = captureDashboard(host, opts.packageName, shot);
     if (!captured.ok) {
       console.error(`      the window capture failed (${captured.stderr}); falling back to the whole display`);
