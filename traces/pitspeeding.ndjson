@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79311,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","OpenDash.DriverInCar"]}
+{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79311,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","OpenDash.DriverInCar","DataCorePlugin.GameRawData.Physics.SteerAngle"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -84,6 +84,7 @@
 {"p":"DataCorePlugin.GameData.TyreWearRearLeft","v":97.3}
 {"p":"DataCorePlugin.GameData.TyreWearRearRight","v":97.2}
 {"p":"DataCorePlugin.GameData.WaterTemperature","v":88.5}
+{"p":"DataCorePlugin.GameRawData.Physics.SteerAngle","v":null}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward","v":"6"}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM","v":9000}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM","v":7800}

@@ -323,8 +323,8 @@ Le Mans Ultimate: their raw blocks have other names (next section). What a null 
 |---|---|---|---|
 | `SessionData.DriverInfo.DriverCarGearNumForward` | top gear, the gear ghost | the fallback, which is wrong | #996 |
 | `SessionData.DriverInfo.DriverCarSLBlinkRPM`, `SLFirstRPM`, `SLLastRPM`, `SLShiftRPM` | the car's own shift ladder | SimHub's bands | #748 |
-| `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | `0x` drawn as a value | #567 |
-| `Telemetry.SteeringWheelAngle` | the steering dial and trace | flat | #567 |
+| `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | hidden in the bar and the pit wall's header, `--` in band D and the session module | #567 |
+| `Telemetry.SteeringWheelAngle` | the steering dial and trace | `Physics.SteerAngle` on Assetto Corsa and ACC, flat on LMU | #567 |
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
 | `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications | the plugin's `DriverInCar`, and without the plugin unknown, read as not in the car for the car alerts and as in it everywhere else | #561 |
 | `Telemetry.LFtempCM`, `RFtempCM`, `LRtempCM`, `RRtempCM` | band D's tyre page | `0 0 0 0` | #556 |
@@ -483,9 +483,10 @@ rFactor 2 plugin's five buffers with their version blocks, and a process named `
 
 What the source cannot settle, to check in the drives #592, #961 and #962 ask for:
 
-- **Assetto Corsa's steering.** `Physics.SteerAngle` is published as AC writes it. Whether AC writes the
-  normalised input or an angle, and its sign, is the author's wheel test (#567). Marvin's AIRA, cited
-  in [simhub-dash-format.md](simhub-dash-format.md) for #1057, negates AC's steering as right-positive.
+- **Assetto Corsa's steering.** `Physics.SteerAngle` is published as AC writes it, and the dash reads it
+  since #567 as the input from -1 to 1 of full lock, positive to the right, which is Marvin's AIRA's
+  reading (see [simhub-dash-format.md](simhub-dash-format.md)). The author's wheel test confirms both: a
+  right turn moves the dial's mark to the right, and full lock reaches its end.
 - **LMU's steering sign.** The structs carry no comment; left to right is the rFactor 2 SDK's
   description of `mUnfilteredSteering`, which LMU inherits, and the same wheel test confirms it.
 - **ACC's second sector.** Whether `Graphics.LastSectorTime` is the sector's own time or the split from

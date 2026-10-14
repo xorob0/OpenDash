@@ -830,6 +830,52 @@ describe('module expressions', () => {
     expect(at(-10)).toEqual(at(-values.STEERING_RANGE));
   });
 
+  test('the session module draws its not-available mark for the incidents on a sim with no count (#567)', () => {
+    const module = MODULES.find((m) => m.id === 'session')!;
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const items = [...walkItems(module.build({ frame: box, density: 'zone', prefix: 'session.' }))];
+    const value = items.find((i): i is TextItem => i.kind === 'text' && i.name === 'session.incidents.value');
+    if (!value) throw new Error(`no session.incidents.value among ${items.map((i) => i.name).join(', ')}`);
+    const text = formulaOf(value, 'Text');
+    const colour = formulaOf(value, 'TextColor');
+    const COUNT = 'DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount';
+    expect(evalNcalc(text, {})).toBe(values.NO_VALUE);
+    expect(evalNcalc(colour, {})).toBe(ds.color.text.primary);
+    expect(evalNcalc(text, { [COUNT]: 0 })).toBe('0x');
+    expect(evalNcalc(text, { [COUNT]: 3 })).toBe('3x');
+    expect(evalNcalc(colour, { [COUNT]: 3 })).toBe(ds.color.caution.primary);
+  });
+
+  /**
+   * Assetto Corsa and ACC publish no `SteeringWheelAngle`, and the dial stood at top dead centre on both.
+   * They publish `Physics.SteerAngle`, the input as a fraction of full lock and positive to the right,
+   * and the dial reads it where iRacing's angle is absent, full lock to its own full range (#567).
+   */
+  test('on Assetto Corsa and ACC the mark follows their input, a right turn to the right of the top', () => {
+    const module = MODULES.find((m) => m.id === 'inputs')!;
+    const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);
+    const mark = [...walkItems(module.build({ frame: box, density: 'zone', prefix: 'inputs.' }))].find((i) => i.name === 'inputs.steer.mark');
+    if (!mark || mark.kind !== 'rect') throw new Error('inputs.steer.mark is not a rect');
+    const place = (n: number): number => Math.round(n * 1e6) / 1e6 + 0;
+    const on = (props: Props): { left: number; top: number } => ({
+      left: place(Number(evalNcalc(mark.bindings!.Left!.formula as string, props))),
+      top: place(Number(evalNcalc(mark.bindings!.Top!.formula as string, props))),
+    });
+    const ac = (input: number): { left: number; top: number } => on({ [values.AC_STEER_ANGLE]: input });
+    const iracing = (angle: number): { left: number; top: number } => on({ 'DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle': angle });
+    expect(ac(0)).toEqual({ left: mark.rect.left, top: mark.rect.top });
+    expect(ac(0.2).left).toBeGreaterThan(mark.rect.left);
+    expect(ac(-0.2).left).toBeLessThan(mark.rect.left);
+    // Full lock is the dial's full lock, and the same place as iRacing's angle at it, turned the other
+    // way round because iRacing's is positive to the left.
+    expect(ac(1)).toEqual(iracing(-values.STEERING_RANGE));
+    expect(ac(-1)).toEqual(iracing(values.STEERING_RANGE));
+    expect(ac(0.5)).toEqual(iracing(-values.STEERING_RANGE / 2));
+    // And iRacing reads its own angle whatever else is there.
+    expect(on({ 'DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle': 0.3, [values.AC_STEER_ANGLE]: -1 })).toEqual(iracing(0.3));
+    expect(on({})).toEqual({ left: mark.rect.left, top: mark.rect.top });
+  });
+
   test('the wheel turns as one: every part goes round the hub and turns by the wheel angle on top of its own', () => {
     const module = MODULES.find((m) => m.id === 'inputs')!;
     const box = rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height);

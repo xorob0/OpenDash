@@ -54,7 +54,7 @@ import {
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, concat } = ncalc;
+const { add, and, fmt, isnull, isNull, not, num, str, iff, eq, concat } = ncalc;
 
 /**
  * What every artboard draws the same way, whatever the bar's height: twenty pixels of side
@@ -129,6 +129,12 @@ interface BarFieldSpec {
    * gap there without a binding. Required of every field that has a denominator. #387.
    */
   drawn?: DrawnFigure;
+  /**
+   * The state the field means something in, where there is one, folded into the slot's visibility so
+   * the label, the value and whatever follows it go together. The incidents are iRacing's alone, and a
+   * sim that publishes no count drew `0x` as if it were one; the field hides there instead (#567).
+   */
+  when?: Expr;
 }
 
 /** The face the bar's followers are set in, which is the value's own. */
@@ -204,7 +210,15 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     chars: CHARS.classPosition,
     widest: CLASS_AND_PLACE_WIDEST,
   },
-  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, numeralWidest: INCIDENTS_WIDEST },
+  {
+    id: 'incidents',
+    label: 'Incidents',
+    sample: '3x',
+    bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')),
+    chars: CHARS.incidents,
+    numeralWidest: INCIDENTS_WIDEST,
+    when: not(isNull(incidents())),
+  },
   {
     id: 'airTemp',
     label: 'Air',
@@ -382,7 +396,8 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ? frame.left + PAD_X + withinEnd * (widest + gap)
         : frame.left + frame.width - PAD_X - endWidth + withinEnd * (widest + gap);
     for (const spec of BAR_FIELD_SPECS) {
-      const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const chosen = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const visible = spec.when === undefined ? chosen : and(chosen, spec.when);
       const name = `${prefix}${slot}.${spec.id}`;
       // One field per end is the portrait face, where the artboard has the room for "Pos" and not
       // for "Position".

@@ -17,6 +17,7 @@ import {
   CHARS,
   CLASS_AND_PLACE_WIDEST,
   INCIDENTS_WIDEST,
+  NO_VALUE,
   LAP_TOTAL_WIDEST,
   LAP_WIDEST,
   carPosition,
@@ -41,7 +42,7 @@ import {
 import { ds } from '../tokens.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
-const { and, fmt, iff, concat, str, gt, num, isnull, not } = ncalc;
+const { and, fmt, iff, concat, str, gt, num, isnull, isNull, not } = ncalc;
 
 export const session = defineModule('session', (ctx) => {
   const d = densityOf(ctx.density);
@@ -125,7 +126,9 @@ export const session = defineModule('session', (ctx) => {
           fld(ctx, 'incidents', 'Incidents', {
             sample: '3x',
             widest: INCIDENTS_WIDEST,
-            bind: concat(fmt(taken, '0'), str('x')),
+            // The incidents are iRacing's alone, and a sim with no count drew `0x` as if it were one; it
+            // draws the not-available mark instead, as the module's other readings do (#567).
+            bind: iff(isNull(incidents()), str(NO_VALUE), concat(fmt(taken, '0'), str('x'))),
             chars: CHARS.incidents,
             fs: d.small,
             colorBind: iff(gt(taken, num(0)), str(ds.color.caution.primary), str(ds.color.text.primary)),

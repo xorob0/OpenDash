@@ -74,6 +74,10 @@ const SITES: Site[] = [
 /** A lap count read straight from the sim, or from the leaderboard for the stint. */
 const LAP_READ = String.raw`(?:isnull\(\[DataCorePlugin\.GameData\.(?:CurrentLap|CompletedLaps|RemainingLaps)\], 0\)|isnull\(driverlapsdonesincelastpitout\((?:[^()]|\([^()]*\))*\), 0\))`;
 
+/** The incident count as the sim publishes it, and as it is drawn, `3x`. */
+const INCIDENT_READ = String.raw`\[DataCorePlugin\.GameRawData\.Telemetry\.PlayerCarMyIncidentCount\]`;
+const INCIDENT_COUNT = String.raw`\(format\(isnull\(${INCIDENT_READ}, 0\), '0'\)\) \+ \('x'\)`;
+
 /** The readings this ticket is about, each with the string it draws at the long end. */
 const READINGS: { name: string; pattern: RegExp; widest: string }[] = [
   { name: 'a lap count', pattern: new RegExp(String.raw`^format\(${LAP_READ}, '0'\)$`), widest: LAP_WIDEST },
@@ -86,9 +90,10 @@ const READINGS: { name: string; pattern: RegExp; widest: string }[] = [
   // The session page's laps left, which in a timed race is predicted from the time left and is
   // `--` until a lap has been timed (#1008); at the long end of a lap race it is `RemainingLaps`.
   { name: 'the laps left', pattern: new RegExp(`^${lapsLeftText().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`), widest: LAP_WIDEST },
+  // The count, or the count behind the not-available mark that a sim with none draws instead (#567).
   {
     name: 'the incident count',
-    pattern: /^\(format\(isnull\(\[DataCorePlugin\.GameRawData\.Telemetry\.PlayerCarMyIncidentCount\], 0\), '0'\)\) \+ \('x'\)$/,
+    pattern: new RegExp(String.raw`^(?:${INCIDENT_COUNT}|[Ii]f\(isnull\(${INCIDENT_READ}\), '--', ${INCIDENT_COUNT}\))$`),
     widest: INCIDENTS_WIDEST,
   },
 ];

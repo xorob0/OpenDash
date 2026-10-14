@@ -1164,6 +1164,30 @@ with SimHub's property list open and read `SteeringWheelAngle` going positive.
   The emulator scenarios that sweep the angle do so symmetrically, so none of the committed traces
   could have shown the sign either way.
 
+### Assetto Corsa's and ACC's steering is a fraction of full lock, positive to the right (2026-10-14, #567)
+
+Established from the shared-memory layouts both sims document and from Marvin's AIRA; not yet seen on a
+real wheel, which is still the check to make: turn right in Assetto Corsa with SimHub's property list
+open and read `Physics.SteerAngle` going positive, and turn to full lock and read 1.
+
+- **Neither publishes iRacing's angle.** `Telemetry.SteeringWheelAngle` is null on both, so the dial and
+  the pit wall's trace stood at the centre whatever the wheel did.
+- **Both publish `Physics.SteerAngle`.** SimHub hands the physics page on as it reads it, so the dash
+  reads `[DataCorePlugin.GameRawData.Physics.SteerAngle]`. It is the steering input from -1 to 1, a
+  fraction of the car's full lock rather than an angle, and neither sim publishes the lock itself.
+- **It is positive to the right.** Marvin's AIRA, cited above for iRacing, negates Assetto Corsa's
+  steering into iRacing's left-positive convention after checking it against a capture. ACC's page is
+  Assetto Corsa's, with the same name and the same convention.
+- **The dash draws full lock at its own full range.** `steering()` in `packages/dash/src/second/values.ts`
+  reads iRacing's angle first and, where it is absent, this input times `-STEERING_RANGE` (3.5 rad), so
+  the input lands in iRacing's convention and the one negation after it draws a right turn to the right.
+  With no lock to read, a car with a small lock and one with a large lock both reach the dial's end at
+  their own full lock, which is the right picture of how much of the wheel is used and the wrong one of
+  the angle. The property is named for what it holds, so no game is named for it (ADR 0021).
+- **Le Mans Ultimate is not read.** Its steering is `mUnfilteredSteering` in the rFactor 2 plugin's
+  telemetry buffer, whose sign is in "Needs a drive" in [sims.md](sims.md); the dial stays at the centre
+  there until that is known.
+
 ### `Rotation` binds, and turns an item about its own centre (2026-10-13, #1057)
 
 Read from the decompiled `plugin/lib/SimHub.Plugins.dll` (9.12.6); not yet seen on the VM, which is

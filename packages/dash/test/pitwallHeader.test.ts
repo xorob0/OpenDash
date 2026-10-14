@@ -104,6 +104,19 @@ describe('the pit wall header', () => {
     expect(partsOf(header(1080, true), 'simClock')).toEqual([]);
   });
 
+  test('hides the incidents on a sim with no count, rather than drawing 0x as if it were one (#567)', () => {
+    const COUNT = 'DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount';
+    const LIMIT = 'DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit';
+    for (const [width, compact] of [[1920, false], [1080, true]] as const) {
+      for (const part of partsOf(header(width, compact), 'incidents')) {
+        const visible = part.bindings?.Visible?.formula as string;
+        expect({ part: part.name, bound: typeof visible }).toEqual({ part: part.name, bound: 'string' });
+        expect({ part: part.name, shown: evalNcalc(visible, {}) }).toEqual({ part: part.name, shown: false });
+        expect({ part: part.name, shown: evalNcalc(visible, { [COUNT]: 0, [LIMIT]: 17 }) }).toEqual({ part: part.name, shown: true });
+      }
+    }
+  });
+
   test('names each clock in front of its own value, and never behind it', () => {
     // The strip read "14:32 LOCAL 15:07 SIM" and was reported from a rig as not saying which clock
     // was the real one; every other group on it names itself first, and now these two do as well.

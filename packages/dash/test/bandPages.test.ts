@@ -652,6 +652,17 @@ describe('the corner blocks at the ends of the band', () => {
     expect(bound(track, 'Text')).not.toContain('ucase');
   });
 
+  test('incidents on a sim with no count are the not-available mark in the primary ink, as the track state is (#567)', () => {
+    const value = named(corners('1280x720'), 'corner.incidents.value');
+    const js = (target: 'Text' | 'TextColor', properties: Record<string, unknown>): unknown => E.toJs(E.evaluate(bound(value, target)!, { properties }));
+    const COUNT = 'DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount';
+    expect(js('Text', {})).toBe(NO_VALUE);
+    expect(js('TextColor', {})).toBe(ds.color.text.primary);
+    expect(js('Text', { [COUNT]: E.int(0) })).toBe('0x');
+    expect(js('Text', { [COUNT]: E.int(4) })).toBe('4x');
+    expect(js('TextColor', { [COUNT]: E.int(4) })).toBe(ds.color.caution.primary);
+  });
+
   test('the left corner leaves the zone letter its room and sets its two fields 18 apart', () => {
     const band = BANDS['1280x400'];
     const items = corners('1280x400');

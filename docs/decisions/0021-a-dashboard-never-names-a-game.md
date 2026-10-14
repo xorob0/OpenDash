@@ -133,9 +133,11 @@ with the bindings that read them.
 
 ### Unresolved
 
-- **The steering angle** (#567) is not a capability yet. iRacing's angle is raw and absent elsewhere, so the
-  dial can hide on another sim without one; following the wheel on Assetto Corsa needs AC's unit and sign,
-  which is the author's test on a real wheel. It joins the table as a reading once that is known.
+- **The steering angle** (#567) is not a capability. iRacing's angle is raw and absent elsewhere, and
+  Assetto Corsa and ACC publish `Physics.SteerAngle`, a fraction of full lock positive to the right, which
+  the binding reads where iRacing's is absent. A property whose name says what it holds needs no game
+  named, so it is an `isnull()` rather than a row. Its sign is read from Marvin's AIRA and waits on the
+  author's test on a real wheel; Le Mans Ultimate's is not read until its sign is known.
 - **The flags** (#551) read iRacing's bits and fall back on SimHub's `Flag_*`, which needs no capability on
   Assetto Corsa and ACC. Le Mans Ultimate's `Flag_Black` is a retirement or a disqualification rather than a
   black flag shown on track; if #551 needs to tell that apart, it is a capability of this kind.

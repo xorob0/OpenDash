@@ -56,7 +56,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { concat, str, fmt, iff, num, isnull, isNull, not } = ncalc;
+const { and, concat, str, fmt, iff, num, isnull, isNull, not } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
@@ -201,6 +201,9 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
 
   const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
+  // The incidents are iRacing's alone, so a sim with no count hides the group rather than drawing `0x`
+  // as if it were one (#567).
+  const hasIncidents = not(isNull(incidents()));
   // `of 30` is the race's length only in a race counted in laps; in a timed iRacing race `TotalLaps`
   // is the leader's laps, and `L12 of 14` read as two laps to go with half an hour to run (#989).
   const lapTotal = hasLapTotal();
@@ -235,9 +238,9 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     {
       id: 'incidents',
       parts: [
-        { kind: 'label', text: 'Inc' },
-        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, widest: INCIDENTS_WIDEST, color: ds.purpose.alert.incident },
-        ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
+        { kind: 'label', text: 'Inc', visibleBind: hasIncidents },
+        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, widest: INCIDENTS_WIDEST, color: ds.purpose.alert.incident, visibleBind: hasIncidents },
+        ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: and(hasIncidents, hasLimit) } as InlinePart]),
       ],
     },
     {

@@ -87,6 +87,17 @@ describe('the telemetry traces', () => {
     expect({ minimum: chart.minimum, maximum: chart.maximum }).toEqual({ minimum: -3.5, maximum: 3.5 });
   });
 
+  test("traces Assetto Corsa's and ACC's steering where iRacing's is absent, a right turn above the line (#567)", () => {
+    // Both publish `Physics.SteerAngle`, the input from -1 to 1 and positive to the right, and the car's
+    // lock nowhere, so full lock is drawn at the edge of the plot.
+    const formula = chartsOf('steering')[0]!.bindings?.CurrentValue?.formula as string;
+    const ac = (input: number): number => Number(evalNcalc(formula, { 'DataCorePlugin.GameRawData.Physics.SteerAngle': input }));
+    expect(ac(0.5)).toBe(1.75);
+    expect(ac(-0.5)).toBe(-1.75);
+    expect(ac(1)).toBe(3.5);
+    expect(ac(0)).toBe(0);
+  });
+
   test('labels the pedals in the canvas order and keeps the legend inside the panel', () => {
     const legend = PAGE.items.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('telemetry.pedals.') && i.name.endsWith('.legend'));
     expect(legend.map((i) => i.text)).toEqual(['Throttle', 'Brake', 'Clutch']);

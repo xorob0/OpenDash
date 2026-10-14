@@ -86,7 +86,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { add, and, fmt, isnull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition } = ncalc;
+const { add, and, fmt, isnull, isNull, num, str, iff, eq, gt, div, game, raw, concat, driver, playerPosition } = ncalc;
 
 /** D7, the one page of the band whose fields are a function of a setting rather than constants. */
 const RELATIVE_PAGE = 'relative';
@@ -901,12 +901,16 @@ const leftCornerFields = (): BandField[] => [
     id: 'incidents',
     label: 'Incidents',
     sample: '3x',
-    bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')),
+    // The incidents are iRacing's alone, and a sim with no count drew `0x` as if it were one. The corner
+    // draws the not-available mark in the primary ink instead, as the track state beside it does,
+    // rather than an amber that would read as a count to watch (#567).
+    bind: iff(isNull(incidents()), str(NO_VALUE), concat(fmt(isnull(incidents(), num(0)), '0'), str('x'))),
     // The count's three cells and one for the `x`, which is how the bar and the session page cut the
     // same reading: in the count's three alone, `100x` lost its `x` to the corner's edge. #596.
     chars: CHARS.incidents,
     numeralWidest: INCIDENTS_WIDEST,
     color: ds.color.caution.primary,
+    colorBind: iff(isNull(incidents()), str(ds.color.text.primary), str(ds.color.caution.primary)),
   },
   // Mixed case rather than upper: "Dry" is a word the driver reads at a glance and "DRY" is one he
   // parses. It is a bound label and not a value for the reason rule 19 gives -- M and W overrun a
@@ -1012,6 +1016,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
             bind: field.bind,
             widest: field.numeralWidest,
             color: field.color,
+            colorBind: field.colorBind,
             maxWidth: w + 4,
           }),
     );

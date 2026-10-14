@@ -2281,6 +2281,13 @@ export const sim = {
 export const throttle = (): Expr => isnull(game('Throttle'), num(0));
 export const brake = (): Expr => isnull(game('Brake'), num(0));
 export const clutch = (): Expr => isnull(game('Clutch'), num(0));
+/** Radians of wheel angle either side of centre a full-lock reading is drawn to. */
+export const STEERING_RANGE = 3.5;
+/**
+ * Assetto Corsa's steering, which ACC publishes under the same name and in the same shape: the input as a
+ * fraction of the car's full lock, -1 to 1, positive to the right. SimHub passes it through unconverted.
+ */
+export const AC_STEER_ANGLE = 'DataCorePlugin.GameRawData.Physics.SteerAngle';
 /**
  * The wheel angle in radians, clockwise as the driver sees it, so that a right turn is positive.
  *
@@ -2288,10 +2295,18 @@ export const clutch = (): Expr => isnull(game('Clutch'), num(0));
  * and SimHub's reader passes the raw value through without touching it. The reading is turned round here
  * and only here, so the dial's mark and the pit wall's trace take the same convention from one place.
  * `docs/research/simhub-dash-format.md` records how the sign was established (#1057).
+ *
+ * Where iRacing's angle is absent, Assetto Corsa's and ACC's {@link AC_STEER_ANGLE} is read in its place,
+ * turned into iRacing's shape first so that one negation serves both (#567). Neither game publishes the
+ * car's lock, so full lock is drawn as the dial's full range, {@link STEERING_RANGE} either side: the mark
+ * says how much of the lock is used rather than how many degrees the wheel has turned. The property is
+ * named for what it holds, and its absence on iRacing and Le Mans Ultimate is the answer there, so no game
+ * is named (ADR 0021). The sign is Marvin's AIRA's, checked against a capture, and is still to be seen on
+ * a real wheel. Le Mans Ultimate's own steering is not read, so the dial stays at centre there.
+ *
+ * Nothing in it is arithmetic on a null: each reading is defaulted before it is scaled.
  */
-export const steering = (): Expr => sub(num(0), isnull(raw('SteeringWheelAngle'), num(0)));
-/** Radians of wheel angle either side of centre a full-lock reading is drawn to. */
-export const STEERING_RANGE = 3.5;
+export const steering = (): Expr => sub(num(0), isnull(raw('SteeringWheelAngle'), mul(isnull(prop(AC_STEER_ANGLE), num(0)), real(-STEERING_RANGE))));
 export const brakeBias = (): Expr => isnull(game('BrakeBias'), num(0));
 export const tcLevel = (): Expr => game('TCLevel');
 export const absLevel = (): Expr => game('ABSLevel');
