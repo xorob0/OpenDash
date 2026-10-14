@@ -87,7 +87,7 @@ export function porscheStrip(ctx: FaceContext): Item[] {
   while (runWidth(TRACK_WIDEST, trackSize) > trackRoom) trackSize--;
   items.push(
     band('strip.track.box', track, ds.color.surface.base, { border: { color: carColour('compound'), width: BORDER }, radius: RADIUS, visibleBind: trackKnown }),
-    label('strip.track.value', 'OPTIMUM', track.left + BORDER, centredY(track, trackSize), trackRoom, {
+    label('strip.track.value', 'DRY', track.left + BORDER, centredY(track, trackSize), trackRoom, {
       size: trackSize,
       color: ds.color.text.primary,
       hAlign: 'center',
