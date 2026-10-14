@@ -108,6 +108,17 @@ aside before that save (#643, `SettingsRescue`).
 every frame at 60 Hz and must not allocate or loop; a plugin that does not need telemetry can
 omit `IDataPlugin` altogether. `End()` runs at shutdown and is where settings are saved.
 
+**A session restart never reaches `DataUpdate` as a frame** (SimHub 9.12.6, decompiled). The game
+manager's `RaiseSessionRestart` marks the frame it restarts on with `IsSessionRestart` and zeroes
+`LastPitStopDuration`, and `CheckSessionRestart` then skips `SendDataUpdatedEvent` for that frame.
+Nor does the mark arrive a frame later in `OldData`: before it calls an `IDataPlugin`,
+`PluginManager.CoreUpdate` sets `data.OldData` to the last frame it dispatched, which was never the
+restart frame. (A pause straight after the restart resends that frame, the one case the mark leaks
+through.) What does reach a plugin is `PluginManager.SessionRestart`: the game manager's event is
+queued with `EnqueueEvent` and run by `ProcessAsyncEvents` inside `CoreUpdate`, on the plugins'
+thread and before their `DataUpdate`, so a handler sees the restart on the first frame dispatched
+after it. The pit box clock is reset that way (#1130, `OpenDash.WatchSessionRestart`).
+
 ## The first-start prompt (2026-09-28, #475)
 
 SimHub asks about a plugin it has not seen before in a window titled "New plugins have been

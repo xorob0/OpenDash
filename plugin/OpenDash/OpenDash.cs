@@ -154,6 +154,27 @@ namespace OpenDashPlugin
             else pluginManager.DashboardListUpdated -= DashboardListUpdated;
         }
 
+        /// <summary>Takes or lets go of SimHub's <c>PluginManager.SessionRestart</c>, for the pit box clock (#1130).</summary>
+        /// <remarks>
+        /// The event and not the frame, because the frame never says so to this plugin. SimHub marks the frame it
+        /// restarts on with IsSessionRestart, zeroes its LastPitStopDuration there and sends no DataUpdate for it;
+        /// and before an IDataPlugin's DataUpdate, PluginManager.CoreUpdate replaces the frame's OldData with the
+        /// last frame it dispatched, which was never the restart frame. The event is queued by the game manager and
+        /// run by CoreUpdate on the plugins' own thread before their DataUpdate, so the clock forgets the last stop
+        /// on the first frame after the restart, the frame SimHub's own LastPitStopDuration first reads 0 on.
+        /// </remarks>
+        private void WatchSessionRestart(PluginManager pluginManager, bool watch)
+        {
+            if (pluginManager == null) return;
+            if (watch) pluginManager.SessionRestart += SessionRestarted;
+            else pluginManager.SessionRestart -= SessionRestarted;
+        }
+
+        private void SessionRestarted(PluginManager pluginManager)
+        {
+            pitStop.Restart();
+        }
+
         /// <summary>
         /// The measured car light tables, fetched onto the machine rather than shipped (ADR 0018).
         /// Built on first use, like the installer, because it needs the SimHub root the settings name.
@@ -473,6 +494,14 @@ namespace OpenDashPlugin
             {
                 Log.Error("Watching SimHub's dashboard list failed", ex);
             }
+            try
+            {
+                WatchSessionRestart(pluginManager, true);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Watching SimHub's session restart failed", ex);
+            }
             Log.Info("Dashboard status: " + Installer.Status);
             Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder, and spells a stock folder the settings
@@ -737,9 +766,8 @@ namespace OpenDashPlugin
         /// on a reader that stamps no packet time, which Le Mans Ultimate's does not.
         /// </summary>
         /// <remarks>
-        /// A session restart is read from the frame before. SimHub marks the frame it restarts on with
-        /// IsSessionRestart and zeroes its LastPitStopDuration there, but sends no DataUpdate for that frame, so
-        /// the first frame a plugin sees after it is the one whose OldData carries the mark.
+        /// A session restart reaches the clock by SimHub's SessionRestart event (WatchSessionRestart), which marks
+        /// it, and this frame's Update carries it out.
         /// </remarks>
         private void UpdatePitStop(PluginManager pluginManager, GameData data)
         {
@@ -748,7 +776,6 @@ namespace OpenDashPlugin
                 pitStop.Reset();
                 return;
             }
-            if (data.OldData != null && data.OldData.IsSessionRestart) pitStop.Restart();
             var read = readProperty;
             if (read == null) readProperty = read = pluginManager.GetPropertyValue;
             pitStop.Update(SimCapabilities.InPitBox(data.GameName, read), DateTime.UtcNow);
@@ -1025,6 +1052,14 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Warn("Letting go of SimHub's dashboard list failed: " + ex.Message);
+            }
+            try
+            {
+                WatchSessionRestart(pluginManager, false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Letting go of SimHub's session restart failed: " + ex.Message);
             }
             // A download has written nothing, so it is stopped rather than waited for; only a run that has started
             // writing is (UpdateService.Busy). Stopped first, so a download that finishes now cannot start writing

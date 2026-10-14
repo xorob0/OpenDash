@@ -11,7 +11,9 @@
 // Contract.LastPitStopSeconds. Where the row has no answer both are null and every dashboard reads SimHub's
 // own members, which is what it read before and with no plugin. A session restart forgets the last stop, as
 // SimHub's RaiseSessionRestart zeroes its LastPitStopDuration, and the stop under way with it, since a stop
-// begun in the session before is none of this one's. Pure: no SimHub types, so the net8.0 tests compile it.
+// begun in the session before is none of this one's. The restart is marked by SimHub's SessionRestart event
+// and carried out on the next frame, so the clock is only ever moved by Update. Pure: no SimHub types, so the
+// net8.0 tests compile it.
 using System;
 using System.Threading;
 
@@ -33,6 +35,9 @@ namespace OpenDashPlugin
         private double publishedLast;
         private bool timing;
 
+        // A restart marked by SimHub's event and not yet carried out; taken by the next Update.
+        private int restartPending;
+
         /// <summary>The seconds the car has stood in its box on this stop, 0 outside it; null where the plugin does not time stops.</summary>
         public double? PitStopSeconds => Volatile.Read(ref timing) ? Volatile.Read(ref publishedSeconds) : (double?)null;
 
@@ -47,6 +52,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public void Update(bool? inBox, DateTime now)
         {
+            if (Interlocked.Exchange(ref restartPending, 0) != 0) Forget();
             if (!inBox.HasValue)
             {
                 Volatile.Write(ref timing, false);
@@ -72,20 +78,27 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// A session restart: the last stop forgotten, as SimHub forgets its own, and the stop under way too, so a
-        /// car still in its box counts from the restart. What is published moves on the next Update.
+        /// car still in its box counts from the restart. Only marked here, from whatever thread SimHub raises its
+        /// event on, and carried out by the next Update, which is when what is published moves.
         /// </summary>
         public void Restart()
         {
-            enteredBox = null;
-            inBoxSeconds = 0.0;
-            lastStopSeconds = 0.0;
+            Interlocked.Exchange(ref restartPending, 1);
         }
 
         /// <summary>No game, or a frame the clock failed on: both readings null, and the last stop forgotten.</summary>
         public void Reset()
         {
             Volatile.Write(ref timing, false);
-            Restart();
+            Interlocked.Exchange(ref restartPending, 0);
+            Forget();
+        }
+
+        private void Forget()
+        {
+            enteredBox = null;
+            inBoxSeconds = 0.0;
+            lastStopSeconds = 0.0;
         }
     }
 }

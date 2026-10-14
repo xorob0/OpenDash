@@ -166,10 +166,32 @@ namespace OpenDashPlugin.Tests
             clock.Update(false, Start.AddSeconds(21));
             Assert.Equal(20.0, clock.LastPitStopSeconds);
 
+            // SimHub's SessionRestart event marks it, between two frames; the next frame carries it out.
             clock.Restart();
+            Assert.Equal(20.0, clock.LastPitStopSeconds);
             clock.Update(false, Start.AddSeconds(60));
             Assert.Equal(0.0, clock.LastPitStopSeconds);
             Assert.Equal(0.0, clock.PitStopSeconds);
+            // Once: the stop after it is kept as any other.
+            clock.Update(true, Start.AddSeconds(70));
+            clock.Update(true, Start.AddSeconds(78));
+            clock.Update(false, Start.AddSeconds(79));
+            Assert.Equal(8.0, clock.LastPitStopSeconds);
+        }
+
+        [Fact]
+        public void A_session_restart_marked_on_a_frame_with_a_reading_missing_is_carried_out_all_the_same()
+        {
+            var clock = new PitStopClock();
+            clock.Update(true, Start);
+            clock.Update(true, Start.AddSeconds(20));
+            clock.Update(false, Start.AddSeconds(21));
+
+            clock.Restart();
+            clock.Update(null, Start.AddSeconds(22));
+            Assert.Null(clock.LastPitStopSeconds);
+            clock.Update(false, Start.AddSeconds(23));
+            Assert.Equal(0.0, clock.LastPitStopSeconds);
         }
 
         [Fact]
