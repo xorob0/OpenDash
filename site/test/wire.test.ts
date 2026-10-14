@@ -15,22 +15,31 @@ import { SAMPLE_COUNTS, SAMPLE_LISTED } from './sampleCounts.ts';
 const repoRoot = path.resolve(import.meta.dir, '..', '..');
 const pluginDir = path.join(repoRoot, 'plugin', 'OpenDash');
 
-/** The plugin's sources by file name, with comments removed so a sentence about a request is not one. */
+/**
+ * The plugin's sources by file name, with comments removed so a sentence about a request is not one.
+ * Line comments go first: a line comment that mentions a path like `plugin/*.dc.html` would otherwise
+ * open a block comment that swallows the code up to the next `*\/` in the file.
+ */
 function pluginSources(): Map<string, string> {
   const out = new Map<string, string>();
   for (const name of readdirSync(pluginDir).sort()) {
     if (!name.endsWith('.cs')) continue;
     const code = readFileSync(path.join(pluginDir, name), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
       .replace(/^\s*\/\/.*$/gm, '')
-      .replace(/\s\/\/ .*$/gm, '');
+      .replace(/\s\/\/ .*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
     out.set(name, code);
   }
   return out;
 }
 
-/** What opens a connection in .NET, written the ways the plugin could write it. */
-const CONNECTION = /\bWebRequest\.Create(Http)?\b|\bnew\s+(HttpClient|WebClient|TcpClient|UdpClient|Socket|HttpListener|ClientWebSocket|Ping)\b|\bDns\.Get/;
+/**
+ * What opens a connection in .NET, written the ways the plugin could write it: HttpWebRequest.Create as
+ * well as WebRequest.Create, and a type named with its namespace, `new System.Net.WebClient()`, as well
+ * as one named bare.
+ */
+const CONNECTION =
+  /\b(?:Http)?WebRequest\.Create(?:Http)?\b|\bnew\s+(?:[\w.:]+\.)?(?:HttpClient|WebClient|TcpClient|UdpClient|Socket|HttpListener|ClientWebSocket|Ping)\b|\bDns\.Get/;
 
 /**
  * Every fetch through IReleaseSource, as "File.cs Method", once per call site. The names fetched

@@ -333,11 +333,11 @@ cannot put a DLL into SimHub's own folder, or who will not, has no route in at a
 **Licensing, activation or accounts.** OpenDash is MIT and there is nothing to unlock.
 
 **Telemetry about the user.** Nothing about the user leaves their machine: no identifier, no
-installation id, no usage counting, no error reporting. The one exception is the update check, and
-it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
+installation id, no usage counting, no error reporting. The update check is one of the two requests
+a rig makes without a press, and it is argued for in [ADR 0012](decisions/0012-update-checks.md), which states in full what is sent.
 What is sent is an anonymous request to GitHub asking what the newest release is, carrying the
 user's IP address, which reaches GitHub and not us, and a `User-Agent` naming the product. It can
-be switched off, and switching it off means nothing is fetched at all. The car's crest is the other
+be switched off, and switching it off means the check fetches nothing at all. The car's crest is the other
 request a rig makes without a press ([#714](https://github.com/xorob0/OpenDash/issues/714), the trade dress
 section below): one file, once, from the address on the panel, carrying the same `User-Agent` and the
 user's IP address to that address's host, and only on a rig with a screen that draws the crest. Clearing
