@@ -343,6 +343,17 @@ section below): one file, once, from the address on the panel, carrying the same
 user's IP address to that address's host, and only on a rig with a screen that draws the crest. Clearing
 the address stops it and removes the copy.
 
+Those two and the two a press asks for are every request the plugin makes. Each carries the same
+`User-Agent` and the user's IP address and nothing else, and `site/test/wire.test.ts` holds the
+plugin's code, this table and the comparison on the site to the one list in `site/lib/wire.ts`.
+
+| Request | To | When |
+|---|---|---|
+| The update check | GitHub's list of OpenDash releases | once a day without a press, and never once **Check for updates** is off |
+| The crest | the address on the panel, Wikipedia's copy by default | once without a press, on a rig with a screen that draws the crest and no copy of it yet, and never once the address is cleared |
+| The car tables | the Car Data archive on GitHub | when the button on the LEDs page is pressed |
+| A new release | the files of the release on GitHub | when **Download** is pressed |
+
 **Copying a visual design.** OpenDash's design is independently derived, and every screenshot in
 OpenDash material is its own.
 
@@ -389,9 +400,9 @@ the mark, which is a different question from shipping it; it is accepted knowing
 reference to the car whose display the theme draws, and the fetch is not offered as the reason it is
 allowed. And the Porsche theme is free, so the question of a sold product drawing the mark, which is the
 case trade mark law cares about most, does not arise for it; what a paid theme does is answered when one
-exists, and until then the default fetch belongs to the free themes alone. The request is the one thing
-OpenDash fetches at a start without a press: one file, from the address on the panel, on a rig with a
-screen that draws the crest and no copy of it yet.
+exists, and until then the default fetch belongs to the free themes alone. The request is, beside the
+update check, the one thing OpenDash fetches at a start without a press: one file, from the address on
+the panel, on a rig with a screen that draws the crest and no copy of it yet.
 
 A theme is named after the display family as a driver says it, as a nominative reference to the
 product and in OpenDash's own type, never styled as the manufacturer presents it. The Porsche theme is
