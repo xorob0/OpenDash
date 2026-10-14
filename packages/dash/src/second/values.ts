@@ -10,7 +10,7 @@
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
-import { MINUS, type Chars } from '../design/metrics.ts';
+import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
 import { CLASS_BEST_LAP, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, propertyName, setting } from '../contract.ts';
 import { chipText } from './chip.ts';
@@ -795,22 +795,54 @@ export const classAndPlace = (idx: Expr): Expr => {
 };
 
 /**
- * The widest {@link classAndPlace} draws: the widest four capitals a real class name is cut to, and
- * the widest of the ninety-nine places and the placeholder.
+ * The readings that can be the widest {@link classAndPlace} draws, one for each data face a theme
+ * sets it in: the widest four capitals a real class name is cut to, and the widest of the
+ * ninety-nine places and the placeholder.
  *
  * `MUST`, from Mustang, and not the chip's `LMP2`: the cut keeps whatever four letters a class starts
  * with, and four letters with an `M` among them are wider than LMP2's, so a Mustang, a Mercedes or a
- * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit.
- * `LMDH` draws exactly as wide in SemiBold and is a hair narrower in Bold. `44` and not `99` or
- * `24`, because the face is proportional and its `4` is the widest digit it has.
+ * McLaren in a big field drew past a box measured from LMP2 and lost the end of its last digit. In
+ * the house's Barlow Condensed, `LMDH` draws exactly as wide in SemiBold and is a hair narrower in
+ * Bold. In Barlow Medium, which the Porsche sets its numerals in, the order turns: `LMDH` is the
+ * widest, then `LAMB`, `MERC` and `MCLA`, and `MUST` is narrower than all four, so the Porsche's
+ * faces were cut from a reading a Hypercar's `LMDH · P44` drew a pixel past (#1058). `44` and not
+ * `99` or `24` in both, because both faces are proportional and the `4` is the widest digit each has.
+ */
+const CLASS_AND_PLACE_CANDIDATES = ['MUST · P44', 'LMDH · P44'] as const;
+
+/**
+ * Of a few readings, the one at least as wide as every other in both data weights of this process's
+ * face, a tie going to the first. None being so is an error rather than a guess, since a declaration
+ * narrower than another reading in either weight is the very defect a declaration is there to prevent.
+ */
+function widestInDataFace(readings: readonly string[]): string {
+  const width = (weight: DataWeight, text: string): number => measureText(DATA_FACE[weight], text, 100);
+  // The advances are summed in floating point, and `LMDH` and `MUST` come to the same width in the
+  // house's SemiBold by different sums, so a tie is read as a tie rather than as the last bit of a sum.
+  const holds = (text: string): boolean => readings.every((other) => (['SemiBold', 'Bold'] as const).every((w) => width(w, other) <= width(w, text) + 1e-9));
+  const widest = readings.find(holds);
+  if (widest === undefined) throw new Error(`none of ${JSON.stringify(readings)} is the widest in both of ${JSON.stringify(DATA_FACE)}`);
+  return widest;
+}
+
+/**
+ * The widest {@link classAndPlace} draws, in the data face of the theme this process builds: `MUST ·
+ * P44` in the house's face and the AiM's, `LMDH · P44` in the Porsche's.
+ *
+ * Read from {@link CLASS_AND_PLACE_CANDIDATES} in the face {@link DATA_FACE} names rather than
+ * written once, because a theme's package is built in a process of its own whose overlay changes the
+ * face, and a widest measured in the house's face is a promise about the house's face only.
  * `classAndPlace.test.ts` holds a list of class names from iRacing, Assetto Corsa and ACC and
- * measures every cut of them at every place against this, in SemiBold and in Bold.
+ * measures every cut of them at every place against this, in SemiBold and in Bold, in the process of
+ * every theme; a class some theme's face draws wider than every candidate is found there, and its
+ * reading belongs among them.
  *
  * It also sets the width of the bar's ends, and at 600 x 686 the strip's five cells now fill what
- * the ends leave to the pixel. A class wider than `MUST` added to that list is therefore a decision
- * about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`, would cost it.
+ * the ends leave to the pixel. A class wider than `MUST` in the house's face added to that list is
+ * therefore a decision about the fifth cell as well as a new entry: a bare `Camaro`, cut to `CAMA`,
+ * would cost it.
  */
-export const CLASS_AND_PLACE_WIDEST = 'MUST · P44';
+export const CLASS_AND_PLACE_WIDEST: string = widestInDataFace(CLASS_AND_PLACE_CANDIDATES);
 
 /**
  * Places gained since the start, signed; 0 when the sim does not track it, and 0 where there is no
