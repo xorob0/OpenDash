@@ -82,6 +82,10 @@ Give the origin with its scheme and without a trailing slash. Unset, the metadat
 absolute URL, which [site/lib/site.ts](../site/lib/site.ts) prefers to guessing at a domain this
 repository does not know.
 
+The survey reads the same value. A submission is taken only from a page whose origin is this one,
+so a form opened at any other address of the same container, Dokploy's generated domain for
+instance, is refused with a 403. Unset, a submission has to come from the host it was sent to.
+
 ### The survey stores answers, and needs two variables for it
 
 The sim racer survey is the one part of the site that keeps anything. The form lives at
@@ -93,12 +97,19 @@ through Prisma, so the application needs two runtime variables, and these do bel
 
 - `DATABASE_URL`: create a PostgreSQL database in Dokploy (Databases, then PostgreSQL) and use the
   internal connection string it shows, which stays on Dokploy's own network.
-- `SURVEY_ADMIN_KEY`: a long random string. Whoever enters it on the results page sees every
-  response; there are no accounts behind it.
+- `SURVEY_ADMIN_KEY`: a long random string, at least 16 characters; `openssl rand -hex 32` makes
+  a good one. Whoever enters it on the results page sees every response; there are no accounts
+  behind it. A shorter key is refused like a missing one.
 
 There is no migration step: the table creates itself on the first submission. Both halves fail
 closed, so a deployment without `DATABASE_URL` answers 503 to a submission, and one without
 `SURVEY_ADMIN_KEY` answers 503 to the results page rather than letting an empty key through.
+
+Both are throttled per client address: ten submissions an hour, and ten wrong keys in a quarter of
+an hour, after which even the right key waits out the quarter. The counters live in the server's
+memory, keyed by a salted hash of the address rather than the address, which is enough for one
+container and is forgotten by a restart; a second replica would count on its own. The address is the last hop of `X-Forwarded-For`, which is what Traefik writes, so
+a proxy added in front of Dokploy's would make every reader one address and needs this revisited.
 
 ### What runs, and what the platform watches
 
