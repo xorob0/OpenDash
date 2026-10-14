@@ -70,6 +70,10 @@ export const UNTRACED_SCENARIOS: readonly string[] = [
   // steerleft holds the wheel a quarter turn to the left so the steering dial's direction can be
   // seen (#1057); it is looked at on the VM, and its trace would be green's with one value held.
   'steerleft',
+  // oilpressure sets the oil-pressure bit with the engine stopped and then turning, ten seconds each,
+  // so that the engine warnings can be seen to wait for the crank (#1115); it is looked at on the VM,
+  // and the half of it a twenty-second trace would hold is pinned in engineWarnings.test.ts already.
+  'oilpressure',
 ];
 
 /** Every scenario a run may name. */
