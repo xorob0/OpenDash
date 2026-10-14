@@ -7,9 +7,9 @@ namespace OpenDashPlugin.Tests
 {
     public class PanelAttentionTests
     {
-        private static AttentionScreen Screen(string name, bool? installed = true, bool? written = false, bool unclaimed = false)
+        private static AttentionScreen Screen(string name, bool? installed = true, bool unclaimed = false)
         {
-            return new AttentionScreen { Name = name, Namespace = name.Replace(" ", string.Empty), Installed = installed, AddedSinceStart = written, Unclaimed = unclaimed };
+            return new AttentionScreen { Name = name, Namespace = name.Replace(" ", string.Empty), Installed = installed, Unclaimed = unclaimed };
         }
 
         private static AttentionStrip Strip(string name, FlagBoxInstallState? profile, bool? selected, string device = "Arduino RGB LEDs")
@@ -35,7 +35,7 @@ namespace OpenDashPlugin.Tests
         public void A_fact_nobody_could_read_produces_nothing()
         {
             var input = new AttentionInput();
-            input.Screens.Add(Screen("Rim", installed: null, written: null));
+            input.Screens.Add(Screen("Rim", installed: null));
             input.Strips.Add(Strip("Dash brow", null, null));
             input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.UpToDate, null));
             input.Matrices.Add(new AttentionMatrix { Slot = 2, Name = "Left pillar", Shown = null });
@@ -58,19 +58,20 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Rim", issue.Subject);
         }
 
+        /// <summary>
+        /// A screen whose folder is there is in SimHub, however recently it was written. There was a rule, "Rim is
+        /// not in SimHub yet", for a folder written in this session, on the belief that SimHub reads its dashboard
+        /// list once at startup; it watches DashTemplates and lists a new folder two seconds after it is written
+        /// (#664), so the rule said something false and sent the driver to a restart they did not need.
+        /// </summary>
         [Fact]
-        public void A_screen_written_since_SimHub_started_says_the_restart_and_the_assignment()
+        public void A_screen_whose_folder_is_there_has_nothing_to_fix_however_new()
         {
             var input = new AttentionInput();
-            input.Screens.Add(Screen("Rim", written: true));
-            var issue = PanelAttention.Find(input).Single();
-            Assert.Equal("Rim is not in SimHub yet", issue.Title);
-            Assert.Equal("Restart SimHub to load it. Then assign \"Rim\" to its display in Dash Studio.", issue.Detail);
-            Assert.Equal("Open Rim", issue.ActionLabel);
-            Assert.Equal(PanelIssueAction.Navigate, issue.Action);
-            // A folder that is gone is not also waiting for a restart.
-            input.Screens[0] = Screen("Rim", installed: false, written: true);
-            Assert.Equal(PanelIssueAction.Reinstall, PanelAttention.Find(input).Single().Action);
+            input.Screens.Add(Screen("Rim"));
+            Assert.Empty(PanelAttention.Find(input));
+            Assert.Null(typeof(PanelAttention).GetField("ScreenRestart"));
+            Assert.Null(typeof(AttentionScreen).GetProperty("AddedSinceStart"));
         }
 
         [Fact]
@@ -207,7 +208,6 @@ namespace OpenDashPlugin.Tests
         {
             var input = new AttentionInput { RestartPending = true, FlagBox = FlagBoxInstallState.Outdated };
             input.Screens.Add(Screen("Old", unclaimed: true));
-            input.Screens.Add(Screen("Rim", written: true));
             input.Screens.Add(Screen("Gone", installed: false));
             input.Strips.Add(Strip("Wheel rim", FlagBoxInstallState.Outdated, true));
             input.Strips.Add(Strip("Dash brow", FlagBoxInstallState.UpToDate, false));
@@ -215,7 +215,7 @@ namespace OpenDashPlugin.Tests
             var ids = PanelAttention.Find(input).Select(i => i.Id.Split(':')[0]).ToList();
             Assert.Equal(new[]
             {
-                "screen-missing", "screen-restart", "strip-unselected", "matrix-dark", "screens-unclaimed",
+                "screen-missing", "strip-unselected", "matrix-dark", "screens-unclaimed",
                 "strip-outdated", "flagbox-outdated", "update-restart",
             }, ids);
         }
@@ -224,14 +224,14 @@ namespace OpenDashPlugin.Tests
         public void A_page_asks_after_an_issue_by_its_rule_and_its_subject()
         {
             var input = new AttentionInput();
-            input.Screens.Add(Screen("Rim", written: true));
+            input.Screens.Add(Screen("Rim", installed: false));
             var issues = PanelAttention.Find(input);
-            Assert.Equal(PanelAttention.ScreenRestart + "Rim", issues.Single().Id);
-            Assert.True(PanelAttention.Has(issues, PanelAttention.ScreenRestart, "Rim"));
-            Assert.False(PanelAttention.Has(issues, PanelAttention.ScreenRestart, "Brow"));
-            Assert.False(PanelAttention.Has(issues, PanelAttention.ScreenMissing, "Rim"));
-            Assert.Same(issues.Single(), PanelAttention.Of(issues, PanelAttention.ScreenRestart, "Rim"));
-            Assert.Null(PanelAttention.Of(null, PanelAttention.ScreenRestart, "Rim"));
+            Assert.Equal(PanelAttention.ScreenMissing + "Rim", issues.Single().Id);
+            Assert.True(PanelAttention.Has(issues, PanelAttention.ScreenMissing, "Rim"));
+            Assert.False(PanelAttention.Has(issues, PanelAttention.ScreenMissing, "Brow"));
+            Assert.False(PanelAttention.Has(issues, PanelAttention.StripUnselected, "Rim"));
+            Assert.Same(issues.Single(), PanelAttention.Of(issues, PanelAttention.ScreenMissing, "Rim"));
+            Assert.Null(PanelAttention.Of(null, PanelAttention.ScreenMissing, "Rim"));
         }
 
         // --- The settings SimHub could not read (#643) --------------------------------------------------------
@@ -303,7 +303,6 @@ namespace OpenDashPlugin.Tests
         public void No_sentence_is_contracted_or_spells_the_wordmark()
         {
             var input = new AttentionInput { RestartPending = true, SettingsUnreadable = true };
-            input.Screens.Add(Screen("Rim", written: true));
             input.Screens.Add(Screen("Gone", installed: false));
             input.Screens.Add(Screen("Old", unclaimed: true));
             input.Strips.Add(Strip("Brow", FlagBoxInstallState.UpToDate, false));

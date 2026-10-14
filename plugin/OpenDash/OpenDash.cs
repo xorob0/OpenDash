@@ -69,14 +69,6 @@ namespace OpenDashPlugin
         /// <summary>What became of the flag box profile at startup, for the lights page. Null until Init runs.</summary>
         public FlagBoxResult FlagBox { get; private set; }
 
-        /// <summary>
-        /// The dashboard folders in DashTemplates when Init had finished writing the rig's own, which are the
-        /// templates SimHub loaded: it reads that list once, at startup. A screen whose folder is not in it was
-        /// added in this session and waits for a restart (PackageExtractor.WaitsForRestart). Null when the
-        /// folder could not be read, which says nothing rather than guess.
-        /// </summary>
-        public ISet<string> TemplatesAtStart { get; private set; }
-
         /// <summary>What the last sync of SimHub's per-car playlists did and found, for the themed screens' pages;
         /// null before the first, and after one that could not reach SimHub's devices (<see cref="CarPlaylistsFailed"/>).</summary>
         public CarPlaylistPlan CarPlaylist { get; private set; }
@@ -90,17 +82,76 @@ namespace OpenDashPlugin
         /// Brings SimHub's per-car playlists to what the rig's themed screens want (#199). On the interface thread.
         /// </summary>
         /// <remarks>
-        /// Asked by the panel after it adds, resizes or removes a themed screen, and once per start from the first
+        /// Asked by the panel after it adds, resizes or removes a themed screen, once per start from the first
         /// frame, which comes after every plugin has finished starting and therefore after SimHub has read its
-        /// devices and its dashboard list. A rig with no themed screen is not synchronised at start, so a driver who
-        /// never picks a theme never has their displays read; the panel's own call after a removal is what takes
-        /// the last of our entries out.
+        /// devices and its dashboard list, and again when SimHub's list moves under a themed screen
+        /// (<see cref="DashboardListUpdated"/>). A rig with no themed screen is not synchronised at start, so a
+        /// driver who never picks a theme never has their displays read; the panel's own call after a removal is
+        /// what takes the last of our entries out.
         /// </remarks>
         public void SyncCarPlaylists()
         {
             var rig = Settings.RigScreens();
             CarPlaylist = CarPlaylists.Sync(rig, PackageCatalogue.From(Installer.PackageSource, new SimHubInstallLog()));
             CarPlaylistsFailed = CarPlaylist == null;
+        }
+
+        /// <summary>
+        /// Raised on the interface thread after SimHub's dashboard list moved under a themed screen and the per-car
+        /// playlists were synchronised again, so an open panel can say what the screen now switches.
+        /// </summary>
+        public event Action CarPlaylistsResynced;
+
+        /// <summary>
+        /// Whether a screen the panel wrote in this run put a face into DashFonts. SimHub draws no such face until
+        /// it restarts (#441), so every screen written after it waits for that restart too, not only the one that
+        /// brought the face. Held here rather than on the panel, which SimHub builds again, and gone with the run.
+        /// </summary>
+        internal bool FontsAwaitRestart { get; set; }
+
+        /// <summary>
+        /// SimHub's dashboard list changed: it watches DashTemplates and reads it again two seconds after a write
+        /// (docs/research/simhub-dash-format.md, #664).
+        /// </summary>
+        /// <remarks>
+        /// The panel's own sync after adding a themed screen runs before SimHub has listed the folder it just wrote,
+        /// so it binds nothing (PanelCarPlaylist.Plan), and before #664 that waited for the next start. This is the
+        /// sync that follows once SimHub lists it. It runs only when the list moved under a themed screen since the
+        /// last sync (PanelCarPlaylist.ListingMoved), so a driver saving a dashboard in Dash Studio, which refreshes
+        /// the list each time, does not have every display read again for nothing; and never before the first
+        /// sync of this start, which the first frame owns, nor after one that could not reach SimHub at all.
+        /// </remarks>
+        private void DashboardListUpdated(object sender, EventArgs e)
+        {
+            // From SimHub's refresh timer, on the interface thread already; posted all the same, so the sync runs
+            // after SimHub has finished telling every listener rather than in the middle of it.
+            OnInterfaceThread(() =>
+            {
+                try
+                {
+                    var last = CarPlaylist;
+                    if (last == null) return;
+                    if (!PanelCarPlaylist.ListingMoved(last, Settings.RigScreens(), CarPlaylists.Listed().Contains)) return;
+                    SyncCarPlaylists();
+                    CarPlaylistsResynced?.Invoke();
+                }
+                catch (Exception ex)
+                {
+                    Log.Warn("The per-car playlists were not synchronised after SimHub's dashboard list changed: " + ex.Message);
+                }
+            });
+        }
+
+        /// <summary>Takes or lets go of SimHub's <c>PluginManager.DashboardListUpdated</c>.</summary>
+        /// <remarks>
+        /// A method of its own, so that a SimHub without the event fails here, where the caller catches it, rather
+        /// than when Init itself is compiled.
+        /// </remarks>
+        private void WatchDashboardList(PluginManager pluginManager, bool watch)
+        {
+            if (pluginManager == null) return;
+            if (watch) pluginManager.DashboardListUpdated += DashboardListUpdated;
+            else pluginManager.DashboardListUpdated -= DashboardListUpdated;
         }
 
         /// <summary>
@@ -350,10 +401,11 @@ namespace OpenDashPlugin
                 // downloaded this one, and this start is what writes them (#438); see EditedConsent.
                 var replaceEdited = EditedConsent.AppliesNow(Settings.ReplaceEditedFor, Version);
                 if (replaceEdited) Log.Info("Replacing edited dashboards, as asked when " + Version + " was downloaded");
-                // On Init's own thread, the one write that stays there (#611), because SimHub reads its template list
-                // once, as its plugins finish starting (docs/dev-loop.md): a folder written after that is not listed
-                // until the next restart, so an install moved off this path would leave every dashboard an update
-                // brought, which this start is what writes (#438), missing from SimHub's list until a second restart.
+                // On Init's own thread, the one write that stays there (#611), so that every dashboard an update
+                // brought, which this start is what writes (#438), is on disk before SimHub's displays open their
+                // dashboards and before the first frame asks SimHub which dashboards it lists for the per-car
+                // playlists. SimHub would list a folder written later within seconds, since it watches DashTemplates
+                // (#664), but a display that had opened its dashboard first would be drawing the copy it found.
                 // On a rig that is current it writes nothing and reads each screen's sidecar and fingerprint, under a
                 // second for the whole of Init on the five-screen test rig, while SimHub is still starting, and nothing in
                 // it waits on the network. Every press that writes later runs off the interface thread.
@@ -364,17 +416,6 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Dashboard installation failed", ex);
-            }
-            try
-            {
-                // After Init's own writes, which are taken as loaded: whether SimHub reads its templates before
-                // or after them is not something the plugin can see, and this errs on the side of saying nothing.
-                TemplatesAtStart = PackageExtractor.InstalledFolders(Installer.SimHubRoot);
-            }
-            catch (Exception ex)
-            {
-                Log.Warn("Could not list the dashboards SimHub loaded at startup: " + ex.Message);
-                TemplatesAtStart = null;
             }
             try
             {
@@ -422,6 +463,14 @@ namespace OpenDashPlugin
             catch (Exception ex)
             {
                 Log.Error("Refreshing the Porsche crest failed", ex);
+            }
+            try
+            {
+                WatchDashboardList(pluginManager, true);
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Watching SimHub's dashboard list failed", ex);
             }
             Log.Info("Dashboard status: " + Installer.Status);
             Log.Info(FlagBoxProfile.Summary(FlagBox));
@@ -805,6 +854,14 @@ namespace OpenDashPlugin
 
         public void End(PluginManager pluginManager)
         {
+            try
+            {
+                WatchDashboardList(pluginManager, false);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Letting go of SimHub's dashboard list failed: " + ex.Message);
+            }
             // A download has written nothing, so it is stopped rather than waited for; only a run that has started
             // writing is (UpdateService.Busy). Stopped first, so a download that finishes now cannot start writing
             // after the wait below has decided there was nothing to wait for.

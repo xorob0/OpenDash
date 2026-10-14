@@ -139,9 +139,10 @@ namespace OpenDashPlugin
             // check's answer is taken before Loaded, since it can land before the page is shown: SimHub builds
             // a new control on every GetWPFSettingsControl, and one it builds and never shows raises no
             // Unloaded, so a static event taken here (InputMappingsChanged) would keep it alive and run its
-            // binding counts for the session behind a page nobody sees. The mappings and the wheel's lighting
-            // presses are taken at Loaded: the page reads both as it builds, and one loaded again catches up
-            // (CatchUp forgets the binding counts and rebuilds).
+            // binding counts for the session behind a page nobody sees. The mappings, the wheel's lighting
+            // presses and the per-car playlists' sync after SimHub lists a themed screen are taken at Loaded: the
+            // page reads all three as it builds, and one loaded again catches up (CatchUp forgets the binding
+            // counts and rebuilds).
             plugin.UpdateChecked += ShowUpdateAnswer;
             Loaded += (sender, args) =>
             {
@@ -151,6 +152,8 @@ namespace OpenDashPlugin
                 plugin.UpdateChecked += ShowUpdateAnswer;
                 plugin.RigLightingPressed -= ShowLightingChange;
                 plugin.RigLightingPressed += ShowLightingChange;
+                plugin.CarPlaylistsResynced -= ShowCarPlaylistsResynced;
+                plugin.CarPlaylistsResynced += ShowCarPlaylistsResynced;
                 StartClock();
                 // SizeChanged has built the first page by now; a host that never gave the control a width
                 // gets it at the assumed one rather than an empty column.
@@ -161,6 +164,7 @@ namespace OpenDashPlugin
             {
                 plugin.UpdateChecked -= ShowUpdateAnswer;
                 plugin.RigLightingPressed -= ShowLightingChange;
+                plugin.CarPlaylistsResynced -= ShowCarPlaylistsResynced;
                 PluginManager.InputMappingsChanged -= MappingsChanged;
                 StopClock();
                 // A resize that had not settled would otherwise rebuild the page off screen, and on Screens
@@ -344,9 +348,9 @@ namespace OpenDashPlugin
         // closed), SheetFooter, CloseSheet. Shared facts and presses: TriggersOf, BoundCount and BindingChipFor
         // (SettingsControl.Bindings.cs, the chip landing on PanelBindings.Anchor(action), which Shortcuts tags,
         // and every binding named through PanelBindings.TriggerLabel); issues, the answer RefreshAttention keeps,
-        // asked through PanelAttention.Has and Of with its rule constants (ScreenRestart, StripUnselected and the
+        // asked through PanelAttention.Has and Of with its rule constants (ScreenMissing, StripUnselected and the
         // rest), and ScreenFacts, StripFacts and MatrixFacts for each device's state -- whether a strip is
-        // Showing, a dashboard is waiting for a restart -- all read while building and never on the tick;
+        // Showing, a dashboard is installed -- all read while building and never on the tick;
         // CheckAgain, which asks SimHub again and redraws (SettingsControl.Status.cs); ProfileSelected;
         // updateStatus and Check(manual), the update check's answer and asking it (SettingsControl.Live.cs);
         // GlyphSheet, InstallScreenAgain, BuildFlagBoxImportFallback, SafePlan, FlagBoxName, EmbeddedProfileOf,
@@ -565,6 +569,20 @@ namespace OpenDashPlugin
             }
             lightingSettle.Stop();
             lightingSettle.Start();
+        }
+
+        /// <summary>
+        /// The plugin synchronised the per-car playlists again once SimHub listed a themed screen's dashboard
+        /// (OpenDash.CarPlaylistsResynced, #664). Only the Screens page with a themed screen selected says what
+        /// its displays switch, so only that page is drawn again, in place; it happens once, a couple of seconds
+        /// after a themed screen is added or resized, and nowhere else.
+        /// </summary>
+        private void ShowCarPlaylistsResynced()
+        {
+            if (!IsLoaded || route == null || route.Page != PanelPage.Screens) return;
+            var screen = SelectedScreen;
+            if (screen == null || screen.Theme == null) return;
+            RebuildPage();
         }
 
         /// <summary>

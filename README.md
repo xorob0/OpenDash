@@ -83,8 +83,9 @@ once the first switch is on, before pressing Ok. An "OpenDash" entry appears in 
 eight pages; on its Screens page, add the screen your rig has, and the plugin writes that dashboard
 into SimHub.
 `OpenDash 850x480` is the base size and the one to take if nothing matches your display exactly;
-`OpenDash 1280x480` is the large one. Restart SimHub once the screens are added, since it reads its list of dashboards only
-when it starts. The full procedure, the table of sizes and the troubleshooting list are in
+`OpenDash 1280x480` is the large one. SimHub lists each dashboard a couple of seconds after it is
+written; restart it once after the first screen, whose fonts SimHub loads only when it starts, as the
+panel says. The full procedure, the table of sizes and the troubleshooting list are in
 [plugin/INSTALL.md](plugin/INSTALL.md).
 
 Copying a file by hand is how SimHub loads any third-party plugin, and unblocking is the step
