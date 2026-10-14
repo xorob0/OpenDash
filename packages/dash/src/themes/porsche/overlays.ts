@@ -31,7 +31,7 @@ import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
 import { TRACKED_VALUES } from '../../second/tracked.ts';
-import { fuelLitres, overPitLimit, pitLimitText, speed } from '../../second/values.ts';
+import { fuelLitres, gear as currentGear, overPitLimit, pitLimitText, speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { gearSizeIn } from '../../zones/zoneAPages.ts';
 import { regionRect, zoneRect } from '../anatomy.ts';
@@ -40,7 +40,7 @@ import { panelOf } from './body.ts';
 import { picture } from './pictograms.ts';
 import { BORDER, BOX_PAD, centredY, lowFuelAlarm, RADIUS, runWidth } from './register.ts';
 
-const { fmt, game, iff, str, concat } = ncalc;
+const { fmt, iff, str, concat } = ncalc;
 
 /**
  * The limiter body's own layout, from the ticket: padding 8, 18 and 10, a 300 px column each side,
@@ -115,7 +115,7 @@ function limiterBody(frame: Rect, gear: Rect): Item {
       mono: cells,
       color: ink,
       maxWidth: gearWidth + GEAR_BOX_SLACK,
-      bind: game('Gear'),
+      bind: currentGear(),
     }),
   ];
   return withMoreBindings({ kind: 'layer', name: 'limiter', children }, { Visible: pitAlertVisible('limiter') });

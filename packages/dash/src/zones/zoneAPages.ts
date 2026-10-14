@@ -26,12 +26,12 @@ import { inset, rect } from '../design/geometry.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
-import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
+import { CHARS, gear, rpm, speed, speedUnit } from '../second/values.ts';
 import { pageBuilder } from '../modules/index.ts';
 import { shapeOf } from '../second/shape.ts';
 import { ds } from '../tokens.ts';
 
-const { game, fmt } = ncalc;
+const { fmt } = ncalc;
 
 /**
  * The weight the speed page draws its one big value in, and the weight it is measured in.
@@ -308,7 +308,7 @@ function speedPage(frame: Rect, prefix: string): Item[] {
 
 /** The gear as A3 draws it: a quarter of the column, in the secondary ink, its label beside it. */
 const gearRuns = (prefix: string, fs: number, labelFs: number): Run[] => [
-  { kind: 'value', name: `${prefix}gear`, sample: '4', fs, chars: GEAR_CHARS, mono: gearCells(fs), color: ds.color.text.secondary, bind: game('Gear') },
+  { kind: 'value', name: `${prefix}gear`, sample: '4', fs, chars: GEAR_CHARS, mono: gearCells(fs), color: ds.color.text.secondary, bind: gear() },
   { kind: 'label', name: `${prefix}gear.label`, text: 'Gear', fs: labelFs, widest: 'Gear', color: ds.color.text.label },
 ];
 

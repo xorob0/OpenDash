@@ -12,16 +12,16 @@
  */
 import type { Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
-import { rpm, speed } from '../../second/values.ts';
+import { gear as currentGear, rpm, speed, speedInMph } from '../../second/values.ts';
 import { reading, segment, segmentLine, segmentWidth } from './register.ts';
 
-const { eq, fmt, game, iff, isnull, str } = ncalc;
+const { fmt, iff, str } = ncalc;
 
 /** The canvas's column: the gear 168, the speed 54 with its unit 12 and 8 px after it, in 284. */
 const COLUMN = { height: 284, gear: 168, speed: 54, unit: 12, unitGap: 8, unitDrop: 4, gap: 16 } as const;
 
 /** The speed unit as the units write it, after `speedUnit`'s reading of the sim's own. */
-const unitOf = () => iff(eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH')), str('mph'), str('kph'));
+const unitOf = () => iff(speedInMph(), str('mph'), str('kph'));
 
 const unitSize = (size: number): number => Math.max(10, Math.round((size * COLUMN.unit) / COLUMN.speed));
 
@@ -41,7 +41,7 @@ function gear(prefix: string, frame: Rect, top: number, size: number): Item[] {
   const left = Math.round(frame.left + (frame.width - width) / 2);
   return [
     segment(`${prefix}gear.ghost`, 'DSEG7Bold', '8', left, top, width, { size, hAlign: 'center', ghost: true }),
-    segment(`${prefix}gear.value`, 'DSEG7Bold', '2', left, top, width, { size, hAlign: 'center', bind: game('Gear'), widest: '8' }),
+    segment(`${prefix}gear.value`, 'DSEG7Bold', '2', left, top, width, { size, hAlign: 'center', bind: currentGear(), widest: '8' }),
   ];
 }
 
