@@ -103,6 +103,15 @@ describe('the wind and the sim clock on a sim that publishes neither', () => {
     });
   });
 
+  test('keep no room for an AM or PM on a 12-hour rig, so -- stands against the edge as a 24-hour clock does', () => {
+    const value = corners().find((i) => i.name === 'corner.sim.value')!;
+    const left = (props: Props): unknown => evalNcalc(bindingExpression(value, 'Left'), props);
+    expect(left(ac('12h'))).toBe(left(iracing('24h')));
+    expect(left(iracing('12h'))).not.toBe(left(iracing('24h')));
+    const bar = BAR_FIELD_SPECS.find((f) => f.id === 'simulatedTime')!;
+    expect({ ac: evalNcalc(bar.suffix!.when, ac('12h')), iracing: evalNcalc(bar.suffix!.when, iracing('12h')) }).toEqual({ ac: false, iracing: true });
+  });
+
   test('read null rather than 0 from the helpers themselves', () => {
     expect(evalNcalc(windKmh(), ac('24h'))).toBeNull();
     expect(evalNcalc(simClock().text, ac('24h'))).toBe('--');

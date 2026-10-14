@@ -81,7 +81,6 @@ import {
   settledFuelTimeLeft,
   simClock,
   spotterCar,
-  twelveHour,
   GRIP_WIDEST,
   hasTrackState,
   hasWind,
@@ -969,7 +968,7 @@ const cornerClocks = (): BandField[] =>
     after: 'PM',
     afterBind: clock.meridiem,
     afterWidest: meridiemWidest('BarlowMedium'),
-    afterWhen: twelveHour(),
+    afterWhen: clock.meridiemShown,
   }));
 
 /**

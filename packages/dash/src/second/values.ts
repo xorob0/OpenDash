@@ -2496,7 +2496,8 @@ export const meridiemWidest = (face: MeasuredFace): string =>
  * `text` is `14:32` on a twenty-four-hour clock and `2:32` on a twelve-hour one -- `HH:mm` against
  * `h:mm`, the twelve-hour hour carrying no leading zero because that is how it is read -- and either
  * fits {@link CHARS.timeOfDay}. `meridiem` is `AM` or `PM` whatever the setting, and a surface draws
- * it only while {@link twelveHour} holds: a word beside the value rather than part of it, because
+ * it only while `meridiemShown` holds, which is {@link twelveHour} and, for a clock that can be
+ * missing, the clock being there: a word beside the value rather than part of it, because
  * `M` is one of the glyphs rule 19 keeps out of a cell. `drawn` is where a word after the digits
  * goes, since a twelve-hour hour is one digit or two and `9:05` placed as if it were `12:05` would
  * stand its `PM` a cell off the figure -- the fault #387 removed from every other follower.
@@ -2504,6 +2505,7 @@ export const meridiemWidest = (face: MeasuredFace): string =>
 export interface TimeOfDay {
   text: Expr;
   meridiem: Expr;
+  meridiemShown: Expr;
   drawn: DrawnFigure;
 }
 
@@ -2529,6 +2531,7 @@ export const localClock = (): TimeOfDay => {
   return {
     text: iff(twelveHour(), fmt(now, 'h:mm'), fmt(now, 'HH:mm')),
     meridiem: iff(isIn(fmt(now, 'HH'), ...writtenHours(12, 23)), str('PM'), str('AM')),
+    meridiemShown: twelveHour(),
     drawn: timeOfDayDrawn(isIn(fmt(now, 'hh'), ...writtenHours(10, 12))),
   };
 };
@@ -2542,7 +2545,9 @@ export const localClock = (): TimeOfDay => {
  *
  * Where the sim has no clock of its own the digits read `--` and the meridiem nothing, rather than
  * `00:00` and `AM` worked out from a 0 standing in for the reading (#1123): Assetto Corsa, ACC and
- * Le Mans Ultimate publish no `SessionTimeOfDay`.
+ * Le Mans Ultimate publish no `SessionTimeOfDay`. The meridiem is not shown there either, so a slot
+ * that keeps its room for one, as the bar's and band D's corner do, closes it and `--` stands against
+ * the edge. The pit wall header keeps the room, its groups being laid out by the setting alone.
  */
 export const simClock = (): TimeOfDay => {
   const seconds = simTimeOfDay();
@@ -2553,6 +2558,7 @@ export const simClock = (): TimeOfDay => {
   return {
     text: iff(known, iff(twelveHour(), concat(fmt(hour12, '0'), str(':'), minutes), concat(fmt(hour, '00'), str(':'), minutes)), str(NO_VALUE)),
     meridiem: iff(known, iff(ge(hour, num(12)), str('PM'), str('AM')), str('')),
+    meridiemShown: and(twelveHour(), known),
     drawn: drawnEither(known, timeOfDayDrawn(ge(hour12, num(10))), drawnText(NO_VALUE)),
   };
 };
