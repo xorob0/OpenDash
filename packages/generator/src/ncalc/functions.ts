@@ -119,6 +119,8 @@ const FUNCTIONS: ReadonlyMap<string, Supported> = new Map<string, Supported>([
   ['sin', { arity: exactly(1), impl: (c) => double(Math.sin(numberArg(c, 0))) }],
   // `Math.Truncate(Convert.ToDouble(x))`, so a null is 0. Unverified on the VM.
   ['truncate', { arity: exactly(1), impl: (c) => double(Math.trunc(numberArg(c, 0))) }],
+  // `Math.Ceiling(Convert.ToDouble(x))`, the same dispatch as `truncate`. Unverified on the VM.
+  ['ceiling', { arity: exactly(1), impl: (c) => double(Math.ceil(numberArg(c, 0))) }],
   [
     'round',
     {

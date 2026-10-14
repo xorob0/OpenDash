@@ -672,9 +672,57 @@ The opponent providers of the 9.12.6 assembly in `plugin/lib` register, beside `
 driver's gap to his own class leader; `lapstoclassleader`; and `gaptoclassleadercombined`, the
 driver's gap to the player's class leader as laps or seconds, spelled the way the overall one is.
 They were found while #212 was reviewed, the class gap having been built on the belief that they
-did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still derives the figure
-from the two gaps to the overall leader, for the reason its comment gives; the three names are here
-so that the next reader checks them rather than the belief.
+did not exist. `carClassRaceGap` in `packages/dash/src/second/values.ts` still derives the seconds
+from the two gaps to the overall leader, which is what `GaptoClassLeader` is for a car of the
+player's class; the three names are here so that the next reader checks them rather than the belief.
+
+What the laps count was read from `GameManagerBase` in the 9.12.6 `GameReaderCommon.dll` on
+2026-10-10 (#1023). `LapsToLeader` is `(int)Math.Truncate(leader.CurrentLapHighPrecision -
+car.CurrentLapHighPrecision)`, the leader being the first of `Opponents`, and `LapsToClassLeader` the
+same against the first opponent whose `CarClass` is the player's, which is the car
+`getopponentleaderboardposition_playerclassonly(1)` names. `CurrentLapHighPrecision` is the laps
+begun and the fraction of the lap run, `CurrentLap - 1` plus the track position where the reader
+does not set it itself, so both count whole laps behind by distance and stay 0 for
+a car on the leader's lap whose lap counter is one lower because the leader has crossed the line and
+it has not. Neither is set on the leader's own row, which is null. The combined strings are built by
+`Opponent.GetCombinedGapAsString`: the laps as `+1 lap` or `+2 laps` when above 0, and otherwise the
+seconds formatted `0.00` with a `+` when positive, so a car on the lead lap reads two decimals. The
+Gap columns read the counts and spell both cases themselves. The NCalc names are `driverlapstoleader`
+and `driverlapstoclassleader`, registered as `Lapstoleader` and `Lapstoclassleader` and lower-cased.
+
+### What the leaderboard says about the race leader (2026-10-10, #1027)
+
+A timed race ends at the overall leader's first crossing after the clock, so `lapsLeft()` in
+`packages/dash/src/second/values.ts` needs to know where the leader is. Read from the 9.12.6
+decompile of `GameReaderCommon.dll`, `ICarsReader.dll` (`IRacingManager.GD_Opponents`) and the
+opponent providers of `SimHub.Plugins.dll`; none of it has been checked on iRacing itself.
+
+- **Row 1 is the sim's overall leader.** `driver<name>(1)` reads the first opponent of the
+  leaderboard, which is sorted by the sim's position, whatever the rig's class setting. On iRacing
+  that position moves only at the line (#1063), so for the lap after a pass for the lead row 1 is the
+  car that was passed. `lapsLeft()` therefore reads the leader's row as the plugin's
+  `OpenDash.LiveOrder1` where it is published, and as row 1 where it is not.
+- **`drivertrackpositionpercent(n)`** is `Opponent.TrackPositionPercent`, which the iRacing reader
+  fills from `CarIdxLapDistPct` and `GameManagerBase` folds into 0..1, so a car out of the world
+  (-1) reads 0. `drivercurrentlaphighprecision(n)` is the lap less one plus that fraction.
+- **`driverbestlap(n)` and `driverlastlap(n)`** are the session results' `FastestTime` and
+  `LastTime`, zero until the car has one.
+- **`drivergaptoleader(n)` is SimHub's own estimate on iRacing**, since the iRacing reader sets
+  neither `GaptoLeader` nor `LapsToLeader`. Under the "basic distance to time" gap mode it is the
+  difference of the two `CurrentLapHighPrecision` times a reference best lap; under "micro sectors"
+  it is the time since the leader was at the car's distance. Both include the whole laps of a lapped
+  car, so neither can be taken modulo a lap to give the car's phase behind the leader.
+- **`Flag_Checkered`** is the `checkered` bit of iRacing's `SessionFlags`. The SDK raises it for the
+  field once the leader has finished; that it does so before the car's own crossing is not yet seen.
+- **Not reachable from a binding:** iRacing's `CarIdxEstTime` and `CarIdxF2Time` are arrays by car
+  index in the raw telemetry, with nothing to index them by the leader's car. `SessionState` is
+  there as a value, and tells the chequered flag apart from racing, as `Flag_Checkered` already does.
+
+NCalc's `ceiling` is dispatched exactly as `truncate` is: one lower-cased `switch`, the same case
+check (which SimHub runs with case ignored, or `truncate` would fail), and
+`Math.Ceiling(Convert.ToDouble(x))`. It has not been run on the VM. NCalc's `max` and `min` take the
+type of their first argument and convert the second to it, so `max(0, x)` with an Int32 nought
+rounds `x` to a whole number; the time goes first.
 
 ### Per-car playlists belong to a display device, and match the iRacing CarPath (2026-10-07, #199)
 
@@ -804,7 +852,39 @@ and `WoteverCommon.dll`. Findings, all now relied upon by the generator:
   right in either unit (#993).
 - Class position: there is no player class position property. `[PlayerClassOpponentsCount]`
   gives the class car count and `driverclassposition(getplayerleaderboardposition())` the
-  position in class.
+  position in class. That is `PositionInClass`, which `GameManagerBase` numbers itself, from 1
+  within each class, in the order of the overall `Position` with a 0 sorted last, so a class
+  place is never 0 and whether a car is placed is asked of `driverposition` (#1014). The class
+  places gained, `driverpositiongainclass`, are counted from the class place of the first frame
+  SimHub saw the car, so a car first seen unplaced counts them from a place SimHub made up, and no
+  package reads them. The overall `driverpositiongain` waits for the car's first real place, and
+  it is the class count too when the field is a single class (#1022). `drivergaptoleader` does not
+  wait: before the sim has placed anyone it is published for every car, measured from the first
+  car of the driver list and negative for some, as seen on the test VM with every iRacing position
+  at 0, so the Gap and Int columns ask `driverposition` of both cars as well (#1028). Nor is it
+  published for the car every gap is measured from: `ComputeOpponentsData` in 9.12.6 calls
+  `UpdateGapToLeader` for every car but the first of `Opponents`, which is `driver*(1)`, and sets
+  that first car's `GaptoLeaderSimHub` to 0 only when it is the player. So `drivergaptoleader(1)` is
+  null whenever somebody else leads, as seen on the test VM in the `green` scenario, and a difference
+  taken from it is null too. SimHub's own `GaptoClassLeader` subtracts 0 in that case, and the Gap
+  and Int columns read it as 0 the same way, on that car only (#1041).
+- `drivergaptoleader` and `driverlapstoleader` are distance in every session. `UpdateGapToLeader`
+  in `GameManagerBaseGapHelpers` takes the first car's `CurrentLapHighPrecision` less the car's,
+  times the reference best lap or through the first car's delta store, and `LapsToLeader` truncates
+  the same difference; the iRacing reader sets neither itself, and nothing asks the session type. In
+  a race that is the gap. In practice and qualifying `Opponents` is sorted by `Position` (the iRacing
+  reader sets no `LivePosition`), which it takes from the session results in best-lap order, so the first car is the fastest and the
+  distance says how long each car has been out: a car tenths off the best lap reads `+5L` or a
+  negative three-digit gap. Per car SimHub publishes `driverdeltatobest`, the car's best lap less the
+  fastest of the whole field, floored at 0, which no class list or interval can use; `driverbestlap`
+  is a TimeSpan from the results' `FastestTime`, left at zero for a car with none. So outside a race
+  the Gap and Int columns subtract two best laps themselves (#1040). `SessionTypeName` is iRacing's
+  `SessionType` verbatim. The Gap and Int columns read best laps in a session named `Practice`,
+  `Open Practice`, `Lone Practice`, `Qualify`, `Open Qualify`, `Lone Qualify`, `Offline Testing` or
+  `Warmup`, compared in capitals, and distance in `Race` and in any other name or none. `Qualify` is
+  the word the Porsche's strip already reads as qualifying, and `Open Practice` and `Lone Practice`
+  come from the fuel margin's tests and #1029 rather than a recording, which has only shown
+  `Lone Qualify` and `Race`. How another sim spells them has not been read.
 - iRacing reports TC and ABS levels from `dcTractionControl` and `dcABS`; both are absent, so
   `isnull([DataCorePlugin.GameRawData.Telemetry.dcTractionControl])` is true, on cars without
   the control, which is how the cards show `--`.
@@ -1118,6 +1198,33 @@ Established by decompiling `IRacingManager.GD_Opponents` in the guest's `ICarsRe
 - So marking a car off track on the lists needs the plugin to publish it per leaderboard position,
   which is a reading of telemetry of the kind ADR 0009 refuses and ADR 0018 allows for the player's
   own car. That is a decision and not a fault, and it is not taken.
+
+### The previous laps are the lap database's, not the session's (2026-10-10, #1011)
+
+Established by decompiling `PersistantTrackerPlugin` and `GameManagerBase` in SimHub 9.12.6, after
+the VM showed a new session's out lap with an average of laps from an earlier run.
+
+- **The ring is filled from the database.** `ComputeLapHistory` loads
+  `DBManager.GetLastLaps(TrackIdWithConfig, CarId, 10)`, the last ten laps of this car at this track
+  from any session, into `PreviousLap_00` to `_09`. It runs when the plugin's context changes, which
+  is SimHub starting, the game starting, a session restart and a change of car or track, and again at
+  every lap, with the new lap put in front. So a session starts with the last session's laps in the
+  ring, and on the VM they survived a restart of SimHub and a new `SessionUniqueID`, `SessionID` and
+  `SubSessionID` at the same track and car.
+- **`PreviousLap_NN_IsCurrentSession` says which slots are this session's.** It is an int, 1 when the
+  slot's lap is in `SessionLapHistory` by its `LapId`, and 0 otherwise. The lap just completed is
+  added to `SessionLapHistory` before the ring is refilled for it (`RaiseNewLap` calls
+  `AddLapHistoryEntry` and then `TrackNewLap`), so slot zero reads 1 from the frame it appears. A
+  session restart clears `SessionLapHistory` and resets the context, so every flag the refill
+  writes is 0.
+- **A slot past the laps the database holds keeps its flag.** Its time and deltas are written zero
+  and `IsCurrentSession` is left as it was. When the database holds no laps at all for this car and
+  track, as on a combination never driven before, that is all ten slots, and slot zero can read 1
+  from the last combination with a time and a delta of nought. So the flag is not a gate on its
+  own: a slot is a lap of this session when it has a time and the flag is 1. `hasSessionLap` in
+  `packages/dash/src/second/values.ts` is that gate, and every reading built on the ring asks it.
+- Beside the two the dashes read, each slot publishes `_DeltaToAllTimeBest` and a hidden
+  `_DeltaToBest`, which is the same value.
 
 ## Sources
 

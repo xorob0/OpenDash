@@ -106,6 +106,8 @@ export const secondsToTimespan = (s: Expr): Expr => `secondstotimespan(${s})`;
 
 export const round = (value: Expr, decimals = 0): Expr => `round(${value}, ${decimals})`;
 export const truncate = (value: Expr): Expr => `truncate(${value})`;
+/** NCalc's own `Ceiling`, dispatched exactly as `truncate` is, by its lower-cased name. */
+export const ceiling = (value: Expr): Expr => `ceiling(${value})`;
 export const abs = (value: Expr): Expr => `abs(${value})`;
 /**
  * `max(a, b)` and `min(a, b)`, whose answer has the **left** operand's type, the right one converted to
@@ -233,14 +235,51 @@ export type DriverFunction =
   | 'position'
   | 'classposition'
   | 'positiongain'
+  /**
+   * Not read by any package. SimHub counts it from the class place it numbered the first frame it
+   * saw the car, which for a car the sim had not placed yet is the car's order in the driver list,
+   * so it can count places a car never lost (#1022). `positiongain` counts from the first real place.
+   */
   | 'positiongainclass'
+  /**
+   * A TimeSpan, which the iRacing reader takes from the session results' `FastestTime` and
+   * `GameManagerBase` leaves at zero for a car with none. Outside a race the Gap and Int columns
+   * measure the difference of two of these, SimHub publishing no best-lap gap a list can use (#1040).
+   */
   | 'bestlap'
   | 'lastlap'
+  /**
+   * The lap in progress, which goes up as the car crosses the line. Not read by any package: two cars'
+   * counters differ for the seconds between one crossing the line and the other, so they cannot say
+   * whether a car is a lap down (#1023); `lapstoleader` and `lapstoclassleader` can.
+   */
   | 'currentlap'
+  /**
+   * Seconds behind the first car of the leaderboard, which every gap is measured from. Null on that
+   * car's own row unless it is the player's, `GameManagerBase` in 9.12.6 setting it to 0 only then
+   * (#1041). It is distance run in every session, so outside a race, where the first car is the
+   * fastest rather than the furthest round, it is not read (#1040).
+   */
   | 'gaptoleader'
   | 'gaptoplayer'
+  /**
+   * Not read by any package. SimHub writes it as seconds to two decimals or as `+1 lap` and
+   * `+2 laps`, where the Gap columns draw one decimal and `+1L` (#1023).
+   */
   | 'gaptoleadercombined'
+  /**
+   * Whole laps the car is behind the leader by distance: the truncated difference of the two cars'
+   * `CurrentLapHighPrecision`, set by `GameManagerBase` in 9.12.6 and null on the leader's own row.
+   */
+  | 'lapstoleader'
+  /** The same against the first car of the player's class, which is what SimHub measures it from. */
+  | 'lapstoclassleader'
   | 'relativegaptoplayer'
+  /**
+   * How far round its lap the car is, from 0 at the line to 1. `Opponent.TrackPositionPercent`,
+   * which iRacing fills from `CarIdxLapDistPct` and `GameManagerBase` folds into 0..1 (9.12.6).
+   */
+  | 'trackpositionpercent'
   | 'iscarinpit'
   | 'iscarinpitlane'
   | 'pitcount'

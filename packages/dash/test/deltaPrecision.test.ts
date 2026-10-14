@@ -30,7 +30,7 @@ import { lapDeltaPanel } from '../src/screens/pitwall.ts';
 import type { Density } from '../src/second/density.ts';
 import { charsOfText, textWidth } from '../src/second/drawn.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { CHARS, LAST_LAP_DELTA, REFERENCE_DELTA_WIDEST, referenceDelta } from '../src/second/values.ts';
+import { CHARS, LAST_LAP_DELTA, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaText } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { expressionsOf, itemsOf, walkItems } from '../src/walk.ts';
 import { evalNcalc, Single, type Props } from './ncalcEval.ts';
@@ -65,8 +65,6 @@ const moduleItems = (id: string, frame: Rect, density: Density): Item[] => {
 interface Site {
   name: string;
   item: TextItem;
-  /** The card alone draws a level delta as a bare zero; everywhere else keeps the sign. */
-  bareAtRest: boolean;
 }
 
 /**
@@ -87,14 +85,13 @@ const SITES: readonly Site[] = [
   ...[rect(0, 0, 255, 187), rect(0, 0, 223, 156), rect(0, 0, 140, 104)].map((slot) => ({
     name: `card 3 in ${slot.width}x${slot.height}`,
     item: named(deltaCard.build(slot, 'delta.'), 'delta.value'),
-    bareAtRest: true,
   })),
   ...MODULE_BOXES.flatMap((box) => [
-    { name: `the delta page, ${box.name}`, item: named(moduleItems('delta', box.frame, box.density), 'delta.delta.value'), bareAtRest: false },
-    { name: `Lap times, ${box.name}`, item: named(moduleItems('lapTimes', box.frame, box.density), 'lapTimes.delta.value'), bareAtRest: false },
+    { name: `the delta page, ${box.name}`, item: named(moduleItems('delta', box.frame, box.density), 'delta.delta.value') },
+    { name: `Lap times, ${box.name}`, item: named(moduleItems('lapTimes', box.frame, box.density), 'lapTimes.delta.value') },
   ]),
-  { name: 'the lap pop-up', item: named([popUp(rect(0, 0, POP_UP_WIDTH, POP_UP_HEIGHT), LAP_POP_UP)], 'popUp.lap.secondary'), bareAtRest: false },
-  { name: 'the pit wall', item: named(lapDeltaPanel('lapDelta', rect(0, 0, 640, 300)), 'lapDelta.delta.value'), bareAtRest: false },
+  { name: 'the lap pop-up', item: named([popUp(rect(0, 0, POP_UP_WIDTH, POP_UP_HEIGHT), LAP_POP_UP)], 'popUp.lap.secondary') },
+  { name: 'the pit wall', item: named(lapDeltaPanel('lapDelta', rect(0, 0, 640, 300)), 'lapDelta.delta.value') },
 ];
 
 const textOf = (item: TextItem): string => {
@@ -120,10 +117,11 @@ const placesDrawn = (places: number, seconds: number): number => (places === 3 &
 
 /**
  * The figure a reading draws, written independently of the binding: a true minus, a plus for anything
- * not negative, and the card's bare zero inside the band, which is half a unit of the last place.
+ * not negative, and a bare zero inside the band, which is half a unit of the last place. Every surface
+ * draws the bare zero, card 3 no longer alone (#614).
  */
-const figure = (seconds: number, places: number, bareAtRest: boolean): string => {
-  if (bareAtRest && Math.abs(seconds) < 0.5 * 10 ** -places) return `0.${'0'.repeat(places)}`;
+const figure = (seconds: number, places: number): string => {
+  if (Math.abs(seconds) < 0.5 * 10 ** -places) return `0.${'0'.repeat(places)}`;
   return `${seconds < 0 ? '−' : '+'}${Math.abs(seconds).toFixed(placesDrawn(places, seconds))}`;
 };
 
@@ -192,7 +190,7 @@ describe('the delta precision (#322)', () => {
         for (const reference of REFERENCES) {
           for (const reading of READINGS) {
             const got = drawn(s, frame(reference, precision, reading));
-            const expected = figure(asRead(reference, reading), placesOf(precision), s.bareAtRest);
+            const expected = figure(asRead(reference, reading), placesOf(precision));
             const at = { site: s.name, reference, precision, reading };
             expect({ ...at, text: got.text }).toEqual({ ...at, text: expected });
             if (got.colour !== undefined) expect({ ...at, colour: got.colour }).toEqual({ ...at, colour: colourOf(got.text) });
@@ -208,17 +206,35 @@ describe('the delta precision (#322)', () => {
     const at = (s: Site, precision: string, reading: number) => drawn(s, frame('session', precision, reading));
     // Hundredths: four thousandths is level, and five is a hundredth, since .NET rounds a half away
     // from zero; a band that took 0.005 in would draw "+0.01" in the resting white.
-    expect(at(page, 'hundredths', 0.004)).toEqual({ text: '+0.00', colour: ds.purpose.delta.zero });
+    expect(at(page, 'hundredths', 0.004)).toEqual({ text: '0.00', colour: ds.purpose.delta.zero });
     expect(at(page, 'hundredths', 0.005)).toEqual({ text: '+0.01', colour: ds.purpose.delta.slower });
     expect(at(page, 'hundredths', -0.005)).toEqual({ text: '−0.01', colour: ds.purpose.delta.faster });
     expect(at(card, 'hundredths', 0.004)).toEqual({ text: '0.00', colour: ds.purpose.delta.zero });
     expect(at(card, 'hundredths', 0.005)).toEqual({ text: '+0.01', colour: ds.purpose.delta.slower });
     // Thousandths: the band narrows with the figure, so four thousandths is a reading and is coloured.
     expect(at(page, 'thousandths', 0.004)).toEqual({ text: '+0.004', colour: ds.purpose.delta.slower });
-    expect(at(page, 'thousandths', 0.0004)).toEqual({ text: '+0.000', colour: ds.purpose.delta.zero });
+    expect(at(page, 'thousandths', 0.0004)).toEqual({ text: '0.000', colour: ds.purpose.delta.zero });
     expect(at(page, 'thousandths', -0.0005)).toEqual({ text: '−0.001', colour: ds.purpose.delta.faster });
     expect(at(card, 'thousandths', 0.0004)).toEqual({ text: '0.000', colour: ds.purpose.delta.zero });
     expect(at(card, 'thousandths', -0.004)).toEqual({ text: '−0.004', colour: ds.purpose.delta.faster });
+  });
+
+  test('a level delta is the bare zero on every surface, at both precisions and on both sides of zero (#614)', () => {
+    // Card 3 drew "0.00" off a branch of its own and the other four drew "+0.00", or "−0.00" a
+    // thousandth under, so one reading looked like two. The branch is the shared text's now, and the
+    // card draws that text and nothing around it.
+    expect(textOf(SITES[0]!.item)).toBe(referenceDeltaText(referenceDelta()));
+    const level = { hundredths: [0, 0.004, -0.004, 0.0049, -0.0049], thousandths: [0, 0.0004, -0.0004, 0.00049, -0.00049] } as const;
+    for (const s of SITES) {
+      for (const precision of DELTA_PRECISIONS) {
+        for (const reading of level[precision]) {
+          const got = drawn(s, frame('session', precision, reading));
+          const at = { site: s.name, precision, reading };
+          expect({ ...at, text: got.text }).toEqual({ ...at, text: `0.${'0'.repeat(placesOf(precision))}` });
+          if (got.colour !== undefined) expect({ ...at, colour: got.colour }).toEqual({ ...at, colour: ds.purpose.delta.zero });
+        }
+      }
+    }
   });
 
   test('a delta of a hundred seconds or more is drawn to hundredths at either precision', () => {
@@ -237,7 +253,7 @@ describe('the delta precision (#322)', () => {
       for (const precision of DELTA_PRECISIONS) {
         const places = placesOf(precision);
         const got = drawn(s, { [REFERENCE]: 'lastlap', [PRECISION]: precision, [SESSION]: 0.7, [LAST]: new Single(-0.4), [LAST_OK]: false });
-        expect({ site: s.name, precision, text: got.text }).toEqual({ site: s.name, precision, text: figure(0, places, s.bareAtRest) });
+        expect({ site: s.name, precision, text: got.text }).toEqual({ site: s.name, precision, text: figure(0, places) });
         if (got.colour !== undefined) expect({ site: s.name, precision, colour: got.colour }).toEqual({ site: s.name, precision, colour: ds.purpose.delta.zero });
       }
     }
