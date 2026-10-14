@@ -40,12 +40,15 @@ import {
   bandFuelQuantity,
   bandFuelQuantityDrawn,
   bandFuelQuantityWidest,
+  bandTyreTemperature,
+  bandTyreTemperatureMark,
   bestLap,
   carPosition,
   positionLabelled,
   carRelativeGap,
   RELATIVE_GAP_WIDEST,
   CHARS,
+  type Corner,
   INCIDENTS_WIDEST,
   LAP_WIDEST,
   clock,
@@ -307,23 +310,38 @@ const stint: readonly BandField[] = [
  * 88, which reads as a set and spends one degree sign instead of four on a band that has room for
  * neither.
  *
- * The `°C` is fixed rather than following the driver's `TemperatureUnit` the way the tyres module's
- * corners now do, and that is not an oversight: these four are iRacing's raw `*tempCM`, which is
- * degrees Celsius whatever the sim is set to display, where the module reads SimHub's own
- * `TyreTemperature*` and gets the driver's unit already converted. A label following the setting
- * here would relabel a Celsius figure as Fahrenheit. #384.
+ * The four are iRacing's raw `*tempCM` where it publishes them, which is the carcass and degrees
+ * Celsius whatever the sim is set to display, so the label says `°C` over them rather than following
+ * the driver's `TemperatureUnit`: a label following the setting there would relabel a Celsius figure
+ * as Fahrenheit (#384). Every other sim has no raw block, and the page falls back to SimHub's own
+ * `TyreTemperature*`, which is already in the driver's unit and is the core temperature on Assetto
+ * Corsa and ACC; the label follows the unit there. A sim with neither draws `--` in each cell rather
+ * than four zeros, which read as four cold tyres. #556.
+ *
+ * `°C` is the widest of the three marks the label can carry, capitals included, so the box is
+ * measured by the label as the catalogue writes it.
  */
+const TYRES_LABEL = 'Tyres °C';
+
+/** One corner of the tyre row: the reading, or `--` where nothing is published. */
+const bandTyreCell = (corner: Corner): string => {
+  const t = bandTyreTemperature(corner);
+  return iff(ncalc.isNull(t), str(NO_VALUE), fmt(t, '0'));
+};
+
 const tyres: readonly BandField[] = [
   {
     id: 'temps',
-    label: 'Tyres °C',
+    label: TYRES_LABEL,
+    labelBind: concat(str('Tyres '), bandTyreTemperatureMark()),
+    labelWidest: TYRES_LABEL,
     sample: '84',
-    bind: fmt(isnull(raw('LFtempCM'), num(0)), '0'),
+    bind: bandTyreCell('FrontLeft'),
     chars: CHARS.temperature,
     row: [
-      { sample: '104', bind: fmt(isnull(raw('RFtempCM'), num(0)), '0') },
-      { sample: '62', bind: fmt(isnull(raw('LRtempCM'), num(0)), '0') },
-      { sample: '88', bind: fmt(isnull(raw('RRtempCM'), num(0)), '0') },
+      { sample: '104', bind: bandTyreCell('FrontRight') },
+      { sample: '62', bind: bandTyreCell('RearLeft') },
+      { sample: '88', bind: bandTyreCell('RearRight') },
     ],
   },
   { id: 'compound', label: 'Compound', sample: 'Medium', bind: isnull(driver('fronttyrecompound', playerPosition()), str('--')), chars: { digits: 7, specials: 0 }, widest: 'Medium' },

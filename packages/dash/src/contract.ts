@@ -1631,9 +1631,10 @@ export interface ModuleMeta {
 
 /**
  * The 22 modules in page order. Three are off by default because iRacing does not carry their
- * data: virtual energy is a Le Mans Ultimate feature, iRacing reports no damage values at all,
- * and per-segment rival timing is not a SimHub property. They ship as honest "not available"
- * pages rather than as invented numbers, so a user on another sim can still switch them on.
+ * data: virtual energy is a Le Mans Ultimate feature, iRacing reports no damage values at all
+ * where Assetto Corsa and ACC do, and per-segment rival timing is not a SimHub property. They say
+ * so on a sim without the data rather than invent numbers, so a user on another sim can still
+ * switch them on, and damage draws the car on the sims that report it (#582).
  *
  * Module 17 draws the gear alone. The design sheet paired it with the speed, but a module shows
  * one thing: the speed has the speedo module, and the dash face settled the same question when
@@ -1662,7 +1663,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 17, id: 'gear', name: 'Gear', description: 'The gear, as large as the screen allows.', enabled: true, needsSession: false },
   { number: 18, id: 'stint', name: 'Stint', description: 'Stint laps and time, stops and the last stop.', enabled: true, needsSession: true },
   { number: 19, id: 'lapHistory', name: 'Lap history', description: 'Your last laps with the delta to your best.', enabled: true, needsSession: true },
-  { number: 20, id: 'damage', name: 'Damage', description: 'Body and suspension damage. iRacing reports none.', enabled: false, needsSession: false },
+  { number: 20, id: 'damage', name: 'Damage', description: 'Body damage panel by panel. Assetto Corsa and ACC only.', enabled: false, needsSession: false },
   { number: 21, id: 'trackRivals', name: 'Track rivals', description: 'How your segments compare against the field.', enabled: false, needsSession: false },
   { number: 22, id: 'engineReadings', name: 'Engine readings', description: 'Water and oil temperatures, oil and fuel pressure, voltage and manifold pressure.', enabled: true, needsSession: false },
 ];

@@ -228,3 +228,11 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+#582 asserts five more in each. The damage page reads `OpenDash.DamageReported`, whether the sim reports
+the car's damage at all, which the plugin answers per sim, and on a sim that does it reads
+`DataCorePlugin.GameData.CarDamage1` to `4`, the front, rear, left and right members. iRacing reports none:
+the plugin's answer is `false` on every frame of all nine, and SimHub's iRacing reader marks the four
+members not available and returns 0 for each (`docs/research/sims.md`). Both are constants, and the values
+a recording with the plugin installed will write. The next `bun run record` reads them from SimHub and the
+plugin and drops the entries.
