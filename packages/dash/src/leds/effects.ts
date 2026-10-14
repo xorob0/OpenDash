@@ -552,7 +552,7 @@ export const PIT_EFFECTS: readonly LedEffect[] = [
     // a rate of its own that was neither of the two and that the eye sorts as whichever it is nearer.
     blinkWhen: pitLimiterOn(),
     blinkDelayMs: SLOW_BLINK_MS,
-    source: 'DataCorePlugin.GameData.PitLimiterOn',
+    source: 'OpenDash.PitLimiterOn, or DataCorePlugin.GameData.PitLimiterOn where the plugin gives none',
   },
   {
     id: 'pit.speeding',

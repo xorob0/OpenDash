@@ -228,3 +228,13 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+#1122 asserts one more in each, `OpenDash.PitLimiterOn`, whether the limiter is on, which the plugin
+answers per sim because on Assetto Corsa SimHub's own `PitLimiterOn` is the pit lane (ADR 0021). Every
+limiter reading reads it, with SimHub's `PitLimiterOn` as its fallback. On iRacing the plugin's answer is
+that member itself, so the column is `true` in `pit` and `pitspeeding` and `false` in `green`,
+`settingchange` and `shiftlights`, where the member is constant, and the value a recording with the plugin
+installed will write. In `race`, `yellow`, `quali` and `notc` the member moves, and an asserted column is a
+constant, so there it is null: the readings fall back to the recorded member, which is the plugin's answer
+frame for frame, and the replay draws the same limiter either way. The next `bun run record` reads it from
+the plugin and drops the entry.
