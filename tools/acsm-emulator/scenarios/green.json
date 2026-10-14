@@ -1,0 +1,16 @@
+{
+  // The race with no flag out from the first tick, so a screenshot taken at any moment shows the same
+  // state. AC has no green flag: Graphics.Flags is AC_NO_FLAG on a clear track, and SimHub marks
+  // GameData.Flag_Green as not available on AC, so "green" here is the absence of every other flag.
+  "extends": "race.json",
+  "name": "Clear track race lap, P3 of 24",
+  "pin": {
+    "Graphics.Flags": "AC_NO_FLAG",
+    "Physics.PitLimiterOn": 0,
+  },
+  "timeline": [
+    {"at": 0, "log": "hold the clear track", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "log": "no limiter on track", "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 20, "log": "TC 3 -> 5", "set": {"Physics.TC": 0.10}},
+  ],
+}

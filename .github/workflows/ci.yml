@@ -153,11 +153,13 @@ jobs:
             plugin/OpenDash/bin/Release/net48/OpenDash.dll
           if-no-files-found: error
 
-  # The C# tools of the dev loop, which nothing else compiles: the emulator `bun run dev` starts on
+  # The C# tools of the dev loop, which nothing else compiles: the emulators `bun run dev` starts on
   # the VM and the trace recorder `bun run record` installs there. Without this job a change that
-  # breaks either surfaces only when somebody next drives the VM (#628). The emulator's deliverable
+  # breaks one surfaces only when somebody next drives the VM (#628). Each emulator's deliverable
   # is net48 and runs only on Windows; devcheck builds the same sources for net8.0, which is what
-  # runs the selfcheck here, on the flag box scenario docs/dev-loop.md names.
+  # runs the selfcheck here: iRacing's on the flag box scenario docs/dev-loop.md names, and Assetto
+  # Corsa's on every scenario it ships, since each one is checked against the layouts SimHub reads
+  # and the fake install beside it in well under a second (#579).
   tools:
     name: Dev tools
     runs-on: ubuntu-latest
@@ -179,6 +181,16 @@ jobs:
       - name: Self-check the emulator
         working-directory: tools/irsdk-emulator
         run: dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll --selfcheck flagbox
+
+      - name: Build the Assetto Corsa emulator
+        run: dotnet build tools/acsm-emulator -c Release
+
+      - name: Build the Assetto Corsa emulator for Linux
+        run: dotnet build tools/acsm-emulator/devcheck -c Release
+
+      - name: Self-check the Assetto Corsa emulator on every scenario
+        working-directory: tools/acsm-emulator
+        run: for scenario in scenarios/*.json; do dotnet devcheck/bin/Release/net8.0/acs.dll --selfcheck "$scenario" || exit 1; done
 
       - name: Build the trace recorder
         run: dotnet build tools/trace-recorder -c Release

@@ -81,8 +81,8 @@ describe('the dash job', () => {
 });
 
 describe('the development tools', () => {
-  // What `bun run dev` and `bun run record` build on their way to the VM, and the Linux build of the
-  // emulator that runs its selfcheck, which docs/dev-loop.md says CI checks.
+  // What `bun run dev` and `bun run record` build on their way to the VM, and the Linux builds of the
+  // emulators that run their selfchecks, which docs/dev-loop.md says CI checks.
   test('are built in Release on every pull request, and the emulator checks itself', () => {
     const tools = job(ci, 'tools');
     expect(tools).toContain('dotnet build tools/irsdk-emulator -c Release');
@@ -90,6 +90,15 @@ describe('the development tools', () => {
     expect(tools).toContain('dotnet build tools/trace-recorder -c Release');
     expect(tools).toContain('dotnet devcheck/bin/Release/net8.0/IrsdkEmulator.dll --selfcheck flagbox');
     expect(tools).not.toContain('continue-on-error');
+  });
+
+  test("Assetto Corsa's emulator is built for both and checks itself on every scenario it ships (#579)", () => {
+    const tools = job(ci, 'tools');
+    expect(tools).toContain('dotnet build tools/acsm-emulator -c Release');
+    expect(tools).toContain('dotnet build tools/acsm-emulator/devcheck -c Release');
+    // A loop that stops at the first scenario that fails, rather than one line per scenario that a
+    // new scenario would have to remember to add.
+    expect(tools).toContain('for scenario in scenarios/*.json; do dotnet devcheck/bin/Release/net8.0/acs.dll --selfcheck "$scenario" || exit 1; done');
   });
 });
 

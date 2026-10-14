@@ -9,6 +9,9 @@ dashboard can be verified with real, scripted values on the Windows test VM wher
 
 Single net48 console exe, no dependencies besides the .NET Framework 4.8 runtime (no NuGet runtime packages).
 
+Its Assetto Corsa twin is [acsm-emulator](../acsm-emulator/README.md), which `--sim ac` on `bun run dev`,
+`bun run emulator` and `bun run record` runs instead of this one.
+
 ## Build
 
 ```bash

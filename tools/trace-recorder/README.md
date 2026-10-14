@@ -28,14 +28,17 @@ from which emulator tick to start:
   "hz": 10,
   "frames": 200,
   "step": 6,
-  "warmUpTicks": 7200,
+"  "warmUpTicks": 7200,
+  "tick": "DataCorePlugin.GameRawData.Telemetry.SessionTick",
   "out": "C:\\Temp\\opendash-trace\\trace.ndjson",
   "properties": ["DataCorePlugin.GameData.Rpms", "..."]
 }
 ```
 
-`DataUpdate` then samples on `DataCorePlugin.GameRawData.Telemetry.SessionTick` rather than on the
-clock. The emulator is a function of its tick, so a frame keyed to a given tick holds the same
+`DataUpdate` then samples on the property `tick` names rather than on the clock: iRacing's
+`DataCorePlugin.GameRawData.Telemetry.SessionTick`, which is also what a request without `tick`
+means, or Assetto Corsa's `DataCorePlugin.GameRawData.Graphics.PacketId`, which `tools/acsm-emulator`
+steps once a tick in the same way (#579). The emulator is a function of its tick, so a frame keyed to a given tick holds the same
 telemetry on every run, and two recordings of one unchanged scenario cover the same span of it. What
 still moves between them is what SimHub keeps its own history of, which is the lap deltas and the
 fuel averages, together with the wall clock it publishes.
