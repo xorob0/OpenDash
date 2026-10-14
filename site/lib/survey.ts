@@ -397,6 +397,11 @@ export const QUESTIONS: readonly Question[] = SURVEY.flatMap((s) => s.questions)
 const SCALE_VALUES = ['1', '2', '3', '4', '5'] as const;
 /** The free line behind a checks question's last option is stored with this prefix. */
 export const OTHER_PREFIX = 'Other: ';
+/**
+ * The field the form hides from people and a form-filling script fills in. The form sends it only
+ * when it is not empty, and the API answers such a submission as if it were stored (#550).
+ */
+export const HONEYPOT = 'website';
 
 /** One respondent's answers. A question left blank is absent, never an empty value. */
 export type Answers = Record<string, string | string[]>;
