@@ -10,7 +10,7 @@ promise that a package without the plugin draws what it always drew. Takes up th
 
 1.0 claims Assetto Corsa, Assetto Corsa Competizione and Le Mans Ultimate beside iRacing
 ([#479](https://github.com/xorob0/OpenDash/issues/479)), and every binding OpenDash ships was written against
-iRacing. The research for [#1100](https://github.com/xorob0/OpenDash/issues/1100), `docs/research/sims.md`,
+iRacing. The research for [#1100](https://github.com/xorob0/OpenDash/issues/1100), [docs/research/sims.md](../research/sims.md),
 read SimHub 9.12.6's four readers and found that most of what the dashboards read means the same on every
 game, because SimHub normalises it into `GameData`, and that the rest falls into two kinds.
 
@@ -112,8 +112,12 @@ member nor an `isnull()` can be right.
 
 No dashboard names a game, and the per-game knowledge lives in one table with a test per game. The A3
 tickets that wait on this (#558, #582, #561) become a change to the binding alone, and #558's "has a
-limiter" is the first: the pit family asks `sim.carHasPitLimiter()`, so on Assetto Corsa the reminder to
-engage the limiter can show, and on iRacing it reads what it always read.
+limiter" is the first: the pit family asks `sim.carHasPitLimiter()`, so on ACC and Le Mans Ultimate, where
+SimHub's `PitLimiterOn` is the car's limiter, the reminder to engage it can show, and on iRacing it reads
+what it always read. On Assetto Corsa it cannot show yet. The family still reads SimHub's `PitLimiterOn`,
+which there is the pit lane, so "in the lane with the limiter off" is never true, and every limiter
+reading lights in the lane whether the limiter is on or not. That changes when the family's limiter reads
+move onto `sim.pitLimiterOn()`, which is #558's.
 
 ### Bad
 

@@ -144,8 +144,11 @@ describe('what each state says', () => {
   });
 
   test('where the plugin says whether the car has a limiter, its answer is the one taken', () => {
-    // Assetto Corsa has no in-car toggle and every car has a limiter: the plugin says so, and the
-    // reminder shows where the toggle's absence alone would have kept it dark (#558).
+    // ACC carries no iRacing toggle, every car has a limiter, and SimHub's PitLimiterOn reads it: the
+    // plugin says the car has one, and the reminder shows where the toggle's absence alone would have
+    // kept it dark. Le Mans Ultimate is the same with an answer of its own. Assetto Corsa is not this
+    // case yet: its PitLimiterOn is the pit lane, so "in the lane, limiter off" never happens there
+    // until the family reads the plugin's limiter (#558).
     expect(shown({ ...on, limiter: false, hasLimiter: false, reported: true })).toBe('engage');
     // And a sim whose car has none says that, whatever else it publishes.
     expect(shown({ ...on, limiter: false, hasLimiter: true, reported: false })).toBeUndefined();

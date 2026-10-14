@@ -704,7 +704,7 @@ namespace OpenDashPlugin
         /// <summary>
         /// What the running sim can report on the last frame SimHub finished: what the
         /// <see cref="Contract.Capabilities"/> publish. Interned and replaced whole, so a reader sees one frame's
-        /// answers or the next one's, and a frame allocates nothing for it. See SimCapabilities.cs and ADR 0021.
+        /// answers or the next one's. See SimCapabilities.cs and ADR 0021.
         /// </summary>
         private volatile SimReport simReport = SimReport.Unknown;
 

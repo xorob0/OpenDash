@@ -21,7 +21,7 @@ namespace OpenDashPlugin
 {
     /// <summary>
     /// One frame's answers, one per <see cref="Contract.Capabilities"/> name, each true, false or null where
-    /// the sim does not say. Immutable and interned, so that a frame allocates nothing for it.
+    /// the sim does not say. Immutable and interned, so that a frame never builds a new one.
     /// </summary>
     public sealed class SimReport
     {
