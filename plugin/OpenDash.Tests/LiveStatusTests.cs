@@ -87,18 +87,25 @@ namespace OpenDashPlugin.Tests
         public void The_track_is_named_for_people_where_the_sim_gives_a_name()
         {
             // Assetto Corsa: TrackName is the track's folder, and its ui_track.json gives the name (#1124).
-            Assert.Equal("Red Bull Ring", LiveStatus.TrackShown("Red Bull Ring", "ks_red_bull_ring"));
-            // An AC track that ships no ui_track.json, and every other sim, where SimHub publishes no name.
-            Assert.Equal("ks_red_bull_ring", LiveStatus.TrackShown(null, "ks_red_bull_ring"));
-            Assert.Equal("ks_red_bull_ring", LiveStatus.TrackShown(" ", "ks_red_bull_ring"));
-            Assert.Equal("Circuit de Spa-Francorchamps", LiveStatus.TrackShown(null, "Circuit de Spa-Francorchamps"));
-            Assert.Null(LiveStatus.TrackShown(null, null));
+            Assert.Equal("Red Bull Ring", LiveStatus.TrackShown("Red Bull Ring", null, "ks_red_bull_ring"));
+            // An AC track that ships no ui_track.json, or names itself with nothing.
+            Assert.Equal("ks_red_bull_ring", LiveStatus.TrackShown(null, null, "ks_red_bull_ring"));
+            Assert.Equal("ks_red_bull_ring", LiveStatus.TrackShown(" ", null, "ks_red_bull_ring"));
+            // iRacing: TrackName is iRacing's code for the track, and the session gives its short name.
+            Assert.Equal("Spa", LiveStatus.TrackShown(null, "Spa", "spa gp"));
+            Assert.Equal("spa gp", LiveStatus.TrackShown(null, null, "spa gp"));
+            Assert.Equal("spa gp", LiveStatus.TrackShown(null, "", "spa gp"));
+            // Every other sim, where SimHub publishes neither raw name.
+            Assert.Equal("Monza", LiveStatus.TrackShown(null, null, "Monza"));
+            Assert.Null(LiveStatus.TrackShown(null, null, null));
 
-            // The plugin reads the same property the dash does, and hands the panel what this decides.
+            // The plugin reads the same properties the dash does, and hands the panel what this decides.
             var source = RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs"));
             Assert.Contains("LiveStatus.TrackShown(", source);
-            Assert.Contains("GetPropertyValue(LiveStatus.TrackNameForPeopleProperty)", source);
-            Assert.Equal("DataCorePlugin.GameRawData.Track.TrackInfo.name", LiveStatus.TrackNameForPeopleProperty);
+            Assert.Contains("GetPropertyValue(LiveStatus.AcTrackNameProperty)", source);
+            Assert.Contains("GetPropertyValue(LiveStatus.IRacingTrackNameProperty)", source);
+            Assert.Equal("DataCorePlugin.GameRawData.Track.TrackInfo.name", LiveStatus.AcTrackNameProperty);
+            Assert.Equal("DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName", LiveStatus.IRacingTrackNameProperty);
         }
 
         [Fact]
