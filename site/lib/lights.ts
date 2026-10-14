@@ -10,5 +10,5 @@ export const PIT_STATES: readonly string[] = ['Speeding in the pit lane', 'Limit
 
 export const WARNINGS: readonly string[] = ['Oil temperature', 'Water temperature', 'Low fuel'];
 
-/** The spotter is not in the ranking: it draws over whatever else the panel shows. */
-export const SPOTTER = 'A car alongside is a bar down that edge, drawn over everything else.';
+/** The spotter is not in the ranking: it draws over whatever else the panel shows, but the box's SC (#515). */
+export const SPOTTER = 'A car alongside is a bar down that edge, drawn over everything else but the SC the box writes for a full course yellow.';

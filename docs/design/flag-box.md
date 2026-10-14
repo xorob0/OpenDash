@@ -55,8 +55,8 @@ strips' rows read too, so the box and a strip never draw one flag two ways (#733
 `purpose.flag.*` but for the meatball's disc, which is `purpose.light.meatball`, the orange an RGB LED
 does not draw as the yellow flag; the box drew it in the caution amber until #733. The green, red, blue
 and white are still the face's state colours, and the flag hues that replace them on a lamp are owed
-by `design/tokens.json`. The blink rate is `indicator.flagBand.flashHz`, so the box pulses at the same rate as the band on the
-face.
+by `design/tokens.json`. The blink rate is `indicator.flagBand.flashHz`, so the box pulses at the
+same rate as the band on the face.
 
 ### Where the rank departs from the canvas's numbering
 
@@ -280,8 +280,9 @@ of centre. The S is rounded, its top-left and bottom-right corners lit, because 
 blocky 5 pixel for pixel and the pair read as 5C, a car number (#516); the top-left is the corner a 5
 never rounds, and `glyphFit.test.ts` compares both letters with every digit a blocky face draws in the
 same cell. The picture blinks against the dark at the band's rate, as the yellow being waved does,
-because the condition moves; consequently the letters are the whole of the difference between the two, which is deliberate. They are SC, which is the
-author's choice for a panel eight columns wide, whatever the band calls the condition (#497).
+because the condition moves; consequently the letters are the whole of the difference between the
+two, which is deliberate. They are SC, which is the author's choice for a panel eight columns wide,
+whatever the band calls the condition (#497).
 Whether strokes one unlit pixel wide survive a diffuser, which spreads the light of the pixels around
 them into the letter, has not been seen on a panel. The canvas's Flag box page still draws the caution
 as the two halves, captioned as the double yellow a marshal post flies, and owes a redrawn tile.
@@ -365,8 +366,8 @@ A bar two pixels wide down the edge the car is on: left, right, or both edges at
 to be the second layer below the flags, so any flag at all hid a car alongside, and a car alongside
 blanked the warnings and the gear beneath it. It is now the last container of the panel, gated on
 that panel's own Spotter switch and on one picture, below, and on nothing else: no other flag, no
-pit condition, and nothing below it excludes it in turn. Its frames light two columns of an edge and leave the rest of the
-panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
+pit condition, and nothing below it excludes it in turn. Its frames light two columns of an edge
+and leave the rest of the panel absent, and SimHub drops an absent pixel when it merges rather than clearing what is under
 it, so a standing yellow keeps columns three to six while the bar says which side. The full course
 yellow is the one exception, because SC runs to both edges and the bar would take the S or the C:
 while a panel draws it, that panel's bar is gated off, and it returns when the caution ends, when a
