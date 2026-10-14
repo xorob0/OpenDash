@@ -25,6 +25,8 @@ interface Car {
   lapstoleader: number | null;
   /** The same behind the first car of the player's class. */
   lapstoclassleader: number | null;
+  /** SimHub's laps begun and the fraction of the lap run, which is distance; null where a case gives none. */
+  currentlaphighprecision: number | null;
   /** Whether this car is in the player's own class, which is what the class-only lookup answers from. */
   ours: boolean;
   /** The last lap's sectors, in seconds; `0` is a sector that was never set. */
@@ -32,7 +34,7 @@ interface Car {
 }
 
 const car = (fields: Partial<Car>): Car =>
-  ({ position: 1, classposition: 1, gaptoleader: 0, lapstoleader: null, lapstoclassleader: null, ours: false, sectors: [0, 0, 0], ...fields });
+  ({ position: 1, classposition: 1, gaptoleader: 0, lapstoleader: null, lapstoclassleader: null, currentlaphighprecision: null, ours: false, sectors: [0, 0, 0], ...fields });
 
 /**
  * An NCalc formula evaluated in JavaScript against a leaderboard.
@@ -70,6 +72,7 @@ function evaluate(
     .replace(/\bformat\(/g, 'fmtOf(')
     .replace(/\breplace\(/g, 'rep(')
     .replace(/\bin\(/g, 'isIn(')
+    .replace(/\btruncate\(/g, 'Math.trunc(')
     .replace(/\bucase\(/g, 'upper(')
     .replace(/ = /g, ' === ')
     .replace(/ and /g, ' && ')
@@ -308,6 +311,74 @@ describe('the Gap and Int columns of a list drawn from one class', () => {
     const int = (row: number): unknown => evaluate(carClassInterval(repeatIndex()), PASSED, row, 'class', live);
     expect([gap(2), gap(1), gap(3)]).toEqual(['Lead', '+0.5', '+8.9']);
     expect([int(2), int(1), int(3)]).toEqual(['', '+0.5', '+8.4']);
+  });
+});
+
+/**
+ * The Int column beside a car on another lap than the car in front of it (#1077).
+ *
+ * Int is the difference of two gaps to the leader, and a gap to the leader carries the whole laps a
+ * car is down, so the interval of a car laps behind the car in front was those laps in seconds: a
+ * car five laps down in the pits read `+484.6` beside a Gap of `+5L` on the pit wall. Whether two
+ * cars are on one lap is a question of distance, as it is for the Gap column, and the distance is
+ * SimHub's `currentlaphighprecision`, the laps begun and the fraction of the lap run.
+ *
+ * The board is one class of five in a race. The leader has just crossed the line to start its
+ * twenty-first lap; the second car is on its lap, 12.3 s down and still on its twentieth; the third
+ * is in the pits five laps down; the fourth is 12.4 s behind the third on the road and on its lap;
+ * the fifth is a lap down on the fourth.
+ */
+describe('the Int column of a car on another lap than the car in front (#1077)', () => {
+  const BOARD: readonly Car[] = [
+    car({ position: 1, classposition: 1, gaptoleader: null, currentlaphighprecision: 20.02, ours: true }),
+    car({ position: 2, classposition: 2, gaptoleader: 12.31, lapstoleader: 0, lapstoclassleader: 0, currentlaphighprecision: 19.88, ours: true }),
+    car({ position: 3, classposition: 3, gaptoleader: 496.9, lapstoleader: 5, lapstoclassleader: 5, currentlaphighprecision: 14.81, ours: true }),
+    car({ position: 4, classposition: 4, gaptoleader: 509.3, lapstoleader: 5, lapstoclassleader: 5, currentlaphighprecision: 14.66, ours: true }),
+    car({ position: 5, classposition: 5, gaptoleader: 640.2, lapstoleader: 6, lapstoclassleader: 6, currentlaphighprecision: 13.62, ours: true }),
+  ];
+  const ROWS = [1, 2, 3, 4, 5];
+  const overall = (row: number): unknown => evaluate(carInterval(repeatIndex()), BOARD, row, 'overall');
+  const inClass = (row: number): unknown => evaluate(carClassInterval(repeatIndex()), BOARD, row);
+
+  test('a lapped car behind a car on the lead lap reads the laps between them, as Gap does', () => {
+    expect({ int: overall(3), gap: evaluate(carRaceGap(repeatIndex()), BOARD, 3, 'overall') }).toEqual({ int: '+5L', gap: '+5L' });
+  });
+
+  test('a lapped car on the lap of the car in front reads the seconds between them', () => {
+    // Five laps down on the leader and on the third car's lap, so the interval is the time on the road.
+    expect(overall(4)).toBe('+12.4');
+  });
+
+  test('a car a lap behind the car in front by distance reads the lap', () => {
+    expect(overall(5)).toBe('+1L');
+  });
+
+  test('a car on the lap of the car in front by distance reads seconds, whatever the lap counters say', () => {
+    // The leader has crossed the line and the second car has not: their counters differ by one and
+    // they are 0.14 of a lap apart, which is the moment the counters got wrong for Gap (#1023).
+    expect(overall(2)).toBe('+12.3');
+  });
+
+  test('the class list reads every row the way the overall list does', () => {
+    expect(ROWS.map(inClass)).toEqual(ROWS.map(overall));
+    expect(ROWS.map(inClass)).toEqual(['', '+12.3', '+5L', '+12.4', '+1L']);
+  });
+
+  test('where SimHub gives no distance the column reads seconds, which is always true', () => {
+    const blind = BOARD.map((c) => ({ ...c, currentlaphighprecision: null }));
+    expect(evaluate(carInterval(repeatIndex()), blind, 3, 'overall')).toBe('+484.6');
+    expect(evaluate(carClassInterval(repeatIndex()), blind, 3)).toBe('+484.6');
+  });
+
+  test('both readings ask distance and not the lap counters', () => {
+    for (const formula of [carInterval(repeatIndex()), carClassInterval(repeatIndex())]) {
+      expect(formula).toContain('drivercurrentlaphighprecision(');
+      expect(formula).not.toMatch(/drivercurrentlap\(/);
+    }
+  });
+
+  test('the widest lap count the column can draw fits the budget the gap is drawn in', () => {
+    expect(fits('+999L', CHARS.gap)).toBe(true);
   });
 });
 

@@ -1166,13 +1166,49 @@ export const carRelativeGap = (idx: Expr): Expr =>
  */
 export const RELATIVE_GAP_WIDEST = `${MINUS}99.999`;
 
-/** The difference of two gaps to the leader, or nothing where SimHub has not measured either. */
-const raceInterval = (here: Expr, ahead: Expr): Expr =>
-  iff(and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))), signed(sub(here, ahead), '0.0'), str(''));
+/**
+ * The whole laps a car is behind the car in front of it by distance: the truncated difference of the
+ * two cars' `currentlaphighprecision`, which is how SimHub counts `lapstoleader` from its leader, and 0
+ * where SimHub has no distance for either car (#1077).
+ *
+ * No count SimHub publishes answers it. `lapstoleader` is truncated before it reaches the dash, so the
+ * difference of two of them is a lap off whenever the leader's lap falls between the two cars: with
+ * the leader at 10.9 laps, cars at 9.95 and 9.85 count 0 and 1, and are a tenth of a lap apart.
+ */
+const lapsBehind = (idx: Expr, ahead: Expr): Expr => {
+  const here = driver('currentlaphighprecision', idx);
+  const there = driver('currentlaphighprecision', ahead);
+  return iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(there)), num(0), truncate(sub(there, here)));
+};
+
+/**
+ * The race interval between a car and the car in front of it: the difference of the two gaps to the
+ * leader, `+1L` where the car is a whole lap or more behind the car in front by distance, and nothing
+ * where SimHub has not measured either gap.
+ *
+ * A gap to the leader carries the whole laps a lapped car is down, so the difference of two gaps on
+ * different laps is those laps in seconds: on the pit wall a car five laps down read `+484.6` beside
+ * a Gap of `+5L`, which is neither the time to the car in front on the road nor a lap count (#1077).
+ * So the laps are asked first, by distance and not by the lap counters for the reason
+ * {@link carRaceGap} gives, and spelled as the Gap column spells them. A lapped car on the lap of the
+ * car in front still reads the seconds between them, which are true.
+ */
+const raceInterval = (idx: Expr, above: Expr): Expr => {
+  const here = referenceGap(idx);
+  const ahead = referenceGap(above);
+  const laps = lapsBehind(idx, above);
+  return iff(
+    and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))),
+    iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, ahead), '0.0')),
+    str(''),
+  );
+};
 
 /**
  * The interval to the car in front on the leaderboard: the difference of the two gaps to the
- * leader. The leader's own row is empty, there being nothing in front of it.
+ * leader, or the laps between the two cars where the car is a lap or more behind it by distance,
+ * through {@link raceInterval} (#1077). The leader's own row is empty, there being nothing in front
+ * of it.
  *
  * The car in front is the one a place ahead as it stands on the road, found through the car's own
  * place and {@link liveRow} rather than the row number, `idx` being a leaderboard row: with no live
@@ -1195,15 +1231,13 @@ const raceInterval = (here: Expr, ahead: Expr): Expr =>
 export const carInterval = (idx: Expr): Expr => {
   const place = carOverallPosition(idx);
   const above = liveRow(sub(place, num(1)));
-  const ahead = referenceGap(above);
-  const here = referenceGap(idx);
   // The car with nothing in front of it: the leader by place once the sim has placed the car, and the
   // first row before then, every other unplaced row reading `--` (#1028).
   const first = iff(hasPosition(idx), eq(place, num(1)), eq(idx, num(1)));
   return iff(
     first,
     str(''),
-    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
+    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(idx, above)), str(NO_VALUE)),
   );
 };
 
@@ -1219,17 +1253,16 @@ export const carInterval = (idx: Expr): Expr => {
  * Below the class's first row it reads `--` until {@link gapIsMeasured} holds, as
  * {@link carInterval} does (#1028), and the car in front is read through {@link referenceGap}, as
  * it is there: the class leader is the race leader in every single-class race (#1041). So is the
- * car's own, which is that first car in the lap after it is passed for the class lead. Outside a
- * race it measures best laps, as {@link carInterval} does (#1040).
+ * car's own, which is that first car in the lap after it is passed for the class lead. A car a lap
+ * or more behind the car in front by distance reads the laps, through {@link raceInterval}, as on
+ * the overall list (#1077). Outside a race it measures best laps, as {@link carInterval} does (#1040).
  */
 export const carClassInterval = (idx: Expr): Expr => {
   const place = carClassPosition(idx);
   const above = liveClassRow(sub(place, num(1)));
-  const ahead = referenceGap(above);
-  const here = referenceGap(idx);
   return iff(
     gt(place, num(1)),
-    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(here, ahead)), str(NO_VALUE)),
+    iff(gapIsMeasured(idx, above), iff(rankedByBestLap(), bestLapGap(idx, above, ''), raceInterval(idx, above)), str(NO_VALUE)),
     str(''),
   );
 };
