@@ -1,5 +1,7 @@
 /** Helpers for attaching NCalc formulas to item properties without repeating the binding shape. */
-import type { Bindings, BindingTarget, FormulaBinding, Item } from './generator.ts';
+import { ncalc, type Bindings, type BindingTarget, type FormulaBinding, type Item, type LayerItem } from './generator.ts';
+
+const { and } = ncalc;
 
 /** An NCalc expression. The generator's helpers in ncalc.ts build these. */
 export type Expr = string;
@@ -69,3 +71,19 @@ export const withoutBindings = <K extends Item['kind']>(item: Extract<Item, { ki
   const { bindings: _dropped, ...rest } = item;
   return (Object.keys(kept).length > 0 ? { ...rest, bindings: kept } : rest) as Extract<Item, { kind: K }>;
 };
+
+/**
+ * `layer`, shown only while `condition` holds as well as whatever its own Visible already asks.
+ *
+ * For a pass that ranks what another component drew without redrawing it: the face hides each box of
+ * the pop-up family while a safety layer it would be drawn over is out (#1069, #1070), whichever
+ * theme drew the box. The two conditions are joined, the layer's own first, so neither is lost and the
+ * added one is only evaluated while the box would otherwise be out. This is not the replacement
+ * {@link withMoreBindings} refuses: nothing the layer bound is dropped.
+ */
+export function visibleOnlyWhile(layer: LayerItem, condition: Expr): LayerItem {
+  const own = layer.bindings?.Visible;
+  if (own === undefined) return withMoreBindings(layer, { Visible: condition });
+  if (own.mode !== 'formula' || typeof own.formula !== 'string') throw new Error(`${layer.name}: Visible is not a formula, so nothing can be joined to it`);
+  return { ...layer, bindings: { ...layer.bindings, Visible: { ...own, formula: and(own.formula, condition) } } };
+}

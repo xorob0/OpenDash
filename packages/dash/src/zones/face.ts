@@ -13,20 +13,21 @@
  * theme's anatomy declares, which under the default theme are the layout's own, read off an
  * artboard; see `docs/design/zones.md`.
  */
-import type { Dashboard, DashboardMetadata, Item, Rect, Screen } from '../generator.ts';
+import type { Dashboard, DashboardMetadata, Item, LayerItem, Rect, Screen } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { FACE_SIZES, FACE_ZONE_LETTERS, pagesForZone, setting, zone as zoneSetting, zoneCounter, type FaceSize, type FaceZone, type ThemeEntry } from '../contract.ts';
-import { withMoreBindings } from '../bind.ts';
+import { visibleOnlyWhile, withMoreBindings, type Expr } from '../bind.ts';
 import { revBar } from '../components/revBar.ts';
 import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagSettled, flagSettledWidth, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { measureText } from '../design/advances.ts';
-import { flagFull } from '../components/flagFull.ts';
-import { pitAlerts } from '../components/pitAlerts.ts';
+import { flagFull, flagFullOut } from '../components/flagFull.ts';
+import { alertCondition, anyBandRaised } from '../flags.ts';
+import { PIT_ALERTS, pitAlerts, pitAlertVisible } from '../components/pitAlerts.ts';
 import { lastingPopUpFrame, lastingPopUps, popUpRoom, transientPopUps } from '../components/popUp.ts';
 import { changeNotifications } from '../components/changeNotification.ts';
-import { rect } from '../design/geometry.ts';
+import { overlaps, rect } from '../design/geometry.ts';
 import { idleScreen } from '../idle.ts';
 import { lapReview, lapReviewFrame, lapReviewOut } from '../components/lapReview.ts';
 import { ds } from '../tokens.ts';
@@ -38,8 +39,9 @@ import { label } from '../elements/label.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
 import { widestCounter, zoneAGearInk, zoneDashboardsFor, zoneWidget } from './pages.ts';
+import { walkItems } from '../walk.ts';
 
-const { and, not } = ncalc;
+const { and, not, or } = ncalc;
 
 export const FACE_SCREEN_NAME = 'Main';
 /**
@@ -149,10 +151,12 @@ export function faceItems(
     name: 'flag',
     children: flagStrip(band_, FLAG_STRIP_STYLES.standard, 'flag'),
   }, { Visible: and(bandFormat, takingBand) }));
+  const settledFlag = drawing.flagSettled ? drawing.flagSettled(ctx) : houseFlagSettled(regions, drawing);
+  const settledConditions = flagSettled(settledFlag, FLAG_STRIP_STYLES.standard, 'flagCorner');
   items.push(withMoreBindings({
     kind: 'layer',
     name: 'flagCorner',
-    children: flagSettled(drawing.flagSettled ? drawing.flagSettled(ctx) : houseFlagSettled(regions, drawing), FLAG_STRIP_STYLES.standard, 'flagCorner'),
+    children: settledConditions,
   }, { Visible: and(bandFormat, not(takingBand)) }));
 
   // The other format: the flag takes zones B, A and C together, which costs the gear for as long as
@@ -171,34 +175,50 @@ export function faceItems(
   // stop under a red flag still has to know whether the limiter is on.
   const restyled = (drawn: Item[], boxes: 'inverse' | 'outline'): Item[] => (drawing.restyle ? drawing.restyle(drawn, { boxes }) : drawn);
   const banner = regionRect(regions, 'pitAlert');
-  items.push(...restyled(pitAlerts(banner, 'pitAlert'), 'inverse'));
+  const pitFamily = restyled(pitAlerts(banner, 'pitAlert'), 'inverse');
+  items.push(...pitFamily);
+
+  // Every box of the pop-up family is drawn after the full-screen flag and the pit family, being over
+  // the zones for its seconds, and none of them is drawn over either of those while it is out: a box
+  // that would cover a safety layer waits for it (#1069, #1070). `givingWay` reads which layers each
+  // box would cover off what this face draws, the house's banner and a theme's takeovers alike.
+  const flagBody = regionRect(regions, 'flagBody');
+  const takeovers = drawing.takeovers ? drawing.takeovers(ctx) : [];
+  const giveWay = givingWay([
+    { out: and(zoneSetting.flagFormatIs(face, 'full'), flagFullOut()), rects: [flagBody], family: 'flag' },
+    { out: and(bandFormat, not(takingBand), anyBandRaised(settledConditions.map((layer) => alertCondition(layer.name.slice('flagCorner.'.length))))), rects: [settledFlag], family: 'flag' },
+    ...pitStatesDrawn([...pitFamily, ...takeovers]),
+  ]);
 
   // A pop-up that holds for as long as its condition does, low fuel for the last laps of a stint and
   // DRS for a straight, never covers the gear (#1047). It takes the pit banner's row, which every
   // theme puts where a state may sit for as long as the limiter is on in the lane, cut short where
   // the gear's ink on any of zone A's pages reaches into it, and it waits for the pit family, whose
-  // row it is. Drawn before a theme's takeovers, which are states of the car that hold too and are
-  // drawn over whatever they take: the AiM's engine warning over zone C, where its banner row is.
+  // row it is, and for the full-screen flag, whose name it reaches on the Porsche's nano and the
+  // AiM's portrait face. Drawn before a theme's takeovers, which are states of the car that hold too
+  // and are drawn over whatever they take: the AiM's engine warning over zone C, where its banner row is.
   const row = lastingPopUpFrame(banner, zoneAGearInk(zoneRect(regions, 'A'), drawing));
-  items.push(...restyled(lastingPopUps(row, 'popUp'), 'outline'));
-  if (drawing.takeovers) items.push(...drawing.takeovers(ctx));
+  items.push(...giveWay(restyled(lastingPopUps(row, 'popUp'), 'outline'), { pitFamily: 'waits already' }));
+  items.push(...takeovers);
 
   // A pop-up that is an event, the lap time for the three seconds after the line, is drawn as a real
   // pop-up: the sheet's 560 by 120 centred on the hero, over the gear and over zones B and C either
   // side for those seconds (#1047). It is kept inside the body, off the rev bar, the bar of settled
   // values and band D, where a flag has the better claim on the same sixty pixels, and off the pit
   // banner: a theme whose hero is short brings a centred box up over the banner, so the box is
-  // centred on the part of the hero the banner leaves wherever that happens (#1052). Drawn after the
-  // limiter and the takeovers, being over them for seconds.
+  // centred on the part of the hero the banner leaves wherever that happens (#1052). It does not open
+  // over the full-screen flag, nor over a theme's drawing of a pit state, as the Porsche's limiter
+  // body and the AiM's `Pit Speed` are, while that state is out.
   const hero = regionRect(regions, 'hero');
-  const flagBody = regionRect(regions, 'flagBody');
   const room = popUpRoom(hero, banner, flagBody);
-  items.push(...restyled(transientPopUps(room, flagBody, 'popUp'), 'outline'));
+  items.push(...giveWay(restyled(transientPopUps(room, flagBody, 'popUp'), 'outline')));
 
   // And the smaller box of the same kind, on the same rectangle: a car setting that has just moved,
   // for the three seconds SimHub's own window holds it. Ranked under the lap-time pop-up inside the
-  // component, so a lap time at the line is never covered by a click of traction control.
-  items.push(...(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(room, flagBody, 'notice'), 'outline')));
+  // component, so a lap time at the line is never covered by a click of traction control, and under
+  // the safety layers here, as the pop-up is. The house's box never reaches the banner, so a dial
+  // turned in the pit box still says where it landed.
+  items.push(...giveWay(drawing.changeNotifications ? drawing.changeNotifications(ctx) : restyled(changeNotifications(room, flagBody, 'notice'), 'outline')));
 
   // The largest of the family, last, and on the same rectangle again: the debrief of the lap just
   // finished, for the four seconds after the line.
@@ -214,13 +234,74 @@ export function faceItems(
   // nano, and is out again after them.
   //
   // The pit family is the exception, and is ranked by condition: the review does not open while any
-  // state of the family is out (`lapReviewOut`, #1053). Geometry could not do it. On the nano the
-  // body is 194 px and a 160 px panel reaches the banner, on the Porsche's faces it reaches the
-  // banner at the top of the gear's tile, and a theme draws the limiter state over regions of its
-  // own, the Porsche over the whole body the review is clamped to and the AiM over zone C.
-  items.push(...restyled([lapReview(lapReviewFrame(hero, flagBody), lapReviewOut(face), 'lapReview')], 'outline'));
+  // state of the family is out (`lapReviewOut`, #1053), whether or not it would reach that state's
+  // drawing. On the nano the body is 194 px and a 160 px panel reaches the banner, on the Porsche's
+  // faces it reaches the banner at the top of the gear's tile, and a theme draws the limiter state
+  // over regions of its own, the Porsche over the whole body the review is clamped to and the AiM
+  // over zone C. The full-screen flag is the other, as it is for every box of the family.
+  items.push(...giveWay(restyled([lapReview(lapReviewFrame(hero, flagBody), lapReviewOut(face), 'lapReview')], 'outline'), { pitFamily: 'waits already' }));
 
   return items;
+}
+
+/** The Visible of each state of the pit family, by which a layer drawing that state is known. */
+const PIT_STATES: ReadonlySet<Expr> = new Set(PIT_ALERTS.map((spec) => pitAlertVisible(spec.id)));
+
+/** Every rectangle the items draw, at any depth, layers being groups rather than drawings. */
+const drawnRects = (items: readonly Item[]): Rect[] => [...walkItems(items)].flatMap((item) => (item.kind === 'layer' ? [] : [item.rect]));
+
+/** A layer's own Visible, or undefined where it has none or it is not a formula. */
+const visibleOf = (item: Item): Expr | undefined => {
+  const visible = item.bindings?.Visible;
+  return visible?.mode === 'formula' && typeof visible.formula === 'string' ? visible.formula : undefined;
+};
+
+/** A layer the pop-up family may not be drawn over while it is out: when it is out, what it draws, and which it is. */
+interface SafetyLayer {
+  out: Expr;
+  rects: readonly Rect[];
+  family: 'flag' | 'pit';
+}
+
+/**
+ * Every layer of `items` that draws a state of the pit family, known by its Visible being one of the
+ * family's: the house's banners, and a theme's takeover shown on one of the family's conditions.
+ */
+const pitStatesDrawn = (items: readonly Item[]): SafetyLayer[] =>
+  [...walkItems(items)]
+    .filter((item): item is LayerItem => item.kind === 'layer' && PIT_STATES.has(visibleOf(item) ?? ''))
+    .map((layer) => ({ out: visibleOf(layer)!, rects: drawnRects(layer.children), family: 'pit' }));
+
+/**
+ * How the pop-up family gives way to the safety layers drawn in the body (#1069, #1070): the returned
+ * function takes a member's boxes and hides each one while a safety layer it would be drawn over is
+ * out.
+ *
+ * - **The flag.** The full-screen block, on a face whose format is `full`, while it draws a
+ *   condition: it is the whole of `flagBody`, so every box inside the body waits for it, and a driver
+ *   who chose the flag that cannot be missed reads its name whole at the line. And the settled flag,
+ *   in the band format once the flag has had band D for its seconds, in the one rectangle #731 keeps
+ *   for it, which only the nano's lap review reaches.
+ * - **A state of the pit family**, while that state is out, wherever the face draws it under the box:
+ *   the house's banner, and a theme's takeover that is shown on one of the family's conditions, as
+ *   the Porsche's limiter body and the AiM's `Pit Speed` are. A member whose own condition already
+ *   waits for the whole family, the lasting pop-ups and the lap review, passes
+ *   `pitFamily: 'waits already'` and is asked about the flag alone.
+ *
+ * Which layers a box would cover is read off the rectangles drawn, so a theme that draws a state
+ * somewhere new is ranked without a word here, and a box that covers none of them, as the house's
+ * change notification covers no banner, still opens in the lane. The condition is joined to each
+ * box's own, after it, so it costs nothing while the box is not out.
+ */
+function givingWay(safety: readonly SafetyLayer[]): (boxes: Item[], opts?: { pitFamily?: 'covered' | 'waits already' }) => Item[] {
+  return (boxes, { pitFamily = 'covered' } = {}) =>
+    boxes.map((box) => {
+      if (box.kind !== 'layer') throw new Error(`${box.name}: a box of the pop-up family is a layer, so that it can be hidden whole`);
+      const drawn = drawnRects([box]);
+      const covers = (layer: SafetyLayer): boolean => layer.rects.some((r) => drawn.some((d) => overlaps(r, d)));
+      const outs = new Set(safety.filter((layer) => (layer.family === 'flag' || pitFamily === 'covered') && covers(layer)).map((layer) => layer.out));
+      return outs.size === 0 ? box : visibleOnlyWhile(box, not(or(...outs)));
+    });
 }
 
 /**

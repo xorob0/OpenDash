@@ -19,9 +19,9 @@ import { describe, expect, test } from 'bun:test';
 import { composePackages } from '../src/build.ts';
 import { zone as zoneSetting } from '../src/contract.ts';
 import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
-import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize } from '../src/components/flagFull.ts';
+import { FLAG_FULL_NAMES, FLAG_FULL_NAME_PAD, FLAG_FULL_NAME_RATIO, flagFullNameSize, flagFullOut } from '../src/components/flagFull.ts';
 import { flagTakingBand } from '../src/components/flagStrip.ts';
-import { ALERT_CATALOGUE, bandVisible, isFlag } from '../src/flags.ts';
+import { ALERT_CATALOGUE, bandRaised, bandVisible, isFlag } from '../src/flags.ts';
 import { ncalc } from '../src/generator.ts';
 import { measureText } from '../src/design/advances.ts';
 import { bottom, contains, overlaps, rect, right } from '../src/design/geometry.ts';
@@ -31,6 +31,7 @@ import { ds } from '../src/tokens.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
 import { ZONE_FACES, faceItems, layoutWithoutRevBar, sizeOf, type ZoneLayout } from '../src/zones/index.ts';
 import { bodyRect } from '../src/zones/layout.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
 
 /** The states the band draws, which are the catalogue's conditions in the catalogue's order. */
 const STATES: readonly string[] = ALERT_CATALOGUE.map((c) => c.id);
@@ -414,6 +415,38 @@ describe('the full-screen format costs the gear', () => {
       expect({ widget, group: items.indexOf(full), after: items.indexOf(full) > widget }).toMatchObject({ after: true });
     });
   }
+});
+
+/**
+ * `flagFullOut` is what the pop-up family waits for while the block is up (#1069), and it is a short
+ * expression standing for a long one: whether any of the block's eighteen layers, each ranked by
+ * `bandVisible` over the whole catalogue, is visible. The two are held equal by evaluation, over the
+ * frame with nothing raised, a frame for each property the block reads raised alone, and a few hundred
+ * frames that raise several at once, the pit lane and its flag switch among them, so that a neutral
+ * alert or a flag silenced in the lane is asked about as well as a flag.
+ */
+describe('flagFullOut is true exactly while the block draws a condition', () => {
+  test('in every frame, on band D\'s own reading', () => {
+    const block = ALERT_CATALOGUE.filter((c) => !NEUTRAL.has(c.id));
+    const drawn = ncalc.or(...block.map(bandVisible));
+    // Every property the whole catalogue reads, the neutral alerts' included, so that a frame can raise
+    // one of those under a flag or alone.
+    const names = [...new Set([...ncalc.or(...ALERT_CATALOGUE.map(bandRaised)).matchAll(/\[([A-Za-z0-9_.]+)\]/g)].map((m) => m[1]!))];
+    const windows = { changed: () => true };
+    // A small seeded generator, so a failure names a frame that can be asked again.
+    let seed = 1069;
+    const next = (): number => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    const value = (name: string, raised: boolean): unknown => (name.endsWith('FlagsInPitLane') ? String(raised) : name.endsWith('IsOnTrack') ? !raised : raised ? 1 : 0);
+    const frames: Props[] = [
+      {},
+      ...names.map((name) => ({ [name]: value(name, true) })),
+      ...Array.from({ length: 400 }, () => Object.fromEntries(names.map((name) => [name, value(name, next() < 0.12)]))),
+    ];
+    for (const frame of frames) {
+      const out = { frame, out: Boolean(evalNcalc(flagFullOut(), frame, windows)) };
+      expect(out).toEqual({ frame, out: Boolean(evalNcalc(drawn, frame, windows)) });
+    }
+  });
 });
 
 /** Every package the build writes, composed once for the walks below. */

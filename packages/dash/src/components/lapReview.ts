@@ -23,9 +23,11 @@
  * a theme's own drawing of the limiter, which the Porsche spreads over the whole body, is ever under
  * it (`lapReviewOut`, #1053). Band D is outside it altogether, which is
  * deliberate and is the same call the pit alerts made: a lap review and a flag are answers to
- * different questions, and a driver crossing the line under a full course yellow needs both. The
- * rev bar and the bar of settled values are outside it for the same reason they are outside the
- * pop-up.
+ * different questions, and a driver crossing the line under a full course yellow needs both. That
+ * holds of a flag in band D. A driver who chose the full-screen flag has it over the body the review
+ * is drawn in, so there the face keeps the review shut while the block is out rather than draw it over
+ * the flag's name (#1069, `givingWay` in `zones/face.ts`). The rev bar and the bar of settled values
+ * are outside it for the same reason they are outside the pop-up.
  *
  * **It is a row of fields and not a drawing.** Every size the canvas quotes for this panel is the
  * companion density -- 116 over a 15 px label, 46 for the deltas and the fuel, 13 for the unit, 24

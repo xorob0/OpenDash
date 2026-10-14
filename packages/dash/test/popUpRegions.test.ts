@@ -15,6 +15,9 @@
  *   held clear of the gear's ink on every page of zone A a driver can cycle to, in every arrangement
  *   of every face of every theme, as each theme ships. That is what a 380 px pop-up over the 1920
  *   face's gear broke, for as long as the tank was under its threshold.
+ * - **Every box** gives way to the two safety layers drawn in the body, the full-screen flag and the
+ *   pit family, by condition: a box drawn over one of them is hidden while it is out (#1053, #1069,
+ *   #1070). That is evaluated on every face as each theme ships, at the end of this file.
  *
  * The lap review is the widest of the transient boxes on purpose: it is clamped to the body as the
  * other two are, and is checked here for the deltas each face keeps.
@@ -36,9 +39,11 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { LAP_REVIEW_PAD_X, LAP_REVIEW_PAD_X_NARROW } from '../src/components/lapReview.ts';
 import { PIT_ALERTS, pitAlertOut, pitAlertVisible } from '../src/components/pitAlerts.ts';
-import { POP_UP_WIDTH, popUpVisible, popUpsOfKind } from '../src/components/popUp.ts';
-import { FACE_SIZES, lapReviewSettingName } from '../src/contract.ts';
-import { evalNcalc, type Props } from './ncalcEval.ts';
+import { FUEL_POP_UP, POP_UP_WIDTH, popUpVisible, popUpsOfKind } from '../src/components/popUp.ts';
+import { FACE_SIZES, flagFormatSettingName, lapReviewSettingName, type FaceSize } from '../src/contract.ts';
+import { ALERT_CATALOGUE, alertCondition, flagBit, isFlag, type AlertCondition } from '../src/flags.ts';
+import { hasSetting, TRACKED_VALUES } from '../src/second/tracked.ts';
+import { evalNcalc, type Calls, type Props } from './ncalcEval.ts';
 import { ncalc, type Item, type LayerItem, type Rect, type TextItem } from '../src/generator.ts';
 import { contains, overlaps, translate } from '../src/design/geometry.ts';
 import { inkOf } from '../src/design/metrics.ts';
@@ -262,7 +267,8 @@ describe('as each theme ships, a lasting pop-up gives the banner\'s row to the p
           expect(layers.map((layer) => layer.name)).toEqual(LASTING.map((prefix) => prefix.slice(0, -1)));
           for (const layer of layers) {
             const id_ = layer.name.slice('popUp.'.length);
-            expect(layer.bindings?.Visible?.formula).toBe(popUpVisible(id_));
+            // Its own condition, which waits for the whole family, with what the face adds after it.
+            expect(String(layer.bindings?.Visible?.formula)).toContain(popUpVisible(id_));
             expect(popUpVisible(id_)).toContain(not(pitAlertOut()));
           }
         }
@@ -371,60 +377,182 @@ describe('the lap review keeps its deltas wherever the face it is drawn in holds
   }
 });
 
+/** The top-level layer of each box of the pop-up family, as the face lists them. */
+const FAMILY = /^(popUp\.[a-z]+|notice\.[A-Za-z]+|lapReview)$/;
+
+/** Whether a layer is shown in a frame, by its own Visible; SimHub's windows are answered as open. */
+const WINDOWS: Calls = { changed: () => true, isincreasing: () => false, isdecreasing: () => false };
+const shown = (layer: LayerItem, frame: Props, windows: Calls = WINDOWS): boolean => Boolean(evalNcalc(String(layer.bindings?.Visible?.formula ?? 'true'), frame, windows));
+/** Every window shut: a flag that has had band D for its seconds and settled, and no setting moving. */
+const SETTLED: Calls = { changed: () => false, isincreasing: () => false, isdecreasing: () => false };
+const drawnParts = (layer: LayerItem): Exclude<Item, LayerItem>[] => [...walkItems(layer.children)].filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer');
+const covers = (a: LayerItem, b: LayerItem): boolean => drawnParts(a).some((part) => drawnParts(b).some((other) => overlaps(part.rect, other.rect)));
+
+/** Every property an expression reads, set to 1: the frame in which a condition that asks only for presence holds. */
+const reads = (expression: string): Props => Object.fromEntries([...expression.matchAll(/\[([A-Za-z0-9_.]+)\]/g)].map((m) => [m[1]!, 1]));
+
+/** A race lap just finished, with the review asked for at every crossing. */
+const atTheLine = (face: FaceSize): Props => ({
+  [`OpenDash.${lapReviewSettingName(face)}`]: 'all',
+  [`${G}.SessionTypeName`]: 'Race',
+  [`${G}.CurrentLapTime`]: 1,
+  [`${G}.LastLapTime`]: 98.4,
+});
+
 /**
- * The lap review gives way to the pit family, on every face as each theme ships it (#1053).
- *
- * The review is clamped to the body, and the body is where a theme draws the limiter state of its
- * own: the Porsche colours the whole of it green or red round the pit speed and the limit, and the
- * AiM writes `Pit Speed` over zone C. A review pushed after them hid both for its four seconds at the
- * line, which most pit lanes cross, and on the Porsche's faces and the house's nano its 160 px reach
- * the banner at the top of the hero as well. So the face is built as the theme ships it and its
- * conditions are evaluated at a crossing with the review set to `all`, once on the circuit and once
- * in each state of the family: wherever a layer drawing a state of the family is out, the review is
- * hidden, drawn under it, or clear of it. Every layer whose Visible is one of the family's states is
- * asked, which is the house's banner and a theme's own drawing of the limiter alike.
+ * A frame in which a box of the family is out on the circuit, whatever face it is on: the moment its
+ * own condition holds and no higher box of its kind's does. A test that asks whether a box is hidden
+ * under a safety layer asks it here, so that "hidden" means the face kept it shut rather than that it
+ * had nothing to say.
  */
-describe('as each theme ships, the lap review never covers a state of the pit family', () => {
+function wanting(name: string, face: FaceSize): Props {
+  const id = name.slice(name.indexOf('.') + 1);
+  const mid = { [`${G}.CurrentLapTime`]: 30, [`${G}.LastLapTime`]: 98.4 };
+  if (name === 'lapReview' || name === 'popUp.lap') return atTheLine(face);
+  if (name === 'popUp.drs') return { [`${G}.DRSAvailable`]: 1 };
+  if (name === 'popUp.fuel') return { ...reads(FUEL_POP_UP.when), 'DataCorePlugin.Computed.Fuel_RemainingLaps': 0.5 };
+  if (name.startsWith('notice.')) {
+    const value = TRACKED_VALUES.find((each) => each.id === id)!;
+    return { ...reads(`${hasSetting(value)} ${value.read}`), ...mid };
+  }
+  throw new Error(`no frame wants ${name} out`);
+}
+
+/** A face as the theme ships it: its main screens' layers, and the contract's entry for its size. */
+function shipped(id: string, size: { width: number; height: number }): { face: FaceSize; screens: { name: string; layers: LayerItem[] }[] } {
+  const face = FACE_SIZES.find((f) => f.width === size.width && f.height === size.height)!;
+  const screens = buildThemeFace(id, size, OPTS)
+    .built.main.screens.filter((screen) => screen.name.startsWith('Main'))
+    .map((screen) => ({ name: screen.name, layers: [...walkItems(screen.items)].filter((item): item is LayerItem => item.kind === 'layer') }));
+  // Both arrangements, the rev bar on and off.
+  expect(screens.length).toBeGreaterThanOrEqual(2);
+  return { face, screens };
+}
+
+/**
+ * No box of the pop-up family covers a state of the pit family while it is out, on every face as each
+ * theme ships it (#1053, #1070).
+ *
+ * The family is drawn over the body, and the body is where a theme draws the limiter state of its
+ * own: the Porsche colours the whole of it green or red round the pit speed and the limit, and the
+ * AiM writes `Pit Speed` over zone C. The review hid both for its four seconds at the line until
+ * #1053, and the lap pop-up hid the Porsche's pit speed for its three until #1070; the house's change
+ * notification, centred on the AiM's narrow faces, reached `Pit Speed` too. So the face is built as
+ * the theme ships it, and every box is put in the frame that brings it out, once on the circuit and
+ * once in each state of the family: wherever a layer drawing a state of the family is out, each box
+ * is hidden, drawn under it, or clear of it. Every layer whose Visible is one of the family's states is
+ * asked, which is the house's banner and a theme's own drawing of the limiter alike. On the circuit
+ * every box is out, so the moments in the lane are asking a question the face would otherwise answer
+ * with the box drawn.
+ */
+describe('as each theme ships, no box of the pop-up family covers a state of the pit family', () => {
   const familyStates = new Map(PIT_ALERTS.map((spec) => [pitAlertVisible(spec.id), spec.id]));
-  const shown = (layer: LayerItem, frame: Props): boolean => Boolean(evalNcalc(String(layer.bindings?.Visible?.formula), frame));
-  const drawnParts = (layer: LayerItem): Exclude<Item, LayerItem>[] => [...walkItems(layer.children)].filter((item): item is Exclude<Item, LayerItem> => item.kind !== 'layer');
 
   for (const id of here) {
     for (const size of THEMES[id]!.anatomy.sizes) {
       test(`${id} ${size.width}x${size.height}`, () => {
-        const faceSize = FACE_SIZES.find((f) => f.width === size.width && f.height === size.height)!;
-        const atTheLine: Props = {
-          [`OpenDash.${lapReviewSettingName(faceSize)}`]: 'all',
-          [`${G}.SessionTypeName`]: 'Race',
-          [`${G}.CurrentLapTime`]: 1,
-          [`${G}.LastLapTime`]: 98.4,
-        };
-        const screens = buildThemeFace(id, size, OPTS).built.main.screens.filter((screen) => screen.name.startsWith('Main'));
-        expect(screens.length).toBeGreaterThanOrEqual(2);
+        const { face, screens } = shipped(id, size);
         for (const screen of screens) {
-          const layers = [...walkItems(screen.items)].filter((item): item is LayerItem => item.kind === 'layer');
-          const review = layers.find((layer) => layer.name === 'lapReview')!;
-          const family = layers.filter((layer) => familyStates.has(String(layer.bindings?.Visible?.formula)));
-          // The house's five banners at the least, and a theme's limiter where it draws one.
+          const family = screen.layers.filter((layer) => familyStates.has(String(layer.bindings?.Visible?.formula)));
+          const boxes = screen.layers.filter((layer) => FAMILY.test(layer.name));
+          // The house's five banners at the least, and a theme's limiter where it draws one; and every
+          // member of the pop-up family.
           expect(family.length).toBeGreaterThanOrEqual(PIT_ALERTS.length);
-          const reviewParts = drawnParts(review);
-          for (const moment of MOMENTS) {
-            const frame = { ...atTheLine, ...moment.car };
-            const out = family.filter((layer) => shown(layer, frame)).map((layer) => familyStates.get(String(layer.bindings?.Visible?.formula)));
-            const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, state: moment.state ?? 'none' };
-            // The moment is the state it is named for, and only that one.
-            expect({ ...where, out: [...new Set(out)] }).toEqual({ ...where, out: moment.state ? [moment.state] : [] });
-            // On the circuit the crossing opens the review, so the moments in the lane are asking a
-            // question the face would otherwise answer with the review out.
-            if (!moment.state) {
-              expect({ ...where, review: shown(review, frame) }).toEqual({ ...where, review: true });
-              continue;
+          expect(new Set(boxes.map((box) => box.name.split('.')[0]))).toEqual(new Set(['popUp', 'notice', 'lapReview']));
+          for (const box of boxes) {
+            for (const moment of MOMENTS) {
+              const frame = { ...wanting(box.name, face), ...moment.car };
+              const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, box: box.name, state: moment.state ?? 'none' };
+              const out = family.filter((layer) => shown(layer, frame)).map((layer) => familyStates.get(String(layer.bindings?.Visible?.formula)));
+              // The moment is the state it is named for, and only that one.
+              expect({ ...where, out: [...new Set(out)] }).toEqual({ ...where, out: moment.state ? [moment.state] : [] });
+              if (!moment.state) {
+                expect({ ...where, shown: shown(box, frame) }).toEqual({ ...where, shown: true });
+                continue;
+              }
+              for (const layer of family.filter((each) => shown(each, frame))) {
+                const hidden = !shown(box, frame);
+                const over = screen.layers.indexOf(layer) > screen.layers.indexOf(box);
+                expect({ ...where, layer: layer.name, covered: !(hidden || over || !covers(box, layer)) }).toEqual({ ...where, layer: layer.name, covered: false });
+              }
             }
-            for (const layer of family.filter((each) => shown(each, frame))) {
-              const hidden = !shown(review, frame);
-              const over = layers.indexOf(layer) > layers.indexOf(review);
-              const clear = drawnParts(layer).every((part) => reviewParts.every((r) => !overlaps(part.rect, r.rect)));
-              expect({ ...where, layer: layer.name, covered: !(hidden || over || clear) }).toEqual({ ...where, layer: layer.name, covered: false });
+          }
+        }
+      });
+    }
+  }
+});
+
+/** The bits that raise a flag of the catalogue, and the frames that raise each of its car alerts. */
+const RAISED_ALERTS: Record<string, Props> = {
+  ignition: { [`${G}.EngineIgnitionOn`]: 0 },
+  engine: { [`${G}.EngineIgnitionOn`]: 1, [`${G}.EngineStarted`]: 0 },
+  incident: { 'DataCorePlugin.GameRawData.Telemetry.PlayerCarMyIncidentCount': 2 },
+};
+const raising = (condition: AlertCondition): Props => {
+  if (isFlag(condition)) {
+    return condition.limiter
+      ? { [`${G}.${condition.limiter}`]: 1 }
+      : { [String(flagBit(condition.bits[0]!)).slice(1, -1)]: 1 };
+  }
+  const props = RAISED_ALERTS[condition.id];
+  if (!props) throw new Error(`no frame raises ${condition.id}`);
+  return props;
+};
+
+/**
+ * With the flag format at `full`, no box of the pop-up family is drawn over the full-screen flag while
+ * it is out, on every face as each theme ships it (#1069).
+ *
+ * The block is the whole body and every box of the family is inside the body, so at every crossing
+ * under a flag the lap pop-up was drawn over the middle of the flag's name and the review over nearly
+ * all of it, and on the Porsche's nano and the AiM's portrait face low fuel reached its top. Each
+ * condition the block draws is raised in turn, with every box in the frame that brings it out: the
+ * condition's layer is shown, and each box drawn over it is hidden. The band format is the control,
+ * and the ticket's other line: under a flag that sits in band D the lap pop-up and the review still
+ * open at the line. Once the flag has had band D for its seconds it settles into the one rectangle of
+ * the face #731 keeps for it, and a box drawn over that rectangle waits for it too: the nano's lap
+ * review is the one that reaches it.
+ */
+describe('as each theme ships, no box of the pop-up family covers the flag', () => {
+  for (const id of here) {
+    for (const size of THEMES[id]!.anatomy.sizes) {
+      test(`${id} ${size.width}x${size.height}`, () => {
+        const { face, screens } = shipped(id, size);
+        const format = `OpenDash.${flagFormatSettingName(face)}`;
+        const onTrack = { 'DataCorePlugin.GameRawData.Telemetry.IsOnTrack': true, [`${G}.EngineIgnitionOn`]: 1, [`${G}.EngineStarted`]: 1 };
+        for (const screen of screens) {
+          const block = screen.layers.find((layer) => layer.name === 'flagFull')!;
+          const conditions = screen.layers.filter((layer) => layer.name.startsWith('flagFull.') && !layer.name.slice('flagFull.'.length).includes('.'));
+          const boxes = screen.layers.filter((layer) => FAMILY.test(layer.name));
+          const corner = screen.layers.find((layer) => layer.name === 'flagCorner')!;
+          const settledAs = (id_: string): LayerItem | undefined => screen.layers.find((layer) => layer.name === `flagCorner.${id_}`);
+          expect(conditions.length).toBe(ALERT_CATALOGUE.filter((c) => !('neutral' in c && c.neutral)).length);
+          for (const box of boxes) {
+            const wants = { ...onTrack, ...wanting(box.name, face) };
+            const where = { face: `${id} ${size.width}x${size.height}`, screen: screen.name, box: box.name };
+            // With no flag out the box opens, in either format.
+            expect({ ...where, shown: shown(box, { ...wants, [format]: 'full' }) }).toEqual({ ...where, shown: true });
+            for (const layer of conditions) {
+              const condition = alertCondition(layer.name.slice('flagFull.'.length));
+              const frame = { ...wants, ...raising(condition), [format]: 'full' };
+              const at = { ...where, condition: condition.id };
+              // The frame raises this condition and the block draws it.
+              expect({ ...at, block: shown(block, frame) && shown(layer, frame) }).toEqual({ ...at, block: true });
+              if (covers(box, layer)) expect({ ...at, covered: shown(box, frame) }).toEqual({ ...at, covered: false });
+              // In the band format the flag is in band D, and the events at the line still open. Once
+              // it has settled, they open unless they would cover the settled flag. The incident is
+              // raised by a window of its own and is asked in band D's phase alone.
+              if (box.name === 'popUp.lap' || box.name === 'lapReview') {
+                const band = { ...frame, [format]: 'band' };
+                expect({ ...at, band: shown(box, band) }).toEqual({ ...at, band: true });
+                const settled = settledAs(condition.id);
+                if (settled && condition.id !== 'incident') {
+                  expect({ ...at, settled: shown(corner, band, SETTLED) && shown(settled, band, SETTLED) }).toEqual({ ...at, settled: true });
+                  expect({ ...at, settledCovered: shown(box, band, SETTLED) && covers(box, settled) }).toEqual({ ...at, settledCovered: false });
+                  expect({ ...at, open: shown(box, band, SETTLED) }).toEqual({ ...at, open: !covers(box, settled) });
+                }
+              }
             }
           }
         }
