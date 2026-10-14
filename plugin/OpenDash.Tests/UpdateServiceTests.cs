@@ -479,6 +479,14 @@ namespace OpenDashPlugin.Tests
             "[{\"tag_name\":\"" + tag + "\",\"prerelease\":false,\"draft\":false,\"body\":\"notes\",\"assets\":["
             + "{\"name\":\"" + PluginUpdate.AssetName + "\",\"browser_download_url\":\"" + PluginUrl + "\",\"size\":1}]}]";
 
+        /// <summary>The version this checkout builds, which the test assembly carries as OpenDash.dll does.</summary>
+        private static readonly string Built = File.ReadAllText(Path.Combine(RepoPaths.Root(), "VERSION")).Trim();
+
+        /// <summary>The tag of a release of <see cref="Built"/>, which is the release a plugin zip of this assembly belongs to.</summary>
+        private static readonly string BuiltTag = "v" + Built;
+
+        /// <summary>A plugin zip whose assembly is a real one, this test assembly at <see cref="Built"/>, since staging
+        /// reads the version out of it (#862). Every other entry is text.</summary>
         private static byte[] PluginZip(params string[] entries)
         {
             using (var buffer = new MemoryStream())
@@ -487,6 +495,12 @@ namespace OpenDashPlugin.Tests
                 {
                     foreach (var name in entries)
                     {
+                        if (Path.GetFileName(name) == PluginUpdate.DllName)
+                        {
+                            var assembly = File.ReadAllBytes(typeof(UpdateServiceTests).Assembly.Location);
+                            using (var target = zip.CreateEntry(name).Open()) target.Write(assembly, 0, assembly.Length);
+                            continue;
+                        }
                         using (var writer = new StreamWriter(zip.CreateEntry(name).Open())) writer.Write("bytes of " + name);
                     }
                 }
@@ -503,7 +517,7 @@ namespace OpenDashPlugin.Tests
         public void A_release_carrying_only_the_plugin_says_the_dashboards_come_with_it()
         {
             var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
-            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
             fetcher.Assets[PluginUrl] = PluginZip("INSTALL.md", PluginUpdate.DllName, "OFL.txt");
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -537,7 +551,7 @@ namespace OpenDashPlugin.Tests
             File.WriteAllText(mine, "{\"mine\":true}");
             installer.Refresh();
 
-            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
             fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -573,7 +587,7 @@ namespace OpenDashPlugin.Tests
             File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash Rim (2)", "OpenDash Rim (2).djson"), "{\"mine\":true}");
             installer.Refresh();
 
-            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
             fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -619,7 +633,7 @@ namespace OpenDashPlugin.Tests
             // The question the Update button asks before it downloads anything.
             Assert.Equal(new[] { "OpenDash Rim (2)" }, installer.EditedFolders);
 
-            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
             fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -642,7 +656,7 @@ namespace OpenDashPlugin.Tests
         public void A_plugin_only_release_whose_plugin_cannot_be_staged_is_a_failure()
         {
             var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
-            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
             fetcher.Assets[PluginUrl] = PluginZip("INSTALL.md", "OFL.txt");
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -667,13 +681,8 @@ namespace OpenDashPlugin.Tests
         public void A_plugin_that_cannot_be_staged_stops_the_packages_it_was_published_with()
         {
             var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
-            var listing = ListingFor("v0.2.0", "OpenDash");
-            var fetcher = new Fetcher
-            {
-                Listing = listing.Insert(listing.LastIndexOf("]}]", StringComparison.Ordinal),
-                    ",{\"name\":\"" + PluginUpdate.AssetName + "\",\"browser_download_url\":\"" + PluginUrl + "\",\"size\":1}"),
-            };
-            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            var fetcher = new Fetcher { Listing = ListingWithPlugin(BuiltTag, "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", Built).ToArray();
             fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
             // A sound download that cannot be written: a folder stands where the assembly is written before it is
             // moved into place, which is the disk refusing a write and not the release being wrong.
@@ -690,6 +699,166 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
             Assert.Contains("OpenDash itself could not be put in place", outcome.Line);
             Assert.False(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>A release that publishes its packages and the plugin beside them, as every release before #438 did.</summary>
+        private static string ListingWithPlugin(string tag, params string[] folders)
+        {
+            var listing = ListingFor(tag, folders);
+            return listing.Insert(listing.LastIndexOf("]}]", StringComparison.Ordinal),
+                ",{\"name\":\"" + PluginUpdate.AssetName + "\",\"browser_download_url\":\"" + PluginUrl + "\",\"size\":1}");
+        }
+
+        // What a download carries (#862)
+
+        /// <summary>
+        /// A plugin older than the one running is not staged, nothing is armed to swap it in, and the run says so
+        /// rather than "Restart SimHub".
+        /// </summary>
+        /// <remarks>
+        /// A release tagged v0.4.0 whose zip was built from 0.3.0 passes every digest. The run used to stage it and
+        /// arm the waiter, the swap put the older plugin in place at the next close, and since the rig was still older
+        /// than the release the next start offered it again, downloading and swapping once a day. Here the running
+        /// plugin stands in for the newer one, since the assembly a test can stage is the version this checkout builds.
+        /// </remarks>
+        [Fact]
+        public void A_plugin_older_than_the_one_running_is_not_staged_and_the_run_fails()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var log = new ListLog();
+            var service = new UpdateService(fetcher, log, pluginVersion: "999.0.0");
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.False(outcome.Ok);
+            Assert.False(outcome.PluginStaged);
+            Assert.Empty(outcome.FollowPlugin);
+            Assert.Equal("OpenDash itself could not be put in place (the plugin download is " + Built + ", older than the 999.0.0 installed here)", outcome.Reason);
+            Assert.DoesNotContain("Restart", outcome.Line);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.False(File.Exists(PluginUpdate.ScriptPath(root)), "a swap was armed for a plugin that was refused");
+            Assert.Contains(log.Lines, line => line.Contains("The new plugin was not staged"));
+        }
+
+        /// <summary>
+        /// A release whose plugin is not the version its tag names stages nothing and writes none of the packages it
+        /// was published with, which are the release's version and would otherwise land on the old plugin (#616).
+        /// </summary>
+        [Fact]
+        public void A_plugin_that_is_not_the_release_s_version_stops_the_packages_it_was_published_with()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
+            var fetcher = new Fetcher { Listing = ListingWithPlugin("v999.0.0", "OpenDash") };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "999.0.0").ToArray();
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: "0.1.0");
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.False(outcome.Ok);
+            Assert.False(outcome.PluginStaged);
+            Assert.Empty(outcome.Updated);
+            Assert.Contains("the plugin download is " + Built + " in a release of 999.0.0", outcome.Reason);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.False(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// A package older than the folder it would replace is refused before anything is written, the plugin
+        /// included, and reported as the failure it is rather than as an update.
+        /// </summary>
+        /// <remarks>
+        /// The install runs forced, so Decide's comparison was computed, logged and then ignored, and the downgrade
+        /// was written over a current dashboard and counted among the updated.
+        /// </remarks>
+        [Fact]
+        public void A_package_older_than_its_folder_is_refused_and_nothing_is_written()
+        {
+            var installer = Installed("0.3.0", new MemoryFolderRecord(), "OpenDash");
+            var fetcher = new Fetcher { Listing = ListingWithPlugin(BuiltTag, "OpenDash") };
+            // A release the rig is offered although its folder is newer, which an older screen holding the rig's
+            // version back makes possible; given here as the version the check is asked about.
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", Built).ToArray();
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson.metadata"),
+                "{\"DashboardVersion\":\"999.0.0\"}");
+            installer.Refresh();
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: "0.1.0");
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.False(outcome.Ok);
+            Assert.Equal("OpenDash is " + Built + ", older than the 999.0.0 installed here", outcome.Reason);
+            Assert.Empty(outcome.Updated);
+            Assert.Equal("999.0.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.False(PluginUpdate.Pending(root));
+        }
+
+        /// <summary>
+        /// A package that is not the release's version is refused, and so is the whole run, even when the package
+        /// before it was sound: a release cut by hand from the wrong build is wrong as a whole.
+        /// </summary>
+        [Fact]
+        public void A_package_that_is_not_the_release_s_version_is_refused_and_nothing_is_written()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            var fetcher = new Fetcher { Listing = ListingFor("v0.2.0", "OpenDash", SmallFolder) };
+            fetcher.Assets["https://example.invalid/OpenDash"] = SyntheticPackage.Zip("OpenDash", "0.2.0").ToArray();
+            fetcher.Assets["https://example.invalid/OpenDash.1280x480"] = SyntheticPackage.Zip(SmallFolder, "0.1.5").ToArray();
+            long ticks = 0;
+            var service = new UpdateService(fetcher);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.False(outcome.Ok);
+            Assert.Equal(SmallFolder + " is 0.1.5 in a release of 0.2.0", outcome.Reason);
+            Assert.Contains("did not finish", outcome.Line);
+            Assert.Empty(outcome.Updated);
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, "OpenDash"));
+            Assert.Equal("0.1.0", PackageExtractor.ReadInstalledVersion(root, SmallFolder));
+        }
+
+        /// <summary>
+        /// A rig whose plugin is already the release, offered it because an edited screen holds the rig's version
+        /// back, still stages the twin: that run is what carries the yes to replacing the screen to the start that
+        /// writes it, and the start clears the twin rather than swapping it (PluginUpdate.Review).
+        /// </summary>
+        [Fact]
+        public void The_release_s_own_plugin_is_staged_over_the_same_version_so_a_yes_reaches_the_start()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash");
+            File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson"), "{\"mine\":true}");
+            installer.Refresh();
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: Built);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.True(outcome.PluginStaged);
+            Assert.True(outcome.ReplaceEditedOnRestart);
+        }
+
+        /// <summary>The plugin hands the service its own version, without which a staged plugin is held to the
+        /// release's version alone. Read rather than run, since its file needs SimHub to compile.</summary>
+        [Fact]
+        public void The_plugin_hands_the_update_its_own_version()
+        {
+            var code = System.Text.RegularExpressions.Regex.Replace(
+                RepoPaths.Code(Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "OpenDash.cs")), @"\s+", " ");
+            Assert.Contains("new UpdateService(new ReleaseClient(Version), new SimHubInstallLog(), Version)", code);
         }
 
         // What the bar is told
@@ -892,7 +1061,7 @@ namespace OpenDashPlugin.Tests
             var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
             File.WriteAllText(Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson"), "{\"mine\":true}");
             installer.Refresh();
-            var fetcher = new Fetcher { Listing = PluginOnlyListing("v0.2.0") };
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
             fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
             long ticks = 0;
             var service = new UpdateService(fetcher);
@@ -912,7 +1081,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
             Assert.True(outcome.ReplaceEditedOnRestart);
-            Assert.Equal("0.2.0", recorded);
+            Assert.Equal(Built, recorded);
         }
 
         /// <summary>
