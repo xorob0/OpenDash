@@ -82,7 +82,7 @@ const CASES = [
 
 describe('a car in the pit lane gives its gap to the PIT chip', () => {
   test('and the boxes include zone B of the 850 x 480 face, in both arrangements', () => {
-    // The face the yellow scenario is watched on, its two cars in the pits.
+    // The face the yellow scenario is watched on, its three cars in the pits.
     const names = moduleBoxes().map((box) => box.name);
     expect(names).toContain('face-274x328');
     expect(names).toContain('face-274x366');
