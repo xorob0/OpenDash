@@ -12,9 +12,10 @@
 // `left(value, k * 9, 9)`, which is the whole reason CarLightTable normalises every colour to
 // #AARRGGBB. Twelve names instead of a hundred and forty-nine.
 //
-// Nothing here throws. An unobserved exception on the thread pool takes SimHub down on .NET
-// Framework, and the fallback for every failure is the same and is already built: the strip goes
-// back to the ladder iRacing publishes.
+// The fallback for every failure is the same and is already built: the strip goes back to the
+// ladder iRacing publishes. Nothing on the thread pool throws, because an unobserved exception there
+// takes SimHub down on .NET Framework. Update is the one exception: it publishes no mirror and then
+// throws on, so that DataUpdate, which guards it, can say in SimHub's log what went wrong.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -285,19 +286,31 @@ namespace OpenDashPlugin
                 frame = Frame.Dark();
                 return;
             }
-            // Looked up on a car change rather than per frame: the fold allocates and this runs at 60 Hz.
-            if (!string.Equals(carId, lastCarId, StringComparison.Ordinal))
+            try
             {
-                lastCarId = carId;
-                lastTable = For(carId);
+                // Looked up on a car change rather than per frame: the fold allocates and this runs at 60 Hz.
+                if (!string.Equals(carId, lastCarId, StringComparison.Ordinal))
+                {
+                    lastCarId = carId;
+                    lastTable = For(carId);
+                }
+                var table = lastTable;
+                frame = table == null ? Frame.Dark() : Compute(table, gear, rpm, fit, clockMs);
             }
-            var table = lastTable;
-            if (table == null)
+            catch (Exception)
             {
+                // The frame before this one stays published unless something replaces it, and it is
+                // usually a lit or flashing bar: a fault that recurs on every frame would freeze the strip
+                // on it (#577). No mirror is the fallback the profile already has. Thrown on rather than
+                // swallowed, so that DataUpdate can say so in SimHub's log.
                 frame = Frame.Dark();
-                return;
+                throw;
             }
+        }
 
+        /// <summary>One frame's answer for a car that has a table.</summary>
+        private static Frame Compute(CarLightTable table, string gear, double rpm, MirrorFit fit, long clockMs)
+        {
             var runs = new string[Contract.MirrorRunLengths.Length];
             for (var i = 0; i < Contract.MirrorRunLengths.Length; i++)
             {
@@ -309,7 +322,7 @@ namespace OpenDashPlugin
             // lookup of a row Colors() has already found ten times this frame, and the alternative is a
             // second entry point walking the same table.
             var row = CarLightMirror.GearFor(table, gear);
-            frame = new Frame
+            return new Frame
             {
                 Ready = true,
                 CarName = table.CarName,
@@ -318,6 +331,16 @@ namespace OpenDashPlugin
                 OverRev = row != null && CarLightMirror.OverRev(table, row, rpm),
                 Flashes = CarLightMirror.CanOverRev(table, row),
             };
+        }
+
+        /// <summary>
+        /// No mirror this frame: what a caller publishes when it could not work out what to hand
+        /// <see cref="Update"/>, so that the strip falls back to the published ladder rather than
+        /// keeping the last frame it was given.
+        /// </summary>
+        public void Clear()
+        {
+            frame = Frame.Dark();
         }
 
         /// <summary>

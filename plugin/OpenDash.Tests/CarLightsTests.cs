@@ -117,6 +117,48 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(CarLightMirror.GearFor(table, "N"), CarLightMirror.GearFor(table, ""));
         }
 
+        /// <summary>Six gears keyed with a leading zero: legal JSON, and not the way SimHub spells a gear.</summary>
+        private const string ZeroPaddedGears = @"{
+            ""carName"": ""Test Padded"", ""carId"": ""test padded"",
+            ""ledNumber"": 2, ""redlineBlinkInterval"": 0,
+            ""ledColor"": [""#00000000"", ""#FF00FF00"", ""#FFFF0000""],
+            ""ledRpm"": [{
+                ""01"": [7000, 1000, 2000], ""02"": [7000, 2000, 3000], ""03"": [7000, 3000, 4000],
+                ""04"": [7000, 4000, 5000], ""05"": [7000, 5000, 6000], ""06"": [7000, 6000, 6500]
+            }]
+        }";
+
+        [Fact]
+        public void A_gear_key_written_another_way_is_read_rather_than_thrown_on()
+        {
+            // The tables come from somebody else's archive, so "01" and " 2" are spellings OpenDash does
+            // not get to refuse. The fallback down the box used to find the number and then look the row
+            // up again by the number's own spelling, which is a key no such table has: a
+            // KeyNotFoundException on every frame in every gear, and a strip frozen on its last frame (#577).
+            var table = Parsed(ZeroPaddedGears);
+            Assert.Same(table.Gears["06"], CarLightMirror.GearFor(table, "7"));
+            Assert.Same(table.Gears["03"], CarLightMirror.GearFor(table, "3"));
+            Assert.Same(table.Gears["01"], CarLightMirror.GearFor(table, "1"));
+            Assert.Equal(new[] { "#FF00FF00", Off }, CarLightMirror.Colors(table, "3", 3500, 2, MirrorFit.Stretch, 0));
+
+            // And a key with a sign or a space in it, built by hand because the reader takes keys as given.
+            var spaced = new CarLightTable
+            {
+                CarId = "spaced",
+                LedCount = 1,
+                Colors = new[] { "#FFFF0000" },
+                BlinkColor = Off,
+                Gears = new Dictionary<string, CarLightGear>(StringComparer.OrdinalIgnoreCase)
+                {
+                    { " 2", new CarLightGear { Redline = 7000, Thresholds = new[] { 2000 } } },
+                    { "+4", new CarLightGear { Redline = 7000, Thresholds = new[] { 4000 } } },
+                },
+            };
+            Assert.Same(spaced.Gears[" 2"], CarLightMirror.GearFor(spaced, "3"));
+            Assert.Same(spaced.Gears["+4"], CarLightMirror.GearFor(spaced, "5"));
+            Assert.Equal(1, CarLightMirror.Ladder(spaced, "4", 4500).Lit);
+        }
+
         [Fact]
         public void A_symmetric_bar_stays_symmetric_at_every_run_length()
         {
