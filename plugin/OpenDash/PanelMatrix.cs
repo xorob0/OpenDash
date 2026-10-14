@@ -761,7 +761,8 @@ namespace OpenDashPlugin
         /// <summary>
         /// What may take the matrix over, first first, as Matrix.dc.html numbers it, fixed until #505 lets a
         /// driver change it. This is not quite the box's own order: flag-box.md and profile.ts (belowFlags)
-        /// paint the spotter as an overlay over everything, a standing yellow included, and rank the rest
+        /// paint the spotter as an overlay over everything, a standing yellow included, but not over the SC
+        /// of a full course yellow, which it gives way to (#515), and rank the rest
         /// flags, pit lane, warnings, gear. The numbers are the artboard's; the disagreement is the author's
         /// to settle, not this page's.
         /// </summary>
@@ -825,8 +826,8 @@ namespace OpenDashPlugin
         /// car is loaded in a game the tables cover. Then, with no tables ever downloaded, that they are not
         /// and where the download is, since this page has none; else whether the tables have measured the
         /// car, which says whether the gear takes the car's own points or falls back to openDash's. Null
-        /// otherwise, since then there is nothing true to say: the plugin reads iRacing's tables alone
-        /// (CarLightLibrary), so in any other game every car would read as missing from a dataset that may well
+        /// otherwise, since then there is nothing true to say: the plugin reads iRacing's, Assetto Corsa's
+        /// and ACC's tables alone (CarLightLibrary.Sims), so in any other game every car would read as missing from a dataset that may well
         /// measure it, and a download sent for from there could never apply. Null too while tables that are on
         /// disk are still being read, or when the copy on disk could not be read: the LEDs page's Car Data
         /// row then says "Loading" or that it could not be read, and a line saying they were never downloaded would
@@ -855,12 +856,8 @@ namespace OpenDashPlugin
             return PanelLeds.TablesMissing(carCount, status);
         }
 
-        /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing",
-        /// "IRacing"): the LEDs page's (PanelLeds.TablesGame).</summary>
-        public const string TablesGame = PanelLeds.TablesGame;
-
-        /// <summary>Whether the tables cover the game SimHub is set to: iRacing's alone, the LEDs page's test
-        /// (PanelLeds.TablesCoverGame).</summary>
+        /// <summary>Whether the tables cover the game SimHub is set to: iRacing, Assetto Corsa and ACC, the LEDs
+        /// page's test (PanelLeds.TablesCoverGame).</summary>
         public static bool TablesCoverGame(string game)
         {
             return PanelLeds.TablesCoverGame(game);

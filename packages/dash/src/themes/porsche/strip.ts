@@ -16,7 +16,7 @@ import { ncalc } from '../../generator.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
-import { currentLap, GRIP_WIDEST, pitLimiterOn, rpm, sessionIs, speed, trackGrip } from '../../second/values.ts';
+import { currentLap, GRIP_WIDEST, hasHeadlightFlashControl, headlightFlashed, pitLimiterOn, rpm, sessionIs, speed, trackGrip } from '../../second/values.ts';
 import { ds } from '../../tokens.ts';
 import { regionRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
@@ -24,7 +24,7 @@ import { porscheFace, type StripBox } from './geometry.ts';
 import { pictogram } from './pictograms.ts';
 import { BORDER, carColour, centredY, namedCell, RADIUS, runWidth } from './register.ts';
 
-const { and, changed, fmt, iff, isNull, not, num, raw, str, ucase } = ncalc;
+const { and, fmt, iff, str, ucase } = ncalc;
 
 /** The house's widest track state, `GRIP_WIDEST`, in the capitals the car writes. */
 const TRACK_WIDEST = GRIP_WIDEST.toUpperCase();
@@ -67,10 +67,9 @@ export function porscheStrip(ctx: FaceContext): Item[] {
     }),
   );
 
-  // The headlight, lit for as long as the band's own alert holds a flash of the lights: iRacing
-  // publishes the flash control and no headlight state, so a flash is all that can light it.
-  const flash = raw('dcHeadlightFlash');
-  items.push(...pictogram('strip.headlight', 'headlight', placed(strip, parts.headlight), { on: and(not(isNull(flash)), changed(num(ds.indicator.alert.durationMs), flash)), state: 'lit' }));
+  // The headlight, lit for as long as the band's own alert holds a flash of the lights, which is the
+  // core's window over the control; a car without the control never lights it.
+  items.push(...pictogram('strip.headlight', 'headlight', placed(strip, parts.headlight), { on: and(hasHeadlightFlashControl(), headlightFlashed()), state: 'lit' }));
 
   // `Lap` on a grey cell over zone C, its number on a dark one.
   const { lap } = parts;

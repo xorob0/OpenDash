@@ -26,6 +26,7 @@ import { measureText, type MeasuredFace } from '../src/design/advances.ts';
 import { SESSION_NAMES, SESSION_NAME_WIDEST, sessionType } from '../src/second/values.ts';
 import { certainlyDrawn, drawnFloors, parseNcalc, readsVocabulary, widthAsDrawn } from './drawnStrings.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
+import { WRITTEN_SESSION_NAMES } from './sessionNames.ts';
 
 const PACKAGES = composePackages({ version: '0.0.0-test', log: () => {} }, true);
 
@@ -146,6 +147,14 @@ describe('every widest holds what its binding can draw', () => {
 });
 
 describe('a property whose words are known is measured by the widest of them', () => {
+  test('the session names are every name a reader writes, on every sim', () => {
+    // Listed for iRacing alone, the AiM cut its session cell to `Time Trial` and drew Assetto
+    // Corsa's `TIME_ATTACK` a cell wider than it (#1127).
+    for (const [sim, names] of Object.entries(WRITTEN_SESSION_NAMES)) {
+      for (const name of names) expect({ sim, name, listed: SESSION_NAMES.includes(name) }).toMatchObject({ listed: true });
+    }
+  });
+
   test('the session name declared widest is the widest session name in every face, as written and in capitals', () => {
     const faces: MeasuredFace[] = ['BarlowMedium', 'BarlowBold', 'BarlowCondensedSemiBold', 'BarlowCondensedBold', 'BarlowCondensedLight', 'DSEG7Regular', 'DSEG7Bold', 'DSEG14Regular'];
     expect(SESSION_NAMES).toContain(SESSION_NAME_WIDEST);

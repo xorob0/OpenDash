@@ -36,14 +36,14 @@ import { LEVEL_WIDEST, hasSetting, trackedValue } from '../../second/tracked.ts'
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { antiRollFront, pitLimiterOn } from '../../second/values.ts';
 import type { TrackedValue } from '../../second/tracked.ts';
-import { ENGINE_WARNING_BITS } from '../../zones/telltales.ts';
+import { ENGINE_WARNING_BITS, engineWarning } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
 import { porscheFace, type SettingsColumn, type TelltaleColumn } from './geometry.ts';
 import { pictogram, type Lit, type Pictogram } from './pictograms.ts';
 import { BORDER, carColour, lowFuelAlarm, RADIUS, settingBox } from './register.ts';
 
-const { add, div, fmt, gt, iff, isnull, lt, mod, mul, num, raw, truncate, and, or } = ncalc;
+const { add, fmt, iff, lt, mul, num, and, or } = ncalc;
 
 /** A zone fills the inside of its 3 px border, so its cells stand flush against it. */
 const PANEL_PAD = BORDER;
@@ -78,9 +78,6 @@ const tileOf = (ctx: FaceContext): Rect => {
   }
   return rect(gear.left - BORDER, gear.top - PANEL_PAD, gear.width + 2 * BORDER, gear.height + 2 * PANEL_PAD);
 };
-
-/** One of iRacing's `EngineWarnings` bits, read by dividing and taking the remainder, as the band's telltales read it. */
-const engineWarning = (bit: number): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(bit))), num(2)), num(0));
 
 /**
  * Every item of a box moved to slot `slots`, the static `rect` being the box at slot `at`: a box past

@@ -98,6 +98,10 @@ export const IRACING: Sim = {
     // steerleft holds the wheel a quarter turn to the left so the steering dial's direction can be
     // seen (#1057); it is looked at on the VM, and its trace would be green's with one value held.
     'steerleft',
+    // oilpressure sets the oil-pressure bit with the engine stopped and then turning, ten seconds each,
+    // so that the engine warnings can be seen to wait for the crank (#1115); it is looked at on the VM,
+    // and both of its states are pinned in engineWarnings.test.ts already.
+    'oilpressure',
   ],
 };
 
@@ -122,16 +126,10 @@ export const ASSETTO_CORSA: Sim = {
     // shiftlights swaps the car at forty seconds to show the lights following it, which is watched on
     // the VM against a strip; a twenty-second trace would hold the Porsche's sweep and no swap.
     'shiftlights',
-    // Added by #579 on a branch that could not claim the VM. Recording them is the VM check of that
-    // ticket: `bun run record --sim ac race green yellow pit quali notc noapp`, then each name comes
-    // off this list in the same commit as its trace.
-    'race',
-    'green',
-    'yellow',
-    'pit',
-    'quali',
-    'notc',
-    'noapp',
+    // Added by #1127 on a branch that could not claim the VM: quali under AC's TIME_ATTACK, the
+    // widest session name, which the AiM is photographed writing whole. `bun run record --sim ac
+    // timeattack` takes it off.
+    'timeattack',
   ],
 };
 

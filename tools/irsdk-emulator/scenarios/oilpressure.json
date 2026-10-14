@@ -1,0 +1,40 @@
+{
+  // The oil-pressure bit of EngineWarnings with the engine stopped, then with it turning (#1115).
+  // iRacing raises that bit on an engine that is merely stopped as readily as on one that is failing,
+  // so every engine warning reads it only while Rpms is above nought. This is the VM check of that:
+  // ten seconds stopped, where the AiM draws no ENGINE box over zone C and the Porsche's oil and
+  // warning pictograms are dim, then ten seconds at 3000 rpm with the same bit, where the AiM reads
+  // ENGINE / OIL PRESS LOW and both pictograms are lit, and round again.
+  //
+  // The car stands on the circuit rather than in its stall, with the limiter off, because in the pit
+  // lane a state of the pit family is always out, ENGAGE LIMITER at the least, and the AiM draws its
+  // limiter over the warning and, from #1097, keeps the warning shut under every state of the family:
+  // the turning half would show nothing there either. The stalled bit stays clear, so SimHub's
+  // EngineStarted holds at 1 and the only thing that changes between the halves is the crank.
+  "extends": "race.json",
+  "name": "Oil pressure bit set, engine stopped then turning",
+  "loop": 20,
+  "variables": [
+    {"name": "SessionFlags", "value": "green", "pin": true},
+    {"name": "EngineWarnings", "value": 4, "pin": true},
+    {"name": "Voltage", "value": 13.9, "pin": true},
+    {"name": "IsOnTrack", "value": true, "pin": true},
+    {"name": "OnPitRoad", "value": 0, "pin": true},
+    {"name": "Speed", "value": 0.0, "pin": true},
+    {"name": "RPM", "value": 0.0, "pin": true},
+    {"name": "Gear", "value": 0, "pin": true},
+    {"name": "Throttle", "value": 0.0, "pin": true},
+    {"name": "Brake", "value": 0.0, "pin": true},
+    {"name": "Clutch", "value": 0.0, "pin": true}
+  ],
+  "timeline": [
+    {"at": 0, "log": "hold everything: the rev sweep, the gear model, the lap timer and the flag cycle would move it", "driver": {"type": "rpmSweep", "enabled": false}},
+    {"at": 0, "driver": {"type": "gearFromRpm", "enabled": false}},
+    {"at": 0, "driver": {"type": "lapTimer", "enabled": false}},
+    {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}},
+    {"at": 0, "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 0, "log": "engine stopped, oil-pressure bit set: no engine warning anywhere", "set": {"RPM": 0.0, "EngineWarnings": 4}},
+    {"at": 10, "log": "engine at 3000 rpm, oil-pressure bit set: the AiM's ENGINE box, the Porsche's oil and warning lit", "set": {"RPM": 3000.0, "EngineWarnings": 4}}
+  ]
+}

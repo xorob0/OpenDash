@@ -35,9 +35,9 @@ import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { rank, type RankMember } from '../second/rank.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
-import { pitLimiterOn, tankIsLow } from '../second/values.ts';
+import { engineRunning, pitLimiterOn, tankIsLow } from '../second/values.ts';
 
-const { computed, div, gt, iff, isnull, lt, mod, num, or, raw, str, truncate } = ncalc;
+const { and, computed, div, gt, iff, isnull, lt, mod, num, or, raw, str, truncate } = ncalc;
 
 /** The page of band D this rank is, which is the id the contract gives it. */
 export const TELLTALE_PAGE = 'car';
@@ -86,7 +86,20 @@ export interface Telltale {
  */
 export const ENGINE_WARNING_BITS = { waterTemperature: 1, fuelPressure: 2, oilPressure: 4, stalled: 8, pitLimiter: 16, revLimiter: 32 } as const;
 
-const engineWarning = (bit: number): Expr => gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(bit))), num(2)), num(0));
+/**
+ * One of those bits as a fault: the bit raised, and for oil pressure the engine turning too. This is
+ * the one reading of the word the dash surfaces take, band D's engine lamp, the AiM's engine warning
+ * and the Porsche's telltales alike, so that none of them can read the oil-pressure bit ungated.
+ *
+ * iRacing raises the oil-pressure bit on an engine that is merely stopped as readily as on one that
+ * is failing, so read alone it lit a red lamp in every garage and after every stall while the LED
+ * strip on the same rig, which gated it on {@link engineRunning}, stayed dark (#1115). The other bits
+ * are read as they stand: no committed trace has a stopped engine in it to say they behave the same.
+ */
+export const engineWarning = (bit: number): Expr => {
+  const raised = gt(mod(truncate(div(isnull(raw('EngineWarnings'), num(0)), num(bit))), num(2)), num(0));
+  return bit === ENGINE_WARNING_BITS.oilPressure ? and(raised, engineRunning()) : raised;
+};
 
 /**
  * The twelve lamps, in the order the 1280 x 480 artboard draws them.

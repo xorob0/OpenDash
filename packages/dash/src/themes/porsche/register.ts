@@ -16,7 +16,7 @@ import { boxSlack } from '../../design/metrics.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { ncalc } from '../../generator.ts';
-import { inTheCar } from '../../second/values.ts';
+import { fuelIsPublished, fuelLitres, inTheCar } from '../../second/values.ts';
 import { ds, resolveToken, TRANSPARENT } from '../../tokens.ts';
 
 /** Every coloured box, the track state, the speed box and the gear tile. */
@@ -104,11 +104,12 @@ export function namedCell(name: string, frame: Rect, title: string, valueCell: R
   ];
 }
 
-/** The tank the car calls low, in litres, which iRacing publishes in litres whatever the display unit. */
+/** The tank the car calls low, in litres whatever the display unit. */
 const LOW_FUEL_LITRES = 10;
 
-/** The car's fuel alarm: in the car, with `FuelLevel` published and under ten litres. */
-export const lowFuelAlarm = (): Expr => {
-  const fuel = ncalc.raw('FuelLevel');
-  return ncalc.and(inTheCar(), ncalc.not(ncalc.isNull(fuel)), ncalc.lt(fuel, ncalc.num(LOW_FUEL_LITRES)));
-};
+/**
+ * The car's fuel alarm: in the car, with a tank published and under ten litres. The tank is SimHub's
+ * `Fuel`, which every sim fills, read back in litres; iRacing's raw `FuelLevel`, which it read until
+ * #1126, is the same litres on iRacing and null on Assetto Corsa, so the alarm never lit there.
+ */
+export const lowFuelAlarm = (): Expr => ncalc.and(inTheCar(), fuelIsPublished(), ncalc.lt(fuelLitres(), ncalc.num(LOW_FUEL_LITRES)));

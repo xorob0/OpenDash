@@ -22,6 +22,8 @@ import { textWidth } from '../src/second/drawn.ts';
 import { bandFuelQuantity, bandFuelQuantityDrawn, bandFuelQuantityWidest, fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, LITRES_TO_GALLONS, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
 import { ncalcEvaluator as E } from '../src/generator.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
+import { evalNcalc, type Props } from './ncalcEval.ts';
+import { measureText } from '../src/design/advances.ts';
 import { ds } from '../src/tokens.ts';
 
 const BANDS = {
@@ -209,6 +211,44 @@ describe('the fields the catalogue draws on each page', () => {
     ]);
     expect(compound!.widest).toBe('Medium');
     expect(compound!.bind).not.toContain('ucase');
+  });
+
+  /**
+   * #556: the four were iRacing's raw `*tempCM` and nothing else, defaulted to zero, so on Assetto
+   * Corsa the page drew `0 0 0 0` under a `°C` whatever the tyres were doing. They read SimHub's own
+   * `TyreTemperature*` where the raw block is absent now, under the driver's unit, and `--` where
+   * nothing at all is published; iRacing's figures and its fixed `°C` are what they were.
+   */
+  describe('D4 Tyres reads the sim it is on', () => {
+    const [temps] = BAND_PAGES.tyres!;
+    const binds = [temps!.bind, ...temps!.row!.map((r) => r.bind)];
+    const RAW = 'DataCorePlugin.GameRawData.Telemetry.';
+    const GAME = 'DataCorePlugin.GameData.';
+    const raw = { [`${RAW}LFtempCM`]: 84.4, [`${RAW}RFtempCM`]: 104, [`${RAW}LRtempCM`]: 61.6, [`${RAW}RRtempCM`]: 88 };
+    const converted = { [`${GAME}TyreTemperatureFrontLeft`]: 70, [`${GAME}TyreTemperatureFrontRight`]: 71, [`${GAME}TyreTemperatureRearLeft`]: 72, [`${GAME}TyreTemperatureRearRight`]: 73 };
+    const read = (props: Props): { label: unknown; cells: unknown[] } => ({ label: evalNcalc(temps!.labelBind!, props), cells: binds.map((b) => evalNcalc(b, props)) });
+
+    test('iRacing draws its raw carcass in Celsius, whatever the driver has set', () => {
+      expect(read({ ...raw, ...converted, [`${GAME}TemperatureUnit`]: 'Fahrenheit' })).toEqual({ label: 'Tyres °C', cells: ['84', '104', '62', '88'] });
+    });
+
+    test('a sim without the raw block draws SimHub\'s figure in the driver\'s unit', () => {
+      expect(read({ ...converted, [`${GAME}TemperatureUnit`]: 'Celcius' })).toEqual({ label: 'Tyres °C', cells: ['70', '71', '72', '73'] });
+      expect(read({ ...converted, [`${GAME}TemperatureUnit`]: 'Fahrenheit' }).label).toBe('Tyres °F');
+      expect(read({ ...converted, [`${GAME}TemperatureUnit`]: 'Kelvin' }).label).toBe('Tyres K');
+    });
+
+    test('a sim that publishes no tyre temperature draws no value rather than four cold tyres', () => {
+      expect(read({}).cells).toEqual([NO_VALUE, NO_VALUE, NO_VALUE, NO_VALUE]);
+    });
+
+    test('the label is measured by the widest mark it can carry', () => {
+      for (const unit of ['Celcius', 'Fahrenheit', 'Kelvin']) {
+        const label = String(evalNcalc(temps!.labelBind!, { [`${GAME}TemperatureUnit`]: unit }));
+        expect(measureText('BarlowMedium', label, 20)).toBeLessThanOrEqual(measureText('BarlowMedium', temps!.labelWidest!, 20));
+        expect(measureText('BarlowMedium', label.toUpperCase(), 20)).toBeLessThanOrEqual(measureText('BarlowMedium', temps!.labelWidest!.toUpperCase(), 20));
+      }
+    });
   });
 
   test('the four temperatures are drawn as four numerals on one line', () => {

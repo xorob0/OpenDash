@@ -29,6 +29,7 @@ import {
   runningPid,
   start as startEmulator,
   stop as stopEmulator,
+  stopAll as stopEmulators,
   tail as emulatorLog,
   upload as uploadEmulator,
   scenarios,
@@ -391,7 +392,11 @@ Copy-Item ${psq(GUEST_OUT)} ${psq(`${SHARE_UNC}\\opendash-trace.ndjson`)} -Force
 /** One scenario, from a stopped SimHub to a written trace. */
 function recordOne(host: Host, scenario: string, opts: RecordOptions, properties: readonly string[]): RunResult {
   console.log(`\n${scenario}: asking SimHub for ${opts.frames} frames at ${opts.hz} Hz of ${opts.sim.label}`);
-  stopEmulator(host, opts.sim);
+  // Every sim's emulator, not only this one's: SimHub with a licence switches to whichever game it
+  // finds running, and a recording of the other game's reader is refused after the twenty seconds
+  // it took (#1138).
+  const emulators = stopEmulators(host);
+  if (!emulators.ok) return emulators;
   const stopped = simhubStop(host);
   if (!stopped.ok) return stopped;
   const requested = writeRequest(host, scenario, opts, properties);

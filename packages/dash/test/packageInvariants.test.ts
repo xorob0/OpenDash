@@ -69,7 +69,7 @@ const RADIUS_EXCEPTIONS: readonly { match: RegExp; radius?: number; why: string 
   // round where the crown between them is not, so the radius is what makes the drawing read as a
   // tyre seen end-on rather than as three bars; it is cut from the box like every other part of it.
   { match: /(?:^|\.)tyres\.(?:Front|Rear)(?:Left|Right)\.track[123]$/, why: "the tyre's tread columns, whose shoulders are round: packages/dash/src/second/tyreGlyph.ts" },
-  { match: /(?:^|\.)pitView\.car\.(?:body|nose|tail|(?:Front|Rear)(?:Left|Right))$/, why: 'the car seen from above, whose tapers are rectangles because the format has no path item: packages/dash/src/second/carTopView.ts' },
+  { match: /(?:^|\.)(?:pitView|damage)\.car\.(?:body|nose|tail|(?:Front|Rear)(?:Left|Right))$/, why: 'the car seen from above, on the pit view and the damage page, whose tapers are rectangles because the format has no path item: packages/dash/src/second/carTopView.ts' },
 ];
 
 /** Where something was found: the package, the dashboard, and the item drawing it. */
