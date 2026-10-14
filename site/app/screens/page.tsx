@@ -44,7 +44,7 @@ export default function Screens() {
         <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
       </Section>
 
-      <Section id="anatomy" title="One face, five parts" lede="Every rectangular face is built the same way. Hover or tap a part.">
+      <Section id="anatomy" title="One face, part by part" lede="Every rectangular face is built the same way. Hover or tap a part.">
         {base ? (
           <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={anatomyParts(HERO_FACE, COUNTS)} />
         ) : null}
@@ -83,7 +83,7 @@ export default function Screens() {
       <Section
         id="pit-wall"
         title="The pit wall"
-        lede="For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and four zones you fill from eleven pages or a web view. Three pages, and a portrait version."
+        lede={`For whoever is not driving: the whole field with gaps, sectors and stops, your own lap beside it, and zones you fill from ${counted(COUNTS.pitWallZonePages, 'page')}, a web view among them, or in the wide zone from ${counted(COUNTS.pitWallWideZonePages, 'page')} of its own. ${counted(COUNTS.pitWallPages, 'page')} to choose between, and a portrait version.`}
       >
         <div className={styles.pitWalls}>
           {pitWall ? (
@@ -101,7 +101,7 @@ export default function Screens() {
 
       <Section
         id="round"
-        title="The two round faces"
+        title="The round faces"
         lede={
           <>
             800 round and 480 round still draw the earlier card layout. What a round face does with zones is decided (
