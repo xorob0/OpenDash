@@ -3,8 +3,9 @@
  * tear-off come from iRacing's pit service bit field, read arithmetically because NCalc has no
  * bitwise operators.
  *
- * Pit time counts up while the car is in the lane and shows the last stop's duration otherwise, so
- * the field is useful both during a stop and after it.
+ * Pit time is the stop timed in the box while the car is in the lane, so 0.0 in the lane outside the
+ * box, and the last stop's duration once the car is out of the lane, so the field is useful both
+ * during a stop and after it.
  *
  * The two numbers are cut from the box rather than read off the ramp, which is the one page on the
  * catalogue artboard that is drawn that way: refuel at 116, 96, 64, 61 and 58 px and pit time at

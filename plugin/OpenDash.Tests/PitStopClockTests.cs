@@ -124,10 +124,10 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void A_frame_LMU_has_not_filled_is_no_answer_and_forgets_the_stop()
+        public void A_frame_LMU_has_not_filled_is_no_answer_and_keeps_the_stop()
         {
-            // The scoring page missing, or a property that throws: null, which publishes null, which the
-            // dashboards answer with SimHub's own members. Never an exception on the data thread.
+            // The scoring page missing, or a property that throws: null, which publishes null for the frame,
+            // which the dashboards answer with SimHub's own members. Never an exception on the data thread.
             Assert.Null(SimCapabilities.InPitBox(SimCapabilities.LeMansUltimate, Lmu(null, null, null, null)));
             Assert.Null(SimCapabilities.InPitBox(SimCapabilities.LeMansUltimate, Lmu(false, true, 3, null)));
             Assert.Null(SimCapabilities.InPitBox(SimCapabilities.LeMansUltimate, name => throw new InvalidOperationException(name)));
@@ -139,6 +139,67 @@ namespace OpenDashPlugin.Tests
             clock.Update(false, Start.AddSeconds(11));
             Assert.Equal(10.0, clock.LastPitStopSeconds);
             clock.Update(null, Start.AddSeconds(12));
+            Assert.Null(clock.PitStopSeconds);
+            Assert.Null(clock.LastPitStopSeconds);
+            // One frame with a reading missing says nothing about the stop: the last one is still there after it,
+            clock.Update(false, Start.AddSeconds(13));
+            Assert.Equal(10.0, clock.LastPitStopSeconds);
+            Assert.Equal(0.0, clock.PitStopSeconds);
+
+            // and a stop with such a frame in the middle of it is timed whole, from the frame the car stopped.
+            clock.Update(box, Start.AddSeconds(100));
+            clock.Update(null, Start.AddSeconds(104));
+            clock.Update(box, Start.AddSeconds(105));
+            Assert.Equal(5.0, clock.PitStopSeconds);
+            clock.Update(false, Start.AddSeconds(106));
+            Assert.Equal(5.0, clock.LastPitStopSeconds);
+        }
+
+        [Fact]
+        public void A_session_restart_forgets_the_last_stop_as_SimHub_forgets_its_own()
+        {
+            // SimHub's RaiseSessionRestart zeroes LastPitStopDuration, so a stop from the session before is not
+            // carried into the next one's Pit time, nor into the service gauge, which divides by it.
+            var clock = new PitStopClock();
+            clock.Update(true, Start);
+            clock.Update(true, Start.AddSeconds(20));
+            clock.Update(false, Start.AddSeconds(21));
+            Assert.Equal(20.0, clock.LastPitStopSeconds);
+
+            clock.Restart();
+            clock.Update(false, Start.AddSeconds(60));
+            Assert.Equal(0.0, clock.LastPitStopSeconds);
+            Assert.Equal(0.0, clock.PitStopSeconds);
+        }
+
+        [Fact]
+        public void A_session_restart_with_the_car_in_its_box_counts_from_the_restart()
+        {
+            // A stop begun in the session before is none of this one's: a car restarted in its garage stall
+            // counts from the restart, and the stop that ends there is that long.
+            var clock = new PitStopClock();
+            clock.Update(true, Start);
+            clock.Update(true, Start.AddSeconds(40));
+            Assert.Equal(40.0, clock.PitStopSeconds);
+
+            clock.Restart();
+            clock.Update(true, Start.AddSeconds(41));
+            Assert.Equal(0.0, clock.PitStopSeconds);
+            Assert.Equal(0.0, clock.LastPitStopSeconds);
+            clock.Update(true, Start.AddSeconds(50));
+            Assert.Equal(9.0, clock.PitStopSeconds);
+            clock.Update(false, Start.AddSeconds(51));
+            Assert.Equal(9.0, clock.LastPitStopSeconds);
+        }
+
+        [Fact]
+        public void No_game_forgets_everything_and_publishes_nothing()
+        {
+            var clock = new PitStopClock();
+            clock.Update(true, Start);
+            clock.Update(true, Start.AddSeconds(10));
+            clock.Update(false, Start.AddSeconds(11));
+            clock.Reset();
             Assert.Null(clock.PitStopSeconds);
             Assert.Null(clock.LastPitStopSeconds);
             // The game back: timing again from nothing, as SimHub's own timer starts from nothing in a new session.

@@ -9,8 +9,9 @@
 // So the plugin keeps the same clock with the box in place of IsInPit, on a sim whose row of
 // SimCapabilities.cs answers InPitBox, and publishes it as Contract.PitStopSeconds and
 // Contract.LastPitStopSeconds. Where the row has no answer both are null and every dashboard reads SimHub's
-// own members, which is what it read before and with no plugin. Pure: no SimHub types, so the net8.0 tests
-// compile it.
+// own members, which is what it read before and with no plugin. A session restart forgets the last stop, as
+// SimHub's RaiseSessionRestart zeroes its LastPitStopDuration, and the stop under way with it, since a stop
+// begun in the session before is none of this one's. Pure: no SimHub types, so the net8.0 tests compile it.
 using System;
 using System.Threading;
 
@@ -39,11 +40,16 @@ namespace OpenDashPlugin
         public double? LastPitStopSeconds => Volatile.Read(ref timing) ? Volatile.Read(ref publishedLast) : (double?)null;
 
         /// <summary>One frame: whether the car is in its box, null where the running sim's row does not say, and the frame's time.</summary>
+        /// <remarks>
+        /// A null publishes null for the frame and leaves the clock as it stood: on a sim whose row never
+        /// answers that is every frame, and on Le Mans Ultimate a frame with a reading missing says nothing
+        /// about the stop, so the next one that does carries on from it rather than from nothing.
+        /// </remarks>
         public void Update(bool? inBox, DateTime now)
         {
             if (!inBox.HasValue)
             {
-                Reset();
+                Volatile.Write(ref timing, false);
                 return;
             }
             if (inBox.Value)
@@ -64,13 +70,22 @@ namespace OpenDashPlugin
             Volatile.Write(ref timing, true);
         }
 
-        /// <summary>No game, or a game the plugin does not time stops for: both readings null, and the last stop forgotten.</summary>
-        public void Reset()
+        /// <summary>
+        /// A session restart: the last stop forgotten, as SimHub forgets its own, and the stop under way too, so a
+        /// car still in its box counts from the restart. What is published moves on the next Update.
+        /// </summary>
+        public void Restart()
         {
-            Volatile.Write(ref timing, false);
             enteredBox = null;
             inBoxSeconds = 0.0;
             lastStopSeconds = 0.0;
+        }
+
+        /// <summary>No game, or a frame the clock failed on: both readings null, and the last stop forgotten.</summary>
+        public void Reset()
+        {
+            Volatile.Write(ref timing, false);
+            Restart();
         }
     }
 }

@@ -736,6 +736,11 @@ namespace OpenDashPlugin
         /// the box to SimHub, and a frame with no game running, publish null. Wall time, as SimHub's own timer is
         /// on a reader that stamps no packet time, which Le Mans Ultimate's does not.
         /// </summary>
+        /// <remarks>
+        /// A session restart is read from the frame before. SimHub marks the frame it restarts on with
+        /// IsSessionRestart and zeroes its LastPitStopDuration there, but sends no DataUpdate for that frame, so
+        /// the first frame a plugin sees after it is the one whose OldData carries the mark.
+        /// </remarks>
         private void UpdatePitStop(PluginManager pluginManager, GameData data)
         {
             if (data == null || !data.GameRunning || data.NewData == null || pluginManager == null)
@@ -743,6 +748,7 @@ namespace OpenDashPlugin
                 pitStop.Reset();
                 return;
             }
+            if (data.OldData != null && data.OldData.IsSessionRestart) pitStop.Restart();
             var read = readProperty;
             if (read == null) readProperty = read = pluginManager.GetPropertyValue;
             pitStop.Update(SimCapabilities.InPitBox(data.GameName, read), DateTime.UtcNow);
