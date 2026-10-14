@@ -44,6 +44,19 @@ describe('the comparison', () => {
     expect(blank).toEqual([]);
   });
 
+  test('no cell says it was not checked', () => {
+    // compare.ts promises a claim we could not stand behind is cut rather than softened, and the car
+    // themes row's DNR cell said "Not checked" under a partial mark (#811).
+    const hedged: string[] = [];
+    for (const row of ROWS) {
+      for (const p of PRODUCTS) {
+        const c = row.cells[p.id];
+        if (/\bnot (checked|read|verified|known)\b|\bunknown\b|\bunchecked\b/i.test(`${c.word} ${c.text}`)) hedged.push(`${row.id}/${p.id}`);
+      }
+    }
+    expect(hedged).toEqual([]);
+  });
+
   test('every cell carries a word', () => {
     for (const row of ROWS) for (const p of PRODUCTS) expect({ cell: `${row.id}/${p.id}`, word: row.cells[p.id].word.length > 0 }).toEqual({ cell: `${row.id}/${p.id}`, word: true });
   });

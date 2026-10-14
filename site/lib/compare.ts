@@ -250,10 +250,14 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
   {
     id: 'themes',
     label: 'Car themes',
+    // The row is younger than CHECKED_ON, so its competitor cells say what the rows read on that date
+    // already hold: Lovely's per-car logo fetch is the privacy row's, and the car as DNR's idle screen
+    // is the idle row's. That none of DNR's dashboards is drawn for a car was checked against its own
+    // dashboards FAQ on 2026-10-14, which lists the seven by the racing each is for (#811).
     cells: {
       opendash: cell('yes', themesCell(l.themes, l.faces), { word: 'Free' }),
       lovely: cell('partial', 'Your car’s logo on the dash, fetched per car. No face drawn like the car’s own display.', { word: 'Logo' }),
-      dnr: cell('partial', 'Not read against their pages yet.', { word: 'Not checked' }),
+      dnr: cell('no', 'The car appears only as a picture on the idle screen, from £3 a month. No face drawn like the car’s own display.'),
     },
   },
   {
