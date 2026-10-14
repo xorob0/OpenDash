@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { rows, scheduled } from '../lib/compare.ts';
-import { QUESTIONS } from '../lib/survey.ts';
+import { QUESTIONS, RETIRED, parseSubmission, questionNumber } from '../lib/survey.ts';
 import { SAMPLE_COUNTS, SAMPLE_LISTED } from './sampleCounts.ts';
 
 const NEEDED = QUESTIONS.find((q) => q.label === 'Needed before daily use');
@@ -28,5 +28,22 @@ describe('what the survey offers as coming', () => {
     expect(offered.filter((o) => refused.some((r) => o.includes(r)))).toEqual([]);
     // The two refusals the survey offered before, by its own words.
     expect(offered.filter((o) => /stream overlay|changing the layout/.test(o))).toEqual([]);
+  });
+});
+
+describe('a question whose list changed', () => {
+  test('takes a new id, so its answers are not counted against the old list', () => {
+    // q15 kept its id when six of its options were replaced, and the panel drew the new options as
+    // shares of respondents who had answered the old ones (#548).
+    const ids = QUESTIONS.map((q) => q.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids.filter((id) => RETIRED.some((r) => r.id === id))).toEqual([]);
+    expect(NEEDED?.id).not.toBe('q15');
+  });
+
+  test('is still numbered by its place in the form, and the API refuses the retired id', () => {
+    expect(QUESTIONS.map(questionNumber)).toEqual(QUESTIONS.map((_, i) => String(i + 1)));
+    expect(NEEDED ? questionNumber(NEEDED) : '').toBe('15');
+    expect(parseSubmission({ q15: ['A stream overlay'] })).toBeNull();
   });
 });
