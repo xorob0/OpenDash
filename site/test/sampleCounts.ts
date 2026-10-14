@@ -20,6 +20,7 @@ export const SAMPLE_COUNTS: Counts = {
   barFields: 10,
   pitWallPages: 3,
   pitWallZonePages: 11,
+  pitWallWideZonePages: 6,
   stripShapes: 62,
   ledProfiles: 158,
   flags: 15,

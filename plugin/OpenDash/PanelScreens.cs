@@ -11,11 +11,15 @@ using System.Linq;
 
 namespace OpenDashPlugin
 {
-    /// <summary>What a screen's card says about it: SimHub has it, SimHub has not read it yet, or it is gone.</summary>
+    /// <summary>What a screen's card says about it: SimHub has it, or it is gone.</summary>
+    /// <remarks>
+    /// There was a third, "Restart SimHub to load it", for a folder written in this session, on the belief that
+    /// SimHub reads its dashboard list once at startup. It watches DashTemplates and lists a new folder two
+    /// seconds after it is written (#664), so a folder that is there is in SimHub.
+    /// </remarks>
     public enum ScreenState
     {
         InSimHub,
-        Restart,
         Missing,
     }
 
@@ -84,8 +88,8 @@ namespace OpenDashPlugin
         public const string InSimHub = "In SimHub";
 
         /// <summary>A card's state, and the title of the fix box under it: the dashboard's folder is gone. One
-        /// word for the one state, on the card and in the box, as PanelCopy.RestartToLoad is one phrase;
-        /// Home's screen line draws this constant too, so the three say it alike.</summary>
+        /// word for the one state, on the card and in the box; Home's screen line draws this constant too, so the
+        /// three say it alike.</summary>
         public const string Missing = "Missing";
 
         /// <summary>The fix box under a screen whose dashboard is gone, titled as its card is; its detail is
@@ -107,20 +111,11 @@ namespace OpenDashPlugin
             return OwnsSettings(screen) ? MissingDetail : null;
         }
 
-        /// <summary>The step after the restart, under PanelCopy.RestartToLoad: SimHub lists the dashboard
-        /// under the screen's name, so that is the name to look for. The panel's one phrasing of the step, on the
-        /// Screens fix box, Home's issue and the Updates row alike: "its display", since Home's list and the
-        /// Updates table have no display for "this" to point at.</summary>
-        public static string RestartDetail(string name)
+        /// <summary>The state a card shows: a folder that is there is in SimHub, which lists it within seconds of
+        /// its being written (#664).</summary>
+        public static ScreenState StateOf(bool installed)
         {
-            return "Then assign \"" + name + "\" to its display in Dash Studio.";
-        }
-
-        /// <summary>The state a card shows. A missing folder wins, because restarting will not bring it back.</summary>
-        public static ScreenState StateOf(bool installed, bool restart)
-        {
-            if (!installed) return ScreenState.Missing;
-            return restart ? ScreenState.Restart : ScreenState.InSimHub;
+            return installed ? ScreenState.InSimHub : ScreenState.Missing;
         }
 
         public static string StateLabel(ScreenState state)
@@ -128,18 +123,16 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case ScreenState.Missing: return Missing;
-                case ScreenState.Restart: return PanelCopy.RestartToLoad;
                 default: return InSimHub;
             }
         }
 
-        /// <summary>The state's dot and ink: green in SimHub, amber waiting for a restart, red when gone.</summary>
+        /// <summary>The state's dot and ink: green in SimHub, red when gone.</summary>
         public static string StateHex(ScreenState state)
         {
             switch (state)
             {
                 case ScreenState.Missing: return Theme.StatusFailed;
-                case ScreenState.Restart: return Theme.Caution;
                 default: return Theme.StatusUpToDate;
             }
         }
@@ -298,11 +291,11 @@ namespace OpenDashPlugin
         public const string KeepTooltip = "Keeps this screen.";
         public const string RemoveItButton = "Remove it";
 
-        /// <summary>After a remove: SimHub reads its list at startup, so the step left is named, and the list
-        /// named by where the driver meets it.</summary>
+        /// <summary>After a remove, which leaves no step: SimHub takes the dashboard out of Dash Studio by itself,
+        /// two seconds after its folder goes (#664).</summary>
         public static string Removed(string name)
         {
-            return "Removed " + name + ". Restart SimHub to take its dashboard out of Dash Studio.";
+            return "Removed " + name + ".";
         }
 
         /// <summary>A remove whose folder stayed: "removed", as the sheet says, and the reason in the log, as

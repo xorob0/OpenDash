@@ -7,10 +7,13 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { rect } from '../src/design/geometry.ts';
+import { MODULES } from '../src/modules/index.ts';
 import { sectorColour, sectorFields } from '../src/second/sectors.ts';
-import { DELTA_WIDEST } from '../src/second/values.ts';
+import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
+import { DELTA_WIDEST, hasTime, sectorLast } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import type { TextItem } from '../src/generator.ts';
+import { walkItems } from '../src/walk.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
 import { evalNcalc } from './ncalcEval.ts';
 
@@ -109,5 +112,51 @@ describe('a sector delta past a hundred seconds', () => {
       const drawn = evalNcalc(formula, frame(seconds));
       expect({ seconds, drawn, fits: widthAsDrawn(label, String(drawn)) <= widthAsDrawn(label, label.widest!) }).toEqual({ seconds, drawn: `S1 · ${text}`, fits: true });
     }
+  });
+});
+
+/**
+ * #614: before a sector is timed, `sectorDelta` is nought less nought, and the delta page and the pit
+ * wall's panel drew it `+0.00`, a sector driven exactly to your best, on every out-lap. The label of
+ * a narrow zone already said nothing there; the fields now say so too.
+ */
+describe('a sector delta with nothing to compare', () => {
+  const LAST = 'DataCorePlugin.GameData.Sector1LastLapTime';
+  const BEST = 'DataCorePlugin.GameData.Sector1BestTime';
+  /** No time yet, a time with no best to hold it against, and SimHub's zero for a sector not yet run. */
+  const EMPTY: readonly Record<string, number>[] = [{}, { [LAST]: 30.12 }, { [LAST]: 0, [BEST]: 30 }, { [LAST]: 0, [BEST]: 0 }];
+
+  /** The sector-one delta of the delta page, in a zone, and of the pit wall's panel, wide enough for six. */
+  const deltas = (): TextItem[] => {
+    const page = MODULES.find((m) => m.id === 'delta')!;
+    const items = [...walkItems(page.build({ frame: rect(0, 0, SHAPE_ARCHETYPES.wide.width, SHAPE_ARCHETYPES.wide.height), density: 'zone', prefix: 'delta.' }))];
+    const field = items.find((i): i is TextItem => i.kind === 'text' && i.name === 'delta.s1.value');
+    const panel = row(1248).find((i) => i.name === 'p.delta1.value');
+    if (field === undefined || panel === undefined) throw new Error('no sector-one delta to test');
+    return [field, panel];
+  };
+
+  test('draws the placeholder, not a signed zero', () => {
+    for (const item of deltas()) {
+      const formula = String(item.bindings?.Text?.formula);
+      for (const props of EMPTY) expect({ item: item.name, props, drawn: evalNcalc(formula, props) }).toEqual({ item: item.name, props, drawn: '--' });
+      // And the figure once there is one.
+      expect({ item: item.name, drawn: evalNcalc(formula, { [LAST]: 29.83, [BEST]: 30.12 }) }).toEqual({ item: item.name, drawn: '−0.29' });
+      expect({ item: item.name, drawn: evalNcalc(formula, { [LAST]: 30.12, [BEST]: 30.12 }) }).toEqual({ item: item.name, drawn: '+0.00' });
+    }
+  });
+
+  test('draws it in the sector colour, which is dim while the sector has no time', () => {
+    // Read off the formula rather than evaluated, since the purple branch asks SimHub for the
+    // session's best split, which the evaluator does not answer.
+    expect(sectorColour(1).startsWith(`if(!(${hasTime(sectorLast(1))}), '${ds.color.text.dim}'`)).toBe(true);
+    for (const item of deltas()) expect({ item: item.name, colour: item.bindings?.TextColor?.formula }).toEqual({ item: item.name, colour: sectorColour(1) });
+  });
+
+  test('and the label of the narrow form is the bare sector number until there is a delta', () => {
+    const label = row(240).find((i) => i.name === 'p.s1.label')!;
+    const formula = String(label.bindings?.Text?.formula);
+    for (const props of EMPTY) expect({ props, drawn: evalNcalc(formula, props) }).toEqual({ props, drawn: 'S1' });
+    expect(evalNcalc(formula, { [LAST]: 29.83, [BEST]: 30.12 })).toBe('S1 · −0.29');
   });
 });

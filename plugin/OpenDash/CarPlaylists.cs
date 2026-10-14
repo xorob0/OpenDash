@@ -93,6 +93,22 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>
+        /// The dashboards SimHub lists now, by code (the folder under DashTemplates), compared as Windows compares
+        /// paths. SimHub reads that list again two seconds after anything in DashTemplates changes (#664).
+        /// </summary>
+        public static ISet<string> Listed()
+        {
+            var listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var dashboards = GraphicalDashPlugin.GetSettings();
+            if (dashboards == null || dashboards.Items == null) return listed;
+            foreach (var item in dashboards.Items.ToList())
+            {
+                if (item != null && item.Code != null) listed.Add(item.Code);
+            }
+            return listed;
+        }
+
         private sealed class Live
         {
             public CarPlaylistDevice Read;
@@ -102,16 +118,7 @@ namespace OpenDashPlugin
         private static CarPlaylistPlan Apply(IReadOnlyList<ScreenInstance> rig, IEnumerable<PackageEntry> catalogue)
         {
             var entries = (catalogue ?? Enumerable.Empty<PackageEntry>()).ToList();
-            var listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var dashboards = GraphicalDashPlugin.GetSettings();
-            if (dashboards != null && dashboards.Items != null)
-            {
-                foreach (var item in dashboards.Items.ToList())
-                {
-                    if (item != null && item.Code != null) listed.Add(item.Code);
-                }
-            }
-
+            var listed = Listed();
             var live = Devices();
             var plan = PanelCarPlaylist.Plan(
                 rig,

@@ -5,7 +5,7 @@
  * accepts and the admin panel counts, with nothing retyped.
  */
 import { useState } from 'react';
-import { OTHER_PREFIX, QUESTIONS, SURVEY, questionNumber, type Question } from '../../lib/survey';
+import { HONEYPOT, OTHER_PREFIX, QUESTIONS, SURVEY, questionNumber, type Question } from '../../lib/survey';
 import styles from './SurveyForm.module.css';
 
 type Draft = Record<string, string | string[]>;
@@ -16,7 +16,9 @@ const asText = (v: string | string[] | undefined): string => (typeof v === 'stri
 export function SurveyForm() {
   const [draft, setDraft] = useState<Draft>({});
   const [otherText, setOtherText] = useState<Record<string, string>>({});
-  const [state, setState] = useState<'editing' | 'sending' | 'done' | 'failed'>('editing');
+  const [state, setState] = useState<'editing' | 'sending' | 'done' | 'failed' | 'throttled'>('editing');
+  /** The honeypot's value: a person never sees the field, so anything in it was typed by a script. */
+  const [trap, setTrap] = useState('');
 
   const set = (id: string, value: string | string[]) => setDraft((d) => ({ ...d, [id]: value }));
 
@@ -51,9 +53,9 @@ export function SurveyForm() {
       const res = await fetch('/api/survey', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(payload()),
+        body: JSON.stringify(trap ? { ...payload(), [HONEYPOT]: trap } : payload()),
       });
-      setState(res.ok ? 'done' : 'failed');
+      setState(res.ok ? 'done' : res.status === 429 ? 'throttled' : 'failed');
     } catch {
       setState('failed');
     }
@@ -140,6 +142,13 @@ export function SurveyForm() {
         </section>
       ))}
 
+      <div className={styles.trap} aria-hidden="true">
+        <label>
+          Leave this empty
+          <input type="text" name={HONEYPOT} tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} />
+        </label>
+      </div>
+
       <div className={styles.submit}>
         <button type="button" className={styles.send} onClick={send} disabled={state === 'sending' || answered === 0}>
           {state === 'sending' ? 'Sending…' : 'Send my answers'}
@@ -148,6 +157,9 @@ export function SurveyForm() {
           {answered} of {QUESTIONS.length} answered. Blanks are allowed.
         </p>
         {state === 'failed' ? <p className={styles.failed}>That did not go through. Your answers are still here: try again.</p> : null}
+        {state === 'throttled' ? (
+          <p className={styles.failed}>Too many sends from your address in the last hour. Your answers are still here: try again later.</p>
+        ) : null}
       </div>
     </div>
   );

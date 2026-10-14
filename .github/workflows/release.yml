@@ -48,11 +48,13 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Test
-        run: bun test
-
+      # Built before the tests, which read build/ and fail rather than skip when it is missing, as in
+      # ci.yml (#909).
       - name: Build dashboard packages
         run: bun run build --all-themes
+
+      - name: Test
+        run: bun test
 
       # What the plugin job embeds, and only that. The font licence is not here because it does not
       # need to be: every .simhubdash carries its own OFL.txt beside its faces, and

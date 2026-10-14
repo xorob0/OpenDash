@@ -917,7 +917,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_dashboard_row_says_its_state_in_the_install_words()
         {
-            var current = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, false);
+            var current = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true);
             Assert.Equal("Rim", current.Name);
             Assert.Equal("dashboard", current.Kind);
             Assert.Equal("0.5.0", current.Version);
@@ -927,7 +927,7 @@ namespace OpenDashPlugin.Tests
             Assert.Null(current.Tooltip);
             Assert.False(current.OffersUpdate);
 
-            var older = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2"), true, false);
+            var older = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2"), true);
             Assert.Equal("Update available", older.State);
             Assert.Equal(Theme.StatusUpdateAvailable, older.StateHex);
             Assert.Equal("0.4.2", older.Version);
@@ -935,13 +935,13 @@ namespace OpenDashPlugin.Tests
 
             const string edited = "You have edited it. Reinstall everything replaces it.";
             Assert.Equal(edited, PanelUpdates.EditedTooltip);
-            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", true), true, false).Tooltip);
+            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", true), true).Tooltip);
             // Either fact alone is the driver's work.
-            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: true, heldBack: false), true, false).Tooltip);
-            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: false, heldBack: true), true, false).Tooltip);
+            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: true, heldBack: false), true).Tooltip);
+            Assert.Equal(edited, PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpdateAvailable, "0.4.2", edited: false, heldBack: true), true).Tooltip);
             Assert.Equal("Reinstall everything brings it up to date.", PanelUpdates.BringsItTo(null));
 
-            var none = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.NotInstalled, null), null, null);
+            var none = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.NotInstalled, null), null);
             Assert.Equal("Not installed", none.State);
             Assert.Equal(Theme.TextLabel, none.StateHex);
             Assert.Equal(Theme.StatusNotInstalled, none.DotHex);
@@ -950,26 +950,26 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A folder that has gone outranks everything, as the Screens card and Home read it, then a
-        /// failure, then one SimHub has not loaded yet, which is said only when the shell's facts know it. The restart is said in the panel's one
-        /// phrase for it, which wraps in the state column where it does not fit one line, and the hover says
-        /// only the step after it, never the state beside it again.</summary>
+        /// failure, then the installer's own status. There is no row for a dashboard SimHub "has not loaded yet":
+        /// SimHub lists a folder two seconds after it is written (#664), and the row used to say "Restart SimHub to
+        /// load it" for every folder written in this session.</summary>
         [Fact]
-        public void A_dashboard_row_puts_a_missing_folder_then_a_failure_then_a_restart_first()
+        public void A_dashboard_row_puts_a_missing_folder_then_a_failure_first()
         {
             // A failed install whose folder has gone is Missing on all three pages: one state, one word.
-            var failedAndGone = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), false, true);
+            var failedAndGone = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), false);
             Assert.Equal(PanelUpdates.Missing, failedAndGone.State);
-            Assert.Equal(PanelScreens.StateLabel(PanelScreens.StateOf(false, true)), failedAndGone.State);
+            Assert.Equal(PanelScreens.StateLabel(PanelScreens.StateOf(false)), failedAndGone.State);
             var gone = new AttentionInput();
-            gone.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = false, AddedSinceStart = true });
+            gone.Screens.Add(new AttentionScreen { Name = "Rim", Namespace = "Rim", Installed = false });
             Assert.StartsWith(PanelAttention.ScreenMissing, System.Linq.Enumerable.Single(PanelAttention.Find(gone)).Id);
 
-            var failed = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), true, true);
+            var failed = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.Failed), true);
             Assert.Equal("Install failed", failed.State);
             Assert.Equal(Theme.StatusFailed, failed.StateHex);
             Assert.Equal("See SimHub's log.", failed.Tooltip);
 
-            var missing = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), false, true);
+            var missing = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), false);
             Assert.Equal("Missing", missing.State);
             Assert.Equal("Missing", PanelUpdates.Missing);
             Assert.Equal(PanelScreens.Missing, PanelUpdates.Missing);
@@ -977,21 +977,14 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(string.Empty, missing.Version);
             Assert.Equal("Reinstall everything installs it again.", missing.Tooltip);
 
-            var waiting = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true, true);
-            // The panel's one phrase for the state, which drops the table's old "Waiting for a restart".
-            Assert.Equal("Restart SimHub to load it", waiting.State);
-            Assert.Equal(PanelCopy.RestartToLoad, waiting.State);
-            Assert.Equal(Theme.Caution, waiting.StateHex);
-            Assert.Equal("0.5.0", waiting.Version);
-            Assert.Equal("Then assign \"Rim\" to its display in Dash Studio.", waiting.Tooltip);
-            Assert.DoesNotContain("Restart SimHub", waiting.Tooltip);
-            // About 140 of the 135 the dot leaves it, so the phrase wraps "it" to a second line: the cell wraps
-            // (state.TextWrapping in UpdatesTableRow, pinned by The_table_and_cards_wrap_and_stretch_rather_than_clip)
-            // and the ruling has the phrase wrap rather than be trimmed.
-            Assert.True(StateWidth(PanelCopy.RestartToLoad) > PanelUpdates.TableStateRoom, "the measure tells a state that wraps from one that fits");
+            // A folder written a moment ago is the installer's status, whatever wrote it.
+            var written = PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), true);
+            Assert.Equal("Up to date", written.State);
+            Assert.Equal("0.5.0", written.Version);
+            Assert.Null(typeof(PanelUpdates).GetMethod("AfterRestart"));
 
-            // Unknown facts say nothing of a restart.
-            Assert.Equal("Up to date", PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), null, null).State);
+            // Unknown facts say the installer's status.
+            Assert.Equal("Up to date", PanelUpdates.DashboardRow(Rim, Package(InstallStatus.UpToDate), null).State);
         }
 
         /// <summary>
@@ -1032,30 +1025,30 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void A_screen_this_build_ships_nothing_for_says_so()
         {
-            var inSimHub = PanelUpdates.DashboardRow(Rim, null, true, false);
+            var inSimHub = PanelUpdates.DashboardRow(Rim, null, true);
             Assert.Equal("Installed", inSimHub.State);
             Assert.Equal(Theme.StatusUpToDate, inSimHub.StateHex);
             Assert.Equal(Theme.StatusUpToDate, inSimHub.DotHex);
             Assert.Equal("This build ships no 1280 × 480 face.", inSimHub.Tooltip);
             Assert.Equal(string.Empty, inSimHub.Version);
-            Assert.Equal("Missing", PanelUpdates.DashboardRow(Rim, null, false, false).State);
-            var unread = PanelUpdates.DashboardRow(Rim, null, null, null);
+            Assert.Equal("Missing", PanelUpdates.DashboardRow(Rim, null, false).State);
+            var unread = PanelUpdates.DashboardRow(Rim, null, null);
             Assert.Equal("Unknown", unread.State);
             Assert.Equal(Theme.TextLabel, unread.StateHex);
             var pitWall = new ScreenInstance { Name = "Pit", Kind = Contract.KindPitWall, Width = 1920, Height = 1080 };
-            Assert.Equal("This build ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null, null).Tooltip);
+            Assert.Equal("This build ships no 1920 × 1080 pit wall.", PanelUpdates.DashboardRow(pitWall, null, null).Tooltip);
             // A slots screen in the Screens page's words: a square one is a round screen and a rectangular one a
             // card face (PanelScreens.KindOf, CardsCaption), never "no 480 × 480 round." nor a third name. A
             // release build carries no slots package, so a migrated rectangular one always shows this hover.
             var round = new ScreenInstance { Name = "Round", Kind = Contract.KindSlots, Width = 480, Height = 480 };
-            Assert.Equal("This build ships no 480 × 480 round screen.", PanelUpdates.DashboardRow(round, null, null, null).Tooltip);
+            Assert.Equal("This build ships no 480 × 480 round screen.", PanelUpdates.DashboardRow(round, null, null).Tooltip);
             var cards = new ScreenInstance { Name = "Cards", Kind = Contract.KindSlots, Width = 1280, Height = 480 };
-            Assert.Equal("This build ships no 1280 × 480 card face.", PanelUpdates.DashboardRow(cards, null, null, null).Tooltip);
+            Assert.Equal("This build ships no 1280 × 480 card face.", PanelUpdates.DashboardRow(cards, null, null).Tooltip);
             Assert.Equal("round screen", PanelUpdates.RoundScreen);
             Assert.Equal("card face", PanelUpdates.CardFace);
             // A size not known is left out, never "0 × 0".
             var unsized = new ScreenInstance { Name = "Phone", Kind = Contract.KindCompanion };
-            Assert.Equal("This build ships no companion.", PanelUpdates.DashboardRow(unsized, null, null, null).Tooltip);
+            Assert.Equal("This build ships no companion.", PanelUpdates.DashboardRow(unsized, null, null).Tooltip);
             Assert.DoesNotContain("0 × 0", PanelUpdates.ShipsNo(new ScreenInstance { Kind = Contract.KindFace, Width = 1280 }));
         }
 
@@ -1945,14 +1938,18 @@ namespace OpenDashPlugin.Tests
                 "applyWaiting = true; if (Check(manual: true)) return; applyWaiting = false;",
                 "if (release == null) { UpdatesDrawCard(); UpdatesRefreshCheck(); Say(UpdateWording.NothingToApply, false); return; }",
                 "plugin.Installer.Refresh();",
-                "var edited = plugin.Installer.EditedFolders;",
-                "var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited), onRestart: release.PluginAsset() != null);",
+                "var replacing = UpdatePlan.Edited(plugin.Installer.Packages, release);",
+                "var edited = replacing.All;",
+                "var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(replacing.Now), UpdatesNames(replacing.OnRestart));",
                 "if (press == PressOutcome.Ask) { UpdatesAsk(updatesCardLine, question); return; }",
                 "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
                 "var started = plugin.ApplyUpdate(release, replaceEdited, report, outcome =>",
                 "if (!started) { Say(PanelMessage.Caution(PanelWriteGate.WhileUpdating)); return; }",
                 "UpdatesDrawCard(); UpdatesRefreshCheck();");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(apply, @"var replaceEdited ="));
+            // When the question says the edited ones are replaced is the plan's, never whether the release carries
+            // the plugin: one that publishes its packages beside it replaces them on the press (#673).
+            Assert.DoesNotContain("PluginAsset()", apply);
 
             InOrder(Method("private void Reinstall()"), "if (UpdatesHeld) return;", "UpdatesReadThen(ReinstallRead);");
             var reinstall = Method("private void ReinstallRead()");
@@ -2150,8 +2147,8 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("for (var i = 0; i < strips.Count; i++) drawn.Add(UpdatesStripRow(strips[i].Key, stripRows[i], versionWidth, painters));", lights);
             Assert.Contains("if (flagBoxPlan != null) drawn.Add(UpdatesFlagBoxRow(flagBoxPlan, flagBoxRow, versionWidth));", lights);
 
-            // The restart is known only from the shell's facts, and a row fed none never says it.
-            Assert.Contains("var row = PanelUpdates.DashboardRow(screen, package, facts == null ? null : facts.Installed, facts == null ? null : facts.AddedSinceStart);", Method("private IList<KeyValuePair<ScreenInstance, UpdatesRow>> UpdatesDashboardRows()"));
+            // A missing folder is known only from the shell's facts, and a row fed none never says it.
+            Assert.Contains("var row = PanelUpdates.DashboardRow(screen, package, facts == null ? null : facts.Installed);", Method("private IList<KeyValuePair<ScreenInstance, UpdatesRow>> UpdatesDashboardRows()"));
 
             var row = Method("private static Border UpdatesTableRow(");
             Assert.Contains("paint = current => { version.Text = current.Version; stacked.Text = PanelUpdates.VersionInName(versionWidth, current.Version); state.Text = current.State; state.Foreground = Ui.Brush(current.StateHex); dot.Fill = Ui.Brush(current.DotHex); border.ToolTip = current.Tooltip; }; paint(row); return border;", row);
@@ -2264,7 +2261,7 @@ namespace OpenDashPlugin.Tests
             var names = Method("private IReadOnlyCollection<string> UpdatesNames(IEnumerable<string> folders)");
             Assert.Contains("var screens = Settings.RigScreens(); return (folders ?? Enumerable.Empty<string>()).Select(folder => PanelUpdates.ScreenName(screens, folder)).ToList();", names);
             // Both questions name what they replace through UpdatesNames, never the installer's folders.
-            Assert.Contains("UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited),", Method("private void ApplyUpdate()"));
+            Assert.Contains("UpdateWording.ReplaceEditedQuestion(UpdatesNames(replacing.Now), UpdatesNames(replacing.OnRestart));", Method("private void ApplyUpdate()"));
             Assert.Contains("PanelUpdates.ReinstallQuestion(UpdatesNames(edited));", Method("private void ReinstallRead()"));
 
             Assert.Contains("foreach (var target in ledDevices.Targets) { if (target != null && target.Id != null) devices[target.Id] = target.Name;", Method("private IDictionary<string, string> UpdatesDevices()"));

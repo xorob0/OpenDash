@@ -80,7 +80,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>Every screen on the rig with its row: the installer's status for the screen's folder, and
-        /// whether SimHub has it and has loaded it (the shell's facts, from the last Go).</summary>
+        /// whether SimHub has it (the shell's facts, from the last Go).</summary>
         private IList<KeyValuePair<ScreenInstance, UpdatesRow>> UpdatesDashboardRows()
         {
             var rows = new List<KeyValuePair<ScreenInstance, UpdatesRow>>();
@@ -90,7 +90,7 @@ namespace OpenDashPlugin
                 if (screen == null) continue;
                 var package = packages.FirstOrDefault(p => string.Equals(p.FolderName, screen.Folder, StringComparison.OrdinalIgnoreCase));
                 var facts = ScreenFacts(screen.Namespace);
-                var row = PanelUpdates.DashboardRow(screen, package, facts == null ? null : facts.Installed, facts == null ? null : facts.AddedSinceStart);
+                var row = PanelUpdates.DashboardRow(screen, package, facts == null ? null : facts.Installed);
                 rows.Add(new KeyValuePair<ScreenInstance, UpdatesRow>(screen, row));
             }
             return rows;

@@ -1324,6 +1324,35 @@ namespace OpenDashPlugin.Tests
             Assert.Null(settings.FlagBoxGear);
             Assert.Null(settings.FlagBoxOilTemp);
             Assert.Null(settings.FlagBoxWaterTemp);
+
+            // And the box it was set for is still on the rig: the scalars are what says this file was
+            // saved, so the panel the old defaults had working is kept rather than read as a new install's
+            // empty rig. #578.
+            Assert.Equal(new[] { 1 }, settings.MatrixPanels());
+            Assert.Equal("Matrix 1", settings.MatrixName(1));
+        }
+
+        /// <summary>
+        /// Any one of the legacy flag box settings is a saved file, on its own and with nothing else in it.
+        /// </summary>
+        /// <remarks>
+        /// The migration empties the scalars into the panels before the panels are named, so whether the
+        /// file was saved has to be asked before it runs, or the one evidence such a file carries is gone
+        /// by the time anything reads it. #578.
+        /// </remarks>
+        [Theory]
+        [InlineData("{\"FlagBoxCriticalOnly\":false}")]
+        [InlineData("{\"FlagBoxGear\":true}")]
+        [InlineData("{\"FlagBoxOilTemp\":0}")]
+        [InlineData("{\"FlagBoxWaterTemp\":110}")]
+        public void A_file_carrying_only_a_legacy_flag_box_setting_keeps_its_box(string json)
+        {
+            var settings = JsonSerializer.Deserialize<OpenDashSettings>(json);
+            settings.Normalise();
+
+            Assert.Equal(new[] { 1 }, settings.MatrixPanels());
+            Assert.Equal("gear", settings.MatrixShownRest(1));
+            Assert.True(settings.MatrixShowsFlags(1));
         }
 
         [Fact]

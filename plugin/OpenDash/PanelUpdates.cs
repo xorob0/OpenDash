@@ -695,16 +695,14 @@ namespace OpenDashPlugin
         /// build ships no package for it: DashboardInstaller.Plan leaves such a folder exactly as it is, so
         /// Reinstall everything does not write it.</param>
         /// <param name="installed">Whether the folder is in DashTemplates, or null when unknown.</param>
-        /// <param name="waitsForRestart">Whether SimHub has yet to load it (ScreenFacts.AddedSinceStart).</param>
         /// <remarks>
         /// A folder that has gone outranks everything, in the failure ink, as the Screens card and Home say of it
-        /// even after a failed install; then a failure; then one SimHub has not loaded yet, known only when the shell's facts say so; then the installer's own status. The
-        /// state words are held here (<see cref="Missing"/>), except the restart's, which is the panel's one
-        /// phrase for that state (PanelCopy.RestartToLoad) and wraps to a second line in the cell. A screen this build ships nothing for is said from the facts alone -- installed
+        /// even after a failed install; then a failure; then the installer's own status. The state words are held
+        /// here (<see cref="Missing"/>). A screen this build ships nothing for is said from the facts alone -- installed
         /// in the installed ink, as the Screens card draws it, or "Unknown" while the facts are not read --
         /// with a tooltip that says why no press here changes it. A hover never repeats the state beside it.
         /// </remarks>
-        public static UpdatesRow DashboardRow(ScreenInstance screen, PackageStatus package, bool? installed, bool? waitsForRestart)
+        public static UpdatesRow DashboardRow(ScreenInstance screen, PackageStatus package, bool? installed)
         {
             var name = screen == null ? string.Empty : screen.Name;
             var version = VersionText(package == null ? null : package.InstalledVersion);
@@ -725,10 +723,6 @@ namespace OpenDashPlugin
             {
                 return Row(name, DashboardKind, version, PanelCopy.InstallFailed, Theme.StatusFailed, SeeLog);
             }
-            if (waitsForRestart == true)
-            {
-                return Row(name, DashboardKind, version, PanelCopy.RestartToLoad, Theme.Caution, AfterRestart(name));
-            }
             switch (package.Status)
             {
                 case InstallStatus.UpToDate:
@@ -744,13 +738,6 @@ namespace OpenDashPlugin
         /// <summary>A missing dashboard's tooltip: the press that puts it back, since the state beside it
         /// already says it is missing.</summary>
         public const string MissingTooltip = PanelConfirmation.ReinstallLabel + " installs it again.";
-
-        /// <summary>A dashboard SimHub has not loaded yet: the step after the restart the state already names, in
-        /// the words the Screens fix box and Home's issue use for it (PanelScreens.RestartDetail).</summary>
-        public static string AfterRestart(string name)
-        {
-            return PanelScreens.RestartDetail(name);
-        }
 
         public const string NotInstalledTooltip = PanelConfirmation.ReinstallLabel + " installs it.";
 

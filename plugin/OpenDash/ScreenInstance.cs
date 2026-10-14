@@ -255,8 +255,13 @@ namespace OpenDashPlugin
         {
             var slot = Contract.PitWallZoneSlotByKey(key);
             if (slot == null) return;
-            if (PitWallZones == null) PitWallZones = new Dictionary<string, int>(StringComparer.Ordinal);
-            PitWallZones[key] = Normalised(slot, page);
+            // A new dictionary rather than a write into this one: the zone's delegate reads it on SimHub's thread
+            // while the panel sets it, and a save's copy walks it (#572).
+            var zones = PitWallZones == null
+                ? new Dictionary<string, int>(StringComparer.Ordinal)
+                : new Dictionary<string, int>(PitWallZones, StringComparer.Ordinal);
+            zones[key] = Normalised(slot, page);
+            PitWallZones = zones;
         }
 
         /// <summary>How this companion draws a flag: off, the strip at the foot, or over the module.</summary>

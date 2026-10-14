@@ -62,6 +62,14 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      # Every theme, as the release builds: the plugin tests hold the embedded packages to the whole
+      # catalogue, and a push to main or a plugin-only branch touches no theme. Before the tests, which
+      # read build/ for the manifest, the profiles and the packages themselves, and which fail here
+      # rather than skip when it is missing (scripts/buildOutput.ts). Built after them, as it was
+      # until #909, every one of those tests was skipped or passed having asserted nothing.
+      - name: Build dashboard packages
+        run: bun run build --all-themes
+
       # The log of a red run says little once a rerun has gone green, and a test that timed out prints
       # no assertion at all, so the run keeps a JUnit report: every test's duration, and the failure
       # text of every test that failed, "test timed out" included. It is written outside the tree and
@@ -76,11 +84,6 @@ jobs:
           name: opendash-test-report
           path: ${{ runner.temp }}/test-report.xml
           if-no-files-found: warn
-
-      - name: Build dashboard packages
-        # Every theme, as the release builds: the plugin tests hold the embedded packages to the whole
-        # catalogue, and a push to main or a plugin-only branch touches no theme.
-        run: bun run build --all-themes
 
       - name: Upload dashboard packages
         uses: actions/upload-artifact@v4
@@ -211,6 +214,11 @@ jobs:
       # a file that has never existed.
       - name: Typecheck
         run: cd site && bun run typecheck
+
+      # The dash job's bun test runs site/test too, but without site/node_modules, so a test that
+      # renders a component with React skips there and runs here.
+      - name: Test
+        run: bun test site/test
 
       # next build is the step that catches a page referring to a token, a package or a module that
       # no longer exists.

@@ -40,42 +40,6 @@ namespace OpenDashPlugin
             return File.Exists(InstalledDashboard(simHubRoot, folderName));
         }
 
-        /// <summary>
-        /// Every folder in DashTemplates that holds its dashboard (IsInstalled), by name, compared as Windows
-        /// compares paths. The plugin takes this once, when Init has finished writing the rig's folders: the
-        /// templates SimHub loaded at startup, which it does not read again (docs/dev-loop.md).
-        /// </summary>
-        public static ISet<string> InstalledFolders(string simHubRoot)
-        {
-            var found = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var root = Path.Combine(simHubRoot, DashTemplates);
-            if (!Directory.Exists(root)) return found;
-            foreach (var folder in Directory.GetDirectories(root))
-            {
-                var name = Path.GetFileName(folder);
-                if (IsInstalled(simHubRoot, name)) found.Add(name);
-            }
-            return found;
-        }
-
-        /// <summary>
-        /// Whether a screen's dashboard waits for SimHub to restart: its folder is in DashTemplates now and was
-        /// not when SimHub loaded its templates, so this session created it. Null when either fact is unknown.
-        /// </summary>
-        /// <remarks>
-        /// It was the folder's and the .djson's write time against the process's start plus two minutes, which
-        /// was wrong both ways: a dashboard saved in Dash Studio, Reinstall or a screen's Edit rewrites the
-        /// .djson, and the screen read "not in SimHub yet" while SimHub listed it; and a screen added in the
-        /// first two minutes -- a first run -- was not flagged at all. A folder SimHub loaded is loaded however
-        /// often it is rewritten, and one it did not load is not, however soon it was made.
-        /// </remarks>
-        public static bool? WaitsForRestart(ISet<string> installedAtStart, string folderName, bool? installedNow)
-        {
-            if (installedNow == false) return false;
-            if (installedAtStart == null || folderName == null || installedNow == null) return null;
-            return !installedAtStart.Contains(folderName);
-        }
-
         /// <summary>DashTemplates/<folder>/<folder>.djson.metadata, the sidecar that carries DashboardVersion.</summary>
         public static string InstalledSidecar(string simHubRoot, string folderName)
         {
@@ -461,6 +425,7 @@ namespace OpenDashPlugin
                     DeleteDirectory(target);
                 }
                 Directory.Move(extracted, target);
+                StampMetadata(target, folderName, log);
                 log.Info("Installed " + folderName + " " + (result.Version ?? "(no version)") + " into " + target);
 
                 result.FontsCopied = CopyFonts(Path.Combine(target, PackageFonts), Path.Combine(simHubRoot, DashFonts), log);
@@ -476,6 +441,35 @@ namespace OpenDashPlugin
                 {
                     log.Warn("Could not remove the staging folder " + staging + ": " + ex.Message);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Stamps the metadata of a folder just moved into place, so that a running SimHub reads its title again.
+        /// </summary>
+        /// <remarks>
+        /// SimHub watches DashTemplates and lists a new folder by itself (#664), but it reads a listed dashboard's
+        /// title again only when a file inside that dashboard's folder is created or changed: its refresh takes the
+        /// folder of each changed path and refreshes the item listed there, and a deletion or a rename is not
+        /// counted at all. Install never writes inside the target. It extracts into a staging folder and moves the
+        /// whole folder in, which the watcher reports as one event on DashTemplates itself, so a folder rewritten
+        /// under a new title (a rename from the panel) would keep the old one in Dash Studio until SimHub restarts.
+        /// A new last-write time on the .djson.metadata, the file the title is read from, is a change inside the
+        /// folder. Only the time moves, and FolderFingerprint hashes content, so the folder still reads as
+        /// untouched. A stamp that fails costs the new title until a restart and nothing else, so it is logged and
+        /// the install goes on.
+        /// </remarks>
+        internal static void StampMetadata(string target, string folderName, IInstallLog log)
+        {
+            var metadata = Path.Combine(target, folderName + MetadataExtension);
+            if (!File.Exists(metadata)) return;
+            try
+            {
+                File.SetLastWriteTimeUtc(metadata, DateTime.UtcNow);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                log.Warn("Could not stamp " + metadata + ", so SimHub may list it under its old title until it restarts: " + e.Message);
             }
         }
 

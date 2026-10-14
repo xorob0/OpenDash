@@ -219,7 +219,11 @@ namespace OpenDashPlugin.Tests
         public void The_rewrite_moves_the_bars_own_names_two_fields_and_nothing_else()
         {
             var embedded = BuiltStripProfile();
-            if (embedded == null) return;
+            if (embedded == null)
+            {
+                Assert.False(OnCI, "no built 3-9-3 strip in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
 
             var bar = new LedBar { Name = "Rim", Namespace = "LedRim", Shape = "3-9-3" };
             var mine = LedBarProfile.For(bar, embedded);
@@ -527,7 +531,11 @@ namespace OpenDashPlugin.Tests
         public void A_name_is_escaped_into_the_profile()
         {
             var embedded = BuiltStripProfile();
-            if (embedded == null) return;
+            if (embedded == null)
+            {
+                Assert.False(OnCI, "no built 3-9-3 strip in " + RepoPaths.EmbeddedResources() + " or " + RepoPaths.BuildOutput());
+                return;
+            }
             var bar = new LedBar { Name = "the \"good\" one", Namespace = "LedGood", Shape = "3-9-3" };
             var mine = LedBarProfile.For(bar, embedded);
             Assert.Contains("\"Name\": \"the \\\"good\\\" one\"", mine);

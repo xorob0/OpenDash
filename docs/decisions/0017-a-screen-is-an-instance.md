@@ -163,6 +163,12 @@ not new — it is true of every install today — but it becomes visible, becaus
 something a user does mid-session rather than something that happened before they ever opened
 SimHub.
 
+*Amended 2026-10-14 (#664):* the consequence above rested on a false premise. SimHub watches
+`DashTemplates` and lists a folder written while it runs two seconds later
+([simhub-dash-format.md](../research/simhub-dash-format.md)), so a screen added mid-session is in Dash
+Studio at once. What does wait for a restart is a font the add writes into `DashFonts`, and the panel
+asks for one only then.
+
 The action list grows with the rig rather than with the catalogue. That is an improvement on today,
 where it is five entries per face size that ships whether or not the user owns one, but it means the
 list changes as screens are added, and SimHub holds bindings by action name. A removed screen's

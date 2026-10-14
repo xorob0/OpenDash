@@ -966,8 +966,8 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Docked rather than stacked, so the words have the card's width to wrap in. A card at the grid's
-        /// narrowest cannot hold every state on one line, and a state is a step a driver follows ("Restart SimHub
-        /// to load it", "Not shown in SimHub"), so it wraps to a second line and is never cut (#524, #541). The
+        /// narrowest cannot hold every state on one line, and a state is a step a driver follows ("Not shown in
+        /// SimHub"), so it wraps to a second line and is never cut (#524, #541). The
         /// line height is fixed so that the dot, centred in the first line, stays there when the words wrap.
         /// </remarks>
         private static DockPanel CardState(string state, string stateHex, double textSize, double dotSize, double lineHeight, double top)

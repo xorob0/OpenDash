@@ -11,8 +11,14 @@ using Xunit;
 namespace OpenDashPlugin.Tests
 {
     [Collection(UpdateServiceWriters.Name)]
-    public class PanelWriteGateTests
+    public class PanelWriteGateTests : IDisposable
     {
+        /// <summary>
+        /// A write this class let go has finished before the next test starts, so a test that failed before its write
+        /// ran does not leave that write counted as Busy for the next one (#1002).
+        /// </summary>
+        public void Dispose() => UpdateService.WaitForIdle(TimeSpan.FromSeconds(10));
+
         [Fact]
         public void Nothing_running_lets_a_press_write()
         {
@@ -49,11 +55,18 @@ namespace OpenDashPlugin.Tests
             var finished = new System.Threading.ManualResetEventSlim();
 
             Assert.True(service.WriteInBackground(() => { running.Set(); release.Wait(TimeSpan.FromSeconds(10)); }, failure => finished.Set()));
-            Assert.True(running.Wait(TimeSpan.FromSeconds(5)));
+            try
+            {
+                Assert.True(running.Wait(TimeSpan.FromSeconds(5)));
 
-            Assert.Equal(PanelWriteGate.WhileWriting, PanelWriteGate.Refusal(service.Applying, UpdateService.Busy));
-
-            release.Set();
+                Assert.Equal(PanelWriteGate.WhileWriting, PanelWriteGate.Refusal(service.Applying, UpdateService.Busy));
+            }
+            finally
+            {
+                // Released whatever happened above: a write left waiting holds the static write lock for its whole
+                // ten seconds, and the next test to write fails on it, which reads as two faults for one.
+                release.Set();
+            }
             Assert.True(finished.Wait(TimeSpan.FromSeconds(10)));
             Assert.Null(PanelWriteGate.Refusal(service.Applying, UpdateService.Busy));
         }
@@ -122,10 +135,18 @@ namespace OpenDashPlugin.Tests
     }
 
     /// <summary>
-    /// The tests that start writers on an UpdateService: UpdateService.Busy is static, so one class's write in
-    /// flight is another's Busy, and the two run one after the other rather than beside each other.
+    /// The tests that hand work to UpdateService's background, alone. UpdateService.Busy and its write lock are
+    /// static, so one class's write in flight is another's Busy, and the classes run one after the other rather
+    /// than beside each other.
     /// </summary>
-    [CollectionDefinition(Name)]
+    /// <remarks>
+    /// Not beside any other collection either (#1002). The work goes to the thread pool, and xUnit runs the rest of
+    /// the suite on the same pool: with every other class running, a work item queued at the start of the run sat
+    /// behind some seventy other work items and did not start for five seconds on a busy four-core runner, so a test
+    /// that waited five seconds for it to start failed with nothing wrong. The lock was free at the time; it was
+    /// the queue. Run after the others, the queue is this collection's alone.
+    /// </remarks>
+    [CollectionDefinition(Name, DisableParallelization = true)]
     public class UpdateServiceWriters
     {
         public const string Name = "UpdateService writers";

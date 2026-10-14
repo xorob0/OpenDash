@@ -6,8 +6,9 @@
  * `scripts/emulator.ts`, and the clicking is `scripts/gui.ts`; this file decides the order, holds
  * the claim on the VM while it works, and says at the end what it did.
  *
- * The order matters in two places. SimHub reads its template list once at startup, so a package
- * has to be installed before SimHub is started rather than after. And the emulator has to be
+ * The order matters in two places. SimHub reads its fonts once at startup, so a package that brings
+ * a face it does not have has to be installed before SimHub is started rather than after (its
+ * dashboard list it watches, #664). And the emulator has to be
  * running before the dash is opened, because a dash opened against a disconnected SimHub draws its
  * defaults and looks broken.
  */

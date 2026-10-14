@@ -136,7 +136,6 @@ namespace OpenDashPlugin.Tests
         public void Each_issue_wears_the_icon_of_what_it_is_about()
         {
             Assert.Equal(PanelIcons.Warning, PanelHome.IssueIcon(Issue(PanelAttention.ScreenMissing + "Face1280x480", PanelPage.Screens, "Face1280x480", PanelIssueAction.Reinstall)));
-            Assert.Equal(PanelIcons.Restart, PanelHome.IssueIcon(Issue(PanelAttention.ScreenRestart + "Face1280x480", PanelPage.Screens, "Face1280x480", PanelIssueAction.Navigate)));
             Assert.Equal(PanelIcons.Leds, PanelHome.IssueIcon(Issue(PanelAttention.StripUnselected + "LedBar1", PanelPage.Leds, "LedBar1", PanelIssueAction.CheckAgain)));
             Assert.Equal(PanelIcons.Leds, PanelHome.IssueIcon(Issue(PanelAttention.StripOutdated + "LedBar1", PanelPage.Updates, "LedBar1", PanelIssueAction.Navigate)));
             Assert.Equal(PanelIcons.Matrix, PanelHome.IssueIcon(Issue(PanelAttention.MatrixDark + "2", PanelPage.Matrix, "2", PanelIssueAction.Navigate)));
@@ -153,7 +152,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void Each_press_does_what_its_issue_asks()
         {
-            Assert.Equal(HomePress.Open, PanelHome.Press(Issue(PanelAttention.ScreenRestart + "Face850x480", PanelPage.Screens, "Face850x480", PanelIssueAction.Navigate)));
+            Assert.Equal(HomePress.Open, PanelHome.Press(Issue(PanelAttention.ScreensUnclaimed + "Face850x480", PanelPage.Screens, "Face850x480", PanelIssueAction.Navigate)));
             Assert.Equal(HomePress.Open, PanelHome.Press(Issue(PanelAttention.MatrixDark + "2", PanelPage.Matrix, "2", PanelIssueAction.Navigate)));
             Assert.Equal(HomePress.CheckAgain, PanelHome.Press(Issue(PanelAttention.StripUnselected + "LedBar1", PanelPage.Leds, "LedBar1", PanelIssueAction.CheckAgain)));
             Assert.Equal(HomePress.Reinstall, PanelHome.Press(Issue(PanelAttention.ScreenMissing + "Face850x480", PanelPage.Screens, "Face850x480", PanelIssueAction.Reinstall)));
@@ -369,13 +368,13 @@ namespace OpenDashPlugin.Tests
         {
             var face = Screen(Contract.KindFace, 1280, 480);
             var settings = new OpenDashSettings();
-            var before = PanelHome.ScreenLine(settings, face, true, false).Text;
+            var before = PanelHome.ScreenLine(settings, face, true).Text;
             face.Face.Cycle("C");
-            var after = PanelHome.ScreenLine(settings, face, true, false).Text;
+            var after = PanelHome.ScreenLine(settings, face, true).Text;
             Assert.NotEqual(before, after);
             Assert.Equal(PanelHome.ScreenShows(settings, face), after);
             face.Face.CycleBack("C");
-            Assert.Equal(before, PanelHome.ScreenLine(settings, face, true, false).Text);
+            Assert.Equal(before, PanelHome.ScreenLine(settings, face, true).Text);
         }
 
         [Fact]
@@ -434,7 +433,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Fuel · Tyres · Leaderboard · Opponents", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
             foreach (var page in Contract.PitWallPageNames) Assert.DoesNotContain(page + " page", PanelHome.ScreenShows(new OpenDashSettings(), portrait));
             // The line a Right now row draws for it, dot and all.
-            Assert.Equal("Fuel · Tyres · Leaderboard · Opponents", PanelHome.ScreenLine(new OpenDashSettings(), portrait, true, false).Text);
+            Assert.Equal("Fuel · Tyres · Leaderboard · Opponents", PanelHome.ScreenLine(new OpenDashSettings(), portrait, true).Text);
             Assert.False(PanelHome.PitWallPortrait(Screen(Contract.KindFace, 600, 686)));
             Assert.False(PanelHome.PitWallPortrait(null));
             Assert.Equal(string.Empty, PanelHome.PortraitZones(null));
@@ -467,7 +466,7 @@ namespace OpenDashPlugin.Tests
         {
             var face = Screen(Contract.KindFace, 1280, 480);
             var settings = new OpenDashSettings();
-            var missing = PanelHome.ScreenLine(settings, face, false, true);
+            var missing = PanelHome.ScreenLine(settings, face, false);
             // The Screens card's own constant, not a copy: when the card's word moves, Home's moves with it. The
             // word itself is held here too, so a Screens page that says otherwise fails Home until the two
             // pages agree on one word (voice.md, "One word per thing").
@@ -475,18 +474,13 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("Missing", missing.Text);
             Assert.Equal(Theme.StatusFailed, missing.TextHex);
             Assert.Equal(Theme.StatusFailed, missing.DotHex);
-            var restart = PanelHome.ScreenLine(settings, face, true, true);
-            // One phrase for a dashboard SimHub has not read (voice.md, "One word per thing"),
-            // the Screens card's too.
-            Assert.Equal("Restart SimHub to load it", restart.Text);
-            Assert.Equal(PanelCopy.RestartToLoad, restart.Text);
-            Assert.Equal(Theme.Caution, restart.TextHex);
-            Assert.Equal(Theme.Caution, restart.DotHex);
-            var fine = PanelHome.ScreenLine(settings, face, true, false);
+            // A folder that is there is in SimHub, which lists it two seconds after it is written (#664): there is no
+            // line for a dashboard SimHub "has not read yet", and no restart to ask for.
+            var fine = PanelHome.ScreenLine(settings, face, true);
             Assert.Equal(PanelHome.ScreenShows(settings, face), fine.Text);
             Assert.Equal(Theme.TextSecondary, fine.TextHex);
             Assert.Equal(Theme.StatusUpToDate, fine.DotHex);
-            Assert.Null(PanelHome.ScreenLine(settings, face, null, false).DotHex);
+            Assert.Null(PanelHome.ScreenLine(settings, face, null).DotHex);
         }
 
         /// <summary>
@@ -498,8 +492,7 @@ namespace OpenDashPlugin.Tests
         {
             var face = Screen(Contract.KindFace, 1280, 480);
             var settings = new OpenDashSettings();
-            Assert.Equal(PanelScreens.StateLabel(ScreenState.Restart), PanelHome.ScreenLine(settings, face, true, true).Text);
-            Assert.Equal(PanelScreens.StateLabel(ScreenState.Missing), PanelHome.ScreenLine(settings, face, false, false).Text);
+            Assert.Equal(PanelScreens.StateLabel(ScreenState.Missing), PanelHome.ScreenLine(settings, face, false).Text);
             Assert.Null(typeof(PanelHome).GetField("RestartToLoad"));
             Assert.Null(typeof(PanelScreens).GetField("RestartToLoad"));
             Assert.Null(typeof(PanelHome).GetField("Missing"));
@@ -911,7 +904,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("if (live.Count > 0) OnTick(", code);
             Assert.Contains("OnTick(() => { foreach (var screen in shown) HomePaintScreen(screen); });", code);
             Assert.Contains("if (shown.Count > 0) OnTick(", code);
-            Assert.Contains("var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart);", code);
+            Assert.Contains("var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed);", code);
             Assert.Contains("var facts = MatrixFacts(slot); var shown = facts == null ? null : facts.Shown;", code);
             Assert.Contains("var line = PanelHome.MatrixLine(slot, title, Settings.MatrixRest(slot), shown); IList<string> cells = new string[64]; if (PanelHome.MatrixDrawsGlyph(shown)) { var options = new MatrixOptions { Rest = Settings.MatrixRest(slot), Side = Settings.MatrixSide(slot), Bands = Settings.MatrixGearBands(slot), CarLadder = Settings.MatrixGearCarLadder(slot), }; cells = PanelEmulation.MatrixFrame(GlyphSheet, PanelEmulation.Idle, options); }", code);
             Assert.Contains("var picture = Ui.Matrix(cells, MatrixStyle.Home, dim);", code);
@@ -919,7 +912,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var dot = HomeDot(line.DotHex);", code);
 
             // A screen's facts, copied at build; its line and dot repainted only when they move.
-            Assert.Contains("var facts = ScreenFacts(screen.Namespace); var restart = PanelAttention.Has(issues, PanelAttention.ScreenRestart, screen.Namespace); var row = new HomeScreen { Namespace = screen.Namespace, Installed = facts == null ? null : facts.Installed, Restart = restart,", code);
+            Assert.Contains("var facts = ScreenFacts(screen.Namespace); var row = new HomeScreen { Namespace = screen.Namespace, Installed = facts == null ? null : facts.Installed,", code);
             Assert.Contains("if (painted == row.Painted) return; row.Painted = painted; HomeSetLine(row.Line, line); HomeSetDot(row.Dot, line.DotHex);", code);
             Assert.Contains("text.Text = line.Text; text.Foreground = Ui.Brush(line.TextHex);", code);
             Assert.Contains("dot.Fill = hex == null ? null : Ui.Brush(hex); dot.Visibility = hex == null ? Visibility.Hidden : Visibility.Visible;", code);
@@ -938,7 +931,7 @@ namespace OpenDashPlugin.Tests
         {
             var code = PageCode();
             Assert.Contains("private void HomePaintStrip(HomeStrip strip) { var profile = strip.Profile; var selected = strip.Selected; var cars = plugin.CarLights; var ns = strip.Bar.Namespace; var live = cars != null && PanelHome.StripLive(cars.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns), profile, selected); var run = live ? cars.Run(strip.Centre) : null; var line = PanelHome.StripLine(live, live ? cars.CarName : null, profile, selected); var runKey = run ?? string.Empty; if (runKey != strip.PaintedRun) {", code);
-            Assert.Contains("private void HomePaintScreen(HomeScreen row) { var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed, row.Restart); var painted = line.Text", code);
+            Assert.Contains("private void HomePaintScreen(HomeScreen row) { var screen = Settings.ScreenByNamespace(row.Namespace); if (screen == null) return; var line = PanelHome.ScreenLine(Settings, screen, row.Installed); var painted = line.Text", code);
 
             var ticked = new List<string>();
             foreach (var head in new[] { "void HomePaintStrip(", "void HomePaintScreen(", "void HomeSetLine(", "void HomeSetDot(" })
@@ -1114,7 +1107,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("stack.Children.Add(head); if (rows.Count == 0) { var none = Ui.Prose(PanelHome.EmptyLine(empty), PanelHome.DetailSize); none.Margin = new Thickness(PanelHome.RowPaddingX, 0, PanelHome.RowPaddingX, PanelHome.RowPaddingY + PanelHome.CardHeadPaddingBottom); stack.Children.Add(none); } foreach (var row in rows) stack.Children.Add(row); return Ui.CardBox(stack, 0);", code);
             // Each screen's row on its card, painted before the first tick.
             Assert.Contains("var row = HomeScreenRow(screen); shown.Add(row.Key); rows.Add(row.Value);", code);
-            Assert.Contains("Restart = restart, Line = HomeLineText(false), Dot = HomeDot(null), }; HomePaintScreen(row);", code);
+            Assert.Contains("Installed = facts == null ? null : facts.Installed, Line = HomeLineText(false), Dot = HomeDot(null), }; HomePaintScreen(row);", code);
             Assert.Contains("DockPanel.SetDock(row.Dot, Dock.Right); dock.Children.Add(row.Dot); dock.Children.Add(text);", code);
             // Each strip's picture in its host, painted before the first tick, and repainted on it.
             // In the kit's fixed picture, which shrinks to the card and never grows past its own size.
@@ -1351,17 +1344,17 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// The restart phrase wraps on a card and is never trimmed. Home's screen line trims (CharacterEllipsis),
-        /// so the phrase has to fit it at the narrowest card: measured in the face it is drawn in, Barlow Regular
-        /// at PanelHome.LineSize, against the card's minimum less its frame, the row's padding, and the dot and
-        /// the gap beside the line.
+        /// A state wraps on a card and is never trimmed. Home's screen line trims (CharacterEllipsis), so the state
+        /// it says has to fit it at the narrowest card: measured in the face it is drawn in, Barlow Regular at
+        /// PanelHome.LineSize, against the card's minimum less its frame, the row's padding, and the dot and the
+        /// gap beside the line. The longest was "Restart SimHub to load it", which went with #664.
         /// </summary>
         [Fact]
-        public void The_restart_phrase_fits_a_screen_line_at_the_narrowest_card()
+        public void A_screens_state_fits_a_screen_line_at_the_narrowest_card()
         {
             var room = PanelHome.CardMinWidth - 2 * PanelMetrics.BorderWeight - 2 * PanelHome.RowPaddingX - PanelHome.RowGap - PanelHome.DotSize;
-            var phrase = TrueTypeAdvances.Of(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-Regular.ttf")).Width(PanelCopy.RestartToLoad, PanelHome.LineSize);
-            Assert.True(phrase < room, "\"" + PanelCopy.RestartToLoad + "\" is " + phrase + " px on a line of " + room);
+            var phrase = TrueTypeAdvances.Of(System.IO.Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-Regular.ttf")).Width(PanelScreens.Missing, PanelHome.LineSize);
+            Assert.True(phrase < room, "\"" + PanelScreens.Missing + "\" is " + phrase + " px on a line of " + room);
             // The geometry measured is the geometry drawn: the line's size and weight, the row's padding, the
             // card's frame, and the dot and its gap.
             var code = PageCode();
@@ -1370,7 +1363,7 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("Width = PanelHome.DotSize,", code);
             Assert.Contains("Margin = new Thickness(PanelHome.RowGap, 0, 0, 0),", code);
             Assert.Contains("return Ui.CardBox(stack, 0);", code);
-            Assert.Equal(PanelCopy.RestartToLoad, PanelHome.ScreenLine(new OpenDashSettings(), new ScreenInstance { Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 }, true, true).Text);
+            Assert.Equal(PanelScreens.Missing, PanelHome.ScreenLine(new OpenDashSettings(), new ScreenInstance { Namespace = "Rim", Kind = Contract.KindFace, Width = 1280, Height = 480 }, false).Text);
         }
     }
 }

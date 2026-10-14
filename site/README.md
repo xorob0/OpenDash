@@ -127,16 +127,19 @@ Environment tab, is read by nothing: the site answers, and its sitemap comes bac
 | `NEXT_PUBLIC_SITE_URL` (build argument) | The canonical origin, no trailing slash. There is no default: unset, the metadata carries no absolute URL and the sitemap comes back empty rather than pointing at a domain this repository would have had to guess. |
 | `PORT` (environment) | Defaults to 3000. |
 | `DATABASE_URL` (environment) | PostgreSQL, for the sim racer survey — the one thing the site stores. Unset, a submission answers 503 and every other page is unaffected. |
-| `SURVEY_ADMIN_KEY` (environment) | Gates the survey results page. Unset, the results answer 503 rather than letting an empty key through. |
+| `SURVEY_ADMIN_KEY` (environment) | Gates the survey results page. Unset or shorter than 16 characters, the results answer 503 rather than letting a weak key through. |
 
 ## The survey
 
 `lib/survey.ts` holds the questions once for all three consumers: the form at `/survey-k4qf9v`, the
-validation in `app/api/survey/route.ts`, and the tallies at `/survey-admin-w7ne3p` behind the key.
+validation in `lib/surveyApi.ts` behind `app/api/survey/route.ts`, and the tallies at `/survey-admin-w7ne3p` behind the key.
 Neither page is in `lib/routes.ts`, deliberately: they are handed out, not found, so the nav, the
 sitemap and the link test do not know them, and both carry `robots: noindex`. Changing an address is
 renaming its folder. Storage is one PostgreSQL table through Prisma
 (`prisma/schema.prisma`), created on first use; `prisma generate` runs as part of `bun run generate`.
+The API takes a submission only as JSON from the site's own origin, stops reading at 64 KiB and
+throttles an address in memory; [docs/deploy.md](../docs/deploy.md) says what that means for the
+deployment, and `test/surveyApi.test.ts` holds it.
 
 A question whose options change takes a new id, and the old question moves to `RETIRED` in the same
 file. The answers already stored stay under the old id, the tallies show them on their own against

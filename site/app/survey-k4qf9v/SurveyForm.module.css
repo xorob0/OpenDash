@@ -219,6 +219,15 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* The honeypot: out of sight and out of the tab order, but in the page for a script to find. */
+.trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .failed {
   margin-top: 0.625rem;
   color: var(--color-danger-primary);
