@@ -57,10 +57,33 @@ describe('the promise', () => {
  * nouns the site counts is what a retyped number looks like, and the sources are refused one. A
  * sentence that needs the number interpolates it from a `Counts`, through `counted()` where the
  * build may be absent.
+ *
+ * A count spelled in words is the same retyped number, and is refused the same way (#821): "eleven
+ * pages" and "five parts" stood on the Screens page while the test looked only for digits. A
+ * spelled count takes a plural, so the words are matched before a plural noun, with room for one
+ * word between them as in "two round faces". That leaves "one page at a time" alone, where one is
+ * not a count, and still catches "twenty-one pages" by its tail.
  */
+const NOUNS = 'dashboards?|LED profiles?|pages?|strip shapes?|faces?|screens?|glyphs?|flags?|companions?|pit walls?|themes?|sizes?|parts?|zones?';
+const PLURALS = NOUNS.split('|')
+  .map((n) => n.replace(/\?$/, ''))
+  .join('|');
+const NUMBER_WORDS =
+  'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred';
+const TYPED = new RegExp(`(?<![×x$] )\\b\\d+ (${NOUNS})\\b`, 'g');
+const SPELLED = new RegExp(`\\b(${NUMBER_WORDS}) ([a-z]+ )?(${PLURALS})\\b`, 'gi');
+
+/** Every count a text types, in digits or in words. */
+const typedCounts = (text: string): RegExpMatchArray[] => [...text.matchAll(TYPED), ...text.matchAll(SPELLED)];
+
 describe('the counts', () => {
-  const NOUNS = 'dashboards?|LED profiles?|pages?|strip shapes?|faces?|screens?|glyphs?|flags?|companions?|pit walls?|themes?|sizes?';
-  const TYPED = new RegExp(`(?<![×x$] )\\b\\d+ (${NOUNS})\\b`, 'g');
+  test.each(['11 pages', 'eleven pages', 'Three pages', 'five parts', 'four zones', 'two round faces', 'twenty-one pages', 'One hundred LED profiles'])('%p is a typed count', (text) => {
+    expect(typedCounts(`Fill it from ${text}.`).length).toBe(1);
+  });
+
+  test.each(['showing one page at a time', 'one button per zone', 'One face, ${n} parts', '1 of ${n} pages', 'a 1920 × 480 face'])('%p is not', (text) => {
+    expect(typedCounts(text)).toEqual([]);
+  });
 
   test('no source types a count', () => {
     const offenders: string[] = [];
@@ -69,7 +92,7 @@ describe('the counts', () => {
       const text = readFileSync(f, 'utf8')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*\/\/.*$/gm, '');
-      for (const m of text.matchAll(TYPED)) {
+      for (const m of typedCounts(text)) {
         // A competitor's cell is a fact about them, read from their pages, and carries no count of ours.
         const line = text.slice(text.lastIndexOf('\n', m.index) + 1, text.indexOf('\n', m.index));
         if (/\b(lovely|dnr): cell\(/.test(line)) continue;

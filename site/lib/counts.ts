@@ -28,7 +28,10 @@ export interface Counts {
   barFields: number;
   /** The landscape pit wall's pages; the portrait one is a package of its own with one page. */
   pitWallPages: number;
+  /** The pages a standard pit wall zone can show, the web view among them. */
   pitWallZonePages: number;
+  /** The pages the one wide pit wall zone can show, a catalogue of its own. */
+  pitWallWideZonePages: number;
   stripShapes: number;
   ledProfiles: number;
   flags: number;

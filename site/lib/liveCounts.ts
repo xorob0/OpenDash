@@ -10,6 +10,7 @@ import {
   MODULES,
   PACKAGES,
   PIT_WALL_PAGES,
+  PIT_WALL_WIDE_ZONE_PAGES,
   PIT_WALL_ZONE_PAGES,
   STRIP_SHAPES,
   THEMED_PACKAGES,
@@ -32,6 +33,7 @@ export const COUNTS: Counts = {
   // The portrait pit wall is a package of its own with one page; the count is the landscape package's.
   pitWallPages: PIT_WALL_PAGES.filter((p) => p.landscape).length,
   pitWallZonePages: PIT_WALL_ZONE_PAGES.length,
+  pitWallWideZonePages: PIT_WALL_WIDE_ZONE_PAGES.length,
   stripShapes: STRIP_SHAPES.length,
   ledProfiles: LED_PROFILE_COUNT,
   flags: FLAGS.length,
