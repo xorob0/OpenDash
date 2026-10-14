@@ -74,8 +74,9 @@ A page is never scaled. It is laid out for the **shape** of the box it is given,
 secondary ranks before it shrinks its numerals, so a bigger screen shows more in each zone rather
 than more regions of the same size.
 
-Ten faces ship. Eight are rectangular and take the same five parts; the two round ones are still the
-card model, on purpose, and what they become is noted below.
+Ten faces ship. Eight are rectangular and take the same five parts, but for 800 x 286, which has no
+room for the bar; the two round ones are still the card model, on purpose, and what they become is
+noted below.
 
 | Package | Size | |
 |---|---|---|
