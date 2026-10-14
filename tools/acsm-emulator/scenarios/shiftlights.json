@@ -1,0 +1,35 @@
+{
+  // One slow sweep, 1200 to 9600 over twenty seconds, and at forty seconds a different car, the twin
+  // of the irsdk shiftlights. AC publishes no shift-light ladder: SimHub builds its lights from
+  // StaticInfo.MaxRpm and, when its "sync redline from game" setting is on, the redline it reads from
+  // the car's ai.ini [GEARS] UP. So the swap to the Mazda (MaxRpm 7200, UP 6800, five gears) is what
+  // shows whether the lights follow the car or stay where the Porsche left them.
+  "extends": "race.json",
+  "name": "Shift lights: a slow RPM sweep, then the same sweep in a different car",
+  "values": {
+    "StaticInfo.IsTimedRace": 1,
+    "Graphics.NumberOfLaps": 0,
+    "Graphics.SessionTimeLeft": 3600000,
+  },
+  "pin": {
+    "Graphics.Flags": "AC_NO_FLAG",
+    "Graphics.isInPitLane": 0,
+    "Physics.PitLimiterOn": 0,
+    "Physics.Gas": 1.0,
+    "Physics.Brake": 0.0,
+  },
+  "timeline": [
+    {"at": 0, "log": "sweep 1200-9600 against the Porsche's MaxRpm 9000 and UP 8600",
+     "driver": {"type": "rpmSweep", "min": 1200, "max": 9600, "period": 20}},
+    {"at": 0, "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "pitLimiterToggle", "enabled": false}},
+    {"at": 40, "log": "a different car: the Mazda, MaxRpm 7200, UP 6800 and five gears",
+     "set": {"StaticInfo.CarModel": "ks_mazda_mx5_cup", "StaticInfo.MaxRpm": 7200, "StaticInfo.MaxFuel": 45, "Physics.TC": 0, "Physics.Abs": 0},
+     "driver": [{"type": "rpmSweep", "min": 900, "max": 7600}, {"type": "gearFromRpm", "maxGear": 5, "redline": 7200}]},
+    {"at": 80, "log": "back to the Porsche",
+     "set": {"StaticInfo.CarModel": "ks_porsche_911_gt3_r_2016", "StaticInfo.MaxRpm": 9000, "StaticInfo.MaxFuel": 120, "Physics.TC": 0.06, "Physics.Abs": 0.2},
+     "driver": [{"type": "rpmSweep", "min": 1200, "max": 9600}, {"type": "gearFromRpm", "maxGear": 6, "redline": 9000}]},
+  ],
+  // The swap repeats, so the lights can be watched following the car more than once.
+  "loop": 120,
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Mazda MX-5 Cup",
+  "brand": "Mazda",
+  "class": "race",
+  "description": "A stand-in for the acsm-emulator's shift-light scenario: fewer gears and a lower redline than the Porsche, and no electronics.ini, so SimHub reads no TC or ABS preset.",
+  "tags": ["#Cup", "rwd", "manual"]
+}

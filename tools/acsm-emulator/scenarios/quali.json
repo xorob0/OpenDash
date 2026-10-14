@@ -1,0 +1,23 @@
+{
+  // A timed qualifying run in a car with TC and ABS at 0, the twin of the irsdk quali. SimHub names
+  // the session from Graphics.Session with AC_ taken off, in capitals: QUALIFY, not iRacing's
+  // "Lone Qualify", which is what a surface comparing session names has to survive. In a session
+  // other than a race AC's position is by best lap, and the player's is the best of the field.
+  "extends": "notc.json",
+  "name": "Timed qualifying, TC and ABS at 0",
+  "values": {
+    "Graphics.Session": "AC_QUALIFY",
+    "Graphics.SessionTimeLeft": 412000,
+    "Graphics.CompletedLaps": 4,
+    "Graphics.iBestTime": 96284,
+    "Graphics.iLastTime": 96284,
+  },
+  "pin": {
+    "Graphics.Flags": "AC_NO_FLAG",
+    "Physics.Fuel": 21.7,
+  },
+  "timeline": [
+    {"at": 0, "log": "no flag through the run", "driver": {"type": "flagCycle", "enabled": false}},
+    {"at": 0, "driver": {"type": "fuelBurn", "enabled": false}},
+  ],
+}

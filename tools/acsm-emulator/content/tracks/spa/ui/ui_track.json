@@ -1,0 +1,8 @@
+{
+  "name": "Spa",
+  "description": "A stand-in for the acsm-emulator: the one file of a track SimHub's Assetto Corsa reader reads a name from. GameData.TrackName is the folder, spa.",
+  "country": "Belgium",
+  "length": "7004m",
+  "pitboxes": "40",
+  "run": "clockwise"
+}
