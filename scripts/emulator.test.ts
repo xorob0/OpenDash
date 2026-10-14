@@ -113,13 +113,14 @@ describe('an Assetto Corsa emulator', () => {
 
   test('is asked after, launched and stopped as acs, not as iRacing\'s', () => {
     const { r, scripts } = withFakeHost(
-      (script) => (isAcQuery(script) ? { stdout: '' } : { stdout: 'launched' }),
+      (script) => (script.startsWith('$p = Get-Process ') ? { stdout: '' } : { stdout: 'launched' }),
       (host, calls) => ({ r: start(host, { scenario: 'green', sim: ASSETTO_CORSA, waitSeconds: 0 }), scripts: calls.flatMap((c) => (c.script ? [c.script] : [])) }),
     );
     // Nothing answered "running" within no seconds, so the start reports it did not appear.
     expect(r.ok).toBe(false);
     expect(scripts.some(isAcQuery)).toBe(true);
-    expect(scripts.some((s) => s.includes('IrsdkEmulator'))).toBe(false);
+    // iRacing's is asked after, to be sure it is not running beside this one, and nothing more.
+    expect(scripts.filter((s) => s.includes('IrsdkEmulator')).every((s) => s.startsWith('$p = Get-Process IrsdkEmulator '))).toBe(true);
     const launch = scripts.find(isLaunch) ?? '';
     expect(launch).toContain('C:\\Temp\\acsm-emulator\\acs.exe');
     expect(launch).toContain('green --log C:\\Temp\\acsm-emulator\\emulator.log');
@@ -169,11 +170,70 @@ describe('an emulator that cannot be asked whether it is running', () => {
   test('one that answers is still told apart: none running is stopped, one running is refused', () => {
     expect(withFakeHost((script) => (isQuery(script) ? { stdout: '' } : {}), (host) => stop(host))).toMatchObject({ ok: true, stdout: 'not running' });
     const refused = withFakeHost(
-      (script) => (isQuery(script) ? { stdout: '4242' } : { stdout: 'launched' }),
+      (script) => (isQuery(script) ? { stdout: '4242' } : script.startsWith('$p = Get-Process acs ') ? { stdout: '' } : { stdout: 'launched' }),
       (host) => start(host, { scenario: 'race', waitSeconds: 0 }),
     );
     expect(refused.ok).toBe(false);
     expect(refused.stderr).toContain('already running (pid 4242)');
+  });
+});
+
+describe("the other sim's emulator", () => {
+  /**
+   * A guest where each sim's emulator is running or not, as `running` says, which stops one when its
+   * stop file is written and launches one when asked, so that what a start leaves can be read.
+   */
+  function guest(running: Record<string, number | null>) {
+    const said: string[] = [];
+    const answer = (script: string): Answer => {
+      said.push(script);
+      for (const sim of SIMS) {
+        if (script.startsWith(`$p = Get-Process ${sim.process} `)) return { stdout: running[sim.id] === null ? '' : String(running[sim.id]) };
+        if (script.startsWith(`New-Item -ItemType File -Force -Path '${sim.guestDir}\\stop.txt'`)) {
+          running[sim.id] = null;
+          return { stdout: 'stopped cleanly' };
+        }
+      }
+      return { stdout: 'launched' };
+    };
+    return { answer, said, running };
+  }
+  const isLaunch = (script: string) => script.includes('New-ScheduledTaskAction');
+
+  test.each([
+    ['an iRacing start', IRACING, ASSETTO_CORSA],
+    ['an Assetto Corsa start', ASSETTO_CORSA, IRACING],
+  ] as const)('%s stops it before launching its own, when it may replace', (_, sim, other) => {
+    // A licensed SimHub switches to whichever game it finds running, so the other emulator left
+    // running by an earlier run could pull this one's SimHub onto its game mid-check (#1138).
+    const g = guest({ [sim.id]: null, [other.id]: 4242 });
+    withFakeHost(g.answer, (host) => start(host, { scenario: 'race', sim, replace: true, waitSeconds: 0 }));
+    expect(g.running[other.id]).toBeNull();
+    const stoppedAt = g.said.findIndex((s) => s.startsWith(`New-Item -ItemType File -Force -Path '${other.guestDir}\\stop.txt'`));
+    const launchedAt = g.said.findIndex(isLaunch);
+    expect(stoppedAt).toBeGreaterThanOrEqual(0);
+    expect(launchedAt).toBeGreaterThan(stoppedAt);
+    expect(g.said[launchedAt]).toContain(`${sim.guestDir}\\${sim.exe}`);
+  });
+
+  test('is a refusal when the start may not replace, as a second copy of its own is', () => {
+    const g = guest({ iracing: null, ac: 4242 });
+    const r = withFakeHost(g.answer, (host) => start(host, { scenario: 'race', waitSeconds: 0 }));
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('the Assetto Corsa emulator is running (pid 4242)');
+    expect(g.running.ac).toBe(4242);
+    expect(g.said.filter(isLaunch)).toEqual([]);
+  });
+
+  test('that cannot be asked after is not started beside blind', () => {
+    const g = guest({ iracing: null, ac: null });
+    const r = withFakeHost(
+      (script) => (script.startsWith('$p = Get-Process acs ') ? { status: 255, stderr: 'ssh: connect to host 127.0.0.1 port 2222: Connection timed out' } : g.answer(script)),
+      (host) => start(host, { scenario: 'race', replace: true, waitSeconds: 0 }),
+    );
+    expect(r.ok).toBe(false);
+    expect(r.stderr).toContain('could not tell whether an emulator is running');
+    expect(g.said.filter(isLaunch)).toEqual([]);
   });
 });
 
