@@ -331,7 +331,8 @@ describe('second-screen values', () => {
 
   test('the track state is iRacing\'s wetness in five words, and Very wet is the word a box is cut for', () => {
     // It read `GameData.TrackGripStatus`, which SimHub 9.12.6 has for no game, so it read `--` on every
-    // sim, iRacing included (#1128). `TrackWetness` is a raw telemetry int every iRacing trace carries.
+    // sim, iRacing included (#1128). `TrackWetness` is a raw telemetry int iRacing publishes, and
+    // `simReadings.test.ts` holds the committed iRacing traces to carrying it, at 1 or more.
     expect(values.trackGrip()).toContain('[DataCorePlugin.GameRawData.Telemetry.TrackWetness]');
     expect(values.trackGrip()).not.toContain('TrackGripStatus');
     expect(values.TRACK_STATES.map((s) => s.word)).toEqual(['Dry', 'Damp', 'Wet', 'Very wet', 'Flooded']);

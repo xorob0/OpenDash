@@ -11,17 +11,27 @@
  * Each field is read as a rig draws it, item by item: its `Visible`, then its `Text`, evaluated against
  * a frame of each sim. A field may hide or read `--` on AC, and may not draw a 0 for a reading it was
  * never given; on iRacing it reads what it read before.
+ *
+ * The Porsche's strip draws the track state in colours of its own, and a theme with colours of its own
+ * cannot be drawn in a process drawing another theme's (`faces.ts`), so the default process runs this
+ * file again in one drawing the Porsche's, as `themeFuelPage.test.ts` does.
  */
 import { describe, expect, test } from 'bun:test';
-import { CLOCK_FORMAT_SETTING, PROPERTY_PREFIX, type ClockFormat } from '../src/contract.ts';
+import { readTrace, tracedScenarios } from '../../../scripts/trace.ts';
+import { CLOCK_FORMAT_SETTING, FACE_SIZES, PROPERTY_PREFIX, type ClockFormat } from '../src/contract.ts';
 import { rect } from '../src/design/geometry.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from '../src/screens/pitwallHeader.ts';
 import { hasTrackState, simClock, trackGrip, windKmh } from '../src/second/values.ts';
+import { drawsInThisProcess } from '../src/themes/faces.ts';
+import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
+import { porscheStrip } from '../src/themes/porsche/strip.ts';
+import { THEME_ID } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { BAR_FIELD_SPECS } from '../src/zones/bar.ts';
 import { bandCorners, bandPageItems } from '../src/zones/bandPages.ts';
+import { ZONE_FACES } from '../src/zones/index.ts';
 import { drawingOf } from './moduleItems.ts';
 import { bindingExpression } from './monoGlyphs.ts';
 import { evalNcalc, Single, type Props } from './ncalcEval.ts';
@@ -170,3 +180,72 @@ describe('the track state', () => {
     expect(evalNcalc(hasTrackState(), ac('24h'))).toBe(false);
   });
 });
+
+/**
+ * The frames above are written by hand, so they say what the track state reads once `TrackWetness` is
+ * there and not that it is. A column can be recorded and still be null in every frame (#922), so the
+ * committed iRacing traces are held to carrying a wetness iRacing has settled on, which the emulator
+ * writes as 1, in every frame of every scenario: then the track state the replays draw is a word.
+ */
+if (THEME_ID === DEFAULT_THEME_ID) {
+  describe('the track state on the committed iRacing traces', () => {
+    for (const scenario of tracedScenarios()) {
+      test(`${scenario} carries a known wetness in every frame, so the track state draws a word`, () => {
+        const trace = readTrace(scenario);
+        const column = trace.columns.find((c) => c.p === `${RAW}TrackWetness`);
+        const frames = column === undefined ? [] : Array.isArray(column.v) ? column.v : Array.from({ length: trace.header.frames }, () => column.v);
+        const unknown = frames.flatMap((v, i) => (typeof v === 'number' && v >= 1 ? [] : [`frame ${i}: ${String(v)}`]));
+        expect({ scenario, carried: column !== undefined, unknown }).toEqual({ scenario, carried: true, unknown: [] });
+        const words = new Set(frames.map((v) => evalNcalc(trackGrip(), iracing('24h', v as number))));
+        expect({ scenario, unknown: words.has('--') }).toEqual({ scenario, unknown: false });
+      });
+    }
+  });
+}
+
+const PORSCHE = 'porsche';
+
+if (drawsInThisProcess(PORSCHE)) {
+  /** The strip's track outline and its word, at every size the Porsche draws. */
+  const strips = (): { at: string; box: Item; value: TextItem }[] =>
+    THEMES[PORSCHE]!.anatomy.sizes.map((size) => {
+      const at = `${size.width}x${size.height}`;
+      const layout = ZONE_FACES.find((f) => f.width === size.width && f.height === size.height)!;
+      const face = FACE_SIZES.find((f) => f.width === size.width && f.height === size.height)!;
+      const items = porscheStrip({ layout, face, regions: THEMES[PORSCHE]!.anatomy.regions(layout), withRevBar: true });
+      const box = items.find((i) => i.name === 'strip.track.box')!;
+      const value = items.find((i): i is TextItem => i.kind === 'text' && i.name === 'strip.track.value')!;
+      return { at, box, value };
+    });
+
+  /** The strip as a driver reads it: whether the outline is drawn, and the word in it. */
+  const strip = (box: Item, value: TextItem, props: Props): { outline: boolean; word: string[] } => {
+    const visible = bindingExpression(box as TextItem, 'Visible');
+    return { outline: visible === '' || evalNcalc(visible, props) === true, word: shown([value], props) };
+  };
+
+  describe("the Porsche strip's track state", () => {
+    test('draws DRY in its outline on a dry iRacing track, and neither outline nor word on Assetto Corsa', () => {
+      const drawn = strips().map(({ at, box, value }) => ({ at, iracing: strip(box, value, iracing('24h')), ac: strip(box, value, ac('24h')) }));
+      expect(drawn).toEqual(
+        THEMES[PORSCHE]!.anatomy.sizes.map((size) => ({
+          at: `${size.width}x${size.height}`,
+          iracing: { outline: true, word: ['DRY'] },
+          ac: { outline: false, word: [] },
+        })),
+      );
+    });
+  });
+}
+
+if (THEME_ID === DEFAULT_THEME_ID && !drawsInThisProcess(PORSCHE)) {
+  test(
+    "the Porsche strip's track state, in a process drawing its colours",
+    () => {
+      const run = Bun.spawnSync([process.execPath, 'test', import.meta.path], { env: { ...process.env, [THEME_ENV]: PORSCHE }, stdout: 'pipe', stderr: 'pipe' });
+      const output = run.exitCode === 0 ? '' : `${run.stdout.toString()}${run.stderr.toString()}`;
+      expect({ theme: PORSCHE, exit: run.exitCode, output }).toEqual({ theme: PORSCHE, exit: 0, output: '' });
+    },
+    120_000,
+  );
+}
