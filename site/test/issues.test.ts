@@ -1,5 +1,5 @@
 /**
- * Every issue the site links is one GitHub still has, and every link says the number it goes to.
+ * No issue the site links is one the backlog import deleted, and every link says the number it goes to.
  *
  * The backlog moved from Linear to GitHub in one import, and the import deleted some of what it
  * created and filed it again under a later number. `docs/backlog.md` is the lookup table, so the
@@ -7,7 +7,8 @@
  * the table's lowest number for as many numbers as the table has rows, and a number in that span the
  * table does not list answers "This issue was deleted". Four of the comparison's coming rows and the
  * home page's night mode link pointed at such numbers, which were the rows' Linear ids rather than
- * their issues (#813). Whether an issue is still open is GitHub's to answer and is not checked here.
+ * their issues (#813). A number deleted later, outside the import's span, is not known here, and
+whether an issue is still open is GitHub's to answer and is not checked either.
  */
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';

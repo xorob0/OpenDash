@@ -25,7 +25,10 @@ const normalise = (s: string): string =>
 
 /**
  * The refusals of docs/scope.md's "What is deliberately not built", by name: each paragraph that
- * opens on a bold name starts one, and the paragraphs up to the next bold name are its body.
+ * opens on a bold name starts one, and the paragraphs up to the next bold name are its body. A
+ * sentence that tells the line's history, as "This line replaces the sentence that used to stand..."
+ * does, is left out of the body: it quotes the position the refusal retired, and a scope quoting it
+ * would cite the refusal for the stance it overturned (#548).
  */
 function refusalsInScope(): Map<string, string> {
   const doc = readFileSync(path.resolve(import.meta.dir, '..', '..', 'docs', 'scope.md'), 'utf8');
@@ -36,7 +39,11 @@ function refusalsInScope(): Map<string, string> {
   for (const paragraph of section.split(/\n\s*\n/)) {
     const bold = /^\*\*([^*]+?)\.?\*\*/.exec(paragraph.trim());
     if (bold) name = normalise(bold[1]!);
-    if (name !== undefined) out.set(name, `${out.get(name) ?? ''} ${normalise(paragraph)}`);
+    const kept = normalise(paragraph)
+      .split(/(?<=\.) /)
+      .filter((sentence) => !/\breplace[sd]?\b|\bused to\b/.test(sentence))
+      .join(' ');
+    if (name !== undefined) out.set(name, `${out.get(name) ?? ''} ${kept}`);
   }
   return out;
 }
