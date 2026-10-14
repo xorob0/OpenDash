@@ -31,7 +31,6 @@ export default function Screens() {
   const pitWallPortrait = byFolder('OpenDash Pit wall portrait');
   const companionClip = companion ? clipFor(companion.folder) : undefined;
   const pitWallClip = pitWall ? clipFor(pitWall.folder) : undefined;
-  const parts = anatomyParts(HERO_FACE, COUNTS);
 
   return (
     <>
@@ -45,9 +44,9 @@ export default function Screens() {
         <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
       </Section>
 
-      <Section id="anatomy" title={`One face, ${counted(parts.length, 'part')}`} lede="Every rectangular face is built the same way. Hover or tap a part.">
+      <Section id="anatomy" title="One face, part by part" lede="Every rectangular face is built the same way. Hover or tap a part.">
         {base ? (
-          <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={parts} />
+          <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={anatomyParts(HERO_FACE, COUNTS)} />
         ) : null}
       </Section>
 

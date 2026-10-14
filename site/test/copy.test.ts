@@ -59,29 +59,33 @@ describe('the promise', () => {
  * build may be absent.
  *
  * A count spelled in words is the same retyped number, and is refused the same way (#821): "eleven
- * pages" and "five parts" stood on the Screens page while the test looked only for digits. A
+ * pages" and "four zones" stood on the Screens page while the test looked only for digits. A
  * spelled count takes a plural, so the words are matched before a plural noun, with room for one
  * word between them as in "two round faces". That leaves "one page at a time" alone, where one is
- * not a count, and still catches "twenty-one pages" by its tail.
+ * not a count, and still catches "twenty-one pages" by its tail. A count in digits gets the same
+ * room, so "2 round faces" is refused too, and a line break counts as a space.
+ *
+ * The anatomy's parts are not counted here: "five parts" is the name the design gives the zone
+ * face, with zones B, A and C as one body, and not a number the build makes.
  */
-const NOUNS = 'dashboards?|LED profiles?|pages?|strip shapes?|faces?|screens?|glyphs?|flags?|companions?|pit walls?|themes?|sizes?|parts?|zones?';
+const NOUNS = 'dashboards?|LED profiles?|pages?|strip shapes?|faces?|screens?|glyphs?|flags?|companions?|pit walls?|themes?|sizes?|zones?';
 const PLURALS = NOUNS.split('|')
   .map((n) => n.replace(/\?$/, ''))
   .join('|');
 const NUMBER_WORDS =
   'one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred';
-const TYPED = new RegExp(`(?<![×x$] )\\b\\d+ (${NOUNS})\\b`, 'g');
-const SPELLED = new RegExp(`\\b(${NUMBER_WORDS}) ([a-z]+ )?(${PLURALS})\\b`, 'gi');
+const TYPED = new RegExp(`(?<![×x$]\\s)\\b\\d+\\s+(?:[a-z]+\\s+)?(${NOUNS})\\b`, 'g');
+const SPELLED = new RegExp(`\\b(${NUMBER_WORDS})\\s+(?:[a-z]+\\s+)?(${PLURALS})\\b`, 'gi');
 
 /** Every count a text types, in digits or in words. */
 const typedCounts = (text: string): RegExpMatchArray[] => [...text.matchAll(TYPED), ...text.matchAll(SPELLED)];
 
 describe('the counts', () => {
-  test.each(['11 pages', 'eleven pages', 'Three pages', 'five parts', 'four zones', 'two round faces', 'twenty-one pages', 'One hundred LED profiles'])('%p is a typed count', (text) => {
+  test.each(['11 pages', 'eleven pages', 'Three pages', 'four zones', 'two round faces', '2 round faces', '22 rectangular faces', 'eleven\n          pages', 'twenty-one pages', 'One hundred LED profiles'])('%p is a typed count', (text) => {
     expect(typedCounts(`Fill it from ${text}.`).length).toBe(1);
   });
 
-  test.each(['showing one page at a time', 'one button per zone', 'One face, ${n} parts', '1 of ${n} pages', 'a 1920 × 480 face'])('%p is not', (text) => {
+  test.each(['showing one page at a time', 'one button per zone', 'One face, five parts', '1 of ${n} pages', 'a 1920 × 480 face'])('%p is not', (text) => {
     expect(typedCounts(text)).toEqual([]);
   });
 
