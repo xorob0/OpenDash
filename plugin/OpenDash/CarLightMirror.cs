@@ -85,14 +85,23 @@ namespace OpenDashPlugin
             CarLightGear found;
             if (key.Length > 0 && table.Gears.TryGetValue(key, out found)) return found;
 
+            // The row is kept as it is found rather than looked up again by the number. int.TryParse reads
+            // "02", " 2" and "+2" all as 2, and the tables are somebody else's files, so the number's own
+            // spelling is a key such a table does not have: looking it up threw on every frame (#577).
+            // Walked by hand rather than with LINQ, because this runs a dozen times a frame.
             int number;
             if (int.TryParse(key, out number))
             {
-                var below = table.Gears.Keys
-                    .Select(k => { int n; return int.TryParse(k, out n) ? n : -1; })
-                    .Where(n => n > 0 && n <= number)
-                    .ToList();
-                if (below.Count > 0) return table.Gears[below.Max().ToString()];
+                CarLightGear best = null;
+                var bestNumber = 0;
+                foreach (var entry in table.Gears)
+                {
+                    int n;
+                    if (!int.TryParse(entry.Key, out n) || n <= 0 || n > number || n <= bestNumber) continue;
+                    best = entry.Value;
+                    bestNumber = n;
+                }
+                if (best != null) return best;
             }
             // Neutral, reverse or nothing at all, on a table that spells none of them.
             return table.Gears.TryGetValue("N", out found) ? found : table.Gears.Values.First();
