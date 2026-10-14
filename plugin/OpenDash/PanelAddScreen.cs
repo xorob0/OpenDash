@@ -625,10 +625,19 @@ namespace OpenDashPlugin
             return screen.Name + " is now " + screen.SizeLabel + ". A display showing a " + screen.SizeLabel + " face switches to it " + NextCar + ".";
         }
 
-        /// <summary>A resize whose dashboard was not installed. The resize itself happened -- the old folder is
-        /// gone and the screen holds its new size, which the header and the card then show -- so the line says
-        /// so and admits the half that did not land, as <see cref="AddFailed"/> does.</summary>
+        /// <summary>A resize whose dashboard was not installed, at the size it was asked for. The new dashboard is
+        /// written before the old one is removed, so a write that fails leaves the old one in place and the screen
+        /// goes back to it at its old size (#588); the line says the resize did not happen and points at the log, as
+        /// <see cref="AddFailed"/> does.</summary>
         public static string ResizeFailed(string name, string size)
+        {
+            return "Could not resize " + name + " to " + size + ". See SimHub's log.";
+        }
+
+        /// <summary>A resize whose dashboard was written but whose install did not finish, as when its fonts could not
+        /// be copied. The new folder is in, so the screen keeps the new size, and the line says so and admits the half
+        /// that did not land, in the words <see cref="AddFailed"/> uses for the same case.</summary>
+        public static string ResizedIncomplete(string name, string size)
         {
             return name + " is now " + size + ", but its dashboard could not be installed. See SimHub's log.";
         }

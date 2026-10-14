@@ -244,18 +244,25 @@ export const SURVEY: readonly SurveySection[] = [
         scaleEnds: ['Very unlikely', 'Very likely'],
       },
       {
-        id: 'q15',
+        // Not q15: that id holds the answers to the list this one replaced, which offered two
+        // refusals and three features that have since shipped. Answers to the two lists are not the
+        // same question, so they are kept apart and the old one is tallied as RETIRED below (#548).
+        id: 'q15b',
         label: 'Needed before daily use',
-        prompt: 'Some things are planned but not built yet. Which would you need before OpenDash could be your daily dashboard?',
+        prompt: 'Some things are coming but not built yet. Which would you need before OpenDash could be your daily dashboard?',
         kind: 'checks',
         hint: ALL,
+        // Between the sims and the last option, the coming rows of the comparison by their labels, and
+        // nothing docs/scope.md refuses: a refusal offered here as a plan tells the visitor who ticks
+        // it that it is coming (#548). A test holds the list to the table.
         options: [
           'Verified support for my sim, beyond iRacing',
-          'An idle and pit screen',
-          'Per-car shift lights and themes',
-          'Round screen support',
-          'A stream overlay',
-          'Changing the layout, not only the colours',
+          'Pit page on the face',
+          'Dashboard manager and first run',
+          'Night mode',
+          'Your own colours',
+          'Licence and rating on driver rows',
+          'Flags screen for a second display',
           'None of these block me',
         ],
       },
@@ -393,6 +400,36 @@ export const SURVEY: readonly SurveySection[] = [
 ];
 
 export const QUESTIONS: readonly Question[] = SURVEY.flatMap((s) => s.questions);
+
+/**
+ * Questions the form no longer asks, whose answers are still in the database. The admin panel tallies
+ * them on their own, so an answer given to an old list is neither lost nor counted against options
+ * its respondent was never offered; the API refuses them like any unknown id.
+ */
+export const RETIRED: readonly Question[] = [
+  {
+    id: 'q15',
+    label: 'Needed before daily use, until October 2026',
+    prompt: 'Some things are planned but not built yet. Which would you need before OpenDash could be your daily dashboard?',
+    kind: 'checks',
+    hint: ALL,
+    options: [
+      'Verified support for my sim, beyond iRacing',
+      'An idle and pit screen',
+      'Per-car shift lights and themes',
+      'Round screen support',
+      'A stream overlay',
+      'Changing the layout, not only the colours',
+      'None of these block me',
+    ],
+  },
+];
+
+/** The number a question is shown under: its place in the form, which an id that was replaced no longer gives. */
+export const questionNumber = (q: Question): string => {
+  const i = QUESTIONS.indexOf(q);
+  return i < 0 ? q.id.slice(1) : String(i + 1);
+};
 
 const SCALE_VALUES = ['1', '2', '3', '4', '5'] as const;
 /** The free line behind a checks question's last option is stored with this prefix. */

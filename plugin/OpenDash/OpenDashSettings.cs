@@ -1864,8 +1864,8 @@ namespace OpenDashPlugin
         /// The namespace is frozen at creation and this does not move it either (ADR 0017), so the zone
         /// settings, the bar and every wheel button bound to the screen survive a resize. What that costs
         /// is the folder: a screen that held the stock folder of its old size no longer holds the stock
-        /// namespace of its new one, so it needs a folder of its own, and the caller deletes the old one
-        /// before calling this.
+        /// namespace of its new one, so it needs a folder of its own, and the caller removes the old one
+        /// once the new one is written (ScreenInstaller.Resize).
         /// </remarks>
         public void ResizeScreen(ScreenInstance screen, PackageEntry entry)
         {
@@ -1877,6 +1877,29 @@ namespace OpenDashPlugin
             screen.Folder = screen.IsStock
                 ? entry.Folder
                 : PackageCatalogue.UniqueFolder(screen.Name, Taken(screen), entry.Folder);
+            screen.Normalise();
+        }
+
+        /// <summary>
+        /// Puts a screen back at the name, size, package, theme and folder it had before a resize, which is how a resize
+        /// whose dashboard could not be written is undone (#588): the old folder is still there, and the screen owns
+        /// it again rather than a folder nothing wrote.
+        /// </summary>
+        /// <remarks>
+        /// The name too, because the Edit sheet renames before it resizes, so that the new folder is titled with the
+        /// new name. The old folder is still titled with the old one, and a screen that kept the new name over it would
+        /// be listed in Dash Studio under a name the card no longer shows.
+        /// </remarks>
+        /// <param name="before">The screen as it was, of which only those six are read.</param>
+        public void ResizeScreenBack(ScreenInstance screen, ScreenInstance before)
+        {
+            if (screen == null || before == null) return;
+            if (!string.IsNullOrEmpty(before.Name)) screen.Name = before.Name;
+            screen.Width = before.Width;
+            screen.Height = before.Height;
+            screen.Package = before.Package;
+            screen.Theme = before.Theme;
+            screen.Folder = before.Folder;
             screen.Normalise();
         }
 
@@ -1983,6 +2006,28 @@ namespace OpenDashPlugin
             if (kept.Count == rig.Count) return false;
             Rig = kept;
             return true;
+        }
+
+        /// <summary>
+        /// Puts a removed screen back where it was on the rig, which is how a remove whose folder could not be
+        /// deleted is undone (#861). A rig that already holds the screen's namespace is left as it is.
+        /// </summary>
+        /// <remarks>
+        /// The panel takes a screen off the rig and saves before it deletes the folder, so that a SimHub closing
+        /// during the delete saves a rig without it rather than one that reinstalls it at the next start. The folder
+        /// is then deleted whole or not at all, and when not, this brings the screen back, settings and place on the
+        /// rig included, since RemoveScreen dropped nothing else.
+        /// </remarks>
+        public void PutScreenBack(ScreenInstance screen, int index)
+        {
+            if (screen == null) return;
+            var rig = RigScreens();
+            if (rig.Any(other => other != null && string.Equals(other.Namespace, screen.Namespace, StringComparison.Ordinal))) return;
+            // A new list rather than an insert into this one, as RemoveScreen makes one: SimHub's threads may be
+            // walking the rig while the panel undoes a remove (#572).
+            var put = new List<ScreenInstance>(rig);
+            put.Insert(Math.Max(0, Math.Min(index, put.Count)), screen);
+            Rig = put;
         }
 
         /// <summary>

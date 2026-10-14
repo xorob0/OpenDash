@@ -9,6 +9,9 @@ SimHub's dashboard format is undocumented. What follows was established by readi
 dashboards and the community build pipelines around them, and it is split into what was
 observed and what is still inferred.
 
+What each game's reader puts into those properties, for Assetto Corsa, ACC and Le Mans Ultimate
+beside iRacing, is in [sims.md](sims.md) (#1100).
+
 Samples analysed, none of which is vendored here:
 
 | Package | SimHub version | Base size | Notes |

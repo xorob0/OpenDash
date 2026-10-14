@@ -32,7 +32,7 @@ import { carLadderAvailable, carLadderFlash, carLadderOnScreens, carLadderOverRe
 import { GEARS, gearGrid } from '../src/leds/gear.ts';
 import { overRev as overRevStrip } from '../src/leds/ladder.ts';
 import { CAUTION, flagFrames, FLAG_PALETTE, HOLD_MS, ignitionOffFrames, STANDBY_PALETTE } from '../src/leds/glyphs.ts';
-import { buildFlagBoxProfile, cautionOnPanel, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
+import { belowFlags, buildFlagBoxProfile, cautionOnPanel, criticalOnly, drawnFlags, flagBoxTree, flagContainers, pruneEmpty, noFlagShowing } from '../src/leds/profile.ts';
 import { CAR_BOTH, CAR_LEFT, CAR_RIGHT, pitStates, spotterStates, warningStates } from '../src/leds/states.ts';
 import { ds } from '../src/tokens.ts';
 import { evalNcalc } from './ncalcEval.ts';
@@ -1129,6 +1129,64 @@ describe('the pit family, the spotter and the warnings', () => {
     expect(text).not.toInclude('PitLimiterSpeedMs');
     expect(text).not.toInclude('GameData.SpeedKmh]');
     expect(text).toInclude('isnull([DataCorePlugin.GameData.PitLimiterSpeed], 999)');
+  });
+
+  describe('a family the panel has switched off holds nothing down', () => {
+    // #566: the warnings and the gear excluded the pit states, and the gear the warnings, by the
+    // telemetry alone. So a panel with Pit off went dark for the whole pit lane, and one with Warnings
+    // off went dark at the first low fuel warning and stayed dark for the rest of the stint.
+    const IN_LANE = { 'DataCorePlugin.GameData.PitLimiterOn': 1, 'DataCorePlugin.GameData.IsInPitLane': 1 };
+    const OUT_OF_LANE = { 'DataCorePlugin.GameData.PitLimiterOn': 1, 'DataCorePlugin.GameData.IsInPitLane': 0 };
+    const LOW_FUEL = { 'DataCorePlugin.GameData.CompletedLaps': 5, 'DataCorePlugin.Computed.Fuel_LitersPerLap': 2.5, 'DataCorePlugin.Computed.Fuel_RemainingLaps': 1 };
+    const switches = (matrix: FlagBoxMatrix, pit: boolean, warnings: boolean) => ({
+      [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Pit')}`]: pit,
+      [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(matrix, 'Warnings')}`]: warnings,
+    });
+
+    /**
+     * What a panel draws below the flags on one frame: each rank whose condition holds, and inside it
+     * the picture whose condition holds, by evaluating the formulas rather than reading them. The gear
+     * is named `Gear` whatever band it is in. A rank that holds with nothing in it lit paints nothing,
+     * so an empty list is a dark panel.
+     */
+    const below = (matrix: FlagBoxMatrix, props: Record<string, unknown>): string[] => {
+      const holds = (c: MatrixContainer): boolean => c.kind === 'when' && evalNcalc(formulaText(c), props) === true;
+      const lit: string[] = [];
+      for (const rank of belowFlags(matrix)) {
+        if (!holds(rank) || !('children' in rank)) continue;
+        const shown = rank.children.find(holds);
+        if (shown?.description) lit.push(shown.description);
+      }
+      return lit;
+    };
+
+    test('with Pit off, the limiter in the lane leaves the gear showing', () => {
+      expect(below(1, { ...switches(1, false, true), ...IN_LANE })).toEqual(['Gear']);
+      expect(below(1, { ...switches(1, false, true), ...OUT_OF_LANE })).toEqual(['Gear']);
+      // And the warnings still outrank the gear there: Pit off frees the panel, it does not skip a rank.
+      expect(below(1, { ...switches(1, false, true), ...IN_LANE, ...LOW_FUEL })).toEqual(['Warning lowFuel']);
+    });
+
+    test('with Warnings off, low fuel leaves the gear showing', () => {
+      expect(below(1, { ...switches(1, true, false), ...LOW_FUEL })).toEqual(['Gear']);
+      expect(below(1, { ...switches(1, false, false), ...IN_LANE, ...LOW_FUEL })).toEqual(['Gear']);
+    });
+
+    test('with both on, the ranking is what it was', () => {
+      const on = switches(1, true, true);
+      expect(below(1, on)).toEqual(['Gear']);
+      expect(below(1, { ...on, ...IN_LANE })).toEqual(['Pit limiterInLane']);
+      expect(below(1, { ...on, ...OUT_OF_LANE })).toEqual(['Pit limiterOutOfLane']);
+      expect(below(1, { ...on, ...LOW_FUEL })).toEqual(['Warning lowFuel']);
+      expect(below(1, { ...on, ...IN_LANE, ...LOW_FUEL })).toEqual(['Pit limiterInLane']);
+      // With no plugin attached, matrix 1's defaults are both on, and it ranks the same way.
+      expect(below(1, { ...IN_LANE, ...LOW_FUEL })).toEqual(['Pit limiterInLane']);
+    });
+
+    test('a panel resting dark stays dark with the families off', () => {
+      const dark = { ...switches(2, false, false), [`${PROPERTY_PREFIX}.${flagBoxMatrixSetting(2, 'Rest')}`]: 'dark' };
+      expect(below(2, { ...dark, ...IN_LANE, ...LOW_FUEL })).toEqual([]);
+    });
   });
 
   test('the pit family outranks the warnings, and the spotter is not in the ranking at all', () => {

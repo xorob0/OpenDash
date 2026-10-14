@@ -37,14 +37,14 @@
  * therefore serves the portrait face, which stacks its zones, and the nano, which has no bar.
  */
 import type { Hex, Item, LayerItem, Rect, RectangleItem } from '../generator.ts';
-import { withMoreBindings } from '../bind.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { DATA_FACE } from '../design/metrics.ts';
 import { rect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { numeral } from '../elements/numeral.ts';
 import { ds } from '../tokens.ts';
-import { ALERT_CATALOGUE, bandNames, bandVisible, type AlertCondition } from '../flags.ts';
+import { ALERT_CATALOGUE, anyBandRaised, bandNames, bandVisible, type AlertCondition } from '../flags.ts';
 import { discBand, namePlate, nearestOdd, stripes } from './alertBand.ts';
 import { BLACK_FLAG_BORDER, FLAG_BLINK_MS } from './flagStrip.ts';
 
@@ -363,4 +363,23 @@ export function flagFull(frame: Rect, prefix = 'flagFull'): LayerItem[] {
       children: blockParts(name, frame, condition),
     }, { Visible: bandVisible(condition) });
   });
+}
+
+/**
+ * Whether the block is drawing a condition, given that the format is `full`: one of the conditions it
+ * draws is raised on the band's reading.
+ *
+ * That is the same answer as asking whether any of {@link flagFull}'s layers is visible, and much the
+ * shorter expression. The layers are ranked by `bandVisible` over the whole catalogue, and the only
+ * conditions they leave out are the two neutral alerts, which are last in it: a raised neutral alert
+ * outranks none of the block's conditions, so the block is out exactly when one of its own is raised.
+ * The face asks it before any box of the pop-up family opens over the body, which the block covers
+ * (#1069).
+ */
+export const flagFullOut = (): Expr => anyBandRaised(BLOCK_CONDITIONS);
+
+// The equivalence above holds only while the neutral alerts are the catalogue's last entries, so a
+// reordering that put one above a condition the block draws stops the build rather than the face.
+if (ALERT_CATALOGUE.some((condition, index) => !onTheBlock(condition) && ALERT_CATALOGUE.slice(index).some(onTheBlock))) {
+  throw new Error('flagFull: a neutral alert is ranked above a condition the full-screen block draws, so flagFullOut no longer says when the block is out');
 }

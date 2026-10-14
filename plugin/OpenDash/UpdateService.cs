@@ -614,8 +614,9 @@ namespace OpenDashPlugin
         /// </summary>
         /// <remarks>
         /// Called from the plugin's End, which SimHub runs on shutdown. Waiting there is the opposite of the usual
-        /// advice and is right here: the alternative is the process exiting between a DeleteDirectory and the
-        /// Directory.Move that replaces what it deleted. A check or a download is never waited for, since abandoning
+        /// advice and is right here: the alternative is the process exiting between the move that takes a dashboard
+        /// aside and the one that brings its replacement in, which leaves the dashboard missing until the next start
+        /// puts it back (PackageExtractor.RemoveOrphanedStaging). A check or a download is never waited for, since abandoning
         /// a read costs nothing and a socket that never answers would hold SimHub's shutdown for its whole timeout.
         /// </remarks>
         public static bool WaitForIdle(TimeSpan timeout) => Idle.Wait(timeout);

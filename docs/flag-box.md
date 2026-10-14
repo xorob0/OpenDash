@@ -161,6 +161,10 @@ you can learn the box away from the car.
 | | **Warnings**: oil, then water, then low fuel | |
 | | **The gear**, coloured by the shift lights, when nothing else is out | |
 
+A family you have switched off for a matrix is not in its table at all, so it takes nothing from
+what is below it: with **Pit lane** off, the matrix goes on showing the gear down the pit lane, and
+with **Warnings** off, it goes on showing the gear on the last laps of fuel.
+
 **The spotter is not in that table**, and that is deliberate. A bar down the edge a car is on is
 drawn *over* whatever else the matrix is showing rather than instead of it, so a car alongside is
 never hidden by a yellow and never hides the gear. With one box you will see the gear in the middle

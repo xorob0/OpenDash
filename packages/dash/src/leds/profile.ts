@@ -53,7 +53,7 @@ import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts
 // to be one expression rather than two spellings of one.
 import { ignitionIsOff, ignitionIsOn } from './gates.ts';
 import { gearGroup } from './gear.ts';
-import { noneRaised, pitStates, spotterStates, stateContainers, warningStates } from './states.ts';
+import { noneRaised, pitStates, spotterStates, stateContainers, warningStates, type BoxState } from './states.ts';
 import { flagFrames, ignitionOffFrames } from './glyphs.ts';
 
 /** The package name, the profile name and the file stem. Spaces are fine: the packages have them. */
@@ -126,16 +126,25 @@ export const noFlagShowing = (matrix: FlagBoxMatrix): Expr => noFlagShown(critic
  * the failure this ranking exists to prevent — so all of it sits under `noFlagShowing()`, and each
  * layer's condition excludes the layers above it.
  *
+ * It excludes them only on a panel that draws them, which is what `matrixGroup` asks of the flags
+ * too. A state the panel has switched off is not shown, so it must not hold down what is under it:
+ * excluding the pit states by the telemetry alone left a panel with Pit off dark for the whole pit
+ * lane, and one with Warnings off dark from the first low fuel warning to the end of the stint.
+ *
  * The spotter is deliberately absent: it is {@link spotterOverlay} now, painted after all of this
  * rather than ranked within it, so the gear shows through the middle of the panel while a car is
  * alongside instead of being blanked by it.
  */
 export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
-  const { and, eq } = ncalc;
+  const { and, eq, not, or } = ncalc;
   const m = flagBoxMatrix(matrix);
   const pit = pitStates();
   const warnings = warningStates(matrix);
   const on = (setting: Expr): Expr => eq(setting, 'true');
+  // "Nothing of this family is holding THIS panel": switched off, or switched on with none raised.
+  const free = (setting: Expr, family: readonly BoxState[]): Expr => or(not(on(setting)), noneRaised(family));
+  const pitFree = free(m.pit(), pit);
+  const warningsFree = free(m.warnings(), warnings);
   return [
     // Its own switch, not the flags'. A driver who turns flags off on a panel has not asked to lose
     // the pit limiter warning, and reading m.flags() here was a copy of the line below it.
@@ -143,7 +152,7 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
     {
       kind: 'when',
       description: 'Warnings',
-      formula: and(on(m.warnings()), noneRaised(pit)),
+      formula: and(on(m.warnings()), pitFree),
       children: stateContainers(warnings, 'Warning'),
     },
     // Nothing above it is raised, and no more: what the panel rests *on* is the gear group's own
@@ -152,7 +161,7 @@ export function belowFlags(matrix: FlagBoxMatrix): MatrixContainer[] {
     {
       kind: 'when',
       description: 'Resting',
-      formula: and(noneRaised(pit), noneRaised(warnings)),
+      formula: and(pitFree, warningsFree),
       children: [gearGroup(matrix)],
     },
   ].filter((c) => c.children.length > 0) as MatrixContainer[];

@@ -141,6 +141,11 @@ The API takes a submission only as JSON from the site's own origin, stops readin
 throttles an address in memory; [docs/deploy.md](../docs/deploy.md) says what that means for the
 deployment, and `test/surveyApi.test.ts` holds it.
 
+A question whose options change takes a new id, and the old question moves to `RETIRED` in the same
+file. The answers already stored stay under the old id, the tallies show them on their own against
+the options they were given, and the form numbers questions by their place, so the new id does not
+show.
+
 ## Design
 
 The design system is the dash's — `design/tokens.json` and the canvas — and most of it carries over

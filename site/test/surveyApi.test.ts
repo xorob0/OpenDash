@@ -6,7 +6,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { ADMIN_KEY_MIN, BODY_LIMIT, GET_LIMIT, POST_LIMIT, Throttle, keyMatches, surveyHandlers } from '../lib/surveyApi.ts';
-import { HONEYPOT, QUESTIONS, type Answers } from '../lib/survey.ts';
+import { HONEYPOT, QUESTIONS, RETIRED, type Answers } from '../lib/survey.ts';
 
 const SITE = 'https://opendash.example';
 const KEY = 'k'.repeat(ADMIN_KEY_MIN) + '-results';
@@ -141,9 +141,32 @@ describe('a submission', () => {
     for (let i = 0; i < POST_LIMIT.count; i++) await api.POST(post(VALID, {}, `10.0.0.${i}, 203.0.113.7`));
     expect((await api.POST(post(VALID, {}, '10.9.9.9, 203.0.113.7'))).status).toBe(429);
   });
+
+  test('to a retired question is refused like an unknown id, and its replacement is taken (#548)', async () => {
+    const { api, stored } = setup();
+    for (const old of RETIRED) {
+      expect(QUESTIONS.some((q) => q.id === old.id)).toBe(false);
+      const res = await api.POST(post(JSON.stringify({ [old.id]: [old.options![0]] })));
+      expect(res.status).toBe(400);
+    }
+    const NEEDED = QUESTIONS.find((q) => q.id === 'q15b')!;
+    expect((await api.POST(post(JSON.stringify({ q15b: [NEEDED.options![0]] })))).status).toBe(201);
+    expect(stored).toEqual([{ q15b: [NEEDED.options![0]] }]);
+  });
 });
 
 describe('the results', () => {
+  test('still carry the answers stored under a retired question, for the panel to tally on its own (#548)', async () => {
+    const stored: Answers[] = [{ q15: ['A stream overlay'] }];
+    const api = surveyHandlers(
+      { insert: async (a) => void stored.push(a), list: async () => stored.map((answers, i) => ({ id: i + 1, submittedAt: '2026-10-01T00:00:00.000Z', answers })) },
+      { siteUrl: SITE, adminKey: () => KEY },
+    );
+    const res = await api.GET(get(`Bearer ${KEY}`));
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { responses: { answers: Answers }[] }).responses.map((r) => r.answers)).toEqual([{ q15: ['A stream overlay'] }]);
+  });
+
   test('answer to the Bearer key', async () => {
     const { api } = setup();
     const res = await api.GET(get(`Bearer ${KEY}`));

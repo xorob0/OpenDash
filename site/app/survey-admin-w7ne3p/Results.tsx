@@ -9,7 +9,7 @@
  * else: a refresh forgets it, which is the cheapest possible session to reason about.
  */
 import { useState } from 'react';
-import { OTHER_PREFIX, SURVEY, type Answers, type Question } from '../../lib/survey';
+import { OTHER_PREFIX, RETIRED, SURVEY, questionNumber, type Answers, type Question } from '../../lib/survey';
 import styles from './Results.module.css';
 
 interface StoredResponse {
@@ -60,6 +60,18 @@ function Texts({ q, responses }: { q: Question; responses: StoredResponse[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function Tally({ q, responses }: { q: Question; responses: StoredResponse[] }) {
+  return (
+    <div className={styles.question}>
+      <h3 className={`h3 ${styles.prompt}`}>
+        <span className={styles.number}>{questionNumber(q)}</span>
+        {q.label}
+      </h3>
+      {q.kind === 'text' || q.kind === 'paragraph' ? <Texts q={q} responses={responses} /> : <OptionCounts q={q} responses={responses} />}
+    </div>
   );
 }
 
@@ -129,16 +141,19 @@ export function Results() {
         <section key={section.title} className={styles.part}>
           <h2 className="h2">{section.title}</h2>
           {section.questions.map((q) => (
-            <div key={q.id} className={styles.question}>
-              <h3 className={`h3 ${styles.prompt}`}>
-                <span className={styles.number}>{q.id.slice(1)}</span>
-                {q.label}
-              </h3>
-              {q.kind === 'text' || q.kind === 'paragraph' ? <Texts q={q} responses={responses} /> : <OptionCounts q={q} responses={responses} />}
-            </div>
+            <Tally key={q.id} q={q} responses={responses} />
           ))}
         </section>
       ))}
+      {RETIRED.length > 0 ? (
+        <section className={styles.part}>
+          <h2 className="h2">No longer asked</h2>
+          <p className={styles.none}>The form stopped asking these. Their answers are counted against the options they were offered.</p>
+          {RETIRED.map((q) => (
+            <Tally key={q.id} q={q} responses={responses} />
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }
