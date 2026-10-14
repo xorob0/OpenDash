@@ -37,8 +37,9 @@ pit alert is out, and never over the gear (#1047, §10 *The pop-up's place*). No
 is drawn over the full-screen flag or a state of the pit family while it is out (*The pop-ups give
 way to the safety layers*, below).
 
-Under the default theme, the same five parts are on every rectangular face, and only their sizes
-change.
+Under the default theme, every rectangular face has the same five parts but 800 × 286, which has no
+room for the bar. From one face to the next only their sizes change, except at 600 × 686, which
+stacks zone A above B above C.
 
 | | |
 |---|---|

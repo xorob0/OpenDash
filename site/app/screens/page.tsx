@@ -5,10 +5,10 @@ import { Capture } from '../../components/Capture';
 import { Clip } from '../../components/Clip';
 import { ScreenPicker } from '../../components/ScreenPicker';
 import { Section } from '../../components/Section';
-import { anatomyParts } from '../../lib/anatomy';
+import { anatomyLede, anatomyParts } from '../../lib/anatomy';
 import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
-import { HERO_FACE } from '../../lib/content.generated';
+import { HERO_FACE, RECTANGULAR_FACES } from '../../lib/content.generated';
 import { ALL, BASE_FACE, LARGE_FACE, NARROWEST_FACE, WIDEST_FACE, byFolder, pickerFaces, type PackageOption } from '../../lib/faces';
 import { and, counted } from '../../lib/counts';
 import { COUNTS } from '../../lib/liveCounts';
@@ -53,7 +53,7 @@ export default function Screens() {
         <ScreenPicker faces={faces} initial={base?.slug ?? faces[0]?.slug ?? ''} />
       </Section>
 
-      <Section id="anatomy" title="One face, part by part" lede="Every rectangular face is built the same way. Hover or tap a part.">
+      <Section id="anatomy" title="One face, part by part" lede={anatomyLede(HERO_FACE, RECTANGULAR_FACES)}>
         {base ? (
           <Anatomy src={stillFor(base.folder)} alt={`The ${sizeLabel(base)} face`} width={HERO_FACE.width} height={HERO_FACE.height} parts={anatomyParts(HERO_FACE, COUNTS)} />
         ) : null}

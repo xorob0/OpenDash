@@ -61,7 +61,8 @@ tagged New is new in this release.
 
 ## The face
 
-A face is **five parts**, and every rectangular size is the same five.
+A face is **five parts**, and every rectangular size is the same five but for 800 x 286, which has
+no room for the bar.
 
 - The **rev bar** across the top, with its shift lights, in a recessed well. The lights come on at
   the RPMs **your sim publishes for the car you are driving**, so a car released this morning is
