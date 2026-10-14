@@ -140,6 +140,30 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A press that keeps the edit on a rig whose plugin is already the release is not told to restart SimHub,
+        /// since a restart finishes nothing, and is told which press replaces the edited dashboard (#1083).
+        /// </summary>
+        [Fact]
+        public void A_press_on_the_plugin_already_running_names_no_restart()
+        {
+            Assert.Equal(
+                "You already have OpenDash 0.4.0. The one you edited is left alone, and Reinstall everything replaces it.",
+                UpdateWording.AlreadyRunning("0.4.0", 1));
+            Assert.Equal(
+                "You already have OpenDash 0.4.0. The 2 you edited are left alone, and Reinstall everything replaces them.",
+                UpdateWording.AlreadyRunning("0.4.0", 2));
+            Assert.Equal("You already have OpenDash 0.4.0.", UpdateWording.AlreadyRunning("0.4.0", 0));
+            // The press it names is the button's own label, so the two cannot drift apart.
+            Assert.Contains(PanelConfirmation.ReinstallLabel, UpdateWording.AlreadyRunning("0.4.0", 1));
+
+            // And it is the line the run says, failure aside, whatever else the outcome holds.
+            var kept = new UpdateOutcome { Ok = true, AlreadyRunning = "0.4.0", EditedKept = new[] { "OpenDash" } };
+            Assert.Equal(UpdateWording.AlreadyRunning("0.4.0", 1), kept.Line);
+            Assert.DoesNotContain("Restart", kept.Line);
+            Assert.DoesNotContain("Restart", new UpdateOutcome { Ok = true, AlreadyRunning = "0.4.0" }.Line);
+        }
+
+        /// <summary>
         /// The question before an update says when the edited dashboards are replaced, and that is decided by the
         /// plan the run follows rather than by whether the release carries the plugin (#673). A release that publishes
         /// its packages beside the plugin, as v0.3.0-rc.7 did, installs them on the second press, and the question

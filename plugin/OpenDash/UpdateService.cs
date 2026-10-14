@@ -46,6 +46,16 @@ namespace OpenDashPlugin
         /// </summary>
         public bool ReplaceEditedOnRestart { get; set; }
 
+        /// <summary>
+        /// The release's version when it is the plugin already running and the run had no yes to carry to a restart,
+        /// so it downloaded and staged nothing (#1083). Null otherwise.
+        /// </summary>
+        public string AlreadyRunning { get; set; }
+
+        /// <summary>Of the dashboards the release carries inside the plugin, those somebody has edited, which a run
+        /// that is <see cref="AlreadyRunning"/> leaves as they are.</summary>
+        public IReadOnlyList<string> EditedKept { get; set; } = new string[0];
+
         /// <summary>Folders that were meant to be replaced and could not be.</summary>
         public IReadOnlyList<string> Failed { get; set; } = new string[0];
 
@@ -69,6 +79,7 @@ namespace OpenDashPlugin
                     // What did land still has to be said, or a person cannot tell what state they are in.
                     return Updated.Count == 0 ? failure : failure + " " + Updated.Count + " of them were replaced before it stopped. " + UpdateWording.ToSee(FontsWritten);
                 }
+                if (AlreadyRunning != null) return UpdateWording.AlreadyRunning(AlreadyRunning, EditedKept.Count);
                 var line = Updated.Count == 1 ? "Updated 1 dashboard. " : Updated.Count > 1 ? "Updated " + Updated.Count + " dashboards. " : string.Empty;
                 if (Updated.Count == 0 && HeldBack.Count > 0) line = "No dashboard was replaced: you have edited all of them. ";
                 else if (Updated.Count == 0 && !PluginStaged) return "There was nothing to replace.";
@@ -207,8 +218,17 @@ namespace OpenDashPlugin
             // and not the other is the mismatch this whole path exists to avoid -- and it fails silently,
             // as a field drawing its fallback for ever with nothing in any log.
             var pluginAsset = release.PluginAsset();
+            // The release's own plugin is the one running, so staging it changes nothing at the restart but one thing:
+            // it carries a yes to replacing edited dashboards to the start that writes them (EditedConsent, #862).
+            // Without that yes it is not fetched at all. Staged, it put "Restart SimHub to finish updating" on the
+            // line, on the card for as long as it waited and in the dialog, for a restart that then cleared it and
+            // finished nothing (#1083).
+            var edited = UpdatePlan.Edited(installer.Packages, release).OnRestart;
+            var alreadyRunning = pluginAsset != null && IsRunning(release.Version) && !(replaceEdited && edited.Count > 0);
+            if (alreadyRunning) pluginAsset = null;
             if (plan.IsEmpty && pluginAsset == null)
             {
+                if (alreadyRunning) return new UpdateOutcome { Ok = true, AlreadyRunning = release.Version, EditedKept = edited };
                 return new UpdateOutcome { Ok = true, NotCarried = plan.NotCarried };
             }
 
@@ -407,6 +427,10 @@ namespace OpenDashPlugin
                 ?.InstalledVersion;
             return CarriedVersion.Refusal(item.FolderName, carried, release.Version, installed);
         }
+
+        /// <summary>Whether <paramref name="version"/> is the plugin running. False for a caller that named none.</summary>
+        private bool IsRunning(string version) =>
+            !string.IsNullOrWhiteSpace(pluginVersion) && !string.IsNullOrWhiteSpace(version) && Versioning.VersionCompare(version, pluginVersion) == 0;
 
         /// <summary>The folder an asset was fetched for, when the package itself could not be read.</summary>
         private static string FolderOf(UpdatePlan plan, string assetName) =>

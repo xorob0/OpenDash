@@ -846,8 +846,8 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
-        /// A rig whose plugin is already the release, offered it because an edited screen holds the rig's version
-        /// back, still stages the twin: that run is what carries the yes to replacing the screen to the start that
+        /// A rig whose plugin is already the release, offered it because a screen it did not edit is behind, still
+        /// stages the twin on a yes to replacing an edited screen: that run is what carries the yes to the start that
         /// writes it, and the start clears the twin rather than swapping it (PluginUpdate.Review).
         /// </summary>
         [Fact]
@@ -867,6 +867,61 @@ namespace OpenDashPlugin.Tests
             Assert.True(outcome.Ok, outcome.Reason);
             Assert.True(outcome.PluginStaged);
             Assert.True(outcome.ReplaceEditedOnRestart);
+        }
+
+        /// <summary>
+        /// A press that keeps the edit, on a rig whose plugin is already the release, downloads and stages nothing and
+        /// does not ask for a restart (#1083).
+        /// </summary>
+        /// <remarks>
+        /// It staged the same plugin and said "Restart SimHub to finish updating. The one you edited is left alone.",
+        /// the card said the same for as long as the twin waited, and the restart cleared the twin and changed
+        /// nothing. With no yes to carry, a restart has nothing to finish, so the line names the version the rig
+        /// already has and the press that does replace the edited screen.
+        /// </remarks>
+        [Fact]
+        public void A_press_that_keeps_the_edit_on_the_plugin_already_running_stages_nothing()
+        {
+            var installer = Installed("0.1.0", new MemoryFolderRecord(), "OpenDash", SmallFolder);
+            var mine = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
+            File.WriteAllText(mine, "{\"mine\":true}");
+            installer.Refresh();
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: Built);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            fetcher.Requested.Clear();
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: false);
+
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.False(outcome.PluginStaged);
+            Assert.False(outcome.ReplaceEditedOnRestart);
+            Assert.Equal(Built, outcome.AlreadyRunning);
+            Assert.Equal(new[] { "OpenDash" }, outcome.EditedKept);
+            Assert.Equal(UpdateWording.AlreadyRunning(Built, 1), outcome.Line);
+            Assert.DoesNotContain("Restart", outcome.Line);
+            Assert.Empty(fetcher.Requested);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.False(File.Exists(PluginUpdate.ScriptPath(root)), "a swap was armed for the plugin already running");
+            Assert.Equal("{\"mine\":true}", File.ReadAllText(mine));
+
+            // A yes with nothing edited to carry has nothing for a restart to do either.
+            installer.EnsureInstalled(true, replaceEdited: true);
+            Assert.Empty(installer.EditedFolders);
+            var nothing = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+            Assert.False(nothing.PluginStaged);
+            Assert.Equal(UpdateWording.AlreadyRunning(Built, 0), nothing.Line);
+            Assert.False(PluginUpdate.Pending(root));
+
+            // A release newer than the plugin is staged as it always was, an edit kept or not: the restart puts it in place.
+            var newer = new UpdateService(fetcher, null, pluginVersion: "0.0.1");
+            newer.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            var staged = newer.Apply(installer, newer.LastReleases[0], replaceEdited: false);
+            Assert.True(staged.PluginStaged);
+            Assert.Null(staged.AlreadyRunning);
+            Assert.True(PluginUpdate.Pending(root));
         }
 
         /// <summary>The plugin hands the service its own version, without which a staged plugin is held to the

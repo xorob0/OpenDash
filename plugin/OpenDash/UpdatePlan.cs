@@ -112,9 +112,11 @@ namespace OpenDashPlugin
     /// disk is touched, and the run says why.
     ///
     /// The same version as what is installed is not refused. A rig whose plugin is already the release but which is
-    /// offered it because one of its screens was edited and held back (UpdateCheck.RigVersion) stages its twin, and
-    /// that run is how a yes to replacing the edited screen reaches the start that writes it (EditedConsent); the
-    /// twin itself is cleared at that start rather than swapped (PluginUpdate.Review).
+    /// offered it, because a screen it did not edit is still behind, stages its twin when the press said yes to
+    /// replacing an edited screen, and that run is how the yes reaches the start that writes it (EditedConsent); the
+    /// twin itself is cleared at that start rather than swapped (PluginUpdate.Review). Without a yes the twin is not
+    /// fetched at all (UpdateService.Apply, #1083), and an edited screen alone no longer holds the rig behind its
+    /// plugin (UpdateCheck.RigVersion).
     /// </remarks>
     public static class CarriedVersion
     {

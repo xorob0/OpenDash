@@ -81,6 +81,27 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// What to say when the release is the plugin already running and the press gave a restart nothing to do.
+        /// </summary>
+        /// <remarks>
+        /// Such a run downloads nothing and stages nothing (UpdateService.Apply), since the plugin the release carries
+        /// is the one SimHub has loaded and its start has already written every dashboard it was going to. It used
+        /// to stage that same plugin and say <see cref="RestartWithDashboards"/>, so a driver who kept an edited
+        /// screen was told to restart SimHub to finish updating, restarted, and found the same screen and the same
+        /// offer (#1083). An edited dashboard is named with the press that does replace it, which is the one place
+        /// that does, since no update will.
+        /// </remarks>
+        /// <param name="version">The version running, which is the release's.</param>
+        /// <param name="edited">How many of the dashboards the release carries inside the plugin somebody has edited.</param>
+        public static string AlreadyRunning(string version, int edited)
+        {
+            var line = "You already have OpenDash " + Show(version) + ".";
+            if (edited <= 0) return line;
+            return line + (edited == 1 ? " The one you edited is left alone, and " + PanelConfirmation.ReinstallLabel + " replaces it."
+                : " The " + edited + " you edited are left alone, and " + PanelConfirmation.ReinstallLabel + " replaces them.");
+        }
+
+        /// <summary>
         /// What the Update button says before it replaces a dashboard somebody has edited.
         /// </summary>
         /// <remarks>
