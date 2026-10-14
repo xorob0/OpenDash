@@ -5,7 +5,7 @@
  * accepts and the admin panel counts, with nothing retyped.
  */
 import { useState } from 'react';
-import { HONEYPOT, OTHER_PREFIX, QUESTIONS, SURVEY, type Question } from '../../lib/survey';
+import { HONEYPOT, OTHER_PREFIX, QUESTIONS, SURVEY, questionNumber, type Question } from '../../lib/survey';
 import styles from './SurveyForm.module.css';
 
 type Draft = Record<string, string | string[]>;
@@ -83,7 +83,7 @@ export function SurveyForm() {
           {section.questions.map((q) => (
             <fieldset key={q.id} className={styles.question}>
               <legend className={styles.prompt}>
-                <span className={styles.number}>{q.id.slice(1)}</span>
+                <span className={styles.number}>{questionNumber(q)}</span>
                 {q.prompt}
                 {q.hint ? <span className={styles.hint}>{q.hint}</span> : null}
               </legend>
