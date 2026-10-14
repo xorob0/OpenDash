@@ -1171,6 +1171,12 @@ namespace OpenDashPlugin.Tests
         /// has put there, and a test that waits a fixed time for it is otherwise a test of how busy the runner is.
         /// The tests are read rather than listed, so that a new class that starts such work cannot be left out.
         /// </summary>
+        /// <remarks>
+        /// It finds only UpdateService's own hand-overs, the calls whose name ends in InBackground. Other work a test
+        /// bounds by time also runs on the shared pool, a request to a listener on loopback for one, and this test
+        /// cannot tell such a wait from any other: a test of that kind allows anything short of the stall it is
+        /// there to catch, as ReleaseClientTests.A_refusal_gives_its_connection_back does.
+        /// </remarks>
         [Fact]
         public void The_tests_that_wait_on_background_work_run_alone()
         {
@@ -1180,7 +1186,7 @@ namespace OpenDashPlugin.Tests
 
             // A call such as service.WriteInBackground( or UpdateService.InBackground(, outside a string or a comment.
             var handsOver = new System.Text.RegularExpressions.Regex(@"\.\w*InBackground\(");
-            var noise = new System.Text.RegularExpressions.Regex(@"""(?:[^""\\\n]|\\.)*""|//[^\n]*");
+            var noise = new System.Text.RegularExpressions.Regex(@"""(?:[^""\\\n]|\\.)*""|//[^\n]*|/\*.*?\*/", System.Text.RegularExpressions.RegexOptions.Singleline);
             var topLevel = new System.Text.RegularExpressions.Regex(@"^    (?:public |internal )?(?:sealed |static |partial )*class (\w+)", System.Text.RegularExpressions.RegexOptions.Multiline);
             var outside = new List<string>();
             var seen = 0;
@@ -1190,7 +1196,9 @@ namespace OpenDashPlugin.Tests
                 foreach (System.Text.RegularExpressions.Match call in handsOver.Matches(code))
                 {
                     seen++;
-                    var name = topLevel.Matches(code.Substring(0, call.Index)).Cast<System.Text.RegularExpressions.Match>().Last().Groups[1].Value;
+                    var within = topLevel.Matches(code.Substring(0, call.Index)).Cast<System.Text.RegularExpressions.Match>().LastOrDefault();
+                    Assert.True(within != null, Path.GetFileName(path) + " has a call that hands work to the background with no class above it at four spaces; the class pattern no longer matches the file");
+                    var name = within.Groups[1].Value;
                     var type = typeof(UpdateServiceTests).Assembly.GetType("OpenDashPlugin.Tests." + name, throwOnError: true);
                     var named = type.GetCustomAttributesData().Where(a => a.AttributeType == typeof(CollectionAttribute)).Select(a => (string)a.ConstructorArguments[0].Value).SingleOrDefault();
                     if (named != UpdateServiceWriters.Name) outside.Add(Path.GetFileName(path) + ": " + name);

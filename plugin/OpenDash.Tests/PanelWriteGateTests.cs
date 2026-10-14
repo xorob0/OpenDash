@@ -11,8 +11,14 @@ using Xunit;
 namespace OpenDashPlugin.Tests
 {
     [Collection(UpdateServiceWriters.Name)]
-    public class PanelWriteGateTests
+    public class PanelWriteGateTests : IDisposable
     {
+        /// <summary>
+        /// A write this class let go has finished before the next test starts, so a test that failed before its write
+        /// ran does not leave that write counted as Busy for the next one (#1002).
+        /// </summary>
+        public void Dispose() => UpdateService.WaitForIdle(TimeSpan.FromSeconds(10));
+
         [Fact]
         public void Nothing_running_lets_a_press_write()
         {

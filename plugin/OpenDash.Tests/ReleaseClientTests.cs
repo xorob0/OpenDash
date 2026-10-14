@@ -146,6 +146,9 @@ namespace OpenDashPlugin.Tests
             Assert.Null(result.Body);
         }
 
+        /// <summary>Longer than a busy runner takes to answer, and short of the timeout a held connection waits out.</summary>
+        private const int UnderTheTimeout = ReleaseClient.TimeoutMilliseconds - 5000;
+
         /// <summary>
         /// A refusal gives its connection back, so a run of them neither piles up connections nor stalls the request
         /// after it.
@@ -158,6 +161,11 @@ namespace OpenDashPlugin.Tests
         /// never stalled. The net8 HttpWebRequest this test runs on does keep an undisposed refusal's connection, and
         /// so opens a new one for every request; counting the connections is what fails when the dispose goes. The
         /// limit is pinned to two and the timings are kept so that a runtime that does hold to it shows the stall.
+        ///
+        /// The stall is the client's whole timeout, so each request is allowed anything short of it
+        /// (<see cref="UnderTheTimeout"/>) rather than five seconds (#1002). Both ends of the request run on the thread
+        /// pool, which the rest of the suite shares, and on a busy runner a request that nothing held took five and a
+        /// half seconds.
         /// </remarks>
         [Fact]
         public void A_refusal_gives_its_connection_back()
@@ -176,13 +184,13 @@ namespace OpenDashPlugin.Tests
                     var refused = client.GetString(prefix);
                     Assert.False(refused.Ok);
                     Assert.Contains("403", refused.Reason);
-                    Assert.InRange(watch.ElapsedMilliseconds, 0, 5000);
+                    Assert.InRange(watch.ElapsedMilliseconds, 0, UnderTheTimeout);
                 }
 
                 var answered = Stopwatch.StartNew();
                 var result = client.GetString(prefix);
                 Assert.True(result.Ok, result.Reason);
-                Assert.InRange(answered.ElapsedMilliseconds, 0, 5000);
+                Assert.InRange(answered.ElapsedMilliseconds, 0, UnderTheTimeout);
 
                 List<string> connections;
                 int requests;
