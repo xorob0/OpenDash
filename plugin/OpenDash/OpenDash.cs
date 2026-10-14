@@ -455,9 +455,10 @@ namespace OpenDashPlugin
             }
             try
             {
-                // The crest is the one thing fetched at a start without a press, and only on a rig with a Porsche
-                // screen that draws the badge and no crest from the address yet: the theme's default (#714, the
-                // trade dress paragraph of scope.md). A copy already on disk is read and nothing is asked.
+                // Beside the update check, the crest is the one thing fetched at a start without a press, and
+                // only on a rig with a Porsche screen that draws the badge and no crest from the address yet: the
+                // theme's default (#714, the trade dress paragraph of scope.md). A copy already on disk is read
+                // and nothing is asked.
                 RefreshCrest();
             }
             catch (Exception ex)

@@ -4,6 +4,10 @@
 // naming the product is sent and that nothing identifying the user is, and both are pinned by ReleaseClientTests
 // against a loopback listener rather than asserted in prose.
 //
+// Every call through it is listed in site/lib/wire.ts, and site/test/wire.test.ts fails on a fetch this folder
+// makes that the list does not name, or on a connection opened anywhere but here: a request added to the plugin
+// is added there too, and the test then asks docs/scope.md and the site's comparison to say it (#1096).
+//
 // HttpWebRequest rather than HttpClient: HttpClient needs a System.Net.Http reference on net48 and buys nothing
 // here, since there is one request at a time and no connection pooling to gain. WebClient would hide the headers.
 using System;
