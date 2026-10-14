@@ -6,6 +6,10 @@
  * Pit time counts up while the car is in the lane and shows the last stop's duration otherwise, so
  * the field is useful both during a stop and after it.
  *
+ * The service order is iRacing's alone. Where the sim publishes none, which is every other sim, the
+ * options row says so in place of the toggles, the refuel figure reads `--`, and the pit time and its
+ * bar, which read SimHub's own pit members, go on counting (#564).
+ *
  * The two numbers are cut from the box rather than read off the ramp, which is the one page on the
  * catalogue artboard that is drawn that way: refuel at 116, 96, 64, 61 and 58 px and pit time at
  * 81, 67, 44, 42 and 40, none of them a ramp size and every pair within a pixel of 1.45 to 1. So
@@ -39,6 +43,7 @@ import {
   pitRefuel,
   pitRefuelIsAbsent,
   pitServiceFlag,
+  pitServiceIsAbsent,
   pitServiceProgress,
   pitTyreSelection,
   type Corner,
@@ -46,7 +51,7 @@ import {
 import { ds } from '../tokens.ts';
 import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
 
-const { fmt, iff, str, not } = ncalc;
+const { and, fmt, iff, str, not } = ncalc;
 
 /**
  * The catalogue's ratio between the refuel quantity and the pit time. Every drawing holds it: 116
@@ -71,6 +76,16 @@ const DASH_HEIGHT = 2;
 
 /** The on state: the 14 px badge the wheel-change tick is cut to fill. */
 const BADGE = 14;
+
+/**
+ * What the options row says where the sim publishes no service order, longest first: the first that
+ * fits the column is drawn, so a narrow one keeps the reason and drops the subject the toggles would
+ * have named. It is the energy and damage modules' "<subject> · <why>", without naming a sim.
+ */
+export const SERVICE_NOTICES: readonly string[] = ['Service · Not reported by this sim', 'Not reported by this sim', 'Not reported'];
+
+/** The order is published, so the toggles have something to say: true on iRacing, false elsewhere. */
+const serviceReported = (): Expr => not(pitServiceIsAbsent());
 
 /**
  * The progress bar's track. Six pixels at every shape the catalogue draws and on the companion
@@ -150,7 +165,7 @@ const serviceOption = (toggle: Toggle): Option => {
     text: toggle.text,
     stateWidth: BADGE,
     state: (name, x, middle) => [
-      band(`${name}.off`, rect(x, middle - DASH_HEIGHT / 2, DASH_WIDTH, DASH_HEIGHT), ds.color.text.dim, { visibleBind: not(on) }),
+      band(`${name}.off`, rect(x, middle - DASH_HEIGHT / 2, DASH_WIDTH, DASH_HEIGHT), ds.color.text.dim, { visibleBind: and(serviceReported(), not(on)) }),
       ...tick(name, rect(x, middle - BADGE / 2, BADGE, BADGE), on),
     ],
   };
@@ -168,7 +183,7 @@ const cornerOption = (toggle: Toggle): Option => {
     stateWidth: BADGE,
     state: (name, x, middle) => {
       const box = rect(x, middle - BADGE / 2, BADGE, BADGE);
-      return [band(`${name}.off`, box, ds.color.text.label, { visibleBind: not(on) }), ...tick(name, box, on)];
+      return [band(`${name}.off`, box, ds.color.text.label, { visibleBind: and(serviceReported(), not(on)) }), ...tick(name, box, on)];
     },
   };
 };
@@ -196,6 +211,7 @@ const tyresOption = (fs: number): Option => {
         color: ds.color.text.primary,
         bind: pitTyreSelection(),
         widest,
+        visibleBind: serviceReported(),
       }),
     ],
   };
@@ -263,12 +279,25 @@ export const pitView = defineModule('pitView', (ctx) => {
           for (const option of row) {
             const name = `${ctx.prefix}${option.id}`;
             items.push(
-              label(`${name}.label`, option.text, x, rowTop + (lineHeight - d.labelSm) / 2, option.textWidth, { size: d.labelSm }),
+              label(`${name}.label`, option.text, x, rowTop + (lineHeight - d.labelSm) / 2, option.textWidth, { size: d.labelSm, visibleBind: serviceReported() }),
               ...option.state(name, x + option.textWidth + STATE_GAP, rowTop + lineHeight / 2),
             );
             x += widthOf(option) + OPTION_GAP;
           }
         });
+        // In the toggles' place where the sim publishes none, the longest notice the column holds, in the
+        // middle of the height they would have taken. The tick and the off states are already dark
+        // there, every bit reading 0, and the labels are hidden above.
+        const notice = SERVICE_NOTICES.find((text) => Math.ceil(measureText('BarlowMedium', text, d.labelSm)) + LABEL_SLACK <= box.width);
+        if (notice !== undefined) {
+          items.push(
+            label(`${ctx.prefix}service.notice`, notice, box.left, top + (height - d.labelSm) / 2, box.width, {
+              size: d.labelSm,
+              color: ds.color.text.dim,
+              visibleBind: pitServiceIsAbsent(),
+            }),
+          );
+        }
         return items;
       },
       shed: {

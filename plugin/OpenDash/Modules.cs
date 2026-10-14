@@ -53,7 +53,7 @@ namespace OpenDashPlugin
             new Module(5, "fuel", "Fuel", "Fuel left, whether it reaches the flag, what to add and the per-lap use.", true),
             new Module(6, "energy", "Energy", "Virtual energy. Le Mans Ultimate only.", false),
             new Module(7, "tyres", "Tyres", "Temperature, pressure, wear and compound per corner.", true),
-            new Module(8, "pitView", "Pit view", "The pit service order: fuel, tyres, repairs and tear-off.", true),
+            new Module(8, "pitView", "Pit view", "The pit service order, iRacing only: fuel, tyres, repairs and tear-off. The pit time on every sim.", true),
             new Module(9, "carSettings", "Car settings", "TC, ABS, brake bias, mixture and anti-roll bars.", true),
             new Module(10, "inputs", "Inputs", "Throttle, brake and clutch traces with bar gauges.", true),
             new Module(11, "session", "Session", "Session type, position, class, lap and time left.", true),

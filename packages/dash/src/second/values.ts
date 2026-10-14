@@ -2582,6 +2582,14 @@ const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvF
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
 
 /**
+ * True where the sim publishes no pit service order, which is every sim but iRacing: Assetto Corsa sets
+ * the stop in its own pit app and puts nothing of it in shared memory. Read alone, every bit defaults to
+ * 0 and draws a stop set to change no tyre and repair nothing, so the pit view says the order is not
+ * reported instead (#564).
+ */
+export const pitServiceIsAbsent = (): Expr => isNull(raw('PitSvFlags'));
+
+/**
  * SimHub's own ratio from litres to gallons, `GameManagerBase.GetFuelConvertRatio` in 9.12.6. The
  * tank a face draws beside the pit order is converted by it, so the order is converted by the same
  * figure rather than by a more exact one that would disagree with the tank in the last digit.

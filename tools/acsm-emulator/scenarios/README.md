@@ -15,7 +15,7 @@ switched off in the timeline, so a screenshot taken at any moment shows the same
 |---|---|
 | `green` | A clean racing lap, P3 of 24, with no flag out. AC has no green flag: `Graphics.Flags` is `AC_NO_FLAG` on a clear track, and SimHub marks `Flag_Green` not available on AC, so this is the absence of every other flag. TC goes from 3 to 5 at twenty seconds, as on iRacing. |
 | `yellow` | A yellow-flag lap on low fuel: `AC_YELLOW_FLAG`, 2.1 litres, a hot right front and a cold left front, worn right-hand tyres, TC 7 and ABS 4, and P6, the player put behind five cars of the field. AC's yellow is one value, with no waving or caution beside it. |
-| `pit` | In the box, in the pit lane, the raw limiter on, stationary in neutral, P9. AC publishes no service order, so unlike iRacing's `pit` there is no pit menu to draw. `GameData.PitLimiterOn` reads on here, but because SimHub answers it with the pit lane on AC (#558), which `race` shows from the other side. The dashes read the plugin's `OpenDash.PitLimiterOn`, which is the raw limiter (#1122). |
+| `pit` | In the box, in the pit lane, the raw limiter on, stationary in neutral, P9. AC publishes no service order, so unlike iRacing's `pit` there is no pit menu to draw, and pit view says the order is not reported while its pit time counts (#564). `GameData.PitLimiterOn` reads on here, but because SimHub answers it with the pit lane on AC (#558), which `race` shows from the other side. The dashes read the plugin's `OpenDash.PitLimiterOn`, which is the raw limiter (#1122). |
 
 ## The others
 
