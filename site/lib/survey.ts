@@ -246,16 +246,20 @@ export const SURVEY: readonly SurveySection[] = [
       {
         id: 'q15',
         label: 'Needed before daily use',
-        prompt: 'Some things are planned but not built yet. Which would you need before OpenDash could be your daily dashboard?',
+        prompt: 'Some things are coming but not built yet. Which would you need before OpenDash could be your daily dashboard?',
         kind: 'checks',
         hint: ALL,
+        // Between the sims and the last option, the coming rows of the comparison by their labels, and
+        // nothing docs/scope.md refuses: a refusal offered here as a plan tells the visitor who ticks
+        // it that it is coming (#548). A test holds the list to the table.
         options: [
           'Verified support for my sim, beyond iRacing',
-          'An idle and pit screen',
-          'Per-car shift lights and themes',
-          'Round screen support',
-          'A stream overlay',
-          'Changing the layout, not only the colours',
+          'Pit page on the face',
+          'Dashboard manager and first run',
+          'Night mode',
+          'Your own colours',
+          'Licence and rating on driver rows',
+          'Flags screen for a second display',
           'None of these block me',
         ],
       },

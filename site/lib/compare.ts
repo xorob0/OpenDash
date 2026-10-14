@@ -29,7 +29,11 @@ export interface Cell {
   text: string;
   /** The issues a coming feature is scheduled under. Required when the mark is `soon`. */
   issues?: number[];
-  /** The line in docs/scope.md a refusal cites, when one exists. */
+  /**
+   * The line in docs/scope.md a refusal cites, when one exists: the refusal's name as the document
+   * sets it in bold, a colon, and words of that refusal's own paragraphs, quoted. A test holds both
+   * halves to the document, so a refusal that moves takes the cell with it (#548).
+   */
   scope?: string;
 }
 
@@ -160,7 +164,7 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
     label: 'Works without the plugin',
     cells: {
       opendash: cell('no', 'The plugin is the only way in. A screen whose plugin is not enabled yet still draws its defaults.', {
-        scope: 'a way in that does not begin with the plugin: a SimHub that cannot take a DLL into its own folder has no route in.',
+        scope: 'a way in that does not begin with the plugin: a user who cannot put a DLL into SimHub’s own folder, or who will not, has no route in at all.',
       }),
       lovely: cell('no', 'The dashboards cannot run without the plugin. Their words.'),
       dnr: cell('no', 'Without the plugin a dashboard draws a notice screen instead of your data.'),
@@ -303,7 +307,10 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
     id: 'invisible',
     label: 'Invisible dash',
     cells: {
-      opendash: cell('no', 'A see-through dash over the game is an overlay, and refused with it.', { word: 'Refused', scope: 'the invisible dash: a screen capture item drawn behind the face.' }),
+      opendash: cell('no', 'A see-through dash over the game is refused as a choice about focus. SimHub could draw one.', {
+        word: 'Refused',
+        scope: 'the invisible dash: the refusal is a choice about focus rather than a limitation of the format.',
+      }),
       lovely: cell('no', 'Nothing of the kind ships.'),
       dnr: cell('yes', 'Invisible: the sim drawn through your own dash screen, on a hotkey. Free.'),
     },

@@ -4,12 +4,42 @@
  * blank. A cell we could not stand behind is cut from the row, never hedged.
  */
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { CHECKED_ON, PRODUCTS, rows, scheduled } from '../lib/compare.ts';
 import { sizeLabel } from '../lib/packages.ts';
 import { FREE_FOREVER, THEMES_FREE } from '../lib/site.ts';
 import { SAMPLE_COUNTS, SAMPLE_LISTED } from './sampleCounts.ts';
 
 const ROWS = rows(SAMPLE_COUNTS, SAMPLE_LISTED);
+
+/** Lower case, one kind of apostrophe and quote, no Markdown emphasis, and single spaces. */
+const normalise = (s: string): string =>
+  s
+    .replace(/\*\*/g, '')
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+
+/**
+ * The refusals of docs/scope.md's "What is deliberately not built", by name: each paragraph that
+ * opens on a bold name starts one, and the paragraphs up to the next bold name are its body.
+ */
+function refusalsInScope(): Map<string, string> {
+  const doc = readFileSync(path.resolve(import.meta.dir, '..', '..', 'docs', 'scope.md'), 'utf8');
+  const start = doc.indexOf('## What is deliberately not built');
+  const section = doc.slice(start, doc.indexOf('\n## ', start + 1));
+  const out = new Map<string, string>();
+  let name: string | undefined;
+  for (const paragraph of section.split(/\n\s*\n/)) {
+    const bold = /^\*\*([^*]+?)\.?\*\*/.exec(paragraph.trim());
+    if (bold) name = normalise(bold[1]!);
+    if (name !== undefined) out.set(name, `${out.get(name) ?? ''} ${normalise(paragraph)}`);
+  }
+  return out;
+}
 
 describe('the comparison', () => {
   test('every row has a cell for every product', () => {
@@ -42,6 +72,25 @@ describe('the comparison', () => {
     const blank = [];
     for (const row of ROWS) for (const p of PRODUCTS) if (p.id !== 'opendash' && row.cells[p.id].text.trim().length < 10) blank.push(`${row.id}/${p.id}`);
     expect(blank).toEqual([]);
+  });
+
+  test('a refusal cites the line docs/scope.md has for it, in the document’s own words', () => {
+    // The stream overlay's cell quoted a sentence docs/scope.md had replaced, and nothing read the
+    // document to notice (#548). A scope is the refusal's bold name, a colon, and a quotation.
+    const refusals = refusalsInScope();
+    const wrong: string[] = [];
+    for (const row of ROWS) {
+      const c = row.cells.opendash;
+      if (c.word === 'Refused' && !c.scope) wrong.push(`${row.id}: refused without a scope line`);
+      if (!c.scope) continue;
+      const colon = c.scope.indexOf(': ');
+      const name = normalise(c.scope.slice(0, colon));
+      const quote = normalise(c.scope.slice(colon + 2)).replace(/\.$/, '');
+      const body = refusals.get(name);
+      if (colon < 0 || body === undefined) wrong.push(`${row.id}: "${c.scope.slice(0, colon)}" is not a refusal in docs/scope.md`);
+      else if (!body.includes(quote)) wrong.push(`${row.id}: docs/scope.md does not say "${quote}" under "${name}"`);
+    }
+    expect(wrong).toEqual([]);
   });
 
   test('no cell says it was not checked', () => {
