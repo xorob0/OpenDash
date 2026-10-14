@@ -30,11 +30,11 @@ switched off in the timeline, so a screenshot taken at any moment shows the same
 
 ## Traces
 
-None is committed yet: the scenarios were added by a branch that could not claim the VM, and every
-one of them is on Assetto Corsa's untraced list in [scripts/sims.ts](../../../scripts/sims.ts).
-`bun run record --sim ac race green yellow pit quali notc noapp timeattack` records them into
-`traces/ac/`, and each name comes off the list in the commit that adds its trace. `shiftlights` stays on it: its point
-is the car swap at forty seconds, which a twenty-second trace would not hold.
+`race`, `green`, `yellow`, `pit`, `quali`, `notc` and `noapp` were recorded on the VM on 2026-10-14
+for #1138 and are committed under `traces/ac/`. Two are still on Assetto Corsa's untraced list in
+[scripts/sims.ts](../../../scripts/sims.ts). `timeattack`, added by #1127, was not part of that recording, and
+`bun run record --sim ac timeattack` takes it off. `shiftlights` stays on it: its point is the car
+swap at forty seconds, which a twenty-second trace would not hold.
 
 ## Checking one
 
