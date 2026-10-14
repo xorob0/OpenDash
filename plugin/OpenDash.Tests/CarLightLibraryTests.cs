@@ -283,8 +283,9 @@ namespace OpenDashPlugin.Tests
             Assert.True(result.Ok);
             Assert.Equal(2, result.Cars);
             Assert.Equal(now, CarLightLibrary.FetchedAt(root));
-            Assert.Equal(2, service.CarCountFor(IRacing));
-            Assert.Equal(0, service.CarCountFor(AssettoCorsa));
+            var read = CarLightLibrary.ReadLibrary(root);
+            Assert.Equal(2, read.CountFor(CarLightLibrary.SimFor(IRacing)));
+            Assert.Equal(0, read.CountFor(CarLightLibrary.SimFor(AssettoCorsa)));
             Assert.Equal("2 cars, updated just now", service.Status);
         }
 
@@ -296,7 +297,7 @@ namespace OpenDashPlugin.Tests
             var result = service.Download(now);
             Assert.True(result.Ok);
             Assert.Equal(1, service.CarCount);
-            Assert.Equal(1, service.CarCountFor("Assetto Corsa"));
+            Assert.Equal(1, CarLightLibrary.ReadLibrary(root).CountFor(CarLightLibrary.SimFor("Assetto Corsa")));
             Assert.Equal(now, CarLightLibrary.FetchedAt(root));
         }
 

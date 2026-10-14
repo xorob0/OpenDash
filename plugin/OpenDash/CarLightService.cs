@@ -13,9 +13,10 @@
 // #AARRGGBB. Twelve names instead of a hundred and forty-nine.
 //
 // The fallback for every failure is the same and is already built: the strip goes back to the
-// ladder the sim publishes. Nothing on the thread pool throws, because an unobserved exception there
-// takes SimHub down on .NET Framework. Update is the one exception: it publishes no mirror and then
-// throws on, so that DataUpdate, which guards it, can say in SimHub's log what went wrong.
+// ladder the sim publishes, or SimHub's bands where it publishes none. Nothing on the thread pool
+// throws, because an unobserved exception there takes SimHub down on .NET Framework. Update is the
+// one exception: it publishes no mirror and then throws on, so that DataUpdate, which guards it, can
+// say in SimHub's log what went wrong.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -52,12 +53,6 @@ namespace OpenDashPlugin
         public int CarCount
         {
             get { return cars.Count; }
-        }
-
-        /// <summary>How many cars one sim's tables hold, by the game as SimHub codes it or names it. Zero for a game they do not cover.</summary>
-        public int CarCountFor(string game)
-        {
-            return cars.CountFor(CarLightLibrary.SimFor(game));
         }
 
         /// <summary>When the tables were last fetched, or null if they never have been.</summary>

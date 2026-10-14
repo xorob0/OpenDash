@@ -38,7 +38,7 @@ export default function Lights() {
           <div className={styles.column}>
             <h2 className="h3">Lit like the real car</h2>
             <p className="prose">
-              A Porsche lights like a Porsche and a Ferrari like a Ferrari. The shift points come from Car Data, an open table of cars measured in iRacing, Assetto Corsa and Assetto Corsa Competizione. One
+              A Porsche lights like a Porsche and a Ferrari like a Ferrari. The shift points come from Car Data, an open table of measured cars, read for iRacing, Assetto Corsa Competizione and the few Assetto Corsa cars it carries so far. One
               click on the LEDs page fetches it, and nothing about you or your car leaves your machine.
             </p>
             <Attribution className={`prose ${styles.credit}`} />
