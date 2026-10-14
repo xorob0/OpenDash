@@ -132,6 +132,10 @@ export const ASSETTO_CORSA: Sim = {
     'quali',
     'notc',
     'noapp',
+    // Added by #1127 on a branch that could not claim the VM: quali under AC's TIME_ATTACK, the
+    // widest session name, which the AiM is photographed writing whole. `bun run record --sim ac
+    // timeattack` takes it off.
+    'timeattack',
   ],
 };
 
