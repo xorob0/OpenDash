@@ -14,13 +14,16 @@ Assetto Corsa emulator (#579), the A3 fixes and the table #102 publishes start f
 
 Decompiled with `ilspycmd` into a scratch directory, never into the repository. The DLLs are the ones
 in the VM's `C:\Program Files (x86)\SimHub`, which are byte-identical to `plugin/lib/` where both
-exist (`GameReaderCommon.dll`, `SimHub.Plugins.dll`).
+exist (`GameReaderCommon.dll`, `SimHub.Plugins.dll`). `ICarsReader.dll` and `iRacingSDK.dll` are the copies
+under the share's `simhub-lib-extra`, taken from the same install: the `GameReaderCommon.dll` beside them
+is byte-identical to `plugin/lib/`'s.
 
 | Assembly | What it holds |
 |---|---|
 | `ACSharedMemory.dll` | `ACManager` (Assetto Corsa), `ACCManager` and `ACCSpectatorManager` (ACC), `ACHelper`, the AC and ACC shared-memory structs (`ACSharedMemory.MMFModels`, `ACSharedMemory.ACC.MMFModels`), `ACSharedMemoryGroupReader`, `ACCSharedMemoryGroupReader`, `ACRawData`, `ACCRawData`, `CarPhysicsManager`, `LutManager`, `ACDHelper`, `TrackDesc`, `CarDesc` |
 | `RfactorReader.dll` | `LMUManager` (Le Mans Ultimate), `RF2ManagerBase<T>` it derives from, `LMUWrapV2`, LMU's native structs (`RfactorReader.LMU`), and the rFactor 2 plugin reader `CrewChiefV4.rFactor2_V2.RF2SharedMemoryReader` |
 | `GameReaderCommon.dll` | `GameManagerBase<,,>`, which turns each reader's `GD_*` answers into `GameData` (`PreParseDataBase`), computes the opponents' derived data (`ComputeOpponentsData`), the sectors, the spotter and the car settings; `StatusDataBase`, `Opponent`, `SectorTimes` |
+| `ICarsReader.dll` | `IRacingManager` (iRacing), the reader the other three are measured against: its `GD_*` answers, such as `GD_TyrePressure*` from `LFcoldPressure`, `GD_TyreTemperature*` from `LFtempCM`, `GD_PitLimiterOn` from the `EngineWarnings` limiter bit, `GD_MaxGears` returning 0 and `GD_CarDamage1..5` marked `[NotAvailable]` and returning 0; `GD_Opponents` |
 | `SimHub.Plugins.dll` | `DataCorePlugin.DeclareProperties` and `DeclareObject`, which name the `GameData` and `GameRawData` properties; `SupportedGameManager`; the NCalc `driver*()` registry in `NCalcEngineMethodsRegistry` |
 | `SimHubWPF.exe` and `SimHubWPF.exe.config` | `GameRegistry.LoadReaders` (the game list), `MainWindow.autodetectTimer_Tick` and `MainModel.GetCurrentGame` (switching), and the `<Code>Processes` application settings (process names) |
 
@@ -144,8 +147,9 @@ nobody fills reads 0, never null.
 **`[NotAvailable]`.** A reader marks the `GD_*` methods it cannot answer with `[NotAvailable]`, and
 `DataCorePlugin.GetPropertySupportStatus(member, readerType, check)`, a public static, turns that into
 `SupportStatus.NotSupported` for the property. It is a real per-game capability list, but not a complete
-or a correct one: `ACCManager.GD_ABSLevel` is marked and filled, `ACManager.GD_PitLimiterOn` is not
-marked and answers a different question, and `GD_CarDamage*` on iRacing is not marked and is zero.
+or a correct one: `ACCManager.GD_ABSLevel` is marked and filled, and `ACManager.GD_PitLimiterOn` is not
+marked and answers a different question. Where a reader has nothing it usually says so: iRacing's
+`GD_CarDamage1..5` are marked and return 0.
 
 **`GameRawData`.** `DataCorePlugin.DeclareProperties` declares it **once, from the reader's
 `GetDataSample()`**, not from live data: every public field and property of the sample, recursively,
@@ -234,6 +238,7 @@ and `PreParseDataBase` adds the player alone, **named `Me`**, with the player's 
 | `SessionTypeName` | differs | `Graphics.Session.ToString().Replace("AC_", "")`, the same capitals as AC. SimHub's enum stops at `AC_DRAG` (6), so a session ACC numbers beyond it reads as a number. |
 | `SessionTimeLeft` | filled | `Graphics.SessionTimeLeft` (ms) |
 | `TotalLaps`, `CompletedLaps`, lap times | filled | `Graphics.NumberOfLaps`, `CompletedLaps`, `iCurrentTime`, `iLastTime`, `iBestTime`; the three times read as 0 when they are 214748300 or more, ACC's "no time" |
+| `RemainingLaps`, `CurrentLap` | computed | by the base (`PreParseDataBase`), as on AC: `TotalLaps - CompletedLaps` and never below 0, and `CompletedLaps` plus one |
 | `Sector*` | computed | as AC, but `GD_Sector2Time` returns the second `LastSectorTime` alone rather than adding the first. Whether ACC's `lastSectorTime` is already cumulative decides whether sector 2 is right; see [Needs a drive](#needs-a-drive). |
 | `Position` | filled | `Graphics.Position` |
 | `OpponentsCount`, `PlayerClassOpponentsCount`, `BestLapOpponent*` | computed | from the broadcast opponents |
@@ -270,6 +275,7 @@ and `PreParseDataBase` adds the player alone, **named `Me`**, with the player's 
 | `SessionTimeLeft` | filled | `scoringInfo.mSessionTimeRemaining` |
 | `TotalLaps` | filled | `scoringInfo.mMaxLaps` when it is between 1 and 999, else 0 |
 | `CompletedLaps` | filled | the player's `mTotalLaps` |
+| `RemainingLaps`, `CurrentLap` | computed | by the base (`PreParseDataBase`), as on AC: `TotalLaps - CompletedLaps` and never below 0, and `CompletedLaps` plus one |
 | `CurrentLapTime` | filled | `mElapsedTime - mLapStartET` of the native telemetry |
 | `LastLapTime`, `BestLapTime` | filled | the player's `mLastLapTime`, `mBestLapTime` (seconds; LMU's -1 for none is clamped to 0 by the base) |
 | `Sector*` | computed | `RF2ManagerBase.GD_Sector1Time`, `GD_Sector2Time`: the rFactor 2 plugin's `mCurSector1`, `mCurSector2`, cumulative |
@@ -354,7 +360,7 @@ reference.
 | Pit service (#564) | `Telemetry.PitSvFlags`, `PitSvFuel`, `dp*TireChange` | none | `Graphics.mfdFuelToAdd`, `mfdTyreSet`, `mfdTyrePressureLF` to `RR` | none read by SimHub (the plugin's pit info buffer is not mapped); `PlayerNativeTelemetry.mScheduledStops` |
 | Flags (#551) | `Telemetry.SessionFlagsDetails.Is*` | `Graphics.Flags` (one value) | `Graphics.Flag`, `Graphics.FlagsDetails.IsACC_*`, `globalYellow`, `globalYellow1..3`, `globalWhite`, `globalGreen`, `globalChequered`, `globalRed`, `Penalty` | `PlayerNativeScoring.mFlag`, `mUnderYellow`, `mFinishStatus`; `scoringInfo.mGamePhase` (5 green, 6 full course yellow, 8 over), `mYellowFlagState`, `mStartLight`; the plugin's `Data.mSectorFlag01..03` |
 | Tyre temperatures (#556) | `Telemetry.LFtempCM` and so on, the same as `GameData.TyreTemperature*` | `Physics.TyreTempI`, `TyreTempM`, `TyreTempO` `01..04`; `GameData.TyreTemperature*Inner/Middle/Outer` swap I and O on the left side | the same, and `Physics.tyreTemp01..04` | `GameData.TyreTemperature*Inner/Middle/Outer` from `mTemperature`; the plugin's `CurrentPlayerTelemetry.mWheels01..04.mTemperature01..03` and `mTireCarcassTemperature` |
-| Damage (#582) | none (`CarDamage*` 0) | `Physics.CarDamage01..05` = `GameData.CarDamage1..5`, unscaled | the same, and `Physics.suspensionDamage01..04` | `GameData.CarDamage*` `[NotAvailable]`; the plugin's `CurrentPlayerTelemetry.mDentSeverity01..08`, `mDetached` |
+| Damage (#582) | none (`GameData.CarDamage*` `[NotAvailable]`, 0) | `Physics.CarDamage01..05` = `GameData.CarDamage1..5`, unscaled | the same, and `Physics.suspensionDamage01..04` | `GameData.CarDamage*` `[NotAvailable]`; the plugin's `CurrentPlayerTelemetry.mDentSeverity01..08`, `mDetached` |
 | Incidents (#567) | `Telemetry.PlayerCarMyIncidentCount`, `WeekendOptions.IncidentLimit` | none | none (`Graphics.Penalty` is a typed penalty) | none (`PlayerNativeScoring.mNumPenalties`, `PlayerNativeTelemetry.mTrackLimitsSteps`) |
 | Delta to last lap (#575) | `Telemetry.LapDeltaToSessionLastlLap` | none | `Graphics.iDeltaLapTime`, to the best lap, as `GameData.DeltaToSessionBest` | `PlayerNativeTelemetry.mDeltaBest`, to the best lap |
 | Gear count (#996) | `DriverInfo.DriverCarGearNumForward` | `Extensions.GearCount`, also `GameData.CarSettings_MaxGears` | none; `CarSettings_MaxGears` is learned | `PlayerNativeTelemetry.mMaxGears`, also `CarSettings_MaxGears` |
@@ -411,8 +417,8 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
 
 A dashboard never names a game, so each reading that differs above becomes an `OpenDash.*` property
 whose value the plugin derives per game from `GameData.GameName`. The per-game table below is what it
-fills; `DataCorePlugin.GetPropertySupportStatus` can seed it but not decide it (it misses AC's limiter
-and iRacing's damage, and marks ACC's filled `ABSLevel`).
+fills; `DataCorePlugin.GetPropertySupportStatus` can seed it but not decide it (it misses AC's limiter,
+which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 
 | Capability | iRacing | Assetto Corsa | ACC | Le Mans Ultimate |
 |---|---|---|---|---|
@@ -422,7 +428,7 @@ and iRacing's damage, and marks ACC's filled `ABSLevel`).
 | In the car | `IsOnTrack` | `Graphics.Status == 2` | `Graphics.Status == 2` | `mInRealtime` |
 | Pit service | yes | no | the MFD's fuel and tyre set | no |
 | Incidents | yes | no | no | no |
-| Steering angle, positive left, in degrees | `-SteeringWheelAngle` in degrees | `Physics.SteerAngle`, its unit and sign for the author's wheel | `Physics.SteerAngle`, an input with no lock | `-mUnfilteredSteering * mPhysicalSteeringWheelRange / 2` |
+| Steering angle, positive left, in degrees | `SteeringWheelAngle` in degrees, not negated (#1057) | `Physics.SteerAngle`, its unit and sign for the author's wheel | `Physics.SteerAngle`, an input with no lock | `-mUnfilteredSteering * mPhysicalSteeringWheelRange / 2` |
 | A delta to the last lap | yes | no | no (one to the best) | no (one to the best) |
 | Damage | no | `CarDamage1..5` | `CarDamage1..5` | no |
 | Opponents beyond the player | yes | only with SimHub's AC app | only with broadcasting | yes |
