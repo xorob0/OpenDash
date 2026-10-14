@@ -9,15 +9,18 @@ import { anatomyParts } from '../../lib/anatomy';
 import { packageFile, stillFor } from '../../lib/captures';
 import { clipFor } from '../../lib/clips';
 import { HERO_FACE } from '../../lib/content.generated';
-import { ALL, BASE_FACE, LARGE_FACE, NARROWEST_FACE, WIDEST_FACE, byFolder, pickerFaces } from '../../lib/faces';
+import { ALL, BASE_FACE, LARGE_FACE, NARROWEST_FACE, WIDEST_FACE, byFolder, pickerFaces, type PackageOption } from '../../lib/faces';
 import { and, counted } from '../../lib/counts';
 import { COUNTS } from '../../lib/liveCounts';
 import { sizeLabel } from '../../lib/packages';
 import { INSTALL, REPO_URL, issueUrl } from '../../lib/site';
 import styles from './page.module.css';
 
-/** `from a 1920 × 480 to a 480 round`, read from the faces the build makes, or nothing when it has made none. */
-const RANGE = WIDEST_FACE && NARROWEST_FACE ? `from a ${sizeLabel(WIDEST_FACE)} to a ${sizeLabel(NARROWEST_FACE)}` : '';
+/** A face as a sentence names it: a round one is `480 round`, a strip `1920 × 480 strip`, any other `1280 × 720 face`. */
+const named = (p: PackageOption): string => (p.round ? sizeLabel(p) : `${sizeLabel(p)} ${p.width >= 3 * p.height ? 'strip' : 'face'}`);
+
+/** `from a 1920 × 480 strip to a 480 round`, read from the faces the build makes, or nothing when it has made none. */
+const RANGE = WIDEST_FACE && NARROWEST_FACE ? `from a ${named(WIDEST_FACE)} to a ${named(NARROWEST_FACE)}` : '';
 
 /** The round faces, which still draw the card layout. */
 const ROUND = ALL.filter((p) => p.round);
