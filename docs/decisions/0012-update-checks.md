@@ -300,5 +300,9 @@ current one alone. Without such a yes nothing is downloaded or staged. With the 
 aside, such a rig is offered the release only when an unedited dashboard is behind the plugin, which is
 what a start whose install of it failed leaves, so the press does what that start would: it writes the
 rig's dashboards from the plugin running, holding the edited ones back. The line says the rig already
-has the version, names what was written and the reopen rather than a restart, and names Reinstall
-everything for a dashboard that was kept. A dashboard that fails again says why, as any update does.
+has the version and names what was written and the reopen rather than a restart. A dashboard that fails
+again says why, as any update does. The panel asks before a press that meets an edited dashboard, so the
+run it sends here either has no edit to keep or has a yes, and a yes for an edited dashboard behind the
+release stages the plugin as above. The service still holds an edited dashboard back on a run with no
+yes, and its line then names Reinstall everything, but that guards a caller other than the panel, which
+has none today.

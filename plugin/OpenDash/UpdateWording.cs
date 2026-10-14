@@ -92,6 +92,10 @@ namespace OpenDashPlugin
         /// which is how a rig on the release comes to be offered it at all, so the line names those and the reopen
         /// rather than a restart. An edited dashboard is named with the press that does replace it, which is the
         /// one place that does, since no update will.
+        ///
+        /// The panel never reaches that edited form: it asks before any press that meets an edited dashboard, and a
+        /// yes for one behind the release stages the plugin instead. It is there for a caller that sends a run with no
+        /// yes, so that such a run says what it left rather than nothing.
         /// </remarks>
         /// <param name="version">The version running, which is the release's.</param>
         /// <param name="updated">How many dashboards were behind it and were written.</param>

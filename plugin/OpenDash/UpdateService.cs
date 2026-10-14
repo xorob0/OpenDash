@@ -54,7 +54,8 @@ namespace OpenDashPlugin
         /// <remarks>
         /// Such a run's <see cref="Updated"/> are the rig's dashboards that were behind the plugin, as one whose
         /// install failed at the start is, and its <see cref="HeldBack"/> are the edited ones behind it, which it
-        /// leaves alone.
+        /// leaves alone. The panel's run never has any: it asks before a press that meets an edited dashboard, and a
+        /// yes for one behind the release stages the plugin rather than coming here.
         /// </remarks>
         public string AlreadyRunning { get; set; }
 

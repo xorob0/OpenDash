@@ -893,7 +893,8 @@ namespace OpenDashPlugin.Tests
         /// nothing. With no yes to carry, a restart has nothing to finish. An unedited screen behind the plugin, which
         /// is how such a rig comes to be offered the release at all, is written now from the plugin running, as its
         /// start would, and the line names the version the rig already has and the press that does replace the
-        /// edited screen.
+        /// edited screen. The panel asks before such a press and sends a yes, so this run with no yes is a caller
+        /// other than the panel's; the service keeps the edit for it all the same.
         /// </remarks>
         [Fact]
         public void A_press_that_keeps_the_edit_on_the_plugin_already_running_stages_nothing()
@@ -990,6 +991,52 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(Built, running);
             Assert.Null(UpdateMark.Offered(Built, running, pluginStaged: false));
             Assert.NotEqual(UpdateState.UpdateAvailable, UpdateMark.Applied(UpdateCheck.Conclude("0.1.0", service.LastReleases, manual: true), outcome.Ok, Built, running).State);
+        }
+
+        /// <summary>
+        /// A yes to replacing an edited screen that is already at the release, on a rig whose plugin is the release and
+        /// whose other screen is behind, carries nothing to a restart: the start leaves a current screen alone whatever
+        /// the driver said, so the twin is not staged and the press writes the screen behind now (#1083).
+        /// </summary>
+        /// <remarks>
+        /// The panel asks before any press that meets an edited screen (UpdatePlan.Edited), so this yes is the one it
+        /// sends here. Counting every edited screen rather than those behind the release staged the twin and asked for
+        /// a restart that wrote nothing, which is the fault this ticket is about.
+        /// </remarks>
+        [Fact]
+        public void A_yes_to_an_edit_already_at_the_release_stages_nothing_and_writes_the_screen_behind()
+        {
+            var record = new MemoryFolderRecord();
+            Installed(Built, record, "OpenDash");
+            Installed("0.1.0", record, SmallFolder);
+            var source = new DownloadedPackageSource();
+            foreach (var folder in new[] { "OpenDash", SmallFolder }) source.Add(folder + ".simhubdash", SyntheticPackage.Zip(folder, Built).ToArray());
+            var installer = new DashboardInstaller(root, null, source, record);
+            var mine = Path.Combine(root, "DashTemplates", "OpenDash", "OpenDash.djson");
+            File.WriteAllText(mine, "{\"mine\":true}");
+            installer.Refresh();
+            Assert.Equal(new[] { "OpenDash" }, installer.EditedFolders);
+            var fetcher = new Fetcher { Listing = PluginOnlyListing(BuiltTag) };
+            fetcher.Assets[PluginUrl] = PluginZip(PluginUpdate.DllName);
+            long ticks = 0;
+            var service = new UpdateService(fetcher, null, pluginVersion: Built);
+            service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            fetcher.Requested.Clear();
+
+            var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
+
+            Assert.True(outcome.Ok, outcome.Reason);
+            Assert.False(outcome.PluginStaged);
+            Assert.False(outcome.ReplaceEditedOnRestart);
+            Assert.Equal(Built, outcome.AlreadyRunning);
+            Assert.Equal(new[] { SmallFolder }, outcome.Updated);
+            Assert.Empty(outcome.HeldBack);
+            Assert.Empty(fetcher.Requested);
+            Assert.False(PluginUpdate.Pending(root));
+            Assert.Equal("{\"mine\":true}", File.ReadAllText(mine));
+            Assert.Equal(Built, PackageExtractor.ReadInstalledVersion(root, SmallFolder));
+            installer.Refresh();
+            Assert.Equal(Built, UpdateCheck.RigVersion(installer.Packages, new[] { "OpenDash", SmallFolder }, Built));
         }
 
         /// <summary>The plugin hands the service its own version, without which a staged plugin is held to the
