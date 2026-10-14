@@ -1945,14 +1945,18 @@ namespace OpenDashPlugin.Tests
                 "applyWaiting = true; if (Check(manual: true)) return; applyWaiting = false;",
                 "if (release == null) { UpdatesDrawCard(); UpdatesRefreshCheck(); Say(UpdateWording.NothingToApply, false); return; }",
                 "plugin.Installer.Refresh();",
-                "var edited = plugin.Installer.EditedFolders;",
-                "var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited), onRestart: release.PluginAsset() != null);",
+                "var replacing = UpdatePlan.Edited(plugin.Installer.Packages, release);",
+                "var edited = replacing.All;",
+                "var question = UpdateWording.ReplaceEditedQuestion(UpdatesNames(replacing.Now), UpdatesNames(replacing.OnRestart));",
                 "if (press == PressOutcome.Ask) { UpdatesAsk(updatesCardLine, question); return; }",
                 "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
                 "var started = plugin.ApplyUpdate(release, replaceEdited, report, outcome =>",
                 "if (!started) { Say(PanelMessage.Caution(PanelWriteGate.WhileUpdating)); return; }",
                 "UpdatesDrawCard(); UpdatesRefreshCheck();");
             Assert.Single(System.Text.RegularExpressions.Regex.Matches(apply, @"var replaceEdited ="));
+            // When the question says the edited ones are replaced is the plan's, never whether the release carries
+            // the plugin: one that publishes its packages beside it replaces them on the press (#673).
+            Assert.DoesNotContain("PluginAsset()", apply);
 
             InOrder(Method("private void Reinstall()"), "if (UpdatesHeld) return;", "UpdatesReadThen(ReinstallRead);");
             var reinstall = Method("private void ReinstallRead()");
@@ -2264,7 +2268,7 @@ namespace OpenDashPlugin.Tests
             var names = Method("private IReadOnlyCollection<string> UpdatesNames(IEnumerable<string> folders)");
             Assert.Contains("var screens = Settings.RigScreens(); return (folders ?? Enumerable.Empty<string>()).Select(folder => PanelUpdates.ScreenName(screens, folder)).ToList();", names);
             // Both questions name what they replace through UpdatesNames, never the installer's folders.
-            Assert.Contains("UpdateWording.ReplaceEditedQuestion(UpdatesNames(edited),", Method("private void ApplyUpdate()"));
+            Assert.Contains("UpdateWording.ReplaceEditedQuestion(UpdatesNames(replacing.Now), UpdatesNames(replacing.OnRestart));", Method("private void ApplyUpdate()"));
             Assert.Contains("PanelUpdates.ReinstallQuestion(UpdatesNames(edited));", Method("private void ReinstallRead()"));
 
             Assert.Contains("foreach (var target in ledDevices.Targets) { if (target != null && target.Id != null) devices[target.Id] = target.Name;", Method("private IDictionary<string, string> UpdatesDevices()"));
