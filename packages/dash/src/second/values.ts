@@ -2211,9 +2211,10 @@ export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)
 export const engineRunning = (): Expr => gt(rpm(), num(0));
 
 /**
- * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
- * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
- * change to this line.
+ * The driver is in the car as iRacing says it: `IsOnTrack`, which is "car on track physics running with
+ * player in car". It is the fallback of {@link sim}'s `driverInCar`, which is what every caller reads, so
+ * that the plugin answers for the other sims and a package without it reads exactly this (#561). One
+ * definition, which #312 asks for.
  *
  * It is the stronger of the two questions #312 tells apart, and {@link inSession} is the weaker: a
  * driver in the garage is in a session and not in the car. Everything that raises itself on a change
@@ -2230,8 +2231,9 @@ export const engineRunning = (): Expr => gt(rpm(), num(0));
  * answers. A change notification is harmless if it fires in a sim with no `IsOnTrack`, so it passes
  * `true` and keeps showing there. The alert catalogue does not: its car alerts outrank every flag, and
  * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that published no `IsOnTrack` would put
- * IGNITION OFF over the band whenever the engine idled. It passes `false`, and is iRacing's, as the
- * flags already are.
+ * IGNITION OFF over the band whenever the engine idled. It passes `false`. With the plugin installed
+ * Assetto Corsa, ACC and Le Mans Ultimate say, so the choice is left to a package without it and to a
+ * sim the plugin's table does not know.
  */
 export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
 
@@ -2269,7 +2271,9 @@ export const sim = {
   damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
   /**
    * The driver is in the car, physics running. Without the plugin, {@link inTheCar}, with the caller's answer
-   * for a sim that says nothing. Not yet read: #561 moves `inTheCar`'s callers onto this.
+   * for a sim that says nothing. Assetto Corsa and ACC answer it with `Graphics.Status` live and Le Mans
+   * Ultimate with `mInRealtime`, so the car alerts, the change notifications, the Porsche's fuel alarm and
+   * the AiM's engine warnings all show there, where iRacing's `IsOnTrack` is absent (#561).
    */
   driverInCar: (ifUnknown = true): Expr => setting.reported(DRIVER_IN_CAR, inTheCar(ifUnknown)),
 };

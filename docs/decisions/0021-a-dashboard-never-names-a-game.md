@@ -126,10 +126,10 @@ that does not know the game's types. A capability is the frame SimHub last finis
 dashboard's own reads by one frame; nothing it answers moves faster than that matters. And a fifth sim
 reads iRacing's answers until it has a row, which is what it read before this record and is no worse.
 
-A trace carries a capability only once a package reads it. The traces carry `CarHasPitLimiter`, the one
-read so far, typed as the constant `true` the plugin publishes for the emulator's car until the next
-recording observes it, as `traces/README.md` records. The other three join the traces with the bindings
-that read them.
+A trace carries a capability only once a package reads it. The traces carry `CarHasPitLimiter` and,
+since #561, `DriverInCar`, each typed as the constant `true` the plugin publishes for the emulator's
+car until the next recording observes it, as `traces/README.md` records. The other two join the traces
+with the bindings that read them.
 
 ### Unresolved
 

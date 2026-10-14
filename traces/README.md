@@ -228,3 +228,10 @@ place of iRacing's `dcPitSpeedLimiterToggle`, with that test as its fallback. On
 is whether the toggle is there at all, and it is there on every frame of all nine, so the column is `true`
 in each: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` reads it from the plugin and drops the entry.
+
+#561 asserts one more in each. `OpenDash.DriverInCar` is whether the driver is in the car with
+the physics running, which the plugin answers per sim (ADR 0021) and which every car alert, every change
+notification, the Porsche's fuel alarm and the AiM's engine warnings now read in place of iRacing's
+`IsOnTrack`, with that as its fallback. On iRacing the plugin's answer is `IsOnTrack` itself, and it is
+`true` on every frame of all nine, so the column is `true` in each: the value a recording will write. The
+next `bun run record` reads it from the plugin and drops the entry.

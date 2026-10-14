@@ -176,6 +176,13 @@ describe('when it is out', () => {
     expect(visible).not.toContain('IsOnTrack], 1)');
   });
 
+  test('on a sim with no IsOnTrack the plugin says whether the driver is in the car (#561)', () => {
+    // Assetto Corsa, ACC and Le Mans Ultimate publish no `IsOnTrack`, and before the plugin answered
+    // the notification showed there in the garage and the menus as readily as on the circuit.
+    const visible = changeNotificationVisible('abs');
+    expect(visible).toContain('isnull([OpenDash.DriverInCar], isnull([DataCorePlugin.GameRawData.Telemetry.IsOnTrack], true))');
+  });
+
   test('a car that does not have the setting raises nothing, tested where the reading is defaulted', () => {
     // The brake bias reads through an isnull default and is never null itself, so the presence test
     // is the property behind it, exactly as the strip's cell does it.

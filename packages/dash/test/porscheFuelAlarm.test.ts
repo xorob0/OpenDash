@@ -15,7 +15,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FACE_SIZES } from '../src/contract.ts';
 import { ncalc, type LayerItem, type TextItem } from '../src/generator.ts';
-import { inTheCar, LITRES_TO_GALLONS } from '../src/second/values.ts';
+import { inTheCar, LITRES_TO_GALLONS, sim } from '../src/second/values.ts';
 import { THEME_DRAWINGS } from '../src/themes/drawings.ts';
 import { drawsInThisProcess } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
@@ -57,6 +57,11 @@ describe("the Porsche's low-fuel alarm", () => {
     expect(raised(ac(30))).toBe(false);
   });
 
+  test('is clear on Assetto Corsa in the garage, where the plugin says the driver is not in the car (#561)', () => {
+    expect(raised({ ...ac(2.1), 'OpenDash.DriverInCar': false })).toBe(false);
+    expect(raised({ ...ac(2.1), 'OpenDash.DriverInCar': true })).toBe(true);
+  });
+
   test('is raised on iRacing with 8 litres, and clear with 30', () => {
     expect(raised(iracing(8))).toBe(true);
     expect(raised(iracing(30))).toBe(false);
@@ -72,7 +77,9 @@ describe("the Porsche's low-fuel alarm", () => {
 
   test('reads no iRacing raw property', () => {
     expect(lowFuelAlarm()).not.toContain('GameRawData.Telemetry.FuelLevel');
-    // The one raw read left is `inTheCar`'s, which reads as in the car where the sim does not say.
+    // The one raw read left is `inTheCar`'s, the plugin's fallback, which reads as in the car where
+    // nothing says.
+    expect(lowFuelAlarm()).toContain(sim.driverInCar());
     expect(lowFuelAlarm().replace(inTheCar(), '')).not.toContain('GameRawData');
   });
 

@@ -21,10 +21,11 @@
  * are a lossy summary of it: `Flag_Yellow` is `yellow`, `yellowWaving`, `caution` and
  * `cautionWaving` folded together, and `Flag_Black` is only the `black` bit, so a furled black and
  * a disqualification are invisible through them. The other five each carry their own condition, and
- * each of those reads `inTheCar` from `second/values.ts`, #312's one test of whether anybody is
+ * each of those reads `sim.driverInCar` from `second/values.ts`, #312's one test of whether anybody is
  * driving: SimHub reads iRacing's ignition as off whenever there is no voltage, which is whenever the
- * driver is in the garage, and an alert raised there is noise. They read it as "no" in a sim that
- * does not say, so the car alerts are iRacing's in the way the flags are.
+ * driver is in the garage, and an alert raised there is noise. The plugin answers it on every sim it
+ * knows (#561), and the alerts read it as "no" where nothing says, so a package without the plugin
+ * raises them on iRacing alone.
  *
  * The catalogue carries no duration of its own, and *whether* a condition shows is exactly as long
  * as it holds: the canvas asks for a configurable three seconds per alert, and a flag that went dark
@@ -40,7 +41,7 @@ import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
 import { setting } from './contract.ts';
-import { engineStopped, hasIncidentLimit, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
+import { engineStopped, hasIncidentLimit, ignitionOff, incidentLimit, incidents, isInPitLane, sim } from './second/values.ts';
 
 const { and, changed, concat, eq, fmt, game, gt, iff, isNull, isnull, not, num, or, prop, raw, str } = ncalc;
 
@@ -269,11 +270,11 @@ export const isFlag = (condition: AlertCondition): condition is FlagCondition =>
 export const ALERT_EVENT_MS = ds.indicator.alert.durationMs;
 
 /**
- * Somebody is in the car, as iRacing says it, and no if the sim says nothing: every car alert's
- * first condition. `inTheCar` explains why this caller answers "no" where the change notification
- * answers "yes".
+ * Somebody is in the car, as the plugin says it for the running sim or iRacing says it without the
+ * plugin, and no if nothing says: every car alert's first condition. `inTheCar` explains why this
+ * caller answers "no" where the change notification answers "yes".
  */
-const driving = (): Expr => inTheCar(false);
+const driving = (): Expr => sim.driverInCar(false);
 
 /**
  * Out on the circuit and in the car, which is where the two power alerts belong.

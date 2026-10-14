@@ -12,7 +12,7 @@ import { describe, expect, test } from 'bun:test';
 import { changeNotificationVisible } from '../src/components/changeNotification.ts';
 import { PIT_ALERTS } from '../src/components/pitAlerts.ts';
 import { ALERT_CATALOGUE, ALERT_EVENT_MS, alertCondition, FLAG_CATALOGUE, isFlag, type CarAlert } from '../src/flags.ts';
-import { engineStopped, ignitionOff, inTheCar, isInPitLane } from '../src/second/values.ts';
+import { engineStopped, ignitionOff, inTheCar, isInPitLane, sim } from '../src/second/values.ts';
 import { TRACKED_VALUES } from '../src/second/tracked.ts';
 import { ncalc } from '../src/generator.ts';
 import { ds } from '../src/tokens.ts';
@@ -104,7 +104,7 @@ describe('nothing is raised with nobody in the car', () => {
   // driver is standing in the garage, so every car alert reads #312's one test of being in the car.
   for (const alert of ALERT_CATALOGUE.filter((c): c is CarAlert => !isFlag(c))) {
     test(alert.id, () => {
-      expect(alert.when).toContain(inTheCar(false));
+      expect(alert.when).toContain(sim.driverInCar(false));
       const everything: Props = {
         ...DRIVING,
         [`${G}.EngineIgnitionOn`]: 0,
@@ -126,10 +126,44 @@ describe('nothing is raised with nobody in the car', () => {
     // car alert, which outranks every flag, does not.
     expect(inTheCar()).toBe(inTheCar(true));
     expect(inTheCar(true)).not.toBe(inTheCar(false));
-    expect(changeNotificationVisible(TRACKED_VALUES[0]!.id)).toContain(inTheCar(true));
+    expect(changeNotificationVisible(TRACKED_VALUES[0]!.id)).toContain(sim.driverInCar(true));
     expect(evalNcalc(inTheCar(true), {})).toBe(true);
     expect(evalNcalc(inTheCar(false), {})).toBe(false);
     expect(evalNcalc(inTheCar(false), { [`${T}.IsOnTrack`]: true })).toBe(true);
+  });
+});
+
+describe('in the car on a sim the plugin answers for (#561)', () => {
+  // Assetto Corsa, ACC and Le Mans Ultimate publish no `IsOnTrack`; the plugin answers whether the
+  // driver is in the car from each one's own reading and publishes it as `OpenDash.DriverInCar`.
+  const { [`${T}.IsOnTrack`]: _iracing, ...ELSEWHERE } = DRIVING;
+  const IN_CAR: Props = { 'OpenDash.DriverInCar': true };
+  const OUT_OF_CAR: Props = { 'OpenDash.DriverInCar': false };
+
+  test('every car alert reads the plugin, with iRacing\'s IsOnTrack as its fallback', () => {
+    for (const alert of ALERT_CATALOGUE.filter((c): c is CarAlert => !isFlag(c))) {
+      expect({ alert: alert.id, reads: alert.when.includes('[OpenDash.DriverInCar]') }).toEqual({ alert: alert.id, reads: true });
+      expect({ alert: alert.id, falls: alert.when.includes(inTheCar(false)) }).toEqual({ alert: alert.id, falls: true });
+    }
+  });
+
+  test('the ignition and the stall are raised there, which they never were without IsOnTrack', () => {
+    expect(raised('ignition', { ...ELSEWHERE, ...IN_CAR, [`${G}.EngineIgnitionOn`]: 0 })).toBe(true);
+    expect(raised('engine', { ...ELSEWHERE, ...IN_CAR, [`${G}.EngineStarted`]: 0 })).toBe(true);
+    expect(raised('ignition', { ...ELSEWHERE, [`${G}.EngineIgnitionOn`]: 0 })).toBe(false);
+  });
+
+  test('and nothing is raised there in the garage or the menus', () => {
+    const everything: Props = { ...ELSEWHERE, [`${G}.EngineIgnitionOn`]: 0, [`${G}.EngineStarted`]: 0, [`${G}.PushToPassActive`]: 1 };
+    for (const alert of ALERT_CATALOGUE.filter((c): c is CarAlert => !isFlag(c))) {
+      expect({ alert: alert.id, raised: raised(alert.id, { ...everything, ...OUT_OF_CAR }, true) }).toEqual({ alert: alert.id, raised: false });
+    }
+  });
+
+  test('the plugin\'s answer is taken over iRacing\'s where both are there, and they agree on iRacing', () => {
+    expect(raised('ignition', { ...DRIVING, ...IN_CAR, [`${G}.EngineIgnitionOn`]: 0 })).toBe(true);
+    expect(raised('ignition', { ...DRIVING, ...IN_CAR, ...IN_THE_GARAGE, [`${G}.EngineIgnitionOn`]: 0 })).toBe(true);
+    expect(raised('ignition', { ...DRIVING, ...OUT_OF_CAR, [`${G}.EngineIgnitionOn`]: 0 })).toBe(false);
   });
 });
 

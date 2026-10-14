@@ -326,7 +326,7 @@ Le Mans Ultimate: their raw blocks have other names (next section). What a null 
 | `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | `0x` drawn as a value | #567 |
 | `Telemetry.SteeringWheelAngle` | the steering dial and trace | flat | #567 |
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
-| `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications | unknown, read as in the car | #561 |
+| `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications | the plugin's `DriverInCar`, and without the plugin unknown, read as not in the car for the car alerts and as in it everywhere else | #561 |
 | `Telemetry.LFtempCM`, `RFtempCM`, `LRtempCM`, `RRtempCM` | band D's tyre page | `0 0 0 0` | #556 |
 | `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service | a stop nobody set | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |

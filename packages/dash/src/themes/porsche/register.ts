@@ -16,7 +16,7 @@ import { boxSlack } from '../../design/metrics.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { ncalc } from '../../generator.ts';
-import { fuelLitres, inTheCar } from '../../second/values.ts';
+import { fuelLitres, sim } from '../../second/values.ts';
 import { ds, resolveToken, TRANSPARENT } from '../../tokens.ts';
 
 /** Every coloured box, the track state, the speed box and the gear tile. */
@@ -113,4 +113,4 @@ const LOW_FUEL_LITRES = 10;
  * #1126, is the same litres on iRacing and null on Assetto Corsa, so the alarm never lit there.
  */
 export const lowFuelAlarm = (): Expr =>
-  ncalc.and(inTheCar(), ncalc.not(ncalc.isNull(ncalc.game('Fuel'))), ncalc.lt(fuelLitres(), ncalc.num(LOW_FUEL_LITRES)));
+  ncalc.and(sim.driverInCar(), ncalc.not(ncalc.isNull(ncalc.game('Fuel'))), ncalc.lt(fuelLitres(), ncalc.num(LOW_FUEL_LITRES)));
