@@ -4,8 +4,8 @@
  * The thing worth proving is that two of them can never draw at once, because they are drawn on top
  * of one another: the exclusion chain is the only thing standing between "ENGAGE LIMITER" and
  * "IGNITION OFF" being one illegible band. So the conditions are evaluated against every
- * combination of the four telemetry facts they read, in the manner flagBox.test.ts evaluates the
- * catalogue against several bits at once.
+ * combination of the telemetry facts they read, and of what the plugin says about the car, in the
+ * manner flagBox.test.ts evaluates the catalogue against several bits at once.
  *
  * The evaluator covers exactly what `pitAlerts.ts` emits -- property reads, `isnull` in both
  * arities, `truncate`, the arithmetic and the comparisons -- and throws on anything else rather
@@ -31,13 +31,19 @@ interface Car {
   stalled: boolean;
   /** Whether the car publishes an in-car limiter toggle at all. */
   hasLimiter: boolean;
+  /**
+   * What the plugin says about the car having a limiter (ADR 0021, #1101): absent with no plugin, no game
+   * or a game it has no row for, and otherwise its answer, which wins over the toggle.
+   */
+  reported?: boolean | null;
 }
 
-const telemetry = (car: Car): Record<string, number | null> => ({
+const telemetry = (car: Car): Record<string, number | boolean | null> => ({
   'DataCorePlugin.GameData.PitLimiterOn': car.limiter ? 1 : 0,
   'DataCorePlugin.GameData.IsInPitLane': car.lane ? 1 : 0,
   'DataCorePlugin.GameData.EngineIgnitionOn': car.ignition ? 1 : 0,
   'DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle': car.hasLimiter ? 1 : null,
+  'OpenDash.CarHasPitLimiter': car.reported ?? null,
   // SimHub's own reading of the engine, which is what the family reads since #762: its iRacing reader
   // sets it from the ignition and the stalled bit, so a stall with the ignition on is 0 and so is
   // any car with the ignition off.
@@ -55,28 +61,34 @@ function evaluate(expression: string, car: Car): boolean {
   const words = js.replace(/P\("[^"]*"\)/g, '0').match(/[A-Za-z_][A-Za-z_.]*/g) ?? [];
   const unknown = words.filter((w) => w !== 'isnull' && w !== 'Math.trunc');
   if (unknown.length > 0) throw new Error(`the evaluator does not cover ${unknown.join(', ')} in ${expression}`);
-  const read = (name: string): number | null => {
+  const read = (name: string): number | boolean | null => {
     if (!(name in values)) throw new Error(`the evaluator has no value for ${name}`);
     return values[name] ?? null;
   };
   // One function for both arities, which is what NCalc's isnull is: with a fallback it defaults the
   // reading, without one it asks whether the property is there at all.
-  const isnull = (value: number | null, fallback?: number): number | boolean => (fallback === undefined ? value === null : (value ?? fallback));
+  const isnull = (value: number | boolean | null, fallback?: number | boolean): number | boolean => (fallback === undefined ? value === null : (value ?? fallback));
   const result: unknown = new Function('P', 'isnull', `return (${js});`)(read, isnull);
   if (typeof result !== 'boolean') throw new Error(`not a condition: ${expression}`);
   return result;
 }
 
-/** Every combination of the five facts: thirty-two cars, which is the whole state space. */
+/**
+ * Every combination of the five facts, with no plugin and with each answer the plugin can give about the
+ * limiter: ninety-six cars, which is the whole state space.
+ */
 const CARS: Car[] = [];
-for (let mask = 0; mask < 32; mask++) {
-  CARS.push({
-    limiter: (mask & 1) > 0,
-    lane: (mask & 2) > 0,
-    ignition: (mask & 4) > 0,
-    stalled: (mask & 8) > 0,
-    hasLimiter: (mask & 16) > 0,
-  });
+for (const reported of [null, false, true]) {
+  for (let mask = 0; mask < 32; mask++) {
+    CARS.push({
+      limiter: (mask & 1) > 0,
+      lane: (mask & 2) > 0,
+      ignition: (mask & 4) > 0,
+      stalled: (mask & 8) > 0,
+      hasLimiter: (mask & 16) > 0,
+      reported,
+    });
+  }
 }
 
 /** Which alert is out on this car, or undefined where the rectangle stays empty. */
@@ -129,6 +141,16 @@ describe('what each state says', () => {
     // iRacing reports PitLimiterOn 0 for a car with no limiter, so without the presence test this
     // is the band a Mazda would carry down every pit lane it ever enters.
     expect(shown({ ...on, limiter: false, hasLimiter: false })).toBeUndefined();
+  });
+
+  test('where the plugin says whether the car has a limiter, its answer is the one taken', () => {
+    // Assetto Corsa has no in-car toggle and every car has a limiter: the plugin says so, and the
+    // reminder shows where the toggle's absence alone would have kept it dark (#558).
+    expect(shown({ ...on, limiter: false, hasLimiter: false, reported: true })).toBe('engage');
+    // And a sim whose car has none says that, whatever else it publishes.
+    expect(shown({ ...on, limiter: false, hasLimiter: true, reported: false })).toBeUndefined();
+    // With no answer, iRacing's own test stands, which is what a package with no plugin reads.
+    expect(shown({ ...on, limiter: false, hasLimiter: true, reported: null })).toBe('engage');
   });
 
   test('the ignition and the engine are read only in the lane, and the ignition outranks the engine', () => {

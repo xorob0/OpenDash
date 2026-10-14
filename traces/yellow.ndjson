@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[79350,6],"recorded":"2026-10-13","simHub":"unknown"}
+{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[79350,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -145,6 +145,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
 {"p":"DataCorePlugin.GameRunning","v":1}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
+{"p":"OpenDash.CarHasPitLimiter","v":true}
 {"p":"OpenDash.CarLadderChosen","v":true}
 {"p":"OpenDash.CarLadderFlashes","v":true}
 {"p":"OpenDash.CarLadderLamps","v":16}
