@@ -165,3 +165,18 @@ form waits for the theme that needs it to argue the case.
 own for 600 x 686, although no Porsche display is portrait. The rule above permits a theme to claim
 the size or to decline it; which of the two the Porsche does is #205's question rather than this
 record's.
+
+---
+
+## Amended, 2026-10-14: the hooks become required, and the house becomes a theme (#1139)
+
+**What moved.** [ADR 0022](0022-core-and-theme.md) decides that every hook of `ThemeDrawing` is
+required and that the house look implements all of them under a theme folder of its own, so that
+"`default` is a theme like any other" above describes the code rather than the intention: today the
+default theme registers no drawing, and every hook left out is the house's code path. It also decides
+that a theme derives from the core's signals and never reads a property, which
+`packages/dash/test/themePurity.test.ts` holds from this date.
+
+**What did not move.** What a theme may change and may never do stands as written: the palette, the
+type, the chrome and the anatomy, and never a page removed or a field dropped. The byte-identical
+requirement is the review of every step ADR 0022 lists.

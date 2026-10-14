@@ -1520,6 +1520,12 @@ export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsC
 export const fieldSize = (): Expr => iff(classMode(), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
+/**
+ * The gear as the sim writes it, `N`, `R` or a digit, and the one place `Gear` is read for a screen:
+ * zone A, the gear card, the pit wall and the LED profiles draw this, and the two car themes do too.
+ * `shift.ts` reads the property on its own, since this file reads its ladders.
+ */
+export const gear = (): Expr => game('Gear');
 
 /**
  * The unit words the faces draw.
@@ -1529,7 +1535,12 @@ export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
  * for `km/h` and `L`. The written form is what the canvas draws and what the box was measured
  * against, so the enum is mapped here rather than in each follower.
  */
-export const speedUnit = (): Expr => iff(eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH')), str('mph'), str('km/h'));
+/**
+ * Whether SimHub is set to miles an hour, which is the one switch every speed figure follows. A
+ * theme that writes the unit in its own words (the AiM writes `kph`) asks this rather than the sim.
+ */
+export const speedInMph = (): Expr => eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH'));
+export const speedUnit = (): Expr => iff(speedInMph(), str('mph'), str('km/h'));
 // Engine speed has one body, `rpms` in `shift.ts`, because the speedo prints it directly above a
 // rev bar that reads the same value: two spellings of one expression is how the redline came to
 // disagree with the bar it sits on. ADR 0014.
@@ -1542,6 +1553,8 @@ export const rpm = rpms;
 const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
 export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
+/** The sim has published a tank at all, which is what tells no tank from an empty one. */
+export const fuelIsPublished = (): Expr => not(isNull(game('Fuel')));
 /**
  * The tank in litres whatever the driver's unit, for a figure a car fixes in litres, as the Porsche
  * fixes its low-fuel alarm at ten (#1126). Null where no sim is running, so a caller can tell no tank
@@ -2618,6 +2631,21 @@ export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)),
 
 /** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
 export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
+
+/**
+ * The car has a headlight-flash control: iRacing's `dcHeadlightFlash`, the in-car control itself,
+ * absent on a car without one and on every other sim.
+ */
+export const hasHeadlightFlashControl = (): Expr => not(isNull(raw('dcHeadlightFlash')));
+
+/**
+ * The driver has flashed the headlights within the alert window: `changed()` over the control, which
+ * is SimHub's own clock (ADR 0009), open for `indicator.alert.durationMs` after the control last
+ * moved. Asked before anything else in an `and`, so that the window is recorded on the first frame
+ * it could open; `flags.ts` says why the order is load-bearing. iRacing publishes the flash control
+ * and no headlight state, so a flash is all that can light a headlight lamp.
+ */
+export const headlightFlashed = (): Expr => ncalc.changed(num(dsTokens.indicator.alert.durationMs), raw('dcHeadlightFlash'));
 
 /**
  * What {@link pitLimit} reads when the sim publishes no limit: a speed nothing reaches in either
