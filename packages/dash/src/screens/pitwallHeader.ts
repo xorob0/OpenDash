@@ -44,6 +44,7 @@ import {
   hasLapTotal,
   hasTrackState,
   hasWind,
+  hasIncidents,
   incidentLimit,
   incidents,
   localClock,
@@ -61,7 +62,7 @@ import {
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
 
-const { concat, str, fmt, iff, num, isnull, isNull, not } = ncalc;
+const { and, concat, str, fmt, iff, num, isnull, isNull, not } = ncalc;
 
 /** Height of the pit wall header and the padding either side of it. */
 export const PIT_WALL_HEADER = { height: 64, padX: 32, gap: 16, groupGap: 24 } as const;
@@ -211,6 +212,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
 
   const compact = spec.compact ?? false;
   const hasLimit = not(isNull(incidentLimit()));
+  const counted = hasIncidents();
   // `of 30` is the race's length only in a race counted in laps; in a timed iRacing race `TotalLaps`
   // is the leader's laps, and `L12 of 14` read as two laps to go with half an hour to run (#989).
   const lapTotal = hasLapTotal();
@@ -242,12 +244,15 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
         { kind: 'value', sample: '0:42:15', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
       ],
     },
+    // Hidden, word and limit with it, where the sim counts no incidents, which is every sim but
+    // iRacing: `Inc 0x` there was a clean sheet nobody awarded (#567). The groups keep their places,
+    // as the track state and the wind beside it do.
     {
       id: 'incidents',
       parts: [
-        { kind: 'label', text: 'Inc' },
-        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, widest: INCIDENTS_WIDEST, color: ds.purpose.alert.incident },
-        ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: hasLimit } as InlinePart]),
+        { kind: 'label', text: 'Inc', visibleBind: counted },
+        { kind: 'value', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, widest: INCIDENTS_WIDEST, color: ds.purpose.alert.incident, visibleBind: counted },
+        ...(compact ? [] : [{ kind: 'label', text: '/ 17', widest: WIDEST_INCIDENT_LIMIT, bind: concat(str('/ '), incidentLimit()), visibleBind: and(counted, hasLimit) } as InlinePart]),
       ],
     },
     {

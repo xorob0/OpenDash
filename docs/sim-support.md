@@ -50,11 +50,12 @@ Assetto Corsa's column depends on the fixes that landed for it on 2026-10-15: it
 flag box and the strips (#551), the track map's notice (#555), the wind, the sim clock and the track
 state hidden rather than drawn as zeros (#1123, #1128), the delta reference (#575), the track's name
 (#1124, #1150), the car alerts and the change notifications reading the plugin's `DriverInCar` (#561),
-the strip and flag box profiles kept on a SimHub that files them per game family (#689), and the pit
-view saying the pit service is not published rather than drawing a stop set to do nothing (#564). Two
-more are in review, and the cells that wait on them say **Wrong** and name the pull request: the pit
-limiter (#1157) and the incidents and the steering (#1158). A third, #1156, times Le Mans Ultimate's
-pit stop in the box rather than down the whole lane.
+the strip and flag box profiles kept on a SimHub that files them per game family (#689), the pit view
+saying the pit service is not published rather than drawing a stop set to do nothing (#564), and the
+incident count and the steering hidden rather than drawn as `0x` and a wheel held straight (#567). One
+more is in review, and the cells that wait on it say **Wrong** and name the pull request: the pit
+limiter (#1157). Another, #1156, times Le Mans Ultimate's pit stop in the box rather than down the
+whole lane.
 
 ## The table
 
@@ -84,7 +85,7 @@ pit stop in the box rather than down the whole lane.
 | Simulated time | **Works.** | **Absent.** Reads `--` (#1123). | **Absent.** ACC's clock is published under a name the bar does not read. | **Absent.** As ACC. |
 | Position | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Class | **Works.** | **Partly.** SimHub gives no AC car a class, so the field is one class and this is the overall place. | **Untested.** Classes from SimHub's ACC table. | **Untested.** The game's own classes. |
-| Incidents | **Works.** | **Wrong.** Reads `0x`. Pending #1158, which hides it. | **Wrong.** As AC, until #1158. | **Wrong.** As AC, until #1158. |
+| Incidents | **Works.** | **Absent.** The slot is left empty, since AC publishes no incident count (#567). | **Absent.** As AC. | **Absent.** As AC. |
 | Air temperature | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Track temperature | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | The car settings strip | **Works.** Every setting the car has. | **Partly.** TC, ABS and brake bias; a cell for a setting AC does not publish closes over. | **Untested.** TC, ABS and brake bias. | **Untested.** TC, ABS and brake bias. |
@@ -109,7 +110,7 @@ pit stop in the box rather than down the whole lane.
 | Weather | **Works.** Air, track, wind and the track state. | **Partly.** Air and track; the wind and the track state hide (#1123). | **Untested.** Air and track; ACC's wind and grip are published under names the page does not read. | **Untested.** As ACC. |
 | Sectors | **Works.** | **Works.** SimHub times the three sectors. | **Untested.** Whether the second sector is right is a question for the drive (research/sims.md). | **Untested.** |
 | Relative | **Works.** | **Works** with SimHub's AC app; without it there is nobody around you. | **Untested.** Needs SimHub's broadcasting connection. | **Untested.** |
-| Corners: incidents, track state, sim clock, local clock, DRS, P2P, spotter | **Works.** | **Partly.** The local clock and DRS work; the track state hides and the sim clock reads `--` (#1123); the spotter needs the app; P2P stays dark, rightly; incidents read `0x`, **Wrong** until #1158. | **Untested.** | **Untested.** |
+| Corners: incidents, track state, sim clock, local clock, DRS, P2P, spotter | **Works.** | **Partly.** The local clock and DRS work; the track state hides and the sim clock reads `--` (#1123); the spotter needs the app; P2P stays dark, rightly; incidents hide (#567). | **Untested.** | **Untested.** |
 
 ### The modules
 
@@ -126,8 +127,8 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Tyres | **Works.** Pressures and temperatures from the last stop. | **Works.** Live pressures and core temperatures; no wheel is ticked for a change, since AC publishes no pit order. | **Untested.** | **Untested.** |
 | Pit view | **Works.** | **Partly.** The pit time and its bar work; the service order says "Pit service · Not published by this sim" (#564), since AC's stop is set in the game's own pit app. | **Partly.** As AC; ACC's own pit menu is published under names the page does not read. | **Partly.** As AC, and the pit time runs from the pit entry line until #1156 times it in the box. |
 | Car settings | **Works.** | **Partly.** TC and ABS as the car's preset, and the brake bias; the engine map and the anti-roll bars hide. | **Untested.** TC and ABS as dialled. | **Untested.** TC and ABS as dialled. |
-| Inputs | **Works.** | **Wrong.** The pedals work; the steering dial lies flat. Pending #1158, which hides it. | **Wrong.** As AC, until #1158. | **Wrong.** As AC, until #1158. |
-| Session | **Works.** | **Partly.** The session's name is drawn as AC writes it, in capitals (`RACE`); incidents read `0x`, **Wrong** until #1158. | **Untested.** As AC. | **Untested.** The game's own names (`Practice`, `Race`). |
+| Inputs | **Works.** | **Partly.** The pedals work; the steering dial hides, since AC's steering is not read yet (#567). | **Partly.** As AC. | **Partly.** As AC. |
+| Session | **Works.** | **Partly.** The session's name is drawn as AC writes it, in capitals (`RACE`); incidents read `--` (#567). | **Untested.** As AC. | **Untested.** The game's own names (`Practice`, `Race`). |
 | Radar | **Works** once SimHub has recorded the track. | **Works** with SimHub's AC app, and without a recorded lap. | **Untested.** Needs broadcasting. | **Untested.** |
 | Track | **Works.** | **Works.** Says "Drive a lap to record it" until SimHub has the outline (#555), names the track as a driver knows it (#1124); the track state hides. | **Untested.** | **Untested.** |
 | Leaderboard | **Works.** | **Partly.** With SimHub's AC app: names, places, gaps, laps and pit state; no car number, class or team, and the iRating column reads `--`. Without it, one row: you, named `Me`. | **Untested.** Needs broadcasting; no iRating. | **Untested.** No iRating. |
@@ -151,10 +152,10 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 
 | Reading | iRacing | Assetto Corsa | ACC | Le Mans Ultimate |
 |---|---|---|---|---|
-| Header | **Works.** | **Partly.** The local clock, the session and the time left work; the wind and the track state hide, the sim clock reads `--` (#1123), and incidents read `0x`, **Wrong** until #1158. | **Untested.** | **Untested.** |
+| Header | **Works.** | **Partly.** The local clock, the session and the time left work; the wind and the track state hide, the sim clock reads `--` (#1123), and the incidents hide (#567). | **Untested.** | **Untested.** |
 | Race | **Works.** | **Partly.** The table as the leaderboard: no number, class or tyre, iRating `--`; whether each car's sectors fill is unclear. | **Untested.** | **Untested.** |
 | Tower | **Works.** | **Partly.** As the race page. | **Untested.** | **Untested.** |
-| Telemetry | **Works.** | **Wrong.** Speed, revs, gear and the pedals work; the steering trace lies flat. Pending #1158, which says it is not published. | **Wrong.** As AC, until #1158. | **Wrong.** As AC, until #1158. |
+| Telemetry | **Works.** | **Partly.** Speed, revs, gear and the pedals work; the steering panel says it is not published by this sim (#567). | **Partly.** As AC. | **Partly.** As AC. |
 | Portrait | **Works.** | **Partly.** As the race page. | **Untested.** | **Untested.** |
 | Web view | **Works.** Not a reading. | **Works.** | **Works.** | **Works.** |
 | Car telemetry | **Works.** | **Partly.** The pedal traces, TC, ABS and brake bias; the other settings hide. | **Untested.** | **Untested.** |
