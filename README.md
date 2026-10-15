@@ -73,9 +73,8 @@ that are plugin settings.
 **Supported: iRacing and Assetto Corsa.** A sim is supported once somebody has driven it with the
 packages and every page, card, module and lamp has been checked against what that sim publishes.
 Where Assetto Corsa publishes nothing for a reading, such as the sim's time of day or the engine
-warnings, the reading hides, reads `--` or says it is not published rather than drawing a zero, and
-the table below names the few that do not do so yet. The other cars come from SimHub's own Assetto
-Corsa app, so without it every list of cars holds only you.
+warnings, the reading hides, reads `--` or says it is not published rather than drawing a zero. The
+other cars come from SimHub's own Assetto Corsa app, so without it every list of cars holds only you.
 
 **May work, untested and not supported: Assetto Corsa Competizione and Le Mans Ultimate.** SimHub
 reads both and the plugin already knows what differs about them, but nobody has driven them with

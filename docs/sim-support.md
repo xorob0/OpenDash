@@ -51,11 +51,10 @@ flag box and the strips (#551), the track map's notice (#555), the wind, the sim
 state hidden rather than drawn as zeros (#1123, #1128), the delta reference (#575), the track's name
 (#1124, #1150), the car alerts and the change notifications reading the plugin's `DriverInCar` (#561),
 the strip and flag box profiles kept on a SimHub that files them per game family (#689), the pit view
-saying the pit service is not published rather than drawing a stop set to do nothing (#564), and the
-incident count and the steering hidden rather than drawn as `0x` and a wheel held straight (#567). One
-more is in review, and the cells that wait on it say **Wrong** and name the pull request: the pit
-limiter (#1157). Another, #1156, times Le Mans Ultimate's pit stop in the box rather than down the
-whole lane.
+saying the pit service is not published rather than drawing a stop set to do nothing (#564), the
+incident count and the steering hidden rather than drawn as `0x` and a wheel held straight (#567), and
+every limiter reading following AC's own limiter rather than the pit lane (#558). One more is in
+review: #1156 times Le Mans Ultimate's pit stop in the box rather than down the whole lane.
 
 ## The table
 
@@ -67,7 +66,7 @@ whole lane.
 | Gear | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Gear ghosts (the gears either side) | **Works.** iRacing declares the car's gear count. | **Works.** The count from the car's `drivetrain.ini`. | **Untested.** The count is learned: the highest gear SimHub has seen in the car. | **Untested.** The game declares the count. |
 | Flag band (band D's takeover) | **Works.** All fifteen conditions. | **Partly.** Yellow, blue, black, white and the chequer (#551). AC has no green, and a single yellow cannot be told apart as a full course yellow, a waved yellow or debris. | **Untested.** SimHub's six one-word flags, the green and a sector yellow among them. | **Untested.** The plugin answers the yellow in your sector, the black, the white and the chequer (#551); blue and green are SimHub's. |
-| Pit banner: Pit limiter, Engage limiter, Disengage limiter | **Works.** | **Wrong.** SimHub reports the pit lane as the limiter, so every limiter state lights in the lane and none outside it. Pending #1157. | **Untested.** SimHub's limiter is the car's; the reminder can show (#1101). | **Untested.** As ACC; the plugin asks the game whether the car has a limiter. |
+| Pit banner: Pit limiter, Engage limiter, Disengage limiter | **Works.** | **Works.** The limiter is read from AC itself through the plugin, not SimHub's member, which is the pit lane on AC, so Engage limiter can show (#558). | **Untested.** SimHub's limiter is the car's; the reminder can show (#1101). | **Untested.** As ACC; the plugin asks the game whether the car has a limiter. |
 | Ignition off and engine off alerts | **Works.** | **Works.** "In the car" is the plugin's answer (#561). | **Untested.** The plugin's answer from the game's status. | **Untested.** The plugin's answer from `mInRealtime`. |
 | Incident alert | **Works.** | **Absent.** No count is published, so it never fires. | **Absent.** | **Absent.** |
 | Push to pass and headlight flash alerts | **Works** on the cars that have them. | **Absent.** Neither is published. | **Absent.** | **Absent.** |
@@ -178,11 +177,11 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 
 | Reading | iRacing | Assetto Corsa | ACC | Le Mans Ultimate |
 |---|---|---|---|---|
-| Porsche: band D's own page | **Works.** | **Partly.** The session reads `RACE` and `QUAL` (#1125) and the low-fuel alarm lights (#1126); the track state hides; the limiter pictogram follows the pit lane, **Wrong** until #1157. | **Untested.** | **Untested.** |
-| Porsche: limiter takeover | **Works.** | **Partly.** The speed reads; the lane's limit reads `--` and the body never turns red, since AC publishes no pit speed limit. It follows the pit lane rather than the limiter, **Wrong** until #1157. | **Untested.** The limit is SimHub's constant 60 km/h. | **Untested.** No limit is published. |
+| Porsche: band D's own page | **Works.** | **Partly.** The session reads `RACE` and `QUAL` (#1125) and the low-fuel alarm lights (#1126); the track state hides; the limiter pictogram follows the limiter (#558). | **Untested.** | **Untested.** |
+| Porsche: limiter takeover | **Works.** | **Partly.** The speed reads; the lane's limit reads `--` and the body never turns red, since AC publishes no pit speed limit. It follows the limiter (#558). | **Untested.** The limit is SimHub's constant 60 km/h. | **Untested.** No limit is published. |
 | Porsche: engine warnings | **Works.** | **Absent.** AC publishes no engine warnings; the warnings stay dark. | **Absent.** | **Absent.** |
 | AiM: session cell | **Works.** | **Works.** A time attack reads `ATTACK` (#1127). | **Untested.** | **Untested.** |
-| AiM: Pit Speed takeover | **Works.** | **Partly.** As the Porsche's: the limit reads `--`, and it follows the pit lane until #1157. | **Untested.** | **Untested.** |
+| AiM: Pit Speed takeover | **Works.** | **Partly.** As the Porsche's: the limit reads `--`, and it follows the limiter (#558). | **Untested.** | **Untested.** |
 | AiM: engine warnings | **Works.** | **Absent.** As the Porsche's. | **Absent.** | **Absent.** |
 
 ### The LED strips
@@ -199,7 +198,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Spotter | **Works.** | **Works** with SimHub's AC app. | **Untested.** | **Untested.** |
 | Turn indicators | **Absent.** iRacing's reader does not fill them; they stay dark. | **Absent.** As iRacing. | **Untested.** | **Untested.** |
 | Pit lane | **Works.** | **Works.** | **Untested.** | **Untested.** |
-| Pit limiter | **Works.** | **Wrong.** Lights in the lane rather than with the limiter. Pending #1157. | **Untested.** | **Untested.** |
+| Pit limiter | **Works.** | **Works.** Lights with the limiter, in the lane or out of it (#558). | **Untested.** | **Untested.** |
 | Pit speeding | **Works.** | **Absent.** No pit speed limit. | **Untested.** SimHub's constant 60 km/h. | **Absent.** |
 
 ### The flag box
@@ -207,7 +206,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Reading | iRacing | Assetto Corsa | ACC | Le Mans Ultimate |
 |---|---|---|---|---|
 | Flags | **Works.** All fifteen pictures. | **Partly.** The black bar, the standing yellow, the blue, the white and the chequer ([flag-box.md](flag-box.md)). | **Untested.** Six pictures. | **Untested.** Six, four of them the plugin's answers. |
-| Pit limiter | **Works.** | **Wrong.** As the strip's. Pending #1157. | **Untested.** | **Untested.** |
+| Pit limiter | **Works.** | **Works.** As the strip's (#558). | **Untested.** | **Untested.** |
 | Pit speeding | **Works.** | **Absent.** AC publishes no pit speed limit, so it never shows. | **Untested.** SimHub's constant 60 km/h on every track. | **Absent.** No pit speed limit is published. |
 
 ### Between sessions
@@ -219,9 +218,8 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 
 ## What is left
 
-The readings marked **Wrong** in Assetto Corsa's column each have a pull request open, and the column
-moves to **Absent** or **Works** as each lands. The **Absent** rows are what AC does not publish, and none
-of them draws a value.
+No cell of Assetto Corsa's column says **Wrong**: every reading there works, works in part with the gap named, or shows its
+not-available state. The **Absent** rows are what AC does not publish, and none of them draws a value.
 
 Three **Partly** cells on Assetto Corsa are not what AC lacks but what the packages could say better, and
 none has a ticket yet: the round faces' tyre cards are captioned "last stop" over AC's live values; the

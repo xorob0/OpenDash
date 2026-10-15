@@ -49,8 +49,8 @@ and [ADR 0002](decisions/0002-djson-generated-from-source.md); the pipeline is i
 [sim-support.md](sim-support.md) is filled**: the table of which sim shows what, a row for every page,
 card, module and lamp (#102). iRacing is the sim every binding was written against. Assetto Corsa was
 driven on 2026-10-15 and its column is filled (#592); where it publishes nothing for a reading, the
-reading hides, reads `--` or says so, and the few that still draw a value they were not given are listed
-there with the ticket that fixes each.
+reading hides, reads `--` or says so rather than drawing a value it was not given. A reading found to
+draw one is marked there as wrong, with the ticket that fixes it.
 
 Assetto Corsa Competizione and Le Mans Ultimate may work. SimHub normalises most of what the packages read
 into `StatusDataBase` for both, and the plugin already answers the questions that differ by sim for each
