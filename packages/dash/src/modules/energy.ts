@@ -27,7 +27,11 @@ import { blockRow, defineModule, fieldsRow, fld } from './module.ts';
 
 const { fmt, iff, isNull, isnull, not, num, raw, str } = ncalc;
 
-export const ENERGY_MESSAGE = 'Virtual energy · Not available in iRacing';
+/**
+ * What the page says on a sim with no virtual energy, which is every sim it reads today. It named
+ * iRacing until #102's audit, and said so on Assetto Corsa too; it names no sim now, as damage's does.
+ */
+export const ENERGY_MESSAGE = 'Virtual energy · Not published by this sim';
 
 /** The four members the sim either fills or does not; `VirtualEnergy` is the one the page turns on. */
 const LEVEL = raw('VirtualEnergy');
