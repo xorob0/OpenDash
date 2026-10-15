@@ -10,9 +10,10 @@
  *
  * The third reference is iRacing's own live delta to the last lap (#322), which SimHub does not
  * publish; it is read from raw telemetry and gated on iRacing's `_OK`, so the cases where it is not
- * there -- no lap yet, another sim, no telemetry at all -- are pinned as well. iRacing publishes it
- * as a float, so every frame gives it as a {@link Single}, which SimHub's `format` does not sign, and
- * what a site draws is the float's figure.
+ * there -- no lap yet, no telemetry at all -- are pinned as well. iRacing publishes it as a float, so
+ * every frame gives it as a {@link Single}, which SimHub's `format` does not sign, and what a site draws
+ * is the float's figure. A sim that publishes neither raw field reads the session best in its place,
+ * under its own caption (#575), on hand-built frames and on every committed trace of Assetto Corsa.
  */
 import { describe, expect, test } from 'bun:test';
 import type { Item, TextItem } from '../src/generator.ts';
@@ -26,7 +27,9 @@ import { MODULES } from '../src/modules/index.ts';
 import { lapDeltaPanel } from '../src/screens/pitwall.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import type { Density } from '../src/second/density.ts';
-import { LAST_LAP_DELTA, REFERENCE_LABEL_WIDEST, lastLapDelta, referenceDelta, referenceLabel } from '../src/second/values.ts';
+import { ASSETTO_CORSA } from '../../../scripts/sims.ts';
+import { frame as traceFrame, readTrace, traceDirOf, tracedScenarios } from '../../../scripts/trace.ts';
+import { LAST_LAP_DELTA, REFERENCE_LABEL_WIDEST, YOUR_BEST_CAPTION, deltaIsToLastLap, lastLapDelta, referenceDelta, referenceLabel, sessionBestDelta } from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
 import { evalNcalc, Single, type Props } from './ncalcEval.ts';
@@ -111,6 +114,9 @@ const frame = (reference: string | undefined, values: { session?: number | null;
   return props;
 };
 
+/** iRacing's two raw fields with a lap to compare against, for a frame that asks only for a caption. */
+const IRACING = { last: 0.1, ok: true } as const;
+
 /** The readings each reference is given in turn, away from the deadband's edge and from a half-cent. */
 const READINGS = [-0.21, 0.21, -0.004, 0.004, -1.23, 0.51, -12.34, 12.34, 0] as const;
 
@@ -168,13 +174,15 @@ describe('the delta reference (#322)', () => {
     // `_OK` false is iRacing before a lap has been completed; absent is another sim, or no
     // telemetry at all. Level is what the session and all-time references draw with no lap to
     // compare against, since SimHub publishes 0 there, so the three agree about "nothing yet".
+    // Either field alone is a sim that publishes the delta and has no reading for it this frame; neither
+    // is a sim that publishes none, which reads the session best instead (#575, pinned below).
     const level = [
       { last: -0.4, ok: false },
       { last: -0.4, ok: undefined },
       { last: -0.4, ok: null },
       { last: undefined, ok: true },
       { last: null, ok: true },
-      { last: undefined, ok: undefined },
+      { last: null, ok: false },
     ] as const;
     for (const s of SITES) {
       expect(drawn(s, frame('lastlap', { session: 0.7, alltime: 0.9, last: -0.4, ok: true })).text).toBe(figure(Math.fround(-0.4)));
@@ -185,6 +193,24 @@ describe('the delta reference (#322)', () => {
       }
     }
     expect(evalNcalc(lastLapDelta(), {})).toBe(0);
+  });
+
+  test('on a sim that publishes no last-lap delta, the last lap reads the session best at every site (#575)', () => {
+    // Assetto Corsa, ACC and Le Mans Ultimate: neither raw field, null or absent. The level zero the
+    // last lap would draw is a lie every lap; the session best is the reference the driver gets instead.
+    for (const s of SITES) {
+      for (const missing of [undefined, null] as const) {
+        for (const reading of READINGS) {
+          const got = drawn(s, frame('lastlap', { session: reading, alltime: reading + 3.33, last: missing, ok: missing }));
+          const expected = figure(reading);
+          expect({ site: s.name, missing, reading, text: got.text }).toEqual({ site: s.name, missing, reading, text: expected });
+          if (got.colour !== undefined) expect({ site: s.name, missing, reading, colour: got.colour }).toEqual({ site: s.name, missing, reading, colour: colourOf(expected) });
+        }
+      }
+    }
+    expect(evalNcalc(deltaIsToLastLap(), frame('lastlap', {}))).toBe(false);
+    expect(evalNcalc(deltaIsToLastLap(), frame('lastlap', IRACING))).toBe(true);
+    expect(evalNcalc(deltaIsToLastLap(), frame('lastlap', { last: null, ok: false }))).toBe(true);
   });
 
   test("the last lap is signed although iRacing's float is not", () => {
@@ -218,16 +244,23 @@ describe('the delta reference (#322)', () => {
   });
 
   test('the caption names the reference, and "vs last lap" is not the lap review\'s "vs previous"', () => {
-    const caption = (reference: string | undefined): unknown => evalNcalc(referenceLabel(), frame(reference, {}));
+    const caption = (reference: string | undefined, values: Parameters<typeof frame>[1] = IRACING): unknown => evalNcalc(referenceLabel(), frame(reference, values));
     expect(caption(undefined)).toBe('vs your best');
     expect(caption('session')).toBe('vs your best');
     expect(caption('alltime')).toBe('vs all-time best');
     expect(caption('lastlap')).toBe('vs last lap');
     expect(caption('previous')).toBe('vs your best');
+    // Before the first lap iRacing still publishes the delta, so the caption is still the last lap's.
+    expect(caption('lastlap', { last: 0, ok: false })).toBe('vs last lap');
+    // A sim that publishes no last-lap delta reads the session best, and the caption says so (#575).
+    expect(caption('lastlap', {})).toBe(YOUR_BEST_CAPTION);
+    expect(caption('lastlap', { last: null, ok: null })).toBe(YOUR_BEST_CAPTION);
+    expect(caption('alltime', {})).toBe('vs all-time best');
   });
 
   test('every caption fits the one widest the delta module and the pit wall are measured by', () => {
-    const captions = DELTA_REFERENCES.map((reference) => evalNcalc(referenceLabel(), frame(reference, {})) as string);
+    const captions = DELTA_REFERENCES.map((reference) => evalNcalc(referenceLabel(), frame(reference, IRACING)) as string);
+    expect(captions).toContain('vs last lap');
     for (const size of [12, 13, 15]) {
       const room = measureText('BarlowMedium', REFERENCE_LABEL_WIDEST, size);
       for (const c of captions) expect({ caption: c, size, fits: measureText('BarlowMedium', c, size) <= room }).toEqual({ caption: c, size, fits: true });
@@ -251,7 +284,52 @@ describe('the delta reference (#322)', () => {
     expect(evalNcalc(bound, frame(undefined, {}))).toBe('Delta to your best');
     expect(evalNcalc(bound, frame('session', {}))).toBe('Delta to your best');
     expect(evalNcalc(bound, frame('alltime', {}))).toBe('Delta to your best');
-    expect(evalNcalc(bound, frame('lastlap', {}))).toBe('Delta to last lap');
+    expect(evalNcalc(bound, frame('lastlap', IRACING))).toBe('Delta to last lap');
+    // On a sim that publishes no last-lap delta the value is the session best, and so is the label (#575).
+    expect(evalNcalc(bound, frame('lastlap', {}))).toBe('Delta to your best');
     expect(measureText('BarlowMedium', 'Delta to last lap', 13)).toBeLessThan(measureText('BarlowMedium', 'Delta to your best', 13));
   });
+});
+
+/**
+ * The hand-built frames above say what the bindings make of a sim with and without iRacing's raw
+ * fields; the committed traces say which sims those are. Every frame of every Assetto Corsa trace is
+ * held to drawing the session best and its caption with the last lap chosen, and every frame of every
+ * iRacing trace to drawing the last lap as before (#575).
+ */
+describe('the last-lap reference on the committed traces (#575)', () => {
+  const chosen = (props: Record<string, unknown>): Props => ({ ...(props as Props), [REFERENCE]: 'lastlap' });
+
+  const acDir = traceDirOf(ASSETTO_CORSA);
+  test('Assetto Corsa has traces to read', () => {
+    expect(tracedScenarios(acDir).length).toBeGreaterThan(0);
+  });
+
+  for (const scenario of tracedScenarios(acDir)) {
+    test(`Assetto Corsa's ${scenario} draws the session best under its own caption in every frame`, () => {
+      const trace = readTrace(scenario, acDir);
+      const wrong: string[] = [];
+      for (let i = 0; i < trace.header.frames; i++) {
+        const props = chosen(traceFrame(trace, i));
+        const delta = evalNcalc(referenceDelta(), props);
+        const label = evalNcalc(referenceLabel(), props);
+        if (delta !== evalNcalc(sessionBestDelta(), props) || label !== YOUR_BEST_CAPTION) wrong.push(`frame ${i}: ${String(delta)} ${String(label)}`);
+      }
+      expect({ scenario, wrong }).toEqual({ scenario, wrong: [] });
+    });
+  }
+
+  for (const scenario of tracedScenarios()) {
+    test(`iRacing's ${scenario} draws its own last-lap delta under "vs last lap" in every frame`, () => {
+      const trace = readTrace(scenario);
+      const wrong: string[] = [];
+      for (let i = 0; i < trace.header.frames; i++) {
+        const props = chosen(traceFrame(trace, i));
+        const delta = evalNcalc(referenceDelta(), props);
+        const label = evalNcalc(referenceLabel(), props);
+        if (delta !== evalNcalc(lastLapDelta(), props) || label !== 'vs last lap') wrong.push(`frame ${i}: ${String(delta)} ${String(label)}`);
+      }
+      expect({ scenario, wrong }).toEqual({ scenario, wrong: [] });
+    });
+  }
 });

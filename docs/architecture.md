@@ -147,8 +147,9 @@ if(isnull([OpenDash.DeltaReference], 'session') = 'alltime',
 ```
 
 That is abridged: the emitted binding also defaults each reading to zero where its property is
-absent and reads the last-lap delta only while iRacing's `LapDeltaToSessionLastlLap_OK` says it has
-a lap to compare against. `referenceDelta()` in `packages/dash/src/second/values.ts` is the whole of
+absent, reads the last-lap delta only while iRacing's `LapDeltaToSessionLastlLap_OK` says it has
+a lap to compare against, and reads the session best in its place on a sim that publishes neither raw
+field (#575). `referenceDelta()` in `packages/dash/src/second/values.ts` is the whole of
 it.
 
 Slots use SimHub's widget mechanism, which is the established way, and the runtime screen switch
