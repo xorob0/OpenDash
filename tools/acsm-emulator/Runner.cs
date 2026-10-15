@@ -56,8 +56,11 @@ namespace AcsmEmulator
             Tick = 1;
             Ctx.Tick = Tick;
             foreach (var d in Drivers) d.Init(Ctx);
-            foreach (var d in Drivers) if (d.Enabled) d.Tick(Ctx);
+            // What the timeline does at 0 holds from the first frame, so it goes before any driver moves: a
+            // driver a scenario turns off at 0 never runs, where one tick of a stopped lap timer would put the
+            // car its current lap time round the track for the whole run (#1138).
             ApplyTimeline();
+            foreach (var d in Drivers) if (d.Enabled) { d.Tick(Ctx); d.Ticks++; }
             Write();
         }
 
@@ -68,7 +71,7 @@ namespace AcsmEmulator
             Ctx.Tick = Tick;
             Ctx.Dt = 1.0 / Scenario.TickRate;
             Ctx.Time = Time;
-            foreach (var d in Drivers) if (d.Enabled) d.Tick(Ctx);
+            foreach (var d in Drivers) if (d.Enabled) { d.Tick(Ctx); d.Ticks++; }
             ApplyTimeline();
             Write();
         }

@@ -18,10 +18,11 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { GEAR_CELL, gearCells, monoWidth } from '../design/metrics.ts';
 import { numeral } from '../elements/numeral.ts';
+import { gear as currentGear } from '../second/values.ts';
 import { FORWARD_GEARS, lastGear } from '../shift.ts';
 import { ds } from '../tokens.ts';
 
-const { game, iff, eq, str, not } = ncalc;
+const { iff, eq, str, not } = ncalc;
 
 /** The gear is one character; SimHub reports "N" and "R" too, drawn in the letter-wide gear cell. */
 export const GEAR_CHARS = { digits: 1, specials: 0 } as const;
@@ -64,7 +65,7 @@ export function gear(frame: Rect, size: number = GEAR_SIZES.standard, prefix = '
   // The box takes a few pixels beyond the cell so that WPF never clips the glyph, and no more:
   // on a round face the slots start just past it.
   const maxWidth = Math.min(frame.left + frame.width - left, width + GEAR_BOX_SLACK);
-  return [numeral(`${prefix}.gear`, '4', left, top, size, GEAR_CHARS, { weight: 'Bold', mono, maxWidth, bind: game('Gear') })];
+  return [numeral(`${prefix}.gear`, '4', left, top, size, GEAR_CHARS, { weight: 'Bold', mono, maxWidth, bind: currentGear() })];
 }
 
 /** The share of the gear a ghosted neighbour is drawn at, where a face draws no other. */
@@ -102,7 +103,7 @@ export function gearGhosts(frame: Rect, size: number, ghosts: GearGhosts, name: 
   const mono = gearCells(small);
   const width = monoWidth(mono, GEAR_CHARS);
   const cell = gearCell(frame, size);
-  const current = game('Gear');
+  const current = currentGear();
   const top = frame.top + (frame.height - small) / 2;
   const sides = [
     { id: 'below', x: cell.left - ghosts.gap - width, step: -1 as const, visibleBind: undefined },

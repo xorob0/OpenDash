@@ -24,6 +24,39 @@ namespace OpenDashPlugin
             SessionType = sessionType;
         }
 
+        /// <summary>
+        /// Where Assetto Corsa publishes the track's name for people: the name in the track's own
+        /// ui_track.json, which SimHub's AC reader loads into its raw Track.TrackInfo. No other sim's reader
+        /// has one, so everywhere else SimHub answers null.
+        /// </summary>
+        public const string AcTrackNameProperty = "DataCorePlugin.GameRawData.Track.TrackInfo.name";
+
+        /// <summary>
+        /// Where iRacing publishes the track's name for people: the session's
+        /// WeekendInfo.TrackDisplayShortName, "Spa" where TrackName is "spa gp". No other sim's reader has a
+        /// SessionData, so everywhere else SimHub answers null.
+        /// </summary>
+        public const string IRacingTrackNameProperty = "DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName";
+
+        /// <summary>
+        /// The track as a person names it: the sim's own name for people where it gives one, and SimHub's
+        /// TrackName where it does not.
+        /// </summary>
+        /// <remarks>
+        /// TrackName is a code on both sims 1.0 is built for: on iRacing the session's WeekendInfo.TrackName,
+        /// "spa gp", and on Assetto Corsa the track's folder in lower case, "ks_red_bull_ring", because
+        /// ACManager answers TrackDesc.Track (#1124). The dash reads the same three properties in the same
+        /// order (trackName() in packages/dash/src/second/values.ts). It falls back only on null, which is
+        /// what SimHub's isnull does, and this also skips a blank name, so a ui_track.json that names its
+        /// track "" shows the folder here and nothing before the length there. No Kunos track does.
+        /// </remarks>
+        public static string TrackShown(string acName, string iRacingName, string trackName)
+        {
+            if (!string.IsNullOrWhiteSpace(acName)) return acName;
+            if (!string.IsNullOrWhiteSpace(iRacingName)) return iRacingName;
+            return trackName;
+        }
+
         /// <summary>Nothing reported yet: no game, not running, and no car or track to name.</summary>
         public static readonly LiveStatus None = new LiveStatus(null, false, null, null, null, null);
 

@@ -1790,7 +1790,7 @@ describe('what iRacing cannot answer', () => {
       const screen = companion.screens.find((s) => s.name === id)!;
       const texts = itemsOf({ ...companion, screens: [screen] }).filter((i): i is TextItem => i.kind === 'text');
       const placeholder = texts.find((t) => t.name.endsWith('.placeholder'));
-      expect({ id, text: placeholder?.text }).toMatchObject({ text: expect.stringContaining('Not a') });
+      expect({ id, text: placeholder?.text }).toMatchObject({ text: expect.stringMatching(/Not (a|published)/) });
       expect(placeholder?.textColor).toBe(ds.color.text.dim);
     }
   });

@@ -70,9 +70,18 @@ namespace AcsmEmulator
             var runner = new Runner(sc, sink);
             var log = new List<string>();
             runner.Log = s => log.Add(s);
+            // A driver the timeline turns off at 0 is off from the first frame. One that ran once first would
+            // leave its mark for the whole run: pit's stopped lap timer put the car its lap time round the
+            // track, P3 where the scenario places it P9 (#1138).
+            var offFromStart = new HashSet<string>(sc.Timeline.Where(e => e.At <= 0).SelectMany(e => e.DriverUpdates)
+                .Where(du => du.ContainsKey("enabled") && Json.ToDouble(du["enabled"]) == 0)
+                .Select(du => Json.GetString(du, "name") ?? Json.GetString(du, "type")), StringComparer.Ordinal);
             try
             {
                 runner.Start();
+                var ran = runner.Drivers.Where(d => (offFromStart.Contains(d.Name) || offFromStart.Contains(d.Type)) && d.Ticks > 0).Select(d => d.Name).ToList();
+                Check(ran.Count == 0, offFromStart.Count == 0 ? "the timeline turns no driver off at 0"
+                    : "the drivers the timeline turns off at 0 never run (" + string.Join(", ", offFromStart) + ")" + (ran.Count == 0 ? "" : ": " + string.Join(", ", ran) + " ran on the first frame"));
                 for (int i = 0; i < 3 * sc.TickRate; i++) runner.Step();
             }
             catch (Exception ex) { Check(false, "simulates three seconds: " + ex.Message); return Done(); }

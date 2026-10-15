@@ -1043,15 +1043,14 @@ namespace OpenDashPlugin.Tests
             foreach (var status in new[] { null, "not loaded", PanelLights.CarTablesNone, "  " + PanelLights.CarTablesNone })
                 foreach (var count in new[] { 0, 12 })
                     Assert.Equal(PanelLeds.TablesMissing(count, status), PanelMatrix.TablesMissing(count, status));
-            Assert.Equal(PanelLeds.TablesGame, PanelMatrix.TablesGame);
-            foreach (var game in new[] { null, "iRacing", " IRacing ", "AssettoCorsa" }) Assert.Equal(PanelLeds.TablesCoverGame(game), PanelMatrix.TablesCoverGame(game));
+            foreach (var game in new[] { null, "iRacing", " IRacing ", "AssettoCorsa", "Assetto Corsa Competizione", "LMU" }) Assert.Equal(PanelLeds.TablesCoverGame(game), PanelMatrix.TablesCoverGame(game));
             var code = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs")), @"\s+", " ");
             Assert.Contains("var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame);", code);
             Assert.Contains("return PanelLeds.TablesMissing(carCount, status);", code);
         }
 
         /// <summary>The line under Car-specific shift points says what LEDs says (PanelLeds.CarLine), and only
-        /// while the switch is on and a car is loaded in the game the tables cover: with no tables ever
+        /// while the switch is on and a car is loaded in a game the tables cover: with no tables ever
         /// downloaded it says so and where the download is, rather than that the car is missing from them; while
         /// tables on disk are still being read, or could not be read, in any other game, or with no car, it says
         /// nothing.</summary>
@@ -1096,7 +1095,8 @@ namespace OpenDashPlugin.Tests
             Assert.True(PanelMatrix.TablesCoverGame("iRacing"));
             Assert.True(PanelMatrix.TablesCoverGame("IRacing"));
             Assert.True(PanelMatrix.TablesCoverGame(" iRacing "));
-            Assert.False(PanelMatrix.TablesCoverGame("Assetto Corsa Competizione"));
+            Assert.True(PanelMatrix.TablesCoverGame("Assetto Corsa"));
+            Assert.True(PanelMatrix.TablesCoverGame("Assetto Corsa Competizione"));
             Assert.False(PanelMatrix.TablesCoverGame("LMU"));
             Assert.False(PanelMatrix.TablesCoverGame(null));
             Assert.False(PanelMatrix.TablesCoverGame(string.Empty));
@@ -1110,7 +1110,7 @@ namespace OpenDashPlugin.Tests
             // shown, worded and inked from what was read; read once as the page is built and on every tick.
             Assert.Contains("Action readCar = () => { "
                 + "var live = plugin.Live ?? LiveStatus.None; "
-                + "var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.CarId) != null; "
+                + "var known = !string.IsNullOrEmpty(live.CarId) && plugin.CarLights.For(live.GameName, live.CarId) != null; "
                 + "var count = plugin.CarLights.CarCount; "
                 + "var tables = count > 0; "
                 + "var missing = PanelMatrix.TablesMissing(count, plugin.CarLights.Status); "

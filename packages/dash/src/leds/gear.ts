@@ -41,6 +41,7 @@ import { shiftBands, type ShiftBand } from '../components/revSegments.ts';
 import { flagBoxMatrix, type FlagBoxMatrix } from '../contract.ts';
 import { ncalc, type Hex, type MatrixContainer } from '../generator.ts';
 import { carLadderFlash, carLadderOnScreens, carLadderStageEntered, eitherOf, FORWARD_GEARS } from '../shift.ts';
+import { gear } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { blinkFrames, pixelsOf, still, type Grid, type Palette } from './glyph.ts';
 
@@ -110,7 +111,7 @@ export function gearGrid(gear: string): Grid {
 export const gearPixels = (gear: string, colour: Hex): ReturnType<typeof pixelsOf> => pixelsOf(gearGrid(gear), paletteFor(colour), `gear ${gear}`);
 
 /** `[Gear] = 'R'`. SimHub reports the gear as a string, `R` and `N` included. */
-export const gearIs = (gear: string): string => eq(ncalc.game('Gear'), str(gear));
+export const gearIs = (wanted: string): string => eq(gear(), str(wanted));
 
 /**
  * The eleven gear glyphs at one shift band, each shown when the car is in that gear, drawn either
