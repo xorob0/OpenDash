@@ -1103,7 +1103,9 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   compare against, and `LapDeltaToSessionLastlLap_DD`, iRacing's rate of change of the delta, which
   nothing reads. The value is not meaningful while `_OK` is false, so `lastLapDelta` in
   `packages/dash/src/second/values.ts` reads it only behind `isnull(..._OK, false)` and draws a level
-  delta otherwise, as SimHub's two draw 0 when they have no lap to compare against.
+  delta otherwise, as SimHub's two draw 0 when they have no lap to compare against. A sim that
+  publishes neither field, which is every sim but iRacing, reads the session best in its place and
+  captions it so (`deltaIsToLastLap`, #575): a level delta there would be drawn every lap.
 - **A raw iRacing float is a boxed System.Single, and `format` does not sign one.** iRacing publishes
   the delta as an irsdk_float; the SDK reads it with `ReadSingle`, the raw telemetry is a dictionary
   of objects that SimHub exposes unchanged, and NCalc's `if` and SimHub's `isnull` hand their
