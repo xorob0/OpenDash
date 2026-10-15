@@ -398,4 +398,8 @@ car's ladder is worse than SimHub's bands. The panel's Soon row is now "Car data
 **What the panel says.** The car count is every sim's cars together, and an archive with iRacing's
 cars and none of Assetto Corsa's is a good copy. The car line speaks in the three games and says
 nothing in any other. A copy fetched before this, flat in the cache, still reads as iRacing's until
-the next download moves it into `iracing/`.
+the next download moves it into `iracing/`. It holds no other sim's cars however recently it came,
+so the Car Data row asks for that download whatever the copy's age ("Press Update for the Assetto
+Corsa and Assetto Corsa Competizione cars."), and in Assetto Corsa or ACC the car line says the
+copy has iRacing's cars only rather than that the car is not in Car Data
+(`CarLightLibrary.IsFlat`).

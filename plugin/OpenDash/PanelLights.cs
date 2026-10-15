@@ -430,6 +430,13 @@ namespace OpenDashPlugin
         /// <summary>The step a copy over a week old is offered, after the count.</summary>
         public const string CarTablesUpdateStep = "Press Update for a newer copy.";
 
+        /// <summary>
+        /// The step the flat copy from before #748 is offered, after the count, whatever its age
+        /// (<see cref="CarLightCars.Flat"/>): it holds iRacing's cars alone, and its stamp can be a day old, so
+        /// neither "over a week ago" nor silence would be true. The sims named are the ones it lacks.
+        /// </summary>
+        public static readonly string CarTablesFlatStep = "Press Update for the " + CarLightLibrary.SimNamesButIRacing + " cars.";
+
         /// <summary>A download that did not answer, with no copy on disk: voice.md's failure form, with the reason
         /// in SimHub's log, where the page writes it, rather than the fetch's own message on the panel.</summary>
         public const string CarTablesDownloadFailed = "Could not download Car Data. See SimHub's log.";
@@ -476,6 +483,16 @@ namespace OpenDashPlugin
         /// </summary>
         public static string CarTablesLine(string status, bool stale)
         {
+            return CarTablesLine(status, stale, false);
+        }
+
+        /// <summary>
+        /// The same, for a copy that may be the flat one from before #748 (<paramref name="flat"/>,
+        /// CarLightService.Flat). Its age is said as any copy's is, and its step is <see cref="CarTablesFlatStep"/>
+        /// in place of <see cref="CarTablesUpdateStep"/>, since a newer copy is not the point: the other sims are.
+        /// </summary>
+        public static string CarTablesLine(string status, bool stale, bool flat)
+        {
             var said = (status ?? string.Empty).Trim();
             if (said == ServiceNotLoaded) return CarTablesLoading;
             if (CarTablesUnread(said)) return CarTablesUnreadable;
@@ -493,6 +510,7 @@ namespace OpenDashPlugin
             // only because nothing says when it came, so it is not called over a week old.
             var copy = !stale ? said : agedAt >= 0 ? said.Substring(0, agedAt) + CarTablesStaleAge : said;
             if (failed) return CarTablesNewerFailed + " " + CarTablesCopyHas + copy + ".";
+            if (flat) return copy + ". " + CarTablesFlatStep;
             return stale ? copy + ". " + CarTablesUpdateStep : copy + ".";
         }
 

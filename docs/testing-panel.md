@@ -111,7 +111,7 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | LD-03 | Fix box | Dash brow | Observe; Check again | steps; "Checked again." line; an `[OpenDash] LED device` line is logged when a device is new or its line changed | V; J `[OpenDash] LED device` lines; N resolved branch |
 | LD-04 | Preview, 6 chips | Wheel rim, E:shiftlights | Live / Shift point / Yellow / Blue / Car left / Pit limiter | frames per rule; Live follows CarLights.Run | U; V; J |
 | LD-05 | All devices at once | | Click | Rig | V |
-| LD-06 | Car's own rev lights | E:race | Flip | RpmStyle car\|leftToRight; "<car> is in Car Data." / "… is not in Car Data." (drive a car without a table via the emulator car name) / no line when off | U; J; V ×3 |
+| LD-06 | Car's own rev lights | E:race | Flip | RpmStyle car\|leftToRight; "<car> is in Car Data." / "… is not in Car Data." (drive a car without a table via the emulator car name) / no line when off; with a flat pre-#748 copy (JSON files straight in CarLights/, no iracing/) in AC, "Your copy of Car Data has iRacing's cars only. Update it under Every strip." and the Car Data row ends "Press Update for the Assetto Corsa and Assetto Corsa Competizione cars." | U; J; V ×3 |
 | LD-07 | Rev light width | on | Actual size | LedMirrorFit; hidden when off | J; V |
 | LD-08 | Centre display | | RPM / Brake / Throttle and brake / Fuel | bar LedCentre | J |
 | LD-09 | SimHub device | | Open | states: none ("No SimHub device has LEDs. …") / one ("Goes to <device>.") / gone ("Device not in SimHub") / not connected | U LedDeviceSurveyTests; V; N populated list |

@@ -83,11 +83,25 @@ namespace OpenDashPlugin
             new Dictionary<string, int>(StringComparer.Ordinal));
 
         public CarLightCars(Dictionary<string, Dictionary<string, CarLightTable>> bySim, Dictionary<string, int> counts)
+            : this(bySim, counts, false)
+        {
+        }
+
+        public CarLightCars(Dictionary<string, Dictionary<string, CarLightTable>> bySim, Dictionary<string, int> counts, bool flat)
         {
             this.bySim = bySim;
             this.counts = counts;
             Count = counts.Values.Sum();
+            Flat = flat;
         }
+
+        /// <summary>
+        /// Whether iRacing's cars were read from the flat copy an OpenDash before #748 left in the cache's root,
+        /// which holds no other sim's. Such a copy is whole for iRacing and empty for every other sim however
+        /// recently it came, so the panel asks for a download rather than calling an Assetto Corsa car unmeasured
+        /// (<see cref="CarLightLibrary.IsFlat"/>).
+        /// </summary>
+        public bool Flat { get; private set; }
 
         /// <summary>How many cars there are, in every sim together: what the panel counts.</summary>
         public int Count { get; private set; }
@@ -201,12 +215,22 @@ namespace OpenDashPlugin
         /// <summary>The sims the tables cover, the way a sentence lists them: "iRacing, Assetto Corsa and Assetto Corsa Competizione".</summary>
         public static string SimNames
         {
-            get
-            {
-                var names = Sims.Select(s => s.Name).ToArray();
-                if (names.Length == 1) return names[0];
-                return string.Join(", ", names, 0, names.Length - 1) + " and " + names[names.Length - 1];
-            }
+            get { return NamesOf(Sims); }
+        }
+
+        /// <summary>The sims whose tables only a copy made since #748 holds, the way a sentence lists them:
+        /// every sim but iRacing, which a flat copy from before it carries alone.</summary>
+        public static string SimNamesButIRacing
+        {
+            get { return NamesOf(Sims.Where(s => s != IRacing)); }
+        }
+
+        private static string NamesOf(IEnumerable<CarLightSim> sims)
+        {
+            var names = sims.Select(s => s.Name).ToArray();
+            if (names.Length == 0) return string.Empty;
+            if (names.Length == 1) return names[0];
+            return string.Join(", ", names, 0, names.Length - 1) + " and " + names[names.Length - 1];
         }
 
         /// <summary>The sim whose tables cover this game, as SimHub codes it or names it; null for any other.</summary>
@@ -315,7 +339,8 @@ namespace OpenDashPlugin
         ///
         /// <para>iRacing's are read from the cache's root when there is no <c>iracing/</c> folder yet:
         /// before #748 they were the only tables and were written there, flat, and a rig that fetched
-        /// them then keeps its cars until the next download moves them.</para>
+        /// them then keeps its cars until the next download moves them. Such a read says so
+        /// (<see cref="CarLightCars.Flat"/>), so that the panel can ask for that download.</para>
         /// </summary>
         public static CarLightCars ReadLibrary(string folder)
         {
@@ -330,7 +355,32 @@ namespace OpenDashPlugin
                 bySim[sim.Folder] = cars;
                 counts[sim.Folder] = CountCars(cars);
             }
-            return new CarLightCars(bySim, counts);
+            return new CarLightCars(bySim, counts, IsFlat(folder));
+        }
+
+        /// <summary>
+        /// Whether the copy on disk is the flat one an OpenDash before #748 wrote: tables in the cache's root and
+        /// no folder for any sim. It holds iRacing's cars and no other sim's, so it wants downloading again
+        /// however fresh its stamp is, and the next download moves it (<see cref="Extract"/>).
+        ///
+        /// <para>A copy with another sim's folder beside the flat files is not one: a download has been made
+        /// since, and found no iRacing cars to move them for, so the sims it holds are the archive's.</para>
+        /// </summary>
+        public static bool IsFlat(string folder)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder)) return false;
+                foreach (var sim in Sims)
+                {
+                    if (Directory.Exists(Path.Combine(folder, sim.Folder))) return false;
+                }
+                return Directory.GetFiles(folder, "*.json").Length > 0;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         /// <summary>
@@ -436,11 +486,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether the copy is old enough to be worth mentioning: never fetched, or fetched longer ago
-        /// than <see cref="MaxAge"/>. Read by the panel, and by nothing that makes a request.
+        /// Whether the copy is worth replacing: never fetched, fetched longer ago than <see cref="MaxAge"/>,
+        /// or the flat copy from before #748 (<see cref="IsFlat"/>), which lacks every sim but iRacing
+        /// whatever its age. Read by the panel, and by nothing that makes a request.
         /// </summary>
         public static bool IsStale(string folder, DateTime nowUtc)
         {
+            if (IsFlat(folder)) return true;
             var fetched = FetchedAt(folder);
             if (fetched == null) return true;
             // A stamp in the future is a clock that moved, not a fresh copy.

@@ -1034,18 +1034,24 @@ namespace OpenDashPlugin.Tests
         {
             var bools = new[] { false, true };
             foreach (var car in new[] { null, " ", "Porsche 911 GT3 R (992)" })
-                foreach (var on in bools) foreach (var hasTable in bools) foreach (var loaded in bools) foreach (var missing in bools) foreach (var covers in bools)
+                foreach (var on in bools) foreach (var hasTable in bools) foreach (var loaded in bools) foreach (var missing in bools) foreach (var covers in bools) foreach (var holds in bools)
                 {
-                    var leds = PanelLeds.CarLine(on, car, hasTable, loaded, missing, covers);
-                    var matrix = PanelMatrix.CarLine(on, car, hasTable, loaded, missing, covers);
-                    Assert.Equal(leds == PanelLeds.CarTablesMissing ? PanelMatrix.CarTablesMissing : leds, matrix);
+                    var leds = PanelLeds.CarLine(on, car, hasTable, loaded, missing, covers, holds);
+                    var matrix = PanelMatrix.CarLine(on, car, hasTable, loaded, missing, covers, holds);
+                    var own = leds == PanelLeds.CarTablesMissing ? PanelMatrix.CarTablesMissing
+                        : leds == PanelLeds.CarTablesIRacingOnly ? PanelMatrix.CarTablesIRacingOnly : leds;
+                    Assert.Equal(own, matrix);
                 }
             foreach (var status in new[] { null, "not loaded", PanelLights.CarTablesNone, "  " + PanelLights.CarTablesNone })
                 foreach (var count in new[] { 0, 12 })
                     Assert.Equal(PanelLeds.TablesMissing(count, status), PanelMatrix.TablesMissing(count, status));
             foreach (var game in new[] { null, "iRacing", " IRacing ", "AssettoCorsa", "Assetto Corsa Competizione", "LMU" }) Assert.Equal(PanelLeds.TablesCoverGame(game), PanelMatrix.TablesCoverGame(game));
             var code = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "PanelMatrix.cs")), @"\s+", " ");
-            Assert.Contains("var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame);", code);
+            foreach (var flat in bools)
+                foreach (var game in new[] { null, "iRacing", "AssettoCorsa", "AssettoCorsaCompetizione", "LMU" })
+                    Assert.Equal(PanelLeds.TablesHoldGame(flat, game), PanelMatrix.TablesHoldGame(flat, game));
+            Assert.Contains("var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame, tablesHoldGame);", code);
+            Assert.Contains("return PanelLeds.TablesHoldGame(flat, game);", code);
             Assert.Contains("return PanelLeds.TablesMissing(carCount, status);", code);
         }
 
@@ -1115,7 +1121,8 @@ namespace OpenDashPlugin.Tests
                 + "var tables = count > 0; "
                 + "var missing = PanelMatrix.TablesMissing(count, plugin.CarLights.Status); "
                 + "var covers = PanelMatrix.TablesCoverGame(live.GameName); "
-                + "var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, missing, covers); "
+                + "var holds = PanelMatrix.TablesHoldGame(plugin.CarLights.Flat, live.GameName); "
+                + "var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, missing, covers, holds); "
                 + "carLine.Text = text ?? string.Empty; "
                 + "carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables))); "
                 + "carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible; "

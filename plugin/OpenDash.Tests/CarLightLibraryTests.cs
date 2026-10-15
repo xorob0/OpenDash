@@ -397,6 +397,53 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void A_flat_copy_however_fresh_asks_for_the_download_that_brings_the_other_sims()
+        {
+            // A rig that pressed Download the day before upgrading past #748: the stamp is a day old, and the copy
+            // holds iRacing's cars alone. An ACC car Car Data measures must not read as one it does not.
+            var now = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "test-one.json"), CarJson("test one"));
+            File.WriteAllText(Path.Combine(root, CarLightLibrary.StampFile), now.AddDays(-1).Ticks.ToString());
+            Assert.True(CarLightLibrary.IsFlat(root));
+            Assert.True(CarLightLibrary.IsStale(root, now));
+
+            var service = new CarLightService(new Source { Bytes = ArchiveOf(
+                ("iracing", "test-one", CarJson("test one")),
+                ("assettocorsacompetizione", "bmw-m4-gt3", CarJson("bmw_m4_gt3"))) }, root);
+            Assert.True(service.Load(now).Ok);
+            Assert.True(service.Flat);
+            Assert.True(service.Stale(now));
+            // Not over a week old, so the age stands, and the step names what the copy lacks.
+            Assert.False(PanelLights.CarTablesStale(service.CarCount, service.FetchedAt, now));
+            Assert.Equal("1 car, updated yesterday. " + PanelLights.CarTablesFlatStep,
+                PanelLights.CarTablesLine(service.Status, false, service.Flat));
+
+            // In ACC the car line asks for that download rather than saying the car is not in Car Data.
+            var known = service.For(Acc, "bmw_m4_gt3") != null;
+            Assert.False(known);
+            var holds = PanelLeds.TablesHoldGame(service.Flat, Acc);
+            Assert.False(holds);
+            Assert.Equal(PanelLeds.CarTablesIRacingOnly, PanelLeds.CarLine(true, "BMW M4 GT3", known, service.CarCount > 0,
+                PanelLeds.TablesMissing(service.CarCount, service.Status), PanelLeds.TablesCoverGame(Acc), holds));
+            Assert.Equal(PanelMatrix.CarTablesIRacingOnly, PanelMatrix.CarLine(true, "BMW M4 GT3", known, service.CarCount > 0,
+                PanelMatrix.TablesMissing(service.CarCount, service.Status), PanelMatrix.TablesCoverGame(Acc), holds));
+            // In iRacing the flat copy is whole, so its line is the plain one.
+            Assert.True(PanelLeds.TablesHoldGame(service.Flat, IRacing));
+            Assert.Equal("Test One is in Car Data.", PanelLeds.CarLine(true, "Test One", service.For(IRacing, "test one") != null, true, false, true,
+                PanelLeds.TablesHoldGame(service.Flat, IRacing)));
+
+            // The download moves it, and the copy is a copy like any other.
+            Assert.True(service.Download(now).Ok);
+            Assert.False(service.Flat);
+            Assert.False(CarLightLibrary.IsFlat(root));
+            Assert.False(service.Stale(now));
+            Assert.NotNull(service.For(Acc, "bmw_m4_gt3"));
+            Assert.Equal("BMW M4 GT3 is in Car Data.", PanelLeds.CarLine(true, "BMW M4 GT3", true, true, false, true,
+                PanelLeds.TablesHoldGame(service.Flat, Acc)));
+        }
+
+        [Fact]
         public void A_download_moves_the_flat_copy_into_iracings_folder()
         {
             Directory.CreateDirectory(root);
@@ -420,6 +467,9 @@ namespace OpenDashPlugin.Tests
             Assert.NotNull(service.For(IRacing, "old car"));
             Assert.NotNull(service.For(AssettoCorsa, "ks_test_car"));
             Assert.Equal(2, service.CarCount);
+            // A download has been made since, so the sims the copy holds are the archive's: it is not the flat one.
+            Assert.False(service.Flat);
+            Assert.False(CarLightLibrary.IsFlat(root));
         }
 
         [Fact]

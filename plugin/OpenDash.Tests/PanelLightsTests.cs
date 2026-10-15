@@ -210,6 +210,29 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// The flat copy an OpenDash before #748 left holds iRacing's cars alone, so it is offered the download
+        /// that brings the others whatever its age: its own age is said as it is, and never called over a week old
+        /// when it is not (#748).
+        /// </summary>
+        [Fact]
+        public void The_flat_copy_is_offered_the_other_sims_cars_whatever_its_age()
+        {
+            Assert.Equal("Press Update for the Assetto Corsa and Assetto Corsa Competizione cars.", PanelLights.CarTablesFlatStep);
+            var now = new System.DateTime(2026, 10, 14, 12, 0, 0, System.DateTimeKind.Utc);
+            var fresh = CarLightService.Describe(84, now.AddDays(-2), now, null);
+            Assert.False(PanelLights.CarTablesStale(84, now.AddDays(-2), now));
+            Assert.Equal("84 cars, updated 2 days ago. " + PanelLights.CarTablesFlatStep, PanelLights.CarTablesLine(fresh, false, true));
+            var old = CarLightService.Describe(84, now.AddDays(-9), now, null);
+            Assert.Equal("84 cars, updated over a week ago. " + PanelLights.CarTablesFlatStep, PanelLights.CarTablesLine(old, true, true));
+            // A failed download is said as for any copy: what failed, then what the copy has.
+            var failed = CarLightService.Describe(84, now.AddDays(-2), now, CarLightRefresh.Failed("Unable to connect to the remote server", 84));
+            Assert.Equal("Could not download a newer copy. Your copy has 84 cars, updated 2 days ago.", PanelLights.CarTablesLine(failed, false, true));
+            // Nothing changes for a copy made since: the two-argument line is the unflat one.
+            Assert.Equal(PanelLights.CarTablesLine(fresh, false), PanelLights.CarTablesLine(fresh, false, false));
+            Assert.Equal("84 cars, updated 2 days ago.", PanelLights.CarTablesLine(fresh, false, false));
+        }
+
+        /// <summary>
         /// A download that did not answer is said in voice.md's failure form, never with the fetch's own message in
         /// a bracketed aside or after a colon: with no copy, what failed and the log, where the page writes the
         /// reason; beside a copy that works, what failed and what the driver still has, as "Could not reach
@@ -256,7 +279,7 @@ namespace OpenDashPlugin.Tests
             // moment, and never from the folder: a tick draws the row, and nothing is read from disk on a tick.
             var leds = RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Lights.cs"));
             Assert.Contains("var stale = PanelLights.CarTablesStale(service.CarCount, service.FetchedAt, DateTime.UtcNow);", leds);
-            Assert.Contains("var line = PanelLights.CarTablesLine(status, stale);", leds);
+            Assert.Contains("var line = PanelLights.CarTablesLine(status, stale, service.Flat);", leds);
             Assert.DoesNotContain(".Stale(", leds);
             Assert.DoesNotContain("CarLightLibrary.", leds);
             // The stamp is read after the status, which the service's read writes after it.
