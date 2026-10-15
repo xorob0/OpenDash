@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79321,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
+{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79321,6],"recorded":"2026-10-13","simHub":"unknown","asserted":["OpenDash.CarHasPitLimiter","DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -93,6 +93,7 @@
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM","v":7800}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLLastRPM","v":8800}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLShiftRPM","v":8400}
+{"p":"DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","v":"Spa"}
 {"p":"DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit","v":"unlimited"}
 {"p":"DataCorePlugin.GameRawData.Telemetry.EngineWarnings","v":0}
 {"p":"DataCorePlugin.GameRawData.Telemetry.FuelLevel","v":38.4}
@@ -147,6 +148,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpLRTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRFTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
+{"p":"DataCorePlugin.GameRawData.Track.TrackInfo.name","v":null}
 {"p":"DataCorePlugin.GameRunning","v":1}
 {"p":"OpenDash.BlackFlagShown","v":null}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}

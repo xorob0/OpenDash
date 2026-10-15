@@ -973,7 +973,7 @@ export const BEST_LAP_SESSIONS = [
  * Whether the session's leaderboard is ordered by best lap, which {@link BEST_LAP_SESSIONS} lists,
  * and so whether the Gap and Int columns measure best laps rather than distance (#1040).
  */
-export const rankedByBestLap = (): Expr => isIn(ucase(sessionType()), ...BEST_LAP_SESSIONS.map((name) => str(name.toUpperCase())));
+export const rankedByBestLap = (): Expr => sessionIs(...BEST_LAP_SESSIONS);
 
 /**
  * The gap outside a race: a car's best lap less the best lap of the car it is measured from, signed
@@ -1612,7 +1612,7 @@ const lapTimeRun = (): Expr => isnull(timespanToSeconds(game('CurrentLapTime')),
 export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(timedLapSeconds(), num(0)));
 
 /** Whether the session is a race, the one session name OpenDash matches with certainty. */
-const isRace = (): Expr => eq(ucase(sessionType()), str('RACE'));
+const isRace = (): Expr => sessionIs('Race');
 
 /**
  * The overall leader's row on SimHub's leaderboard: the car first on the road, {@link liveRow} of 1.
@@ -2319,13 +2319,62 @@ export const antiRollRear = (): Expr => raw('dcAntiRollRear');
 
 export const airTemperature = (): Expr => isnull(game('AirTemperature'), num(0));
 export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0));
-export const trackName = (): Expr => isnull(game('TrackName'), str(''));
+/**
+ * Where Assetto Corsa publishes the track's name for people: the `name` of the track's own
+ * `ui_track.json`, which SimHub's AC reader loads into its raw `Track.TrackInfo` (`TrackDesc` and
+ * `TrackInfo` in `ACSharedMemory.dll`, decompiled). No other sim's reader has a `Track.TrackInfo`, so
+ * everywhere else it is null.
+ */
+export const AC_TRACK_NAME = 'DataCorePlugin.GameRawData.Track.TrackInfo.name';
+
+/**
+ * Where iRacing publishes the track's name for people: the session's `WeekendInfo.TrackDisplayShortName`,
+ * `Spa` where `TrackName` is `spa gp`. SimHub's iRacing reader declares the whole session info raw
+ * (`SessionData._WeekendInfo` in `iRacingSDK.dll`, decompiled), and no other sim's reader has a
+ * `SessionData`, so everywhere else it is null.
+ *
+ * The short name rather than `TrackDisplayName`, `Circuit de Spa-Francorchamps`, because the header
+ * this feeds is 163 px wide on the 800 by 480 layout and the pit wall's race page, and the long name
+ * with its length after it is over 200 px there. WPF would cut it off mid-word.
+ */
+export const IRACING_TRACK_NAME = 'DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName';
+
+/**
+ * The track as a driver names it, `Red Bull Ring` rather than `ks_red_bull_ring` and `Spa` rather
+ * than `spa gp`.
+ *
+ * `GameData.TrackName` is not that on either sim 1.0 is built for. On iRacing it is the session's
+ * `WeekendInfo.TrackName`, iRacing's internal code (`IRacingManager.GD_TrackName`, decompiled, and
+ * every recorded trace, which holds `spa gp`). On Assetto Corsa `ACManager.GD_TrackName` answers
+ * `TrackDesc.Track`, the track's folder, lower-cased as `TrackDesc.GetFromAPI` finds it under
+ * `content\tracks` (#1124). So each sim's own name is read first where it is set, and `TrackName`
+ * where neither is, which is every other sim and an AC track that ships no `ui_track.json`. None of
+ * the reads names a game: each raw one is simply null wherever SimHub does not fill it.
+ */
+export const trackName = (): Expr => isnull(prop(AC_TRACK_NAME), isnull(prop(IRACING_TRACK_NAME), isnull(game('TrackName'), str(''))));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
 /** The widest word the grip status takes, which is what a field measures its box against. */
 export const GRIP_WIDEST = 'Moderate';
 /** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
 export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
+
+/**
+ * Whether the session is one of `names`, whichever case the sim writes it in (#1125).
+ *
+ * SimHub passes each sim's own spelling through: iRacing's `Race` and `Lone Qualify`, and Assetto
+ * Corsa's and ACC's enum names with their `AC_` taken off, `RACE` and `QUALIFY`
+ * (`ACManager.GD_SessionTypeName`, decompiled `ACSharedMemory.dll`). NCalc's `=` and `in` compare
+ * two strings with `Comparer.Default`, which minds the case, so the name is put in capitals and
+ * compared with the names in capitals. `names` are written as iRacing writes them, and one name is
+ * an `=` rather than an `in` of one. `ncalcCoverage.test.ts` refuses a comparison of the session
+ * name made any other way.
+ */
+export const sessionIs = (...names: readonly string[]): Expr => {
+  const [first, ...rest] = names.map((name) => str(name.toUpperCase()));
+  if (first === undefined) throw new Error('sessionIs() takes at least one session name');
+  return rest.length === 0 ? eq(ucase(sessionType()), first) : isIn(ucase(sessionType()), first, ...rest);
+};
 
 /**
  * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
