@@ -214,14 +214,18 @@ for the matrix; it is not answered by drawing one.
 | 19 | Push to pass | `GameData.PushToPassActive` | 24 | Filled `purpose.alert.p2p`, "PUSH TO PASS", only where the name is written. |
 | 20 | Headlight flash | `dcHeadlightFlash` has just moved | 25 | Outlined `purpose.alert.p2p`, "FLASH", only where the name is written. |
 
-**All five read whether anybody is in the car**, which is `inTheCar` in `second/values.ts`, iRacing's
-`IsOnTrack` and #312's one test of it. The ignition needs it most: SimHub's iRacing reader has no
+**All five read whether anybody is in the car**, which is `sim.driverInCar` in `second/values.ts` and
+#312's one test of it: the plugin's `DriverInCar` (ADR 0021), which is iRacing's `IsOnTrack`, Assetto
+Corsa's and ACC's `Graphics.Status` at `AC_LIVE` and Le Mans Ultimate's `mInRealtime`, and without the
+plugin `IsOnTrack` alone (#561). The ignition needs it most: SimHub's iRacing reader has no
 ignition of iRacing's to pass through and derives one from `Voltage`, so a driver standing in the
-garage is, to SimHub, a driver whose ignition is off. They read it as "no" where a sim does not
-publish `IsOnTrack`, which makes them iRacing's as the flags are: elsewhere SimHub's ignition is its
-guess from the revs, `Rpms > 300`, and IGNITION OFF would sit over every flag whenever the engine
-idled. The change notification reads the same test as "yes" there, since a notification that fires
-in another sim costs nothing.
+garage is, to SimHub, a driver whose ignition is off. They read it as "no" where nothing answers, a
+sim the plugin has no row for and no `IsOnTrack`: there SimHub's ignition is its guess from the revs,
+`Rpms > 300`, and IGNITION OFF would sit over every flag whenever the engine was not turning, in the
+menus as much as on track. On Assetto Corsa the same guess is the ignition, so with the driver in the
+car a stall or an engine cut on track reads IGNITION OFF. The change notification reads the same test
+as "yes" where nothing answers, since a notification that fires there costs nothing; on Assetto Corsa
+it is "no" in the menus, a replay and a pause.
 
 **The stall is SimHub's reading and not iRacing's bit.** `EngineStarted` is the ignition on and the
 stalled bit of `EngineWarnings` clear, except that SimHub ignores the bit on an electric car, on one
