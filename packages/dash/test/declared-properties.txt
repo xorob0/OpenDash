@@ -299,6 +299,7 @@ OpenDash.CarHasPitLimiter
 OpenDash.PitLimiterOn
 OpenDash.DamageReported
 OpenDash.DriverInCar
+OpenDash.TrackMapRecorded
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart
