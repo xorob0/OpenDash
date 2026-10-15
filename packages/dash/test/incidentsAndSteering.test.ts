@@ -1,10 +1,12 @@
 /**
- * The incident count, on a sim that publishes it and on one that does not (#567).
+ * The incident count and the wheel angle, on a sim that publishes them and on one that does not (#567).
  *
- * It is iRacing's raw telemetry, `Telemetry.PlayerCarMyIncidentCount`, which SimHub's Assetto Corsa, ACC
- * and Le Mans Ultimate readers never publish. It was read behind an `isnull(..., 0)`, so on Assetto Corsa
- * the bar, band D's corner, the pit wall header and the session page drew `0x`, a clean sheet nobody
- * awarded. Now the incident fields hide, or read `--` where a page keeps the field's place.
+ * Both are iRacing's raw telemetry, `Telemetry.PlayerCarMyIncidentCount` and `Telemetry.SteeringWheelAngle`,
+ * which SimHub's Assetto Corsa, ACC and Le Mans Ultimate readers never publish. Each was read behind an
+ * `isnull(..., 0)`, so on Assetto Corsa the bar, band D's corner, the pit wall header and the session page
+ * drew `0x`, a clean sheet nobody awarded, and the steering dial and the pit wall's steering trace drew a
+ * wheel held straight through every corner. Now the incident fields hide, or read `--` where a page keeps
+ * the field's place, and the dial and the trace hide, the trace saying why.
  *
  * Each surface is read as a rig draws it: a group whose `Visible` is false hides everything in it, and a
  * text shows its `Text` evaluated against the frame. The frames are the committed traces of the `race`
@@ -17,8 +19,9 @@ import { BAR_FIELDS, barFieldSettingName, FACE_SIZES, PROPERTY_PREFIX } from '..
 import { rect } from '../src/design/geometry.ts';
 import type { Item } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
+import { TELEMETRY_TRACES, TRACE_NOT_PUBLISHED, tracePanel } from '../src/screens/pitwall.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from '../src/screens/pitwallHeader.ts';
-import { hasIncidents } from '../src/second/values.ts';
+import { hasIncidents, hasSteering } from '../src/second/values.ts';
 import { bar } from '../src/zones/bar.ts';
 import { bandCorners } from '../src/zones/bandPages.ts';
 import { ZONE_FACES } from '../src/zones/index.ts';
@@ -27,6 +30,7 @@ import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const RAW = 'DataCorePlugin.GameRawData.Telemetry.';
 const INCIDENTS = `${RAW}PlayerCarMyIncidentCount`;
+const STEERING = `${RAW}SteeringWheelAngle`;
 
 const raceFrame = (simId: string): Props => {
   const sim = SIMS.find((s) => s.id === simId);
@@ -99,5 +103,43 @@ describe('the incident count', () => {
   test("keeps the incident limit hidden with the count, though the limit alone is published", () => {
     const limitOnly = { ...raceFrame('ac'), 'DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit': '17' };
     expect(words(header(), limitOnly, 'h.incidents.')).toEqual([]);
+  });
+});
+
+const inputsPage = (): Item[] => MODULES.find((m) => m.id === 'inputs')!.build({ frame: rect(0, 0, 600, 280), density: 'zone', prefix: 'inputs.' });
+const steeringPanel = (): Item[] => tracePanel('telemetry.steering', rect(0, 0, 1240, 200), TELEMETRY_TRACES.find((t) => t.id === 'steering')!);
+
+/** What a rig draws of the dial and of the trace panel: the names of the parts shown, and the words. */
+const steeringReadings = (props: Props) => {
+  const dial = drawn(inputsPage(), props).filter((i) => i.name.startsWith('inputs.steer.'));
+  const panel = drawn(steeringPanel(), props);
+  return {
+    dialParts: dial.length,
+    traced: panel.filter((i) => i.name.startsWith('telemetry.steering.trace.Steering')).map((i) => i.name),
+    panelWords: panel.filter((i) => i.text !== undefined).map((i) => i.text!),
+  };
+};
+
+describe('the wheel angle', () => {
+  test('is published by the iRacing trace and not by the Assetto Corsa one', () => {
+    expect(typeof raceFrame('iracing')[STEERING]).toBe('number');
+    expect(raceFrame('ac')[STEERING]).toBeNull();
+    expect({ iracing: evalNcalc(hasSteering(), raceFrame('iracing')), ac: evalNcalc(hasSteering(), raceFrame('ac')) }).toEqual({ iracing: true, ac: false });
+  });
+
+  test('hides the dial and the trace on Assetto Corsa rather than drawing a wheel held straight, and the panel says why', () => {
+    expect(steeringReadings(raceFrame('ac'))).toEqual({ dialParts: 0, traced: [], panelWords: ['Steering', TRACE_NOT_PUBLISHED] });
+  });
+
+  test('draws the dial and traces the angle on iRacing, as it did', () => {
+    const iracing = raceFrame('iracing');
+    const readings = steeringReadings(iracing);
+    expect(readings.dialParts).toBeGreaterThan(10);
+    expect(readings.traced).toEqual(['telemetry.steering.trace.Steering']);
+    expect(readings.panelWords).toEqual(['Steering']);
+    const chart = drawn(steeringPanel(), iracing).find((i) => i.name === 'telemetry.steering.trace.Steering')!;
+    const item = [...steeringPanel()].flatMap((i) => (i.kind === 'layer' ? i.children : [i])).find((i) => i.name === chart.name)!;
+    // Clockwise as the driver sees it, so iRacing's left-positive angle is turned round (#1057).
+    expect(evalNcalc(formulaOf(item, 'CurrentValue'), iracing)).toBeCloseTo(-(iracing[STEERING] as number), 6);
   });
 });

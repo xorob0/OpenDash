@@ -29,7 +29,7 @@ import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { ring } from '../elements/ring.ts';
 import { ds } from '../tokens.ts';
-import { STEERING_RANGE, steering } from './values.ts';
+import { hasSteering, STEERING_RANGE, steering } from './values.ts';
 
 const { add, max, min, mul, num, real, sub } = ncalc;
 
@@ -151,6 +151,9 @@ function spoke(name: string, hub: { cx: number; cy: number }, bearing: number, l
  * The bounds are on the left of each clamp and written as doubles: NCalc's `max` and `min` answer in
  * their left operand's type, and the reading on the left was `isnull(angle, 0)`, an Int32 on a frame
  * with no angle (#1046).
+ *
+ * The whole dial is one group that hides where the sim publishes no angle, which is every sim but
+ * iRacing until Assetto Corsa's is measured (#567).
  */
 export function steeringDial(name: string, frame: Rect, labelSize: number): Item[] {
   // A pixel over the advance: `Steer` is a whole 36 px at 15, and a box cut to the exact advance loses
@@ -190,7 +193,10 @@ export function steeringDial(name: string, frame: Rect, labelSize: number): Item
   const slots = side >= SLOTS_FROM;
   // The stripe always stands proud of the rim on both sides, however thin the rim is drawn.
   const mark = { width: even(D.mark), height: 2 * Math.ceil((stroke + 2 * px(2)) / 2) };
-  return [
+  // One group, hidden where the sim publishes no wheel angle (#567): a wheel held straight through every
+  // corner is a reading of its own, and a wrong one. A group whose Visible is false leaves its children's
+  // bindings unevaluated, so the turning parts cost nothing there either; see `withSessionGate`.
+  const wheelItems: Item[] = [
     // Each spoke runs from the hub to the rim's centre line, so the boss and the rim cover its ends.
     ...spokes.flatMap((s) => spoke(`${name}.spoke${s.id}`, hub, s.bearing, radius, s.widths, px(2), wheel, clamped)),
     ...(slots ? spokes.map((s) => onWheel(`${name}.slot${s.id}`, hub, polar(s.bearing, radius * 0.55), s.bearing, { width: px(D.slot), height: Math.round(radius * 0.36) }, cut, clamped)) : []),
@@ -203,4 +209,5 @@ export function steeringDial(name: string, frame: Rect, labelSize: number): Item
     onWheel(`${name}.mark`, hub, { x: 0, y: -radius }, 0, mark, ds.color.text.primary, clamped),
     ...(named ? [label(`${name}.label`, 'Steer', cx - Math.round(labelWidth / 2), top + side + STEERING_DIAL.labelGap - box.top, labelWidth, { size: labelSize })] : []),
   ];
+  return [withMoreBindings({ kind: 'layer', name: `${name}.dial`, children: wheelItems }, { Visible: hasSteering() })];
 }

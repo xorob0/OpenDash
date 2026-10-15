@@ -25,12 +25,13 @@ import { panel, PANEL_TITLE_HEIGHT } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
 import { rowsThatFit as boardRowsThatFit, table, type ColumnId } from '../second/table.ts';
+import { placeholder } from '../second/placeholder.ts';
 import { LEGEND_HEIGHT, trace, type Series } from '../second/trace.ts';
 import { track, trackFrameWidth } from '../modules/track.ts';
 import { fld, sessionNotice, withSessionGate, type ModuleContext } from '../modules/module.ts';
 import { assistField } from '../modules/carSettings.ts';
 import { airTemperature, bestLap, brake, brakeBias, carPosition,
-  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, gear, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, YOUR_BEST_CAPTION, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
+  positionDigits, CHARS, CLASS_AND_PLACE_WIDEST, classAndPlace, classOpponentCount, clutch, estimatedLap, fieldSize, gear, LAP_TIME_WIDEST, lapTime, lapTimeWidest, lastLap, player, positionDrawn, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaColour, referenceDeltaText, referenceLabel, REFERENCE_LABEL_WIDEST, YOUR_BEST_CAPTION, roadTemperature, rpm, SESSION_NAME_WIDEST, sessionBestLap, sessionClock, sessionType, speed, speedUnit, hasSteering, steering, STEERING_RANGE, throttle, untimedMark } from '../second/values.ts';
 import { FORWARD_GEARS } from '../shift.ts';
 import { ds } from '../tokens.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from './pitwallHeader.ts';
@@ -300,7 +301,7 @@ const gearNumber = (): Expr =>
  * gives the speed and pedal plots twice the gear plot and a column divided by weight gave every
  * panel whatever was left over.
  */
-export const TELEMETRY_TRACES: { id: string; title: string; titleBind?: Expr; titleWidest?: string; series: () => Series[]; plot: number }[] = [
+export const TELEMETRY_TRACES: { id: string; title: string; titleBind?: Expr; titleWidest?: string; series: () => Series[]; plot: number; present?: () => Expr }[] = [
   // The speed trace carries its unit in the title, which is where the sheet puts it, and the unit
   // is the driver's own rather than a fixed word: the value under it is `SpeedLocal`, so a title
   // reading kilometres over a miles rig would be an engineer reading the wrong number off a graph.
@@ -329,8 +330,19 @@ export const TELEMETRY_TRACES: { id: string; title: string; titleBind?: Expr; ti
       { name: 'Clutch', color: ds.color.text.secondary, bind: clutch(), min: 0, max: 100 },
     ],
   },
-  { id: 'steering', title: 'Steering', plot: 110, series: () => [{ name: 'Steering', color: ds.color.text.primary, bind: steering(), min: -STEERING_RANGE, max: STEERING_RANGE }] },
+  // Only where the sim publishes a wheel angle: a flat line through every corner is a reading of its
+  // own, and a wrong one, so elsewhere the panel says the sim does not publish it (#567).
+  {
+    id: 'steering',
+    title: 'Steering',
+    plot: 110,
+    series: () => [{ name: 'Steering', color: ds.color.text.primary, bind: steering(), min: -STEERING_RANGE, max: STEERING_RANGE }],
+    present: hasSteering,
+  },
 ];
+
+/** What a trace panel says in place of its plot where the sim does not publish what it traces. */
+export const TRACE_NOT_PUBLISHED = 'Not published by this sim';
 
 /**
  * What a trace panel spends around its plot, which is what turns a declared plot height into the
@@ -356,7 +368,16 @@ export function tracePanel(name: string, frame: Rect, spec: (typeof TELEMETRY_TR
     title: spec.title,
     ...(spec.titleBind ? { titleBind: spec.titleBind, titleWidest: spec.titleWidest ?? spec.title } : {}),
   });
-  return [...items, ...trace(`${name}.trace`, body, spec.series(), DENSITY, { legend: spec.series().length > 1 })];
+  const plot = trace(`${name}.trace`, body, spec.series(), DENSITY, { legend: spec.series().length > 1 });
+  if (spec.present === undefined) return [...items, ...plot];
+  // The plot in one group and the notice in its place, one of the two on the screen at a time, as a
+  // module's session gate composes them: a hidden group leaves its children's bindings unevaluated.
+  const present = spec.present();
+  return [
+    ...items,
+    withMoreBindings({ kind: 'layer', name: `${name}.plot`, children: plot }, { Visible: present }),
+    ...placeholder(`${name}.`, TRACE_NOT_PUBLISHED, body, DENSITY).map((item) => withMoreBindings(item, { Visible: ncalc.not(present) })),
+  ];
 }
 
 /**
