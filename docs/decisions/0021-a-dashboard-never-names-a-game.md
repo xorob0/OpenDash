@@ -127,10 +127,10 @@ No dashboard names a game, and the per-game knowledge lives in one table with a 
 tickets that wait on this (#558, #582, #561) become a change to the binding alone, and #558's "has a
 limiter" is the first: the pit family asks `sim.carHasPitLimiter()`, so on ACC and Le Mans Ultimate, where
 SimHub's `PitLimiterOn` is the car's limiter, the reminder to engage it can show, and on iRacing it reads
-what it always read. On Assetto Corsa it cannot show yet. The family still reads SimHub's `PitLimiterOn`,
-which there is the pit lane, so "in the lane with the limiter off" is never true, and every limiter
-reading lights in the lane whether the limiter is on or not. That changes when the family's limiter reads
-move onto `sim.pitLimiterOn()`, which is #558's.
+what it always read. On Assetto Corsa it showed only once every limiter reading moved onto
+`sim.pitLimiterOn()` (#1122): before that the family read SimHub's `PitLimiterOn`, which there is the pit
+lane, so "in the lane with the limiter off" was never true, and every limiter reading lit in the lane
+whether the limiter was on or not.
 
 ### Bad
 
