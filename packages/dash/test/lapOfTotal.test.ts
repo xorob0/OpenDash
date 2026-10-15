@@ -10,14 +10,17 @@
  * every box the module is built into holds it.
  */
 import { describe, expect, test } from 'bun:test';
-import { monoWidth } from '../src/design/metrics.ts';
+import { DATA_FACE, monoWidth } from '../src/design/metrics.ts';
 import type { TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { charsOfText, textWidth } from '../src/second/drawn.ts';
-import { CHARS, LAP_OF_TOTAL_WIDEST } from '../src/second/values.ts';
+import { CHARS, lapOfTotalWidest } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
+
+/** The widest reading in the face the module is drawn in here, the house's. */
+const LAP_OF_TOTAL_WIDEST = lapOfTotalWidest(DATA_FACE.SemiBold);
 
 const stint = MODULES.find((m) => m.id === 'stint')!;
 
@@ -89,7 +92,8 @@ describe('the lap of the race on the stint page', () => {
 
   test('the budget is the declared reading, every space and the slash in a full cell', () => {
     const mono = SITES[0]!.item.monospace!;
-    expect(LAP_OF_TOTAL_WIDEST).toBe('999 / 999');
+    // Of the widest figure in the face rather than of nines, which in Barlow Condensed are not (#1117).
+    expect(lapOfTotalWidest('BarlowCondensedSemiBold')).toBe('444 / 444');
     expect(charsOfText(LAP_OF_TOTAL_WIDEST, mono)).toEqual(CHARS.lapOfTotal);
     for (const s of SITES) {
       expect({ site: s.name, widest: s.item.widest }).toEqual({ site: s.name, widest: LAP_OF_TOTAL_WIDEST });
