@@ -59,6 +59,11 @@ namespace OpenDashPlugin
         public const string LightLowFuel = "#FF6A00"; // purpose.light.lowFuel
         public const string LightSpotter = "#B14BFF"; // purpose.light.spotter
         public const string LightMeatball = "#FF6A00"; // purpose.light.meatball
+        // The flags as a lamp draws them (#733), in the flags' own hues rather than the face's state colours.
+        public const string LightFlagGreen = "#00FF00"; // purpose.light.flag.green
+        public const string LightFlagRed = "#FF0000"; // purpose.light.flag.red
+        public const string LightFlagBlue = "#0000FF"; // purpose.light.flag.blue
+        public const string LightFlagWhite = "#FFFFFF"; // purpose.light.flag.white
 
         // The panel's own second shades: the border of a fix box, the ink of a destructive press, and the
         // tag a new control carries for one release.

@@ -255,6 +255,17 @@ export const ds = {
       lowFuel: hex('purpose.light.lowFuel'),
       spotter: hex('purpose.light.spotter'),
       meatball: hex('purpose.light.meatball'),
+      /**
+       * The flags as a lamp draws them, where the face's are its state colours (#733): an RGB LED
+       * renders the good green as a teal. LED-only, like the rest of `light`; the face's flag band
+       * and ring keep `flag` above.
+       */
+      flag: {
+        green: hex('purpose.light.flag.green'),
+        red: hex('purpose.light.flag.red'),
+        blue: hex('purpose.light.flag.blue'),
+        white: hex('purpose.light.flag.white'),
+      },
     },
     /**
      * A pop-up owns two colours of its own rather than borrowing `surface.zone` and `text.primary`

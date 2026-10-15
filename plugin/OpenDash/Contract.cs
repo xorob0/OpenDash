@@ -971,15 +971,15 @@ namespace OpenDashPlugin
         /// </remarks>
         public static readonly IReadOnlyList<LedColour> LedColours = new[]
         {
-            new LedColour("flag.red", "Red flag", "#FF2D46", "Red flag"),
+            new LedColour("flag.red", "Red flag", "#FF0000", "Red flag"),
             new LedColour("flag.black", "Black flag", "#F5F7FA", "Black flag"),
             new LedColour("flag.meatball", "Meatball flag", "#FF6A00", "Meatball flag"),
             new LedColour("flag.caution", "Full course yellow", "#FFD400", "Full course yellow"),
             new LedColour("flag.yellow", "Yellow flag", "#FFD400", "Yellow flag"),
             new LedColour("flag.debris", "Debris flag", "#FFD400", "Debris flag"),
-            new LedColour("flag.blue", "Blue flag", "#2E7BFF", "Blue flag"),
+            new LedColour("flag.blue", "Blue flag", "#0000FF", "Blue flag"),
             new LedColour("flag.white", "White flag", "#FFFFFF", "White flag"),
-            new LedColour("flag.green", "Green flag", "#00D96A", "Green flag"),
+            new LedColour("flag.green", "Green flag", "#00FF00", "Green flag"),
             new LedColour("flag.chequered", "Chequered flag", "#F5F7FA", "Chequered flag"),
             new LedColour("spotter", "Spotter", "#B14BFF", "Car alongside, left", "Car alongside, right"),
             new LedColour("turn", "Turn signals", "#00D96A", "Indicating left", "Indicating right"),
