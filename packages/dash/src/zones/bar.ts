@@ -37,6 +37,7 @@ import {
   fieldSize,
   currentLap,
   hasLapTotal,
+  hasIncidents,
   incidents,
   localClock,
   meridiemWidest,
@@ -128,6 +129,12 @@ interface BarFieldSpec {
    * gap there without a binding. Required of every field that has a denominator. #387.
    */
   drawn?: DrawnFigure;
+  /**
+   * True while the sim publishes the reading. A field without one is drawn whenever its slot asks for
+   * it; a field with one leaves its slot empty, label and all, where the sim has nothing for it, rather
+   * than drawing a figure it was never given: the incident count on a sim that counts none (#567).
+   */
+  present?: Expr;
 }
 
 /** The face the bar's followers are set in, which is the value's own. */
@@ -203,7 +210,9 @@ export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
     chars: CHARS.classPosition,
     widest: CLASS_AND_PLACE_WIDEST,
   },
-  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, numeralWidest: INCIDENTS_WIDEST },
+  // Hidden where the sim counts no incidents, which is every sim but iRacing: `0x` there was a clean
+  // sheet nobody awarded (#567).
+  { id: 'incidents', label: 'Incidents', sample: '3x', bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')), chars: CHARS.incidents, numeralWidest: INCIDENTS_WIDEST, present: hasIncidents() },
   {
     id: 'airTemp',
     label: 'Air',
@@ -381,7 +390,8 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
         ? frame.left + PAD_X + withinEnd * (widest + gap)
         : frame.left + frame.width - PAD_X - endWidth + withinEnd * (widest + gap);
     for (const spec of BAR_FIELD_SPECS) {
-      const visible = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const selected = eq(zoneSetting.barField(opts.face, slot), num(BAR_FIELDS.find((f) => f.id === spec.id)?.number ?? 0));
+      const visible = spec.present === undefined ? selected : and(selected, spec.present);
       const name = `${prefix}${slot}.${spec.id}`;
       // One field per end is the portrait face, where the artboard has the room for "Pos" and not
       // for "Position".

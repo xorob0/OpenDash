@@ -2339,6 +2339,16 @@ export const clutch = (): Expr => isnull(game('Clutch'), num(0));
  * `docs/research/simhub-dash-format.md` records how the sign was established (#1057).
  */
 export const steering = (): Expr => sub(num(0), isnull(raw('SteeringWheelAngle'), num(0)));
+/**
+ * Whether the sim publishes a wheel angle a dashboard can read: iRacing's raw `SteeringWheelAngle`.
+ *
+ * Assetto Corsa, ACC and Le Mans Ultimate publish none under that name, and a dial or trace drawing
+ * {@link steering}'s 0 for them shows a wheel held straight through every corner, which is a reading of
+ * its own. The steering dial and the pit wall's steering trace hide on this instead (#567). Assetto
+ * Corsa's own `Physics.SteerAngle` joins once its unit and sign are measured on a wheel, which
+ * `docs/research/simhub-dash-format.md` records as still owed.
+ */
+export const hasSteering = (): Expr => not(isNull(raw('SteeringWheelAngle')));
 /** Radians of wheel angle either side of centre a full-lock reading is drawn to. */
 export const STEERING_RANGE = 3.5;
 export const brakeBias = (): Expr => isnull(game('BrakeBias'), num(0));
@@ -2681,6 +2691,12 @@ export const simClock = (): TimeOfDay => {
 
 /** Incidents taken, which iRacing publishes raw and other sims do not publish at all. */
 export const incidents = (): Expr => raw('PlayerCarMyIncidentCount');
+/**
+ * Whether the sim counts incidents at all. Only iRacing does; on Assetto Corsa, ACC and Le Mans Ultimate
+ * the count is null, and a field drawing it as `0x` awards a clean sheet nobody counted. A field hides on
+ * this, or draws the not-available mark where it has a place to keep (#567).
+ */
+export const hasIncidents = (): Expr => not(isNull(incidents()));
 /** The incident limit, a string in iRacing's session YAML ("unlimited" or a number). */
 export const incidentLimit = (): Expr => prop('DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit');
 /** The session has a limit to count incidents against: one is published and it is not "unlimited". */
@@ -2782,6 +2798,19 @@ export const PIT_SERVICE_BITS = { FrontLeft: 1, FrontRight: 2, RearLeft: 4, Rear
 const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvFlags'), num(0)), num(bit))), num(2));
 
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
+
+/**
+ * The sim publishes a pit service order at all, which is iRacing alone (#564).
+ *
+ * Assetto Corsa's stop is set in the game's own pit app and its shared memory carries no request;
+ * ACC's MFD and Le Mans Ultimate's scheduled stops are under raw names of their own, which SimHub
+ * publishes and OpenDash does not read. Each of them is handed iRacing's `PitSvFlags` as null, and
+ * {@link pitServiceFlag} reads a null as 0, so a page drawn from the bits alone shows a stop set to
+ * change no tyre and repair nothing, which is a stop nobody set. This is what such a page asks
+ * first. It is an `isnull()` over the property it already reads, ADR 0021's second kind, so it
+ * needs no capability: the absence is the answer.
+ */
+export const pitServiceIsPublished = (): Expr => not(isNull(raw('PitSvFlags')));
 
 /**
  * SimHub's own ratio from litres to gallons, `GameManagerBase.GetFuelConvertRatio` in 9.12.6. The

@@ -1196,6 +1196,30 @@ with SimHub's property list open and read `SteeringWheelAngle` going positive.
   The emulator scenarios that sweep the angle do so symmetrically, so none of the committed traces
   could have shown the sign either way.
 
+### Assetto Corsa's steering is `Physics.SteerAngle`, unit and sign not yet measured (2026-10-15, #567)
+
+Read from SimHub 9.12.6's AC reader and from the committed Assetto Corsa traces; the measurement itself
+is owed to a real wheel.
+
+- **iRacing's property is null on AC.** `[DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle]` is
+  iRacing's raw block, which the AC reader does not publish: every trace under `traces/ac/` carries the
+  column and it is null in every frame. Read behind `isnull(..., 0)` it drew a wheel held straight through
+  every corner, so the steering dial and the pit wall's steering trace now hide where it is null
+  (`hasSteering()` in `packages/dash/src/second/values.ts`), and the trace panel says "Not published by
+  this sim" in the plot's place.
+- **AC's own reading is `[DataCorePlugin.GameRawData.Physics.SteerAngle]`**, AC's `physics.steerAngle`
+  passed through unconverted; SimHub maps it into no `GameData` member. What AC writes there is not
+  settled by the source: Kunos's shared-memory header gives only the name, ACC (which shares the layout)
+  documents the same field as the input from -1 to 1, and Marvin's AIRA negates AC's steering as
+  right-positive (cited in the section above). So whether it is radians, degrees or a fraction of the lock,
+  and which way is positive, is the author's check on a wheel: turn a quarter turn left in an AC session
+  with SimHub's property list open and read `Physics.SteerAngle`'s value and sign. Until then the dash
+  does not read it, rather than drawing a guess.
+- **When it is measured**, it joins `steering()`'s `isnull` chain after iRacing's, converted to the
+  radians and the clockwise sign `STEERING_RANGE` and the dial are in, and `hasSteering()` takes it in
+  with it. If it is a fraction of the lock, the car's lock is not published on AC, so it can only be drawn
+  against a fixed range and the trace's scale says so.
+
 ### `Rotation` binds, and turns an item about its own centre (2026-10-13, #1057)
 
 Read from the decompiled `plugin/lib/SimHub.Plugins.dll` (9.12.6); not yet seen on the VM, which is
