@@ -26,10 +26,12 @@ import {
   classOpponentCount,
   currentLap,
   fieldSize,
+  hasIncidents,
   hasLapTotal,
   incidents,
   lapsLeftShown,
   lapsLeftText,
+  NO_VALUE,
   player,
   positionDrawn,
   sessionClock,
@@ -126,7 +128,9 @@ export const session = defineModule('session', (ctx) => {
           fld(ctx, 'incidents', 'Incidents', {
             sample: '3x',
             widest: INCIDENTS_WIDEST,
-            bind: concat(fmt(taken, '0'), str('x')),
+            // `--` where the sim counts no incidents, every sim but iRacing, rather than a `0x` nobody
+            // awarded. The page keeps the field's place, so the cars beside it do not move (#567).
+            bind: iff(hasIncidents(), concat(fmt(taken, '0'), str('x')), str(NO_VALUE)),
             chars: CHARS.incidents,
             fs: d.small,
             colorBind: iff(gt(taken, num(0)), str(ds.color.caution.primary), str(ds.color.text.primary)),
