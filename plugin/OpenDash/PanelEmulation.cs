@@ -338,8 +338,8 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>The colour a flag lights an LED in. Black and the chequer light in the panel's white,
-        /// since a black LED is an unlit one.</summary>
+        /// <summary>The colour a flag is drawn in on the face, which the round face's ring takes (purpose.flag.*).
+        /// Black and the chequer are the panel's white. An LED takes <see cref="LampColour"/>.</summary>
         public static string FlagColour(string id)
         {
             switch (id)
@@ -352,6 +352,21 @@ namespace OpenDashPlugin
                 case Chequer: return Theme.FlagChequer;
                 case Red: return Theme.FlagRed;
                 default: return null;
+            }
+        }
+
+        /// <summary>The colour a flag lights an LED in, as LAMP_FLAG in leds/flagColours.ts draws it: the green, the
+        /// red, the blue and the white in the flags' own hues rather than the face's (#733). Black and the chequer
+        /// light in the panel's white, since a black LED is an unlit one.</summary>
+        public static string LampColour(string id)
+        {
+            switch (id)
+            {
+                case Green: return Theme.LightFlagGreen;
+                case Blue: return Theme.LightFlagBlue;
+                case White: return Theme.LightFlagWhite;
+                case Red: return Theme.LightFlagRed;
+                default: return FlagColour(id);
             }
         }
 
@@ -443,7 +458,7 @@ namespace OpenDashPlugin
 
             if (IsFlag(scenarioId) && draws)
             {
-                var colour = options.Colour(ColourKey(scenarioId), FlagColour(scenarioId));
+                var colour = options.Colour(ColourKey(scenarioId), LampColour(scenarioId));
                 if (ends == 0) Fill(middle, colour);
                 else if (Spreads(scenarioId)) { Fill(left, colour); Fill(right, colour); }
                 else

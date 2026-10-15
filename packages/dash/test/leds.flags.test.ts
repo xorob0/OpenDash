@@ -306,10 +306,10 @@ describe('what one flag looks like beside another', () => {
   test('every flag draws its own token, and the ones with no second colour blink against the ground', () => {
     const drawn: Record<string, string> = {
       'flag.yellow': ds.purpose.flag.yellow,
-      'flag.blue': ds.purpose.flag.blue,
-      'flag.white': ds.purpose.flag.white,
-      'flag.green': ds.purpose.flag.green,
-      'flag.red': ds.purpose.flag.red,
+      'flag.blue': ds.purpose.light.flag.blue,
+      'flag.white': ds.purpose.light.flag.white,
+      'flag.green': ds.purpose.light.flag.green,
+      'flag.red': ds.purpose.light.flag.red,
     };
     for (const [id, color] of Object.entries(drawn)) {
       const e = effect(id);

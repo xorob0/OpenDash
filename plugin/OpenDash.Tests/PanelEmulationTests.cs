@@ -67,7 +67,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelEmulation.Revs(9, PanelEmulation.Yellow), frame[1]);
             // Black lights white: a black LED is an unlit one.
             Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.Black)[0], led => Assert.Equal(Theme.FlagBlack, led));
-            Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.Red)[2], led => Assert.Equal(Theme.FlagRed, led));
+            Assert.All(PanelEmulation.StripFrame(3, 9, PanelEmulation.Red)[2], led => Assert.Equal(Theme.LightFlagRed, led));
         }
 
         /// <summary>The blue, the white, the green and the chequer keep their one LED a side, the race lamp, as
@@ -79,9 +79,9 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(1, PanelEmulation.RaceLamp(2));
             Assert.Equal(0, PanelEmulation.RaceLamp(1));
             var blue = PanelEmulation.StripFrame(4, 14, PanelEmulation.Blue);
-            Assert.Equal(new[] { null, Theme.FlagBlue, null, null }, blue[0]);
-            Assert.Equal(new[] { null, null, Theme.FlagBlue, null }, blue[2]);
-            Assert.Equal(new[] { Theme.FlagGreen }, PanelEmulation.StripFrame(1, 9, PanelEmulation.Green)[0]);
+            Assert.Equal(new[] { null, Theme.LightFlagBlue, null, null }, blue[0]);
+            Assert.Equal(new[] { null, null, Theme.LightFlagBlue, null }, blue[2]);
+            Assert.Equal(new[] { Theme.LightFlagGreen }, PanelEmulation.StripFrame(1, 9, PanelEmulation.Green)[0]);
             foreach (var id in new[] { PanelEmulation.Red, PanelEmulation.Black, PanelEmulation.Yellow }) Assert.True(PanelEmulation.Spreads(id), id);
             foreach (var id in new[] { PanelEmulation.Blue, PanelEmulation.White, PanelEmulation.Green, PanelEmulation.Chequer }) Assert.False(PanelEmulation.Spreads(id), id);
         }
@@ -93,7 +93,7 @@ namespace OpenDashPlugin.Tests
         {
             var flag = PanelEmulation.StripFrame(0, 15, PanelEmulation.Blue);
             Assert.Single(flag);
-            Assert.All(flag[0], led => Assert.Equal(Theme.FlagBlue, led));
+            Assert.All(flag[0], led => Assert.Equal(Theme.LightFlagBlue, led));
             foreach (var car in new[] { PanelEmulation.CarLeft, PanelEmulation.CarRight, PanelEmulation.CarBoth })
             {
                 Assert.All(PanelEmulation.StripFrame(0, 15, car)[0], led => Assert.Equal(Theme.LightSpotter, led));
@@ -341,7 +341,7 @@ namespace OpenDashPlugin.Tests
             var redGlyph = sheet.Find("red");
             Assert.Equal(Array.IndexOf(redGlyph.DurationsMs, redGlyph.DurationsMs.Max()), Array.IndexOf(redGlyph.Frames, redGlyph.Still));
             Assert.Equal(redGlyph.Still.SelectMany(row => row), red);
-            Assert.Contains(Theme.FlagRed, red);
+            Assert.Contains(Theme.LightFlagRed, red);
         }
 
         private static PanelGlyphSheet BuiltSheet()

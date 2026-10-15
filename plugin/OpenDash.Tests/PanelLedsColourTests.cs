@@ -77,7 +77,7 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("#00D96A", PanelEmulation.StripFrame(3, 9, PanelEmulation.LowFuel, options)[0][2]);
             // What it has not changed is the default.
             Assert.Equal(Theme.LightTemperature, PanelEmulation.StripFrame(3, 9, PanelEmulation.Oil, options)[0][2]);
-            Assert.Equal(Theme.FlagBlue, PanelEmulation.StripFrame(3, 9, PanelEmulation.Blue, options)[0][1]);
+            Assert.Equal(Theme.LightFlagBlue, PanelEmulation.StripFrame(3, 9, PanelEmulation.Blue, options)[0][1]);
             // The options hold a copy: a pick after the preview was drawn does not move it.
             bar.SetColour("spotter", null);
             Assert.Equal("#FFFFFF", options.Colour("spotter", Theme.LightSpotter));

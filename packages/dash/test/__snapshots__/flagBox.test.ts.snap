@@ -941,62 +941,62 @@ EEEEEEEE
 EEEEEEEE
 
 debris
-EEEBEEEB
-EEBEEEBE
-EBEEEBEE
-BEEEBEEE
-EEEBEEEB
-EEBEEEBE
-EBEEEBEE
-BEEEBEEE
+EEEFEEEF
+EEFEEEFE
+EFEEEFEE
+FEEEFEEE
+EEEFEEEF
+EEFEEEFE
+EFEEEFEE
+FEEEFEEE
   --
-EEBEEEBE
-EBEEEBEE
-BEEEBEEE
-EEEBEEEB
-EEBEEEBE
-EBEEEBEE
-BEEEBEEE
-EEEBEEEB
+EEFEEEFE
+EFEEEFEE
+FEEEFEEE
+EEEFEEEF
+EEFEEEFE
+EFEEEFEE
+FEEEFEEE
+EEEFEEEF
   --
-EBEEEBEE
-BEEEBEEE
-EEEBEEEB
-EEBEEEBE
-EBEEEBEE
-BEEEBEEE
-EEEBEEEB
-EEBEEEBE
+EFEEEFEE
+FEEEFEEE
+EEEFEEEF
+EEFEEEFE
+EFEEEFEE
+FEEEFEEE
+EEEFEEEF
+EEFEEEFE
 
 blue
-FFFFFFFF
-FFFFFFFF
-FFFFFFFF
-FFFFFFFF
-FFFFFFFF
-FFFFFFFF
-FFFFFFFF
-FFFFFFFF
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
+GGGGGGGG
 
 white
-GGGGGGGG
-GGGGGGGG
-GGGGGGGG
-GGGGGGGG
-GGGGGGGG
-GGGGGGGG
-GGGGGGGG
-GGGGGGGG
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
+HHHHHHHH
 
 green
-HHHHHHHH
-HHHHHHHH
-HHHHHHHH
-HHHHHHHH
-HHHHHHHH
-HHHHHHHH
-HHHHHHHH
-HHHHHHHH
+IIIIIIII
+IIIIIIII
+IIIIIIII
+IIIIIIII
+IIIIIIII
+IIIIIIII
+IIIIIIII
+IIIIIIII
 
 startSet
 ........
@@ -1038,53 +1038,53 @@ CC..CC..
 CC..CC..
 
 Pit speeding
-BB....BB
-BBB..BBB
-.BBBBBB.
-..BBBB..
-BB....BB
-BBB..BBB
-.BBBBBB.
-..BBBB..
+FF....FF
+FFF..FFF
+.FFFFFF.
+..FFFF..
+FF....FF
+FFF..FFF
+.FFFFFF.
+..FFFF..
 
 Pit limiterOutOfLane
-..GGGG..
-..GGGG..
-..GGGG..
-..GGGG..
-..GGGG..
+..HHHH..
+..HHHH..
+..HHHH..
+..HHHH..
+..HHHH..
 ........
-..GGGG..
-..GGGG..
+..HHHH..
+..HHHH..
 
 Pit limiterInLane
-GGGGGGGG
-GGGGGGGG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GGGGGGGG
-GGGGGGGG
+HHHHHHHH
+HHHHHHHH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HHHHHHHH
+HHHHHHHH
 
 Warning oilHot
-.......I
-......I.
-.....I..
-.IIIII..
-IIIIIII.
-IIIIIII.
-.IIIII..
-...I....
+.......J
+......J.
+.....J..
+.JJJJJ..
+JJJJJJJ.
+JJJJJJJ.
+.JJJJJ..
+...J....
 
 Warning waterHot
-..II..II
-.I..II..
-I....II.
+..JJ..JJ
+.J..JJ..
+J....JJ.
 ........
-..II..II
-.I..II..
-I....II.
+..JJ..JJ
+.J..JJ..
+J....JJ.
 ........
 
 Warning lowFuel
@@ -1098,14 +1098,14 @@ Warning lowFuel
 EEEEEEE.
 
 Gear R redline
-.BBBBB..
-.BBBBB..
-.BB..BB.
-.BB..BB.
-.BBBBB..
-.BBBBB..
-.BB.BB..
-.BB.BB..
+.FFFFF..
+.FFFFF..
+.FF..FF.
+.FF..FF.
+.FFFFF..
+.FFFFF..
+.FF.FF..
+.FF.FF..
   --
 ........
 ........
@@ -1117,14 +1117,14 @@ Gear R redline
 ........
 
 Gear N redline
-.BB..BB.
-.BB..BB.
-.BBB.BB.
-.BBB.BB.
-.BB.BBB.
-.BB.BBB.
-.BB..BB.
-.BB..BB.
+.FF..FF.
+.FF..FF.
+.FFF.FF.
+.FFF.FF.
+.FF.FFF.
+.FF.FFF.
+.FF..FF.
+.FF..FF.
   --
 ........
 ........
@@ -1136,14 +1136,14 @@ Gear N redline
 ........
 
 Gear 1 redline
-..BBB...
-..BBB...
-...BB...
-...BB...
-...BB...
-...BB...
-.BBBBBB.
-.BBBBBB.
+..FFF...
+..FFF...
+...FF...
+...FF...
+...FF...
+...FF...
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1155,14 +1155,14 @@ Gear 1 redline
 ........
 
 Gear 2 redline
-.BBBBBB.
-.BBBBBB.
-.....BB.
-.BBBBBB.
-.BBBBBB.
-.BB.....
-.BBBBBB.
-.BBBBBB.
+.FFFFFF.
+.FFFFFF.
+.....FF.
+.FFFFFF.
+.FFFFFF.
+.FF.....
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1174,14 +1174,14 @@ Gear 2 redline
 ........
 
 Gear 3 redline
-.BBBBBB.
-.BBBBBB.
-.....BB.
-.BBBBBB.
-.BBBBBB.
-.....BB.
-.BBBBBB.
-.BBBBBB.
+.FFFFFF.
+.FFFFFF.
+.....FF.
+.FFFFFF.
+.FFFFFF.
+.....FF.
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1193,14 +1193,14 @@ Gear 3 redline
 ........
 
 Gear 4 redline
-.BB..BB.
-.BB..BB.
-.BB..BB.
-.BBBBBB.
-.BBBBBB.
-.....BB.
-.....BB.
-.....BB.
+.FF..FF.
+.FF..FF.
+.FF..FF.
+.FFFFFF.
+.FFFFFF.
+.....FF.
+.....FF.
+.....FF.
   --
 ........
 ........
@@ -1212,14 +1212,14 @@ Gear 4 redline
 ........
 
 Gear 5 redline
-.BBBBBB.
-.BBBBBB.
-.BB.....
-.BBBBBB.
-.BBBBBB.
-.....BB.
-.BBBBBB.
-.BBBBBB.
+.FFFFFF.
+.FFFFFF.
+.FF.....
+.FFFFFF.
+.FFFFFF.
+.....FF.
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1231,14 +1231,14 @@ Gear 5 redline
 ........
 
 Gear 6 redline
-.BBBBBB.
-.BBBBBB.
-.BB.....
-.BBBBBB.
-.BBBBBB.
-.BB..BB.
-.BBBBBB.
-.BBBBBB.
+.FFFFFF.
+.FFFFFF.
+.FF.....
+.FFFFFF.
+.FFFFFF.
+.FF..FF.
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1250,14 +1250,14 @@ Gear 6 redline
 ........
 
 Gear 7 redline
-.BBBBBB.
-.BBBBBB.
-....BB..
-....BB..
-...BB...
-...BB...
-..BB....
-..BB....
+.FFFFFF.
+.FFFFFF.
+....FF..
+....FF..
+...FF...
+...FF...
+..FF....
+..FF....
   --
 ........
 ........
@@ -1269,14 +1269,14 @@ Gear 7 redline
 ........
 
 Gear 8 redline
-.BBBBBB.
-.BBBBBB.
-.BB..BB.
-.BBBBBB.
-.BBBBBB.
-.BB..BB.
-.BBBBBB.
-.BBBBBB.
+.FFFFFF.
+.FFFFFF.
+.FF..FF.
+.FFFFFF.
+.FFFFFF.
+.FF..FF.
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1288,14 +1288,14 @@ Gear 8 redline
 ........
 
 Gear 9 redline
-.BBBBBB.
-.BBBBBB.
-.BB..BB.
-.BBBBBB.
-.BBBBBB.
-.....BB.
-.BBBBBB.
-.BBBBBB.
+.FFFFFF.
+.FFFFFF.
+.FF..FF.
+.FFFFFF.
+.FFFFFF.
+.....FF.
+.FFFFFF.
+.FFFFFF.
   --
 ........
 ........
@@ -1307,224 +1307,224 @@ Gear 9 redline
 ........
 
 Gear R stage2
-.IIIII..
-.IIIII..
-.II..II.
-.II..II.
-.IIIII..
-.IIIII..
-.II.II..
-.II.II..
+.JJJJJ..
+.JJJJJ..
+.JJ..JJ.
+.JJ..JJ.
+.JJJJJ..
+.JJJJJ..
+.JJ.JJ..
+.JJ.JJ..
 
 Gear N stage2
-.II..II.
-.II..II.
-.III.II.
-.III.II.
-.II.III.
-.II.III.
-.II..II.
-.II..II.
+.JJ..JJ.
+.JJ..JJ.
+.JJJ.JJ.
+.JJJ.JJ.
+.JJ.JJJ.
+.JJ.JJJ.
+.JJ..JJ.
+.JJ..JJ.
 
 Gear 1 stage2
-..III...
-..III...
-...II...
-...II...
-...II...
-...II...
-.IIIIII.
-.IIIIII.
+..JJJ...
+..JJJ...
+...JJ...
+...JJ...
+...JJ...
+...JJ...
+.JJJJJJ.
+.JJJJJJ.
 
 Gear 2 stage2
-.IIIIII.
-.IIIIII.
-.....II.
-.IIIIII.
-.IIIIII.
-.II.....
-.IIIIII.
-.IIIIII.
+.JJJJJJ.
+.JJJJJJ.
+.....JJ.
+.JJJJJJ.
+.JJJJJJ.
+.JJ.....
+.JJJJJJ.
+.JJJJJJ.
 
 Gear 3 stage2
-.IIIIII.
-.IIIIII.
-.....II.
-.IIIIII.
-.IIIIII.
-.....II.
-.IIIIII.
-.IIIIII.
+.JJJJJJ.
+.JJJJJJ.
+.....JJ.
+.JJJJJJ.
+.JJJJJJ.
+.....JJ.
+.JJJJJJ.
+.JJJJJJ.
 
 Gear 4 stage2
-.II..II.
-.II..II.
-.II..II.
-.IIIIII.
-.IIIIII.
-.....II.
-.....II.
-.....II.
+.JJ..JJ.
+.JJ..JJ.
+.JJ..JJ.
+.JJJJJJ.
+.JJJJJJ.
+.....JJ.
+.....JJ.
+.....JJ.
 
 Gear 5 stage2
-.IIIIII.
-.IIIIII.
-.II.....
-.IIIIII.
-.IIIIII.
-.....II.
-.IIIIII.
-.IIIIII.
+.JJJJJJ.
+.JJJJJJ.
+.JJ.....
+.JJJJJJ.
+.JJJJJJ.
+.....JJ.
+.JJJJJJ.
+.JJJJJJ.
 
 Gear 6 stage2
-.IIIIII.
-.IIIIII.
-.II.....
-.IIIIII.
-.IIIIII.
-.II..II.
-.IIIIII.
-.IIIIII.
+.JJJJJJ.
+.JJJJJJ.
+.JJ.....
+.JJJJJJ.
+.JJJJJJ.
+.JJ..JJ.
+.JJJJJJ.
+.JJJJJJ.
 
 Gear 7 stage2
-.IIIIII.
-.IIIIII.
-....II..
-....II..
-...II...
-...II...
-..II....
-..II....
+.JJJJJJ.
+.JJJJJJ.
+....JJ..
+....JJ..
+...JJ...
+...JJ...
+..JJ....
+..JJ....
 
 Gear 8 stage2
-.IIIIII.
-.IIIIII.
-.II..II.
-.IIIIII.
-.IIIIII.
-.II..II.
-.IIIIII.
-.IIIIII.
+.JJJJJJ.
+.JJJJJJ.
+.JJ..JJ.
+.JJJJJJ.
+.JJJJJJ.
+.JJ..JJ.
+.JJJJJJ.
+.JJJJJJ.
 
 Gear 9 stage2
-.IIIIII.
-.IIIIII.
-.II..II.
-.IIIIII.
-.IIIIII.
-.....II.
-.IIIIII.
-.IIIIII.
+.JJJJJJ.
+.JJJJJJ.
+.JJ..JJ.
+.JJJJJJ.
+.JJJJJJ.
+.....JJ.
+.JJJJJJ.
+.JJJJJJ.
 
 Gear R stage1
-.HHHHH..
-.HHHHH..
-.HH..HH.
-.HH..HH.
-.HHHHH..
-.HHHHH..
-.HH.HH..
-.HH.HH..
+.KKKKK..
+.KKKKK..
+.KK..KK.
+.KK..KK.
+.KKKKK..
+.KKKKK..
+.KK.KK..
+.KK.KK..
 
 Gear N stage1
-.HH..HH.
-.HH..HH.
-.HHH.HH.
-.HHH.HH.
-.HH.HHH.
-.HH.HHH.
-.HH..HH.
-.HH..HH.
+.KK..KK.
+.KK..KK.
+.KKK.KK.
+.KKK.KK.
+.KK.KKK.
+.KK.KKK.
+.KK..KK.
+.KK..KK.
 
 Gear 1 stage1
-..HHH...
-..HHH...
-...HH...
-...HH...
-...HH...
-...HH...
-.HHHHHH.
-.HHHHHH.
+..KKK...
+..KKK...
+...KK...
+...KK...
+...KK...
+...KK...
+.KKKKKK.
+.KKKKKK.
 
 Gear 2 stage1
-.HHHHHH.
-.HHHHHH.
-.....HH.
-.HHHHHH.
-.HHHHHH.
-.HH.....
-.HHHHHH.
-.HHHHHH.
+.KKKKKK.
+.KKKKKK.
+.....KK.
+.KKKKKK.
+.KKKKKK.
+.KK.....
+.KKKKKK.
+.KKKKKK.
 
 Gear 3 stage1
-.HHHHHH.
-.HHHHHH.
-.....HH.
-.HHHHHH.
-.HHHHHH.
-.....HH.
-.HHHHHH.
-.HHHHHH.
+.KKKKKK.
+.KKKKKK.
+.....KK.
+.KKKKKK.
+.KKKKKK.
+.....KK.
+.KKKKKK.
+.KKKKKK.
 
 Gear 4 stage1
-.HH..HH.
-.HH..HH.
-.HH..HH.
-.HHHHHH.
-.HHHHHH.
-.....HH.
-.....HH.
-.....HH.
+.KK..KK.
+.KK..KK.
+.KK..KK.
+.KKKKKK.
+.KKKKKK.
+.....KK.
+.....KK.
+.....KK.
 
 Gear 5 stage1
-.HHHHHH.
-.HHHHHH.
-.HH.....
-.HHHHHH.
-.HHHHHH.
-.....HH.
-.HHHHHH.
-.HHHHHH.
+.KKKKKK.
+.KKKKKK.
+.KK.....
+.KKKKKK.
+.KKKKKK.
+.....KK.
+.KKKKKK.
+.KKKKKK.
 
 Gear 6 stage1
-.HHHHHH.
-.HHHHHH.
-.HH.....
-.HHHHHH.
-.HHHHHH.
-.HH..HH.
-.HHHHHH.
-.HHHHHH.
+.KKKKKK.
+.KKKKKK.
+.KK.....
+.KKKKKK.
+.KKKKKK.
+.KK..KK.
+.KKKKKK.
+.KKKKKK.
 
 Gear 7 stage1
-.HHHHHH.
-.HHHHHH.
-....HH..
-....HH..
-...HH...
-...HH...
-..HH....
-..HH....
+.KKKKKK.
+.KKKKKK.
+....KK..
+....KK..
+...KK...
+...KK...
+..KK....
+..KK....
 
 Gear 8 stage1
-.HHHHHH.
-.HHHHHH.
-.HH..HH.
-.HHHHHH.
-.HHHHHH.
-.HH..HH.
-.HHHHHH.
-.HHHHHH.
+.KKKKKK.
+.KKKKKK.
+.KK..KK.
+.KKKKKK.
+.KKKKKK.
+.KK..KK.
+.KKKKKK.
+.KKKKKK.
 
 Gear 9 stage1
-.HHHHHH.
-.HHHHHH.
-.HH..HH.
-.HHHHHH.
-.HHHHHH.
-.....HH.
-.HHHHHH.
-.HHHHHH.
+.KKKKKK.
+.KKKKKK.
+.KK..KK.
+.KKKKKK.
+.KKKKKK.
+.....KK.
+.KKKKKK.
+.KKKKKK.
 
 Gear R rest
 .CCCCC..
@@ -1637,127 +1637,129 @@ Gear 9 rest
 .CCCCCC.
 
 Spotter carBothGrowing
-G......G
-G......G
-G......G
-G......G
-G......G
-G......G
-G......G
-G......G
+H......H
+H......H
+H......H
+H......H
+H......H
+H......H
+H......H
+H......H
   --
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
   --
-GGG..GGG
-GGG..GGG
-GGG..GGG
-GGG..GGG
-GGG..GGG
-GGG..GGG
-GGG..GGG
-GGG..GGG
+HHH..HHH
+HHH..HHH
+HHH..HHH
+HHH..HHH
+HHH..HHH
+HHH..HHH
+HHH..HHH
+HHH..HHH
 
 Spotter carLeftGrowing
-G.......
-G.......
-G.......
-G.......
-G.......
-G.......
-G.......
-G.......
+H.......
+H.......
+H.......
+H.......
+H.......
+H.......
+H.......
+H.......
   --
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
+HH......
+HH......
+HH......
+HH......
+HH......
+HH......
+HH......
+HH......
   --
-GGG.....
-GGG.....
-GGG.....
-GGG.....
-GGG.....
-GGG.....
-GGG.....
-GGG.....
+HHH.....
+HHH.....
+HHH.....
+HHH.....
+HHH.....
+HHH.....
+HHH.....
+HHH.....
 
 Spotter carRightGrowing
-.......G
-.......G
-.......G
-.......G
-.......G
-.......G
-.......G
-.......G
+.......H
+.......H
+.......H
+.......H
+.......H
+.......H
+.......H
+.......H
   --
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
+......HH
+......HH
+......HH
+......HH
+......HH
+......HH
+......HH
+......HH
   --
-.....GGG
-.....GGG
-.....GGG
-.....GGG
-.....GGG
-.....GGG
-.....GGG
-.....GGG
+.....HHH
+.....HHH
+.....HHH
+.....HHH
+.....HHH
+.....HHH
+.....HHH
+.....HHH
 
 Spotter carBoth
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
-GG....GG
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
+HH....HH
 
 Spotter carLeft
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
-GG......
+HH......
+HH......
+HH......
+HH......
+HH......
+HH......
+HH......
+HH......
 
 Spotter carRight
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
-......GG
+......HH
+......HH
+......HH
+......HH
+......HH
+......HH
+......HH
+......HH
 
 legend
 A #33383F
-B #FF2D46
+B #FF0000
 C #F5F7FA
 D #FF6A00
 E #FFD400
-F #2E7BFF
-G #FFFFFF
-H #00D96A
-I #FFB300"
+F #FF2D46
+G #0000FF
+H #FFFFFF
+I #00FF00
+J #FFB300
+K #00D96A"
 `;
