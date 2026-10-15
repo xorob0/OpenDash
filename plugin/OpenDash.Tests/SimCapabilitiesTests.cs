@@ -220,7 +220,7 @@ namespace OpenDashPlugin.Tests
             // the question a dashboard asks rather than for a game.
             Assert.Equal(new[] { "CarHasPitLimiter", "PitLimiterOn", "DamageReported", "DriverInCar" }, Contract.Capabilities);
             var shared = Contract.SharedPropertyNames().ToList();
-            Assert.Equal(Contract.Capabilities, shared.Skip(shared.Count - Contract.Capabilities.Length));
+            Assert.Equal(Contract.Capabilities, shared.Skip(shared.IndexOf(Contract.CarHasPitLimiter)).Take(Contract.Capabilities.Length));
             Assert.Equal(shared.IndexOf("LiveClassOrder" + LivePosition.Slots) + 1, shared.IndexOf(Contract.CarHasPitLimiter));
         }
     }

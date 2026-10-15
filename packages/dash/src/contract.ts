@@ -331,6 +331,20 @@ export const DRIVER_IN_CAR = 'DriverInCar';
 export const CAPABILITIES = [CAR_HAS_PIT_LIMITER, PIT_LIMITER_ON, DAMAGE_REPORTED, DRIVER_IN_CAR] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 
+/**
+ * Whether SimHub holds an outline of the track the car is on, which is what its map item draws: `true`,
+ * `false` before a lap has recorded one, or null with no game running or on a game that records none. #555.
+ *
+ * Published rather than chosen, and published only because SimHub does not publish it. SimHub records the
+ * outline itself from one lap driven line to line outside the pit lane, keeps it per track and layout, and
+ * ships none; its map item draws an empty box until it has one, and the readiness it keeps is not a
+ * property. The plugin reads SimHub's record (`plugin/OpenDash/TrackMap.cs`) so that the track module can
+ * say why its map is empty. Read through `trackMapRecorded` in `second/values.ts`, with `true` as the
+ * fallback, so a package with no plugin draws the map item as it always did.
+ * `docs/research/simhub-dash-format.md` records what SimHub needs before it draws a track.
+ */
+export const TRACK_MAP_RECORDED = 'TrackMapRecorded';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -489,6 +503,9 @@ export function dashProperties(): string[] {
     // And what the running sim can report after that, published rather than chosen and shared because every
     // screen that asks one of the questions asks it of the same sim. #1101.
     ...CAPABILITIES,
+    // And whether SimHub holds the track's outline after that, published rather than chosen and shared because
+    // every screen that draws the track map asks it of the same track. #555.
+    TRACK_MAP_RECORDED,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }

@@ -3,7 +3,14 @@
  * its length on the left and its surface state on the right.
  *
  * The map comes from SimHub's recorded outline, so it appears once a lap has been recorded for the
- * track. Class colours are off: identity on these screens is a labelled chip, and a map full of
+ * track and its layout: one lap driven from the line to the line outside the pit lane, which SimHub
+ * keeps per track and layout and never ships. Until then SimHub's map item draws an empty box and
+ * says nothing, which on a sim where nobody has driven the track reads as a broken page, so the
+ * module says what the box is waiting for in its place (#555). The plugin is what knows: SimHub keeps
+ * no property for it, and `trackMapRecorded` falls back on the map as it always was drawn.
+ * `docs/research/simhub-dash-format.md` records what SimHub needs before it draws a track.
+ *
+ * Class colours are off: identity on these screens is a labelled chip, and a map full of
  * iRacing's class colours would fight the state colours this design reserves.
  *
  * The cars are round because SimHub's map item carries one player style and one opponent style,
@@ -11,16 +18,21 @@
  * the grey ones, are not expressible and are left out rather than approximated.
  */
 import { ncalc } from '../generator.ts';
+import { withMoreBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Rect } from '../design/geometry.ts';
 import { densityOf, type Density } from '../second/density.ts';
 import { label } from '../elements/label.ts';
 import type { StaticMapItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
-import { GRIP_WIDEST, hasTrackState, trackGrip, trackLengthKm, trackName } from '../second/values.ts';
+import { placeholder } from '../second/placeholder.ts';
+import { GRIP_WIDEST, hasTrackState, TRACK_MAP_REASON, trackGrip, trackLengthKm, trackMapRecorded, trackName } from '../second/values.ts';
 import { defineModule } from './module.ts';
 
-const { concat, fmt, str } = ncalc;
+const { concat, fmt, not, str } = ncalc;
+
+/** What the map's box says until SimHub has an outline to draw in it. */
+export const TRACK_MAP_NOTICE = `Track · ${TRACK_MAP_REASON}`;
 
 /**
  * The line the circuit is drawn with, cut from the map the way the gear's cell is cut from its box.
@@ -76,7 +88,15 @@ export const track = defineModule('track', (ctx) => {
     opponentStyle: { dotColor: ds.color.text.secondary, dotRadius: 3, dotBorderThickness: 0, dotBorderColor: ds.color.surface.base, labelFontSize: 1, labelColor: ds.color.surface.base },
     startLine: { color: ds.color.text.primary, enabled: true, width: 3, height: 16 },
   };
-  if (!titled) return [map];
+  // The map and what its box says without one, one of them at a time, the way the session gate puts
+  // a module and its notice in the same rectangle. The header stays: the name and the grip are the
+  // sim's whether or not the outline is recorded.
+  const recorded = trackMapRecorded();
+  const drawing = [
+    withMoreBindings<'staticMap'>(map, { Visible: recorded }),
+    ...placeholder(`${ctx.prefix}map.`, TRACK_MAP_NOTICE, mapRect, ctx.density).map((item) => withMoreBindings(item, { Visible: not(recorded) })),
+  ];
+  if (!titled) return drawing;
   // The state is the right half of the canvas's header row. Its box is measured for the longest
   // word the binding can produce rather than for "Dry", and the name gives up exactly that much
   // plus the canvas's 12 px: a name and a state competing for one 245 px line is where WPF clips
@@ -95,6 +115,6 @@ export const track = defineModule('track', (ctx) => {
       // Hidden where the sim reports no track state, rather than `--` beside the track's name (#1128).
       visibleBind: hasTrackState(),
     }),
-    map,
+    ...drawing,
   ];
 });

@@ -1548,7 +1548,7 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('names the track above its map by default, which is what the companion and the pit wall draw', () => {
     const items = build();
-    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.state', 'track.map']);
+    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.state', 'track.map', 'track.map.placeholder']);
     expect(mapIn(items).rect.top).toBeGreaterThan(frame.top);
   });
 
@@ -1566,8 +1566,32 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('gives the map the whole frame when the caller asks for no title', () => {
     const items = build(false);
-    expect(items.map((i) => i.name)).toEqual(['track.map']);
+    expect(items.map((i) => i.name)).toEqual(['track.map', 'track.map.placeholder']);
     expect(mapIn(items).rect).toMatchObject({ top: frame.top, height: frame.height });
+  });
+
+  /**
+   * SimHub draws an empty box until it has recorded an outline of the track, and says nothing (#555). On
+   * Assetto Corsa, where a driver may never have done a whole lap of a track or a layout, that read as a
+   * page that was broken. The plugin says whether the outline exists, and the module says what the box is
+   * waiting for in its place; with no plugin the map is drawn exactly as it was.
+   */
+  test('says the map waits for a lap while SimHub has no outline of the track, and draws it as before otherwise', () => {
+    for (const title of [undefined, false]) {
+      const items = build(title);
+      const map = mapIn(items);
+      const notice = items.find((i): i is TextItem => i.name === 'track.map.placeholder')!;
+      expect(notice).toBeDefined();
+      expect(notice.text).toBe('Track · Drive a lap to record it');
+      expect(contains(map.rect, notice.rect)).toBe(true);
+      const visible = (item: Item, props: Props) => Boolean(evalNcalc(bindingExpression(item as TextItem, 'Visible'), props));
+      const unrecorded = { [`${PROPERTY_PREFIX}.TrackMapRecorded`]: false };
+      const recorded = { [`${PROPERTY_PREFIX}.TrackMapRecorded`]: true };
+      expect({ map: visible(map, unrecorded), notice: visible(notice, unrecorded) }).toEqual({ map: false, notice: true });
+      expect({ map: visible(map, recorded), notice: visible(notice, recorded) }).toEqual({ map: true, notice: false });
+      // No plugin, no game, or a game that records no outline: the map item as it always was.
+      expect({ map: visible(map, {}), notice: visible(notice, {}) }).toEqual({ map: true, notice: false });
+    }
   });
 
   /**

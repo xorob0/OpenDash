@@ -153,6 +153,18 @@ namespace OpenDashPlugin
         /// <summary>Every capability, in the order they are attached. ADR 0021.</summary>
         public static readonly string[] Capabilities = { CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar };
 
+        /// <summary>
+        /// Whether SimHub holds an outline of the track the car is on, which is what its map item draws: true,
+        /// false before a lap has recorded one, or null with no game running or on a game that records none. #555.
+        /// </summary>
+        /// <remarks>
+        /// Published rather than chosen, and published only because SimHub does not publish it: the map item
+        /// keeps its own readiness, which is not a property. The track module reads it to say why its map is
+        /// empty, with true as the isnull() fallback so that a package with no plugin draws what it always drew.
+        /// See TrackMap.cs.
+        /// </remarks>
+        public const string TrackMapRecorded = "TrackMapRecorded";
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1576,6 +1588,9 @@ namespace OpenDashPlugin
             // And what the running sim can report, appended for the same reason, published rather than chosen
             // and shared because every screen that asks one of the questions asks it of the same sim. #1101.
             foreach (var capability in Capabilities) yield return capability;
+            // And whether SimHub holds the track's outline, appended for the same reason and shared because every
+            // screen that draws the track map asks it of the same track. #555.
+            yield return TrackMapRecorded;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

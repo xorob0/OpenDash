@@ -122,7 +122,12 @@ export default function Install() {
             <strong>Nothing on the display.</strong> Assign the dashboard in Dash Studio. The plugin installs; SimHub launches.
           </li>
           <li>
-            <strong>The track map or radar is empty.</strong> SimHub draws them after one recorded lap.
+            <strong>The track map says “Drive a lap to record it”.</strong> SimHub draws the map from its own recording of the track: one whole
+            lap, from the line to the line, outside the pit lane. It keeps one per track and layout, so a new layout needs its own lap.
+          </li>
+          <li>
+            <strong>The radar is empty on iRacing.</strong> On iRacing it waits for that same recorded lap. On Assetto Corsa, ACC and Le Mans
+            Ultimate it draws without one.
           </li>
           <li>
             <strong>A value reads <code>--</code>.</strong> iRacing has not published it yet, or never does.
