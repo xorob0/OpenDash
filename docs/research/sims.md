@@ -326,14 +326,14 @@ section). What a null does to the reading:
 | `SessionData.DriverInfo.DriverCarGearNumForward` | top gear, the gear ghost | the fallback, which is wrong | #996 |
 | `SessionData.DriverInfo.DriverCarSLBlinkRPM`, `SLFirstRPM`, `SLLastRPM`, `SLShiftRPM` | the car's own shift ladder | SimHub's bands | #748 |
 | `SessionData.WeekendInfo.TrackDisplayShortName` | the track header's name, after AC's own | AC's raw name, or `TrackName` | #1124 |
-| `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | `0x` drawn as a value | #567 |
-| `Telemetry.SteeringWheelAngle` | the steering dial and trace | flat | #567 |
+| `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | hidden, `--` on the session page | #567 |
+| `Telemetry.SteeringWheelAngle` | the steering dial and trace | hidden, the trace panel saying so | #567 |
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
-| `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications | unknown, read as in the car | #561 |
+| `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications, behind the plugin's `DriverInCar` | the plugin's answer; without it, in the car for the notifications and not for the alerts | #561 |
 | `Telemetry.LFtempCM`, `RFtempCM`, `LRtempCM`, `RRtempCM` | band D's tyre page | `0 0 0 0` | #556 |
-| `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service | a stop nobody set | #564 |
+| `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service, band D's `Refuel` | the notice in place of the service, the pit time kept; `--` | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |
-| `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | a level `+0.00` | #575 |
+| `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | the session best, captioned as such | #575 |
 | `Telemetry.WindVel` | the wind on band D and the pit wall header | hidden | #1123 |
 | `Telemetry.SessionTimeOfDay` | the sim clock on the bar, band D and the pit wall header | `--` | #1123 |
 | `Telemetry.TrackWetness` | the track state on band D, the track module, the pit wall header and the Porsche strip | hidden | #1128 |
@@ -417,8 +417,9 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
   position; no class, number, team, iRating or compound. Without it: one row, the player, named `Me`.
 - **Clock and weather.** Air and road temperatures are filled. `WindVel` and `SessionTimeOfDay` are absent:
   the wind field hides and the sim clock reads `--` (#1123); before, they drew `0 km/h` and `00:00`.
-- **Telltales.** `EngineWarnings` is absent, so the engine lamp stays dark. The limiter lamp reads
-  `GameData.PitLimiterOn`, which on AC is the pit lane.
+- **Telltales.** `EngineWarnings` is absent, so the engine lamp stays dark. The limiter lamp, like every
+  limiter reading, reads the plugin's `OpenDash.PitLimiterOn`, which on AC is the raw `Physics.PitLimiterOn`
+  (#1122). Without the plugin it falls back to `GameData.PitLimiterOn`, which on AC is the pit lane.
 - **LED effects.** `TCActive` and `ABSActive` come from AC's UDP interface (`isTcInAction`,
   `isAbsInAction`), so they light only once SimHub's UDP client is connected to the game. The turn
   indicators are `[NotAvailable]`. `ERSPercent` is the KERS or ERS charge over its maximum.
@@ -491,8 +492,9 @@ rFactor 2 plugin's five buffers with their version blocks, and a process named `
 What the source cannot settle, to check in the drives #592, #961 and #962 ask for:
 
 - **Assetto Corsa's steering.** `Physics.SteerAngle` is published as AC writes it. Whether AC writes the
-  normalised input or an angle, and its sign, is the author's wheel test (#567). Marvin's AIRA, cited
-  in [simhub-dash-format.md](simhub-dash-format.md) for #1057, negates AC's steering as right-positive.
+  normalised input or an angle, and its sign, is the author's wheel test (#567); until then the dial and
+  the trace hide on AC, and [simhub-dash-format.md](simhub-dash-format.md) records what to read. Marvin's
+  AIRA, cited there for #1057, negates AC's steering as right-positive.
 - **LMU's steering sign.** The structs carry no comment; left to right is the rFactor 2 SDK's
   description of `mUnfilteredSteering`, which LMU inherits, and the same wheel test confirms it.
 - **ACC's second sector.** Whether `Graphics.LastSectorTime` is the sector's own time or the split from

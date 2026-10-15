@@ -2,7 +2,8 @@
   // In the pit box with the limiter on, the twin of the irsdk pit. AC publishes no service order, so
   // there is no pit menu to show: what this holds still is the car stationary in its box, in the pit
   // lane, with the raw limiter on. SimHub's GameData.PitLimiterOn reads on here for the wrong reason,
-  // since on AC it is the pit lane (#558); the raw Physics.PitLimiterOn is the limiter itself.
+  // since on AC it is the pit lane (#558); the raw Physics.PitLimiterOn is the limiter itself, and what
+  // the plugin's OpenDash.PitLimiterOn, which every limiter reading reads, answers with (#1122).
   "extends": "race.json",
   "name": "In the pit box, limiter on",
   "values": {

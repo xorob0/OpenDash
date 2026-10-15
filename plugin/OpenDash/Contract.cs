@@ -321,7 +321,8 @@ namespace OpenDashPlugin
 
         /// <summary>Your best of the session, which SimHub calls its session best, the all-time best, or the lap before this one. The last is iRacing's own
         /// live delta rather than SimHub's, which publishes none against the last lap; the dash reads it
-        /// in the expression and this side only carries the choice. #322.</summary>
+        /// in the expression and this side only carries the choice. #322. On a sim that publishes no such
+        /// delta the dash reads the session best in its place, and the panel's caption says so. #575.</summary>
         public static readonly string[] DeltaReferences = { "session", "alltime", "lastlap" };
         public const string DefaultDeltaReference = "session";
 

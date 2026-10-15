@@ -120,8 +120,9 @@ namespace OpenDashPlugin.Tests
         public void The_delta_row_names_every_reference_the_contract_declares()
         {
             Assert.Equal("Delta reference", PanelDataTab.DeltaTitle);
-            // Still true of three references: each of them is a lap.
-            Assert.Equal("Which lap the delta compares against.", PanelDataTab.DeltaCaption);
+            // The last lap is iRacing's own delta, and the dash reads your best in its place on any other sim
+            // (#575), which nothing on the row could otherwise tell a driver who chose it.
+            Assert.Equal("Last lap works on iRacing only; other sims compare against your best.", PanelDataTab.DeltaCaption);
             Assert.Equal(new[] { "Your best", "All-time best", "Last lap" }, PanelDataTab.DeltaLabels);
             Assert.Equal(Contract.DeltaReferences.Length, PanelDataTab.DeltaLabels.Length);
             var source = string.Concat(RepoPaths.SettingsControlCode());

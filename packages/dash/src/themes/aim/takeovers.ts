@@ -25,7 +25,7 @@ import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { pitAlertVisible } from '../../components/pitAlerts.ts';
 import { rect } from '../../design/geometry.ts';
-import { inTheCar, pitLimitText } from '../../second/values.ts';
+import { pitLimitText, sim } from '../../second/values.ts';
 import { ENGINE_WARNING_BITS, engineWarning } from '../../zones/telltales.ts';
 import { zoneRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
@@ -96,7 +96,7 @@ function warning(frame: Rect): Item {
     line('warning.title', 'ENGINE', top),
     line('warning.reading', WARNINGS[0].text, top + size + gap, which, WARNING_WIDEST),
   ];
-  const on = and(inTheCar(), or(...WARNINGS.map((w) => engineWarning(w.bit))));
+  const on = and(sim.driverInCar(), or(...WARNINGS.map((w) => engineWarning(w.bit))));
   return withMoreBindings({ kind: 'layer', name: 'warning', children }, { Visible: on });
 }
 

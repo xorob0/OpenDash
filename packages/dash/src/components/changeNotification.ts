@@ -50,7 +50,7 @@ import { numeral } from '../elements/numeral.ts';
 import { charsOfText } from '../second/drawn.ts';
 import { FIT_LADDER } from '../second/field.ts';
 import { TRACKED_VALUES, hasSetting, type TrackedValue } from '../second/tracked.ts';
-import { inTheCar } from '../second/values.ts';
+import { sim } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { LAP_POP_UP, sheetFrame } from './popUp.ts';
 
@@ -92,7 +92,7 @@ export const CHANGE_NOTIFICATION_MS = ds.indicator.changeNotification.durationMs
  * strip's own `hasSetting`, because for three of the seven the reading is defaulted and so is never
  * null itself.
  */
-const moved = (value: TrackedValue): Expr => and(inTheCar(), hasSetting(value), changed(num(CHANGE_NOTIFICATION_MS), value.read));
+const moved = (value: TrackedValue): Expr => and(sim.driverInCar(), hasSetting(value), changed(num(CHANGE_NOTIFICATION_MS), value.read));
 
 /**
  * The one pop-up that outranks this box.

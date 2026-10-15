@@ -1714,7 +1714,7 @@ export const MODULE_CATALOGUE: readonly ModuleMeta[] = [
   { number: 5, id: 'fuel', name: 'Fuel', description: 'Fuel left, whether it reaches the flag, what to add and the per-lap use.', enabled: true, needsSession: true },
   { number: 6, id: 'energy', name: 'Energy', description: 'Virtual energy. Le Mans Ultimate only.', enabled: false, needsSession: false },
   { number: 7, id: 'tyres', name: 'Tyres', description: 'Temperature, pressure, wear and compound per corner.', enabled: true, needsSession: false },
-  { number: 8, id: 'pitView', name: 'Pit view', description: 'The pit service order: fuel, tyres, repairs and tear-off.', enabled: true, needsSession: true },
+  { number: 8, id: 'pitView', name: 'Pit view', description: 'The pit service order: fuel, tyres, repairs and tear-off, iRacing only; the pit time on every sim.', enabled: true, needsSession: true },
   { number: 9, id: 'carSettings', name: 'Car settings', description: 'TC, ABS, brake bias, mixture and anti-roll bars.', enabled: true, needsSession: false },
   { number: 10, id: 'inputs', name: 'Inputs', description: 'Throttle, brake and clutch traces with bar gauges.', enabled: true, needsSession: false },
   { number: 11, id: 'session', name: 'Session', description: 'Session type, position, class, lap and time left.', enabled: true, needsSession: true },

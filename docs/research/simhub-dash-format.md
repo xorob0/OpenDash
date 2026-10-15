@@ -836,6 +836,36 @@ player's `CarPath` from the default face to the themed one and back, falling bac
 and only `porsche992cup` was written beside it; and removing the screen took out the plugin's entries
 and nothing else. The monitor and web dash routes were not exercised, since the VM has neither device.
 
+### A lighting profile list can be kept per game family (2026-10-15, #689)
+
+Every LED and matrix settings object is a `ProfileSettingsBase<TProfile, TSettings>` in
+`SimHub.Plugins.ProfilesCommon`, and that class can keep its profiles per game family. What follows was read
+from the IL of `plugin/lib/SimHub.Plugins.dll` (9.12.6) on 2026-10-15; every member named is public.
+
+- **`FilterByGameFamily`** is a virtual `bool`; the base returns `false`. In 9.12.6 neither `LedsSettings` nor
+  `MatrixSettings` overrides it, which is why the VM never showed the filter.
+- **`AvailableProfiles`**, the list a device's page draws, is the current family's list when the filter is on:
+  `PerFamilyProfiles.FindOrAdd(f => f.Family == CurrentGameFamily, () => new ProfilesFamily { Family = CurrentGameFamily }).Profiles`.
+  Only without the filter is it `BuiltInProfiles` (built-in profiles switched on) or `Profiles`.
+- **`PerFamilyProfiles`** is an `ObservableCollection<ProfilesFamily<TProfile, TSettings>>`, each with a
+  `GameReaderCommon.GameFamily Family` (`None`, `Racing`, `Flight`) and its own `Profiles`.
+  `CurrentGameFamily` is `CurrentProfileGame.Family`, which starts as `Racing`.
+- **`Profiles` is only the serialised list** under the filter. `OnSerializing` clears it and refills it from
+  every family's list, so a profile in `Profiles` and in no family is gone from the file at the first save.
+  `OnDeserialized` gives a profile with no `TargetGameFamily` the family `Racing` and files every profile
+  under its family, leaving `Profiles` holding them all. The constructor watches `Profiles` for changes
+  only without the filter, and each family's list with it.
+- **SimHub's own `AddProfile(target, p)`** sets `p.Settings`, sets `TargetGameFamily` to
+  `CurrentGameFamily` under the filter, calls `InitProfile`, adds to `target` (`AvailableProfiles` from the
+  public overload), renumbers any duplicate id and refreshes the sorted list.
+
+OpenDash adds to `Profiles` by hand rather than through `AddProfile` (the reason is
+`ProfileInstall.WhyNotAddProfile`), so under the filter it now also sets `TargetGameFamily` and adds to the
+current family's list, and sweeps every family's list when it replaces or removes a copy. The rig that
+reported #689 runs a later build (9.12.9) on which the strip's list is filtered; that build's assembly has not
+been read. **Not verified:** which builds and which drivers turn the filter on. The survey's line for each LED
+device now says "profiles kept per game family" and names the family when a driver does, so a log answers it.
+
 ### Community precedent for source in git
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`
@@ -1073,7 +1103,9 @@ Established by decompiling `PersistantTrackerPlugin` in SimHub 9.12.6.
   compare against, and `LapDeltaToSessionLastlLap_DD`, iRacing's rate of change of the delta, which
   nothing reads. The value is not meaningful while `_OK` is false, so `lastLapDelta` in
   `packages/dash/src/second/values.ts` reads it only behind `isnull(..._OK, false)` and draws a level
-  delta otherwise, as SimHub's two draw 0 when they have no lap to compare against.
+  delta otherwise, as SimHub's two draw 0 when they have no lap to compare against. A sim that
+  publishes neither field, which is every sim but iRacing, reads the session best in its place and
+  captions it so (`deltaIsToLastLap`, #575): a level delta there would be drawn every lap.
 - **A raw iRacing float is a boxed System.Single, and `format` does not sign one.** iRacing publishes
   the delta as an irsdk_float; the SDK reads it with `ReadSingle`, the raw telemetry is a dictionary
   of objects that SimHub exposes unchanged, and NCalc's `if` and SimHub's `isnull` hand their
@@ -1163,6 +1195,30 @@ with SimHub's property list open and read `SteeringWheelAngle` going positive.
   variable says the sign, and `tools/irsdk-emulator/scenarios/steerleft.json` holds a left turn at it.
   The emulator scenarios that sweep the angle do so symmetrically, so none of the committed traces
   could have shown the sign either way.
+
+### Assetto Corsa's steering is `Physics.SteerAngle`, unit and sign not yet measured (2026-10-15, #567)
+
+Read from SimHub 9.12.6's AC reader and from the committed Assetto Corsa traces; the measurement itself
+is owed to a real wheel.
+
+- **iRacing's property is null on AC.** `[DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle]` is
+  iRacing's raw block, which the AC reader does not publish: every trace under `traces/ac/` carries the
+  column and it is null in every frame. Read behind `isnull(..., 0)` it drew a wheel held straight through
+  every corner, so the steering dial and the pit wall's steering trace now hide where it is null
+  (`hasSteering()` in `packages/dash/src/second/values.ts`), and the trace panel says "Not published by
+  this sim" in the plot's place.
+- **AC's own reading is `[DataCorePlugin.GameRawData.Physics.SteerAngle]`**, AC's `physics.steerAngle`
+  passed through unconverted; SimHub maps it into no `GameData` member. What AC writes there is not
+  settled by the source: Kunos's shared-memory header gives only the name, ACC (which shares the layout)
+  documents the same field as the input from -1 to 1, and Marvin's AIRA negates AC's steering as
+  right-positive (cited in the section above). So whether it is radians, degrees or a fraction of the lock,
+  and which way is positive, is the author's check on a wheel: turn a quarter turn left in an AC session
+  with SimHub's property list open and read `Physics.SteerAngle`'s value and sign. Until then the dash
+  does not read it, rather than drawing a guess.
+- **When it is measured**, it joins `steering()`'s `isnull` chain after iRacing's, converted to the
+  radians and the clockwise sign `STEERING_RANGE` and the dial are in, and `hasSteering()` takes it in
+  with it. If it is a fraction of the lock, the car's lock is not published on AC, so it can only be drawn
+  against a fixed range and the trace's scale says so.
 
 ### `Rotation` binds, and turns an item about its own centre (2026-10-13, #1057)
 

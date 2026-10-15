@@ -90,23 +90,43 @@ namespace OpenDashPlugin
             var settings = driver?.Settings;
             if (settings == null) return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
 
+            var lists = ListsOf(settings);
             return ProfileInstall.Install(
-                settings.Profiles,
-                settings.AvailableProfiles,
+                lists,
                 new object[] { embedded },
-                index => AddToSaved(settings, embedded),
+                index => AddToSaved(settings, embedded, lists),
                 driver.SaveSettings,
                 "matrix",
                 FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles))[0];
         }
 
-        /// <summary>Adds to the list SimHub saves. See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
-        private static void AddToSaved(MatrixSettings settings, RGBMatrixProfile profile)
+        /// <summary>Adds to the list SimHub saves, and under the game family filter to the current family's list
+        /// as well (#689). See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
+        private static void AddToSaved(MatrixSettings settings, RGBMatrixProfile profile, ProfileLists lists)
         {
             profile.Settings = settings;
+            if (lists.ByFamily) profile.TargetGameFamily = settings.CurrentGameFamily;
             settings.InitProfile(profile);
-            settings.Profiles.Add(profile);
+            ProfileInstall.AddTo(lists, profile);
             settings.RefreshSortedProfiles();
+        }
+
+        /// <summary>The matrix settings' profile lists as an install sees them, every game family's included when
+        /// SimHub keeps them per family (#689). Read the list the page draws first: under the filter, reading it
+        /// is what adds the current family's list when there is none yet.</summary>
+        private static ProfileLists ListsOf(MatrixSettings settings)
+        {
+            var byFamily = settings.FilterByGameFamily;
+            var shown = settings.AvailableProfiles;
+            var families = new List<IList>();
+            if (byFamily && settings.PerFamilyProfiles != null)
+            {
+                foreach (var family in settings.PerFamilyProfiles)
+                {
+                    if (family != null) families.Add(family.Profiles);
+                }
+            }
+            return ProfileLists.Of(settings.Profiles, shown, byFamily, families);
         }
 
         /// <summary>
@@ -213,11 +233,11 @@ namespace OpenDashPlugin
                     .ToList();
             }
 
+            var lists = ListsOf(settings);
             var results = ProfileInstall.Install(
-                settings.Profiles,
-                settings.AvailableProfiles,
+                lists,
                 parsed.Cast<object>().ToList(),
-                index => AddToSaved(settings, parsed[index]),
+                index => AddToSaved(settings, parsed[index], lists),
                 target.Save,
                 "RGB LED",
                 FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles),
@@ -254,11 +274,11 @@ namespace OpenDashPlugin
             }
 
             var copies = installed.Select(i => Parse(jsons[i])).ToList();
+            var lists = ListsOf(individual);
             var mirrored = ProfileInstall.Install(
-                individual.Profiles,
-                individual.AvailableProfiles,
+                lists,
                 copies.Cast<object>().ToList(),
-                index => AddToSaved(individual, copies[index]),
+                index => AddToSaved(individual, copies[index], lists),
                 target.Save,
                 "individual LED",
                 false,
@@ -271,13 +291,34 @@ namespace OpenDashPlugin
             }
         }
 
-        /// <summary>Adds to the list SimHub saves. See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
-        private static void AddToSaved(LedsSettings settings, LedsProfile profile)
+        /// <summary>Adds to the list SimHub saves, and under the game family filter to the current family's list
+        /// as well, which is the one the device's page draws (#689). See <see cref="ProfileInstall.WhyNotAddProfile"/>.</summary>
+        private static void AddToSaved(LedsSettings settings, LedsProfile profile, ProfileLists lists)
         {
             profile.Settings = settings;
+            if (lists.ByFamily) profile.TargetGameFamily = settings.CurrentGameFamily;
             settings.InitProfile(profile);
-            settings.Profiles.Add(profile);
+            ProfileInstall.AddTo(lists, profile);
             settings.RefreshSortedProfiles();
+        }
+
+        /// <summary>One LED list's profile lists as an install sees them, every game family's included when SimHub
+        /// keeps them per family (#689): a telemetry list or an individual one, the two being the same type. Reads
+        /// the list the page draws first, since under the filter reading it is what adds the current family's list
+        /// when there is none yet.</summary>
+        private static ProfileLists ListsOf(LedsSettings settings)
+        {
+            var byFamily = settings.FilterByGameFamily;
+            var shown = settings.AvailableProfiles;
+            var families = new List<IList>();
+            if (byFamily && settings.PerFamilyProfiles != null)
+            {
+                foreach (var family in settings.PerFamilyProfiles)
+                {
+                    if (family != null) families.Add(family.Profiles);
+                }
+            }
+            return ProfileLists.Of(settings.Profiles, shown, byFamily, families);
         }
 
         /// <summary>
@@ -294,7 +335,7 @@ namespace OpenDashPlugin
             var target = LedTargets.Find(device);
             var settings = target?.Settings;
             if (settings == null) return false;
-            var gone = ProfileInstall.Uninstall(settings.Profiles, settings.AvailableProfiles, profileId, target.Save, "RGB LED");
+            var gone = ProfileInstall.Uninstall(ListsOf(settings), profileId, target.Save, "RGB LED");
             return UninstallIndividual(target, profileId) || gone;
         }
 
@@ -304,7 +345,7 @@ namespace OpenDashPlugin
         {
             var individual = target.Individual;
             if (individual == null) return false;
-            return ProfileInstall.Uninstall(individual.Profiles, individual.AvailableProfiles, profileId, target.Save, "individual LED");
+            return ProfileInstall.Uninstall(ListsOf(individual), profileId, target.Save, "individual LED");
         }
 
         /// <summary>
@@ -326,7 +367,7 @@ namespace OpenDashPlugin
             var gone = false;
             foreach (var target in targets ?? Enumerable.Empty<LedTarget>())
             {
-                if (ProfileInstall.Uninstall(target.Settings.Profiles, target.Settings.AvailableProfiles, profileId, target.Save, "RGB LED")) gone = true;
+                if (ProfileInstall.Uninstall(ListsOf(target.Settings), profileId, target.Save, "RGB LED")) gone = true;
                 if (UninstallIndividual(target, profileId)) gone = true;
             }
             return gone;
@@ -409,8 +450,18 @@ namespace OpenDashPlugin
         /// The one step left out is that method's de-duplication pass, which renumbers any profile whose
         /// id already appears: the caller has just removed ours by id, so there is nothing to renumber,
         /// and letting it run would hand SimHub the chance to renumber the very profile we then go looking
-        /// for. `TargetGameFamily` is left alone for the same kind of reason -- it is set only under
-        /// `FilterByGameFamily`, which neither lighting driver overrides to true.
+        /// for.
+        ///
+        /// **Under `FilterByGameFamily` the add reaches the family's list as well** (#689). SimHub can keep
+        /// profiles per game family, and then `AvailableProfiles` is neither `Profiles` nor `BuiltInProfiles`
+        /// but the current family's own list under `PerFamilyProfiles`, which is what the device's page draws,
+        /// and `Profiles` is cleared and rebuilt from the families at every save (`OnSerializing`). Neither
+        /// lighting driver turned the filter on in the decompiled 9.12.6, but a rig on a later build does, and
+        /// a profile added to `Profiles` alone was then counted as installed, missing from the page, and gone at
+        /// the next save. So there the add does what `AddProfile(target, p)` does under the filter: it sets
+        /// `TargetGameFamily` to the current family and adds to that family's list, and it still adds to
+        /// `Profiles`, so the census that reads it counts the profile before the save mirrors the families.
+        /// Which lists those are is <see cref="ProfileLists"/>, read off the settings each time, never assumed.
         /// </remarks>
         internal const string WhyNotAddProfile =
             "SimHub's AddProfile targets AvailableProfiles, which is BuiltInProfiles on a device with "
@@ -418,15 +469,15 @@ namespace OpenDashPlugin
 
         /// <summary>The group install of ProfileInstall.Core.cs over SimHub's own profile type and log.</summary>
         internal static IList<FlagBoxPlan> Install(
-            IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what, bool builtInMode = false, string where = null)
+            ProfileLists lists, IReadOnlyList<object> embedded, Action<int> add, Action save, string what, bool builtInMode = false, string where = null)
         {
-            return Install(profiles, available, embedded, add, save, what, Read, SimHubLog, builtInMode, where);
+            return Install(lists, embedded, add, save, what, Read, SimHubLog, builtInMode, where);
         }
 
         /// <summary>The uninstall of ProfileInstall.Core.cs over SimHub's own profile type and log.</summary>
-        internal static bool Uninstall(IList profiles, IList available, Guid id, Action save, string what)
+        internal static bool Uninstall(ProfileLists lists, Guid id, Action save, string what)
         {
-            return Uninstall(profiles, available, id, save, what, Read, SimHubLog);
+            return Uninstall(lists, id, save, what, Read, SimHubLog);
         }
 
         private static readonly IInstallLog SimHubLog = new SimHubInstallLog();

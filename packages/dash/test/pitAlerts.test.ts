@@ -36,6 +36,12 @@ interface Car {
    * or a game it has no row for, and otherwise its answer, which wins over the toggle.
    */
   reported?: boolean | null;
+  /**
+   * What the plugin says about the limiter itself (#1122): absent with no plugin, and otherwise its answer,
+   * which wins over SimHub's `PitLimiterOn`. On Assetto Corsa that member is the pit lane, so the plugin's
+   * reading of the raw limiter is the only one that tells a limiter left off in the lane apart.
+   */
+  reportedLimiter?: boolean | null;
 }
 
 const telemetry = (car: Car): Record<string, number | boolean | null> => ({
@@ -44,6 +50,7 @@ const telemetry = (car: Car): Record<string, number | boolean | null> => ({
   'DataCorePlugin.GameData.EngineIgnitionOn': car.ignition ? 1 : 0,
   'DataCorePlugin.GameRawData.Telemetry.dcPitSpeedLimiterToggle': car.hasLimiter ? 1 : null,
   'OpenDash.CarHasPitLimiter': car.reported ?? null,
+  'OpenDash.PitLimiterOn': car.reportedLimiter ?? null,
   // SimHub's own reading of the engine, which is what the family reads since #762: its iRacing reader
   // sets it from the ignition and the stalled bit, so a stall with the ignition on is 0 and so is
   // any car with the ignition off.
@@ -75,19 +82,23 @@ function evaluate(expression: string, car: Car): boolean {
 
 /**
  * Every combination of the five facts, with no plugin and with each answer the plugin can give about the
- * limiter: ninety-six cars, which is the whole state space.
+ * car having a limiter and about the limiter being on: two hundred and eighty-eight cars, which is the
+ * whole state space.
  */
 const CARS: Car[] = [];
 for (const reported of [null, false, true]) {
-  for (let mask = 0; mask < 32; mask++) {
-    CARS.push({
-      limiter: (mask & 1) > 0,
-      lane: (mask & 2) > 0,
-      ignition: (mask & 4) > 0,
-      stalled: (mask & 8) > 0,
-      hasLimiter: (mask & 16) > 0,
-      reported,
-    });
+  for (const reportedLimiter of [null, false, true]) {
+    for (let mask = 0; mask < 32; mask++) {
+      CARS.push({
+        limiter: (mask & 1) > 0,
+        lane: (mask & 2) > 0,
+        ignition: (mask & 4) > 0,
+        stalled: (mask & 8) > 0,
+        hasLimiter: (mask & 16) > 0,
+        reported,
+        reportedLimiter,
+      });
+    }
   }
 }
 
@@ -146,14 +157,29 @@ describe('what each state says', () => {
   test('where the plugin says whether the car has a limiter, its answer is the one taken', () => {
     // ACC carries no iRacing toggle, every car has a limiter, and SimHub's PitLimiterOn reads it: the
     // plugin says the car has one, and the reminder shows where the toggle's absence alone would have
-    // kept it dark. Le Mans Ultimate is the same with an answer of its own. Assetto Corsa is not this
-    // case yet: its PitLimiterOn is the pit lane, so "in the lane, limiter off" never happens there
-    // until the family reads the plugin's limiter (#558).
+    // kept it dark. Le Mans Ultimate is the same with an answer of its own, and so is Assetto Corsa,
+    // whose limiter is the next test.
     expect(shown({ ...on, limiter: false, hasLimiter: false, reported: true })).toBe('engage');
     // And a sim whose car has none says that, whatever else it publishes.
     expect(shown({ ...on, limiter: false, hasLimiter: true, reported: false })).toBeUndefined();
     // With no answer, iRacing's own test stands, which is what a package with no plugin reads.
     expect(shown({ ...on, limiter: false, hasLimiter: true, reported: null })).toBe('engage');
+  });
+
+  test("where the plugin reads the limiter, its answer is the one taken, which is what makes Assetto Corsa's lane readable", () => {
+    // Assetto Corsa: SimHub's PitLimiterOn is the pit lane, so it reads 1 in the lane whatever the
+    // driver did, and read alone the family showed the filled band to a driver who had not engaged
+    // the limiter (#558). The plugin reads the raw limiter, and the reminder is raised instead.
+    const ac = { ...on, hasLimiter: false, reported: true };
+    expect(shown({ ...ac, limiter: true, reportedLimiter: false })).toBe('engage');
+    expect(shown({ ...ac, limiter: true, reportedLimiter: true })).toBe('limiter');
+    // On track SimHub's member reads 0 while the raw limiter is on, and the mistake is shown.
+    expect(shown({ ...ac, lane: false, limiter: false, reportedLimiter: true })).toBe('disengage');
+    expect(shown({ ...ac, lane: false, limiter: false, reportedLimiter: false })).toBeUndefined();
+    // With no answer, SimHub's member stands, which is iRacing's limiter bit and what a package with no
+    // plugin reads.
+    expect(shown({ ...on, limiter: true, reportedLimiter: null })).toBe('limiter');
+    expect(shown({ ...on, limiter: false, reportedLimiter: null })).toBe('engage');
   });
 
   test('the ignition and the engine are read only in the lane, and the ignition outranks the engine', () => {
