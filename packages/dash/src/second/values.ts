@@ -2249,9 +2249,11 @@ export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)
 export const engineRunning = (): Expr => gt(rpm(), num(0));
 
 /**
- * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
- * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
- * change to this line.
+ * The driver is in the car, as iRacing says it: `IsOnTrack`, which is "car on track physics running
+ * with player in car". This is iRacing's reading and the fallback of {@link sim}'s `driverInCar`, which
+ * is what every caller reads (#561): the plugin answers the question for each sim it knows, Assetto
+ * Corsa's `Graphics.Status` at `AC_LIVE` among them, and this is what a package without the plugin, or
+ * a sim the plugin has no row for, reads instead. Nothing reads it but that helper.
  *
  * It is the stronger of the two questions #312 tells apart, and {@link inSession} is the weaker: a
  * driver in the garage is in a session and not in the car. Everything that raises itself on a change
@@ -2262,14 +2264,15 @@ export const engineRunning = (): Expr => gt(rpm(), num(0));
  * Read as a boolean and not compared with a number. A raw telemetry boolean reaches a binding as
  * `true` or `false`, where `GameData`'s booleans arrive as 1 and 0 -- the committed traces show both
  * forms side by side -- so `= 1` would never hold and the gate would silence everything behind it.
- * It is the same reading `carAvailable` uses for the leaderboard's rows.
+ * It is the same reading `carAvailable` uses for the leaderboard's rows, and the plugin publishes its
+ * answer in the same shape.
  *
  * **What a sim that does not say gets is the caller's choice**, because the two callers want opposite
- * answers. A change notification is harmless if it fires in a sim with no `IsOnTrack`, so it passes
+ * answers. A change notification is harmless if it fires in a sim with no answer, so it passes
  * `true` and keeps showing there. The alert catalogue does not: its car alerts outrank every flag, and
- * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that published no `IsOnTrack` would put
- * IGNITION OFF over the band whenever the engine idled. It passes `false`, and is iRacing's, as the
- * flags already are.
+ * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that said nothing would put IGNITION OFF
+ * over the band whenever the engine was not turning, in a menu as much as on track. It passes `false`,
+ * and is iRacing's unless the plugin answers for the sim.
  */
 export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
 
@@ -2306,8 +2309,11 @@ export const sim = {
    */
   damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
   /**
-   * The driver is in the car, physics running. Without the plugin, {@link inTheCar}, with the caller's answer
-   * for a sim that says nothing. Not yet read: #561 moves `inTheCar`'s callers onto this.
+   * The driver is in the car, physics running: on Assetto Corsa and ACC `Graphics.Status` at `AC_LIVE`, so
+   * not in a menu, a replay or a pause, and on Le Mans Ultimate `mInRealtime`. Without the plugin,
+   * {@link inTheCar}, iRacing's `IsOnTrack`, with the caller's answer for a sim that says nothing. Read by the
+   * alert catalogue's car alerts, the change notifications, the AiM's engine warning and the Porsche's fuel
+   * alarm (#561).
    */
   driverInCar: (ifUnknown = true): Expr => setting.reported(DRIVER_IN_CAR, inTheCar(ifUnknown)),
   /**
