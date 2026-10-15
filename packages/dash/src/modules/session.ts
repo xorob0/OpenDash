@@ -9,6 +9,7 @@
  * [ADR 0009](../../../../docs/decisions/0009-does-the-plugin-compute.md) leaves out of the bar's
  * catalogue for the same reason. A field that can never have a value is worse than no field.
  */
+import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { drawnFigure } from '../second/drawn.ts';
@@ -17,7 +18,7 @@ import {
   CHARS,
   CLASS_AND_PLACE_WIDEST,
   INCIDENTS_WIDEST,
-  LAP_TOTAL_WIDEST,
+  lapTotalWidest,
   LAP_WIDEST,
   carPosition,
   classAndPlace,
@@ -92,7 +93,7 @@ export const session = defineModule('session', (ctx) => {
             follower: {
               kind: 'denominator',
               text: '/ 30',
-              widest: LAP_TOTAL_WIDEST,
+              widest: lapTotalWidest(DATA_FACE.SemiBold),
               bind: concat(str('/ '), fmt(totalLaps(), '0')),
               // Hidden with the lap as well as without a length. iRacing's `TotalLaps` in a timed race
               // is the leader's laps, so a denominator shown for that alone drew `/ 14` with no lap

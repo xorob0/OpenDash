@@ -106,8 +106,10 @@ describe('card expressions', () => {
     const denominator = textItem('session', 'denominator');
     expect(formulaOf(denominator, 'Text')).toBe("('/ ') + (format([DataCorePlugin.GameData.TotalLaps], '0'))");
     // Not timed as well as a total above nought: a timed session's `TotalLaps` is the leader's laps,
-    // which is no length even with the lap forced on (#989).
-    expect(formulaOf(denominator, 'Visible')).toBe(`(!(${time})) and ((!(${timed})) and ((isnull([DataCorePlugin.GameData.TotalLaps], 0)) > (0)))`);
+    // which is no length even with the lap forced on (#989). Nor is a total of four figures, which
+    // the box is not cut for and no race runs to (#1117).
+    const laps = 'isnull([DataCorePlugin.GameData.TotalLaps], 0)';
+    expect(formulaOf(denominator, 'Visible')).toBe(`(!(${time})) and ((!(${timed})) and ((${laps}) > (0)) and ((${laps}) <= (999)))`);
     expect(formulaOf(denominator, 'Left')).toContain('>= (100), 3');
     for (const item of ['label', 'value', 'mark', 'denominator'] as const) {
       const expressions = Object.values(textItem('session', item).bindings ?? {}).map((b) => (b && typeof b.formula === 'string' ? b.formula : ''));
@@ -330,9 +332,14 @@ describe('second-screen values', () => {
     );
   });
 
-  test('the grip status is drawn as the sim words it, and Moderate is the word a box is cut for', () => {
-    expect(values.trackGrip()).toBe("isnull([DataCorePlugin.GameData.TrackGripStatus], '--')");
-    expect(values.GRIP_WIDEST).toBe('Moderate');
+  test('the track state is iRacing\'s wetness in five words, and Very wet is the word a box is cut for', () => {
+    // It read `GameData.TrackGripStatus`, which SimHub 9.12.6 has for no game, so it read `--` on every
+    // sim, iRacing included (#1128). `TrackWetness` is a raw telemetry int iRacing publishes, and
+    // `simReadings.test.ts` holds the committed iRacing traces to carrying it, at 1 or more.
+    expect(values.trackGrip()).toContain('[DataCorePlugin.GameRawData.Telemetry.TrackWetness]');
+    expect(values.trackGrip()).not.toContain('TrackGripStatus');
+    expect(values.TRACK_STATES.map((s) => s.word)).toEqual(['Dry', 'Damp', 'Wet', 'Very wet', 'Flooded']);
+    expect(values.GRIP_WIDEST).toBe('Very wet');
   });
 
   test('a low tank is one sentence, against the threshold every light reads', () => {

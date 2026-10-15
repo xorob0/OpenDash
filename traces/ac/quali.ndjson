@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"quali","frames":200,"hz":10,"ticks":[9110,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
+{"trace":1,"scenario":"quali","frames":200,"hz":10,"ticks":[9110,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -129,6 +129,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.SessionTimeOfDay","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle","v":null}
+{"p":"DataCorePlugin.GameRawData.Telemetry.TrackWetness","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergy","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergyLaps","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergyPerLap","v":null}
@@ -622,6 +623,7 @@
 {"p":"OpenDash.Slot11","v":9}
 {"p":"OpenDash.Slot12","v":10}
 {"p":"OpenDash.ThemeAimBacklight","v":"white"}
+{"p":"OpenDash.TrackMapRecorded","v":true}
 {"p":"OpenDash.UpdateAvailable","v":false}
 {"p":"OpenDash.UpdateVersion","v":""}
 {"p":"OpenDash.WebViewUrl","v":null}

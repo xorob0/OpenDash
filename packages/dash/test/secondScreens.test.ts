@@ -35,7 +35,7 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox, densityOf, grownAtMost } from '../src/second/density.ts';
-import { CHARS, CORNERS, classAndPlace, player, type Corner } from '../src/second/values.ts';
+import { CHARS, CORNERS, classAndPlace, hasTrackState, player, trackGrip, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
@@ -1548,24 +1548,50 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('names the track above its map by default, which is what the companion and the pit wall draw', () => {
     const items = build();
-    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.state', 'track.map']);
+    expect(items.map((i) => i.name)).toEqual(['track.title', 'track.state', 'track.map', 'track.map.placeholder']);
     expect(mapIn(items).rect.top).toBeGreaterThan(frame.top);
   });
 
   test('puts the surface state at the right of that header, measured for its longest reading', () => {
     const [title, state] = build() as [TextItem, TextItem];
-    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'Moderate', text: 'Dry' });
-    expect(state.bindings?.Text?.formula).toContain('TrackGripStatus');
+    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'Very wet', text: 'Dry' });
+    expect(state.bindings?.Text?.formula).toBe(trackGrip());
+    // Hidden where the sim reports no track state, rather than `--` beside the name (#1128).
+    expect(state.bindings?.Visible?.formula).toBe(hasTrackState());
     // The name gives up the state's width rather than the two sharing the line: WPF clips, it does
-    // not reflow, so a long track name would otherwise be drawn straight through "MODERATE".
+    // not reflow, so a long track name would otherwise be drawn straight through "VERY WET".
     expect(state.rect.left + state.rect.width).toBe(frame.left + frame.width);
     expect(title.rect.left + title.rect.width).toBeLessThanOrEqual(state.rect.left);
   });
 
   test('gives the map the whole frame when the caller asks for no title', () => {
     const items = build(false);
-    expect(items.map((i) => i.name)).toEqual(['track.map']);
+    expect(items.map((i) => i.name)).toEqual(['track.map', 'track.map.placeholder']);
     expect(mapIn(items).rect).toMatchObject({ top: frame.top, height: frame.height });
+  });
+
+  /**
+   * SimHub draws an empty box until it has recorded an outline of the track, and says nothing (#555). On
+   * Assetto Corsa, where a driver may never have done a whole lap of a track or a layout, that read as a
+   * page that was broken. The plugin says whether the outline exists, and the module says what the box is
+   * waiting for in its place; with no plugin the map is drawn exactly as it was.
+   */
+  test('says the map waits for a lap while SimHub has no outline of the track, and draws it as before otherwise', () => {
+    for (const title of [undefined, false]) {
+      const items = build(title);
+      const map = mapIn(items);
+      const notice = items.find((i): i is TextItem => i.name === 'track.map.placeholder')!;
+      expect(notice).toBeDefined();
+      expect(notice.text).toBe('Track · Drive a lap to record it');
+      expect(contains(map.rect, notice.rect)).toBe(true);
+      const visible = (item: Item, props: Props) => Boolean(evalNcalc(bindingExpression(item as TextItem, 'Visible'), props));
+      const unrecorded = { [`${PROPERTY_PREFIX}.TrackMapRecorded`]: false };
+      const recorded = { [`${PROPERTY_PREFIX}.TrackMapRecorded`]: true };
+      expect({ map: visible(map, unrecorded), notice: visible(notice, unrecorded) }).toEqual({ map: false, notice: true });
+      expect({ map: visible(map, recorded), notice: visible(notice, recorded) }).toEqual({ map: true, notice: false });
+      // No plugin, no game, or a game that records no outline: the map item as it always was.
+      expect({ map: visible(map, {}), notice: visible(notice, {}) }).toEqual({ map: true, notice: false });
+    }
   });
 
   /**

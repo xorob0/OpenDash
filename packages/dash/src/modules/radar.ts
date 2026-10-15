@@ -1,8 +1,10 @@
 /**
  * Module 12, Radar: SimHub's proximity radar with the spotter either side of it.
  *
- * The radar draws the player at the centre and the cars around from the recorded track map, so it
- * needs a lap on the track before it shows anything. The two blocks beside it come from SimHub's
+ * The radar draws the player at the centre and the cars around. On iRacing it places them through
+ * the recorded track map, so it needs a lap on the track before it shows anything; on Assetto Corsa,
+ * ACC and Le Mans Ultimate it draws from the cars' own coordinates and needs no map
+ * (`docs/research/simhub-dash-format.md`, #555). The two blocks beside it come from SimHub's
  * own spotter and turn red when a car is alongside.
  *
  * The grid the canvas draws under the cars is four rectangles of this module's own: the radar item

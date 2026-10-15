@@ -303,6 +303,7 @@ OpenDash.YellowFlagShown
 OpenDash.BlackFlagShown
 OpenDash.WhiteFlagShown
 OpenDash.ChequeredFlagShown
+OpenDash.TrackMapRecorded
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart

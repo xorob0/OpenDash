@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
+import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -1442,8 +1442,25 @@ export const isUntimedSession = (): Expr => gt(sessionTimeLeft(), num(UNTIMED_SE
  * `SessionTimeLeft` of nought rather than iRacing's week, still has its laps counted. What it costs
  * is the iRacing race given both a lap count and a time limit, which is timed and so draws the clock
  * and no total, as the session card has always drawn it.
+ *
+ * Three digits at most, {@link MOST_LAPS}: a total of a thousand laps or more is not a length.
  */
-export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps(), num(0)));
+export const hasLapTotal = (): Expr => and(not(isTimedSession()), gt(totalLaps(), num(0)), le(totalLaps(), num(MOST_LAPS)));
+
+/**
+ * The longest race a lap total is taken to be, and what every `/ 30` after a lap is measured for.
+ *
+ * No race is run to a thousand laps: the longest iRacing schedules are the 500-lap short tracks. A
+ * box after a lap is cut for three digits, `/ 444` in Barlow, and this cap is the guard that keeps
+ * that a declaration the binding can reach: a total past it, from whatever reader sends one, is drawn
+ * as no total, the lap alone, rather than a box being cut for a length nobody drives (#1117).
+ *
+ * It is a guard and not a known case. The rFactor 2 reader already answers nought for a total outside
+ * 1 to 999 (`docs/research/sims.md`). iRacing writes 32767 for a session with no lap limit, but SimHub
+ * does not pass it through: in `traces/notc.ndjson`, a timed race where the sim writes 32767 to
+ * `SessionLapsTotal`, `TotalLaps` reads 15, the leader's laps.
+ */
+export const MOST_LAPS = 999;
 
 /** What a session clock reads where there is no session at all: a clock of the same shape, unset. */
 export const NO_CLOCK = `-:--:--`;
@@ -2093,20 +2110,28 @@ export const fuelToEndColour = (): Expr =>
   );
 
 /**
- * The widest reading {@link lapOfTotal} is budgeted for, and what its box is measured against: a
- * three-digit lap of a three-digit race. Its sample is the short end, and a field measured by
- * `12 / 43` passes every fit test while `12 / 120` is clipped on the screen.
+ * The widest race length a box in `face` has to hold after a lap, as `before` writes it: `/ 30` or
+ * `of 30`, of up to {@link MOST_LAPS} laps.
+ *
+ * Measured rather than written as `/ 999`, because the nine is not the widest figure: in Barlow
+ * Condensed SemiBold the 4 and the 0 are wider, so the session page's denominator was cut for
+ * `/ 999` and a 400-lap race drew `/ 40` on the 1280 x 480 and 1280 x 400 faces. #1117.
  */
-export const LAP_OF_TOTAL_WIDEST = '999 / 999';
+export const lapTotalWidest = (face: MeasuredFace, before = '/'): string => `${before} ${widestFigure(face, String(MOST_LAPS))}`;
+
+/**
+ * The widest reading {@link lapOfTotal} is budgeted for in `face`, and what its box is measured
+ * against: a three-digit lap of a three-digit race, each in the face's widest figures. Its sample is
+ * the short end, and a field measured by `12 / 43` passes every fit test while `12 / 120` is clipped
+ * on the screen.
+ */
+export const lapOfTotalWidest = (face: MeasuredFace): string => `${widestFigure(face, LAP_WIDEST)} ${lapTotalWidest(face)}`;
 
 /**
  * The widest lap count {@link CHARS.lap} is budgeted for, and what a lap field declares as its
  * `widest` so the fit tests measure the long end rather than the `12` of its sample. #596.
  */
 export const LAP_WIDEST = '999';
-
-/** The widest `/ 30` a lap count is followed by: the race's length, in three digits. #596. */
-export const LAP_TOTAL_WIDEST = '/ 999';
 
 /** The widest incident count, `x` and all, that {@link CHARS.incidents} is budgeted for. #596. */
 export const INCIDENTS_WIDEST = '999x';
@@ -2353,10 +2378,68 @@ export const IRACING_TRACK_NAME = 'DataCorePlugin.GameRawData.SessionData.Weeken
  */
 export const trackName = (): Expr => isnull(prop(AC_TRACK_NAME), isnull(prop(IRACING_TRACK_NAME), isnull(game('TrackName'), str(''))));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
-/** The widest word the grip status takes, which is what a field measures its box against. */
-export const GRIP_WIDEST = 'Moderate';
-/** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
-export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
+/**
+ * How wet the track is, as iRacing's raw `TrackWetness` writes it: `irsdk_TrackWetness`, 1 for dry up
+ * to 7 for extremely wet, and 0 while iRacing does not know. SimHub passes it through as the plain
+ * int (`Telemetry.ConvertToSpecificType` in its iRacingSDK leaves it alone), and it is null on every
+ * other sim, which has no reading of this kind under this name.
+ */
+export const trackWetness = (): Expr => raw('TrackWetness');
+
+/**
+ * Whether the sim reports a track state at all: iRacing's wetness is there and known.
+ *
+ * Asked of the reading itself, as ADR 0021 has an absent raw property answer for itself. Assetto Corsa,
+ * ACC and Le Mans Ultimate each publish a grip of their own, in a scale of their own (a number, a word
+ * and a level, docs/research/sims.md), which nothing has seen on a drive yet, so the field hides there
+ * rather than drawing a word nobody checked (#1128).
+ */
+export const hasTrackState = (): Expr => gt(isnull(trackWetness(), num(0)), num(0));
+
+/**
+ * The words the track state is drawn in, driest first, and the wetness each starts at.
+ *
+ * iRacing's seven steps are folded onto five, because its own names ("Very Lightly Wet", "Moderately
+ * Wet") are wider than any box the state is drawn in: mostly dry and very lightly wet are both a damp
+ * track, lightly and moderately wet both a wet one.
+ */
+export const TRACK_STATES = [
+  { word: 'Dry', from: 1 },
+  { word: 'Damp', from: 2 },
+  { word: 'Wet', from: 4 },
+  { word: 'Very wet', from: 6 },
+  { word: 'Flooded', from: 7 },
+] as const;
+
+/** The widest of {@link TRACK_STATES} in every face it is drawn in, which a field measures its box against. */
+export const GRIP_WIDEST = 'Very wet';
+
+/**
+ * The track state, as one of {@link TRACK_STATES}, and `--` where the sim reports none.
+ *
+ * It read `GameData.TrackGripStatus` until #1128, which SimHub 9.12.6 does not have for any game, so
+ * every field drawing it read `--` on every sim, iRacing included. A field drawing it hides on
+ * {@link hasTrackState} rather than draw the `--`.
+ */
+export const trackGrip = (): Expr => {
+  const wetness = isnull(trackWetness(), num(0));
+  // Built from the driest outwards, so that the wettest word's test is the first a rig evaluates.
+  return TRACK_STATES.reduce<Expr>((drier, state) => iff(ge(wetness, num(state.from)), str(state.word), drier), str(NO_VALUE));
+};
+/**
+ * Whether SimHub holds the outline its map item draws, for the track the car is on. #555.
+ *
+ * The plugin answers it from SimHub's own record ({@link TRACK_MAP_RECORDED} in `contract.ts`). Without the
+ * plugin, with no game running and on a game that records no outline, `true`: the map item is drawn as it
+ * always was, and nothing tells the driver to drive a lap that might not be what is missing.
+ */
+export const trackMapRecorded = (): Expr => isnull(prop(propertyName(TRACK_MAP_RECORDED)), 'true');
+/**
+ * What the track module says in place of a map SimHub has yet to record: the lap it needs, which is a whole
+ * one, from the line to the line and outside the pit lane, since leaving the pits records nothing until the
+ * car crosses the line. The name half goes when the box is short, as it does for every notice.
+ */
+export const TRACK_MAP_REASON = 'Drive a lap to record it';
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**
@@ -2482,12 +2565,23 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 
-/** Wind speed in km/h, from the raw metres per second iRacing publishes. */
-export const windKmh = (): Expr => mul(isnull(raw('WindVel'), num(0)), num(3.6));
-/** Wind direction in degrees, from radians. */
-export const windDegrees = (): Expr => mul(isnull(raw('WindDir'), num(0)), num(180 / Math.PI));
-/** The sim's own clock, as seconds of day. */
-export const simTimeOfDay = (): Expr => isnull(raw('SessionTimeOfDay'), num(0));
+/**
+ * `value` of `reading` while the sim publishes `reading`, and otherwise `reading` itself, which is
+ * null: a reading the sim does not have stays null through a conversion rather than becoming 0, and
+ * the arithmetic never meets a null, which NCalc would throw on rather than pass on.
+ */
+const orNull = (reading: Expr, value: Expr): Expr => iff(isNull(reading), reading, value);
+
+/** Whether the sim publishes a wind: iRacing's raw `WindVel`, which Assetto Corsa, ACC and LMU do not (#1123). */
+export const hasWind = (): Expr => not(isNull(raw('WindVel')));
+/** Wind speed in km/h, from the raw metres per second iRacing publishes; null where the sim has none. */
+export const windKmh = (): Expr => orNull(raw('WindVel'), mul(raw('WindVel'), num(3.6)));
+/** Wind direction in degrees, from radians; null where the sim has none. */
+export const windDegrees = (): Expr => orNull(raw('WindDir'), mul(raw('WindDir'), num(180 / Math.PI)));
+/** Whether the sim publishes a clock of its own: iRacing's raw `SessionTimeOfDay` (#1123). */
+export const hasSimClock = (): Expr => not(isNull(raw('SessionTimeOfDay')));
+/** The sim's own clock, as seconds of day; null where the sim has none. */
+export const simTimeOfDay = (): Expr => raw('SessionTimeOfDay');
 
 /** Whether the rig writes its clocks to twelve hours, which is `ClockFormat`. #324. */
 export const twelveHour = (): Expr => setting.clockFormatIs('12h');
@@ -2512,7 +2606,8 @@ export const meridiemWidest = (face: MeasuredFace): string =>
  * `text` is `14:32` on a twenty-four-hour clock and `2:32` on a twelve-hour one -- `HH:mm` against
  * `h:mm`, the twelve-hour hour carrying no leading zero because that is how it is read -- and either
  * fits {@link CHARS.timeOfDay}. `meridiem` is `AM` or `PM` whatever the setting, and a surface draws
- * it only while {@link twelveHour} holds: a word beside the value rather than part of it, because
+ * it only while `meridiemShown` holds, which is {@link twelveHour} and, for a clock that can be
+ * missing, the clock being there: a word beside the value rather than part of it, because
  * `M` is one of the glyphs rule 19 keeps out of a cell. `drawn` is where a word after the digits
  * goes, since a twelve-hour hour is one digit or two and `9:05` placed as if it were `12:05` would
  * stand its `PM` a cell off the figure -- the fault #387 removed from every other follower.
@@ -2520,6 +2615,7 @@ export const meridiemWidest = (face: MeasuredFace): string =>
 export interface TimeOfDay {
   text: Expr;
   meridiem: Expr;
+  meridiemShown: Expr;
   drawn: DrawnFigure;
 }
 
@@ -2545,6 +2641,7 @@ export const localClock = (): TimeOfDay => {
   return {
     text: iff(twelveHour(), fmt(now, 'h:mm'), fmt(now, 'HH:mm')),
     meridiem: iff(isIn(fmt(now, 'HH'), ...writtenHours(12, 23)), str('PM'), str('AM')),
+    meridiemShown: twelveHour(),
     drawn: timeOfDayDrawn(isIn(fmt(now, 'hh'), ...writtenHours(10, 12))),
   };
 };
@@ -2555,16 +2652,24 @@ export const localClock = (): TimeOfDay => {
  * Arithmetic rather than a format, the time of day being a number of seconds: the hour is taken
  * modulo 24, so a session clock that reaches midnight reads `00:00` rather than `24:00`, and the
  * twelve-hour hour is that hour moved onto 1 to 12, midnight and noon both reading 12.
+ *
+ * Where the sim has no clock of its own the digits read `--` and the meridiem nothing, rather than
+ * `00:00` and `AM` worked out from a 0 standing in for the reading (#1123): Assetto Corsa, ACC and
+ * Le Mans Ultimate publish no `SessionTimeOfDay`. The meridiem is not shown there either, so a slot
+ * that keeps its room for one, as the bar's and band D's corner do, closes it and `--` stands against
+ * the edge. The pit wall header keeps the room, its groups being laid out by the setting alone.
  */
 export const simClock = (): TimeOfDay => {
   const seconds = simTimeOfDay();
   const hour = mod(truncate(div(seconds, num(3600))), num(24));
   const hour12 = add(mod(add(hour, num(11)), num(12)), num(1));
   const minutes = fmt(truncate(div(mod(seconds, num(3600)), num(60))), '00');
+  const known = hasSimClock();
   return {
-    text: iff(twelveHour(), concat(fmt(hour12, '0'), str(':'), minutes), concat(fmt(hour, '00'), str(':'), minutes)),
-    meridiem: iff(ge(hour, num(12)), str('PM'), str('AM')),
-    drawn: timeOfDayDrawn(ge(hour12, num(10))),
+    text: iff(known, iff(twelveHour(), concat(fmt(hour12, '0'), str(':'), minutes), concat(fmt(hour, '00'), str(':'), minutes)), str(NO_VALUE)),
+    meridiem: iff(known, iff(ge(hour, num(12)), str('PM'), str('AM')), str('')),
+    meridiemShown: and(twelveHour(), known),
+    drawn: drawnEither(known, timeOfDayDrawn(ge(hour12, num(10))), drawnText(NO_VALUE)),
   };
 };
 
