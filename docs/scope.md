@@ -39,16 +39,24 @@ and [ADR 0002](decisions/0002-djson-generated-from-source.md); the pipeline is i
 |---|---|
 | Renderer | SimHub native (DashStudio) |
 | Telemetry | SimHub; the user supplies their own install |
-| Supported sim | iRacing |
+| Supported sims | iRacing, Assetto Corsa |
 | Screens | ten dash faces, two companions, two pit walls |
 | Plugin | .NET Framework 4.8, code-only WPF, builds on Linux |
 | Distribution | `OpenDash-plugin.zip` only; the packages and profiles travel inside it |
 | Licence | MIT |
 
-Other sims will very probably work, because SimHub normalises the common fields into
-`StatusDataBase`, and a module that reads something iRacing does not publish says so rather than
-drawing a zero. They are nevertheless untested, and they must not be advertised as supported
-until somebody has actually driven them. Concerning that audit, see #102.
+**A sim is supported once somebody has driven it with the packages and its column of
+[sim-support.md](sim-support.md) is filled**: the table of which sim shows what, a row for every page,
+card, module and lamp (#102). iRacing is the sim every binding was written against. Assetto Corsa was
+driven on 2026-10-15 and its column is filled (#592); where it publishes nothing for a reading, the
+reading hides, reads `--` or says so, and the few that still draw a value they were not given are listed
+there with the ticket that fixes each.
+
+Assetto Corsa Competizione and Le Mans Ultimate may work. SimHub normalises most of what the packages read
+into `StatusDataBase` for both, and the plugin already answers the questions that differ by sim for each
+([ADR 0021](decisions/0021-a-dashboard-never-names-a-game.md)). They are nevertheless untested and not
+supported, and nothing advertises them, until each has been driven and its column filled from the drive
+(#961, #962). Any other sim SimHub reads is in the same position, without the plugin's answers.
 
 ## What ships
 
@@ -415,10 +423,6 @@ unrelated displays, the model name distinguishes them. That name is the one that
 package folder (`OpenDash Porsche 1280x480`, [ADR 0016](decisions/0016-themed-package-distribution.md)),
 in SimHub's dashboard list, in the plugin's panel and in the title of the theme's ticket.
 
-**Sims other than iRacing, as a supported claim.** They may work, and they are welcome to, but
-nothing is advertised as supported before somebody has driven it and the bindings have been
-audited.
-
 **The invisible dash.** A screen capture item drawn behind the face, so that the screen reads as
 transparent over the rig, is a feature of somebody else's product. SimHub does publish
 `ScreenCaptureItem`, and [research/simhub-dash-format.md](research/simhub-dash-format.md) already
@@ -490,8 +494,8 @@ anything. [CLAUDE.md](../CLAUDE.md) explains the traps and
 ## Related documents
 
 [architecture.md](architecture.md) is how source becomes a `.simhubdash` and how a setting
-reaches a running dashboard. [second-screens.md](second-screens.md) is the companion and the pit
-wall. [flag-box.md](flag-box.md) is the 8x8 matrix, and [design/flag-box.md](design/flag-box.md)
+reaches a running dashboard. [sim-support.md](sim-support.md) is which sim shows what, page by page.
+[second-screens.md](second-screens.md) is the companion and the pit wall. [flag-box.md](flag-box.md) is the 8x8 matrix, and [design/flag-box.md](design/flag-box.md)
 is what each of its sixty-four-pixel pictures means. [decisions/](decisions/) holds the records that this document summarises, and a record
 wins over this summary wherever the two disagree. [research/](research/) holds the format notes
 verified against SimHub 9.12.6, which are the place to check before guessing at a property name.

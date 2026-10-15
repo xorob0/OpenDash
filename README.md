@@ -21,9 +21,9 @@ None of it has to be configured in order to work, since every package carries a 
 itself, and the plugin is what makes that layout yours.
 
 The screen it draws on is whichever one SimHub already drives: an HDMI DDU, a Vocore or a
-USBD480 USB screen, a phone or a tablet on the network. The telemetry is SimHub's as well, so
-other sims will very probably work, although iRacing is the one OpenDash is tested against and
-therefore the only one it claims.
+USBD480 USB screen, a phone or a tablet on the network. The telemetry is SimHub's as well, and
+OpenDash supports two sims: iRacing and Assetto Corsa. [Which sims](#which-sims) below says what that
+means and what the others can expect.
 
 The plugin is published on the [releases page](https://github.com/xorob0/OpenDash/releases) with
 every package inside it, and [Install](#install) below says how to put it into SimHub.
@@ -67,6 +67,22 @@ that are plugin settings.
 > SimHub 9.12.6. See [docs/scope.md](docs/scope.md) for what OpenDash is and what it refuses to
 > be, [docs/second-screens.md](docs/second-screens.md) for the companion and the pit wall, and
 > [docs/flag-box.md](docs/flag-box.md) for the 8x8 LED matrix.
+
+## Which sims
+
+**Supported: iRacing and Assetto Corsa.** A sim is supported once somebody has driven it with the
+packages and every page, card, module and lamp has been checked against what that sim publishes.
+Where Assetto Corsa publishes nothing for a reading, such as the sim's time of day or the engine
+warnings, the reading hides, reads `--` or says it is not published rather than drawing a zero, and
+the table below names the few that do not do so yet. The other cars come from SimHub's own Assetto
+Corsa app, so without it every list of cars holds only you.
+
+**May work, untested and not supported: Assetto Corsa Competizione and Le Mans Ultimate.** SimHub
+reads both and the plugin already knows what differs about them, but nobody has driven them with
+OpenDash yet. Any other sim SimHub reads is in the same position.
+
+[docs/sim-support.md](docs/sim-support.md) is the whole table: a row for each thing OpenDash draws and
+a column for each of the four sims, marked works, partly, absent, wrong or untested.
 
 ## Install
 
@@ -178,7 +194,8 @@ and four data zones whose contents are plugin settings. A portrait version cover
 side.
 
 Three modules ship off because iRacing publishes none of their data, and they say so rather than
-drawing zeros. [docs/second-screens.md](docs/second-screens.md) lists every such case and why.
+drawing zeros; on Assetto Corsa the damage module has data and draws the car.
+[docs/second-screens.md](docs/second-screens.md) lists every such case and why.
 
 ## Why it is generated from source
 
