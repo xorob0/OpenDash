@@ -37,13 +37,13 @@ export default function Home() {
         <div className={`page ${styles.heroGrid}`}>
           <div className={styles.heroText}>
             <p className="label">
-              iRacing · SimHub {SIMHUB_VERSION}+ · Windows ·{' '}
+              iRacing · Assetto Corsa · SimHub {SIMHUB_VERSION}+ · Windows ·{' '}
               <span className={styles.state}>
                 {releaseWord(VERSION)} {VERSION}
               </span>
             </p>
             <h1 className="display">{FREE_HEADLINE}</h1>
-            <p className={`prose ${styles.lede}`}>OpenDash is a free set of dashboards for SimHub on Windows, built for iRacing first.</p>
+            <p className={`prose ${styles.lede}`}>OpenDash is a free set of dashboards for SimHub on Windows, for iRacing and Assetto Corsa.</p>
             <p className="prose">
               <strong>{FREE_FOREVER}</strong> {THEMES_FREE} {NOTHING_TO_UNLOCK}
             </p>
@@ -153,7 +153,12 @@ export default function Home() {
       <Section id="status" title={`${releaseWord(VERSION)}: what is missing`}>
         <ul className={`rows ${styles.status}`}>
           <li>Every release so far is a candidate.</li>
-          <li>{CLAIMED_SIM}</li>
+          <li>
+            {CLAIMED_SIM}{' '}
+            <Link href="/pages#sims" className="link">
+              Which sim shows what
+            </Link>
+          </li>
           <li>
             Night mode is for the lights only. Screens are coming (
             {NIGHT.map((n, i) => (

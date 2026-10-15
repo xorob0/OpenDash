@@ -130,7 +130,7 @@ export default function Install() {
             Ultimate it draws without one.
           </li>
           <li>
-            <strong>A value reads <code>--</code>.</strong> iRacing has not published it yet, or never does.
+            <strong>A value reads <code>--</code>.</strong> Your sim has not published it yet, or never does.
           </li>
           <li>
             <strong>The shift lights look generic.</strong> Press Download under Car Data on the LEDs page.

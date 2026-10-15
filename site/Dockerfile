@@ -88,6 +88,9 @@ COPY scripts ./scripts
 # site/tsconfig.json excludes scripts/ but not test/, so `next build` type-checks that chain and
 # fails on a JSON module this stage does not have, which is how it broke the first real deploy.
 COPY data ./data
+# The one document the site renders besides the changelog: the Pages page draws the table of which
+# sim shows what from it, through scripts/simSupport.ts (#102). The rest of docs/ stays out.
+COPY docs/sim-support.md ./docs/
 COPY VERSION CHANGELOG.md package.json bun.lock bunfig.toml ./
 # content.ts imports the module catalogue from packages/dash/src/contract.ts, which resolves
 # `@opendash/generator` through the root workspace, so the root has to be installed here as well as

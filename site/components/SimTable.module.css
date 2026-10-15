@@ -1,0 +1,154 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.title {
+  color: var(--color-text-secondary);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reading {
+  text-align: left;
+  vertical-align: top;
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.sim {
+  text-align: left;
+  vertical-align: bottom;
+  padding: var(--space-3);
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.row {
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.cell {
+  vertical-align: top;
+  padding: var(--space-3);
+}
+
+.mark {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The comparison's 6 px square, in the colour of what the mark means. */
+.square {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-dim);
+}
+
+.works {
+  background: var(--color-good-primary);
+}
+
+.partly {
+  background: var(--color-text-secondary);
+}
+
+.wrong {
+  background: var(--color-caution-primary);
+}
+
+.absent,
+.untested {
+  background: var(--color-text-dim);
+}
+
+.word {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.text {
+  color: var(--color-text-secondary);
+  font-size: var(--size-small);
+}
+
+/* On a phone each section becomes a stack: a row's cells one under the other, each labelled with its sim. */
+@media (max-width: 61.99rem) {
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .table,
+  .table tbody,
+  .row {
+    display: block;
+  }
+
+  .row {
+    padding-block: var(--space-3);
+  }
+
+  .reading {
+    display: block;
+    padding: 0 0 var(--space-2);
+  }
+
+  .cell {
+    display: block;
+    padding: var(--space-2) 0 var(--space-2) var(--space-4);
+    border-inline-start: 1px solid var(--color-surface-raised);
+  }
+
+  .cell::before {
+    content: attr(data-sim);
+    display: block;
+    font-size: var(--size-label);
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-1);
+  }
+}
+
+@media (min-width: 62rem) {
+  .reading {
+    width: 12rem;
+  }
+
+  .sim,
+  .cell {
+    width: calc((100% - 12rem) / 4);
+  }
+}
