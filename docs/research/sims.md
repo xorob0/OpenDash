@@ -417,8 +417,9 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
   position; no class, number, team, iRating or compound. Without it: one row, the player, named `Me`.
 - **Clock and weather.** Air and road temperatures are filled. `WindVel` and `SessionTimeOfDay` are absent:
   the wind field hides and the sim clock reads `--` (#1123); before, they drew `0 km/h` and `00:00`.
-- **Telltales.** `EngineWarnings` is absent, so the engine lamp stays dark. The limiter lamp reads
-  `GameData.PitLimiterOn`, which on AC is the pit lane.
+- **Telltales.** `EngineWarnings` is absent, so the engine lamp stays dark. The limiter lamp, like every
+  limiter reading, reads the plugin's `OpenDash.PitLimiterOn`, which on AC is the raw `Physics.PitLimiterOn`
+  (#1122). Without the plugin it falls back to `GameData.PitLimiterOn`, which on AC is the pit lane.
 - **LED effects.** `TCActive` and `ABSActive` come from AC's UDP interface (`isTcInAction`,
   `isAbsInAction`), so they light only once SimHub's UDP client is connected to the game. The turn
   indicators are `[NotAvailable]`. `ERSPercent` is the KERS or ERS charge over its maximum.
