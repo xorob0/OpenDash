@@ -7,9 +7,11 @@
  * text on the strip whose width is known at build time and is therefore what gives way when the
  * two sides meet: the portrait header once drew "OFFLINE TESTING" over "PIT WALL · PORTRAIT".
  *
- * The track state is one of them, which SimHub publishes as `TrackGripStatus` and which band D and
- * the track module bind as well. The compact portrait header drops it along with the wind and the
- * sim clock, which is room the 1080 px strip does not have.
+ * The track state is one of them, iRacing's raw `TrackWetness` in five words, which band D and the
+ * track module draw as well. SimHub publishes no `TrackGripStatus` for any game, which is what this
+ * read until #1128. The track state and the wind are hidden where the sim reports neither, which is
+ * every sim but iRacing, and the sim clock reads `--` there (#1123). The compact portrait header drops
+ * all three, which is room the 1080 px strip does not have.
  *
  * **There is no flag group and there should not be one.** The strip carried a colour block and a
  * word for a while, built from the six normalised `Flag_*` properties, and it was reported from a
@@ -40,10 +42,13 @@ import {
   SESSION_NAME_WIDEST,
   currentLap,
   hasLapTotal,
+  hasTrackState,
+  hasWind,
   incidentLimit,
   incidents,
   localClock,
   meridiemWidest,
+  NO_VALUE,
   sessionClock,
   sessionType,
   simClock,
@@ -89,6 +94,8 @@ interface RunSpec {
   sample: string;
   widest: string;
   bind: Expr;
+  /** While the run is drawn at all: a reading the sim may not publish. It keeps its room either way. */
+  visibleBind?: Expr;
 }
 
 /**
@@ -109,7 +116,7 @@ function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { 
       const box = textBox(top, fs);
       const items: Item[] = [];
       if (spec.label !== undefined) {
-        items.push(label(`${name}.0`, spec.label, x, canvasYForBaseline(canvasBaseline(top, fs), labelSize), labelWidth, { size: labelSize }));
+        items.push(label(`${name}.0`, spec.label, x, canvasYForBaseline(canvasBaseline(top, fs), labelSize), labelWidth, { size: labelSize, visibleBind: spec.visibleBind }));
       }
       items.push(withMoreBindings({
         kind: 'text',
@@ -124,7 +131,7 @@ function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { 
         hAlign: 'left',
         vAlign: 'top',
         backgroundColor: TRANSPARENT,
-      }, { Text: spec.bind }));
+      }, { Text: spec.bind, Visible: spec.visibleBind }));
       return items;
     },
   };
@@ -245,11 +252,11 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
     },
     {
       id: 'track',
-      run: { label: 'Track', sample: 'Dry', widest: GRIP_WIDEST, bind: trackGrip() },
+      run: { label: 'Track', sample: 'Dry', widest: GRIP_WIDEST, bind: trackGrip(), visibleBind: hasTrackState() },
     },
     {
       id: 'wind',
-      run: { sample: '12 km/h', widest: WIDEST_WIND, bind: concat(fmt(windKmh(), '0'), str(' km/h')) },
+      run: { sample: '12 km/h', widest: WIDEST_WIND, bind: iff(hasWind(), concat(fmt(windKmh(), '0'), str(' km/h')), str(NO_VALUE)), visibleBind: hasWind() },
     },
     // Two groups and not one, each label in front of its own value.
     //

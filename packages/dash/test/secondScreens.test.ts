@@ -35,7 +35,7 @@ import { COMPANION_SIZES, SCREEN_PACKAGES, buildScreenPackage, companionGeometry
 import { ZONE_REFERENCE, pagesOf, type ZoneKind } from '../src/screens/zones.ts';
 import { ZONE_FACES, layoutWithoutRevBar, zonesOf } from '../src/zones/index.ts';
 import { densityForBox, densityOf, grownAtMost } from '../src/second/density.ts';
-import { CHARS, CORNERS, classAndPlace, player, type Corner } from '../src/second/values.ts';
+import { CHARS, CORNERS, classAndPlace, hasTrackState, player, trackGrip, type Corner } from '../src/second/values.ts';
 import { DENOMINATOR_GAP, UNIT_GAP, field, type FieldSpec, type Follower } from '../src/second/field.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { UNIT_GAP as WHEEL_UNIT_GAP } from '../src/second/wheel.ts';
@@ -1554,10 +1554,12 @@ describe('the track module has a titled and a titleless form', () => {
 
   test('puts the surface state at the right of that header, measured for its longest reading', () => {
     const [title, state] = build() as [TextItem, TextItem];
-    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'Moderate', text: 'Dry' });
-    expect(state.bindings?.Text?.formula).toContain('TrackGripStatus');
+    expect({ hAlign: state.hAlign, widest: state.widest, text: state.text }).toEqual({ hAlign: 'right', widest: 'Very wet', text: 'Dry' });
+    expect(state.bindings?.Text?.formula).toBe(trackGrip());
+    // Hidden where the sim reports no track state, rather than `--` beside the name (#1128).
+    expect(state.bindings?.Visible?.formula).toBe(hasTrackState());
     // The name gives up the state's width rather than the two sharing the line: WPF clips, it does
-    // not reflow, so a long track name would otherwise be drawn straight through "MODERATE".
+    // not reflow, so a long track name would otherwise be drawn straight through "VERY WET".
     expect(state.rect.left + state.rect.width).toBe(frame.left + frame.width);
     expect(title.rect.left + title.rect.width).toBeLessThanOrEqual(state.rect.left);
   });

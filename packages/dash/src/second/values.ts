@@ -2369,10 +2369,54 @@ export const IRACING_TRACK_NAME = 'DataCorePlugin.GameRawData.SessionData.Weeken
  */
 export const trackName = (): Expr => isnull(prop(AC_TRACK_NAME), isnull(prop(IRACING_TRACK_NAME), isnull(game('TrackName'), str(''))));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
-/** The widest word the grip status takes, which is what a field measures its box against. */
-export const GRIP_WIDEST = 'Moderate';
-/** The track's grip, in the words the sim writes it in; `--` where the sim reports none. */
-export const trackGrip = (): Expr => isnull(game('TrackGripStatus'), str(NO_VALUE));
+/**
+ * How wet the track is, as iRacing's raw `TrackWetness` writes it: `irsdk_TrackWetness`, 1 for dry up
+ * to 7 for extremely wet, and 0 while iRacing does not know. SimHub passes it through as the plain
+ * int (`Telemetry.ConvertToSpecificType` in its iRacingSDK leaves it alone), and it is null on every
+ * other sim, which has no reading of this kind under this name.
+ */
+export const trackWetness = (): Expr => raw('TrackWetness');
+
+/**
+ * Whether the sim reports a track state at all: iRacing's wetness is there and known.
+ *
+ * Asked of the reading itself, as ADR 0021 has an absent raw property answer for itself. Assetto Corsa,
+ * ACC and Le Mans Ultimate each publish a grip of their own, in a scale of their own (a number, a word
+ * and a level, docs/research/sims.md), which nothing has seen on a drive yet, so the field hides there
+ * rather than drawing a word nobody checked (#1128).
+ */
+export const hasTrackState = (): Expr => gt(isnull(trackWetness(), num(0)), num(0));
+
+/**
+ * The words the track state is drawn in, driest first, and the wetness each starts at.
+ *
+ * iRacing's seven steps are folded onto five, because its own names ("Very Lightly Wet", "Moderately
+ * Wet") are wider than any box the state is drawn in: mostly dry and very lightly wet are both a damp
+ * track, lightly and moderately wet both a wet one.
+ */
+export const TRACK_STATES = [
+  { word: 'Dry', from: 1 },
+  { word: 'Damp', from: 2 },
+  { word: 'Wet', from: 4 },
+  { word: 'Very wet', from: 6 },
+  { word: 'Flooded', from: 7 },
+] as const;
+
+/** The widest of {@link TRACK_STATES} in every face it is drawn in, which a field measures its box against. */
+export const GRIP_WIDEST = 'Very wet';
+
+/**
+ * The track state, as one of {@link TRACK_STATES}, and `--` where the sim reports none.
+ *
+ * It read `GameData.TrackGripStatus` until #1128, which SimHub 9.12.6 does not have for any game, so
+ * every field drawing it read `--` on every sim, iRacing included. A field drawing it hides on
+ * {@link hasTrackState} rather than draw the `--`.
+ */
+export const trackGrip = (): Expr => {
+  const wetness = isnull(trackWetness(), num(0));
+  // Built from the driest outwards, so that the wettest word's test is the first a rig evaluates.
+  return TRACK_STATES.reduce<Expr>((drier, state) => iff(ge(wetness, num(state.from)), str(state.word), drier), str(NO_VALUE));
+};
 /**
  * Whether SimHub holds the outline its map item draws, for the track the car is on. #555.
  *
@@ -2512,12 +2556,23 @@ export const gameRunning = (): Expr => gt(isnull(prop('DataCorePlugin.GameRunnin
 export const inSession = (): Expr => and(gameRunning(), ne(sessionType(), str('')));
 export const carModel = (): Expr => isnull(game('CarModel'), str(''));
 
-/** Wind speed in km/h, from the raw metres per second iRacing publishes. */
-export const windKmh = (): Expr => mul(isnull(raw('WindVel'), num(0)), num(3.6));
-/** Wind direction in degrees, from radians. */
-export const windDegrees = (): Expr => mul(isnull(raw('WindDir'), num(0)), num(180 / Math.PI));
-/** The sim's own clock, as seconds of day. */
-export const simTimeOfDay = (): Expr => isnull(raw('SessionTimeOfDay'), num(0));
+/**
+ * `value` of `reading` while the sim publishes `reading`, and otherwise `reading` itself, which is
+ * null: a reading the sim does not have stays null through a conversion rather than becoming 0, and
+ * the arithmetic never meets a null, which NCalc would throw on rather than pass on.
+ */
+const orNull = (reading: Expr, value: Expr): Expr => iff(isNull(reading), reading, value);
+
+/** Whether the sim publishes a wind: iRacing's raw `WindVel`, which Assetto Corsa, ACC and LMU do not (#1123). */
+export const hasWind = (): Expr => not(isNull(raw('WindVel')));
+/** Wind speed in km/h, from the raw metres per second iRacing publishes; null where the sim has none. */
+export const windKmh = (): Expr => orNull(raw('WindVel'), mul(raw('WindVel'), num(3.6)));
+/** Wind direction in degrees, from radians; null where the sim has none. */
+export const windDegrees = (): Expr => orNull(raw('WindDir'), mul(raw('WindDir'), num(180 / Math.PI)));
+/** Whether the sim publishes a clock of its own: iRacing's raw `SessionTimeOfDay` (#1123). */
+export const hasSimClock = (): Expr => not(isNull(raw('SessionTimeOfDay')));
+/** The sim's own clock, as seconds of day; null where the sim has none. */
+export const simTimeOfDay = (): Expr => raw('SessionTimeOfDay');
 
 /** Whether the rig writes its clocks to twelve hours, which is `ClockFormat`. #324. */
 export const twelveHour = (): Expr => setting.clockFormatIs('12h');
@@ -2542,7 +2597,8 @@ export const meridiemWidest = (face: MeasuredFace): string =>
  * `text` is `14:32` on a twenty-four-hour clock and `2:32` on a twelve-hour one -- `HH:mm` against
  * `h:mm`, the twelve-hour hour carrying no leading zero because that is how it is read -- and either
  * fits {@link CHARS.timeOfDay}. `meridiem` is `AM` or `PM` whatever the setting, and a surface draws
- * it only while {@link twelveHour} holds: a word beside the value rather than part of it, because
+ * it only while `meridiemShown` holds, which is {@link twelveHour} and, for a clock that can be
+ * missing, the clock being there: a word beside the value rather than part of it, because
  * `M` is one of the glyphs rule 19 keeps out of a cell. `drawn` is where a word after the digits
  * goes, since a twelve-hour hour is one digit or two and `9:05` placed as if it were `12:05` would
  * stand its `PM` a cell off the figure -- the fault #387 removed from every other follower.
@@ -2550,6 +2606,7 @@ export const meridiemWidest = (face: MeasuredFace): string =>
 export interface TimeOfDay {
   text: Expr;
   meridiem: Expr;
+  meridiemShown: Expr;
   drawn: DrawnFigure;
 }
 
@@ -2575,6 +2632,7 @@ export const localClock = (): TimeOfDay => {
   return {
     text: iff(twelveHour(), fmt(now, 'h:mm'), fmt(now, 'HH:mm')),
     meridiem: iff(isIn(fmt(now, 'HH'), ...writtenHours(12, 23)), str('PM'), str('AM')),
+    meridiemShown: twelveHour(),
     drawn: timeOfDayDrawn(isIn(fmt(now, 'hh'), ...writtenHours(10, 12))),
   };
 };
@@ -2585,16 +2643,24 @@ export const localClock = (): TimeOfDay => {
  * Arithmetic rather than a format, the time of day being a number of seconds: the hour is taken
  * modulo 24, so a session clock that reaches midnight reads `00:00` rather than `24:00`, and the
  * twelve-hour hour is that hour moved onto 1 to 12, midnight and noon both reading 12.
+ *
+ * Where the sim has no clock of its own the digits read `--` and the meridiem nothing, rather than
+ * `00:00` and `AM` worked out from a 0 standing in for the reading (#1123): Assetto Corsa, ACC and
+ * Le Mans Ultimate publish no `SessionTimeOfDay`. The meridiem is not shown there either, so a slot
+ * that keeps its room for one, as the bar's and band D's corner do, closes it and `--` stands against
+ * the edge. The pit wall header keeps the room, its groups being laid out by the setting alone.
  */
 export const simClock = (): TimeOfDay => {
   const seconds = simTimeOfDay();
   const hour = mod(truncate(div(seconds, num(3600))), num(24));
   const hour12 = add(mod(add(hour, num(11)), num(12)), num(1));
   const minutes = fmt(truncate(div(mod(seconds, num(3600)), num(60))), '00');
+  const known = hasSimClock();
   return {
-    text: iff(twelveHour(), concat(fmt(hour12, '0'), str(':'), minutes), concat(fmt(hour, '00'), str(':'), minutes)),
-    meridiem: iff(ge(hour, num(12)), str('PM'), str('AM')),
-    drawn: timeOfDayDrawn(ge(hour12, num(10))),
+    text: iff(known, iff(twelveHour(), concat(fmt(hour12, '0'), str(':'), minutes), concat(fmt(hour, '00'), str(':'), minutes)), str(NO_VALUE)),
+    meridiem: iff(known, iff(ge(hour, num(12)), str('PM'), str('AM')), str('')),
+    meridiemShown: and(twelveHour(), known),
+    drawn: drawnEither(known, timeOfDayDrawn(ge(hour12, num(10))), drawnText(NO_VALUE)),
   };
 };
 

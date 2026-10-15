@@ -333,8 +333,9 @@ section). What a null does to the reading:
 | `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service | a stop nobody set | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |
 | `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | a level `+0.00` | #575 |
-| `Telemetry.WindVel` | the wind on band D and the pit wall header | **`0 km/h`, drawn as a value** | none, reported with this page |
-| `Telemetry.SessionTimeOfDay` | the sim clock on the bar and band D | **`00:00`, drawn as a value** | none, reported with this page |
+| `Telemetry.WindVel` | the wind on band D and the pit wall header | hidden | #1123 |
+| `Telemetry.SessionTimeOfDay` | the sim clock on the bar, band D and the pit wall header | `--` | #1123 |
+| `Telemetry.TrackWetness` | the track state on band D, the track module, the pit wall header and the Porsche strip | hidden | #1128 |
 | `Telemetry.SessionTimeTotal` | the untimed-session mark | rests on `SessionTimeLeft` alone | none needed |
 | `Telemetry.EngineWarnings` | the engine telltale, the AiM and Porsche engine warnings, the oil pressure LED | dark | none needed |
 | `Telemetry.FuelPress`, `ManifoldPress`, `Voltage` | the engine readings page | `--` | none needed |
@@ -344,8 +345,10 @@ section). What a null does to the reading:
 | `Telemetry.dcTractionControl2`, `dcThrottleShape`, `dcFuelMixture`, `dcAntiRollFront`, `dcAntiRollRear` | the car settings fields and their change notifications | hidden | none needed |
 | `Telemetry.dcHeadlightFlash` | the flash alert, the Porsche strip | never fires | none needed |
 
-`DataCorePlugin.GameData.TrackGripStatus` belongs here too although it is spelled as a `GameData`
-member: no reader publishes it, iRacing's included, because `StatusDataBase` has no such member.
+The track state read `DataCorePlugin.GameData.TrackGripStatus` until #1128, which no reader publishes,
+iRacing's included, because `StatusDataBase` has no such member; it read `--` everywhere. It reads
+iRacing's raw `TrackWetness` now, an `irsdk_TrackWetness` SimHub passes through as a plain int (0 not
+yet known, 1 dry to 7 extremely wet), folded onto five words: Dry, Damp, Wet, Very wet and Flooded.
 
 The Porsche's low-fuel alarm read `Telemetry.FuelLevel` when this page was written, so it never lit on
 the other three. It reads `GameData.Fuel` now, turned back into litres on a gallons profile, which on
@@ -373,7 +376,7 @@ reference.
 | Wind | `Telemetry.WindVel`, `WindDir` | none | `Graphics.WindSpeed`, `Graphics.WindDirection` | `scoringInfo.mWind.x`, `.y`, `.z` |
 | Time of day | `Telemetry.SessionTimeOfDay` | none | `Graphics.clock` | `scoringInfo.mTimeOfDay` |
 | Session length | `Telemetry.SessionTimeTotal` | none | none | `scoringInfo.mEndET` |
-| Track grip | none | `Graphics.surfaceGrip` | `Graphics.trackGripStatus`, `rainIntensity`, `rainIntensityIn10min`, `In30min` | `scoringInfo.mTrackGripLevel`, `mAvgPathWetness`, `mRaining` |
+| Track grip | `Telemetry.TrackWetness` | `Graphics.surfaceGrip` | `Graphics.trackGripStatus`, `rainIntensity`, `rainIntensityIn10min`, `In30min` | `scoringInfo.mTrackGripLevel`, `mAvgPathWetness`, `mRaining` |
 | Engine warnings | `Telemetry.EngineWarnings` | none | none | `PlayerNativeTelemetry.mOverheating` |
 | Virtual energy | `Telemetry.VirtualEnergy*` (null on iRacing too) | none | none | `PlayerNativeTelemetry.mVirtualEnergy`, `mSoC`, `mBatteryChargeFraction`, `mRegen` |
 | Car settings | `Telemetry.dcTractionControl2`, `dcThrottleShape`, `dcFuelMixture`, `dcAntiRoll*` | none (`Extensions.TCPresetCount`, `ABSPresetCount`) | `Graphics.TCCut`, `Graphics.EngineMap` | `PlayerNativeTelemetry.mTCCut`, `mTCSlip`, `mMotorMap`, `mFrontAntiSway`, `mRearAntiSway`, each with a `Max` |
@@ -396,8 +399,8 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
   empty. Every comparison of the name goes through `sessionIs()`, which compares it in capitals, and
   `ncalcCoverage.test.ts` refuses one that does not, so the Porsche strip reads `RACE` and `QUAL` (#1125). `untimedMark` reads `SessionTimeTotal`, which AC does not have, so it rests on `SessionTimeLeft`.
 - **Spotter.** Fires from car coordinates within 10 m beside the car, only with SimHub's AC app running.
-- **Grip.** `TrackGripStatus` is not published by SimHub for any game; the band and the pit wall header
-  draw `--` everywhere, iRacing included.
+- **Grip.** The track state reads iRacing's raw `TrackWetness` (#1128), which AC does not have, so every
+  field that draws it hides. AC's own reading is raw `Graphics.surfaceGrip`, a number, not yet drawn.
 - **Fuel.** `Physics.Fuel` in litres and the same calculator as every game.
 - **Tyres.** Live pressure in psi, core temperature, wear on SimHub's remaining-tread scale (100 new)
   after mapping AC's 93.75..100. `fronttyrecompound` is null for every AC car, so the field reads `--`;
@@ -411,8 +414,8 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
 - **DRS and P2P.** `DRSAvailable` is AC's own; `PushToPassActive` is null, so the chip stays dark.
 - **Opponents.** With SimHub's app: name, car, position, best, last and current lap, pit state and world
   position; no class, number, team, iRating or compound. Without it: one row, the player, named `Me`.
-- **Clock and weather.** Air and road temperatures are filled. `WindVel` and `SessionTimeOfDay` are absent,
-  and the wind field and the sim clock draw `0 km/h` and `00:00` rather than hiding.
+- **Clock and weather.** Air and road temperatures are filled. `WindVel` and `SessionTimeOfDay` are absent:
+  the wind field hides and the sim clock reads `--` (#1123); before, they drew `0 km/h` and `00:00`.
 - **Telltales.** `EngineWarnings` is absent, so the engine lamp stays dark. The limiter lamp reads
   `GameData.PitLimiterOn`, which on AC is the pit lane.
 - **LED effects.** `TCActive` and `ABSActive` come from AC's UDP interface (`isTcInAction`,
@@ -439,7 +442,7 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 | Damage | no | `CarDamage1..5` | `CarDamage1..5` | no |
 | Opponents beyond the player | yes | only with SimHub's AC app | only with broadcasting | yes |
 | Track name for people | raw `SessionData.WeekendInfo.TrackDisplayShortName`; `TrackName` is iRacing's code, `spa gp` | raw `Track.TrackInfo.name` | `TrackName` | `TrackName` |
-| Track grip | no | a number | a word | a level |
+| Track grip | `TrackWetness`, seven levels | a number | a word | a level |
 | Wind and time of day | yes | no | yes | yes |
 | Pit lane speed limit | yes | no | a constant 60 km/h | no |
 | Virtual energy | no | no | no | yes |

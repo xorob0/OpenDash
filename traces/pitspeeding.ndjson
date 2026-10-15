@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79448,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName"]}
+{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79448,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -71,7 +71,6 @@
 {"p":"DataCorePlugin.GameData.TemperatureUnit","v":"Celcius"}
 {"p":"DataCorePlugin.GameData.Throttle","v":0}
 {"p":"DataCorePlugin.GameData.TotalLaps","v":30}
-{"p":"DataCorePlugin.GameData.TrackGripStatus","v":null}
 {"p":"DataCorePlugin.GameData.TrackLength","v":7000}
 {"p":"DataCorePlugin.GameData.TrackName","v":"spa gp"}
 {"p":"DataCorePlugin.GameData.TrackPositionPercent","v":0.003}
@@ -129,6 +128,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.SessionTimeOfDay","v":[51724.1328,51724.2344,51724.332,51724.4336,51724.5352,51724.6328,51724.7344,51724.832,51724.9336,51725.0352,51725.1328,51725.2344,51725.332,51725.4336,51725.5352,51725.6328,51725.7344,51725.832,51725.9336,51726.0352,51726.1328,51726.2344,51726.332,51726.4336,51726.6328,51726.7344,51726.832,51726.9336,51727.0352,51727.1328,51727.2344,51727.332,51727.4336,51727.5352,51727.6328,51727.7344,51727.832,51727.9336,51728.0352,51728.1328,51728.2344,51728.332,51728.4336,51728.5352,51728.6328,51728.7344,51728.832,51728.9336,51729.0352,51729.1328,51729.2344,51729.332,51729.4336,51729.5352,51729.6328,51729.7344,51729.832,51729.9336,51730.1016,51730.2344,51730.332,51730.5352,51730.6328,51730.7344,51730.832,51730.9336,51731.0352,51731.1328,51731.2344,51731.332,51731.4336,51731.5352,51731.6328,51731.7344,51731.832,51731.9336,51732.0352,51732.1328,51732.2344,51732.332,51732.4336,51732.5352,51732.6328,51732.7344,51732.832,51732.9336,51733.0352,51733.1328,51733.2344,51733.332,51733.4336,51733.5352,51733.6328,51733.7344,51733.832,51733.9336,51734.0352,51734.1328,51734.2344,51734.332,51734.4336,51734.5352,51734.6328,51734.7344,51734.832,51734.9336,51735.0352,51735.1328,51735.2344,51735.332,51735.4336,51735.5352,51735.6328,51735.7344,51735.832,51735.9336,51736.0352,51736.1328,51736.2344,51736.332,51736.4336,51736.5352,51736.6328,51736.7344,51736.832,51736.9336,51737.0352,51737.2344,51737.332,51737.4336,51737.5352,51737.6328,51737.7344,51737.832,51737.9336,51738.0352,51738.1328,51738.2344,51738.332,51738.4336,51738.5352,51738.6328,51738.7344,51738.832,51738.9336,51739.0352,51739.1328,51739.2344,51739.332,51739.4336,51739.5352,51739.6328,51739.7344,51739.832,51739.9336,51740.0352,51740.1328,51740.2344,51740.332,51740.4336,51740.5352,51740.6328,51740.7344,51740.832,51740.9336,51741.0352,51741.1328,51741.2344,51741.332,51741.4336,51741.5352,51741.6328,51741.7344,51741.832,51741.9336,51742.0352,51742.1328,51742.2344,51742.332,51742.4336,51742.5352,51742.6328,51742.7344,51742.832,51742.9336,51743.0352,51743.1328,51743.2344,51743.332,51743.4336,51743.5352,51743.6328,51743.7344,51743.832,51743.9336,51744.0352,51744.1328,51744.2344,51744.4336,51744.5352]}
 {"p":"DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal","v":2700}
 {"p":"DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle","v":0}
+{"p":"DataCorePlugin.GameRawData.Telemetry.TrackWetness","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergy","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergyLaps","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergyPerLap","v":null}

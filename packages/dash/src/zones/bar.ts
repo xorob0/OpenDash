@@ -47,7 +47,6 @@ import {
   sessionClock,
   simClock,
   totalLaps,
-  twelveHour,
   untimedMark,
   roadTemperature,
   type TimeOfDay,
@@ -145,7 +144,7 @@ const timeOfDayField = (id: string, label: string, sample: string, clock: TimeOf
   bind: clock.text,
   chars: CHARS.timeOfDay,
   drawn: clock.drawn,
-  suffix: { sample: 'PM', bind: clock.meridiem, widest: meridiemWidest(FOLLOWER_FACE), when: twelveHour() },
+  suffix: { sample: 'PM', bind: clock.meridiem, widest: meridiemWidest(FOLLOWER_FACE), when: clock.meridiemShown },
 });
 
 /** The ten fields an end of the bar can show. Ordered as the plugin lists them. */

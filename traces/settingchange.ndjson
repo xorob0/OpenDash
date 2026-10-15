@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79944,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName"]}
+{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79944,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -71,7 +71,6 @@
 {"p":"DataCorePlugin.GameData.TemperatureUnit","v":"Celcius"}
 {"p":"DataCorePlugin.GameData.Throttle","v":100}
 {"p":"DataCorePlugin.GameData.TotalLaps","v":30}
-{"p":"DataCorePlugin.GameData.TrackGripStatus","v":null}
 {"p":"DataCorePlugin.GameData.TrackLength","v":7000}
 {"p":"DataCorePlugin.GameData.TrackName","v":"spa gp"}
 {"p":"DataCorePlugin.GameData.TrackPositionPercent","v":0.369}
@@ -129,6 +128,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.SessionTimeOfDay","v":[51732.3984,51732.5,51732.6016,51732.6992,51732.7852,51732.8984,51733,51733.1016,51733.1992,51733.3008,51733.3984,51733.5,51733.6016,51733.6992,51733.8008,51733.8984,51734,51734.1016,51734.1992,51734.3008,51734.3984,51734.5,51734.6016,51734.6992,51734.8008,51734.8984,51735,51735.1016,51735.1992,51735.3008,51735.3984,51735.5,51735.6016,51735.6992,51735.8008,51735.8984,51736,51736.1016,51736.1992,51736.3008,51736.3984,51736.5,51736.6016,51736.6992,51736.8008,51736.8984,51737,51737.1016,51737.1992,51737.3008,51737.3984,51737.5,51737.6016,51737.6992,51737.8008,51737.8984,51738,51738.1016,51738.1992,51738.3008,51738.3984,51738.5,51738.6016,51738.6992,51738.8008,51738.8984,51739,51739.1016,51739.1992,51739.3008,51739.3984,51739.5,51739.6016,51739.6836,51739.8008,51739.8984,51739.9844,51740.082,51740.1992,51740.3008,51740.3984,51740.5,51740.6016,51740.6992,51740.8008,51740.8984,51741,51741.1016,51741.1992,51741.3008,51741.3984,51741.5,51741.6016,51741.6484,51741.8164,51741.918,51742.0156,51742.1172,51742.2148,51742.3164,51742.418,51742.5156,51742.6172,51742.8008,51742.8984,51743,51743.1016,51743.1992,51743.3008,51743.3984,51743.5,51743.6016,51743.6992,51743.8008,51743.8984,51744,51744.1016,51744.1992,51744.3008,51744.3984,51744.5,51744.6016,51744.6992,51744.8008,51744.8984,51745,51745.1016,51745.1992,51745.3008,51745.3984,51745.5,51745.6016,51745.6992,51745.8008,51745.8984,51746,51746.1016,51746.1992,51746.3008,51746.3984,51746.5,51746.6016,51746.6992,51746.8008,51746.8984,51747,51747.1016,51747.1992,51747.3008,51747.3984,51747.5,51747.6016,51747.6992,51747.8008,51747.8984,51748,51748.1016,51748.1992,51748.3008,51748.3984,51748.5,51748.6016,51748.6992,51748.8008,51748.8984,51749,51749.1016,51749.1992,51749.3008,51749.3984,51749.5,51749.6016,51749.6992,51749.8008,51749.8984,51750,51750.1016,51750.1992,51750.3008,51750.3984,51750.5,51750.6016,51750.6992,51750.8008,51750.8984,51751,51751.1016,51751.1992,51751.3008,51751.3984,51751.5,51751.6016,51751.6484,51751.8008,51751.8984,51752,51752.1016,51752.1992,51752.3008,51752.3984]}
 {"p":"DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal","v":2700}
 {"p":"DataCorePlugin.GameRawData.Telemetry.SteeringWheelAngle","v":0}
+{"p":"DataCorePlugin.GameRawData.Telemetry.TrackWetness","v":1}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergy","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergyLaps","v":null}
 {"p":"DataCorePlugin.GameRawData.Telemetry.VirtualEnergyPerLap","v":null}

@@ -32,7 +32,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
-import { charsOfText, drawnAtMost, drawnFigure, drawnOr, drawnWithin, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
+import { charsOfText, drawnAtMost, drawnEither, drawnFigure, drawnOr, drawnText, drawnWithin, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
 import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
@@ -84,7 +84,10 @@ import {
   settledFuelTimeLeft,
   simClock,
   spotterCar,
-  twelveHour,
+  GRIP_WIDEST,
+  hasTrackState,
+  hasWind,
+  trackGrip,
   windKmh,
 } from '../second/values.ts';
 import { ds, TRANSPARENT } from '../tokens.ts';
@@ -360,8 +363,20 @@ const weather: readonly BandField[] = [
     chars: CHARS.pressure,
     after: '°',
   },
-  { id: 'wind', label: 'Wind', sample: '12', bind: fmt(windKmh(), '0'), drawn: drawnFigure({ value: windKmh(), digits: CHARS.temperature.digits }), chars: CHARS.temperature, after: 'km/h' },
-  { id: 'grip', label: 'Grip', sample: 'Green', bind: isnull(game('TrackGripStatus'), str('--')), chars: { digits: 7, specials: 0 }, widest: 'Moderate' },
+  // Removed rather than drawn as `0 km/h` where the sim publishes no wind, which is every sim but
+  // iRacing (#1123); the reading and its width still answer `--` should anything draw them then.
+  {
+    id: 'wind',
+    label: 'Wind',
+    sample: '12',
+    bind: iff(hasWind(), fmt(windKmh(), '0'), str(NO_VALUE)),
+    drawn: drawnEither(hasWind(), drawnFigure({ value: windKmh(), digits: CHARS.temperature.digits }), drawnText(NO_VALUE)),
+    chars: CHARS.temperature,
+    after: 'km/h',
+    present: hasWind(),
+  },
+  // The track state, removed where the sim reports none (#1128).
+  { id: 'grip', label: 'Grip', sample: 'Dry', bind: trackGrip(), chars: { digits: 7, specials: 0 }, widest: GRIP_WIDEST, present: hasTrackState() },
 ];
 
 /**
@@ -927,9 +942,10 @@ const leftCornerFields = (): BandField[] => [
     color: ds.color.caution.primary,
   },
   // Mixed case rather than upper: "Dry" is a word the driver reads at a glance and "DRY" is one he
-  // parses. It is a bound label and not a value for the reason rule 19 gives -- M and W overrun a
-  // cell cut for digits -- and "Moderate" is the widest state iRacing reports.
-  { id: 'trackState', label: 'Track', sample: 'Dry', bind: isnull(game('TrackGripStatus'), str('--')), chars: { digits: 5, specials: 0 }, widest: 'Moderate' },
+  // parses. It is a bound label and not a value for the reason rule 19 gives -- W overruns a cell
+  // cut for digits -- measured by the widest of the track states. It is the last field of the corner,
+  // so hiding it where the sim reports no state (#1128) moves nothing.
+  { id: 'trackState', label: 'Track', sample: 'Dry', bind: trackGrip(), chars: { digits: 5, specials: 0 }, widest: GRIP_WIDEST, present: hasTrackState() },
 ];
 
 /** The three lamps in the right corner. A lamp is a word, lit or dim; it never disappears. */
@@ -970,7 +986,7 @@ const cornerClocks = (): BandField[] =>
     after: 'PM',
     afterBind: clock.meridiem,
     afterWidest: meridiemWidest('BarlowMedium'),
-    afterWhen: twelveHour(),
+    afterWhen: clock.meridiemShown,
   }));
 
 /**
@@ -1017,7 +1033,10 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   let x = frame.left + m.padX + letterRoom(frame);
   for (const field of left) {
     const w = fieldWidth(field, valueFs, labelFs);
-    items.push(label(`${prefix}${field.id}.label`, field.label, x, labelTop, w, { size: labelFs }));
+    // A corner field is hidden where the game has nothing for it rather than closed over: the corner
+    // is not a rank, and only its last field has one.
+    items.push(label(`${prefix}${field.id}.label`, field.label, x, labelTop, w, { size: labelFs, visibleBind: field.present }));
+    if (field.present !== undefined && !field.widest) throw new Error(`${field.id}: a corner hides only a bound word`);
     items.push(
       field.widest
         ? label(`${prefix}${field.id}.value`, field.sample, x, valueTop, w, {
@@ -1025,6 +1044,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
             color: field.color ?? ds.color.text.primary,
             bind: field.bind,
             widest: field.widest,
+            visibleBind: field.present,
           })
         : numeral(`${prefix}${field.id}.value`, field.sample, x, valueTop, valueFs, field.chars, {
             bind: field.bind,

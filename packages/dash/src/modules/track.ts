@@ -26,7 +26,7 @@ import { label } from '../elements/label.ts';
 import type { StaticMapItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { placeholder } from '../second/placeholder.ts';
-import { GRIP_WIDEST, TRACK_MAP_REASON, trackGrip, trackLengthKm, trackMapRecorded, trackName } from '../second/values.ts';
+import { GRIP_WIDEST, hasTrackState, TRACK_MAP_REASON, trackGrip, trackLengthKm, trackMapRecorded, trackName } from '../second/values.ts';
 import { defineModule } from './module.ts';
 
 const { concat, fmt, not, str } = ncalc;
@@ -112,6 +112,8 @@ export const track = defineModule('track', (ctx) => {
       hAlign: 'right',
       bind: trackGrip(),
       widest: GRIP_WIDEST,
+      // Hidden where the sim reports no track state, rather than `--` beside the track's name (#1128).
+      visibleBind: hasTrackState(),
     }),
     ...drawing,
   ];
