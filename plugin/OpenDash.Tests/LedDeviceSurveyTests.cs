@@ -301,5 +301,28 @@ namespace OpenDashPlugin.Tests
             empty.IndividualLedCount = 0;
             Assert.False(LedDeviceSurvey.InstallsIntoIndividual(empty));
         }
+
+        /// <summary>#689: a driver that keeps its profiles per game family says so, and names the family whose
+        /// list the page draws, so a rig's log shows which builds turn the filter on without anyone asking.</summary>
+        [Fact]
+        public void The_line_names_the_game_family_a_driver_keeps_its_profiles_under()
+        {
+            var wheel = FanaBridgeWheel("Disabled");
+            wheel.Profiles = 3;
+            wheel.GameFamily = "Racing";
+
+            var line = LedDeviceSurvey.LogLine(wheel);
+
+            Assert.Contains("; 3 saved profiles; no built-in profiles; profiles kept per game family, Racing's list on the page; other drivers: individual LEDs;", line);
+        }
+
+        /// <summary>A driver that keeps one list, which is every lighting driver in the decompiled 9.12.6, says
+        /// nothing of families.</summary>
+        [Fact]
+        public void A_driver_with_one_list_says_nothing_of_game_families()
+        {
+            Assert.DoesNotContain("game family", LedDeviceSurvey.LogLine(Wheel()));
+            Assert.DoesNotContain("game family", LedDeviceSurvey.LogLine(FanaBridgeWheel("Exclusive")));
+        }
     }
 }
