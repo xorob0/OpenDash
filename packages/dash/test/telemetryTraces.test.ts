@@ -16,13 +16,16 @@ import { describe, expect, test } from 'bun:test';
 import type { ChartItem, Item, Rect, TextItem } from '../src/generator.ts';
 import { TELEMETRY_TRACES, telemetryPage } from '../src/screens/pitwall.ts';
 import { ds } from '../src/tokens.ts';
+import { walkItems } from '../src/walk.ts';
 import { evalNcalc } from './ncalcEval.ts';
 
 const PAGE = telemetryPage(1920, 1080);
+/** Every item of the page, layers flattened: the steering plot is a group that hides where the sim publishes no angle (#567). */
+const ITEMS: Item[] = [...walkItems(PAGE.items)];
 
 /** A named item of the page. Every item the telemetry column draws is boxed; a layer would not be. */
 const named = (name: string): Exclude<Item, { kind: 'layer' }> => {
-  const item = PAGE.items.find((i) => i.name === name);
+  const item = ITEMS.find((i) => i.name === name);
   if (!item || item.kind === 'layer') throw new Error(`no boxed item named ${name}`);
   return item;
 };
@@ -31,7 +34,7 @@ const boxOf = (name: string): Rect => named(name).rect;
 
 const textOf = (name: string): string => (named(name) as TextItem).text;
 
-const chartsOf = (id: string): ChartItem[] => PAGE.items.filter((i): i is ChartItem => i.kind === 'chart' && i.name.startsWith(`telemetry.${id}.`));
+const chartsOf = (id: string): ChartItem[] => ITEMS.filter((i): i is ChartItem => i.kind === 'chart' && i.name.startsWith(`telemetry.${id}.`));
 
 describe('the telemetry traces', () => {
   test('stacks the canvas five, in the canvas order', () => {
@@ -51,7 +54,7 @@ describe('the telemetry traces', () => {
     const gear = chartsOf('gear');
     expect(gear).toHaveLength(1);
     expect(gear[0]!.lineColor).toBe(ds.color.text.primary);
-    expect(PAGE.items.some((i) => i.name.startsWith('telemetry.gear.trace') && i.name.endsWith('.legend'))).toBe(false);
+    expect(ITEMS.some((i) => i.name.startsWith('telemetry.gear.trace') && i.name.endsWith('.legend'))).toBe(false);
     const top = (id: string): number => chartsOf(id)[0]!.rect.top;
     expect(top('rpm')).toBeLessThan(top('gear'));
     expect(top('gear')).toBeLessThan(top('pedals'));
@@ -88,7 +91,7 @@ describe('the telemetry traces', () => {
   });
 
   test('labels the pedals in the canvas order and keeps the legend inside the panel', () => {
-    const legend = PAGE.items.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('telemetry.pedals.') && i.name.endsWith('.legend'));
+    const legend = ITEMS.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('telemetry.pedals.') && i.name.endsWith('.legend'));
     expect(legend.map((i) => i.text)).toEqual(['Throttle', 'Brake', 'Clutch']);
     // The canvas puts the legend on the title row, beside the title. `trace` only draws it under
     // the plot, which is a `second/trace.ts` option this file does not own; what is pinned here is

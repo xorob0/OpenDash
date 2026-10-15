@@ -1632,7 +1632,8 @@ describe('the track module has a titled and a titleless form', () => {
 });
 
 describe('the inputs page', () => {
-  const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'inputs')!.build({ frame: rect(0, 0, w, h), density, prefix: 'inputs.' });
+  // Layers flattened: the dial is one group, hidden where the sim publishes no wheel angle (#567).
+  const build = (w: number, h: number, density: Density = 'zone'): Item[] => [...walkItems(MODULES.find((m) => m.id === 'inputs')!.build({ frame: rect(0, 0, w, h), density, prefix: 'inputs.' }))];
   const named = (items: Item[], name: string): Item => items.find((i) => i.name === name)!;
 
   test('gives each pedal its own reading, drawn at the density small size', () => {
@@ -1683,7 +1684,7 @@ describe('the inputs page', () => {
     const spokes = ['Left', 'Right', 'Down'];
     // A spoke tapers, and its taper is three bars: the middle and an edge either side.
     const turning = [...spokes.flatMap((s) => [`inputs.steer.spoke${s}`, `inputs.steer.spoke${s}.left`, `inputs.steer.spoke${s}.right`]), ...spokes.map((s) => `inputs.steer.slot${s}`)];
-    const wheel = [...turning, 'inputs.steer.rim', 'inputs.steer.boss', 'inputs.steer.hole', 'inputs.steer.mark', 'inputs.steer.label'];
+    const wheel = ['inputs.steer.dial', ...turning, 'inputs.steer.rim', 'inputs.steer.boss', 'inputs.steer.hole', 'inputs.steer.mark', 'inputs.steer.label'];
     expect(steerIn(build(600, 280))).toEqual(wheel);
     expect(steerIn(build(430, 300))).toHaveLength(wheel.length);
     expect(steerIn(build(274, 300))).toEqual([]);

@@ -66,6 +66,7 @@ import {
   FUEL_TO_END_UNIT_WIDEST,
   FUEL_TO_END_WIDEST,
   fuelUnit,
+  hasIncidents,
   incidents,
   LAP_TIME_WIDEST,
   lapTime,
@@ -935,6 +936,9 @@ const leftCornerFields = (): BandField[] => [
     label: 'Incidents',
     sample: '3x',
     bind: concat(fmt(isnull(incidents(), num(0)), '0'), str('x')),
+    // Hidden where the sim counts no incidents, every sim but iRacing, rather than drawn as a `0x`
+    // nobody awarded; the track state beside it keeps its place (#567).
+    present: hasIncidents(),
     // The count's three cells and one for the `x`, which is how the bar and the session page cut the
     // same reading: in the count's three alone, `100x` lost its `x` to the corner's edge. #596.
     chars: CHARS.incidents,
@@ -1034,9 +1038,8 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
   for (const field of left) {
     const w = fieldWidth(field, valueFs, labelFs);
     // A corner field is hidden where the game has nothing for it rather than closed over: the corner
-    // is not a rank, and only its last field has one.
+    // is not a rank, so the incident count leaves its place empty and the track state keeps its own.
     items.push(label(`${prefix}${field.id}.label`, field.label, x, labelTop, w, { size: labelFs, visibleBind: field.present }));
-    if (field.present !== undefined && !field.widest) throw new Error(`${field.id}: a corner hides only a bound word`);
     items.push(
       field.widest
         ? label(`${prefix}${field.id}.value`, field.sample, x, valueTop, w, {
@@ -1051,6 +1054,7 @@ export function bandCorners(frame: Rect, prefix: string): Item[] {
             widest: field.numeralWidest,
             color: field.color,
             maxWidth: w + 4,
+            visibleBind: field.present,
           }),
     );
     x += w + CORNER_GAP;
