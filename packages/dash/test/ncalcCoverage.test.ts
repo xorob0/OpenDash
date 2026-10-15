@@ -88,6 +88,60 @@ const unique = [...new Set(sites.map((s) => s.expression))];
 
 const describeFailure = (site: Site, reason: string): string => `${site.where}\n  ${reason}\n  in ${site.expression}`;
 
+const SESSION_NAME = 'DataCorePlugin.GameData.SessionTypeName';
+
+/** The session name as SimHub publishes it: the read, or the read with a fallback. */
+const isSessionRead = (node: E.Node): boolean =>
+  (node.type === 'property' && node.name === SESSION_NAME) || (node.type === 'call' && node.name.toLowerCase() === 'isnull' && node.args[0] !== undefined && isSessionRead(node.args[0]));
+
+/** The session name in capitals, whichever case the sim wrote it in. */
+const isSessionFolded = (node: E.Node): boolean =>
+  node.type === 'call' && ((node.name.toLowerCase() === 'ucase' && node.args[0] !== undefined && isSessionRead(node.args[0])) || (node.name.toLowerCase() === 'isnull' && node.args[0] !== undefined && isSessionFolded(node.args[0])));
+
+/**
+ * Every comparison of the session name with a word in `root`, `=`, `!=` and `in` alike, and those of
+ * them that would match on one sim only: the name read as the sim wrote it against a word with a
+ * letter in it, or the name in capitals against a word that is not.
+ */
+function sessionComparisons(root: E.Node): { compared: number; wrong: string[] } {
+  let compared = 0;
+  const wrong: string[] = [];
+  const check = (subject: E.Node, other: E.Node): void => {
+    if (other.type !== 'literal' || typeof other.value !== 'string') return;
+    const word = other.value;
+    if (isSessionRead(subject)) {
+      compared += 1;
+      if (/\p{L}/u.test(word)) wrong.push(`${E.print(subject)} is compared with '${word}' as the sim wrote it; compare ucase(${E.print(subject)}) with '${word.toUpperCase()}'`);
+    } else if (isSessionFolded(subject)) {
+      compared += 1;
+      if (word !== word.toUpperCase()) wrong.push(`${E.print(subject)} is in capitals and '${word}' is not, so it never matches`);
+    }
+  };
+  const visit = (node: E.Node): void => {
+    switch (node.type) {
+      case 'binary':
+        if (node.op === '=' || node.op === '!=') {
+          check(node.left, node.right);
+          check(node.right, node.left);
+        }
+        visit(node.left);
+        visit(node.right);
+        return;
+      case 'call':
+        if (node.name.toLowerCase() === 'in' && node.args[0] !== undefined) for (const option of node.args.slice(1)) check(node.args[0], option);
+        for (const arg of node.args) visit(arg);
+        return;
+      case 'unary':
+        visit(node.operand);
+        return;
+      default:
+        return;
+    }
+  };
+  visit(root);
+  return { compared, wrong };
+}
+
 describe('every expression in a full build, held to the browser evaluator', () => {
   test('the walk finds the build: every theme, and tens of thousands of expressions', () => {
     expect(themes.map((t) => t.id)).toContain('porsche');
@@ -139,6 +193,26 @@ describe('every expression in a full build, held to the browser evaluator', () =
         failures.push(describeFailure(site, `${E.print(node)} may round its right operand to an Int32`));
       }
     }
+    expect(failures).toEqual([]);
+  });
+
+  test('no expression compares the session name in the case one sim writes it', () => {
+    // iRacing writes `Race` and Assetto Corsa and ACC write `RACE`, and NCalc's `=` and `in` mind
+    // the case, so a name compared as one sim spells it never matches on the other (#1125). The name
+    // is compared through `ucase`, against a word in capitals, which is what `sessionIs` in
+    // `second/values.ts` writes. A literal with no letter in it, the empty string `inSession` asks
+    // about, reads the same in every case and is let through.
+    const failures: string[] = [];
+    const seen = new Set<string>();
+    let compared = 0;
+    for (const site of sites) {
+      if (seen.has(site.expression)) continue;
+      seen.add(site.expression);
+      const problems = sessionComparisons(E.parseCached(site.expression).root);
+      compared += problems.compared;
+      for (const problem of problems.wrong) failures.push(describeFailure(site, problem));
+    }
+    expect(compared).toBeGreaterThan(0);
     expect(failures).toEqual([]);
   });
 
