@@ -16,7 +16,7 @@ import { ncalc } from '../../generator.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
-import { currentLap, GRIP_WIDEST, hasHeadlightFlashControl, headlightFlashed, pitLimiterOn, rpm, sessionType, speed, trackGrip } from '../../second/values.ts';
+import { currentLap, GRIP_WIDEST, hasHeadlightFlashControl, headlightFlashed, pitLimiterOn, rpm, sessionIs, speed, trackGrip } from '../../second/values.ts';
 import { ds } from '../../tokens.ts';
 import { regionRect } from '../anatomy.ts';
 import type { FaceContext } from '../drawing.ts';
@@ -24,16 +24,18 @@ import { porscheFace, type StripBox } from './geometry.ts';
 import { pictogram } from './pictograms.ts';
 import { BORDER, carColour, centredY, namedCell, RADIUS, runWidth } from './register.ts';
 
-const { and, eq, fmt, iff, isIn, str, ucase } = ncalc;
+const { and, fmt, iff, str, ucase } = ncalc;
 
 /** The house's widest track state, `GRIP_WIDEST`, in the capitals the car writes. */
 const TRACK_WIDEST = GRIP_WIDEST.toUpperCase();
 
-
-/** Every qualifying session iRacing names, which the car's `QUAL` page stands for. */
+/**
+ * Every qualifying session iRacing names, which the car's `QUAL` page stands for. Assetto Corsa and
+ * ACC write theirs `QUALIFY`, which {@link sessionIs} matches, comparing in capitals (#1125).
+ */
 const QUALIFYING = ['Qualify', 'Lone Qualify', 'Open Qualify'];
 
-const pageName = (): string => iff(eq(sessionType(), str('Race')), str('RACE'), iff(isIn(sessionType(), ...QUALIFYING.map((name) => str(name))), str('QUAL'), str('PRACTICE')));
+const pageName = (): string => iff(sessionIs('Race'), str('RACE'), iff(sessionIs(...QUALIFYING), str('QUAL'), str('PRACTICE')));
 
 /** A strip box's rect: its x and size, centred on the strip's height and dropped as the canvas drops it. */
 const placed = (strip: Rect, box: StripBox): Rect => rect(box.left, strip.top + Math.round((strip.height - box.height) / 2 + box.drop), box.width, box.height);

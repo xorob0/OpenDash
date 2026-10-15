@@ -840,15 +840,21 @@ namespace OpenDashPlugin
             }
 
             // What the panel names, compared before anything is built and replaced only when
-            // something in it moved, so a frame in which nothing did allocates nothing for the
-            // panel's copy and the interface thread is not handed a new object sixty times a second.
+            // something in it moved, so a frame in which nothing did builds no new copy for the panel
+            // and the interface thread is not handed a new object sixty times a second. The frame
+            // still allocates a little: GetPropertyValue lower-cases the name it is given, once for
+            // each sim's raw track name, and that is read every frame because AC's can arrive after
+            // TrackName without TrackName changing.
             try
             {
                 var gameName = GameDisplayName(pluginManager, data);
                 var gameRunning = data != null && data.GameRunning;
                 var carId = telemetry == null ? null : telemetry.CarId;
                 var carModel = telemetry == null ? null : telemetry.CarModel;
-                var trackName = telemetry == null ? null : telemetry.TrackName;
+                var trackName = telemetry == null ? null : LiveStatus.TrackShown(
+                    pluginManager == null ? null : pluginManager.GetPropertyValue(LiveStatus.AcTrackNameProperty) as string,
+                    pluginManager == null ? null : pluginManager.GetPropertyValue(LiveStatus.IRacingTrackNameProperty) as string,
+                    telemetry.TrackName);
                 var sessionType = telemetry == null ? null : telemetry.SessionTypeName;
                 if (!live.Is(gameName, gameRunning, carId, carModel, trackName, sessionType))
                     live = new LiveStatus(gameName, gameRunning, carId, carModel, trackName, sessionType);
