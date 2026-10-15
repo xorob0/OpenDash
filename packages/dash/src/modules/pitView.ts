@@ -6,6 +6,13 @@
  * Pit time counts up while the car is in the lane and shows the last stop's duration otherwise, so
  * the field is useful both during a stop and after it.
  *
+ * Only iRacing publishes the order (#564). Every other sim hands the bit field and the fuel over as
+ * null, which read as 0 drew every corner unticked, the repair off and `0.00 L`: a stop set to do
+ * nothing, rather than a stop the dashboard cannot see. So the page is built twice, as damage's is,
+ * and the sim decides which is on the screen: the order where {@link pitServiceIsPublished}, and
+ * where it is not, the pit time and the progress bar, which read SimHub's own pit lane and stop
+ * timing and are right on every sim, around a notice saying the service is not published.
+ *
  * The two numbers are cut from the box rather than read off the ramp, which is the one page on the
  * catalogue artboard that is drawn that way: refuel at 116, 96, 64, 61 and 58 px and pit time at
  * 81, 67, 44, 42 and 40, none of them a ramp size and every pair within a pixel of 1.45 to 1. So
@@ -26,6 +33,7 @@ import { densityOf } from '../second/density.ts';
 import { levelGauge } from '../second/gauge.ts';
 import { fieldBlockHeight, fieldWidth, planLines, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, rowsThatFit, stack, type StackRow } from '../second/layout.ts';
+import { placeholder, placeholderHeight } from '../second/placeholder.ts';
 import { columnsAt, promotesLead } from '../second/shape.ts';
 import {
   CHARS,
@@ -39,14 +47,18 @@ import {
   pitRefuel,
   pitRefuelIsAbsent,
   pitServiceFlag,
+  pitServiceIsPublished,
   pitServiceProgress,
   pitTyreSelection,
   type Corner,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
-import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn } from './module.ts';
+import { blockRow, defineModule, fieldsRow, fld, pageKeeps, shapeIn, type ModuleContext } from './module.ts';
 
 const { fmt, iff, str, not } = ncalc;
+
+/** What the page says in place of the order on a sim that publishes none. */
+export const PIT_SERVICE_MESSAGE = 'Pit service · Not published by this sim';
 
 /**
  * The catalogue's ratio between the refuel quantity and the pit time. Every drawing holds it: 116
@@ -201,6 +213,20 @@ const tyresOption = (fs: number): Option => {
   };
 };
 
+/**
+ * The time in the box while the car is in the lane and the last stop's otherwise. SimHub times both
+ * on every sim, so this is the half of the page that does not need the order.
+ */
+const pitTimeSpec = (ctx: ModuleContext, fs: number): FieldSpec =>
+  fld(ctx, 'pitTime', 'Pit time', {
+    sample: '24.3',
+    bind: fmt(iff(isInPitLane(), inPitSeconds(), lastPitDuration()), '0.0'),
+    chars: CHARS.consumption,
+    fs,
+    follower: { text: 's' },
+    drawn: drawnFigure({ value: iff(isInPitLane(), inPitSeconds(), lastPitDuration()), digits: CHARS.consumption.digits - 1, decimals: 1 }),
+  });
+
 export const pitView = defineModule('pitView', (ctx) => {
   const d = densityOf(ctx.density);
   const shape = shapeIn(ctx);
@@ -296,14 +322,7 @@ export const pitView = defineModule('pitView', (ctx) => {
       follower: { text: 'L', bind: fuelUnit(), widest: 'gal' },
       drawn: drawnOr(absent, NO_VALUE, drawnFigure({ value: refuel, digits: CHARS.fuel.digits - 1, decimals: 1 })),
     }),
-    fld(ctx, 'pitTime', 'Pit time', {
-      sample: '24.3',
-      bind: fmt(iff(isInPitLane(), inPitSeconds(), lastPitDuration()), '0.0'),
-      chars: CHARS.consumption,
-      fs: Math.round(fs / TIME_RATIO),
-      follower: { text: 's' },
-      drawn: drawnFigure({ value: iff(isInPitLane(), inPitSeconds(), lastPitDuration()), digits: CHARS.consumption.digits - 1, decimals: 1 }),
-    }),
+    pitTimeSpec(ctx, Math.round(fs / TIME_RATIO)),
   ];
 
   const ceiling = Math.round(d.hero * (promotesLead(shape) ? TALL_PROMOTION : 1));
@@ -380,8 +399,40 @@ export const pitView = defineModule('pitView', (ctx) => {
       low = mid + 1;
     }
   }
-  if (drawn === undefined) return stack(ctx.frame, whole.rows, ctx.density);
-  const car = carTopViewSize(ctx.frame, drawn.width);
-  const carBox = rect(ctx.frame.left, ctx.frame.top + Math.round((ctx.frame.height - car.height) / 2), car.width, car.height);
-  return [...carTopView(`${ctx.prefix}car`, carBox, { wheel: cornerPaint }), ...stack(beside(drawn.width), drawn.rows, ctx.density)];
+  const order = (): Item[] => {
+    if (drawn === undefined) return stack(ctx.frame, whole.rows, ctx.density);
+    const car = carTopViewSize(ctx.frame, drawn.width);
+    const carBox = rect(ctx.frame.left, ctx.frame.top + Math.round((ctx.frame.height - car.height) / 2), car.width, car.height);
+    return [...carTopView(`${ctx.prefix}car`, carBox, { wheel: cornerPaint }), ...stack(beside(drawn.width), drawn.rows, ctx.density)];
+  };
+
+  // Where the sim publishes no order (#564): the pit time at the size the order's page gives it, so
+  // it does not jump between sims, the notice where the order would be, and the progress bar, all in
+  // one centred column. There is no car, since its four corners would be a tyre change nobody set.
+  // The items are named under `unpublished.` so that neither half's names collide with the other's.
+  const unpublished = (): Item[] => {
+    const inner: ModuleContext = { ...ctx, prefix: `${ctx.prefix}unpublished.`, shape };
+    const time = fieldsRow([pitTimeSpec(inner, Math.round(whole.lead / TIME_RATIO))], inner, { justify: 'centre' });
+    const room = ctx.frame.height - 2 * ROW_TAIL - time.height - BAR_HEIGHT - 2 * d.gapY;
+    const height = placeholderHeight(PIT_SERVICE_MESSAGE, ctx.frame.width, room, ctx.density);
+    return stack(
+      ctx.frame,
+      [
+        time,
+        blockRow(height, (bottom) => placeholder(inner.prefix, PIT_SERVICE_MESSAGE, rect(ctx.frame.left, bottom - height, ctx.frame.width, height), ctx.density)),
+        blockRow(BAR_HEIGHT, (bottom) => [
+          levelGauge(`${inner.prefix}gauge`, rect(ctx.frame.left, bottom - BAR_HEIGHT, ctx.frame.width, BAR_HEIGHT), pitServiceProgress(), { value: 62 }),
+        ], true),
+      ],
+      ctx.density,
+    );
+  };
+
+  // One half at a time, each a layer whose Visible is the answer, so a hidden half's bindings are
+  // not evaluated and the overlap exists only in the editor.
+  const published = pitServiceIsPublished();
+  return [
+    withMoreBindings({ kind: 'layer', name: `${ctx.prefix}published`, children: order() }, { Visible: published }),
+    withMoreBindings({ kind: 'layer', name: `${ctx.prefix}unpublished`, children: unpublished() }, { Visible: not(published) }),
+  ];
 });
