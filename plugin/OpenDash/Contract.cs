@@ -194,6 +194,25 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string TrackMapRecorded = "TrackMapRecorded";
 
+        /// <summary>
+        /// The seconds the car has been stopped in its pit box on this stop, 0 while it is not in the box, or null
+        /// where SimHub's own GameData.IsInPitSince already times the box. #1130.
+        /// </summary>
+        /// <remarks>
+        /// Published rather than chosen, and only where SimHub's timer counts something else: Le Mans Ultimate's
+        /// reader answers IsInPit with the whole pit lane, so IsInPitSince runs from the entry line. The plugin
+        /// times the box from the running sim's row of SimCapabilities.cs (ADR 0021) with PitStopClock.cs, and
+        /// the pit view reads it with SimHub's IsInPitSince as the isnull() fallback, which is what it draws with
+        /// no plugin and on every sim whose row leaves the box to SimHub.
+        /// </remarks>
+        public const string PitStopSeconds = "PitStopSeconds";
+
+        /// <summary>
+        /// How long the car's last stop in its pit box was, 0 before a first one, or null where SimHub's own
+        /// GameData.LastPitStopDuration is already the box. See <see cref="PitStopSeconds"/>. #1130.
+        /// </summary>
+        public const string LastPitStopSeconds = "LastPitStopSeconds";
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1620,6 +1639,10 @@ namespace OpenDashPlugin
             // And whether SimHub holds the track's outline, appended for the same reason and shared because every
             // screen that draws the track map asks it of the same track. #555.
             yield return TrackMapRecorded;
+            // And the stop in the pit box, appended for the same reason, published rather than chosen and shared
+            // because every screen that times a stop times the same car. #1130.
+            yield return PitStopSeconds;
+            yield return LastPitStopSeconds;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

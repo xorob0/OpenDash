@@ -37,10 +37,11 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void It_is_published_last_in_the_shared_group_and_not_offered_as_a_setting()
+        public void It_is_published_after_the_capabilities_in_the_shared_group_and_not_offered_as_a_setting()
         {
             var shared = Contract.SharedPropertyNames().ToList();
-            Assert.Equal(shared.Count - 1, shared.IndexOf(Contract.TrackMapRecorded));
+            // Last until the stop in the pit box was appended after it (#1130).
+            Assert.Equal(shared.IndexOf(Contract.PitStopSeconds) - 1, shared.IndexOf(Contract.TrackMapRecorded));
             Assert.Equal(shared.IndexOf(Contract.Capabilities.Last()) + 1, shared.IndexOf(Contract.TrackMapRecorded));
             Assert.Equal("TrackMapRecorded", Contract.TrackMapRecorded);
         }

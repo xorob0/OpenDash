@@ -283,3 +283,11 @@ Assetto Corsa's seven in `ac/` assert the same four. Its row leaves them null to
 `Flag_*` read `Graphics.Flag`, the one flag the game shows the driver, so the column is null on every
 frame of all seven for the same reason. The next `bun run record --sim ac` reads them from the plugin and
 drops the entries.
+
+#1130 asserts two more in each of the nine and each of Assetto Corsa's seven, `OpenDash.PitStopSeconds` and
+`OpenDash.LastPitStopSeconds`, the stop in the pit box the plugin times where SimHub's own `IsInPitSince` and
+`LastPitStopDuration` count something else. The pit view reads them ahead of SimHub's two. Only Le Mans
+Ultimate's row answers, since its reader's `IsInPit` is the whole pit lane; iRacing's and Assetto Corsa's
+`IsInPit` are the box, so their rows leave it to SimHub and the plugin publishes null for both, on every frame
+of all sixteen: a constant, and the value a recording with the plugin installed will write. The next
+`bun run record` and `bun run record --sim ac` read them from the plugin and drop the entries.

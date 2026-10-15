@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, propertyName, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
+import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2872,8 +2872,17 @@ export const overPitLimit = (): Expr => and(gt(pitLimit(), num(0)), gt(speed(), 
  */
 export const pitSpeeding = (): Expr => and(isInPitLane(), overPitLimit());
 
-export const inPitSeconds = (): Expr => isnull(game('IsInPitSince'), num(0));
-export const lastPitDuration = (): Expr => isnull(game('LastPitStopDuration'), num(0));
+/**
+ * The seconds the car has been stopped in its pit box on this stop, `0` outside it.
+ *
+ * SimHub's `IsInPitSince` times its `IsInPit`, which is the box on iRacing, Assetto Corsa and ACC and the
+ * whole pit lane on Le Mans Ultimate. There the plugin times the box itself and publishes it
+ * ({@link PIT_STOP_SECONDS} in `contract.ts`); everywhere else, and with no plugin, it publishes null and
+ * SimHub's member is read as it always was. #1130.
+ */
+export const inPitSeconds = (): Expr => isnull(prop(propertyName(PIT_STOP_SECONDS)), isnull(game('IsInPitSince'), num(0)));
+/** How long the last stop in the box was, `0` before one: the plugin's where it times the box, SimHub's elsewhere. See {@link inPitSeconds}. */
+export const lastPitDuration = (): Expr => isnull(prop(propertyName(LAST_PIT_STOP_SECONDS)), isnull(game('LastPitStopDuration'), num(0)));
 
 /**
  * The words the catalogue writes beside `Tyres`, longest first is not the order: this is the set,

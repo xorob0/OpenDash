@@ -367,6 +367,26 @@ export type Capability = (typeof CAPABILITIES)[number];
  */
 export const TRACK_MAP_RECORDED = 'TrackMapRecorded';
 
+/**
+ * The seconds the car has been stopped in its pit box on this stop, `0` while it is not in the box, or null
+ * where SimHub's own `GameData.IsInPitSince` already times the box. #1130.
+ *
+ * Published rather than chosen, and only where SimHub's timer counts something else. SimHub times a stop
+ * from its `IsInPit`, and Le Mans Ultimate's reader answers that with the player's `mInPits`, the whole pit
+ * lane, so `IsInPitSince` runs from the entry line and `LastPitStopDuration` is the lane: a 30 s stop in a
+ * lane that takes 25 s to drive reads about 55 s. The plugin times the box instead, from the player's
+ * `mPitState`, through the running sim's row of `plugin/OpenDash/SimCapabilities.cs` (ADR 0021) and
+ * `plugin/OpenDash/PitStopClock.cs`. Read through `inPitSeconds` in `second/values.ts`, with SimHub's
+ * member as the fallback, so a package with no plugin, and every sim whose row leaves the box to SimHub,
+ * draws what it always drew.
+ */
+export const PIT_STOP_SECONDS = 'PitStopSeconds';
+/**
+ * How long the car's last stop in its pit box was, `0` before a first one, or null where SimHub's own
+ * `GameData.LastPitStopDuration` is already the box. See {@link PIT_STOP_SECONDS}. #1130.
+ */
+export const LAST_PIT_STOP_SECONDS = 'LastPitStopSeconds';
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -528,6 +548,10 @@ export function dashProperties(): string[] {
     // And whether SimHub holds the track's outline after that, published rather than chosen and shared because
     // every screen that draws the track map asks it of the same track. #555.
     TRACK_MAP_RECORDED,
+    // And the stop in the pit box after that, published rather than chosen and shared because every screen
+    // that times a stop times the same car. #1130.
+    PIT_STOP_SECONDS,
+    LAST_PIT_STOP_SECONDS,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }

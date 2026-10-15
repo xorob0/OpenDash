@@ -161,6 +161,8 @@ namespace OpenDashPlugin.Tests
                 [player + "mTotalLaps"] = (short)4,
                 [player + "mFinishStatus"] = (sbyte)0,
                 [player + "mNumPenalties"] = (short)0,
+                // Out on track, no stop under way.
+                [player + "mPitState"] = (byte)0,
                 // SimHub's own summaries, as LMUManager computes them from the same frame.
                 [GameData + "Flag_Yellow"] = 0,
                 [GameData + "Flag_Black"] = 0,
@@ -253,6 +255,7 @@ namespace OpenDashPlugin.Tests
             Player + "mTotalLaps",
             Player + "mFinishStatus",
             Player + "mNumPenalties",
+            Player + "mPitState",
             // TelemInfoV01's scalars.
             Raw + "PlayerNativeTelemetry.mSpeedLimiterAvailable",
             // rF2ScoringInfo with the sample's three sector flags, and rF2VehicleScoring.
@@ -291,11 +294,16 @@ namespace OpenDashPlugin.Tests
                 LmuRace((Scoring + "mSession", 5)),
                 LmuRace((Raw + "PlayerNativeTelemetry.mSpeedLimiterAvailable", (byte)1), (Scoring + "mInRealtime", true)),
             };
-            foreach (var frame in frames) SimCapabilities.Read(SimCapabilities.LeMansUltimate, Recording(frame));
+            foreach (var frame in frames)
+            {
+                SimCapabilities.Read(SimCapabilities.LeMansUltimate, Recording(frame));
+                SimCapabilities.InPitBox(SimCapabilities.LeMansUltimate, Recording(frame));
+            }
             var raw = asked.Where(name => name.StartsWith(Raw, StringComparison.OrdinalIgnoreCase)).ToList();
             Assert.Contains(PluginScoring + "mSectorFlag01", raw);
             Assert.Contains(PluginScoring + "mSectorFlag02", raw);
             Assert.Contains(PluginScoring + "mSectorFlag03", raw);
+            Assert.Contains(Player + "mPitState", raw);
             Assert.Empty(raw.Where(name => !LmuPropertiesSimHubDeclares.Contains(name)));
         }
 
