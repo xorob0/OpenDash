@@ -329,11 +329,11 @@ section). What a null does to the reading:
 | `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | `0x` drawn as a value | #567 |
 | `Telemetry.SteeringWheelAngle` | the steering dial and trace | flat | #567 |
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
-| `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications | unknown, read as in the car | #561 |
+| `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications, behind the plugin's `DriverInCar` | the plugin's answer; without it, in the car for the notifications and not for the alerts | #561 |
 | `Telemetry.LFtempCM`, `RFtempCM`, `LRtempCM`, `RRtempCM` | band D's tyre page | `0 0 0 0` | #556 |
 | `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service | a stop nobody set | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |
-| `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | a level `+0.00` | #575 |
+| `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | the session best, captioned as such | #575 |
 | `Telemetry.WindVel` | the wind on band D and the pit wall header | hidden | #1123 |
 | `Telemetry.SessionTimeOfDay` | the sim clock on the bar, band D and the pit wall header | `--` | #1123 |
 | `Telemetry.TrackWetness` | the track state on band D, the track module, the pit wall header and the Porsche strip | hidden | #1128 |

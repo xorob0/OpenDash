@@ -7,7 +7,7 @@ import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts'
 import { sweep } from '../src/build.ts';
 import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV,
   CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP,
-  FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PORSCHE_CREST, PROPERTY_PREFIX, CAPABILITIES, PIT_LIMITER_ON, YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, TRACK_MAP_RECORDED, liveSettingNames, themeSettingNames, zoneProperties, declaredProperties, defaultCardForSlot,
+  FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PORSCHE_CREST, PROPERTY_PREFIX, CAPABILITIES, PIT_LIMITER_ON, YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, DRIVER_IN_CAR, TRACK_MAP_RECORDED, liveSettingNames, themeSettingNames, zoneProperties, declaredProperties, defaultCardForSlot,
   secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { IDLE_SCREEN_NAME } from '../src/idle.ts';
@@ -116,12 +116,13 @@ describe('contract', () => {
     // The live places and rows are read, but by a name built from the row at render time, which no scan
     // of the expressions can see: `COMPUTED_PROPERTIES` in properties.ts lists them instead. #1063.
     // What the running sim can report is shared and unread here: only the zone faces' pit family asks
-    // whether the car has a limiter, and the other two wait on the tickets that move their bindings. #1101.
-    // The four flag answers are the exception: band D and the flag box read them wherever they read a
-    // flag summary, the card face's included. #1129. So is whether the limiter is on, which the card
-    // face's limiter banner reads like every limiter reading, because SimHub's own member is the pit lane
-    // on Assetto Corsa. #1122.
-    const READ_ANSWERS: string[] = [YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, PIT_LIMITER_ON];
+    // whether the car has a limiter, and the damage page whether the sim reports damage. #1101.
+    // The four flag answers are an exception: band D and the flag box read them wherever they read a
+    // flag summary, the card face's included. #1129. Whether the driver is in the car is another: the
+    // car alerts and the change notifications read it, and the card face draws both. #561. So is whether
+    // the limiter is on, which the card face's limiter banner reads like every limiter reading, because
+    // SimHub's own member is the pit lane on Assetto Corsa. #1122.
+    const READ_ANSWERS: string[] = [YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, DRIVER_IN_CAR, PIT_LIMITER_ON];
     // Whether SimHub holds the track's outline is shared and unread here: no card draws the track map. #555.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
     const unread = new Set([

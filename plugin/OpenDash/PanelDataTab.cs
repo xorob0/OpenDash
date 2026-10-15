@@ -64,7 +64,11 @@ namespace OpenDashPlugin
 
         public const string DeltaTitle = "Delta reference";
 
-        public const string DeltaCaption = "Which lap the delta compares against.";
+        /// <summary>The one answer that needs unpacking: the last lap is a delta only iRacing publishes, and on
+        /// any other sim the dash compares against your best instead and says so. The two other answers are
+        /// SimHub's and read the same everywhere, so the caption names the third rather than describing the
+        /// set (docs/design/voice.md). iRacing is named for the reason the live positions name it. #575.</summary>
+        public const string DeltaCaption = "Last lap works on iRacing only; other sims compare against your best.";
 
         /// <summary>One label per reference, in the contract's order.</summary>
         /// <remarks>

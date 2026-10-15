@@ -3,12 +3,96 @@
 // collections already are. FlagBoxInstaller.cs is the other half: it reaches the drivers, parses the embedded
 // profiles and reads one list entry as a profile, which is the only thing here that would need a SimHub type, so it
 // is handed in as `read`. Compiled into OpenDash.Tests: no SimHub or WPF types here.
+//
+// **A settings object can hold more than two lists** (#689). SimHub's `ProfileSettingsBase` can keep its profiles
+// per game family: under `FilterByGameFamily`, `AvailableProfiles` -- the list a device's page draws -- is the
+// current family's own list under `PerFamilyProfiles`, and `Profiles` is only what is serialised, cleared and rebuilt
+// from the families at every save. A profile added to `Profiles` alone is then neither on the page nor in the file
+// once SimHub saves. ProfileLists is the lists of one settings object as an install sees them: the saved list, every
+// other list a copy of ours can stand in, and the family list an add has to reach as well.
 using System;
 using System.Collections;
 using System.Collections.Generic;
 
 namespace OpenDashPlugin
 {
+    /// <summary>
+    /// The profile lists of one SimHub settings object, as an install reads, adds to and takes out of them (#689).
+    /// </summary>
+    /// <remarks>
+    /// Over the non-generic IList for the reason ProfileInstall is (see FlagBoxInstaller.cs), so a test builds one
+    /// over plain lists. Every list is held once, by reference: under the family filter the list the page draws is
+    /// one of the family lists, and without it, it is usually the saved list itself.
+    /// </remarks>
+    internal sealed class ProfileLists
+    {
+        private ProfileLists(IList saved, IReadOnlyList<IList> others, IList family)
+        {
+            Saved = saved;
+            Others = others;
+            Family = family;
+        }
+
+        /// <summary>`Profiles`: the list SimHub serialises when it does not keep profiles per game family, and the one
+        /// the census reads either way, since SimHub fills it from every family when it loads and when it saves.</summary>
+        public IList Saved { get; }
+
+        /// <summary>Every list other than <see cref="Saved"/> that a copy of ours can stand in, each once: the one the
+        /// device's page draws, and under the family filter every family's list, so that a copy installed while
+        /// another family was current is replaced and removed too rather than written back by the next save.</summary>
+        public IReadOnlyList<IList> Others { get; }
+
+        /// <summary>The list an add has to reach besides <see cref="Saved"/>: the current game family's, which is what
+        /// the page draws and what the next save rebuilds <see cref="Saved"/> from. Null when SimHub does not keep
+        /// profiles per family, where <see cref="Saved"/> is the whole of it.</summary>
+        public IList Family { get; }
+
+        /// <summary>Whether an add goes to a game family's list, and so needs its target family set the way SimHub's
+        /// own AddProfile sets it.</summary>
+        public bool ByFamily
+        {
+            get { return Family != null; }
+        }
+
+        /// <summary>A settings object that does not keep profiles per family: the saved list and the one the page
+        /// draws, which is the saved list itself unless the device lists its maker's built-in profiles.</summary>
+        public static ProfileLists Of(IList saved, IList shown)
+        {
+            return Of(saved, shown, false, null);
+        }
+
+        /// <summary>
+        /// A settings object as SimHub has it: the saved list, the list the page draws, whether it keeps profiles
+        /// per game family, and when it does, every family's list.
+        /// </summary>
+        /// <remarks>
+        /// Under the filter the list the page draws is the current family's -- SimHub's `AvailableProfiles` finds it
+        /// or adds it -- and that is where an add goes besides the saved list, as SimHub's own `AddProfile` puts it
+        /// there. It is never the maker's built-in list then: SimHub asks about the family filter first.
+        /// </remarks>
+        public static ProfileLists Of(IList saved, IList shown, bool byFamily, IEnumerable<IList> families)
+        {
+            var others = new List<IList>();
+            Keep(others, saved, shown);
+            if (byFamily && families != null)
+            {
+                foreach (var family in families) Keep(others, saved, family);
+            }
+            var current = byFamily && shown != null && !ReferenceEquals(shown, saved) ? shown : null;
+            return new ProfileLists(saved, others, current);
+        }
+
+        private static void Keep(List<IList> others, IList saved, IList list)
+        {
+            if (list == null || ReferenceEquals(list, saved)) return;
+            foreach (var other in others)
+            {
+                if (ReferenceEquals(other, list)) return;
+            }
+            others.Add(list);
+        }
+    }
+
     internal static partial class ProfileInstall
     {
         /// <summary>What a profile list holds, reduced to what the decision needs, or null when it cannot be
@@ -46,6 +130,19 @@ namespace OpenDashPlugin
             IList profiles, IList available, IReadOnlyList<object> embedded, Action<int> add, Action save, string what,
             Func<object, InstalledProfile> read, IInstallLog log, bool builtInMode = false, string where = null)
         {
+            return Install(ProfileLists.Of(profiles, available), embedded, add, save, what, read, log, builtInMode, where);
+        }
+
+        /// <summary>
+        /// The install over every list of one settings object (#689): ours is taken out of the saved list and out of
+        /// every other list a copy can stand in, and put back into each where it stood when an add fails.
+        /// </summary>
+        internal static IList<FlagBoxPlan> Install(
+            ProfileLists lists, IReadOnlyList<object> embedded, Action<int> add, Action save, string what,
+            Func<object, InstalledProfile> read, IInstallLog log, bool builtInMode = false, string where = null)
+        {
+            var profiles = lists.Saved;
+            var others = lists.Others;
             var results = new FlagBoxPlan[embedded.Count];
             var replacedCopy = new bool[embedded.Count];
             var changed = false;
@@ -58,18 +155,22 @@ namespace OpenDashPlugin
                     continue;
                 }
                 var takenFromProfiles = new List<KeyValuePair<int, object>>();
-                var takenFromAvailable = new List<KeyValuePair<int, object>>();
+                var takenFromOthers = new List<KeyValuePair<int, object>>[others.Count];
+                for (var k = 0; k < others.Count; k++) takenFromOthers[k] = new List<KeyValuePair<int, object>>();
                 try
                 {
                     // Ours is the one carrying our ProfileId. Anything else in either list is the user's
                     // and is not touched, which is the whole reason this is safer than merging the file.
                     //
-                    // Both lists. AvailableProfiles returns Profiles unless the settings filter by game
+                    // Every list. AvailableProfiles returns Profiles unless the settings filter by game
                     // family or the device has built-in profiles switched on (ProfileSettingsBase.cs:422),
                     // and a device maker's BuiltInLedsProfiles put the LED driver in the second case, so
                     // there the two genuinely part company and removing from only one would leave a
-                    // duplicate. Adding goes to Profiles alone -- see ProfileInstall.WhyNotAddProfile --
-                    // and BuiltInProfiles is otherwise never touched: those are the maker's, not ours.
+                    // duplicate. Under the family filter every family's list is swept too (#689): a copy
+                    // installed while another family was current is in that family's list, and the next
+                    // save would write it back. Adding goes to Profiles, and under the filter to the current
+                    // family's list as well -- see ProfileInstall.WhyNotAddProfile -- and BuiltInProfiles is
+                    // otherwise never touched: those are the maker's, not ours.
                     //
                     // The old copy goes before the new one is added, never after: both carry the same id,
                     // so a removal by id afterwards would take the newcomer too, and the sorted list the
@@ -77,23 +178,25 @@ namespace OpenDashPlugin
                     // removed after it. What is taken is remembered, with where it stood, so that an add
                     // that fails puts it back rather than leaving the device without the profile.
                     Take(profiles, profile.ProfileId, read, takenFromProfiles);
-                    if (!ReferenceEquals(available, profiles))
+                    for (var k = 0; k < others.Count; k++)
                     {
-                        Take(available, profile.ProfileId, read, takenFromAvailable);
+                        Take(others[k], profile.ProfileId, read, takenFromOthers[k]);
                     }
 
                     add(i);
                     changed = true;
-                    // One profile replaced, however many lists it was in: the two are views of one set
-                    // of profiles, and a copy in both is still one copy to the driver reading the log.
-                    replacedCopy[i] = takenFromProfiles.Count + takenFromAvailable.Count > 0;
+                    // One profile replaced, however many lists it was in: they are views of one set of
+                    // profiles, and a copy in several is still one copy to the driver reading the log.
+                    var taken = takenFromProfiles.Count;
+                    foreach (var other in takenFromOthers) taken += other.Count;
+                    replacedCopy[i] = taken > 0;
                 }
                 catch (Exception e)
                 {
                     log.Error("Installing the " + Name(profile) + " profile into SimHub failed: " + e);
                     results[i] = new FlagBoxPlan { State = FlagBoxInstallState.Failed };
                     PutBack(profiles, embedded[i], takenFromProfiles, what, log);
-                    if (!ReferenceEquals(available, profiles)) PutBack(available, embedded[i], takenFromAvailable, what, log);
+                    for (var k = 0; k < others.Count; k++) PutBack(others[k], embedded[i], takenFromOthers[k], what, log);
                 }
             }
 
@@ -164,12 +267,34 @@ namespace OpenDashPlugin
             return results;
         }
 
+        /// <summary>
+        /// The list half of an add (#689): the saved list, and under the game family filter the current family's,
+        /// which is the list the device's page draws and the one the next save rebuilds the saved list from.
+        /// </summary>
+        /// <remarks>
+        /// Into the saved list too, under the filter, so that the census, which reads it, counts the profile
+        /// before SimHub's save mirrors the families into it. The same object in both, as SimHub has it after a
+        /// load: the save clears the saved list and refills it from the families, so it is never written twice.
+        /// </remarks>
+        internal static void AddTo(ProfileLists lists, object profile)
+        {
+            lists.Saved.Add(profile);
+            if (lists.Family != null) lists.Family.Add(profile);
+        }
+
         /// <summary>Removes one profile id from both lists and saves once. False when nothing went,
         /// which is also what a profile that was never there gives.</summary>
         internal static bool Uninstall(IList profiles, IList available, Guid id, Action save, string what, Func<object, InstalledProfile> read, IInstallLog log)
         {
-            var gone = Remove(profiles, id, read);
-            if (!ReferenceEquals(available, profiles)) gone += Remove(available, id, read);
+            return Uninstall(ProfileLists.Of(profiles, available), id, save, what, read, log);
+        }
+
+        /// <summary>Removes one profile id from every list of one settings object, every game family's included
+        /// (#689), and saves once. False when nothing went.</summary>
+        internal static bool Uninstall(ProfileLists lists, Guid id, Action save, string what, Func<object, InstalledProfile> read, IInstallLog log)
+        {
+            var gone = Remove(lists.Saved, id, read);
+            foreach (var other in lists.Others) gone += Remove(other, id, read);
             if (gone == 0) return false;
             if (!Save(save, what, log)) return false;
             log.Info("Removed " + gone + " " + what + " profile(s) from SimHub.");
