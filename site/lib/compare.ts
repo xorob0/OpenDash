@@ -122,7 +122,7 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
     id: 'sims',
     label: 'Sims',
     cells: {
-      opendash: cell('partial', 'Built and tested on iRacing. Other sims may work. We do not claim them.', { word: 'iRacing' }),
+      opendash: cell('partial', 'Supported on iRacing and Assetto Corsa. ACC and Le Mans Ultimate may work, untested and not supported.', { word: 'iRacing, AC' }),
       lovely: cell('yes', '12 sims natively, and any sim SimHub reads.', { word: 'Compatible' }),
       dnr: cell('yes', '9 sims with their own presets, 7 with measured car data, and any sim SimHub reads.', { word: 'Compatible' }),
     },

@@ -8,6 +8,10 @@ does that.
 You need SimHub 9.12.6 or later on Windows. `OpenDash-plugin.zip` contains `OpenDash.dll`,
 this file and `OFL.txt`, the licence of the Barlow typefaces the dashboards ship.
 
+OpenDash supports iRacing and Assetto Corsa. Assetto Corsa Competizione and Le Mans Ultimate may work,
+but they are untested and not supported. On Assetto Corsa the other cars come from SimHub's own AC app,
+which SimHub installs into the game; without it, every list of cars holds only you.
+
 ## Install
 
 1. Close SimHub.
