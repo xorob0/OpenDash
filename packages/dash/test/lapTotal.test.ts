@@ -335,7 +335,9 @@ describe('every race length fits the box it is drawn in (#1117)', () => {
       }
     }
     expect(clipped).toEqual([]);
-  });
+    // A thousand readings through the bindings of every drawing take five seconds on a loaded runner,
+    // which is bun's default limit, so the test names its own rather than measuring fewer totals.
+  }, 30_000);
 
   test('a total past three digits is not a length, so nothing draws one', () => {
     // No race is run to a thousand laps, and the boxes are cut for three digits, so a longer total
