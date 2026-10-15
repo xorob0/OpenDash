@@ -50,10 +50,11 @@ Assetto Corsa's column depends on the fixes that landed for it on 2026-10-15: it
 flag box and the strips (#551), the track map's notice (#555), the wind, the sim clock and the track
 state hidden rather than drawn as zeros (#1123, #1128), the delta reference (#575), the track's name
 (#1124, #1150), the car alerts and the change notifications reading the plugin's `DriverInCar` (#561),
-and the strip and flag box profiles kept on a SimHub that files them per game family (#689). Three more
-are in review, and the cells that wait on them say **Wrong** and name the pull request: the pit
-limiter (#1157), the pit view's service (#1155) and the incidents and the steering (#1158). A fourth,
-#1156, times Le Mans Ultimate's pit stop in the box rather than down the whole lane.
+the strip and flag box profiles kept on a SimHub that files them per game family (#689), and the pit
+view saying the pit service is not published rather than drawing a stop set to do nothing (#564). Two
+more are in review, and the cells that wait on them say **Wrong** and name the pull request: the pit
+limiter (#1157) and the incidents and the steering (#1158). A third, #1156, times Le Mans Ultimate's
+pit stop in the box rather than down the whole lane.
 
 ## The table
 
@@ -123,7 +124,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Fuel | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Energy | **Absent.** Off by default. | **Absent.** Says the sim does not publish it. | **Absent.** | **Absent.** As band D's: LMU's own energy is not read yet (#962). |
 | Tyres | **Works.** Pressures and temperatures from the last stop. | **Works.** Live pressures and core temperatures; no wheel is ticked for a change, since AC publishes no pit order. | **Untested.** | **Untested.** |
-| Pit view | **Works.** | **Wrong.** Draws a stop set to do nothing. Pending #1155, which says the pit service is not published and keeps the pit time. | **Wrong.** As AC, until #1155. | **Wrong.** As AC, until #1155, and the pit time runs from the entry line (#1156). |
+| Pit view | **Works.** | **Partly.** The pit time and its bar work; the service order says "Pit service · Not published by this sim" (#564), since AC's stop is set in the game's own pit app. | **Partly.** As AC; ACC's own pit menu is published under names the page does not read. | **Partly.** As AC, and the pit time runs from the pit entry line until #1156 times it in the box. |
 | Car settings | **Works.** | **Partly.** TC and ABS as the car's preset, and the brake bias; the engine map and the anti-roll bars hide. | **Untested.** TC and ABS as dialled. | **Untested.** TC and ABS as dialled. |
 | Inputs | **Works.** | **Wrong.** The pedals work; the steering dial lies flat. Pending #1158, which hides it. | **Wrong.** As AC, until #1158. | **Wrong.** As AC, until #1158. |
 | Session | **Works.** | **Partly.** The session's name is drawn as AC writes it, in capitals (`RACE`); incidents read `0x`, **Wrong** until #1158. | **Untested.** As AC. | **Untested.** The game's own names (`Practice`, `Race`). |

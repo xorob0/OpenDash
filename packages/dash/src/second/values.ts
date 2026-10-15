@@ -2784,6 +2784,19 @@ const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvF
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
 
 /**
+ * The sim publishes a pit service order at all, which is iRacing alone (#564).
+ *
+ * Assetto Corsa's stop is set in the game's own pit app and its shared memory carries no request;
+ * ACC's MFD and Le Mans Ultimate's scheduled stops are under raw names of their own, which SimHub
+ * publishes and OpenDash does not read. Each of them is handed iRacing's `PitSvFlags` as null, and
+ * {@link pitServiceFlag} reads a null as 0, so a page drawn from the bits alone shows a stop set to
+ * change no tyre and repair nothing, which is a stop nobody set. This is what such a page asks
+ * first. It is an `isnull()` over the property it already reads, ADR 0021's second kind, so it
+ * needs no capability: the absence is the answer.
+ */
+export const pitServiceIsPublished = (): Expr => not(isNull(raw('PitSvFlags')));
+
+/**
  * SimHub's own ratio from litres to gallons, `GameManagerBase.GetFuelConvertRatio` in 9.12.6. The
  * tank a face draws beside the pit order is converted by it, so the order is converted by the same
  * figure rather than by a more exact one that would disagree with the tank in the last digit.

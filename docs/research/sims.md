@@ -331,7 +331,7 @@ section). What a null does to the reading:
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
 | `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications, behind the plugin's `DriverInCar` | the plugin's answer; without it, in the car for the notifications and not for the alerts | #561 |
 | `Telemetry.LFtempCM`, `RFtempCM`, `LRtempCM`, `RRtempCM` | band D's tyre page | `0 0 0 0` | #556 |
-| `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service | a stop nobody set | #564 |
+| `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service, band D's `Refuel` | the notice in place of the service, the pit time kept; `--` | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |
 | `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | the session best, captioned as such | #575 |
 | `Telemetry.WindVel` | the wind on band D and the pit wall header | hidden | #1123 |
