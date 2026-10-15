@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[8794,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[8794,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -591,6 +591,7 @@
 {"p":"OpenDash.LivePosition7","v":null}
 {"p":"OpenDash.LivePosition8","v":null}
 {"p":"OpenDash.LivePosition9","v":null}
+{"p":"OpenDash.PitLimiterOn","v":true}
 {"p":"OpenDash.PitWallClassOnly","v":null}
 {"p":"OpenDash.PitWallFlagFormat","v":null}
 {"p":"OpenDash.PitWallPage","v":null}

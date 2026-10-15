@@ -2299,10 +2299,10 @@ export const sim = {
   carHasPitLimiter: (): Expr => setting.reported(CAR_HAS_PIT_LIMITER, not(isNull(raw('dcPitSpeedLimiterToggle')))),
   /**
    * The limiter is engaged, as the sim reports it. Without the plugin, SimHub's `PitLimiterOn`, which is
-   * iRacing's limiter bit and, on Assetto Corsa, the pit lane rather than the limiter. Not yet read by any
-   * binding: {@link pitLimiterOn} is, until #558 moves the pit family onto this.
+   * iRacing's limiter bit and, on Assetto Corsa, the pit lane rather than the limiter. Every binding reads
+   * it through {@link pitLimiterOn}. #1122.
    */
-  pitLimiterOn: (): Expr => setting.reported(PIT_LIMITER_ON, pitLimiterOn()),
+  pitLimiterOn: (): Expr => setting.reported(PIT_LIMITER_ON, simHubPitLimiterOn()),
   /**
    * The sim reports the car's damage. Without the plugin, false: iRacing fills SimHub's `CarDamage1..5` with
    * zeros, which is no report at all. The damage module draws the car or says the sim reports none by it. #582.
@@ -2844,8 +2844,21 @@ export const isInPitLane = (): Expr => gt(isnull(game('IsInPitLane'), num(0)), n
 
 // --- The pit lane and the spotter, one body each for the faces, the strips and the box -----------
 
-/** The limiter is engaged. Null-safe, so a sim that publishes nothing draws no limiter anywhere. */
-export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
+/**
+ * SimHub's own `PitLimiterOn`, null-safe. On iRacing, ACC and Le Mans Ultimate it is the limiter; on
+ * Assetto Corsa SimHub fills it with the pit lane (`ACManager.GD_PitLimiterOn` returns `GD_IsInPitLane`),
+ * so it is read only as {@link sim.pitLimiterOn}'s fallback and never by a binding of its own.
+ */
+const simHubPitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)), num(1));
+
+/**
+ * The limiter is engaged, which every limiter reading on every surface reads: the telltale, the strip, the
+ * flag box, the overlay, the pit family and the themes' own. It is the plugin's answer for the running sim,
+ * and SimHub's member where the plugin gives none, because on Assetto Corsa that member is the pit lane and
+ * read alone it lit every limiter reading in the lane whether the limiter was on or not (#1122). Null-safe,
+ * so a sim that publishes nothing draws no limiter anywhere.
+ */
+export const pitLimiterOn = (): Expr => sim.pitLimiterOn();
 
 /** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
 export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
