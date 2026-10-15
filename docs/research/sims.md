@@ -326,7 +326,7 @@ section). What a null does to the reading:
 | `SessionData.DriverInfo.DriverCarGearNumForward` | top gear, the gear ghost | the fallback, which is wrong | #996 |
 | `SessionData.DriverInfo.DriverCarSLBlinkRPM`, `SLFirstRPM`, `SLLastRPM`, `SLShiftRPM` | the car's own shift ladder | SimHub's bands | #748 |
 | `SessionData.WeekendInfo.TrackDisplayShortName` | the track header's name, after AC's own | AC's raw name, or `TrackName` | #1124 |
-| `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | `0x` drawn as a value | #567 |
+| `SessionData.WeekendInfo.WeekendOptions.IncidentLimit`, `Telemetry.PlayerCarMyIncidentCount` | incidents | hidden, `--` on the session page | #567 |
 | `Telemetry.SteeringWheelAngle` | the steering dial and trace | flat | #567 |
 | `Telemetry.SessionFlagsDetails.Is*` (15) | band D, the flag box, the strips' flag lamps | no flag | #551 |
 | `Telemetry.IsOnTrack` | "in the car" for the alerts and notifications | unknown, read as in the car | #561 |

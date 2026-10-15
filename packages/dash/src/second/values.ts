@@ -2675,6 +2675,12 @@ export const simClock = (): TimeOfDay => {
 
 /** Incidents taken, which iRacing publishes raw and other sims do not publish at all. */
 export const incidents = (): Expr => raw('PlayerCarMyIncidentCount');
+/**
+ * Whether the sim counts incidents at all. Only iRacing does; on Assetto Corsa, ACC and Le Mans Ultimate
+ * the count is null, and a field drawing it as `0x` awards a clean sheet nobody counted. A field hides on
+ * this, or draws the not-available mark where it has a place to keep (#567).
+ */
+export const hasIncidents = (): Expr => not(isNull(incidents()));
 /** The incident limit, a string in iRacing's session YAML ("unlimited" or a number). */
 export const incidentLimit = (): Expr => prop('DataCorePlugin.GameRawData.SessionData.WeekendInfo.WeekendOptions.IncidentLimit');
 /** The session has a limit to count incidents against: one is published and it is not "unlimited". */
