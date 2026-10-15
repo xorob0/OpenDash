@@ -115,7 +115,8 @@ const ladderLayers = (count: number, style: LedRpmStyle, which: Ladder): leds.Le
  * The measured overrides, one `Groups.CustomConditionalGroup` per car and gear the table covers.
  *
  * These come *after* the two derived ladders so that they compose over them: a car in the table
- * gets its measured gear, and every other car and gear keeps the ladder iRacing publishes. That is
+ * gets its measured gear, and every other car and gear keeps the derived ladder, iRacing's
+ * published shift points or SimHub's in any other sim. That is
  * the "derived by default, table overrides" of #774, and it is why an empty table costs nothing
  * — no entries, no containers, no change to any profile.
  *

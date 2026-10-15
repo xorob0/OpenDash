@@ -83,9 +83,9 @@ namespace OpenDashPlugin
         ///
         /// Everything that would make the bar a guess is a refusal: a missing id, no LEDs, a colour
         /// list that does not match the LED count, a gear row that does not. A car OpenDash refuses
-        /// falls back to the ladder iRacing publishes, so the cost of being strict here is that a
-        /// driver sees the lights OpenDash drew last month rather than a bar assembled out of
-        /// mismatched halves.
+        /// falls back to the sim's own ladder (iRacing's published one, SimHub's elsewhere), so the
+        /// cost of being strict here is that a driver sees the lights OpenDash drew last month rather
+        /// than a bar assembled out of mismatched halves.
         /// </summary>
         public static CarLightTable Parse(string json)
         {
@@ -116,7 +116,7 @@ namespace OpenDashPlugin
             var colorValues = Items(colors).Select(i => Normalise(i.Value)).ToArray();
             if (colorValues.Length != count + 1) return null;
             // A colour nobody can read is a bar drawn in the wrong colours, which is worse than the
-            // ladder iRacing publishes. The whole car goes rather than one LED.
+            // sim's own ladder. The whole car goes rather than one LED.
             if (colorValues.Any(c => c == null)) return null;
 
             var gears = ParseGears(root, count);

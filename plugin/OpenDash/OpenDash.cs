@@ -589,7 +589,8 @@ namespace OpenDashPlugin
             // The mirror. Ready is the gate every strip profile's car layer hangs on, and each run is
             // one fixed-width string the profile slices a colour out of with left(); DataUpdate fills
             // them. With the tables absent or the car unmeasured, Ready stays 0 and the profile draws
-            // the ladder iRacing publishes, which is what it drew before any of this existed.
+            // the sim's own ladder, iRacing's published shift points or SimHub's elsewhere, which is
+            // what it drew before any of this existed.
             this.AttachDelegate(Contract.LedMirrorReady, () => CarLights.Ready ? 1 : 0);
             foreach (var length in Contract.MirrorRunLengths)
             {

@@ -4,7 +4,7 @@
 // Every test here is a failure mode, because the success path is one download and a folder read.
 // The failures are what matter: no network, half a network, a proxy answering HTML, an archive that
 // is not one, a car the database has never heard of. All of them have the same answer -- the strip
-// goes back to the ladder iRacing publishes -- and the point of the tests is that none of them
+// goes back to the sim's own ladder -- and the point of the tests is that none of them
 // throws on the way there.
 using System;
 using System.Collections.Generic;
