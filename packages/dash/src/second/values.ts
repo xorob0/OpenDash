@@ -3083,9 +3083,27 @@ export const lastLapDelta = (): Expr =>
   iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), mul(isnull(raw(LAST_LAP_DELTA), num(0)), '1.0'), num(0));
 
 /**
+ * Whether the sim publishes a live delta to the last lap at all, which is whether either of iRacing's
+ * two raw fields is there. iRacing publishes both on every frame, `_OK` false until there is a lap to
+ * compare against; Assetto Corsa, ACC and Le Mans Ultimate publish neither, and SimHub has no reading
+ * of its own to stand in (docs/research/sims.md). ADR 0021's second kind: the property's absence is
+ * itself the answer, so no capability is needed and no game is named.
+ */
+export const lastLapDeltaPublished = (): Expr => not(and(isNull(raw(`${LAST_LAP_DELTA}_OK`)), isNull(raw(LAST_LAP_DELTA))));
+
+/**
+ * Whether the delta is drawn against the last lap: the driver chose it, and the sim publishes it.
+ * Where it does not, the reference is the session best, the default, and every caption says so with
+ * it, so a driver who chose the last lap on Assetto Corsa reads the delta to their best under its own
+ * name rather than a level `+0.00` every lap under "vs last lap" (#575).
+ */
+export const deltaIsToLastLap = (): Expr => and(setting.deltaReferenceIs('lastlap'), lastLapDeltaPublished());
+
+/**
  * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
  * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
- * different laps. An unknown value reads the `session` reference, which is the default.
+ * different laps. An unknown value reads the `session` reference, which is the default, and so does
+ * the last lap on a sim that does not publish one ({@link deltaIsToLastLap}).
  *
  * The `session` reference is SimHub's live delta to its session best, which is the player's own best
  * lap of this session and not the field's: SimHub's lap tracker follows the player's laps and nobody
@@ -3093,7 +3111,7 @@ export const lastLapDelta = (): Expr =>
  * session best a page draws beside it in purple is the field's (#1030).
  */
 export const referenceDelta = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(deltaIsToLastLap(), lastLapDelta(), sessionBestDelta()));
 
 /** The caption of a delta to the player's own best lap of the session, which is what SimHub's session best is. */
 export const YOUR_BEST_CAPTION = 'vs your best';
@@ -3107,10 +3125,11 @@ export const YOUR_BEST_CAPTION = 'vs your best';
  * "vs your best" rather than the canvas's "vs session best", because the reference is the player's
  * own best lap of the session (see {@link referenceDelta}), and "session best" is what Lap times,
  * Sectors and the pit wall call the field's. On a face that drew both, the same two words named two
- * laps most of a second apart (#1030).
+ * laps most of a second apart (#1030). It follows {@link referenceDelta} onto your best where the sim
+ * publishes no last-lap delta, so the caption names the lap the figure is measured against (#575).
  */
 export const referenceLabel = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str(YOUR_BEST_CAPTION)));
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(deltaIsToLastLap(), str('vs last lap'), str(YOUR_BEST_CAPTION)));
 
 /**
  * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is
