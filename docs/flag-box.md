@@ -183,8 +183,23 @@ by colour alone.
 
 ## What it does not do
 
-**iRacing only.** Other sims may work and are welcome to; nothing here has been driven in one, and
-flags are more tempting to over-claim than a dashboard because they look universal. They are not.
+**Every condition only on iRacing.** iRacing publishes each of the fifteen as a flag of its own.
+Assetto Corsa, ACC and Le Mans Ultimate publish only SimHub's six one-word flags, `Flag_Black`,
+`Flag_Yellow`, `Flag_Blue`, `Flag_White`, `Flag_Green` and `Flag_Checkered`, and on those the box
+reads them instead (#551). That is six pictures of the fifteen: the black bar, the standing yellow,
+the blue, the white, the green and the chequer. The other nine stay dark there, because a one-word
+flag cannot say them: there is no red, no disqualification, no furled black and no meatball to read,
+and a yellow is drawn as the standing one, never as a full course yellow, a waved yellow or debris,
+because SimHub's yellow does not say which it is. The screens' flag band and the strips show the same
+six, in the same order.
+
+On Le Mans Ultimate SimHub's own answer is wrong for four of the six, so the plugin answers in its
+place (#1129): a yellow is drawn only for one in the sector you are in rather than anywhere on the
+lap, the black only for a penalty you have to serve rather than for a car that has retired, and the
+white on your last lap and the chequer when the session is over, both of which SimHub never raises
+there. Where the game does not say, the box falls back on SimHub's flag. None of this has been driven
+in Le Mans Ultimate yet, and flags are more tempting to over-claim than a dashboard because they look
+universal. They are not.
 
 **These are not drawn, because iRacing does not publish them.** Each is a thing somebody will ask
 for; the honest answer is that the data is not there, not that it was forgotten.

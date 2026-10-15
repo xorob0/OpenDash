@@ -46,7 +46,7 @@
  */
 import type { Expr } from '../bind.ts';
 import { flagBox, flagBoxMatrix, FLAG_BOX_MATRICES, type FlagBoxMatrix } from '../contract.ts';
-import { boxRaisedSafely, conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
+import { conditionVisible, flagsShown, noFlagShown, type FlagCondition } from '../flags.ts';
 import { ncalc, type MatrixContainer, type MatrixProfile } from '../generator.ts';
 // The ignition read is telemetry and lives with the rest of it; the two *gates* composed from it
 // live in gates.ts, because the strip asks the same question above its own tree and the answer has
@@ -100,15 +100,14 @@ const flagVisible = (matrix: FlagBoxMatrix, condition: FlagCondition): Expr => c
  * flag it is drawing, which a red flag above it or the pit lane's switch can each take away. The one
  * condition the spotter gives way to (#515).
  *
- * Ranked as the caution's own container ranks it, but read null-safely. Where the bits are published
- * the two agree, so the bar gives way exactly while SC is drawn; where they are not, as on Assetto
- * Corsa, the bare read would throw, a `when` takes a throw for false, and the bar that sim does draw
- * would go with it.
+ * Ranked as the caution's own container ranks it, by the same reading, so the bar gives way exactly
+ * while SC is drawn. The reading is null-safe since #551, so on a sim with no bits, as on Assetto
+ * Corsa, it is false rather than a throw a `when` takes for false, and the bar that sim does draw stays.
  */
 export function cautionOnPanel(matrix: FlagBoxMatrix): Expr {
   const caution = drawnFlags(false).find((condition) => condition.id === 'caution');
   if (caution === undefined) throw new RangeError('the full course yellow has no glyph, so the spotter has nothing to give way to');
-  return ncalc.and(ncalc.eq(flagBoxMatrix(matrix).flags(), 'true'), conditionVisible(caution, criticalOnly(matrix), drawnFlags(false), boxRaisedSafely));
+  return ncalc.and(ncalc.eq(flagBoxMatrix(matrix).flags(), 'true'), conditionVisible(caution, criticalOnly(matrix), drawnFlags(false)));
 }
 
 /** The catalogue, in order. */

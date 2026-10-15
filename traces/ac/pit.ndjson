@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[8794,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded"]}
+{"trace":1,"scenario":"pit","frames":200,"hz":10,"ticks":[8794,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -151,6 +151,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":null}
 {"p":"DataCorePlugin.GameRawData.Track.TrackInfo.name","v":"Spa"}
 {"p":"DataCorePlugin.GameRunning","v":1}
+{"p":"OpenDash.BlackFlagShown","v":null}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CarHasPitLimiter","v":true}
 {"p":"OpenDash.CarLadderChosen","v":true}
@@ -160,6 +161,7 @@
 {"p":"OpenDash.CarLadderOverRev","v":false}
 {"p":"OpenDash.CarLadderStage","v":-1}
 {"p":"OpenDash.CarLadderTopRpm","v":0}
+{"p":"OpenDash.ChequeredFlagShown","v":null}
 {"p":"OpenDash.ClassBestLap","t":"timespan","v":"00:01:37.5120000"}
 {"p":"OpenDash.ClockFormat","v":"24h"}
 {"p":"OpenDash.CompanionFlagFormat","v":null}
@@ -625,6 +627,8 @@
 {"p":"OpenDash.UpdateAvailable","v":false}
 {"p":"OpenDash.UpdateVersion","v":""}
 {"p":"OpenDash.WebViewUrl","v":null}
+{"p":"OpenDash.WhiteFlagShown","v":null}
+{"p":"OpenDash.YellowFlagShown","v":null}
 {"p":"PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds","v":14.27}
 {"p":"PersistantTrackerPlugin.EstimatedLapTime","t":"timespan","v":"00:01:51.9290000"}
 {"p":"PersistantTrackerPlugin.PreviousLap_00","t":"timespan","v":"00:01:38.4640000"}

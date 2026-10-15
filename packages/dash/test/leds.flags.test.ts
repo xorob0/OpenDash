@@ -21,6 +21,7 @@ import { drawnFlags } from '../src/leds/profile.ts';
 import { flagFrames } from '../src/leds/glyphs.ts';
 import { lampsOf } from '../src/leds/lamps.ts';
 import { ds } from '../src/tokens.ts';
+import { withEveryBitPublished } from './flagReads.ts';
 
 const profileFor = (shape: StripShape): leds.LedProfile => rpmStripProfile(shape, stableGuid(`test/flags/${shape.id}`));
 const textOf = (shape: StripShape): string => leds.serializeProfile(profileFor(shape));
@@ -45,9 +46,10 @@ const safeRead = (bit: SessionFlagBit): string => ncalc.isnull(flagBit(bit), nca
  * One of these conditions with the named bits raised. Handles exactly what the rows emit —
  * parenthesised `and`, `or`, `!` and `isnull([bit], 0) = 1` — and throws on anything wider rather
  * than guessing, so a change to how the conditions are built fails here instead of passing wrongly.
+ * Every bit is published, as on iRacing, so the summary a sim with no bits is read by is false.
  */
 const evaluate = (expression: string, raised: readonly SessionFlagBit[]): boolean => {
-  let s = expression;
+  let s = withEveryBitPublished(expression);
   for (const condition of FLAG_CATALOGUE) {
     for (const bit of condition.bits) s = s.split(safeRead(bit)).join(raised.includes(bit) ? '1' : '0');
   }
@@ -115,13 +117,16 @@ describe('the catalogue reaches the strip', () => {
     // IsActiveBase catches a throwing expression and returns its default of 1.0, so a bare read on
     // a sim that publishes no SessionFlagsDetails does not leave the lamp dark: it raises every flag
     // at once. The box's when group tolerates the same throw, which is why this is the strip's test.
+    // A bit is read as `isnull([bit], 0)` for its value and as `isnull([bit])` for whether it is
+    // published at all, and the summary a sim with no bits falls back on (#551) is read the same way.
     for (const shape of ALL_SHAPES) {
       const text = textOf(shape);
       for (const condition of drawnOnStrip()) {
-        for (const bit of condition.bits) {
-          const bare = text.split(flagBit(bit)).length - 1;
-          const wrapped = text.split(safeRead(bit)).length - 1;
-          expect({ shape: shape.id, bit, bare, wrapped }).toMatchObject({ bare: wrapped });
+        const reads = [...condition.bits.map(flagBit), ...(condition.faceFlag ? [`[DataCorePlugin.GameData.${condition.faceFlag}]`] : [])];
+        for (const read of reads) {
+          const bare = text.split(read).length - 1;
+          const wrapped = text.split(`isnull(${read}`).length - 1;
+          expect({ shape: shape.id, read, bare, wrapped }).toMatchObject({ bare: wrapped });
         }
       }
     }

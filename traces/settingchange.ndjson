@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79944,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness"]}
+{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79944,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -150,6 +150,7 @@
 {"p":"DataCorePlugin.GameRawData.Telemetry.dpRRTireChange","v":1}
 {"p":"DataCorePlugin.GameRawData.Track.TrackInfo.name","v":null}
 {"p":"DataCorePlugin.GameRunning","v":1}
+{"p":"OpenDash.BlackFlagShown","v":null}
 {"p":"OpenDash.BlueFlagDetail","v":"none"}
 {"p":"OpenDash.CarHasPitLimiter","v":true}
 {"p":"OpenDash.CarLadderChosen","v":true}
@@ -159,6 +160,7 @@
 {"p":"OpenDash.CarLadderOverRev","v":false}
 {"p":"OpenDash.CarLadderStage","v":1}
 {"p":"OpenDash.CarLadderTopRpm","v":8228}
+{"p":"OpenDash.ChequeredFlagShown","v":null}
 {"p":"OpenDash.ClassBestLap","v":null}
 {"p":"OpenDash.ClockFormat","v":"24h"}
 {"p":"OpenDash.CompanionFlagFormat","v":"full"}
@@ -624,6 +626,8 @@
 {"p":"OpenDash.UpdateAvailable","v":false}
 {"p":"OpenDash.UpdateVersion","v":""}
 {"p":"OpenDash.WebViewUrl","v":""}
+{"p":"OpenDash.WhiteFlagShown","v":null}
+{"p":"OpenDash.YellowFlagShown","v":null}
 {"p":"PersistantTrackerPlugin.AllTimeBestLiveDeltaSeconds","v":32.47}
 {"p":"PersistantTrackerPlugin.EstimatedLapTime","t":"timespan","v":"00:00:42.4700000"}
 {"p":"PersistantTrackerPlugin.PreviousLap_00","t":"timespan","v":"00:01:38.4190000"}

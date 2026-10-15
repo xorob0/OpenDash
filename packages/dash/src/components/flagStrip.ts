@@ -19,9 +19,11 @@
  * and visible on the 8x8 box. The face, the box and the pit wall header now rank one list, so the
  * three cannot disagree about which of two live conditions wins.
  *
- * The price is that band D is iRacing's, as the box already was: `SessionFlagsDetails` is a raw
- * iRacing field, so in another sim the band stays dark rather than drawing an approximation of a
- * flag nobody published. `safeBitSet` is what keeps it dark, since a bare read of an absent
+ * `SessionFlagsDetails` is a raw iRacing field, so on another sim the band reads what that sim does
+ * publish, #551: `flagRaised` falls back on a condition's `Flag_*`, through the plugin's answer for it
+ * where SimHub's is wrong (#1129), so the black, the yellow, the blue, the white, the green and the
+ * chequer show there and the conditions the summary cannot tell apart stay dark rather than drawing an
+ * approximation of a flag nobody published. The reading is null-safe, since a bare read of an absent
  * property is not a boolean.
  *
  * The nano's 12 px strip is too thin for a name, so its style drops the names and thins the
@@ -39,7 +41,7 @@ import type { Item, LayerItem, Rect } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { ncalc } from '../generator.ts';
 import { ALERT_BAND_BORDER, ALERT_BAND_STYLES, alertBandName, chequerBand, discBand, filledBand, outlinedBand, stripedBand, type AlertBandStyle } from './alertBand.ts';
-import { ALERT_CATALOGUE, bandNames, bandRaised, bandVisible, FACE_FLAG_PRIORITY, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
+import { ALERT_CATALOGUE, bandNames, bandRaised, bandVisible, FACE_FLAG_PRIORITY, faceFlagRaised, flagsAllowedHere, raisedRank, type AlertBandSpec, type AlertCondition, type FaceFlag } from '../flags.ts';
 import { BLUE_FLAG_DETAILS, setting, type BlueFlagDetail } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
 import { carBehindClass, carBehindPositionClass, WIDEST_BEHIND_CLASS, WIDEST_BEHIND_POSITION_CLASS } from '../second/values.ts';
@@ -48,7 +50,7 @@ import { ds } from '../tokens.ts';
 export { ALERT_BAND_BORDER as BLACK_FLAG_BORDER, ALERT_FLASH_MS as FLAG_BLINK_MS, ALERT_NAME_WEIGHT as FLAG_NAME_WEIGHT, ALERT_BAND_STYLES as FLAG_STRIP_STYLES } from './alertBand.ts';
 export type { AlertBandStyle as FlagStripStyle } from './alertBand.ts';
 
-const { game, eq, and, changed, num, concat, iff, str } = ncalc;
+const { eq, and, changed, num, concat, iff, not, str } = ncalc;
 
 /**
  * SimHub flag properties in priority order, taken from `FLAG_CATALOGUE` rather than restated.
@@ -61,7 +63,10 @@ export const FLAG_PRIORITY: readonly FaceFlag[] = FACE_FLAG_PRIORITY;
 export type FlagProperty = FaceFlag;
 
 /**
- * `[Flag_X] = 1` and every higher-priority flag `= 0`, where a flag may show at all.
+ * `[Flag_X] = 1` and every higher-priority flag not, where a flag may show at all, each read through
+ * `faceFlagRaised`: the plugin's answer for the flag where it gives one, which on Le Mans Ultimate is
+ * the chequer and the white SimHub never raises and the black and the yellow it raises for the wrong
+ * thing (#1129), and SimHub's own property everywhere else, iRacing included.
  *
  * The ring reads SimHub's six rather than the catalogue's reading, so it asks `flagsAllowedHere`
  * itself: a ring that kept its colour in the pit lane after band D had gone quiet would be two
@@ -69,8 +74,8 @@ export type FlagProperty = FaceFlag;
  */
 export function flagVisible(flag: FlagProperty): Expr {
   const index = FLAG_PRIORITY.indexOf(flag);
-  const higher = FLAG_PRIORITY.slice(0, index).map((f) => eq(game(f), num(0)));
-  return and(flagsAllowedHere(), ...higher, eq(game(flag), num(1)));
+  const higher = FLAG_PRIORITY.slice(0, index).map((f) => not(faceFlagRaised(f)));
+  return and(flagsAllowedHere(), ...higher, faceFlagRaised(flag));
 }
 
 /**
@@ -198,9 +203,9 @@ const blueFlagParts = (name: string, frame: Rect, style: AlertBandStyle, spec: A
 };
 
 /**
- * One condition's layer, ranked by `bandVisible` rather than by the box's own reading: null-safe, so
- * that a sim publishing no `SessionFlagsDetails` leaves the band dark rather than lighting it, and
- * limited where a bit is held longer than the flag it announces.
+ * One condition's layer, ranked by `bandVisible`: null-safe, so that a sim publishing no
+ * `SessionFlagsDetails` lights the band only for a `Flag_*` it does publish rather than for every
+ * condition at once, and limited where a bit is held longer than the flag it announces.
  *
  * The band passes `false` for the critical-flags switch and so draws the whole list. That switch is
  * the box's, where sixty-four pixels are the only thing a driver has; a driver who wants band D

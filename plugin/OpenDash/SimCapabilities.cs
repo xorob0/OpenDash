@@ -5,7 +5,9 @@
 // an isnull() in the expression already tells "not reported" from a value. A few questions cannot be told
 // apart that way: a car without a pit limiter reads PitLimiterOn 0 like a limiter switched off, Assetto
 // Corsa's reader fills PitLimiterOn with the pit lane, iRacing fills CarDamage1..5 with zeros, and the
-// raw reading that says the driver is in the car has another name and another shape on every sim. For
+// raw reading that says the driver is in the car has another name and another shape on every sim, and Le
+// Mans Ultimate's reader raises SimHub's Flag_Black for a retired car, Flag_Yellow for a yellow anywhere on
+// the track, and never the chequer or the white (#1129). For
 // those the plugin answers, from the table below, and publishes one OpenDash property per question
 // (Contract.Capabilities); ADR 0021 is the rule and docs/research/sims.md (#1100) is where each row's
 // facts were read. A game with no row gets null for every question, which is also what a dashboard reads
@@ -16,6 +18,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 
 namespace OpenDashPlugin
 {
@@ -25,72 +28,99 @@ namespace OpenDashPlugin
     /// </summary>
     public sealed class SimReport
     {
-        private static readonly SimReport[] Interned = Build();
+        /// <summary>How many questions there are, and so how many digits a report's index has.</summary>
+        private static readonly int Count = Contract.Capabilities.Length;
+
+        /// <summary>
+        /// One slot per set of answers, by <see cref="Index"/>: three answers to each of the questions. Filled
+        /// as each set is first asked for, since a session meets a handful of the 6561 and never the rest.
+        /// </summary>
+        private static readonly SimReport[] Interned = new SimReport[Power(Count)];
 
         /// <summary>Every answer null: no game, a game with no row, or no frame to read.</summary>
-        public static readonly SimReport Unknown = Of(null, null, null, null);
+        public static readonly SimReport Unknown = Of();
+
+        private readonly bool?[] answers;
 
         /// <summary>See <see cref="Contract.CarHasPitLimiter"/>.</summary>
-        public bool? CarHasPitLimiter { get; }
+        public bool? CarHasPitLimiter => Read(Contract.CarHasPitLimiter);
 
         /// <summary>See <see cref="Contract.PitLimiterOn"/>.</summary>
-        public bool? PitLimiterOn { get; }
+        public bool? PitLimiterOn => Read(Contract.PitLimiterOn);
 
         /// <summary>See <see cref="Contract.DamageReported"/>.</summary>
-        public bool? DamageReported { get; }
+        public bool? DamageReported => Read(Contract.DamageReported);
 
         /// <summary>See <see cref="Contract.DriverInCar"/>.</summary>
-        public bool? DriverInCar { get; }
+        public bool? DriverInCar => Read(Contract.DriverInCar);
 
-        private SimReport(bool? carHasPitLimiter, bool? pitLimiterOn, bool? damageReported, bool? driverInCar)
+        /// <summary>See <see cref="Contract.YellowFlagShown"/>.</summary>
+        public bool? YellowFlagShown => Read(Contract.YellowFlagShown);
+
+        /// <summary>See <see cref="Contract.BlackFlagShown"/>.</summary>
+        public bool? BlackFlagShown => Read(Contract.BlackFlagShown);
+
+        /// <summary>See <see cref="Contract.WhiteFlagShown"/>.</summary>
+        public bool? WhiteFlagShown => Read(Contract.WhiteFlagShown);
+
+        /// <summary>See <see cref="Contract.ChequeredFlagShown"/>.</summary>
+        public bool? ChequeredFlagShown => Read(Contract.ChequeredFlagShown);
+
+        private SimReport(bool?[] answers)
         {
-            CarHasPitLimiter = carHasPitLimiter;
-            PitLimiterOn = pitLimiterOn;
-            DamageReported = damageReported;
-            DriverInCar = driverInCar;
+            this.answers = answers;
         }
 
-        /// <summary>The one instance holding these four answers.</summary>
-        public static SimReport Of(bool? carHasPitLimiter, bool? pitLimiterOn, bool? damageReported, bool? driverInCar)
+        /// <summary>
+        /// The one instance holding these answers, in the order of <see cref="Contract.Capabilities"/>; a question
+        /// left off the end is answered null.
+        /// </summary>
+        public static SimReport Of(params bool?[] answers)
         {
-            return Interned[Index(carHasPitLimiter, pitLimiterOn, damageReported, driverInCar)];
+            var index = 0;
+            for (var i = 0; i < Count; i++) index = index * 3 + Digit(answers != null && i < answers.Length ? answers[i] : null);
+            return At(index);
         }
 
         /// <summary>One answer, by its <see cref="Contract.Capabilities"/> name; null for a name that is not one.</summary>
         public bool? Read(string capability)
         {
-            switch (capability)
-            {
-                case Contract.CarHasPitLimiter: return CarHasPitLimiter;
-                case Contract.PitLimiterOn: return PitLimiterOn;
-                case Contract.DamageReported: return DamageReported;
-                case Contract.DriverInCar: return DriverInCar;
-                default: return null;
-            }
+            var i = Array.IndexOf(Contract.Capabilities, capability);
+            return i < 0 ? null : answers[i];
         }
 
         public override string ToString()
         {
             return "limiter " + Word(CarHasPitLimiter) + ", on " + Word(PitLimiterOn)
-                + ", damage " + Word(DamageReported) + ", in the car " + Word(DriverInCar);
+                + ", damage " + Word(DamageReported) + ", in the car " + Word(DriverInCar)
+                + ", yellow " + Word(YellowFlagShown) + ", black " + Word(BlackFlagShown)
+                + ", white " + Word(WhiteFlagShown) + ", chequered " + Word(ChequeredFlagShown);
         }
 
         private static string Word(bool? answer) => answer.HasValue ? (answer.Value ? "yes" : "no") : "unknown";
 
-        private static int Digit(bool? answer) => answer.HasValue ? (answer.Value ? 2 : 1) : 0;
+        /// <summary>An answer as one digit of a report's index: unknown, no, yes.</summary>
+        internal static int Digit(bool? answer) => answer.HasValue ? (answer.Value ? 2 : 1) : 0;
 
-        private static int Index(bool? a, bool? b, bool? c, bool? d) => ((Digit(a) * 3 + Digit(b)) * 3 + Digit(c)) * 3 + Digit(d);
-
-        private static SimReport[] Build()
+        /// <summary>The report at an index built from <see cref="Digit"/>s, the first question the most significant.</summary>
+        internal static SimReport At(int index)
         {
-            var answers = new bool?[] { null, false, true };
-            var all = new SimReport[81];
-            foreach (var a in answers)
-                foreach (var b in answers)
-                    foreach (var c in answers)
-                        foreach (var d in answers)
-                            all[Index(a, b, c, d)] = new SimReport(a, b, c, d);
-            return all;
+            var report = Volatile.Read(ref Interned[index]);
+            if (report != null) return report;
+            var answers = new bool?[Count];
+            for (int i = Count - 1, rest = index; i >= 0; i--, rest /= 3)
+            {
+                var digit = rest % 3;
+                answers[i] = digit == 0 ? (bool?)null : digit == 2;
+            }
+            return Interlocked.CompareExchange(ref Interned[index], new SimReport(answers), null) ?? Interned[index];
+        }
+
+        private static int Power(int digits)
+        {
+            var n = 1;
+            for (var i = 0; i < digits; i++) n *= 3;
+            return n;
         }
     }
 
@@ -118,6 +148,38 @@ namespace OpenDashPlugin
         /// <summary>AC_LIVE in Assetto Corsa's and ACC's AC_STATUS: a session running with the player driving.</summary>
         public const int AcLive = 2;
 
+        /// <summary>Where Le Mans Ultimate publishes the session's scoring, under rFactor 2's names.</summary>
+        public const string LmuScoring = GameRawData + "LMUNativeTelemetry.scoring.scoringInfo.";
+
+        /// <summary>Where Le Mans Ultimate publishes the player's own car's scoring.</summary>
+        public const string LmuPlayer = GameRawData + "PlayerNativeScoring.";
+
+        /// <summary>
+        /// Where SimHub publishes the session's scoring from the rFactor 2 plugin's page, which Le Mans Ultimate
+        /// also runs. SimHub declares GameRawData once, from LMUManager.GetDataSample, and nothing for an array
+        /// that is null there: the sample's LMUNativeTelemetry holds no mSectorFlag, so only this page's
+        /// Data.mSectorFlag01 to 03 are published.
+        /// </summary>
+        public const string LmuPluginScoring = GameRawData + "Data.";
+
+        /// <summary>The player's own car's scoring on the rFactor 2 plugin's page, the same frame as <see cref="LmuPluginScoring"/>.</summary>
+        public const string LmuPluginPlayer = GameRawData + "CurrentPlayer.";
+
+        /// <summary>rFactor 2's mGamePhase while the race is green.</summary>
+        public const int LmuGreen = 5;
+
+        /// <summary>rFactor 2's mGamePhase under a full course yellow.</summary>
+        public const int LmuFullCourseYellow = 6;
+
+        /// <summary>rFactor 2's mGamePhase once the session is over: the chequer is out.</summary>
+        public const int LmuSessionOver = 8;
+
+        /// <summary>rFactor 2's mFinishStatus for a car that has taken the chequer.</summary>
+        public const int LmuFinished = 1;
+
+        /// <summary>rFactor 2's first race session in mSession: 10 to 13 are the races, below are practice, qualifying and warmup.</summary>
+        public const int LmuFirstRace = 10;
+
         /// <summary>How one sim answers one question, given a way to read a property by its full name.</summary>
         public delegate bool? Answer(Func<string, object> property);
 
@@ -128,6 +190,27 @@ namespace OpenDashPlugin
             public Answer PitLimiterOn { get; set; }
             public Answer DamageReported { get; set; }
             public Answer DriverInCar { get; set; }
+            public Answer YellowFlagShown { get; set; }
+            public Answer BlackFlagShown { get; set; }
+            public Answer WhiteFlagShown { get; set; }
+            public Answer ChequeredFlagShown { get; set; }
+
+            /// <summary>The answer to one question by its <see cref="Contract.Capabilities"/> name.</summary>
+            public Answer For(string capability)
+            {
+                switch (capability)
+                {
+                    case Contract.CarHasPitLimiter: return CarHasPitLimiter;
+                    case Contract.PitLimiterOn: return PitLimiterOn;
+                    case Contract.DamageReported: return DamageReported;
+                    case Contract.DriverInCar: return DriverInCar;
+                    case Contract.YellowFlagShown: return YellowFlagShown;
+                    case Contract.BlackFlagShown: return BlackFlagShown;
+                    case Contract.WhiteFlagShown: return WhiteFlagShown;
+                    case Contract.ChequeredFlagShown: return ChequeredFlagShown;
+                    default: return null;
+                }
+            }
         }
 
         /// <summary>The same answer for every car on every frame.</summary>
@@ -147,6 +230,62 @@ namespace OpenDashPlugin
         };
 
         /// <summary>
+        /// Whether a yellow is out in the sector the player's car is in, rather than anywhere on the track. rFactor 2
+        /// numbers the player's mSector 0 for the third sector, 1 for the first and 2 for the second, and orders
+        /// mSectorFlag the same way, which SimHub publishes one-based as mSectorFlag01 to mSectorFlag03; a flag of 1
+        /// is a yellow, as LMUManager.GD_Flag_Yellow reads it. Both are read from the rFactor 2 plugin's page, the
+        /// only one on which SimHub publishes the sector flags (<see cref="LmuPluginScoring"/>), and which
+        /// LMUManager.IsGameRunning requires, so it is there whenever the game is. Null while either is absent, so a
+        /// dashboard falls back on SimHub's own any-sector Flag_Yellow rather than read "no yellow".
+        /// </summary>
+        public static bool? LmuLocalYellow(Func<string, object> property)
+        {
+            var sector = Number(property(LmuPluginPlayer + "mSector"));
+            if (!sector.HasValue || sector.Value < 0 || sector.Value > 2) return null;
+            var flag = Number(property(LmuPluginScoring + "mSectorFlag0" + (sector.Value + 1).ToString(CultureInfo.InvariantCulture)));
+            return flag.HasValue ? flag.Value == 1 : (bool?)null;
+        }
+
+        /// <summary>
+        /// Whether the chequer is out for the player: the session is over, rFactor 2's mGamePhase 8, which it becomes
+        /// as the leader crosses the line and stays at for every car still to cross it, or the player has finished.
+        /// Null with no session to read. SimHub's own Flag_Checkered is [NotAvailable] on Le Mans Ultimate.
+        /// </summary>
+        public static bool? LmuChequered(Func<string, object> property)
+        {
+            var phase = Number(property(LmuScoring + "mGamePhase"));
+            if (!phase.HasValue) return null;
+            return phase.Value == LmuSessionOver || Number(property(LmuPlayer + "mFinishStatus")) == LmuFinished;
+        }
+
+        /// <summary>
+        /// Whether the player is on the last lap of a race that is still running: in a race of so many laps, the
+        /// player has completed all but one of them; in a timed race, the time has run out and the player has not
+        /// yet crossed the line. An approximation, since rFactor 2 publishes no white flag: a car the leader has
+        /// lapped is shown it a lap late, as the leader's crossing ends that car's race too. Null with no session to
+        /// read. SimHub's own Flag_White is [NotAvailable] on Le Mans Ultimate.
+        /// </summary>
+        public static bool? LmuLastLap(Func<string, object> property)
+        {
+            var session = Number(property(LmuScoring + "mSession"));
+            var phase = Number(property(LmuScoring + "mGamePhase"));
+            if (!session.HasValue || !phase.HasValue) return null;
+            if (session.Value < LmuFirstRace || (phase.Value != LmuGreen && phase.Value != LmuFullCourseYellow)) return false;
+            if (Number(property(LmuPlayer + "mFinishStatus")) > 0) return false;
+            var maxLaps = Number(property(LmuScoring + "mMaxLaps"));
+            if (maxLaps.HasValue && maxLaps.Value > 0 && maxLaps.Value < LmuTimedRaceLaps)
+            {
+                var laps = Number(property(LmuPlayer + "mTotalLaps"));
+                return laps.HasValue ? laps.Value >= maxLaps.Value - 1 : (bool?)null;
+            }
+            var remaining = Real(property(LmuScoring + "mSessionTimeRemaining"));
+            return remaining.HasValue ? remaining.Value <= 0 : (bool?)null;
+        }
+
+        /// <summary>The mMaxLaps at and above which rFactor 2's race is one of time rather than laps: it writes a huge number there.</summary>
+        public const int LmuTimedRaceLaps = 10000;
+
+        /// <summary>
         /// One row per game, by SimHub's code. Each answer cites the reader member docs/research/sims.md read it
         /// from; adding a game is adding a row here and its test, and nothing in a dashboard.
         /// </summary>
@@ -162,6 +301,12 @@ namespace OpenDashPlugin
                 DamageReported = Always(false),
                 // "Car on track physics running with player in car."
                 DriverInCar = Truth(GameRawData + "Telemetry.IsOnTrack"),
+                // The flags are SessionFlagsDetails' bits, which a dashboard asks before any of these and which
+                // iRacing publishes on every frame, so there is nothing for the plugin to answer.
+                YellowFlagShown = null,
+                BlackFlagShown = null,
+                WhiteFlagShown = null,
+                ChequeredFlagShown = null,
             },
             [AssettoCorsa] = new Row
             {
@@ -174,6 +319,12 @@ namespace OpenDashPlugin
                 DamageReported = Always(true),
                 // Graphics.Status: AC_OFF, AC_REPLAY, AC_LIVE, AC_PAUSE. Live is the driver in the car.
                 DriverInCar = Is(GameRawData + "Graphics.Status", AcLive),
+                // ACManager's Flag_* read Graphics.Flag, the one flag the game shows the driver, so SimHub's own
+                // summary is the answer and a dashboard reads it (#551).
+                YellowFlagShown = null,
+                BlackFlagShown = null,
+                WhiteFlagShown = null,
+                ChequeredFlagShown = null,
             },
             [AssettoCorsaCompetizione] = new Row
             {
@@ -183,6 +334,12 @@ namespace OpenDashPlugin
                 // ACCManager.GD_CarDamage1..5 read Physics.CarDamage.
                 DamageReported = Always(true),
                 DriverInCar = Is(GameRawData + "Graphics.Status", AcLive),
+                // ACCManager's Flag_* read Graphics.Flag, as Assetto Corsa's do; the global flags it also has are
+                // the track's and not the driver's.
+                YellowFlagShown = null,
+                BlackFlagShown = null,
+                WhiteFlagShown = null,
+                ChequeredFlagShown = null,
             },
             [LeMansUltimate] = new Row
             {
@@ -194,6 +351,19 @@ namespace OpenDashPlugin
                 DamageReported = Always(false),
                 // mInRealtime: in the car rather than in the monitor.
                 DriverInCar = Truth(GameRawData + "LMUNativeTelemetry.scoring.scoringInfo.mInRealtime"),
+                // GD_Flag_Yellow is any mSectorFlag at 1: a yellow anywhere on the track. The driver's own sector.
+                YellowFlagShown = LmuLocalYellow,
+                // GD_Flag_Black is mFinishStatus 2 or 3, a retirement or a disqualification. A black flag on track
+                // is a penalty to serve, and mNumPenalties counts those outstanding.
+                BlackFlagShown = property =>
+                {
+                    var penalties = Number(property(LmuPlayer + "mNumPenalties"));
+                    return penalties.HasValue ? penalties.Value > 0 : (bool?)null;
+                },
+                // GD_Flag_White is [NotAvailable].
+                WhiteFlagShown = LmuLastLap,
+                // GD_Flag_Checkered is [NotAvailable].
+                ChequeredFlagShown = LmuChequered,
             },
         };
 
@@ -210,8 +380,10 @@ namespace OpenDashPlugin
         {
             Row row;
             if (gameName == null || property == null || !Table.TryGetValue(gameName, out row)) return SimReport.Unknown;
-            return SimReport.Of(Ask(row.CarHasPitLimiter, property), Ask(row.PitLimiterOn, property),
-                Ask(row.DamageReported, property), Ask(row.DriverInCar, property));
+            // The index is built answer by answer rather than through SimReport.Of, so a frame allocates nothing.
+            var index = 0;
+            foreach (var capability in Contract.Capabilities) index = index * 3 + SimReport.Digit(Ask(row.For(capability), property));
+            return SimReport.At(index);
         }
 
         private static bool? Ask(Answer answer, Func<string, object> property)

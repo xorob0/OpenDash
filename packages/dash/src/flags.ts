@@ -20,7 +20,22 @@
  * `SessionFlags` (see docs/research/simhub-dash-format.md). The six normalised `Flag_*` properties
  * are a lossy summary of it: `Flag_Yellow` is `yellow`, `yellowWaving`, `caution` and
  * `cautionWaving` folded together, and `Flag_Black` is only the `black` bit, so a furled black and
- * a disqualification are invisible through them. The other five each carry their own condition, and
+ * a disqualification are invisible through them.
+ *
+ * **On a sim that publishes no bits the summary is all there is, #551.** Assetto Corsa, ACC and Le
+ * Mans Ultimate have no `SessionFlagsDetails`, so {@link flagRaised} reads a condition's bits where
+ * they are published and, where none of them is, its `faceFlag`: the black, the yellow, the blue, the
+ * white, the green and the chequer, which is everything such a sim can show. The red, the
+ * disqualification, the furled black, the meatball, the full course yellow, the waved yellow, the
+ * debris flag and the start gantry have no `faceFlag` and stay dark there, since nothing says which of
+ * them a `Flag_Yellow` or a `Flag_Black` is. Where SimHub's own member is wrong for a sim the plugin
+ * answers instead, by a capability named for the flag (ADR 0021, #1129): on Le Mans Ultimate SimHub
+ * never raises the chequer or the white, raises the black for a car that has retired, and raises the
+ * yellow for a yellow anywhere on the track, and `YellowFlagShown`, `BlackFlagShown`,
+ * `WhiteFlagShown` and `ChequeredFlagShown` say what this driver is being shown. iRacing's bits are
+ * asked first and are always there, so iRacing reads exactly what it read before.
+ *
+ * The five car alerts each carry their own condition, and
  * each of those reads `inTheCar` from `second/values.ts`, #312's one test of whether anybody is
  * driving: SimHub reads iRacing's ignition as off whenever there is no voltage, which is whenever the
  * driver is in the garage, and an alert raised there is noise. They read it as "no" in a sim that
@@ -39,8 +54,8 @@
 import { ncalc, type Hex } from './generator.ts';
 import type { Expr } from './bind.ts';
 import { ds } from './tokens.ts';
-import { setting } from './contract.ts';
-import { engineStopped, hasHeadlightFlashControl, hasIncidentLimit, headlightFlashed, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane } from './second/values.ts';
+import { BLACK_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, setting, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from './contract.ts';
+import { engineStopped, hasHeadlightFlashControl, hasIncidentLimit, headlightFlashed, ignitionOff, incidentLimit, incidents, inTheCar, isInPitLane, sim, type FlagCapability } from './second/values.ts';
 
 const { and, changed, concat, eq, fmt, game, gt, iff, isNull, isnull, not, num, or, prop, raw, str } = ncalc;
 
@@ -109,11 +124,37 @@ export const safeBitSet: BitTest = (bit) => eq(isnull(flagBit(bit), num(0)), num
 export const flagsAllowedHere = (): Expr => or(eq(setting.flagsInPitLane(), 'true'), not(isInPitLane()));
 
 /**
- * The six SimHub flag properties, which are what the round face's ring and the pit wall header
- * still read. They are a lossy summary, as the header of this file says, and band D no longer
- * reads them: `components/flagStrip.ts` draws the whole catalogue off the bits instead.
+ * The six SimHub flag properties, which are what the round face's ring reads and what every other
+ * surface reads on a sim with no bits. They are a lossy summary, as the header of this file says,
+ * and where the bits are published nothing but the ring reads them: `components/flagStrip.ts` draws
+ * the whole catalogue off the bits instead.
  */
 export type FaceFlag = 'Flag_Black' | 'Flag_Checkered' | 'Flag_Yellow' | 'Flag_Blue' | 'Flag_White' | 'Flag_Green';
+
+/**
+ * The capability the plugin answers a face flag with, for the four whose SimHub member is wrong on some
+ * sim (#1129). The blue and the green have none: Le Mans Ultimate's blue is the player's own `mFlag`,
+ * which is right, and its green is already the short green the band wants.
+ */
+export const FLAG_CAPABILITY: Readonly<Partial<Record<FaceFlag, FlagCapability>>> = {
+  Flag_Black: BLACK_FLAG_SHOWN,
+  Flag_Yellow: YELLOW_FLAG_SHOWN,
+  Flag_White: WHITE_FLAG_SHOWN,
+  Flag_Checkered: CHEQUERED_FLAG_SHOWN,
+};
+
+/** The plugin's answer for a face flag where it gives one, and `simHubs`, SimHub's own reading of it, where it does not. */
+const reportedFlag = (flag: FaceFlag, simHubs: Expr): Expr => {
+  const capability = FLAG_CAPABILITY[flag];
+  return capability === undefined ? simHubs : sim.flagShown(capability, simHubs);
+};
+
+/**
+ * A face flag as the round face's ring reads it: the plugin's answer, then SimHub's own `[Flag_X] = 1`,
+ * which is the bare read the ring has always made. On iRacing the plugin answers none of the four, so
+ * the ring reads exactly the property it read before.
+ */
+export const faceFlagRaised = (flag: FaceFlag): Expr => reportedFlag(flag, eq(game(flag), num(1)));
 
 /**
  * How a band draws the condition: five shapes and no sixth, which are the canvas's own four for the
@@ -226,7 +267,10 @@ export interface FlagCondition extends CatalogueEntry {
    * be a solid green bar over the fuel page for an entire race.
    */
   limiter?: FaceFlag;
-  /** The SimHub property that answers for this condition on the ring and the pit wall header. */
+  /**
+   * The SimHub property that answers for this condition on the round face's ring, and on every surface
+   * where none of its bits is published (see {@link flagRaised}).
+   */
   faceFlag?: FaceFlag;
 }
 
@@ -550,8 +594,40 @@ export const alertCondition = (id: string): AlertCondition => {
 export const conditionRaised = (condition: FlagCondition, test: BitTest = bitSet): Expr => or(...condition.bits.map(test));
 
 /**
+ * Whether a flag is out, on every sim, null-safely: the one reading the box, band D and the LED strips
+ * share, so that the three cannot disagree about which flag a sim is showing. #551.
+ *
+ * Any of its bits set, as iRacing publishes them. Where none of its bits is published at all, its
+ * `faceFlag`, through the plugin's answer for it where the plugin gives one (#1129): so on Assetto Corsa,
+ * ACC and Le Mans Ultimate the six conditions with a `faceFlag` show and the rest stay dark, which is
+ * what the header of this file says such a sim can show. A bit that is published and clear is a flag
+ * that is not out, whatever the summary says; on iRacing every bit is published on every frame, so the
+ * second half is never reached there and iRacing reads what it read before.
+ *
+ * Null-safe because every surface needs it to be: a CustomStatus takes a throwing formula for "on",
+ * and a `when` takes one for "off" and with it every condition ranked below.
+ */
+export function flagRaised(condition: FlagCondition): Expr {
+  const bits = conditionRaised(condition, safeBitSet);
+  const summary = summaryRaised(condition);
+  return summary === undefined ? bits : or(bits, summary);
+}
+
+/**
+ * The half of {@link flagRaised} a sim with no bits is read by: none of the condition's bits published,
+ * and its `faceFlag` raised, through the plugin's answer where it gives one. Undefined for a condition
+ * with no `faceFlag`, which such a sim cannot show. Exported so that a test evaluating a frame with
+ * every bit published, as iRacing's are, can take it out whole rather than parse it.
+ */
+export function summaryRaised(condition: FlagCondition): Expr | undefined {
+  if (condition.faceFlag === undefined) return undefined;
+  const unpublished = and(...condition.bits.map((bit) => isNull(flagBit(bit))));
+  return and(unpublished, reportedFlag(condition.faceFlag, eq(isnull(game(condition.faceFlag), num(0)), num(1))));
+}
+
+/**
  * How a surface reads a whole condition, which is the seam the ranking is parameterised over. The
- * box reads the bits; band D reads them null-safely and honours `limiter`, and it has to be the
+ * box reads {@link flagRaised}; band D reads it too and honours `limiter`, and it has to be the
  * same reading in the layer's own term and in the negated terms of every layer below it, or two
  * conditions could draw at once. A car alert has one reading, its own `when`, whichever surface
  * asks.
@@ -570,18 +646,16 @@ const readingFlags =
   (condition) =>
     isFlag(condition) ? and(flagsAllowedHere(), flag(condition)) : condition.when;
 
-/** The box's reading, and the default: the bits, as they are. */
-export const boxRaised: RaisedTest = readingFlags((condition) => conditionRaised(condition));
-
 /**
- * The box's reading, null-safe: false for every flag on a sim that publishes no `SessionFlagsDetails`,
- * and the same answer as {@link boxRaised} wherever the bits are published, which on iRacing is always.
+ * The box's reading, and the default: {@link flagRaised}, the bits and on a sim with none the summary.
  *
- * It is for a gate that has to hold when there are no flags to read, which the box's own containers
- * are not: the spotter gives way to the full course yellow (#515), and a bare read there would throw
- * on Assetto Corsa, which `when` takes for false, and take away a bar that sim does draw.
+ * It read the bits bare until #551, which a `when` tolerates by taking a throw for false: on a sim
+ * with no `SessionFlagsDetails` every container was dark, and a flag the sim did publish, a yellow on
+ * Assetto Corsa, was dark with them, since every container below the red asks the red first. The
+ * spotter's gate (#515), which has to hold when there are no flags to read, is the same reading now
+ * rather than a null-safe copy of it.
  */
-export const boxRaisedSafely: RaisedTest = readingFlags((condition) => conditionRaised(condition, safeBitSet));
+export const boxRaised: RaisedTest = readingFlags(flagRaised);
 
 /**
  * Band D's reading: null-safe, because a bare read of an absent property is not a boolean and the
@@ -591,7 +665,7 @@ export const bandRaised: RaisedTest = readingFlags((condition) => bandFlagRaised
 
 /** Band D's reading of one flag before the pit lane is asked, which `bandRaised` and `anyBandRaised` share. */
 function bandFlagRaised(condition: FlagCondition): Expr {
-  return condition.limiter ? eq(isnull(prop(`DataCorePlugin.GameData.${condition.limiter}`), num(0)), num(1)) : conditionRaised(condition, safeBitSet);
+  return condition.limiter ? eq(isnull(prop(`DataCorePlugin.GameData.${condition.limiter}`), num(0)), num(1)) : flagRaised(condition);
 }
 
 /**

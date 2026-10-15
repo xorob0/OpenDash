@@ -348,9 +348,9 @@ const blockParts = (name: string, frame: Rect, condition: AlertCondition): Item[
  * in the catalogue is.
  *
  * `bandVisible`, the band's own ranking, which is what makes the two formats one reading of one
- * list: null-safe, so a sim publishing no `SessionFlagsDetails` leaves the block dark rather than
- * covering the gear with the highest-ranked flag in it, and limited where a bit outlives the flag it
- * announces, so the green does not sit over zone A for a whole stint. The two neutral alerts have no
+ * list: null-safe, so a sim publishing no `SessionFlagsDetails` draws only a `Flag_*` it does
+ * publish (#551) rather than covering the gear with the highest-ranked flag in it, and limited where
+ * a bit outlives the flag it announces, so the green does not sit over zone A for a whole stint. The two neutral alerts have no
  * layer and still rank, so a push to pass leaves the block dark rather than letting the flash under it
  * through.
  */

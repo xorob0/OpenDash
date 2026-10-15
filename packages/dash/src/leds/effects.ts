@@ -34,7 +34,7 @@ import { ncalc, leds } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { FLAG_BLINK_MS, FLAG_TAKEOVER_MS } from '../components/flagStrip.ts';
 import { propertyName, setting, WHEEL_LOCK, WHEEL_SPIN } from '../contract.ts';
-import { conditionRaised, flagCondition, flagsAllowedHere, safeBitSet, type FlagCondition } from '../flags.ts';
+import { FLAG_CAPABILITY, flagCondition, flagRaised, flagsAllowedHere, type FlagCondition } from '../flags.ts';
 import { engineRunning, isInPitLane, pitLimiterOn, pitSpeeding, spotterCar, tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { LAMP_FLAG } from './flagColours.ts';
@@ -152,7 +152,9 @@ const lowFuel = (): Expr => tankIsLow();
  * `Flag_Yellow` and hide a furled black and a disqualification behind `Flag_Black` entirely, so the
  * box and the strip could disagree about which flag was out. These rows rank `FLAG_CATALOGUE`
  * through `SessionFlagsDetails` the way `profile.ts` ranks it for the matrix, so nine conditions
- * that could not reach a strip at all now do.
+ * that could not reach a strip at all now do. On a sim with no bits a row falls back on the summary
+ * through the same `flagRaised` the box and band D read (#551), so the six with a `Flag_*` reach the
+ * strip there too and the strip, the box and the band still pick one flag.
  *
  * **A row is an appearance, not a condition.** One LED has a hue and a rhythm and nothing else, so
  * fifteen conditions cannot each be drawn differently; the canvas's own answer is that the ones a
@@ -263,6 +265,19 @@ export const FLAG_ROWS: readonly FlagRow[] = [
   },
 ];
 
+/**
+ * What a row reads, for the panel: the bits, and for a condition with a `faceFlag` the summary and the
+ * plugin's answer it falls back on where no bit is published.
+ */
+const flagSource = (conditions: readonly FlagCondition[]): string =>
+  conditions
+    .flatMap((c) => [
+      ...c.bits.map((bit) => `DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Is${bit}`),
+      ...(c.faceFlag === undefined ? [] : [`DataCorePlugin.GameData.${c.faceFlag}`]),
+      ...(c.faceFlag === undefined || FLAG_CAPABILITY[c.faceFlag] === undefined ? [] : [propertyName(FLAG_CAPABILITY[c.faceFlag]!)]),
+    ])
+    .join(', ');
+
 /** The catalogue conditions of one row, resolved once. */
 const rowConditions = (row: FlagRow): FlagCondition[] => row.conditions.map(flagCondition);
 
@@ -280,8 +295,9 @@ export const flagEffects = (): LedEffect[] =>
     const mine = rowConditions(row);
     const above = FLAG_ROWS.slice(0, index).flatMap(rowConditions);
     // Null-safe, because a CustomStatus answers a throwing formula with on: a car that publishes no
-    // SessionFlagsDetails would otherwise show every flag at once rather than none.
-    const raised = (c: FlagCondition): Expr => conditionRaised(c, safeBitSet);
+    // SessionFlagsDetails would otherwise show every flag at once rather than none. `flagRaised` is,
+    // and on such a sim it reads the summary where the condition has one.
+    const raised = (c: FlagCondition): Expr => flagRaised(c);
     const when = and(...above.map((c) => not(raised(c))), or(...mine.map(raised)));
     return {
       id: `flag.${row.id}`,
@@ -292,7 +308,7 @@ export const flagEffects = (): LedEffect[] =>
       blinkWhen: when,
       ...(row.blinkColor ? { blinkColor: row.blinkColor } : {}),
       blinkDelayMs: row.blinkDelayMs,
-      source: mine.flatMap((c) => c.bits).map((bit) => `DataCorePlugin.GameRawData.Telemetry.SessionFlagsDetails.Is${bit}`).join(', '),
+      source: flagSource(mine),
     };
   }).reverse();
 
@@ -320,7 +336,7 @@ export const flagSpreads = (overflow: Expr | undefined): LedEffect[] =>
   FLAG_ROWS.flatMap((row) => {
     const flag = flagEffects().find((e) => e.id === `flag.${row.id}`)!;
     const spread = row.spread;
-    const raised = (id: string): Expr => conditionRaised(flagCondition(id), safeBitSet);
+    const raised = (id: string): Expr => flagRaised(flagCondition(id));
     const spreads =
       spread === undefined
         ? undefined

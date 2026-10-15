@@ -60,6 +60,19 @@ game, `plugin/OpenDash/SimCapabilities.cs`, filled from the research page, and p
 | `DamageReported` | no | yes | yes | no | no |
 | `DriverInCar` | raw `Telemetry.IsOnTrack` | `Graphics.Status` is `AC_LIVE` | `Graphics.Status` is `AC_LIVE` | `scoringInfo.mInRealtime` | `IsOnTrack`, then the caller's answer |
 
+Four more were added for the flags (#1129), and they are the one kind of question a row may leave
+unanswered: null there means "SimHub's own `Flag_*` is right here", which it is on every claimed sim but
+Le Mans Ultimate. Band D, the box and the strips read a flag's capability only where none of iRacing's
+bits for the condition is published. The round faces' ring reads it ahead of the summary on every sim,
+bits or none, so on iRacing it is the row's null for all four that keeps the ring as it was.
+
+| Capability | iRacing | Assetto Corsa | ACC | Le Mans Ultimate | Without the plugin |
+|---|---|---|---|---|---|
+| `YellowFlagShown` | null | null | null | the rFactor 2 plugin's `Data.mSectorFlag` of the player's own `CurrentPlayer.mSector` is 1 | `Flag_Yellow` |
+| `BlackFlagShown` | null | null | null | the player's `mNumPenalties` is above 0 | `Flag_Black` |
+| `WhiteFlagShown` | null | null | null | the player has begun the race's last lap | `Flag_White` |
+| `ChequeredFlagShown` | null | null | null | `mGamePhase` is 8, or the player's `mFinishStatus` is 1 | `Flag_Checkered` |
+
 **The default is iRacing's answer.** Every dashboard reads a capability through `setting.reported` in
 `contract.ts`, from a helper in `second/values.ts` (`sim.carHasPitLimiter()` and its three siblings), with
 the reading OpenDash made before the capability existed as its `isnull()` fallback. The plugin publishes
@@ -136,9 +149,14 @@ that read them.
 - **The steering angle** (#567) is not a capability yet. iRacing's angle is raw and absent elsewhere, so the
   dial can hide on another sim without one; following the wheel on Assetto Corsa needs AC's unit and sign,
   which is the author's test on a real wheel. It joins the table as a reading once that is known.
-- **The flags** (#551) read iRacing's bits and fall back on SimHub's `Flag_*`, which needs no capability on
-  Assetto Corsa and ACC. Le Mans Ultimate's `Flag_Black` is a retirement or a disqualification rather than a
-  black flag shown on track; if #551 needs to tell that apart, it is a capability of this kind.
+- **The flags' Le Mans Ultimate answers** (#1129) were read from SimHub's LMU reader and the game's shared
+  memory layout, not from a drive. The sector flags are read from the rFactor 2 plugin's page, `Data.*`,
+  because SimHub publishes LMU's raw data from the reader's empty sample and LMU's own page has no sector
+  flags there; that page is the one `LMUManager.IsGameRunning` requires, so it is there whenever the game
+  is. The three sector flags are assumed to be indexed as `mSector` is, which
+  counts the last sector as 0; rFactor 2's own header says the order is to be tested. The white flag is the player's own last lap,
+  which a car lapped by the leader sees a lap late; and the black is read from the penalty count, since the
+  game's own `mFlag` carries only the blue. A drive (#962) settles all three.
 - **Every Assetto Corsa, ACC and LMU answer was read from SimHub's source, not from a drive.** The shapes in
   which `Graphics.Status` and `mSpeedLimiterAvailable` reach the plugin are handled in each form SimHub could
   hand them on in, and the AC shared-memory emulator (#579) is where they are first seen.
