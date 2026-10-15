@@ -14,11 +14,12 @@ import { SIMS } from '../../../scripts/sims.ts';
 import { frame, readTrace, traceDirOf, tracedScenarios } from '../../../scripts/trace.ts';
 import { composePackages } from '../src/build.ts';
 import type { Item, TextItem } from '../src/generator.ts';
+import { measureText } from '../src/design/advances.ts';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
 import { AC_TRACK_NAME, IRACING_TRACK_NAME } from '../src/second/values.ts';
-import { expressionsIn, walkItems } from '../src/walk.ts';
+import { expressionsIn, itemsOf, walkItems } from '../src/walk.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const TRACK_NAME = 'DataCorePlugin.GameData.TrackName';
@@ -41,6 +42,9 @@ const header = (): TextItem => {
 };
 
 const drawn = (props: Props): unknown => evalNcalc(String(header().bindings?.Text?.formula), props);
+
+/** A text item's `Text` formula, or the empty string where it has none. */
+const formulaOf = (item: Item): string => String(item.bindings?.Text?.formula ?? '');
 
 describe("the track module's header", () => {
   test("on Assetto Corsa it names the track from its ui_track.json, not its folder", () => {
@@ -106,4 +110,70 @@ describe("no package reads TrackName without each sim's name for people in front
       }
     });
   }
+});
+
+describe("the track module's header fits its box whatever the track is called (#1150)", () => {
+  // The name is an open string, so the line is measured by what it draws on frames whose names are
+  // long rather than by its sample. Every box the packages place the module in, with each sim's raw
+  // name filled in turn, since the two reach the line through different reads.
+  const packages = composePackages({ version: '0.0.0-test', log: () => {} }, true);
+  const headers = new Map<string, TextItem>();
+  for (const { pkg } of packages) {
+    for (const dashboard of pkg.dashboards) {
+      for (const item of itemsOf(dashboard)) {
+        if (item.kind !== 'text' || !formulaOf(item).includes(`[${AC_TRACK_NAME}]`)) continue;
+        headers.set(`${item.rect.width}x${item.fontSize}`, item);
+      }
+    }
+  }
+
+  const SIXTY = 'Autodromo Internazionale del Mugello Grand Prix Circuit 2024';
+  const NAMES = ['Spa', 'Red Bull Ring', 'Nürburgring Combined', 'Nordschleife - Tourist', 'Watkins Glen International', SIXTY, 'W'.repeat(60)];
+  const LENGTHS = [7004, 25378, 250000];
+  const frames: Props[] = NAMES.flatMap((name) =>
+    LENGTHS.flatMap((length) => [
+      { ...AC, [AC_TRACK_NAME]: name, [TRACK_LENGTH]: length },
+      { ...IRACING, [IRACING_TRACK_NAME]: name, [TRACK_LENGTH]: length },
+    ]),
+  );
+
+  test('the packages place the header, the smallest boxes among them', () => {
+    expect(SIXTY.length).toBe(60);
+    expect(headers.size).toBeGreaterThan(5);
+    expect(Math.min(...[...headers.values()].map((h) => h.rect.width))).toBeLessThan(200);
+  });
+
+  test('every string the header draws is inside its box and inside its widest', () => {
+    for (const item of headers.values()) {
+      const limit = measureText('BarlowMedium', item.widest ?? '', item.fontSize);
+      for (const props of frames) {
+        const text = String(evalNcalc(formulaOf(item), props));
+        const width = measureText('BarlowMedium', text, item.fontSize);
+        expect({ box: item.rect.width, text, fits: width < item.rect.width, withinWidest: width <= limit }).toEqual({ box: item.rect.width, text, fits: true, withinWidest: true });
+      }
+    }
+  });
+
+  test('a short name keeps its length in every box, and a long one is cut rather than drawn past it', () => {
+    for (const item of headers.values()) {
+      expect(evalNcalc(formulaOf(item), IRACING)).toBe('Spa · 7.0 km');
+      // The companion page's header holds all sixty; every narrower one cuts and says it has.
+      const cut = String(evalNcalc(formulaOf(item), { ...AC, [AC_TRACK_NAME]: SIXTY }));
+      const whole = cut === SIXTY || cut.startsWith(`${SIXTY} · `);
+      expect({ box: item.rect.width, cut, readable: whole || (cut.endsWith('…') && SIXTY.startsWith(cut.slice(0, -1))) }).toMatchObject({ readable: true });
+      if (item.rect.width < 300) expect(whole).toBe(false);
+    }
+  });
+
+  test('the length gives way before the name does', () => {
+    // On the narrowest header Red Bull Ring fits whole only without its length, and is drawn so
+    // rather than cut to make room for it; on the widest it is drawn with it, as the canvas writes it.
+    const byWidth = [...headers.values()].sort((a, b) => a.rect.width - b.rect.width);
+    const narrowest = formulaOf(byWidth[0]!);
+    const widest = formulaOf(byWidth[byWidth.length - 1]!);
+    expect(evalNcalc(narrowest, AC)).toBe('Red Bull Ring');
+    expect(evalNcalc(widest, AC)).toBe('Red Bull Ring · 4.3 km');
+    // A reading past any circuit is held to three figures rather than let a fourth past the box.
+    expect(evalNcalc(widest, { ...AC, [TRACK_LENGTH]: 250000 })).toBe('Red Bull Ring · 99.9 km');
+  });
 });
