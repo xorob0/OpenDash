@@ -27,6 +27,11 @@
 // the two counts are equal the profile goes into the individual list as well, since the LEDs are the same
 // LEDs in the same order, and where they differ the install says which switch hides it.
 //
+// **A driver that keeps its profiles per game family is named as such** (#689). SimHub's page then draws the
+// current family's list rather than the saved one, and the install puts the profile in both (ProfileLists in
+// ProfileInstall.Core.cs). The decompiled 9.12.6 never turns the filter on for either lighting driver and a rig's
+// later build does, so the line says which family's list the page shows and the next log settles which builds do.
+//
 // Pure, and compiled into OpenDash.Tests: `LedTargets` reads SimHub's types into a `LedDeviceSeen` and
 // this decides what to make of it, so the verdicts and the lines they produce are pinned without SimHub.
 // Nothing here widens what is offered. Whether a strip profile installed into a module's other drivers
@@ -124,6 +129,11 @@ namespace OpenDashPlugin
         public bool? HasBuiltInProfiles { get; set; }
 
         public bool? UseBuiltInProfiles { get; set; }
+
+        /// <summary>The game family whose list the device's page draws, as SimHub's `GameFamily` names it ("Racing",
+        /// "Flight"), when the driver keeps its profiles per game family; null when it keeps one list, or there is
+        /// no driver to ask (#689). A profile then has to go into that family's list as well as the saved one.</summary>
+        public string GameFamily { get; set; }
 
         /// <summary>Public properties of an RGB LED driver type found on an instance that is not an LED
         /// module, as "Type.Property". Only ever read to be logged: a driver held somewhere OpenDash does
@@ -235,6 +245,7 @@ namespace OpenDashPlugin
                         ? "built-in profiles " + (seen.UseBuiltInProfiles == true ? "switched on" : "switched off")
                         : "no built-in profiles");
                 }
+                if (seen.GameFamily != null) parts.Add(GameFamilyPart(seen.GameFamily));
                 if (seen.OtherDrivers != null && seen.OtherDrivers.Count > 0)
                 {
                     parts.Add("other drivers: " + string.Join(", ", seen.OtherDrivers));
@@ -251,6 +262,13 @@ namespace OpenDashPlugin
                 ? "LED device offered: \"" + Or(seen.Name, "unnamed") + "\""
                 : "LED device not offered: \"" + Or(seen.Name, "unnamed") + "\", because " + reason;
             return head + ". " + string.Join("; ", parts) + ".";
+        }
+
+        /// <summary>The survey line's account of a driver that keeps its profiles per game family (#689): SimHub's
+        /// page then draws the named family's list, which is where a strip's profile goes besides the saved one.</summary>
+        private static string GameFamilyPart(string family)
+        {
+            return "profiles kept per game family, " + Or(family, "an unnamed family") + "'s list on the page";
         }
 
         /// <summary>The survey line's account of the module's "Individual leds profiles" choice (#690).</summary>

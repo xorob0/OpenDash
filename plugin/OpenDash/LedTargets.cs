@@ -346,6 +346,7 @@ namespace OpenDashPlugin
                 seen.Profiles = leds.Profiles == null ? (int?)null : leds.Profiles.Count;
                 seen.HasBuiltInProfiles = leds.HasBuiltInProfiles;
                 seen.UseBuiltInProfiles = leds.UseBuiltInProfiles;
+                seen.GameFamily = leds.FilterByGameFamily ? leds.CurrentGameFamily.ToString() : null;
             }
             if (LedDeviceSurvey.Judge(seen) != LedDeviceVerdict.Offered) return new Surveyed { Seen = seen };
 
