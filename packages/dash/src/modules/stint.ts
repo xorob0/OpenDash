@@ -29,8 +29,7 @@ import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { drawnFigure } from '../second/drawn.ts';
-import { CHARS, lapOfTotalWidest, LAP_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, settledFuelTimeLeft } from '../second/values.ts';
+import { CHARS, lapOfTotalWidest, LAP_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, secondsToFit, secondsToFitDrawn, secondsToFitWidest, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, isnull, num, driver, game } = ncalc;
@@ -66,11 +65,12 @@ export const stint = defineModule('stint', (ctx) => {
           fld(ctx, 'stops', 'Stops', { sample: '1', bind: fmt(stops, '0'), chars: CHARS.position, fs: d.mid }),
           fld(ctx, 'lastStop', 'Last stop', {
             sample: '24.3',
-            bind: fmt(lastStop, '0.0'),
+            widest: secondsToFitWidest(CHARS.consumption, 1),
+            bind: secondsToFit(lastStop, CHARS.consumption, 1),
             chars: CHARS.consumption,
             fs: d.mid,
             follower: { text: 's' },
-            drawn: drawnFigure({ value: lastStop, digits: CHARS.consumption.digits - 1, decimals: 1 }),
+            drawn: secondsToFitDrawn(lastStop, CHARS.consumption, 1),
           }),
         ],
         ctx,
