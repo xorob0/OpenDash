@@ -283,3 +283,12 @@ Assetto Corsa's seven in `ac/` assert the same four. Its row leaves them null to
 `Flag_*` read `Graphics.Flag`, the one flag the game shows the driver, so the column is null on every
 frame of all seven for the same reason. The next `bun run record --sim ac` reads them from the plugin and
 drops the entries.
+
+#561 asserts one more in each of the sixteen, `OpenDash.DriverInCar`, whether the driver is in the car with
+the physics running, which the plugin answers per sim (ADR 0021). The car alerts, the change notifications,
+the AiM's engine warning and the Porsche's fuel alarm read it ahead of iRacing's `Telemetry.IsOnTrack`. On
+iRacing the plugin's answer is `IsOnTrack` itself, which is `true` on every frame of all nine; on Assetto
+Corsa it is `Graphics.Status` at `AC_LIVE`, which is what the emulator writes on every tick of every
+scenario until it stops, so the column is `true` on every frame of all seven too. Both are constants, and
+the value a recording with the plugin installed will write. The next `bun run record` and
+`bun run record --sim ac` read it from the plugin and drop the entries.

@@ -2249,9 +2249,11 @@ export const engineStopped = (): Expr => eq(isnull(game('EngineStarted'), num(1)
 export const engineRunning = (): Expr => gt(rpm(), num(0));
 
 /**
- * The driver is in the car: iRacing's `IsOnTrack`, which is "car on track physics running with
- * player in car". This is the one definition of it, which #312 asks for, so that a second sim is a
- * change to this line.
+ * The driver is in the car, as iRacing says it: `IsOnTrack`, which is "car on track physics running
+ * with player in car". This is iRacing's reading and the fallback of {@link sim}'s `driverInCar`, which
+ * is what every caller reads (#561): the plugin answers the question for each sim it knows, Assetto
+ * Corsa's `Graphics.Status` at `AC_LIVE` among them, and this is what a package without the plugin, or
+ * a sim the plugin has no row for, reads instead. Nothing reads it but that helper.
  *
  * It is the stronger of the two questions #312 tells apart, and {@link inSession} is the weaker: a
  * driver in the garage is in a session and not in the car. Everything that raises itself on a change
@@ -2262,14 +2264,15 @@ export const engineRunning = (): Expr => gt(rpm(), num(0));
  * Read as a boolean and not compared with a number. A raw telemetry boolean reaches a binding as
  * `true` or `false`, where `GameData`'s booleans arrive as 1 and 0 -- the committed traces show both
  * forms side by side -- so `= 1` would never hold and the gate would silence everything behind it.
- * It is the same reading `carAvailable` uses for the leaderboard's rows.
+ * It is the same reading `carAvailable` uses for the leaderboard's rows, and the plugin publishes its
+ * answer in the same shape.
  *
  * **What a sim that does not say gets is the caller's choice**, because the two callers want opposite
- * answers. A change notification is harmless if it fires in a sim with no `IsOnTrack`, so it passes
+ * answers. A change notification is harmless if it fires in a sim with no answer, so it passes
  * `true` and keeps showing there. The alert catalogue does not: its car alerts outrank every flag, and
- * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that published no `IsOnTrack` would put
- * IGNITION OFF over the band whenever the engine idled. It passes `false`, and is iRacing's, as the
- * flags already are.
+ * off iRacing SimHub's ignition is `Rpms > 300`, so a sim that said nothing would put IGNITION OFF
+ * over the band whenever the engine was not turning, in a menu as much as on track. It passes `false`,
+ * and is iRacing's unless the plugin answers for the sim.
  */
 export const inTheCar = (ifUnknown = true): Expr => isnull(raw('IsOnTrack'), ifUnknown ? 'true' : 'false');
 
@@ -2306,8 +2309,11 @@ export const sim = {
    */
   damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
   /**
-   * The driver is in the car, physics running. Without the plugin, {@link inTheCar}, with the caller's answer
-   * for a sim that says nothing. Not yet read: #561 moves `inTheCar`'s callers onto this.
+   * The driver is in the car, physics running: on Assetto Corsa and ACC `Graphics.Status` at `AC_LIVE`, so
+   * not in a menu, a replay or a pause, and on Le Mans Ultimate `mInRealtime`. Without the plugin,
+   * {@link inTheCar}, iRacing's `IsOnTrack`, with the caller's answer for a sim that says nothing. Read by the
+   * alert catalogue's car alerts, the change notifications, the AiM's engine warning and the Porsche's fuel
+   * alarm (#561).
    */
   driverInCar: (ifUnknown = true): Expr => setting.reported(DRIVER_IN_CAR, inTheCar(ifUnknown)),
   /**
@@ -2794,6 +2800,19 @@ const pitServiceBit = (bit: number): Expr => mod(truncate(div(isnull(raw('PitSvF
 export const pitServiceFlag = (bit: number): Expr => gt(pitServiceBit(bit), num(0));
 
 /**
+ * The sim publishes a pit service order at all, which is iRacing alone (#564).
+ *
+ * Assetto Corsa's stop is set in the game's own pit app and its shared memory carries no request;
+ * ACC's MFD and Le Mans Ultimate's scheduled stops are under raw names of their own, which SimHub
+ * publishes and OpenDash does not read. Each of them is handed iRacing's `PitSvFlags` as null, and
+ * {@link pitServiceFlag} reads a null as 0, so a page drawn from the bits alone shows a stop set to
+ * change no tyre and repair nothing, which is a stop nobody set. This is what such a page asks
+ * first. It is an `isnull()` over the property it already reads, ADR 0021's second kind, so it
+ * needs no capability: the absence is the answer.
+ */
+export const pitServiceIsPublished = (): Expr => not(isNull(raw('PitSvFlags')));
+
+/**
  * SimHub's own ratio from litres to gallons, `GameManagerBase.GetFuelConvertRatio` in 9.12.6. The
  * tank a face draws beside the pit order is converted by it, so the order is converted by the same
  * figure rather than by a more exact one that would disagree with the tank in the last digit.
@@ -3093,9 +3112,27 @@ export const lastLapDelta = (): Expr =>
   iff(isnull(raw(`${LAST_LAP_DELTA}_OK`), 'false'), mul(isnull(raw(LAST_LAP_DELTA), num(0)), '1.0'), num(0));
 
 /**
+ * Whether the sim publishes a live delta to the last lap at all, which is whether either of iRacing's
+ * two raw fields is there. iRacing publishes both on every frame, `_OK` false until there is a lap to
+ * compare against; Assetto Corsa, ACC and Le Mans Ultimate publish neither, and SimHub has no reading
+ * of its own to stand in (docs/research/sims.md). ADR 0021's second kind: the property's absence is
+ * itself the answer, so no capability is needed and no game is named.
+ */
+export const lastLapDeltaPublished = (): Expr => not(and(isNull(raw(`${LAST_LAP_DELTA}_OK`)), isNull(raw(LAST_LAP_DELTA))));
+
+/**
+ * Whether the delta is drawn against the last lap: the driver chose it, and the sim publishes it.
+ * Where it does not, the reference is the session best, the default, and every caption says so with
+ * it, so a driver who chose the last lap on Assetto Corsa reads the delta to their best under its own
+ * name rather than a level `+0.00` every lap under "vs last lap" (#575).
+ */
+export const deltaIsToLastLap = (): Expr => and(setting.deltaReferenceIs('lastlap'), lastLapDeltaPublished());
+
+/**
  * The delta every screen draws, per the plugin's DeltaReference: the one reading behind the card, the
  * delta module, Lap times, the lap pop-up and the pit wall, so no two of them can compare against
- * different laps. An unknown value reads the `session` reference, which is the default.
+ * different laps. An unknown value reads the `session` reference, which is the default, and so does
+ * the last lap on a sim that does not publish one ({@link deltaIsToLastLap}).
  *
  * The `session` reference is SimHub's live delta to its session best, which is the player's own best
  * lap of this session and not the field's: SimHub's lap tracker follows the player's laps and nobody
@@ -3103,7 +3140,7 @@ export const lastLapDelta = (): Expr =>
  * session best a page draws beside it in purple is the field's (#1030).
  */
 export const referenceDelta = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(setting.deltaReferenceIs('lastlap'), lastLapDelta(), sessionBestDelta()));
+  iff(setting.deltaReferenceIs('alltime'), allTimeBestDelta(), iff(deltaIsToLastLap(), lastLapDelta(), sessionBestDelta()));
 
 /** The caption of a delta to the player's own best lap of the session, which is what SimHub's session best is. */
 export const YOUR_BEST_CAPTION = 'vs your best';
@@ -3117,10 +3154,11 @@ export const YOUR_BEST_CAPTION = 'vs your best';
  * "vs your best" rather than the canvas's "vs session best", because the reference is the player's
  * own best lap of the session (see {@link referenceDelta}), and "session best" is what Lap times,
  * Sectors and the pit wall call the field's. On a face that drew both, the same two words named two
- * laps most of a second apart (#1030).
+ * laps most of a second apart (#1030). It follows {@link referenceDelta} onto your best where the sim
+ * publishes no last-lap delta, so the caption names the lap the figure is measured against (#575).
  */
 export const referenceLabel = (): Expr =>
-  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(setting.deltaReferenceIs('lastlap'), str('vs last lap'), str(YOUR_BEST_CAPTION)));
+  iff(setting.deltaReferenceIs('alltime'), str('vs all-time best'), iff(deltaIsToLastLap(), str('vs last lap'), str(YOUR_BEST_CAPTION)));
 
 /**
  * The longest caption {@link referenceLabel} can produce, which is what a box that draws it is

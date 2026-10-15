@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79944,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown"]}
+{"trace":1,"scenario":"settingchange","frames":200,"hz":10,"ticks":[79944,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -190,6 +190,7 @@
 {"p":"OpenDash.DamageReported","v":false}
 {"p":"OpenDash.DeltaPrecision","v":"hundredths"}
 {"p":"OpenDash.DeltaReference","v":"session"}
+{"p":"OpenDash.DriverInCar","v":true}
 {"p":"OpenDash.DriverNameFormat","v":"full"}
 {"p":"OpenDash.DriverNameTeam","v":false}
 {"p":"OpenDash.Face1280x400BarLeft1","v":null}
