@@ -15,6 +15,7 @@
     <Compile Include="../OpenDash/ClassBestLap.cs" Link="Plugin/ClassBestLap.cs" />
     <Compile Include="../OpenDash/LivePosition.cs" Link="Plugin/LivePosition.cs" />
     <Compile Include="../OpenDash/SimCapabilities.cs" Link="Plugin/SimCapabilities.cs" />
+    <Compile Include="../OpenDash/TrackMap.cs" Link="Plugin/TrackMap.cs" />
     <Compile Include="../OpenDash/SlipEstimate.cs" Link="Plugin/SlipEstimate.cs" />
     <Compile Include="../OpenDash/Cards.cs" Link="Plugin/Cards.cs" />
     <Compile Include="../OpenDash/Modules.cs" Link="Plugin/Modules.cs" />

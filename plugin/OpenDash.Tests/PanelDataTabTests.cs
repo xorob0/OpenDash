@@ -43,9 +43,11 @@ namespace OpenDashPlugin.Tests
                 // idle screen's two are published rather than chosen, and the one setting behind them is
                 // the update check's switch on the Updates page (#755). The class best is published from
                 // SimHub's own frame and nobody sets it, and so is the race as it stands on the road (#1063), and
-                // so is what the running sim can report (#1101).
+                // so is what the running sim can report (#1101), and so is whether SimHub holds the track's
+                // outline (#555).
                 .Where(name => !name.StartsWith("Slot", StringComparison.Ordinal) && name != Contract.ShiftLights)
                 .Where(name => name != Contract.UpdateAvailable && name != Contract.UpdateVersion && name != Contract.ClassBestLap)
+                .Where(name => name != Contract.TrackMapRecorded)
                 .Where(name => !Contract.LivePropertyNames().Contains(name))
                 .Where(name => !Contract.Capabilities.Contains(name))
                 // A theme's own settings are drawn from their declaration, which names no theme, so they are
