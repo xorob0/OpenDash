@@ -7,7 +7,7 @@ import { buildLayout, buildPackage, fontsForPackage } from '../src/dashboard.ts'
 import { sweep } from '../src/build.ts';
 import { CARD_CATALOGUE, CAR_LADDER_CHOSEN, CAR_LADDER_FLASHES, CAR_LADDER_LAMPS, CAR_LADDER_LIT, CAR_LADDER_OVER_REV,
   CAR_LADDER_STAGE, CAR_LADDER_TOP_RPM, dashProperties, DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP,
-  FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PORSCHE_CREST, PROPERTY_PREFIX, CAPABILITIES, PIT_LIMITER_ON, YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, DRIVER_IN_CAR, TRACK_MAP_RECORDED, liveSettingNames, themeSettingNames, zoneProperties, declaredProperties, defaultCardForSlot,
+  FLAG_BOX_LOW_FUEL_LAPS_SETTING, LIGHTS_LOW_FUEL_LAPS_SETTING, PORSCHE_CREST, PROPERTY_PREFIX, CAPABILITIES, PIT_LIMITER_ON, YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, DRIVER_IN_CAR, TRACK_MAP_RECORDED, PIT_STOP_SECONDS, LAST_PIT_STOP_SECONDS, liveSettingNames, themeSettingNames, zoneProperties, declaredProperties, defaultCardForSlot,
   secondScreenProperties } from '../src/contract.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { IDLE_SCREEN_NAME } from '../src/idle.ts';
@@ -124,10 +124,11 @@ describe('contract', () => {
     // SimHub's own member is the pit lane on Assetto Corsa. #1122.
     const READ_ANSWERS: string[] = [YELLOW_FLAG_SHOWN, BLACK_FLAG_SHOWN, WHITE_FLAG_SHOWN, CHEQUERED_FLAG_SHOWN, DRIVER_IN_CAR, PIT_LIMITER_ON];
     // Whether SimHub holds the track's outline is shared and unread here: no card draws the track map. #555.
+    // And so is the stop in the pit box: no card draws the pit view. #1130.
     const all = new Set([...propertiesIn(main), ...propertiesIn(cards)].filter((p) => p.startsWith('OpenDash.')));
     const unread = new Set([
       ...zoneProperties(),
-      ...[DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP, PORSCHE_CREST, ...themeSettingNames(), ...liveSettingNames(), ...CAPABILITIES.filter((n) => !READ_ANSWERS.includes(n)), TRACK_MAP_RECORDED].map((n) => `${PROPERTY_PREFIX}.${n}`),
+      ...[DRIVER_NAME_FORMAT_SETTING, DRIVER_NAME_TEAM_SETTING, CLASS_BEST_LAP, PORSCHE_CREST, ...themeSettingNames(), ...liveSettingNames(), ...CAPABILITIES.filter((n) => !READ_ANSWERS.includes(n)), TRACK_MAP_RECORDED, PIT_STOP_SECONDS, LAST_PIT_STOP_SECONDS].map((n) => `${PROPERTY_PREFIX}.${n}`),
     ]);
     const zoneProps = new Set(zoneProperties());
     const carBar = [CAR_LADDER_STAGE, CAR_LADDER_OVER_REV, CAR_LADDER_LIT, CAR_LADDER_LAMPS, CAR_LADDER_FLASHES, CAR_LADDER_CHOSEN].map((n) => `${PROPERTY_PREFIX}.${n}`);

@@ -739,6 +739,44 @@ namespace OpenDashPlugin
         /// <summary>SimHub's property reader, made once rather than on every frame.</summary>
         private Func<string, object> readProperty;
 
+        /// <summary>Times the car's stops in its pit box where SimHub's own timer counts the lane. Data thread only. #1130.</summary>
+        private readonly PitStopClock pitStop = new PitStopClock();
+
+        /// <summary>
+        /// The seconds of the stop under way and the length of the last one, boxed: what <see cref="Contract.PitStopSeconds"/>
+        /// and <see cref="Contract.LastPitStopSeconds"/> publish, null where SimHub's own timer is the box. Boxed again
+        /// only when the reading moves, so a frame with the car out of its box allocates nothing for them. #1130.
+        /// </summary>
+        private volatile object pitStopSeconds;
+        private volatile object lastPitStopSeconds;
+
+        /// <summary>
+        /// Advances <see cref="pitStop"/> by one frame from the running game's row of the table, which says whether the
+        /// car is in its box, and publishes what it reads. With no game running, and on a sim whose row leaves the box
+        /// to SimHub, the clock forgets and publishes null, so every dashboard reads SimHub's own timer.
+        /// </summary>
+        private void UpdatePitStop(PluginManager pluginManager, GameData data, long nowMs)
+        {
+            bool? inBox = null;
+            if (data != null && data.GameRunning && data.NewData != null && pluginManager != null)
+            {
+                var read = readProperty;
+                if (read == null) readProperty = read = pluginManager.GetPropertyValue;
+                inBox = SimCapabilities.InPitBox(data.GameName, read);
+            }
+            pitStop.Update(inBox, nowMs / 1000.0);
+            pitStopSeconds = Boxed(pitStop.Seconds, pitStopSeconds);
+            lastPitStopSeconds = Boxed(pitStop.LastSeconds, lastPitStopSeconds);
+        }
+
+        /// <summary>A reading boxed for SimHub, reusing the box it already has when the value has not moved.</summary>
+        private static object Boxed(double? value, object current)
+        {
+            if (!value.HasValue) return null;
+            if (current is double held && held == value.Value) return current;
+            return value.Value;
+        }
+
         /// <summary>
         /// Fills <see cref="simReport"/> from the running game's row of the table, or empties it with no game
         /// running, so that every dashboard falls back on iRacing's own answer exactly as it does with no plugin.
@@ -879,6 +917,21 @@ namespace OpenDashPlugin
                 Report(trackMapFault, e, nowMs);
             }
 
+            // And the stop in the pit box, on a sim whose own timer counts the lane (#1130). A failure forgets the
+            // stop and publishes null, which every dashboard reads as no plugin and answers with SimHub's own timer.
+            try
+            {
+                UpdatePitStop(pluginManager, data, nowMs);
+                Report(pitStopFault.Succeeded());
+            }
+            catch (Exception e)
+            {
+                pitStop.Reset();
+                pitStopSeconds = null;
+                lastPitStopSeconds = null;
+                Report(pitStopFault, e, nowMs);
+            }
+
             // What the panel names, compared before anything is built and replaced only when
             // something in it moved, so a frame in which nothing did builds no new copy for the panel
             // and the interface thread is not handed a new object sixty times a second. The frame
@@ -965,6 +1018,7 @@ namespace OpenDashPlugin
         private readonly FrameFault livePositionFault = new FrameFault("Ranking the live positions", "dashboards order the field as the sim does");
         private readonly FrameFault simReportFault = new FrameFault("Reading what the running sim can report", "dashboards fall back on iRacing's own answers");
         private readonly FrameFault trackMapFault = new FrameFault("Reading whether SimHub has recorded the track", "the track map says nothing about an outline it lacks");
+        private readonly FrameFault pitStopFault = new FrameFault("Timing the stop in the pit box", "the pit view times the stop as SimHub does");
         private readonly FrameFault liveCardFault = new FrameFault("Naming the game, car and track for the settings panel", "the panel's live card keeps what it last named");
         private readonly FrameFault carLightsFault = new FrameFault("Computing the car's own lights", "the strips and rev bars fall back to the ladder the sim publishes");
         private readonly FrameFault slipFault = new FrameFault("Estimating wheelspin and lock-up", "the slip lamps stay dark");
@@ -1270,6 +1324,10 @@ namespace OpenDashPlugin
             // And whether SimHub holds the track's outline, filled by DataUpdate and null with no game running. Not
             // a setting: see Contract.TrackMapRecorded. #555.
             this.AttachDelegate(Contract.TrackMapRecorded, () => trackMapRecorded);
+            // And the stop in the pit box, filled by DataUpdate and null wherever SimHub's own timer is the box. Not a
+            // setting: see Contract.PitStopSeconds. #1130.
+            this.AttachDelegate(Contract.PitStopSeconds, () => pitStopSeconds);
+            this.AttachDelegate(Contract.LastPitStopSeconds, () => lastPitStopSeconds);
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

@@ -86,7 +86,7 @@ namespace OpenDashPlugin.Tests
             // whether the rig asked for the car's own lights in the first place, which is a reduction
             // over the bars and so is the plugin's to answer (#353).
             Assert.Equal(
-                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1 + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
+                4 + 12 + 2 + 2 + 2 + 1 + 1 + 1 + 1 + 1 + Contract.ThemeSettings.Count + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1 + 2 + Contract.FaceSizes.Count * perFace + 22 + 3 + Contract.PitWallZoneSlots.Count + 4 + 13 + Contract.FlagBoxMatrices.Count * 13 + Contract.LedPropertyNames().Count(),
                 names.Count);
             // And what that sum comes to, said out loud: contract.test.ts asserts the same number of
             // the TypeScript's own list, and the two were 244 and 246 for as long as LedCentre and
@@ -132,8 +132,9 @@ namespace OpenDashPlugin.Tests
             // name a game (#1101).
             // And 666 before the plugin had to say whether SimHub holds the track's outline, which no property of
             // SimHub's says (#555), and 667 before four more said which flag a sim whose own summary is wrong is
-            // showing (#1129).
-            Assert.Equal(671, names.Count);
+            // showing (#1129). And 671 before the plugin had to time the stop in the pit box, which Le Mans
+            // Ultimate's reader times over the whole pit lane (#1130).
+            Assert.Equal(673, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -199,7 +200,11 @@ namespace OpenDashPlugin.Tests
             // And whether SimHub holds the track's outline, published and asked of the same track by every
             // screen that draws its map. #555.
             Assert.Equal("TrackMapRecorded", names[28 + 4 * LivePosition.Slots + Contract.Capabilities.Length]);
-            Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1, Contract.SharedPropertyNames().Count());
+            // And the stop in the pit box after it, published and asked of the same car by every screen that times a
+            // stop. #1130.
+            Assert.Equal("PitStopSeconds", names[28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1]);
+            Assert.Equal("LastPitStopSeconds", names[28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 2]);
+            Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1 + 2, Contract.SharedPropertyNames().Count());
             Assert.True(Contract.DefaultFlagsInPitLane);
 
             // The first face's group starts where the shared one ends. Counted rather than written as a

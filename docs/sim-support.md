@@ -53,8 +53,8 @@ state hidden rather than drawn as zeros (#1123, #1128), the delta reference (#57
 the strip and flag box profiles kept on a SimHub that files them per game family (#689), the pit view
 saying the pit service is not published rather than drawing a stop set to do nothing (#564), the
 incident count and the steering hidden rather than drawn as `0x` and a wheel held straight (#567), and
-every limiter reading following AC's own limiter rather than the pit lane (#558). One more is in
-review: #1156 times Le Mans Ultimate's pit stop in the box rather than down the whole lane.
+every limiter reading following AC's own limiter rather than the pit lane (#558). Le Mans Ultimate's
+pit stop is timed in the box rather than down the whole lane (#1156).
 
 ## The table
 
@@ -104,7 +104,7 @@ review: #1156 times Le Mans Ultimate's pit stop in the box rather than down the 
 |---|---|---|---|---|
 | Fuel | **Works.** | **Partly.** Fuel, time, margin, laps and use work; Refuel reads `--`, since AC publishes no pit order. | **Untested.** Refuel reads `--`. | **Untested.** Refuel reads `--`. |
 | Energy | **Absent.** iRacing publishes no virtual energy; every field reads `--`. | **Absent.** | **Absent.** | **Absent.** LMU publishes it under its own names, which the page does not read yet (#962). |
-| Stint | **Works.** | **Works.** | **Untested.** | **Untested.** The stop is timed from the pit entry line; #1156 times it in the box. |
+| Stint | **Works.** | **Works.** | **Untested.** | **Untested.** The stop is timed in the box (#1156). |
 | Tyres | **Works.** The carcass temperature iRacing measures at the last stop. | **Works.** The live core temperature (#556). The compound reads `--`, since SimHub gives AC none. | **Untested.** Live core temperatures. | **Untested.** The mean of the three tread temperatures. |
 | Weather | **Works.** Air, track, wind and the track state. | **Partly.** Air and track; the wind and the track state hide (#1123). | **Untested.** Air and track; ACC's wind and grip are published under names the page does not read. | **Untested.** As ACC. |
 | Sectors | **Works.** | **Works.** SimHub times the three sectors. | **Untested.** Whether the second sector is right is a question for the drive (research/sims.md). | **Untested.** |
@@ -124,7 +124,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Fuel | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Energy | **Absent.** Off by default. | **Absent.** Says the sim does not publish it. | **Absent.** | **Absent.** As band D's: LMU's own energy is not read yet (#962). |
 | Tyres | **Works.** Pressures and temperatures from the last stop. | **Works.** Live pressures and core temperatures; no wheel is ticked for a change, since AC publishes no pit order. | **Untested.** | **Untested.** |
-| Pit view | **Works.** | **Partly.** The pit time and its bar work; the service order says "Pit service · Not published by this sim" (#564), since AC's stop is set in the game's own pit app. | **Partly.** As AC; ACC's own pit menu is published under names the page does not read. | **Partly.** As AC, and the pit time runs from the pit entry line until #1156 times it in the box. |
+| Pit view | **Works.** | **Partly.** The pit time and its bar work; the service order says "Pit service · Not published by this sim" (#564), since AC's stop is set in the game's own pit app. | **Partly.** As AC; ACC's own pit menu is published under names the page does not read. | **Partly.** As AC; the pit time runs from when the car stops in the box (#1156). |
 | Car settings | **Works.** | **Partly.** TC and ABS as the car's preset, and the brake bias; the engine map and the anti-roll bars hide. | **Untested.** TC and ABS as dialled. | **Untested.** TC and ABS as dialled. |
 | Inputs | **Works.** | **Partly.** The pedals work; the steering dial hides, since AC's steering is not read yet (#567). | **Partly.** As AC. | **Partly.** As AC. |
 | Session | **Works.** | **Partly.** The session's name is drawn as AC writes it, in capitals (`RACE`); incidents read `--` (#567). | **Untested.** As AC. | **Untested.** The game's own names (`Practice`, `Race`). |

@@ -73,6 +73,15 @@ bits or none, so on iRacing it is the row's null for all four that keeps the rin
 | `WhiteFlagShown` | null | null | null | the player has begun the race's last lap | `Flag_White` |
 | `ChequeredFlagShown` | null | null | null | `mGamePhase` is 8, or the player's `mFinishStatus` is 1 | `Flag_Checkered` |
 
+One question has a number for its answer rather than a truth, and an expression cannot work it out because
+it has to be timed: how long the car has been stopped in its pit box, and how long its last stop was (#1130).
+SimHub times both from its `IsInPit`, which is the box on iRacing, Assetto Corsa and ACC and the whole pit
+lane on Le Mans Ultimate. So the row answers whether the car is in its box, null where SimHub's `IsInPit`
+already is, and the player's `mPitState` is 3 on Le Mans Ultimate; the plugin times that answer
+(`PitStopClock.cs`) and publishes `PitStopSeconds` and `LastPitStopSeconds`, null wherever the row is. The
+pit view reads them ahead of SimHub's `IsInPitSince` and `LastPitStopDuration`, so every sim but Le Mans
+Ultimate, and a package with no plugin, reads what it read before.
+
 **The default is iRacing's answer.** Every dashboard reads a capability through `setting.reported` in
 `contract.ts`, from a helper in `second/values.ts` (`sim.carHasPitLimiter()` and its three siblings), with
 the reading OpenDash made before the capability existed as its `isnull()` fallback. The plugin publishes
@@ -158,6 +167,10 @@ change notifications (#561).
   counts the last sector as 0; rFactor 2's own header says the order is to be tested. The white flag is the player's own last lap,
   which a car lapped by the leader sees a lap late; and the black is read from the penalty count, since the
   game's own `mFlag` carries only the blue. A drive (#962) settles all three.
+- **The stop in the box on Le Mans Ultimate** (#1130) is `mPitState == 3`, read from rFactor 2's header and from
+  SimHub's opponents' pit statistics, which also ask for a speed under 5 km/h; the plugin leaves the speed out, since
+  a car stopped in its box is not moving and a jitter over the line would split one stop into two. A drive (#962)
+  settles whether the state reads 3 for the whole stop and only for it.
 - **Every Assetto Corsa, ACC and LMU answer was read from SimHub's source, not from a drive.** The shapes in
   which `Graphics.Status` and `mSpeedLimiterAvailable` reach the plugin are handled in each form SimHub could
   hand them on in, and the AC shared-memory emulator (#579) is where they are first seen.

@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79448,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn"]}
+{"trace":1,"scenario":"pitspeeding","frames":200,"hz":10,"ticks":[79448,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn","OpenDash.PitStopSeconds","OpenDash.LastPitStopSeconds"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":-1}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -333,6 +333,7 @@
 {"p":"OpenDash.Face850x480ZoneDClassOnly","v":null}
 {"p":"OpenDash.FlagBoxLowFuelLaps","v":2}
 {"p":"OpenDash.FlagsInPitLane","v":true}
+{"p":"OpenDash.LastPitStopSeconds","v":null}
 {"p":"OpenDash.LightsLowFuelLaps","v":2}
 {"p":"OpenDash.LiveClassOrder1","v":1}
 {"p":"OpenDash.LiveClassOrder10","v":[17,17,17,17,17,17,17,17,17,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19,19]}
@@ -591,6 +592,7 @@
 {"p":"OpenDash.LivePosition8","v":8}
 {"p":"OpenDash.LivePosition9","v":9}
 {"p":"OpenDash.PitLimiterOn","v":true}
+{"p":"OpenDash.PitStopSeconds","v":null}
 {"p":"OpenDash.PitWallClassOnly","v":false}
 {"p":"OpenDash.PitWallFlagFormat","v":"band"}
 {"p":"OpenDash.PitWallPage","v":0}

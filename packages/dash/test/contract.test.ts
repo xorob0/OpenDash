@@ -182,7 +182,8 @@ describe('settings', () => {
     // shows in the pit lane, the Porsche crest's path and the AiM's backlight, which every screen
     // shares with the four modes and the twelve slots, and the race as it stands on the road after
     // them, four families of a place or a row per car, which every screen that draws one reads (#1063).
-    // The lone 1 after the capabilities is whether SimHub holds the track's outline (#555).
+    // The lone 1 after the capabilities is whether SimHub holds the track's outline (#555), and the 2 after it
+    // the stop in the pit box, timed by the plugin where SimHub's own timer counts the pit lane (#1130).
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
@@ -190,6 +191,7 @@ describe('settings', () => {
         4 * LIVE_SLOTS +
         CAPABILITIES.length +
         1 +
+        2 +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -243,7 +245,9 @@ describe('settings', () => {
     // the running sim can report, four answers that let no dashboard name a game (#1101). And 666 before
     // the plugin had to say whether SimHub holds the track's outline, which no property of SimHub's says
     // (#555), and 667 before four more said which flag a sim whose own summary is wrong is showing (#1129).
-    expect(props).toHaveLength(671);
+    // And 671 before the plugin had to time the stop in the pit box, which Le Mans Ultimate's reader times
+    // over the whole pit lane (#1130).
+    expect(props).toHaveLength(673);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -401,6 +405,10 @@ describe('settings', () => {
         // And whether SimHub holds the track's outline, published rather than chosen and asked of the same
         // track by every screen that draws its map. #555.
         'TrackMapRecorded',
+        // And the stop in the pit box, published rather than chosen where SimHub's own timer counts the pit
+        // lane, and asked of the same car by every screen that times a stop. #1130.
+        'PitStopSeconds',
+        'LastPitStopSeconds',
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 

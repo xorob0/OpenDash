@@ -310,3 +310,11 @@ seconds, which no constant can say, so there the column is null and the readings
 `PitLimiterOn`, the pit lane, which is off on track: the replay of those three draws the limiter off where a
 dash with the plugin blinks it on and off. That is the one place a replay and the VM differ, and the next
 `bun run record --sim ac` records the plugin's column and drops the entry.
+
+#1130 asserts two more in each of the nine and each of Assetto Corsa's seven, `OpenDash.PitStopSeconds` and
+`OpenDash.LastPitStopSeconds`, the stop in the pit box the plugin times where SimHub's own `IsInPitSince` and
+`LastPitStopDuration` count something else. The pit view reads them ahead of SimHub's two. Only Le Mans
+Ultimate's row answers, since its reader's `IsInPit` is the whole pit lane; iRacing's and Assetto Corsa's
+`IsInPit` are the box, so their rows leave it to SimHub and the plugin publishes null for both, on every frame
+of all sixteen: a constant, and the value a recording with the plugin installed will write. The next
+`bun run record` and `bun run record --sim ac` read them from the plugin and drop the entries.

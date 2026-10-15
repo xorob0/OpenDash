@@ -7,7 +7,8 @@
 // Corsa's reader fills PitLimiterOn with the pit lane, iRacing fills CarDamage1..5 with zeros, and the
 // raw reading that says the driver is in the car has another name and another shape on every sim, and Le
 // Mans Ultimate's reader raises SimHub's Flag_Black for a retired car, Flag_Yellow for a yellow anywhere on
-// the track, and never the chequer or the white (#1129). For
+// the track, and never the chequer or the white (#1129). Its IsInPit is the whole pit lane too, so the row
+// also says when the car is in its box, which PitStopClock.cs times (#1130). For
 // those the plugin answers, from the table below, and publishes one OpenDash property per question
 // (Contract.Capabilities); ADR 0021 is the rule and docs/research/sims.md (#1100) is where each row's
 // facts were read. A game with no row gets null for every question, which is also what a dashboard reads
@@ -180,6 +181,9 @@ namespace OpenDashPlugin
         /// <summary>rFactor 2's first race session in mSession: 10 to 13 are the races, below are practice, qualifying and warmup.</summary>
         public const int LmuFirstRace = 10;
 
+        /// <summary>rFactor 2's mPitState while the car is stopped in its pit box: 0 none, 1 request, 2 entering, 3 stopped, 4 exiting.</summary>
+        public const int LmuPitStopped = 3;
+
         /// <summary>How one sim answers one question, given a way to read a property by its full name.</summary>
         public delegate bool? Answer(Func<string, object> property);
 
@@ -194,6 +198,14 @@ namespace OpenDashPlugin
             public Answer BlackFlagShown { get; set; }
             public Answer WhiteFlagShown { get; set; }
             public Answer ChequeredFlagShown { get; set; }
+
+            /// <summary>
+            /// Whether the car is stopped in its pit box, which is what <see cref="PitStopClock"/> times for
+            /// <see cref="Contract.PitStopSeconds"/> and <see cref="Contract.LastPitStopSeconds"/>. Not published itself:
+            /// a dashboard asks how long the stop has been, and an expression cannot time anything. Null where
+            /// SimHub's own IsInPit is the box, so that its IsInPitSince and LastPitStopDuration are the answer (#1130).
+            /// </summary>
+            public Answer InPitBox { get; set; }
 
             /// <summary>The answer to one question by its <see cref="Contract.Capabilities"/> name.</summary>
             public Answer For(string capability)
@@ -307,6 +319,8 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // SimHub's IsInPit is the box here, so its IsInPitSince and LastPitStopDuration time the stop.
+                InPitBox = null,
             },
             [AssettoCorsa] = new Row
             {
@@ -325,6 +339,8 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // ACManager.GD_IsInPit is Graphics.IsInPit, the box, so SimHub's own timer is the stop.
+                InPitBox = null,
             },
             [AssettoCorsaCompetizione] = new Row
             {
@@ -340,6 +356,8 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // ACCManager.GD_IsInPit is Graphics.IsInPit, the box, as Assetto Corsa's is.
+                InPitBox = null,
             },
             [LeMansUltimate] = new Row
             {
@@ -364,6 +382,10 @@ namespace OpenDashPlugin
                 WhiteFlagShown = LmuLastLap,
                 // GD_Flag_Checkered is [NotAvailable].
                 ChequeredFlagShown = LmuChequered,
+                // GD_IsInPit is mInPits, the whole pit lane, as GD_IsInPitLane is, so SimHub's IsInPitSince runs from
+                // the entry line and its LastPitStopDuration is the lane. The player's own mPitState is the box, which
+                // is how SimHub's opponents' pit statistics already read it (#1130).
+                InPitBox = Is(LmuPlayer + "mPitState", LmuPitStopped),
             },
         };
 
@@ -384,6 +406,18 @@ namespace OpenDashPlugin
             var index = 0;
             foreach (var capability in Contract.Capabilities) index = index * 3 + SimReport.Digit(Ask(row.For(capability), property));
             return SimReport.At(index);
+        }
+
+        /// <summary>
+        /// Whether the car is stopped in its pit box on this frame of <paramref name="gameName"/>, by its row's
+        /// <see cref="Row.InPitBox"/>: null for a game with no row, for a row that leaves it to SimHub's own IsInPit,
+        /// and for a property that cannot be read. Never throws.
+        /// </summary>
+        public static bool? InPitBox(string gameName, Func<string, object> property)
+        {
+            Row row;
+            if (gameName == null || property == null || !Table.TryGetValue(gameName, out row)) return null;
+            return Ask(row.InPitBox, property);
         }
 
         private static bool? Ask(Answer answer, Func<string, object> property)
