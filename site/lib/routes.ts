@@ -15,7 +15,7 @@ export interface Route {
 export const ROUTES = {
   home: { path: '/', anchors: ['why', 'screen', 'pages', 'second-screens', 'lights', 'status', 'get'], changeFrequency: 'weekly' },
   screens: { path: '/screens', anchors: ['faces', 'anatomy', 'fit', 'companion', 'pit-wall', 'round', 'not-listed'], changeFrequency: 'monthly' },
-  pages: { path: '/pages', anchors: ['catalogue', 'face', 'glance'], changeFrequency: 'monthly' },
+  pages: { path: '/pages', anchors: ['catalogue', 'face', 'glance', 'sims'], changeFrequency: 'monthly' },
   lights: { path: '/lights', anchors: ['car', 'strips', 'strip-shows', 'flag-box', 'plugin'], changeFrequency: 'monthly' },
   compare: { path: '/compare', anchors: ['table', 'scheduled'], changeFrequency: 'monthly' },
   install: { path: '/install', anchors: ['plugin', 'after', 'companion-paging', 'nothing-showing', 'only-way'], changeFrequency: 'monthly' },

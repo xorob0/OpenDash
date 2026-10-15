@@ -21,7 +21,7 @@ Three scripts read the repository at build time, and their output is generated a
 | Script | Reads | Writes |
 |---|---|---|
 | `scripts/tokens.ts` | `design/tokens.json` | `app/tokens.css` |
-| `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `build/OpenDash-plugin.zip` | `lib/content.generated.ts` |
+| `scripts/content.ts` | `build/manifest.json`, `packages/dash/src/contract.ts`, `flags.ts`, `leds/strip.ts`, `zones/index.ts`, `VERSION`, `CHANGELOG.md`, `docs/sim-support.md`, `build/OpenDash-plugin.zip` | `lib/content.generated.ts` |
 | `scripts/fonts.ts` | `packages/dash/fonts/*.ttf` | `public/fonts/*.woff2` |
 
 So which packages exist, which of them are a car theme's and what the themes are, how big the plugin
@@ -50,7 +50,7 @@ pages say so rather than inventing a file.
 |---|---|
 | `/` | which sim, which host, what it costs; find your screen; download |
 | `/screens` | every size, to scale; the anatomy; the companion; the pit wall |
-| `/pages` | the 21 pages, captured; the face's other catalogues |
+| `/pages` | the 21 pages, captured; the face's other catalogues; which sim shows what |
 | `/lights` | the car's own shift lights, the strip shapes, the flag box, In the plugin (which page holds what) |
 | `/compare` | openDash beside the two competitors, dated |
 | `/install` | the plugin, the unblock step, nothing showing, and why there is no other way in |

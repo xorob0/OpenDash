@@ -19,7 +19,7 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 
 export const SITE_NAME = 'OpenDash';
 /** The product, as the mark spells it. */
 export const WORDMARK = 'openDash';
-export const SITE_TAGLINE = 'Free dashboards for SimHub, built for iRacing first.';
+export const SITE_TAGLINE = 'Free dashboards for SimHub, for iRacing and Assetto Corsa.';
 
 export const REPO_URL = 'https://github.com/xorob0/OpenDash';
 /** The repository as the footer prints it, so the address is written once. */
@@ -67,8 +67,14 @@ export const ONLY_WAY_IN = 'The plugin is the only way in: every dashboard and e
 /** What the line costs, said where it is made rather than discovered by the reader it excludes. */
 export const NO_OTHER_ROUTE = 'A SimHub that cannot take a DLL into its own folder cannot run OpenDash. That is a choice, and the scope says what it buys.';
 
-/** The claim about sims, which docs/scope.md limits to iRacing until #102 says otherwise. */
-export const CLAIMED_SIM = 'Tested on iRacing only. Other sims may work and are not claimed.';
+/**
+ * The claim about sims, in docs/scope.md's terms: a sim is supported once it has been driven and its
+ * column of docs/sim-support.md is filled (#102, #479). The Pages page renders that table.
+ */
+export const CLAIMED_SIM = 'Supported on iRacing and Assetto Corsa. ACC and Le Mans Ultimate may work, but they are untested and not supported.';
+
+/** The supported sims as the first screen's label and the page titles name them. */
+export const SUPPORTED_SIMS = 'iRacing and Assetto Corsa';
 
 export const NO_TRACKING = 'No analytics, no cookies. This site records nothing about you.';
 

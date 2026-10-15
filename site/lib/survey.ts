@@ -237,7 +237,7 @@ export const SURVEY: readonly SurveySection[] = [
     // parity with the dashboards above, which ship the stream overlay and the invisible dash that the
     // scope refuses and the comparison marks Refused (#1095). A test holds the note to the table.
     note:
-      'OpenDash is an alternative to the dashboards above. It is free and open source, and it covers what a driver reads from the seat: the dash, the second screens and the LEDs. It is not a copy of those dashboards: some of what they offer, such as a stream overlay or an invisible dash, is refused on purpose rather than planned. It intends to stay a dashboard and LED tool and nothing more, made for iRacing first and meant to reach other sims as each one is driven and checked.',
+      'OpenDash is an alternative to the dashboards above. It is free and open source, and it covers what a driver reads from the seat: the dash, the second screens and the LEDs. It is not a copy of those dashboards: some of what they offer, such as a stream overlay or an invisible dash, is refused on purpose rather than planned. It intends to stay a dashboard and LED tool and nothing more, made for iRacing and Assetto Corsa and meant to reach other sims as each one is driven and checked.',
     questions: [
       {
         id: 'q14',

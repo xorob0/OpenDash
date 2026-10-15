@@ -8,7 +8,7 @@ import { SITE_TAGLINE } from '../lib/site';
  * The picture a link to the site unfurls with: the mark, the tagline, the promise, and the base
  * face's own capture. Rendered at build time from the same still the home page shows.
  */
-export const alt = 'OpenDash: free SimHub dashboards for iRacing';
+export const alt = 'OpenDash: free SimHub dashboards for iRacing and Assetto Corsa';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
