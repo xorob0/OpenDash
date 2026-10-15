@@ -973,7 +973,7 @@ export const BEST_LAP_SESSIONS = [
  * Whether the session's leaderboard is ordered by best lap, which {@link BEST_LAP_SESSIONS} lists,
  * and so whether the Gap and Int columns measure best laps rather than distance (#1040).
  */
-export const rankedByBestLap = (): Expr => isIn(ucase(sessionType()), ...BEST_LAP_SESSIONS.map((name) => str(name.toUpperCase())));
+export const rankedByBestLap = (): Expr => sessionIs(...BEST_LAP_SESSIONS);
 
 /**
  * The gap outside a race: a car's best lap less the best lap of the car it is measured from, signed
@@ -1520,6 +1520,12 @@ export const classOpponentCount = (): Expr => isnull(game('PlayerClassOpponentsC
 export const fieldSize = (): Expr => iff(classMode(), classOpponentCount(), opponentCount());
 
 export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
+/**
+ * The gear as the sim writes it, `N`, `R` or a digit, and the one place `Gear` is read for a screen:
+ * zone A, the gear card, the pit wall and the LED profiles draw this, and the two car themes do too.
+ * `shift.ts` reads the property on its own, since this file reads its ladders.
+ */
+export const gear = (): Expr => game('Gear');
 
 /**
  * The unit words the faces draw.
@@ -1529,7 +1535,12 @@ export const speed = (): Expr => isnull(game('SpeedLocal'), num(0));
  * for `km/h` and `L`. The written form is what the canvas draws and what the box was measured
  * against, so the enum is mapped here rather than in each follower.
  */
-export const speedUnit = (): Expr => iff(eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH')), str('mph'), str('km/h'));
+/**
+ * Whether SimHub is set to miles an hour, which is the one switch every speed figure follows. A
+ * theme that writes the unit in its own words (the AiM writes `kph`) asks this rather than the sim.
+ */
+export const speedInMph = (): Expr => eq(isnull(game('SpeedLocalUnit'), str('KMH')), str('MPH'));
+export const speedUnit = (): Expr => iff(speedInMph(), str('mph'), str('km/h'));
 // Engine speed has one body, `rpms` in `shift.ts`, because the speedo prints it directly above a
 // rev bar that reads the same value: two spellings of one expression is how the redline came to
 // disagree with the bar it sits on. ADR 0014.
@@ -1542,6 +1553,8 @@ export const rpm = rpms;
 const fuelInGallons = (): Expr => eq(isnull(game('FuelUnit'), str('Liters')), str('Gallons'));
 export const fuelUnit = (): Expr => iff(fuelInGallons(), str('gal'), str('L'));
 export const fuel = (): Expr => isnull(game('Fuel'), num(0));
+/** The sim has published a tank at all, which is what tells no tank from an empty one. */
+export const fuelIsPublished = (): Expr => not(isNull(game('Fuel')));
 /**
  * The tank in litres whatever the driver's unit, for a figure a car fixes in litres, as the Porsche
  * fixes its low-fuel alarm at ten (#1126). Null where no sim is running, so a caller can tell no tank
@@ -1599,7 +1612,7 @@ const lapTimeRun = (): Expr => isnull(timespanToSeconds(game('CurrentLapTime')),
 export const lapsLeftIsKnown = (): Expr => ncalc.or(not(isTimedSession()), gt(timedLapSeconds(), num(0)));
 
 /** Whether the session is a race, the one session name OpenDash matches with certainty. */
-const isRace = (): Expr => eq(ucase(sessionType()), str('RACE'));
+const isRace = (): Expr => sessionIs('Race');
 
 /**
  * The overall leader's row on SimHub's leaderboard: the car first on the road, {@link liveRow} of 1.
@@ -2264,7 +2277,7 @@ export const sim = {
   pitLimiterOn: (): Expr => setting.reported(PIT_LIMITER_ON, pitLimiterOn()),
   /**
    * The sim reports the car's damage. Without the plugin, false: iRacing fills SimHub's `CarDamage1..5` with
-   * zeros, which is no report at all. Not yet read: #582 gates the damage module on it.
+   * zeros, which is no report at all. The damage module draws the car or says the sim reports none by it. #582.
    */
   damageReported: (): Expr => setting.reported(DAMAGE_REPORTED, 'false'),
   /**
@@ -2297,7 +2310,39 @@ export const antiRollRear = (): Expr => raw('dcAntiRollRear');
 
 export const airTemperature = (): Expr => isnull(game('AirTemperature'), num(0));
 export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0));
-export const trackName = (): Expr => isnull(game('TrackName'), str(''));
+/**
+ * Where Assetto Corsa publishes the track's name for people: the `name` of the track's own
+ * `ui_track.json`, which SimHub's AC reader loads into its raw `Track.TrackInfo` (`TrackDesc` and
+ * `TrackInfo` in `ACSharedMemory.dll`, decompiled). No other sim's reader has a `Track.TrackInfo`, so
+ * everywhere else it is null.
+ */
+export const AC_TRACK_NAME = 'DataCorePlugin.GameRawData.Track.TrackInfo.name';
+
+/**
+ * Where iRacing publishes the track's name for people: the session's `WeekendInfo.TrackDisplayShortName`,
+ * `Spa` where `TrackName` is `spa gp`. SimHub's iRacing reader declares the whole session info raw
+ * (`SessionData._WeekendInfo` in `iRacingSDK.dll`, decompiled), and no other sim's reader has a
+ * `SessionData`, so everywhere else it is null.
+ *
+ * The short name rather than `TrackDisplayName`, `Circuit de Spa-Francorchamps`, because the header
+ * this feeds is 163 px wide on the 800 by 480 layout and the pit wall's race page, and the long name
+ * with its length after it is over 200 px there. WPF would cut it off mid-word.
+ */
+export const IRACING_TRACK_NAME = 'DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName';
+
+/**
+ * The track as a driver names it, `Red Bull Ring` rather than `ks_red_bull_ring` and `Spa` rather
+ * than `spa gp`.
+ *
+ * `GameData.TrackName` is not that on either sim 1.0 is built for. On iRacing it is the session's
+ * `WeekendInfo.TrackName`, iRacing's internal code (`IRacingManager.GD_TrackName`, decompiled, and
+ * every recorded trace, which holds `spa gp`). On Assetto Corsa `ACManager.GD_TrackName` answers
+ * `TrackDesc.Track`, the track's folder, lower-cased as `TrackDesc.GetFromAPI` finds it under
+ * `content\tracks` (#1124). So each sim's own name is read first where it is set, and `TrackName`
+ * where neither is, which is every other sim and an AC track that ships no `ui_track.json`. None of
+ * the reads names a game: each raw one is simply null wherever SimHub does not fill it.
+ */
+export const trackName = (): Expr => isnull(prop(AC_TRACK_NAME), isnull(prop(IRACING_TRACK_NAME), isnull(game('TrackName'), str(''))));
 export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0)), num(1000));
 /**
  * How wet the track is, as iRacing's raw `TrackWetness` writes it: `irsdk_TrackWetness`, 1 for dry up
@@ -2348,6 +2393,23 @@ export const trackGrip = (): Expr => {
   return TRACK_STATES.reduce<Expr>((drier, state) => iff(ge(wetness, num(state.from)), str(state.word), drier), str(NO_VALUE));
 };
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
+
+/**
+ * Whether the session is one of `names`, whichever case the sim writes it in (#1125).
+ *
+ * SimHub passes each sim's own spelling through: iRacing's `Race` and `Lone Qualify`, and Assetto
+ * Corsa's and ACC's enum names with their `AC_` taken off, `RACE` and `QUALIFY`
+ * (`ACManager.GD_SessionTypeName`, decompiled `ACSharedMemory.dll`). NCalc's `=` and `in` compare
+ * two strings with `Comparer.Default`, which minds the case, so the name is put in capitals and
+ * compared with the names in capitals. `names` are written as iRacing writes them, and one name is
+ * an `=` rather than an `in` of one. `ncalcCoverage.test.ts` refuses a comparison of the session
+ * name made any other way.
+ */
+export const sessionIs = (...names: readonly string[]): Expr => {
+  const [first, ...rest] = names.map((name) => str(name.toUpperCase()));
+  if (first === undefined) throw new Error('sessionIs() takes at least one session name');
+  return rest.length === 0 ? eq(ucase(sessionType()), first) : isIn(ucase(sessionType()), first, ...rest);
+};
 
 /**
  * The session names `SessionTypeName` is written with, which is what a box that draws it is cut to.
@@ -2605,6 +2667,26 @@ export const tyreWearMin = (corner: Corner): Expr => {
   return iff(ncalc.isNull(section('M')), tyreWear(corner), mul(min(section('L'), min(section('M'), section('R'))), num(100)));
 };
 
+/**
+ * The tyre temperature band D's tyre page draws, or null where the sim publishes none (#556).
+ *
+ * iRacing's raw `*tempCM` first, which is the carcass in the middle of the tread and in degrees
+ * Celsius whatever the driver has set, and which is what the page has always drawn there. Where it is
+ * absent, which is every sim but iRacing, SimHub's own `TyreTemperature*`, which is already in the
+ * driver's unit: on Assetto Corsa and ACC that is the core temperature the sim publishes, and on Le
+ * Mans Ultimate the mean of the three tread readings. Neither is defaulted, so a sim that publishes
+ * no tyre temperature at all, or no game running, is a null the page draws as {@link NO_VALUE}
+ * rather than a row of zeros that read as four cold tyres.
+ */
+export const bandTyreTemperature = (corner: Corner): Expr => isnull(raw(`${CORNER_PREFIX[corner]}tempCM`), game(`TyreTemperature${corner}`));
+
+/**
+ * The unit over {@link bandTyreTemperature}: `°C` while iRacing's raw carcass is what is drawn, since
+ * that is Celsius whatever the setting says, and the driver's own mark where SimHub's converted
+ * figure is. One corner answers for all four, the raw block being published whole or not at all.
+ */
+export const bandTyreTemperatureMark = (): Expr => iff(isNull(raw('LFtempCM')), temperatureMark(), str('°C'));
+
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**
@@ -2621,7 +2703,7 @@ export const perTemperatureUnit = (f: Expr, k: Expr, c: Expr): Expr => iff(eq(te
  * Every temperature SimHub publishes is already converted to whichever of the three the driver has
  * set, so a page drawing `TyreTemperature*` follows this and a page reading iRacing's raw telemetry
  * does not: `LFtempCM` is degrees Celsius whatever the setting says, which is why band D's tyre
- * page writes its own `°C` rather than asking here.
+ * page asks {@link bandTyreTemperatureMark} instead, and writes `°C` while it draws the raw figure.
  */
 export const temperatureMark = (): Expr => {
   const unit = temperatureUnit();
@@ -2684,6 +2766,21 @@ export const pitLimiterOn = (): Expr => eq(isnull(game('PitLimiterOn'), num(0)),
 
 /** A car alongside on `side`, as SimHub folds iRacing's `CarLeftRight` into two booleans. */
 export const spotterCar = (side: 'Left' | 'Right'): Expr => gt(isnull(game(`SpotterCar${side}`), num(0)), num(0));
+
+/**
+ * The car has a headlight-flash control: iRacing's `dcHeadlightFlash`, the in-car control itself,
+ * absent on a car without one and on every other sim.
+ */
+export const hasHeadlightFlashControl = (): Expr => not(isNull(raw('dcHeadlightFlash')));
+
+/**
+ * The driver has flashed the headlights within the alert window: `changed()` over the control, which
+ * is SimHub's own clock (ADR 0009), open for `indicator.alert.durationMs` after the control last
+ * moved. Asked before anything else in an `and`, so that the window is recorded on the first frame
+ * it could open; `flags.ts` says why the order is load-bearing. iRacing publishes the flash control
+ * and no headlight state, so a flash is all that can light a headlight lamp.
+ */
+export const headlightFlashed = (): Expr => ncalc.changed(num(dsTokens.indicator.alert.durationMs), raw('dcHeadlightFlash'));
 
 /**
  * What {@link pitLimit} reads when the sim publishes no limit: a speed nothing reaches in either

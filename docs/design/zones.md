@@ -869,7 +869,7 @@ Pages with nothing to shed, and why:
 - **Radar** (`radar`) — the cars beside you, cut from the box; rule 18.
 - **Track** (`track`) — the map, cut from the box; rule 18.
 - **Lap history** (`lapHistory`) — lap and time at every shape with a declared row count, plus a delta the wide page adds; there is no field the table drops.
-- **Damage** (`damage`) — one line of prose: iRacing publishes no damage.
+- **Damage** (`damage`) — a drawing cut from its box (rule 18) with the four panels beside it, or one line of prose where the sim reports no damage.
 - **Track rivals** (`trackRivals`) — one line of prose: SimHub times sectors, not segments.
 
 A drawing is cut from its box rather than shed (rule 18), and a page that says it has no data is
@@ -1187,6 +1187,16 @@ against what it kept before.
 Every face keeps
 the estimate; the margin outranks it in the declaration and no width has yet had to spend it.
 `bandPages.test.ts` pins this table, because nothing else would notice it going stale.
+
+**D4's four temperatures are the carcass on iRacing and the core elsewhere** ([#556](https://github.com/xorob0/OpenDash/issues/556)).
+On iRacing they are the raw `LFtempCM` and its three siblings, the carcass in the middle of the tread,
+which is Celsius whatever the driver has set, so the label says `Tyres °C` there in every unit
+([#384](https://github.com/xorob0/OpenDash/issues/384)). Every other sim has no raw block, and the page
+reads SimHub's own `TyreTemperature*` instead: on Assetto Corsa and ACC that is the core temperature
+the sim publishes, on Le Mans Ultimate the mean of the three tread readings, and on all three it is
+already in the driver's unit, so the label follows it as `°C`, `°F` or `K`. `°C` is the widest of the
+three in either case, so the label is measured as the catalogue writes it. A sim that publishes
+neither draws `--` in each of the four cells, never four zeros, which would read as four cold tyres.
 
 **The gaps and sizes are each face's own.** Band D is padded 16 px at the sides and 12 in portrait,
 its three groups sit 22 apart, a corner block's two fields 18, and a page's fields 34 at the three

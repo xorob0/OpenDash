@@ -120,22 +120,19 @@ export const ASSETTO_CORSA: Sim = {
   banner: 'AcsmEmulator - scenario',
   defaultScenario: 'race',
   tickProperty: 'DataCorePlugin.GameRawData.Graphics.PacketId',
-  rawPrefixes: ['DataCorePlugin.GameRawData.Physics.', 'DataCorePlugin.GameRawData.Graphics.', 'DataCorePlugin.GameRawData.StaticInfo.'],
+  // Track is the reader's own: the track it found under content\tracks and its ui_track.json, which is
+  // where the track module's header reads the name for people from (#1124).
+  rawPrefixes: [
+    'DataCorePlugin.GameRawData.Physics.',
+    'DataCorePlugin.GameRawData.Graphics.',
+    'DataCorePlugin.GameRawData.StaticInfo.',
+    'DataCorePlugin.GameRawData.Track.',
+  ],
   traceSubdir: 'ac',
   untraced: [
     // shiftlights swaps the car at forty seconds to show the lights following it, which is watched on
     // the VM against a strip; a twenty-second trace would hold the Porsche's sweep and no swap.
     'shiftlights',
-    // Added by #579 on a branch that could not claim the VM. Recording them is the VM check of that
-    // ticket: `bun run record --sim ac race green yellow pit quali notc noapp`, then each name comes
-    // off this list in the same commit as its trace.
-    'race',
-    'green',
-    'yellow',
-    'pit',
-    'quali',
-    'notc',
-    'noapp',
     // Added by #1127 on a branch that could not claim the VM: quali under AC's TIME_ATTACK, the
     // widest session name, which the AiM is photographed writing whole. `bun run record --sim ac
     // timeattack` takes it off.

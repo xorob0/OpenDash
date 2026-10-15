@@ -232,6 +232,23 @@ in each: a constant, and the value a recording with the plugin installed will wr
 That recording was 2026-10-14, for #1123, when the track state moved from `GameData.TrackGripStatus`,
 which SimHub publishes for no game, to iRacing's `Telemetry.TrackWetness` (#1128). The new column is 1
 on every frame of all nine, iRacing's dry and the emulator's constant, and `CarHasPitLimiter` is `true`
-as asserted, so no entry is asserted in any of the nine. The header names its `game` from that recording
-on. The rig carried an 850x480 screen beside the 1280x480 that day and no pit wall, which is why the
-850x480's settings read values and the pit wall's are null.
+as asserted, so that entry was dropped. The header names its `game` from that recording on. The rig
+carried an 850x480 screen beside the 1280x480 that day and no pit wall, which is why the 850x480's
+settings read values and the pit wall's are null.
+
+#582 asserts five more in each. The damage page reads `OpenDash.DamageReported`, whether the sim reports
+the car's damage at all, which the plugin answers per sim, and on a sim that does it reads
+`DataCorePlugin.GameData.CarDamage1` to `4`, the front, rear, left and right members. iRacing reports none:
+the plugin's answer is `false` on every frame of all nine, and SimHub's iRacing reader marks the four
+members not available and returns 0 for each (`docs/research/sims.md`). Both are constants, and the values
+a recording with the plugin installed will write. The next `bun run record` reads them from SimHub and the
+plugin and drops the entries.
+
+#1124 asserts two more in each: raw `SessionData.WeekendInfo.TrackDisplayShortName`, `Spa`, and raw
+`Track.TrackInfo.name`, null on iRacing, which the track module's header reads. #582 and #1124 landed on
+main while #1123's recording was on its branch, so the nine are that recording with these seven columns
+carried over from main's, all constants. The next `bun run record` reads them and drops the entries.
+
+Assetto Corsa's seven were recorded before #1123 read `Telemetry.TrackWetness`, so each asserts that
+column as null, which is what SimHub hands a dashboard on AC for any raw iRacing `Telemetry.*` column.
+The next `bun run record --sim ac` reads it and drops the entry.

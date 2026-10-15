@@ -165,6 +165,8 @@
       {"idx": 5, "class": 2708, "lap": 13, "pct": 0.03},
       {"idx": 6, "class": 2708, "lap": 12, "pct": 0.84},
       {"idx": 7, "class": 2708, "lap": 13, "pct": 0.16},
+      // In its stall for the whole race, so every scenario built on this one has a PIT chip in its table
+      // before its own cars go in (#1138).
       {"idx": 8, "class": 2708, "lap": 12, "pct": 0.985, "pit": true},
       {"idx": 9, "class": 2708, "lap": 13, "pct": 0.27},
       {"idx": 10, "class": 2708, "lap": 12, "pct": 0.91},

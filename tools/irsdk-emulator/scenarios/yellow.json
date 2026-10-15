@@ -33,6 +33,6 @@
   "timeline": [
     {"at": 0, "log": "hold the yellow: the flag cycle would move it", "driver": {"type": "flagCycle", "enabled": false}},
     {"at": 0, "log": "the fuel burn would refill the pinned level", "driver": {"type": "fuelBurn", "enabled": false}},
-    {"at": 2, "log": "two cars in the pits", "driver": {"type": "field", "pitCars": [4, 17]}}
+    {"at": 2, "log": "two more cars in the pits, three with race.json's car 8", "driver": {"type": "field", "pitCars": [4, 17]}}
   ]
 }

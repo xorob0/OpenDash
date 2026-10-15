@@ -570,9 +570,9 @@ namespace OpenDashPlugin
         /// <remarks>
         /// With no tables on disk, which is every fresh install, no car can be found in them, and saying the
         /// car "is not in Car Data" would be false for a car it measures. The line says what is missing
-        /// instead, and where the row that fetches it is. The plugin reads only iRacing's tables
-        /// (CarLightLibrary), so in any other game every car would read as missing, which the greyed row for
-        /// the other sims' car data already says is not read yet: there the line says nothing.
+        /// instead, and where the row that fetches it is. The plugin reads iRacing's, Assetto Corsa's and
+        /// ACC's tables (CarLightLibrary.Sims), so in any other game every car would read as missing, which the
+        /// greyed row for LMU's car data already says is not read yet: there the line says nothing.
         ///
         /// <para>With no tables read, it says they are missing only where none were ever downloaded
         /// (<paramref name="tablesMissing"/>): while the start's read is still running, or where the copy on disk
@@ -596,13 +596,14 @@ namespace OpenDashPlugin
             return carCount <= 0 && (status ?? string.Empty).Trim().StartsWith(PanelLights.CarTablesNone, StringComparison.Ordinal);
         }
 
-        /// <summary>The game whose tables the plugin reads, as SimHub names it or codes it ("iRacing", "IRacing").</summary>
-        public const string TablesGame = "iRacing";
-
-        /// <summary>Whether the tables cover the game SimHub is set to: iRacing's alone.</summary>
+        /// <summary>
+        /// Whether the tables cover the game SimHub is set to, as it names it or codes it ("Assetto Corsa",
+        /// "AssettoCorsa"): iRacing, Assetto Corsa and ACC, the sims whose folders the plugin takes out of the
+        /// archive (CarLightLibrary.Sims, #748).
+        /// </summary>
         public static bool TablesCoverGame(string game)
         {
-            return game != null && string.Equals(game.Trim(), TablesGame, StringComparison.OrdinalIgnoreCase);
+            return CarLightLibrary.SimFor(game) != null;
         }
 
         /// <summary>Whether the tables are on disk: any car in them.</summary>
@@ -1472,7 +1473,7 @@ namespace OpenDashPlugin
             PanelSoon.PitLimiterLights,
             PanelSoon.IdleSweep,
             PanelSoon.EngineStartAnimation,
-            PanelSoon.CarDataForAcAccLmu,
+            PanelSoon.CarDataForLmu,
         };
 
         /// <summary>The effect labels, drawn from each switch's Label in the grid's loop rather than from a

@@ -1,9 +1,8 @@
 /**
  * The car seen from above: one drawing read twice. The pit order colours its four corner blocks by
- * the wheels the crew is down to change, and the damage page colours its panels by what is hurt.
- * iRacing reports no damage at all, so that second reading is a colour binding waiting for a caller
- * rather than anything drawn today; the drawing is the same either way, which is the whole reason
- * it is one file and not two.
+ * the wheels the crew is down to change, and the damage page colours its panels by what is hurt,
+ * on the sims that report damage (#582). The drawing is the same either way, which is the whole
+ * reason it is one file and not two.
  *
  * The canvas draws it at 142, 129, 106 and 79 px wide and every one of those is the same picture in
  * the same 86 by 150 viewBox, so the numbers below are the drawing and the size is rule 18's

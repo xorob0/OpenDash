@@ -1,7 +1,7 @@
 /**
  * What a module draws when the sim cannot answer it. Three modules ship this way on iRacing:
- * virtual energy is a Le Mans Ultimate feature, iRacing publishes no damage values at all, and
- * per-segment rival timing is not a SimHub property.
+ * virtual energy is a Le Mans Ultimate feature, iRacing publishes no damage values at all where
+ * Assetto Corsa and ACC do, and per-segment rival timing is not a SimHub property.
  *
  * They say so rather than showing zeros. A dashboard that invents a number is worse than one that
  * admits it has none, and the modules stay in the catalogue so another sim can switch them on.

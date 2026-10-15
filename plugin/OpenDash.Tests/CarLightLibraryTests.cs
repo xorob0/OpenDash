@@ -25,6 +25,11 @@ namespace OpenDashPlugin.Tests
             try { Directory.Delete(root, true); } catch { }
         }
 
+        /// <summary>SimHub's codes for the games, as GameData.GameName hands them to DataUpdate.</summary>
+        private const string IRacing = SimCapabilities.IRacing;
+        private const string AssettoCorsa = SimCapabilities.AssettoCorsa;
+        private const string Acc = SimCapabilities.AssettoCorsaCompetizione;
+
         private static string CarJson(string carId, int leds = 2)
         {
             var colors = string.Join(", ", Enumerable.Repeat("\"#FFFF0000\"", leds + 1));
@@ -33,21 +38,45 @@ namespace OpenDashPlugin.Tests
                    ", \"redlineBlinkInterval\": 0, \"ledColor\": [" + colors + "], \"ledRpm\": [{ \"1\": [" + rpm + "] }] }";
         }
 
-        /// <summary>The upstream archive as it really arrives: a top folder named for the branch, ten games' worth.</summary>
+        /// <summary>
+        /// The upstream archive as it really arrives: a top folder named for the branch, ten games' worth,
+        /// and a <c>src_data/</c> beside <c>data/</c>. Upstream's is <c>src_data/lmu/</c>, whose name contains
+        /// <c>data/lmu/</c>; here it holds a covered sim's folder, so a match on a substring would take it.
+        /// </summary>
         private static byte[] Archive(params string[] carIds)
+        {
+            return ArchiveOf(carIds.Select(id => ("iracing", id.Replace(' ', '-'), CarJson(id))).ToArray());
+        }
+
+        /// <summary>The same archive with each file placed by hand: a game folder, the file's name, its contents.</summary>
+        private static byte[] ArchiveOf(params (string sim, string file, string json)[] cars)
         {
             var stream = new MemoryStream();
             using (var zip = new ZipArchive(stream, ZipArchiveMode.Create, true))
             {
                 SyntheticPackage.Add(zip, "car-data-main/README.md", "# not a car");
                 SyntheticPackage.Add(zip, "car-data-main/data/manifest.json", "{}");
-                SyntheticPackage.Add(zip, "car-data-main/data/assettocorsa/some-other-sim.json", CarJson("other sim"));
-                foreach (var id in carIds)
+                SyntheticPackage.Add(zip, "car-data-main/data/car-classes.json", "{}");
+                SyntheticPackage.Add(zip, "car-data-main/data/lmu/a-team.json", CarJson("a team"));
+                SyntheticPackage.Add(zip, "car-data-main/data/automobilista2/a-car.json", CarJson("a car"));
+                SyntheticPackage.Add(zip, "car-data-main/src_data/iracing/a-source.json", CarJson("a source"));
+                SyntheticPackage.Add(zip, "car-data-main/src_data/assettocorsa/a-source.json", CarJson("a source"));
+                foreach (var car in cars)
                 {
-                    SyntheticPackage.Add(zip, "car-data-main/data/iracing/" + id.Replace(' ', '-') + ".json", CarJson(id));
+                    SyntheticPackage.Add(zip, "car-data-main/data/" + car.sim + "/" + car.file + ".json", car.json);
                 }
             }
             return stream.ToArray();
+        }
+
+        /// <summary>Every file under the cache, relative to it with forward slashes, in order.</summary>
+        private string[] FilesUnderRoot()
+        {
+            return Directory.GetFiles(root, "*", SearchOption.AllDirectories)
+                .Select(f => f.Substring(root.Length + 1).Replace('\\', '/'))
+                .Where(f => f != CarLightLibrary.StampFile)
+                .OrderBy(f => f, StringComparer.Ordinal)
+                .ToArray();
         }
 
         /// <summary>Answers one URL with bytes, or refuses, the way a machine with no network does.</summary>
@@ -86,13 +115,62 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void Takes_iracings_cars_out_of_the_archive_and_leaves_the_other_nine_sims_in_it()
+        public void Takes_each_covered_sims_cars_into_a_folder_of_its_own_and_leaves_the_other_games_in_the_archive()
         {
-            var written = CarLightLibrary.Extract(Archive("test one", "test two"), root);
-            Assert.Equal(2, written);
-            var files = Directory.GetFiles(root).Select(Path.GetFileName).OrderBy(n => n, StringComparer.Ordinal).ToArray();
-            // OpenDash supports one sim, so it keeps one sim's files: 340 KB rather than a megabyte.
-            Assert.Equal(new[] { "test-one.json", "test-two.json" }, files);
+            var written = CarLightLibrary.Extract(ArchiveOf(
+                ("iracing", "test-one", CarJson("test one")),
+                ("iracing", "test-two", CarJson("test two")),
+                ("assettocorsa", "ks-test-car", CarJson("ks_test_car")),
+                ("assettocorsacompetizione", "test-gt3", CarJson("test_gt3"))), root);
+            Assert.Equal(4, written);
+            // iRacing, Assetto Corsa and ACC, each in its own folder so a car is looked up among its own
+            // sim's cars (#748). LMU, AMS2 and the rest stay in the archive, and so does src_data/, which
+            // holds upstream's sources rather than cars.
+            Assert.Equal(new[]
+            {
+                "assettocorsa/ks-test-car.json",
+                "assettocorsacompetizione/test-gt3.json",
+                "iracing/test-one.json",
+                "iracing/test-two.json",
+            }, FilesUnderRoot());
+        }
+
+        [Fact]
+        public void The_covered_sims_are_iracing_assetto_corsa_and_acc_by_their_archive_folders()
+        {
+            // Read from the archive, not from its README: data/<SimHub's game code, folded>/.
+            Assert.Equal(new[] { "iracing", "assettocorsa", "assettocorsacompetizione" }, CarLightLibrary.Sims.Select(s => s.Folder).ToArray());
+            Assert.Equal(new[] { IRacing, AssettoCorsa, Acc }, CarLightLibrary.Sims.Select(s => s.Code).ToArray());
+            Assert.Same(CarLightLibrary.Sims[0], CarLightLibrary.IRacing);
+            Assert.Equal("iRacing, Assetto Corsa and Assetto Corsa Competizione", CarLightLibrary.SimNames);
+            foreach (var sim in CarLightLibrary.Sims)
+            {
+                // The code DataUpdate hands over and the name the panel shows both find the sim's folder.
+                Assert.Same(sim, CarLightLibrary.SimFor(sim.Code));
+                Assert.Same(sim, CarLightLibrary.SimFor(sim.Name));
+                Assert.Same(sim, CarLightLibrary.SimFor(sim.Folder));
+            }
+        }
+
+        [Theory]
+        [InlineData("IRacing", "iracing")]
+        [InlineData(" iRacing ", "iracing")]
+        [InlineData("AssettoCorsa", "assettocorsa")]
+        [InlineData("Assetto Corsa", "assettocorsa")]
+        [InlineData("AssettoCorsaCompetizione", "assettocorsacompetizione")]
+        [InlineData("Assetto Corsa Competizione", "assettocorsacompetizione")]
+        // LMU's keys name a team rather than a car, so its folder is left in the archive.
+        [InlineData("LMU", null)]
+        [InlineData("Le Mans Ultimate", null)]
+        // Folded whole, so a game whose name starts with a covered one's is not taken for it.
+        [InlineData("AssettoCorsaEVO", null)]
+        [InlineData("Automobilista2", null)]
+        [InlineData("", null)]
+        [InlineData(null, null)]
+        public void A_game_is_matched_to_its_sims_folder_however_simhub_spells_it(string game, string folder)
+        {
+            var sim = CarLightLibrary.SimFor(game);
+            Assert.Equal(folder, sim?.Folder);
         }
 
         [Fact]
@@ -104,17 +182,19 @@ namespace OpenDashPlugin.Tests
             {
                 SyntheticPackage.Add(zip, "x/data/iracing/../../escaped.json", CarJson("escaped"));
                 SyntheticPackage.Add(zip, "x/data/iracing/nested/deeper.json", CarJson("deeper"));
+                SyntheticPackage.Add(zip, "x/data/assettocorsa/../iracing/sideways.json", CarJson("sideways"));
+                SyntheticPackage.Add(zip, "x/data/iracing/.json", CarJson("nameless"));
                 SyntheticPackage.Add(zip, "x/data/iracing/fine.json", CarJson("fine"));
             }
             Assert.Equal(1, CarLightLibrary.Extract(stream.ToArray(), root));
-            Assert.Equal(new[] { "fine.json" }, Directory.GetFiles(root).Select(Path.GetFileName).ToArray());
+            Assert.Equal(new[] { "iracing/fine.json" }, FilesUnderRoot());
         }
 
         [Fact]
         public void Reads_every_car_it_can_and_skips_the_ones_it_cannot()
         {
             Directory.CreateDirectory(root);
-            File.WriteAllText(Path.Combine(root, "good.json"), CarJson("good car"));
+            File.WriteAllText(Path.Combine(root, "good-car.json"), CarJson("good car"));
             File.WriteAllText(Path.Combine(root, "broken.json"), "{ not json at all");
             File.WriteAllText(Path.Combine(root, "mismatched.json"), "{ \"carId\": \"x\", \"ledNumber\": 4, \"ledColor\": [\"Red\"], \"ledRpm\": [{}] }");
             File.WriteAllText(Path.Combine(root, "notes.txt"), "ignored");
@@ -182,12 +262,164 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
-        public void An_archive_with_no_iracing_cars_is_not_treated_as_a_good_copy()
+        public void An_archive_with_no_cars_for_any_covered_sim_is_not_treated_as_a_good_copy()
         {
+            // LMU's and AMS2's cars are in it, and they are not cars the plugin reads.
             var result = CarLightLibrary.Fetch(new Source { Bytes = Archive() }, root, DateTime.UtcNow);
             Assert.False(result.Ok);
+            Assert.Equal("the archive carried no cars for iRacing, Assetto Corsa and Assetto Corsa Competizione", result.Reason);
             // Not stamped, so the next start tries again rather than waiting a week on an empty folder.
             Assert.Null(CarLightLibrary.FetchedAt(root));
+        }
+
+        [Fact]
+        public void An_archive_with_iracings_cars_and_none_of_assetto_corsas_is_still_a_good_copy()
+        {
+            // Which is the archive as it might stand any day: one sim's folder empty is not a broken
+            // download, and the cars it does carry are counted and stamped (#748).
+            var now = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+            var service = new CarLightService(new Source { Bytes = Archive("test one", "test two") }, root);
+            var result = service.Download(now);
+            Assert.True(result.Ok);
+            Assert.Equal(2, result.Cars);
+            Assert.Equal(now, CarLightLibrary.FetchedAt(root));
+            var read = CarLightLibrary.ReadLibrary(root);
+            Assert.Equal(2, read.CountFor(CarLightLibrary.SimFor(IRacing)));
+            Assert.Equal(0, read.CountFor(CarLightLibrary.SimFor(AssettoCorsa)));
+            Assert.Equal("2 cars, updated just now", service.Status);
+        }
+
+        [Fact]
+        public void An_archive_with_assetto_corsas_cars_alone_is_a_good_copy_too()
+        {
+            var now = new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc);
+            var service = new CarLightService(new Source { Bytes = ArchiveOf(("assettocorsa", "ks-test-car", CarJson("ks_test_car"))) }, root);
+            var result = service.Download(now);
+            Assert.True(result.Ok);
+            Assert.Equal(1, service.CarCount);
+            Assert.Equal(1, CarLightLibrary.ReadLibrary(root).CountFor(CarLightLibrary.SimFor("Assetto Corsa")));
+            Assert.Equal(now, CarLightLibrary.FetchedAt(root));
+        }
+
+        [Fact]
+        public void A_car_is_looked_up_among_its_own_sims_cars_alone()
+        {
+            // One id in two sims, with ladders that differ, which is the case a single dictionary got
+            // wrong: the last file read won for both games.
+            var service = new CarLightService(new Source { Bytes = ArchiveOf(
+                ("iracing", "shared-car", CarJson("shared car", 2)),
+                ("assettocorsa", "shared-car", CarJson("shared_car", 4)),
+                ("assettocorsa", "ks-only-in-ac", CarJson("ks_only_in_ac", 3))) }, root);
+            Assert.True(service.Download(DateTime.UtcNow).Ok);
+            Assert.Equal(3, service.CarCount);
+
+            Assert.Equal(2, service.For(IRacing, "shared car").LedCount);
+            Assert.Equal(4, service.For(AssettoCorsa, "shared_car").LedCount);
+            // SimHub's code and the name the panel shows find the same shelf.
+            Assert.Equal(4, service.For("Assetto Corsa", "shared_car").LedCount);
+            // A car in one sim is not found from another, nor in a game whose tables are not read.
+            Assert.Null(service.For(IRacing, "ks_only_in_ac"));
+            Assert.NotNull(service.For(AssettoCorsa, "ks_only_in_ac"));
+            Assert.Null(service.For(Acc, "shared_car"));
+            Assert.Null(service.For(SimCapabilities.LeMansUltimate, "shared car"));
+            Assert.Null(service.For(null, "shared car"));
+
+            // And the frame: the same id lights four lamps in AC and two in iRacing, looked up again
+            // when the game changes under an unchanged car id.
+            service.Update(AssettoCorsa, "shared_car", "1", 6900, MirrorFit.Stretch, true, 0);
+            Assert.True(service.Ready);
+            Assert.Equal(4, service.Lamps);
+            service.Update(IRacing, "shared_car", "1", 6900, MirrorFit.Stretch, true, 0);
+            Assert.Equal(2, service.Lamps);
+            service.Update(SimCapabilities.LeMansUltimate, "shared_car", "1", 6900, MirrorFit.Stretch, true, 0);
+            // A game with no tables is no mirror, which sends the strip back to SimHub's bands.
+            Assert.False(service.Ready);
+            Assert.Equal(0, service.Lamps);
+        }
+
+        [Fact]
+        public void An_assetto_corsa_car_lights_its_own_ladder_by_the_folder_name_simhub_reports()
+        {
+            // AC's GameData.CarId is the car's folder under content/cars, underscores and all; the
+            // archive's file is named for it folded, which is the shape of the one AC table upstream.
+            var service = new CarLightService(new Source { Bytes = ArchiveOf(("assettocorsa", "ks-test-gt3-2024", CarJson("ks_test_gt3_2024", 6))) }, root);
+            Assert.True(service.Download(DateTime.UtcNow).Ok);
+
+            service.Update(AssettoCorsa, "ks_test_gt3_2024", "1", 6900, MirrorFit.Stretch, true, 0);
+            Assert.True(service.Ready);
+            Assert.Equal(6, service.Lamps);
+            Assert.Equal("ks_test_gt3_2024", service.CarName);
+
+            // A car AC has and the archive has not falls back as it always did: no mirror.
+            service.Update(AssettoCorsa, "ks_mazda_mx5_cup", "1", 6900, MirrorFit.Stretch, true, 0);
+            Assert.False(service.Ready);
+            Assert.Equal(0, service.Lamps);
+        }
+
+        [Fact]
+        public void A_table_is_found_by_its_files_name_as_well_as_by_the_id_inside_and_counted_once()
+        {
+            // Upstream's one AC table today: the file is named rss-formula-hybrid-2023, the id inside
+            // says rss_formula_hybrid_2023_AC, and its README says a file is named for SimHub's id.
+            var service = new CarLightService(new Source { Bytes = ArchiveOf(("assettocorsa", "test-hybrid-2023", CarJson("test_hybrid_2023_AC"))) }, root);
+            Assert.True(service.Download(DateTime.UtcNow).Ok);
+            Assert.Equal(1, service.CarCount);
+            Assert.NotNull(service.For(AssettoCorsa, "test_hybrid_2023"));
+            Assert.Same(service.For(AssettoCorsa, "test_hybrid_2023"), service.For(AssettoCorsa, "test_hybrid_2023_AC"));
+        }
+
+        [Fact]
+        public void A_files_name_never_takes_the_key_another_cars_id_has()
+        {
+            Directory.CreateDirectory(root);
+            // b.json says it is car "a"; a-other.json says it is car "b". Each id is its own car's key.
+            File.WriteAllText(Path.Combine(root, "b.json"), CarJson("a", 2));
+            File.WriteAllText(Path.Combine(root, "a-other.json"), CarJson("b", 3));
+            var cars = CarLightLibrary.ReadFolder(root);
+            Assert.Equal(2, cars["a"].LedCount);
+            Assert.Equal(3, cars["b"].LedCount);
+            Assert.Equal(3, cars["a-other"].LedCount);
+            Assert.Equal(2, CarLightLibrary.CountCars(cars));
+        }
+
+        [Fact]
+        public void A_copy_fetched_before_each_sim_had_a_folder_still_reads_as_iracings_cars()
+        {
+            // Before #748 the tables were iRacing's alone and lay flat in the cache. A rig that fetched
+            // them then keeps its cars, in iRacing and nowhere else, until it downloads again.
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "test-one.json"), CarJson("test one"));
+            var service = new CarLightService(new Source { Failure = "should not be asked" }, root);
+            Assert.True(service.Load(DateTime.UtcNow).Ok);
+            Assert.Equal(1, service.CarCount);
+            Assert.NotNull(service.For(IRacing, "test one"));
+            Assert.Null(service.For(AssettoCorsa, "test one"));
+        }
+
+        [Fact]
+        public void A_download_moves_the_flat_copy_into_iracings_folder()
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "old-car.json"), CarJson("old car"));
+            var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
+            Assert.True(service.Download(DateTime.UtcNow).Ok);
+            // The flat file was the old copy of the same folder, so it goes rather than being read twice.
+            Assert.Equal(new[] { "iracing/test-one.json" }, FilesUnderRoot());
+            Assert.Equal(1, service.CarCount);
+            Assert.Null(service.For(IRacing, "old car"));
+        }
+
+        [Fact]
+        public void A_download_with_no_iracing_cars_leaves_the_flat_copy_where_it_is_read()
+        {
+            Directory.CreateDirectory(root);
+            File.WriteAllText(Path.Combine(root, "old-car.json"), CarJson("old car"));
+            var service = new CarLightService(new Source { Bytes = ArchiveOf(("assettocorsa", "ks-test-car", CarJson("ks_test_car"))) }, root);
+            Assert.True(service.Download(DateTime.UtcNow).Ok);
+            // No iracing folder was written, so the old copy is still iRacing's cars.
+            Assert.NotNull(service.For(IRacing, "old car"));
+            Assert.NotNull(service.For(AssettoCorsa, "ks_test_car"));
+            Assert.Equal(2, service.CarCount);
         }
 
         [Fact]
@@ -199,7 +431,7 @@ namespace OpenDashPlugin.Tests
 
             Assert.True(loaded.Ok);
             Assert.Equal(1, service.CarCount);
-            service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0);
+            service.Update(IRacing, "test one", "1", 6900, MirrorFit.Stretch, true, 0);
             Assert.True(service.Ready);
             Assert.Equal("test one", service.CarName);
 
@@ -232,12 +464,12 @@ namespace OpenDashPlugin.Tests
             var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
             service.Download(DateTime.UtcNow);
 
-            service.Update("a car nobody measured", "1", 6900, MirrorFit.Stretch, true, 0);
+            service.Update(IRacing, "a car nobody measured", "1", 6900, MirrorFit.Stretch, true, 0);
             Assert.False(service.Ready);
             // Still the right width, so a profile that reads it anyway slices dark rather than nothing.
             Assert.Equal(14 * Contract.MirrorColorWidth, service.Run(14).Length);
 
-            service.Update("test one", "1", 6900, MirrorFit.Stretch, false, 0);
+            service.Update(IRacing, "test one", "1", 6900, MirrorFit.Stretch, false, 0);
             Assert.False(service.Ready);
 
             // And no ladder either, which is what sends a screen's rev bar back to the published one:
@@ -253,13 +485,13 @@ namespace OpenDashPlugin.Tests
         {
             var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
             service.Download(DateTime.UtcNow);
-            service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0);
+            service.Update(IRacing, "test one", "1", 6900, MirrorFit.Stretch, true, 0);
             Assert.True(service.Ready);
 
             // A table that disagrees with itself, which the reader refuses and so has to be made by hand:
             // one colour for a two-LED bar is an IndexOutOfRangeException in the middle of the frame.
-            service.For("test one").Colors = new[] { "#FFFF0000" };
-            Assert.ThrowsAny<Exception>(() => service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0));
+            service.For(IRacing, "test one").Colors = new[] { "#FFFF0000" };
+            Assert.ThrowsAny<Exception>(() => service.Update(IRacing, "test one", "1", 6900, MirrorFit.Stretch, true, 0));
 
             // The frame before was lit, and a failure used to leave it published: a strip frozen on its last
             // good frame for as long as the fault lasted (#577). Now it is no mirror at all, which is what
@@ -275,7 +507,7 @@ namespace OpenDashPlugin.Tests
         {
             var service = new CarLightService(new Source { Bytes = Archive("test one") }, root);
             service.Download(DateTime.UtcNow);
-            service.Update("test one", "1", 6900, MirrorFit.Stretch, true, 0);
+            service.Update(IRacing, "test one", "1", 6900, MirrorFit.Stretch, true, 0);
             Assert.True(service.Ready);
 
             // What DataUpdate does when something before Update throws, such as reading the telemetry.
@@ -299,7 +531,7 @@ namespace OpenDashPlugin.Tests
 
             foreach (var gear in new[] { "1", "3", "6", "7" })
             {
-                service.Update("test padded", gear, 6900, MirrorFit.Stretch, true, 0);
+                service.Update(IRacing, "test padded", gear, 6900, MirrorFit.Stretch, true, 0);
                 Assert.True(service.Ready);
                 Assert.Equal(2, service.Lamps);
             }

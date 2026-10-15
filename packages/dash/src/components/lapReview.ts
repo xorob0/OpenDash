@@ -76,13 +76,13 @@ import {
   previousLap,
   previousLapDelta,
   secondsOf,
-  sessionType,
+  sessionIs,
   signedToFit,
   YOUR_BEST_CAPTION,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 
-const { and, concat, eq, fmt, game, iff, isnull, lt, not, num, or, str, sub, ucase } = ncalc;
+const { and, concat, fmt, game, iff, isnull, lt, not, num, or, str, sub } = ncalc;
 
 /** The density the canvas draws this panel at: 116 over a 15 px label, 46, 13, and 24 between a pair. */
 const DENSITY = 'companion';
@@ -142,13 +142,13 @@ export const lapReviewAtTheLine = (): Expr =>
  * Whether this face wants the review in the session being driven.
  *
  * `Race` is the one session name OpenDash can match with certainty and is the string the pit wall
- * header already writes beside the session, so the comparison goes through `sessionType()` rather
- * than through a second spelling of the same property. `contract.ts` carries the setting and this
+ * header already writes beside the session, so the comparison goes through `sessionIs()` rather
+ * than through a second spelling of the same property, in capitals as every sim's spelling of it is. `contract.ts` carries the setting and this
  * file carries what it is compared against, because the telemetry cannot be imported there without
  * a cycle.
  */
 export const lapReviewWanted = (face: FaceSize): Expr =>
-  or(zoneSetting.lapReviewIs(face, 'all'), and(zoneSetting.lapReviewIs(face, 'race'), eq(ucase(sessionType()), str('RACE'))));
+  or(zoneSetting.lapReviewIs(face, 'all'), and(zoneSetting.lapReviewIs(face, 'race'), sessionIs('Race')));
 
 /**
  * The panel is wanted, the lap has just landed and no state of the pit family is out: the one
