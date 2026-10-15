@@ -836,6 +836,36 @@ player's `CarPath` from the default face to the themed one and back, falling bac
 and only `porsche992cup` was written beside it; and removing the screen took out the plugin's entries
 and nothing else. The monitor and web dash routes were not exercised, since the VM has neither device.
 
+### A lighting profile list can be kept per game family (2026-10-15, #689)
+
+Every LED and matrix settings object is a `ProfileSettingsBase<TProfile, TSettings>` in
+`SimHub.Plugins.ProfilesCommon`, and that class can keep its profiles per game family. What follows was read
+from the IL of `plugin/lib/SimHub.Plugins.dll` (9.12.6) on 2026-10-15; every member named is public.
+
+- **`FilterByGameFamily`** is a virtual `bool`; the base returns `false`. In 9.12.6 neither `LedsSettings` nor
+  `MatrixSettings` overrides it, which is why the VM never showed the filter.
+- **`AvailableProfiles`**, the list a device's page draws, is the current family's list when the filter is on:
+  `PerFamilyProfiles.FindOrAdd(f => f.Family == CurrentGameFamily, () => new ProfilesFamily { Family = CurrentGameFamily }).Profiles`.
+  Only without the filter is it `BuiltInProfiles` (built-in profiles switched on) or `Profiles`.
+- **`PerFamilyProfiles`** is an `ObservableCollection<ProfilesFamily<TProfile, TSettings>>`, each with a
+  `GameReaderCommon.GameFamily Family` (`None`, `Racing`, `Flight`) and its own `Profiles`.
+  `CurrentGameFamily` is `CurrentProfileGame.Family`, which starts as `Racing`.
+- **`Profiles` is only the serialised list** under the filter. `OnSerializing` clears it and refills it from
+  every family's list, so a profile in `Profiles` and in no family is gone from the file at the first save.
+  `OnDeserialized` gives a profile with no `TargetGameFamily` the family `Racing` and files every profile
+  under its family, leaving `Profiles` holding them all. The constructor watches `Profiles` for changes
+  only without the filter, and each family's list with it.
+- **SimHub's own `AddProfile(target, p)`** sets `p.Settings`, sets `TargetGameFamily` to
+  `CurrentGameFamily` under the filter, calls `InitProfile`, adds to `target` (`AvailableProfiles` from the
+  public overload), renumbers any duplicate id and refreshes the sorted list.
+
+OpenDash adds to `Profiles` by hand rather than through `AddProfile` (the reason is
+`ProfileInstall.WhyNotAddProfile`), so under the filter it now also sets `TargetGameFamily` and adds to the
+current family's list, and sweeps every family's list when it replaces or removes a copy. The rig that
+reported #689 runs a later build (9.12.9) on which the strip's list is filtered; that build's assembly has not
+been read. **Not verified:** which builds and which drivers turn the filter on. The survey's line for each LED
+device now says "profiles kept per game family" and names the family when a driver does, so a log answers it.
+
 ### Community precedent for source in git
 
 Blumlaut commits raw `.djson` and zips in CI, and DahlDesign runs Prettier over `**/*.djson`
