@@ -471,7 +471,7 @@ describe('sixty-four pixels', () => {
     // moving one would teach them that movement is ordinary, which is the whole rule undone.
     const blue = flagFrames('blue') ?? [];
     expect(blue).toHaveLength(1);
-    expect(blue[0]?.pixels.flat().every((p) => p === ds.purpose.flag.blue)).toBe(true);
+    expect(blue[0]?.pixels.flat().every((p) => p === ds.purpose.light.flag.blue)).toBe(true);
   });
 
   test('a flag that moves has more than one frame and a flag that is held has exactly one', () => {
@@ -1389,7 +1389,7 @@ describe('the spotter gives way to the full course yellow (#515)', () => {
     const panel = flagBoxTree().flatMap((c) => [...walkContainers([c])]).find((c) => c.description === `Matrix ${matrix}`);
     if (panel === undefined) throw new Error(`no Matrix ${matrix} in the tree`);
     visit(panel);
-    const letter = (pixel: Hex | null): string => (pixel === null ? '.' : pixel === ds.purpose.flag.yellow ? 'Y' : pixel === ds.purpose.flag.white ? 'W' : '#');
+    const letter = (pixel: Hex | null): string => (pixel === null ? '.' : pixel === ds.purpose.flag.yellow ? 'Y' : pixel === ds.purpose.light.flag.white ? 'W' : '#');
     return canvas.map((row) => row.map(letter).join(''));
   }
 

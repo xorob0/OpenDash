@@ -38,6 +38,7 @@ import { FLAG_CAPABILITY, flagCondition, flagRaised, flagsAllowedHere, type Flag
 import { engineRunning, isInPitLane, pitLimiterOn, pitSpeeding, spotterCar, tankIsLow } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { LAMP_FLAG } from './flagColours.ts';
+import { hueFamily } from './hueFamily.ts';
 import { type EffectRole, type Lamp, type LampRole } from './lamps.ts';
 
 const { and, changed, eq, game, gt, isnull, not, num, or, prop, raw } = ncalc;
@@ -744,7 +745,10 @@ export const lampConditions = (lamp: Lamp, side: 'left' | 'right'): LedEffect[] 
   // hard zero. Rank decides everything else, `carries` being highest first.
   // The second colour is part of the appearance: the debris flag and the full course yellow are the
   // same yellow at the same rate, and its stripes' red in the off phase is what tells them apart (#570).
-  const appearanceOf = (e: LedEffect): string => `${e.color} ${e.blinkWhen ? `${String(e.blinkDelayMs)} ${e.blinkColor ?? BLINK_OFF}` : 'steady'}`;
+  // A colour is its hue family rather than its hex, which is what an LED shows: since #733 the green
+  // flag is the flags' own green and the indicator the face's, two hexes and one green at one rate.
+  const appearanceOf = (e: LedEffect): string =>
+    `${hueFamily(e.color)} ${e.blinkWhen ? `${String(e.blinkDelayMs)} ${hueFamily(e.blinkColor ?? BLINK_OFF)}` : 'steady'}`;
   // A borrowed flag never wins against a condition the lamp is its own: it is there on loan.
   const mine = carried.filter((e) => !spreads.includes(e));
   const ordered = [...mine.filter((e) => !e.bestEffort), ...mine.filter((e) => e.bestEffort), ...spreads];

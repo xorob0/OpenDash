@@ -58,10 +58,11 @@ the band itself.
 Colour is a token from `design/tokens.json`, resolved to a literal at build time, through
 `LAMP_FLAG` in `leds/flagColours.ts`: the one table of the flags as a lamp draws them, which the
 strips' rows read too, so the box and a strip never draw one flag two ways (#733). It is
-`purpose.flag.*` but for the meatball's disc, which is `purpose.light.meatball`, the orange an RGB LED
-does not draw as the yellow flag; the box drew it in the caution amber until #733. The green, red, blue
-and white are still the face's state colours, and the flag hues that replace them on a lamp are owed
-by `design/tokens.json`. The blink rate is `indicator.flagBand.flashHz`, so the box pulses at the
+`purpose.light.flag.*` for the green, red, blue and white, LED-only tokens in the flags' own hues
+rather than the face's state colours (an RGB LED renders the face's good green as a teal), and
+`purpose.light.meatball` for the meatball's disc, the orange an RGB LED does not draw as the yellow
+flag; the box drew it in the caution amber until #733. The yellow, the debris flag's stripe, the black
+and the chequer are `purpose.flag.*`, as on the face. The blink rate is `indicator.flagBand.flashHz`, so the box pulses at the
 same rate as the band on the face.
 
 ### Where the rank departs from the canvas's numbering
