@@ -105,7 +105,8 @@ export function aimRegions(width: number, height: number): Regions {
     { role: 'zone', zone: 'A', rect: a },
     { role: 'zone', zone: 'C', rect: c },
     { role: 'band', rect: band },
-    // The house's pit banner keeps the top of zone C, where the limiter's own takeover covers it.
+    // The house's pit banner keeps the top of zone C, where the limiter's own takeover covers it. It is
+    // shorter than a row of the relative, and the face takes the rest of the row it cuts (#1165).
     { role: 'pitAlert', rect: rect(c.left, c.top, c.width, 30) },
     { role: 'hero', rect: a },
     // The full-screen flag takes the LCD below the tacho, the foot included.

@@ -22,12 +22,13 @@ import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagSettled, flagSettledWidth, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { measureText } from '../design/advances.ts';
+import { inkOf } from '../design/metrics.ts';
 import { flagFull, flagFullOut } from '../components/flagFull.ts';
 import { alertCondition, anyBandRaised } from '../flags.ts';
-import { PIT_ALERTS, pitAlerts, pitAlertVisible } from '../components/pitAlerts.ts';
-import { lastingPopUpFrame, lastingPopUps, popUpRoom, transientPopUps } from '../components/popUp.ts';
+import { PIT_ALERTS, pitAlertOut, pitAlerts, pitAlertVisible } from '../components/pitAlerts.ts';
+import { lastingPopUpFrame, lastingPopUps, popUpRoom, popUpsOfKind, transientPopUps } from '../components/popUp.ts';
 import { changeNotifications } from '../components/changeNotification.ts';
-import { overlaps, rect } from '../design/geometry.ts';
+import { bottom, contains, overlaps, rect, right, translate } from '../design/geometry.ts';
 import { idleScreen } from '../idle.ts';
 import { lapReview, lapReviewFrame, lapReviewOut } from '../components/lapReview.ts';
 import { ds } from '../tokens.ts';
@@ -38,10 +39,10 @@ import type { FaceContext, ThemeDrawing } from '../themes/drawing.ts';
 import { label } from '../elements/label.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { widestCounter, zoneAGearInk, zoneDashboardsFor, zoneWidget } from './pages.ts';
+import { widestCounter, zoneAGearInk, zoneDashboardsFor, zonePageScreens, zoneWidget } from './pages.ts';
 import { walkItems } from '../walk.ts';
 
-const { and, not, or } = ncalc;
+const { and, eq, not, num, or } = ncalc;
 
 export const FACE_SCREEN_NAME = 'Main';
 /**
@@ -124,6 +125,12 @@ export function faceItems(
     items.push(...zoneHeaderParts(face, zone, zoneRect(regions, zone), drawing));
   }
 
+  // Where a theme lays the pit banner over a zone of modules, as the AiM lays it over the top of zone
+  // C, the page under it gives up the row the banner cuts while the banner's row is in use (#1165).
+  // Listed after the widgets, which it is drawn over, and before the flags, which are drawn over it.
+  const banner = regionRect(regions, 'pitAlert');
+  items.push(...bannerRowMasks(face, regions, drawing, banner, theme));
+
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
   // whichever has the better claim, which is why the face has no separate flag strip.
   //
@@ -174,7 +181,6 @@ export function faceItems(
   // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
   // stop under a red flag still has to know whether the limiter is on.
   const restyled = (drawn: Item[], boxes: 'inverse' | 'outline'): Item[] => (drawing.restyle ? drawing.restyle(drawn, { boxes }) : drawn);
-  const banner = regionRect(regions, 'pitAlert');
   const pitFamily = restyled(pitAlerts(banner, 'pitAlert'), 'inverse');
   items.push(...pitFamily);
 
@@ -247,6 +253,65 @@ export function faceItems(
   items.push(...giveWay(restyled([lapReview(lapReviewFrame(hero, flagBody), lapReviewOut(face), 'lapReview')], 'outline'), { pitFamily: 'waits already' }));
 
   return items;
+}
+
+/**
+ * Where the row the pit banner cuts out of a page ends, in the coordinates `items` are drawn in: the
+ * banner's bottom edge, moved down past everything drawn across it in the banner's columns until
+ * nothing is (#1165).
+ *
+ * A text is taken when its ink is cut, because a figure whose top is under the banner and whose foot
+ * is not reads as a different figure, and the edge moves to the foot of the ink rather than of the
+ * box: the boxes of a page's stacked figures overlap where their ink does not, and would take the page
+ * a row at a time. A drawing is taken when it starts under the banner and either holds a text that is
+ * taken or is no taller than the strip taken so far, which takes a row's ground with its row and a
+ * badge beside its text, and leaves a radar, a map, a trace or a car under the banner as it would be
+ * under any box: a drawing taller than the row it crosses is the page itself, and blanking it would
+ * leave the zone empty for the length of a stop.
+ */
+export function rowUnderBanner(banner: Rect, items: readonly Item[]): number {
+  const across = [...walkItems(items)]
+    .flatMap((item) => (item.kind === 'layer' ? [] : [{ text: item.kind === 'text', rect: item.rect, ink: item.kind === 'text' ? inkOf(item) : item.rect }]))
+    .filter(({ rect: r }) => r.left < right(banner) && right(r) > banner.left);
+  const taken: Rect[] = [];
+  const holdsTaken = (r: Rect): boolean => taken.some((ink) => contains(r, ink));
+  let edge = bottom(banner);
+  for (;;) {
+    const strip = edge - banner.top;
+    const cut = across.filter(({ text, rect: r, ink }) => ink.top < edge && bottom(ink) > edge && (text || (r.top < bottom(banner) && (r.height <= strip || holdsTaken(r)))));
+    if (cut.length === 0) return edge;
+    taken.push(...cut.filter(({ text }) => text).map(({ ink }) => ink));
+    edge = Math.max(...cut.map(({ ink }) => Math.ceil(bottom(ink))));
+  }
+}
+
+/**
+ * The zone's ground drawn over the row each page of a zone of modules loses to the pit banner, where
+ * the banner is laid over such a zone, one rectangle per page that loses one (#1165).
+ *
+ * The banner is 30 px where a row of the relative is 64, so a driver in the box read the lower half of
+ * the first row under it and nothing to say it was the car ahead. Under the ground the row is gone
+ * whole, for as long as the banner's row is in use: while a state of the pit family is out, and while
+ * a lasting pop-up holds it. The pages are read off the zone's own screens, so a page that changes its
+ * rows moves its rectangle with it, and each rectangle is shown on its page alone, asked once on the
+ * group, whose Visible being false leaves the pages' bindings unevaluated for the rest of a stint.
+ *
+ * The house and the Porsche lay the banner over the gear's zone, which is drawn to be read through it,
+ * and get none.
+ */
+function bannerRowMasks(face: FaceSize, regions: Regions, drawing: ThemeDrawing, banner: Rect, theme?: ThemeEntry): Item[] {
+  const zone = (['B', 'C'] as const).find((z) => contains(zoneRect(regions, z), banner));
+  if (zone === undefined) return [];
+  const at = zoneRect(regions, zone);
+  const ground = drawing.zoneGround?.(zone) ?? ds.color.surface.base;
+  const inZone = translate(banner, -at.left, -at.top);
+  const masks = zonePageScreens(face, [zone], { width: at.width, height: at.height }, false, drawing).flatMap(({ page, screen }) => {
+    const edge = rowUnderBanner(inZone, screen.items) + at.top;
+    if (edge === bottom(banner)) return [];
+    return [withMoreBindings(band(`bannerRow.${page.id}`, rect(banner.left, banner.top, banner.width, edge - banner.top), ground), { Visible: eq(zoneSetting.page(face, zone, theme), num(page.number)) })];
+  });
+  if (masks.length === 0) return [];
+  return [withMoreBindings({ kind: 'layer', name: 'bannerRow', children: masks }, { Visible: or(pitAlertOut(), ...popUpsOfKind('lasting').map((spec) => spec.when)) })];
 }
 
 /** The Visible of each state of the pit family, by which a layer drawing that state is known. */

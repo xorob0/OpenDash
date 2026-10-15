@@ -61,6 +61,9 @@ export const canvasYForBaseline = (baseline: number, fs: number): number => base
  */
 const BARLOW_FAMILIES: ReadonlySet<string> = new Set(['Barlow', 'openDash Display']);
 
+/** The segment faces the AiM's register sets its readings in (`themes/aim/register.ts`). */
+const SEGMENT_FAMILIES: ReadonlySet<string> = new Set(['DSEG7 Classic', 'DSEG14 Classic']);
+
 /**
  * How far a figure or a capital marks above the baseline and below it, in em: the cap height and the
  * overshoot a round figure carries past it and under the baseline. Read off the bundled faces with
@@ -74,10 +77,12 @@ const INK_BELOW_BASELINE = 0.02;
  * The part of a text box a run of figures or capitals can mark: from the top of the cap height and
  * its overshoot down to just under the baseline, across the whole box. A WPF box is 1.2 em tall and
  * its first 0.28 em is leading a figure never reaches, which is the room the face draws the pit banner
- * in above the gear. A face these metrics do not describe, such as the AiM's seven-segment faces, is
- * taken to mark its whole box, which is never smaller than its ink.
+ * in above the gear. The AiM's segment faces have an ascent of one em and no descent, so WPF sets a
+ * cell's top at the box's and the cell is the box's first em, the rest being the line's slack. A face
+ * neither describes is taken to mark its whole box, which is never smaller than its ink.
  */
 export function inkOf(item: { rect: { left: number; top: number; width: number; height: number }; font: string; fontSize: number }): { left: number; top: number; width: number; height: number } {
+  if (SEGMENT_FAMILIES.has(item.font)) return { ...item.rect, height: Math.min(item.rect.height, item.fontSize) };
   if (!BARLOW_FAMILIES.has(item.font)) return { ...item.rect };
   const baseline = item.rect.top + WPF_BASELINE * item.fontSize;
   const top = baseline - INK_ABOVE_BASELINE * item.fontSize;
