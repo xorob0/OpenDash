@@ -242,8 +242,10 @@ SimHub fills on every sim and nothing reads the raw one any more.
 `GameData.TrackGripStatus`, which SimHub publishes for no game, to iRacing's `Telemetry.TrackWetness`
 (#1128). That column was 1 on every frame of all nine, iRacing's dry and the emulator's constant. #555's
 recording reached main first, so when the two met the nine kept #555's recording with #1123's
-`TrackWetness` column carried over from its own, as recorded rather than asserted, and the
-`TrackGripStatus` column nothing reads any more dropped.
+`TrackWetness` column carried over from its own, and the `TrackGripStatus` column nothing reads any
+more dropped. The value was observed, but in a different recording than the one each file holds, so
+each asserts the column: it was carried in by hand, not recorded with the frames beside it. The next
+`bun run record` reads it from SimHub and drops the entry.
 
 #582, which landed on main while that recording was on #555's branch, asserts five more in each, carried
 onto the recorded traces when the two met. The damage page reads `OpenDash.DamageReported`, whether the sim reports
