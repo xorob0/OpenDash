@@ -54,6 +54,18 @@ function linesThatFit(text: string, frame: Rect, size: number, step: number): st
 }
 
 /**
+ * How tall {@link placeholder} draws `text` in a box `width` wide and at most `height` tall: the
+ * lines it keeps, from the top of the first to the foot of the last. A page that says part of
+ * itself is missing sets the notice as a row among its readings and needs this for the row.
+ */
+export function placeholderHeight(text: string, width: number, height: number, density: Density): number {
+  const size = densityOf(density).label;
+  const step = Math.ceil(LINE_SPACING * size);
+  const lines = linesThatFit(text, { left: 0, top: 0, width, height }, size, step);
+  return (lines.length - 1) * step + size;
+}
+
+/**
  * A centred block in text.dim, the module's name first and then why there is nothing to show.
  *
  * The prose is cut from the box rather than sized to it (rule 18): it is set at the density's label
