@@ -9,7 +9,7 @@
 import type { HAlign, Hex, Item, Rect } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
-import { measureText } from '../design/advances.ts';
+import { measureText, widestFigure } from '../design/advances.ts';
 import { withMoreBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
 import { canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/metrics.ts';
@@ -23,7 +23,7 @@ import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
 import { densityOf, type Density } from './density.ts';
 import { charsOfText, drawnAfter, drawnFigure, textWidth, type DrawnFigure } from './drawn.ts';
-import { CHARS, LAP_TOTAL_WIDEST, LAP_WIDEST, carPosition,
+import { CHARS, LAP_WIDEST, carPosition, lapTotalWidest,
   positionLabelled, positionLabelledDrawn, currentLap, fieldSize, hasLapTotal, player, totalLaps } from './values.ts';
 
 const { add, concat, str, fmt, iff, num } = ncalc;
@@ -127,7 +127,8 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     concat(str('L'), fmt(currentLap(), '0')),
     drawnAfter('L', drawnFigure({ value: currentLap(), digits: CHARS.lap.digits })),
     '/ 30',
-    LAP_TOTAL_WIDEST,
+    // Measured in the face the denominator is drawn in, where the widest figure is not the 9 (#1117).
+    lapTotalWidest('BarlowMedium'),
     concat(str('/ '), fmt(totalLaps(), '0')),
     valueY,
     fs,
@@ -136,7 +137,9 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
     // it is the leader's laps, and `L12 / 14` told the driver the race ended in two (#989).
     hasLapTotal(),
   );
-  const position = pair(`${name}.position`, 'P24', 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', '/ 999', concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
+  // A field of up to three figures, measured by the widest of them in its face rather than by `/ 999` (#1117).
+  const fieldWidest = `/ ${widestFigure('BarlowMedium', '999')}`;
+  const position = pair(`${name}.position`, 'P24', 'P24', positionLabelled(player()), positionLabelledDrawn(player()), '/ 24', fieldWidest, concat(str('/ '), fmt(fieldSize(), '0')), valueY, fs, density);
   const right = frame.left + frame.width - COMPANION_HEADER.padX;
   const lapX = right - lap.width;
   const positionX = lapX - COMPANION_HEADER.groupGap - position.width;

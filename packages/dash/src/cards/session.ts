@@ -10,10 +10,11 @@
  * text.dim; the `/ N` denominator is visible only in laps mode in a session that is not timed and
  * declares a lap count (`hasLapTotal`), its Left following the lap count's digits.
  */
+import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
 import { markWhen } from '../elements/mark.ts';
-import { LAP_TOTAL_WIDEST, NO_CLOCK, hasLapTotal, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
+import { NO_CLOCK, hasLapTotal, lapTotalWidest, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
@@ -56,7 +57,7 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
     {
       kind: 'denominator',
       sample: '/ 30',
-      widest: LAP_TOTAL_WIDEST,
+      widest: lapTotalWidest(DATA_FACE.SemiBold),
       bind: concat(str('/ '), fmt(totalLaps, '0')),
       after: { digits: 2, specials: 0 },
       maxAfter: { digits: SESSION_LAP_DIGITS, specials: 0 },
