@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Actions, Primary } from '../../components/Buttons';
 import { Section } from '../../components/Section';
 import { Steps } from '../../components/Steps';
@@ -87,6 +88,11 @@ export default function Install() {
             <strong>Updates.</strong> The plugin checks GitHub once a day, sends nothing about you, and can be switched off. Press Download on the Updates page, then restart SimHub.
           </li>
         </ul>
+        <p className={`prose ${styles.points}`}>
+          <Link href="/plugin" className="link">
+            The plugin, page by page
+          </Link>
+        </p>
       </Section>
 
       <Section

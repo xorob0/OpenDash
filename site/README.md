@@ -50,8 +50,10 @@ pages say so rather than inventing a file.
 |---|---|
 | `/` | which sim, which host, what it costs; find your screen; download |
 | `/screens` | every size, to scale; the anatomy; the companion; the pit wall |
+| `/themes` | the Porsche face beside the plain one; what a theme is; what follows; free like the rest |
 | `/pages` | the 21 pages, captured; the face's other catalogues; which sim shows what |
 | `/lights` | the car's own shift lights, the strip shapes, the flag box, In the plugin (which page holds what) |
+| `/plugin` | the panel's eight pages, each captured; a screen set up on a picture of itself; the rig; updates that keep what you changed; what leaves your machine |
 | `/compare` | openDash beside the two competitors, dated |
 | `/install` | the plugin, the unblock step, nothing showing, and why there is no other way in |
 | `/download` | the plugin, what it carries, the release notes |

@@ -10,7 +10,7 @@ import { Section } from '../components/Section';
 import { packageFile } from '../lib/captures';
 import { clipFor } from '../lib/clips';
 import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
-import { BASE_FACE, byFolder, pickerFaces } from '../lib/faces';
+import { BASE_FACE, LARGE_FACE, byFolder, pickerFaces, themeById, themedAt } from '../lib/faces';
 import { counted } from '../lib/counts';
 import { sizeLabel } from '../lib/packages';
 import { COUNTS } from '../lib/liveCounts';
@@ -26,6 +26,8 @@ export default function Home() {
   const companion = byFolder('OpenDash Companion');
   const pitWall = byFolder('OpenDash Pit wall');
   const faces = pickerFaces();
+  const porsche = themeById('porsche');
+  const porscheFace = porsche && LARGE_FACE ? themedAt(porsche, LARGE_FACE) : undefined;
 
   return (
     <>
