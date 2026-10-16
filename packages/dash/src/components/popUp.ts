@@ -284,11 +284,11 @@ export const LASTING_LEAST_HEIGHT = POP_UP_RULE + textBox(0, ds.size.label).heig
  * its figures; on the Porsche's at the top of the gear's tile; on the AiM's at the top of zone C. A
  * lasting pop-up takes the same row, and the pit family has it first (`popUpVisible`).
  *
- * `gear` is the ink of the gear on every one of zone A's pages (`zoneAGearInk`). Where any of it
- * reaches into the row, as the house's nano does by a pixel and the Porsche's portrait face by four,
- * the row ends where the ink begins, so the box is never over the gear whichever page is showing. A
- * row the gear leaves too short for a label's line box is a layout this cannot draw, and says so
- * rather than covering the gear: that is a theme's anatomy to answer.
+ * `gear` is the ink of the gear on every one of zone A's pages (`zoneAGearInk`). No shipped face's
+ * gear reaches into the row any more, since zone A draws the gear below the banner (#1182). Where a
+ * page's ink did reach it, the row would end where the ink begins, so that the box is never over the
+ * gear whichever page is showing. A row the gear leaves too short for a label's line box is a layout
+ * this cannot draw, and says so rather than covering the gear: that is a theme's anatomy to answer.
  */
 export function lastingPopUpFrame(banner: Rect, gear: readonly Rect[]): Rect {
   const reaching = gear.filter((ink) => overlaps(ink, banner));
