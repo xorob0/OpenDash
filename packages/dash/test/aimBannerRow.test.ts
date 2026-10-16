@@ -12,7 +12,9 @@
  * that frame. Under it every figure of every page is whole, wholly covered or wholly below, and so is
  * every part of the relative, its rows' grounds included, every copy of a repeated row counted where
  * SimHub stamps it. Nothing that was whole below the banner is cut by the grounds either: a car, a
- * wheel or a gauge drawn under the row the banner takes is left as it was.
+ * wheel or a gauge drawn under the row the banner takes is left as it was. A drawing the banner clips,
+ * such as a wheel a few pixels under it, is blanked only with the row of figures it belongs to, asked
+ * of the figures drawn in that frame.
  *
  * A drawing that is the page itself, a radar, a map, a trace or a car, and that already ran under the
  * banner, runs under it as it would under any box, and is left: blanking it would leave zone C empty
@@ -24,7 +26,7 @@
 import { describe, expect, test } from 'bun:test';
 import { FUEL_POP_UP } from '../src/components/popUp.ts';
 import { DAMAGE_REPORTED, FACE_SIZES, pagesForZone, zonePageSettingName } from '../src/contract.ts';
-import { bottom, right, translate } from '../src/design/geometry.ts';
+import { bottom, contains, right, translate } from '../src/design/geometry.ts';
 import { inkOf } from '../src/design/metrics.ts';
 import type { Item, LayerItem, Rect } from '../src/generator.ts';
 import { regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
@@ -80,13 +82,25 @@ const shown = (item: Item, frame: Props): boolean => Boolean(evalNcalc(String(it
  * deepest cover across it.
  */
 function cutBy(covers: readonly Rect[], banner: Rect, r: Rect): boolean {
+  const feet = feetOver(covers, banner, r);
+  return feet !== undefined && feet.most > r.top && feet.least < bottom(r);
+}
+
+/** How far down what covers the banner's columns reaches across `r`'s columns, at least and at most. */
+function feetOver(covers: readonly Rect[], banner: Rect, r: Rect): { least: number; most: number } | undefined {
   const from = Math.max(r.left, banner.left);
   const to = Math.min(right(r), right(banner));
-  if (to <= from) return false;
+  if (to <= from) return undefined;
   const xs = [from, ...covers.flatMap((c) => [c.left, right(c)]).filter((x) => x > from && x < to)];
   const feet = xs.map((x) => Math.max(banner.top, ...covers.filter((c) => c.left <= x && right(c) > x).map(bottom)));
-  return Math.max(...feet) > r.top && Math.min(...feet) < bottom(r);
+  return { least: Math.min(...feet), most: Math.max(...feet) };
 }
+
+/** Whether what covers the banner's columns hides the whole of `r`. */
+const hiddenBy = (covers: readonly Rect[], banner: Rect, r: Rect): boolean => {
+  const feet = feetOver(covers, banner, r);
+  return feet !== undefined && r.left >= banner.left && right(r) <= right(banner) && feet.least >= bottom(r);
+};
 
 if (drawsInThisProcess(AIM)) {
   describe('on the AiM, the row the pit banner cuts out of zone C goes whole', () => {
@@ -139,6 +153,20 @@ if (drawsInThisProcess(AIM)) {
 
                 // Nothing that was whole below the banner is cut by the grounds drawn under it.
                 expect({ ...at_, whole: visible.filter(({ drawn: r }) => r.top >= bottom(banner) && cut(r)).map(named) }).toEqual({ ...at_, whole: [] });
+
+                // A drawing is blanked only with the row it belongs to: one the grounds hide whole holds a
+                // figure they hide or ends no lower than the deepest of them, and one they cut deeper than
+                // the banner did lies in the columns of something they hide. Each is asked of what is
+                // drawn in this frame, so a reading of the pit view's other half never takes or cuts a
+                // car's wheels (#1165, seen on the VM at 800x286 with the rev bar on).
+                const taken = visible.filter(({ drawn: r }) => r.top < bottom(banner) && hiddenBy(covers, banner, r) && !hiddenBy([banner], banner, r));
+                const figures = taken.filter(({ item }) => item.kind === 'text').map(({ drawn: r }) => r);
+                const deepest = Math.max(bottom(banner), ...figures.map(bottom));
+                const drawings = visible.filter(({ item, drawn: r }) => item.kind !== 'text' && r.top < bottom(banner));
+                const blanked = drawings.filter(({ drawn: r }) => taken.some((part) => part.drawn === r) && bottom(r) > deepest && !figures.some((ink) => contains(r, ink)));
+                expect({ ...at_, blanked: blanked.map(named) }).toEqual({ ...at_, blanked: [] });
+                const deeper = drawings.filter(({ drawn: r }) => !hiddenBy(covers, banner, r) && feetOver(covers, banner, r)!.most > bottom(banner) && !taken.some(({ drawn: t }) => t.left < right(r) && right(t) > r.left));
+                expect({ ...at_, deeper: deeper.map(named) }).toEqual({ ...at_, deeper: [] });
 
                 // And no part of the relative, the grounds of its rows included.
                 if (page.id === 'relative') {

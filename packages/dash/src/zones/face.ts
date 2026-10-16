@@ -289,16 +289,20 @@ const rowParts = (banner: Rect, items: readonly Item[]): RowPart[] =>
  * A text is taken when its ink is cut, because a figure whose top is under the banner and whose foot
  * is not reads as a different figure, and its columns go down to the foot of the ink rather than of
  * the box: the boxes of a page's stacked figures overlap where their ink does not, and would take the
- * page a row at a time. A drawing is taken when it holds a text that is taken or is no taller than the
- * strip taken so far in its columns, which takes a row's ground with its row and a badge beside its
- * text, unless taking it would cut something that was whole below the banner. That leaves a radar, a
- * map, a trace or a car under the banner as it would be under any box: a drawing taller than the row
+ * page a row at a time. A drawing is taken when it holds a text that is taken or ends no lower than the
+ * deepest text taken so far, which takes a row's ground with its row and a badge beside its text,
+ * unless taking it would cut something that was whole below the banner. That leaves a radar, a map, a
+ * trace or a car under the banner as it would be under any box: a drawing that reaches below the row
  * it crosses is the page itself, and blanking it would leave the zone empty for the length of a stop.
+ * A wheel the banner clips by a few pixels is left too: it is shorter than the banner, but it hangs
+ * below every reading taken beside it, and blanking it took the pit view's front wheels at 800x286.
  *
- * `cut` is what was whole below the banner and is cut by what is covered, which a page that asks for
- * this must not have.
+ * `guarded` is every part the covers may be drawn over, which is more than `parts` where the covers
+ * are shown with drawings they were not computed from: nothing of it that was whole below the banner
+ * is cut by a take, and no merge changes how any of it is cut. `cut` is what of it was whole below the
+ * banner and is cut by what is covered, which a page that asks for this must not have.
  */
-function rowUnderBanner(banner: Rect, parts: readonly RowPart[]): { covers: Rect[]; cut: RowPart[] } {
+function rowUnderBanner(banner: Rect, parts: readonly RowPart[], guarded: readonly RowPart[] = parts): { covers: Rect[]; cut: RowPart[] } {
   const sky = skyline(banner);
   const below = (part: RowPart): boolean => part.ink.top >= bottom(banner);
   const cutBy = (s: Skyline, { ink }: RowPart): boolean => {
@@ -311,11 +315,11 @@ function rowUnderBanner(banner: Rect, parts: readonly RowPart[]): { covers: Rect
     const taking = parts.filter((part) => {
       if (settled.has(part) || !cutBy(sky, part)) return false;
       if (part.text) return true;
-      const short = part.rect.height <= sky.over(part.ink.left, right(part.ink)).most - banner.top;
+      const short = bottom(part.rect) <= sky.over(banner.left, right(banner)).most;
       if (!short && !taken.some((ink) => contains(part.rect, ink))) return false;
       const after = sky.copy();
       after.raise(part.ink.left, right(part.ink), Math.ceil(bottom(part.ink)));
-      return !parts.some((other) => other !== part && !settled.has(other) && below(other) && !cutBy(sky, other) && cutBy(after, other));
+      return !guarded.some((other) => other !== part && !settled.has(other) && below(other) && !cutBy(sky, other) && cutBy(after, other));
     });
     if (taking.length === 0) break;
     for (const part of taking) {
@@ -328,7 +332,7 @@ function rowUnderBanner(banner: Rect, parts: readonly RowPart[]): { covers: Rect
   // that was not, and a part cut already is cut no deeper and no shallower. A row of figures is one
   // rectangle to the foot of its deepest figure rather than a run per figure.
   const unchanged = (before: Skyline, after: Skyline): boolean =>
-    parts.every((part) => {
+    guarded.every((part) => {
       if (!cutBy(after, part)) return true;
       if (!cutBy(before, part)) return false;
       const [was, is] = [before.over(part.ink.left, right(part.ink)), after.over(part.ink.left, right(part.ink))];
@@ -344,7 +348,7 @@ function rowUnderBanner(banner: Rect, parts: readonly RowPart[]): { covers: Rect
       if (unchanged(flat, trial)) [flat, merged] = [trial, true];
     }
   }
-  return { covers: flat.covers(), cut: parts.filter((part) => !settled.has(part) && below(part) && cutBy(flat, part)) };
+  return { covers: flat.covers(), cut: guarded.filter((part) => !settled.has(part) && below(part) && cutBy(flat, part)) };
 }
 
 interface Skyline {
@@ -405,9 +409,11 @@ function skyline(banner: Rect, from: readonly { left: number; right: number; foo
  * group, whose Visible being false leaves the pages' bindings unevaluated for the rest of a stint.
  *
  * A page that draws one of two halves, as the pit view draws the car where the sim publishes the stop
- * and a centred column where it does not, may need a reading of one half covered where the other half
- * has its car. Such a page is covered a half at a time, each half's rectangles shown with its half.
- * A page that still cuts something whole below the banner is refused, since the driver would see it.
+ * and a centred column where it does not, is covered a half at a time, each half's rectangles shown
+ * with its half, so that a reading of one half never takes or cuts the other half's car: at 800x286 the
+ * unpublished half's PIT TIME caption lies across the published half's car. What every half draws is
+ * covered once, shown with all of them, and so is kept clear of every half's drawings. A page that
+ * still cuts something whole below the banner is refused, since the driver would see it.
  *
  * The house and the Porsche lay the banner over the gear's zone, which is drawn to be read through it,
  * and get none.
@@ -420,8 +426,10 @@ function bannerRowMasks(face: FaceSize, regions: Regions, drawing: ThemeDrawing,
   const inZone = translate(banner, -at.left, -at.top);
   const masks = zonePageScreens(face, [zone], { width: at.width, height: at.height }, false, drawing).flatMap(({ page, screen }) => {
     const parts = rowParts(inZone, screen.items);
-    const whole = rowUnderBanner(inZone, parts);
-    const halves = whole.cut.length === 0 ? [{ when: [] as readonly Expr[], ...whole }] : halvesOf(parts).map((when) => ({ when, ...rowUnderBanner(inZone, parts.filter((part) => startsWith(when, part.when))) }));
+    const halves = halvesOf(parts).map((when) => {
+      const half = parts.filter((part) => startsWith(when, part.when));
+      return { when, ...rowUnderBanner(inZone, half, when.length === 0 ? parts : half) };
+    });
     const cut = halves.flatMap((half) => half.cut);
     if (cut.length > 0) {
       throw new Error(`the pit banner at ${JSON.stringify(banner)} cannot take a row of the ${page.id} page at ${face.width}x${face.height} without cutting ${cut.map((part) => `${part.name} at ${part.ink.top}-${bottom(part.ink)}`).join(', ')}`);

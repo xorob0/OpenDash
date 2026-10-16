@@ -65,6 +65,14 @@ const BARLOW_FAMILIES: ReadonlySet<string> = new Set(['Barlow', 'openDash Displa
 const SEGMENT_FAMILIES: ReadonlySet<string> = new Set(['DSEG7 Classic', 'DSEG14 Classic']);
 
 /**
+ * How far below a box's top WPF sets the top of a segment face's cell, in em. The DSEG faces have an
+ * ascent of one em, no descent and a line gap of 0.09 em, and WPF lays half the gap above the ascent,
+ * so the cell starts 0.045 em down and its foot is 1.045 em down. Seen on the VM, where a ground cut
+ * to the box's first em left a row of 1 to 2 px of segment feet under it (#1165).
+ */
+export const SEGMENT_CELL_DROP = 0.045;
+
+/**
  * How far a figure or a capital marks above the baseline and below it, in em: the cap height and the
  * overshoot a round figure carries past it and under the baseline. Read off the bundled faces with
  * `tools/measure-font`, the 8 reaches 0.713 em in Barlow Condensed Bold and Barlow Bold and the round
@@ -77,12 +85,15 @@ const INK_BELOW_BASELINE = 0.02;
  * The part of a text box a run of figures or capitals can mark: from the top of the cap height and
  * its overshoot down to just under the baseline, across the whole box. A WPF box is 1.2 em tall and
  * its first 0.28 em is leading a figure never reaches, which is the room the face draws the pit banner
- * in above the gear. The AiM's segment faces have an ascent of one em and no descent, so WPF sets a
- * cell's top at the box's and the cell is the box's first em, the rest being the line's slack. A face
- * neither describes is taken to mark its whole box, which is never smaller than its ink.
+ * in above the gear. The AiM's segment faces mark a cell one em tall, set {@link SEGMENT_CELL_DROP} below
+ * the box's top, the rest of the box being the line's slack. A face neither describes is taken to mark
+ * its whole box, which is never smaller than its ink.
  */
 export function inkOf(item: { rect: { left: number; top: number; width: number; height: number }; font: string; fontSize: number }): { left: number; top: number; width: number; height: number } {
-  if (SEGMENT_FAMILIES.has(item.font)) return { ...item.rect, height: Math.min(item.rect.height, item.fontSize) };
+  if (SEGMENT_FAMILIES.has(item.font)) {
+    const top = item.rect.top + SEGMENT_CELL_DROP * item.fontSize;
+    return { ...item.rect, top, height: Math.min(item.rect.top + item.rect.height, top + item.fontSize) - top };
+  }
   if (!BARLOW_FAMILIES.has(item.font)) return { ...item.rect };
   const baseline = item.rect.top + WPF_BASELINE * item.fontSize;
   const top = baseline - INK_ABOVE_BASELINE * item.fontSize;

@@ -48,6 +48,8 @@ interface Font {
   advances: number[];
   cmap: Map<number, number>;
   nameOffset: number;
+  /** The hhea table's ascender, descender and line gap, in font units, from which WPF sets a line. */
+  line: { ascender: number; descender: number; lineGap: number };
   data: DataView;
 }
 
@@ -80,7 +82,8 @@ export function parseFont(bytes: Uint8Array): Font {
     loca.push(indexToLocFormat === 0 ? data.getUint16(locaTable.offset + i * 2) * 2 : data.getUint32(locaTable.offset + i * 4));
   }
 
-  const numberOfHMetrics = data.getUint16(need('hhea').offset + 34);
+  const hhea = need('hhea').offset;
+  const numberOfHMetrics = data.getUint16(hhea + 34);
   const hmtx = need('hmtx').offset;
   const advances: number[] = [];
   for (let i = 0; i < numGlyphs; i++) {
@@ -98,6 +101,7 @@ export function parseFont(bytes: Uint8Array): Font {
     advances,
     cmap: parseCmap(data, need('cmap').offset),
     nameOffset: need('name').offset,
+    line: { ascender: data.getInt16(hhea + 4), descender: data.getInt16(hhea + 6), lineGap: data.getInt16(hhea + 8) },
     data,
   };
 }

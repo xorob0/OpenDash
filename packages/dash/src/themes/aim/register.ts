@@ -57,7 +57,7 @@ export const segmentWidth = (face: SegmentFace, text: string, fs: number): numbe
  */
 export const segmentText = (expr: Expr): Expr => ncalc.replace(expr, '−', '-');
 
-/** The height of a run's box: the house's line and a pixel, of which the cell's ink is the top em. */
+/** The height of a run's box: the house's line and a pixel, of which the cell's ink is an em near the top. */
 export const segmentLine = (size: number): number => Math.ceil(LINE_SPACING * size) + BOX_SLACK;
 
 export interface SegmentOptions {
@@ -72,9 +72,10 @@ export interface SegmentOptions {
 }
 
 /**
- * A run of a segment face whose ink starts at `y`. The faces' ascent is the em and their descent
- * nothing, so WPF puts the top of a cell at the top of the box; the box is the house's line and a
- * pixel taller than the cell, which the fit checks ask of every text.
+ * A run of a segment face in a box from `y`. The faces' ascent is the em and their descent nothing,
+ * and WPF lays half their line gap above the ascent, so a cell is drawn from `SEGMENT_CELL_DROP` em
+ * under the box's top, which is where `inkOf` measures it; the box is the house's line and a pixel
+ * taller than the cell, which the fit checks ask of every text.
  */
 export function segment(name: string, face: SegmentFace, text: string, x: number, y: number, width: number, opts: SegmentOptions): TextItem {
   return withMoreBindings({
