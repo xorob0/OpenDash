@@ -7,19 +7,23 @@
  * and a gap with no tops, and nothing to say they were the car ahead. The face now draws the zone's
  * ground over the row each page loses to the banner while the banner's row is in use, and this file
  * evaluates that the way SimHub would: zone C is set to each page in turn, each state of the pit
- * family is brought out and so is low fuel, which holds the same row, and what the face covers is the
- * banner and the grounds shown in that frame. Under it every figure of every page is whole, wholly
- * covered or wholly below, and so is every part of the relative, its rows' grounds included.
+ * family is brought out and so is low fuel, which holds the same row, the session and the sim are
+ * each way a page draws differently, and what the face covers is the banner and the grounds shown in
+ * that frame. Under it every figure of every page is whole, wholly covered or wholly below, and so is
+ * every part of the relative, its rows' grounds included, every copy of a repeated row counted where
+ * SimHub stamps it. Nothing that was whole below the banner is cut by the grounds either: a car, a
+ * wheel or a gauge drawn under the row the banner takes is left as it was.
  *
- * A drawing that is the page itself, a radar, a map, a trace or a car, runs under the banner as it
- * would under any box, and is left: blanking it would leave zone C empty for a stop.
+ * A drawing that is the page itself, a radar, a map, a trace or a car, and that already ran under the
+ * banner, runs under it as it would under any box, and is left: blanking it would leave zone C empty
+ * for a stop.
  *
  * The AiM's figures are set in its segment faces, so this is measured in a process drawing them, as
  * `themeFuelPage.test.ts` does: the default process starts this file again with the AiM's colours.
  */
 import { describe, expect, test } from 'bun:test';
 import { FUEL_POP_UP } from '../src/components/popUp.ts';
-import { FACE_SIZES, pagesForZone, zonePageSettingName } from '../src/contract.ts';
+import { DAMAGE_REPORTED, FACE_SIZES, pagesForZone, zonePageSettingName } from '../src/contract.ts';
 import { bottom, right, translate } from '../src/design/geometry.ts';
 import { inkOf } from '../src/design/metrics.ts';
 import type { Item, LayerItem, Rect } from '../src/generator.ts';
@@ -27,7 +31,7 @@ import { regionRect, zoneRect, type Regions } from '../src/themes/anatomy.ts';
 import { buildThemeFace, drawsInThisProcess } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
-import { walkItems } from '../src/walk.ts';
+import { drawnParts } from '../src/walk.ts';
 import { kindOf, regionsWithoutRevBar, zoneDashboardName } from '../src/zones/index.ts';
 import { evalNcalc, type Calls, type Props } from './ncalcEval.ts';
 
@@ -57,11 +61,32 @@ const IN_USE: { moment: string; frame: Props }[] = [
   { moment: 'low fuel', frame: { ...car(false, false), ...reads(FUEL_POP_UP.when), 'DataCorePlugin.Computed.Fuel_RemainingLaps': 0.5 } },
 ];
 
+/**
+ * The ways a page of zone C is drawn: in a session on a sim that publishes the pit service and
+ * reports damage, in a session on one that does neither, and out of a session.
+ */
+const SIMS: { sim: string; frame: Props }[] = [
+  { sim: 'publishing', frame: { 'DataCorePlugin.GameRunning': 1, [`${G}.SessionTypeName`]: 'Race', 'DataCorePlugin.GameRawData.Telemetry.PitSvFlags': 0, [`OpenDash.${DAMAGE_REPORTED}`]: true } },
+  { sim: 'silent', frame: { 'DataCorePlugin.GameRunning': 1, [`${G}.SessionTypeName`]: 'Race', [`OpenDash.${DAMAGE_REPORTED}`]: false } },
+  { sim: 'out of session', frame: { 'DataCorePlugin.GameRunning': 0 } },
+];
+
 const WINDOWS: Calls = { changed: () => true, isincreasing: () => false, isdecreasing: () => false };
 const shown = (item: Item, frame: Props): boolean => Boolean(evalNcalc(String(item.bindings?.Visible?.formula ?? 'true'), frame, WINDOWS));
 
-/** Whether a run from `top` to `foot` is cut by a horizontal edge at `y`. */
-const cut = (r: Rect, y: number): boolean => r.top < y && bottom(r) > y;
+/**
+ * Whether what covers the banner's columns cuts `r`: covers it in part, neither wholly nor not at all.
+ * Every cover starts at the banner's top, so a column is covered from there down to the foot of the
+ * deepest cover across it.
+ */
+function cutBy(covers: readonly Rect[], banner: Rect, r: Rect): boolean {
+  const from = Math.max(r.left, banner.left);
+  const to = Math.min(right(r), right(banner));
+  if (to <= from) return false;
+  const xs = [from, ...covers.flatMap((c) => [c.left, right(c)]).filter((x) => x > from && x < to)];
+  const feet = xs.map((x) => Math.max(banner.top, ...covers.filter((c) => c.left <= x && right(c) > x).map(bottom)));
+  return Math.max(...feet) > r.top && Math.min(...feet) < bottom(r);
+}
 
 if (drawsInThisProcess(AIM)) {
   describe('on the AiM, the row the pit banner cuts out of zone C goes whole', () => {
@@ -89,42 +114,51 @@ if (drawsInThisProcess(AIM)) {
 
           for (const page of pagesForZone('C')) {
             const drawn = dashboard.screens.find((s) => s.name === page.id)!;
-            const parts = [...walkItems(drawn.items)]
-              .flatMap((item) => (item.kind === 'layer' ? [] : [{ item, drawn: translate(item.kind === 'text' ? inkOf(item) : item.rect, zone.left, zone.top) }]))
-              .filter(({ drawn: r }) => r.left < right(banner) && right(r) > banner.left);
+            // Each part where it is drawn on the face, every copy of a repeated row where SimHub stamps
+            // it, with the layers outside the rows that decide whether it is drawn. The page's own
+            // ground lies behind the whole banner and is not a part.
+            const parts = [...drawnParts(drawn.items)]
+              .map(({ item, layers }) => {
+                const repeated = layers.findIndex((l) => (l.repetitions ?? 0) > 0);
+                return { item, layers: repeated < 0 ? layers : layers.slice(0, repeated), drawn: translate(item.kind === 'text' ? inkOf(item) : item.rect, zone.left, zone.top) };
+              })
+              .filter(({ drawn: r }) => r.left < right(banner) && right(r) > banner.left && !(r.top <= banner.top && bottom(r) >= bottom(banner) && r.left <= banner.left && right(r) >= right(banner)));
 
-            for (const { moment, frame: car_ } of IN_USE) {
-              const frame = { ...car_, [pageProp]: page.number };
-              const at_ = { ...where, page: page.id, moment };
-              const masks = masksIn(frame);
-              expect({ ...at_, masks: masks.length <= 1 }).toEqual({ ...at_, masks: true });
-              const edge = Math.max(bottom(banner), ...masks.map((mask) => bottom(mask.rect)));
+            for (const { sim, frame: simFrame } of SIMS) {
+              const onPage = { ...simFrame, [pageProp]: page.number };
+              const visible = parts.filter(({ layers }) => layers.every((l) => shown(l, onPage)));
+              for (const { moment, frame: car_ } of IN_USE) {
+                const frame = { ...car_, ...onPage };
+                const at_ = { ...where, page: page.id, sim, moment };
+                const covers = [banner, ...masksIn(frame).map((mask) => mask.rect)];
+                const cut = (r: Rect): boolean => cutBy(covers, banner, r);
+                const named = ({ item, drawn: r }: (typeof parts)[number]): string => `${item.name} ${r.top}-${bottom(r)}`;
 
-              // No figure of any page is cut by the edge of what the face covers.
-              const figures = parts.filter(({ item, drawn: r }) => item.kind === 'text' && cut(r, edge)).map(({ item, drawn: r }) => `${item.name} ${r.top}-${bottom(r)}`);
-              expect({ ...at_, edge, cut: figures }).toEqual({ ...at_, edge, cut: [] });
+                // No figure of any page is cut by the edge of what the face covers.
+                expect({ ...at_, cut: visible.filter(({ item, drawn: r }) => item.kind === 'text' && cut(r)).map(named) }).toEqual({ ...at_, cut: [] });
 
-              // And no part of the relative, the grounds of its rows included; the page's own ground is
-              // the zone's and is not a part.
-              if (page.id === 'relative') {
-                const relative = parts
-                  .filter(({ item, drawn: r }) => item.name.startsWith('relative.') && r.height < zone.height && cut(r, edge))
-                  .map(({ item, drawn: r }) => `${item.name} ${r.top}-${bottom(r)}`);
-                expect({ ...at_, edge, cut: relative }).toEqual({ ...at_, edge, cut: [] });
+                // Nothing that was whole below the banner is cut by the grounds drawn under it.
+                expect({ ...at_, whole: visible.filter(({ drawn: r }) => r.top >= bottom(banner) && cut(r)).map(named) }).toEqual({ ...at_, whole: [] });
+
+                // And no part of the relative, the grounds of its rows included.
+                if (page.id === 'relative') {
+                  expect({ ...at_, relative: visible.filter(({ item, drawn: r }) => item.name.startsWith('relative.') && cut(r)).map(named) }).toEqual({ ...at_, relative: [] });
+                }
               }
-            }
 
-            // Off those moments the zone is drawn whole: nothing of the face is over it.
-            const onCircuit = { ...car(false, false), [pageProp]: page.number };
-            expect({ ...where, page: page.id, masks: masksIn(onCircuit).length }).toEqual({ ...where, page: page.id, masks: 0 });
+              // Off those moments the zone is drawn whole: nothing of the face is over it.
+              const onCircuit = { ...car(false, false), ...onPage };
+              expect({ ...where, page: page.id, sim, masks: masksIn(onCircuit).length }).toEqual({ ...where, page: page.id, sim, masks: 0 });
+            }
           }
 
           // The grounds are drawn over zone C's widget and under the flags and the banner, which are drawn
-          // over them, each the banner's columns from the banner's top.
+          // over them, each in the banner's columns from the banner's top.
           expect({ ...where, afterZone: names.indexOf('bannerRow') > names.indexOf('zoneC'), beforeFlag: names.indexOf('bannerRow') < names.indexOf('flag') }).toEqual({ ...where, afterZone: true, beforeFlag: true });
           for (const mask of layer?.children ?? []) {
             if (mask.kind === 'layer') throw new Error(`${mask.name} is a layer`);
-            expect({ ...where, mask: mask.name, left: mask.rect.left, top: mask.rect.top, width: mask.rect.width }).toEqual({ ...where, mask: mask.name, left: banner.left, top: banner.top, width: banner.width });
+            const inColumns = mask.rect.left >= banner.left && right(mask.rect) <= right(banner);
+            expect({ ...where, mask: mask.name, top: mask.rect.top, inColumns }).toEqual({ ...where, mask: mask.name, top: banner.top, inColumns: true });
           }
         }
       });
