@@ -26,6 +26,8 @@ export const REPO_URL = 'https://github.com/xorob0/OpenDash';
 export const REPO_LABEL = REPO_URL.replace(/^https:\/\//, '');
 export const issueUrl = (n: number): string => `${REPO_URL}/issues/${n}`;
 export const SCOPE_URL = `${REPO_URL}/blob/main/docs/scope.md`;
+/** The table of which sim shows what, reading by reading, which the Pages page summarises. */
+export const SIM_SUPPORT_URL = `${REPO_URL}/blob/main/docs/sim-support.md`;
 /** The one link beyond the repository: CC BY attribution links its source. */
 export const CAR_DATA_URL = 'https://github.com/Lovely-Sim-Racing/lovely-car-data';
 /** Linked once, on the install page, because a reader without SimHub has to get it first. */

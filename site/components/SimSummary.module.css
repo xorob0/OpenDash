@@ -1,0 +1,122 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
+.sim {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.sim + .sim {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-surface-raised);
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.count {
+  max-width: var(--measure);
+}
+
+/* The groups flow down one column and then the next, so a one-line section does not leave a hole beside a long one. */
+.groups {
+  column-gap: var(--space-6);
+}
+
+@media (min-width: 62rem) {
+  .groups {
+    columns: 2;
+  }
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-4);
+  break-inside: avoid;
+}
+
+.title {
+  color: var(--color-text-secondary);
+}
+
+.items {
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+.reading {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The comparison's 6 px square, in the colour of what the mark means. */
+.square {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: var(--color-text-dim);
+}
+
+.works {
+  background: var(--color-good-primary);
+}
+
+.partly {
+  background: var(--color-text-secondary);
+}
+
+.wrong {
+  background: var(--color-caution-primary);
+}
+
+.absent,
+.untested {
+  background: var(--color-text-dim);
+}
+
+.word {
+  font-size: var(--size-label);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+}
+
+.note {
+  color: var(--color-text-secondary);
+  font-size: var(--size-small);
+  max-width: var(--measure);
+}
+
+.more {
+  margin-top: var(--space-2);
+}

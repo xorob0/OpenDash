@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { PageGrid } from '../../components/PageGrid';
 import { Section } from '../../components/Section';
-import { SimTable } from '../../components/SimTable';
-import { BAND_D_PAGES, BAR_FIELDS, MODULES, PIT_WALL_ZONE_PAGES, SIM_NAMES, SIM_TABLE, ZONE_A_PAGES } from '../../lib/content.generated';
+import { SimSummary } from '../../components/SimSummary';
+import { BAND_D_PAGES, BAR_FIELDS, MODULES, PIT_WALL_ZONE_PAGES, SIM_NAMES, SIM_TABLE, SUPPORTED_SIM_NAMES, ZONE_A_PAGES } from '../../lib/content.generated';
 import { CLAIMED_SIM } from '../../lib/site';
 import { COUNTS } from '../../lib/liveCounts';
 import styles from './page.module.css';
@@ -55,8 +55,8 @@ export default function Pages() {
 
       <Section id="glance" title="Quick glance" lede="Hold a wheel button and one zone shows a page you chose. Release it and the zone goes back." />
 
-      <Section id="sims" title="Which sim shows what" lede={`${CLAIMED_SIM} Any other sim SimHub reads can run the packages too. Where a sim publishes nothing for a reading, the reading hides, reads -- or says so.`}>
-        <SimTable sims={SIM_NAMES} sections={SIM_TABLE} />
+      <Section id="sims" title="Which sim shows what" lede={CLAIMED_SIM}>
+        <SimSummary sims={SIM_NAMES} supported={SUPPORTED_SIM_NAMES} sections={SIM_TABLE} />
       </Section>
     </>
   );

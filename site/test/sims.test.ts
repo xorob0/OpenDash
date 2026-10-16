@@ -67,7 +67,7 @@ describe('the claim about sims', () => {
   test('and renders the table on the Pages page, under the anchor the home page links to', () => {
     const pages = readFileSync(path.join(import.meta.dir, '..', 'app', 'pages', 'page.tsx'), 'utf8');
     expect(pages).toContain('id="sims"');
-    expect(pages).toContain('<SimTable');
+    expect(pages).toContain('<SimSummary');
     expect(readFileSync(path.join(import.meta.dir, '..', 'app', 'page.tsx'), 'utf8')).toContain('href="/pages#sims"');
   });
 });
