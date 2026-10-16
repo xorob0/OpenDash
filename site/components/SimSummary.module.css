@@ -1,75 +1,46 @@
 .wrap {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-4);
   width: 100%;
+  max-width: 52rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.part {
+  text-align: left;
+  vertical-align: middle;
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
+  font-weight: 600;
+  color: var(--color-text-primary);
 }
 
 .sim {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  text-align: left;
+  vertical-align: bottom;
+  padding: var(--space-3);
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: 1.125rem;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
 }
 
-.sim + .sim {
-  padding-top: var(--space-6);
+.row {
   border-top: 1px solid var(--color-surface-raised);
 }
 
-.head {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+.row:last-child {
+  border-bottom: 1px solid var(--color-surface-raised);
 }
 
-.count {
-  max-width: var(--measure);
-}
-
-/* The groups flow down one column and then the next, so a one-line section does not leave a hole beside a long one. */
-.groups {
-  column-gap: var(--space-6);
-}
-
-@media (min-width: 62rem) {
-  .groups {
-    columns: 2;
-  }
-}
-
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-bottom: var(--space-4);
-  break-inside: avoid;
-}
-
-.title {
-  color: var(--color-text-secondary);
-}
-
-.items {
-  margin: 0;
-  padding: 0;
-}
-
-.item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--space-1) var(--space-3);
-}
-
-.reading {
-  font-weight: 600;
-  color: var(--color-text-primary);
+.cell {
+  vertical-align: middle;
+  padding: var(--space-3);
 }
 
 .mark {
@@ -78,7 +49,7 @@
   gap: var(--space-2);
 }
 
-/* The comparison's 6 px square, in the colour of what the mark means. */
+/* The comparison's 6 px square, in the colour of what the cell means. */
 .square {
   display: inline-block;
   width: 6px;
@@ -94,12 +65,7 @@
   background: var(--color-text-secondary);
 }
 
-.wrong {
-  background: var(--color-caution-primary);
-}
-
-.absent,
-.untested {
+.none {
   background: var(--color-text-dim);
 }
 
@@ -109,14 +75,30 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-text-primary);
-}
-
-.note {
-  color: var(--color-text-secondary);
-  font-size: var(--size-small);
-  max-width: var(--measure);
+  white-space: nowrap;
 }
 
 .more {
   margin-top: var(--space-2);
+}
+
+@media (max-width: 47.99rem) {
+  .part,
+  .cell,
+  .sim {
+    padding-inline: var(--space-2);
+  }
+
+  .part {
+    padding-inline-start: 0;
+  }
+
+  .sim {
+    font-size: 1rem;
+  }
+
+  /* "Not published" and "Le Mans Ultimate" may wrap rather than push the table past the gutter. */
+  .word {
+    white-space: normal;
+  }
 }

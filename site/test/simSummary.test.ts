@@ -1,52 +1,34 @@
 /**
- * The Pages page summarises docs/sim-support.md rather than rendering it (#1191): a supported sim's
- * column becomes the readings that do not simply work, grouped by section, each with the first
- * sentence of its note and none of the bookkeeping.
+ * The Pages page summarises docs/sim-support.md rather than rendering it (#1191): a row per part of
+ * the dash, and per supported sim how many of that part's readings are marked Works.
  */
 import { describe, expect, test } from 'bun:test';
 import { readSimSupport, SUPPORTED_SIMS } from '../../scripts/simSupport.ts';
-import { note, summarise } from '../lib/sims.ts';
+import { countByPart } from '../lib/sims.ts';
 
 const sections = readSimSupport();
+const parts = countByPart(sections, SUPPORTED_SIMS);
 
-describe('a note', () => {
-  test('is the first sentence after the mark, without the ticket', () => {
-    expect(note({ mark: 'Partly', text: '**Partly.** Air and track; the wind and the track state hide (#1123). More follows.' })).toBe(
-      'Air and track; the wind and the track state hide.',
-    );
-    expect(note({ mark: 'Absent', text: '**Absent.** Reads `--` (#1123, #567).' })).toBe('Reads `--`.');
-    expect(note({ mark: 'Partly', text: '**Partly.** The chequer ([flag-box.md](flag-box.md)).' })).toBe('The chequer.');
-    expect(note({ mark: 'Works', text: '**Works** on the cars that have them.' })).toBe('on the cars that have them.');
+describe('the parts', () => {
+  test('are the document sections, in its order, each the size of its table', () => {
+    expect(parts.map((p) => p.title)).toEqual(sections.map((s) => s.title));
+    expect(parts.map((p) => p.total)).toEqual(sections.map((s) => s.rows.length));
   });
 
-  test('is empty for a cell that is only its mark', () => {
-    expect(note({ mark: 'Absent', text: '**Absent.**' })).toBe('');
-  });
-});
-
-describe('a supported sim', () => {
-  test('lists every reading of its column that is not Works, under its section, and counts the rest', () => {
-    for (const sim of SUPPORTED_SIMS) {
-      const summary = summarise(sections, sim);
-      const rows = sections.flatMap((s) => s.rows);
-      expect(summary.total).toBe(rows.length);
-      expect(summary.works).toBe(rows.filter((r) => r.cells[sim].mark === 'Works').length);
-      expect(summary.groups.flatMap((g) => g.items).length).toBe(summary.total - summary.works);
-      for (const group of summary.groups) {
-        expect(sections.map((s) => s.title)).toContain(group.title);
-        expect(group.items.length).toBeGreaterThan(0);
-        for (const item of group.items) {
-          expect(item.mark).not.toBe('Works');
-          expect(item.mark).not.toBe('Untested');
-          expect(item.note).not.toMatch(/#\d+/);
-          expect(item.note).not.toMatch(/\]\(/);
-        }
+  test('count the Works cells of each supported sim and nothing else', () => {
+    for (const [i, section] of sections.entries()) {
+      for (const sim of SUPPORTED_SIMS) {
+        const works = section.rows.filter((r) => r.cells[sim].mark === 'Works').length;
+        expect(parts[i]?.works[sim]).toBe(works);
+        expect(works).toBeLessThanOrEqual(parts[i]?.total ?? 0);
       }
     }
   });
 
-  test('on iRacing is a handful; on Assetto Corsa it is the column the drive rests on', () => {
-    expect(summarise(sections, 'iRacing').groups.flatMap((g) => g.items).length).toBeLessThan(10);
-    expect(summarise(sections, 'Assetto Corsa').groups.length).toBeGreaterThan(5);
+  test('say iRacing works nearly everywhere and Assetto Corsa in part', () => {
+    const whole = (sim: (typeof SUPPORTED_SIMS)[number]) => parts.filter((p) => p.works[sim] === p.total).length;
+    expect(whole('iRacing')).toBeGreaterThan(parts.length / 2);
+    expect(whole('Assetto Corsa')).toBeLessThan(whole('iRacing'));
+    expect(parts.every((p) => p.works['Assetto Corsa'] > 0)).toBe(true);
   });
 });
