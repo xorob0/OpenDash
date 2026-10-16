@@ -4,10 +4,9 @@
  * Null when `build/` is absent or from another version, which `readBuildManifest` says once; the
  * tests that need a build then skip with a message, as `captures.test.ts` does.
  */
-import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { readBuildManifest } from '../scripts/content.ts';
-import { demoEntries, demoGroup } from '../scripts/demo-data.ts';
+import { demoEntries, demoGroup, packageFiles } from '../scripts/demo-data.ts';
 import type { DemoGroup } from '../lib/demo/types.ts';
 import { parseDashboard, type SceneDashboard } from '../lib/demo/scene.ts';
 
@@ -32,11 +31,13 @@ export const HAS_BUILD = manifest !== null;
 export const builtFaces = (): BuiltFace[] =>
   manifest
     ? demoEntries(manifest).map((entry) => {
-        const dir = path.join(repoRoot, 'build', entry.folder);
         const library = new Map<string, SceneDashboard>();
         const raw = new Map<string, unknown>();
-        for (const file of readdirSync(dir).filter((f) => f.endsWith('.djson'))) {
-          const json = JSON.parse(readFileSync(path.join(dir, file), 'utf8').replace(/^﻿/, '')) as unknown;
+        // Through the demo's own reader, which takes the zip when the unpacked folder is absent: CI's
+        // Website job has only the zips.
+        for (const [file, data] of packageFiles(entry)) {
+          if (!file.endsWith('.djson')) continue;
+          const json = JSON.parse(data.toString('utf8').replace(/^\ufeff/, '')) as unknown;
           raw.set(file, json);
           library.set(file, parseDashboard(json, file));
         }
