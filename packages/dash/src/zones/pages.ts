@@ -26,7 +26,7 @@ import {
   type ThemeEntry,
 } from '../contract.ts';
 import { measureText } from '../design/advances.ts';
-import { rect, translate, type Size } from '../design/geometry.ts';
+import { bottom, overlaps, rect, translate, type Size } from '../design/geometry.ts';
 import { inkOf } from '../design/metrics.ts';
 import { walkItems } from '../walk.ts';
 import { pageBuilder } from '../modules/index.ts';
@@ -39,6 +39,7 @@ import { ds } from '../tokens.ts';
 import { bandCorners, bandPageItems, bandPageRoom } from './bandPages.ts';
 import { zoneAPage } from './zoneAPages.ts';
 import type { ThemeDrawing } from '../themes/drawing.ts';
+import { regionRect, zoneRect, type Regions } from '../themes/anatomy.ts';
 
 /** Which catalogue a zone dashboard carries. A and D have their own; B and C share the modules. */
 export type ZoneKind = 'zoneA' | 'module' | 'band';
@@ -65,22 +66,63 @@ const zoneAItems = (page: string, frame: Rect, drawing: ThemeDrawing): Item[] =>
  */
 const GEAR_RUN = /(^|\.)gear(\.(value|ghost|below|above))?$/;
 
+/** The runs of a zone A page that draw the gear, layers walked through. */
+const gearRunsOf = (items: readonly Item[]): TextItem[] => [...walkItems(items)].filter((item): item is TextItem => item.kind === 'text' && GEAR_RUN.test(item.name));
+
+/**
+ * How far down zone A the pit banner reaches, which the gear's ink has to begin below (#1182): from
+ * the zone's top to the banner's foot where a face draws the banner over zone A, as the house and the
+ * Porsche do at the top of it, and nothing where the banner is drawn clear of the zone, as the AiM
+ * draws it over zone C and the Porsche's nano above the gear's tile.
+ *
+ * The pit family is opaque and is out for as long as a driver is in the lane, so a gear whose ink
+ * reached into it was drawn without its top for the whole stop.
+ */
+export function bannerClearance(regions: Regions): number {
+  const zoneA = zoneRect(regions, 'A');
+  const banner = regionRect(regions, 'pitAlert');
+  return overlaps(zoneA, banner) ? bottom(banner) - zoneA.top : 0;
+}
+
+/**
+ * The drawing zone A's pages are drawn with where the pit banner reaches `clear` down the zone: the
+ * house's pages told to begin the gear's ink below it, and any page, the house's or a theme's own,
+ * refused if the banner would still cover its gear, so that a page or a face that brings the gear up
+ * under the banner fails the build rather than ships.
+ *
+ * It is the theme's own hook for a page of zone A that carries the clearance, rather than a number
+ * threaded through every zone dashboard, because that hook is already where a page of zone A is asked
+ * for, and zones B, C and D have no use for it.
+ */
+export function zoneADrawing(drawing: ThemeDrawing, clear: number): ThemeDrawing {
+  if (clear <= 0) return drawing;
+  return {
+    ...drawing,
+    zoneAPage: (page, frame, prefix) => {
+      const items = drawing.zoneAPage?.(page, frame, prefix) ?? zoneAPage(page, frame, prefix, drawing.gearGhosts ?? true, clear);
+      const covered = gearRunsOf(items).filter((run) => inkOf(run).top < frame.top + clear);
+      if (covered.length > 0) {
+        throw new Error(`zone A: the pit banner reaches ${clear} px down a ${frame.width} x ${frame.height} column and covers the top of ${covered.map((run) => run.name).join(', ')}`);
+      }
+      return items;
+    },
+  };
+}
+
 /**
  * Where the gear marks the face on each of zone A's pages, in the face's own coordinates: the ink of
- * every run that draws it, drawn in `zoneA` as the zone's dashboard draws it.
+ * every run that draws it, drawn in zone A as the zone's dashboard draws it, under the face's banner.
  *
  * Read off the pages rather than off a table, because the gear is cut from the column (rule 18) and
  * so moves with every face, every arrangement and every theme's page. It is what a pop-up that stays
  * up for as long as its condition holds is kept clear of (#1047): the gear may be on whichever page a
  * driver cycles to while it is up. The track page draws no gear and adds nothing.
  */
-export function zoneAGearInk(zoneA: Rect, drawing: ThemeDrawing = {}): Rect[] {
+export function zoneAGearInk(regions: Regions, drawing: ThemeDrawing = {}): Rect[] {
+  const zoneA = zoneRect(regions, 'A');
   const frame = rect(0, 0, zoneA.width, zoneA.height);
-  return pagesForZone('A').flatMap((page) =>
-    [...walkItems(zoneAItems(page.id, frame, drawing))]
-      .filter((item): item is TextItem => item.kind === 'text' && GEAR_RUN.test(item.name))
-      .map((item) => translate(inkOf(item), zoneA.left, zoneA.top)),
-  );
+  const drawn = zoneADrawing(drawing, bannerClearance(regions));
+  return pagesForZone('A').flatMap((page) => gearRunsOf(zoneAItems(page.id, frame, drawn)).map((item) => translate(inkOf(item), zoneA.left, zoneA.top)));
 }
 
 /**
@@ -264,19 +306,24 @@ export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: 
  * Zones that land on the same file are grouped rather than dropped, because the file has to know
  * which zones read it: a page that filters to the player's class asks whether *the zone showing it*
  * was set to, and answering that with the wrong letter would have zone B follow zone C's setting.
+ *
+ * `clear` is how far down zone A the pit banner reaches (`bannerClearance`), which zone A's pages
+ * draw the gear below. One file is one drawing, so two arrangements that share zone A's rectangle and
+ * not the banner's reach are refused rather than one of them drawn with the other's gear.
  */
-export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZone; size: Size; corners?: boolean }[], metadata: DashboardMetadata, drawing: ThemeDrawing = {}): Dashboard[] {
-  const groups = new Map<string, { zones: [FaceZone, ...FaceZone[]]; size: Size; corners: boolean }>();
-  for (const { zone, size, corners } of zones) {
+export function zoneDashboardsFor(face: FaceSize, zones: readonly { zone: FaceZone; size: Size; corners?: boolean; clear?: number }[], metadata: DashboardMetadata, drawing: ThemeDrawing = {}): Dashboard[] {
+  const groups = new Map<string, { zones: [FaceZone, ...FaceZone[]]; size: Size; corners: boolean; clear: number }>();
+  for (const { zone, size, corners, clear = 0 } of zones) {
     const key = zoneDashboardName(kindOf(zone), size);
     const group = groups.get(key);
     if (group) {
+      if (group.clear !== clear) throw new Error(`${key}: drawn once for two reaches of the pit banner, ${group.clear} px and ${clear} px`);
       if (!group.zones.includes(zone)) group.zones.push(zone);
       continue;
     }
-    groups.set(key, { zones: [zone], size, corners: corners ?? false });
+    groups.set(key, { zones: [zone], size, corners: corners ?? false, clear });
   }
-  return [...groups.values()].map((g) => zoneDashboard(face, g.zones, g.size, metadata, g.corners, drawing));
+  return [...groups.values()].map((g) => zoneDashboard(face, g.zones, g.size, metadata, g.corners, zoneADrawing(drawing, g.clear)));
 }
 
 /**

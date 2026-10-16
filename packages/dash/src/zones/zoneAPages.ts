@@ -15,12 +15,12 @@
  * None of these draws a header. Zones B and C carry the page name in a 22 px line, and spending that
  * here would cost the gear its size for the sake of saying "gear". What zone A does when its page changes is the question #154 owns.
  */
-import type { Hex, Item, Monospace, Rect } from '../generator.ts';
+import type { Hex, Item, Monospace, Rect, TextItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { gear as gearComponent, gearGhosts, ghostedGearWidth, GEAR_BOX_SLACK, GEAR_CHARS, type GearGhosts } from '../components/gear.ts';
 import { measureText } from '../design/advances.ts';
-import { boxSlack, canvasBaseline, canvasYForBaseline, cells, gearCells, monoWidth, type Chars, type DataWeight } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, gearCells, inkOf, monoWidth, type Chars, type DataWeight } from '../design/metrics.ts';
 import { GEAR_CELL, LINE_SPACING, THOUSANDS, thousands } from '../design/metrics.ts';
 import { inset, rect } from '../design/geometry.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -188,10 +188,19 @@ function row(frame: Rect, top: number, runs: readonly Run[]): Item[] {
   });
 }
 
-/** Rows centred as one stack in `frame`, `gap` apart: equal slack above the first and below the last. */
-function stack(frame: Rect, gap: number, rows: readonly { fs: number; draw: (top: number) => Item[] }[]): Item[] {
-  const height = rows.reduce((sum, r) => sum + rowHeight(r.fs), 0) + gap * Math.max(0, rows.length - 1);
-  let top = frame.top + (frame.height - height) / 2;
+/** A stack row: its run's size, and what it draws from the top it is given. */
+type StackRow = { fs: number; draw: (top: number) => Item[] };
+
+/** What a stack's rows take down the column, the gaps between them included. */
+const stackHeight = (gap: number, rows: readonly StackRow[]): number => rows.reduce((sum, r) => sum + rowHeight(r.fs), 0) + gap * Math.max(0, rows.length - 1);
+
+/**
+ * Rows centred as one stack in `frame`, `gap` apart: equal slack above the first and below the last,
+ * unless that would start the stack above `from`, where it starts instead.
+ */
+function stack(frame: Rect, gap: number, rows: readonly StackRow[], from = frame.top): Item[] {
+  const height = stackHeight(gap, rows);
+  let top = Math.max(frame.top + (frame.height - height) / 2, from);
   const items: Item[] = [];
   for (const r of rows) {
     items.push(...r.draw(top));
@@ -257,18 +266,43 @@ const plainGearWidth = (fs: number): number => monoWidth(gearCells(fs), GEAR_CHA
 /**
  * A1: the gear with its neighbours ghosted either side, the speed under it, the revs under that.
  * Without the ghosts where the face asks for the gear alone, as a car whose display shows one gear does.
+ *
+ * `clear` is how far down the column the gear's ink has to begin, which is where the pit banner ends
+ * on a face that draws it over the top of zone A (#1182). The banner is opaque and out for as long as
+ * a driver is in the lane, so a gear whose ink reached into it lost its top for the whole stop. The
+ * stack is centred as the sheets draw it wherever that already leaves the ink below the banner; where
+ * it does not, as on the house's 800 x 286 face and the Porsche's 1280 x 400 and 600 x 686, the stack
+ * starts lower by what the banner needs, into the slack under the revs, and every run keeps its share
+ * of the column. The gear gives up size only where that slack runs out, which no face does.
  */
-function gearSpeedRevs(frame: Rect, prefix: string, ghosts = true): Item[] {
+function gearSpeedRevs(frame: Rect, prefix: string, ghosts = true, clear = 0): Item[] {
   const d = densityOf('zone');
   const share = SHARE.a1;
-  const gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => (ghosts ? ghostedGearWidth(fs, GHOSTS) : plainGearWidth(fs)));
+  const gap = rowGap(frame.height, share.gap);
   const speedSize = fitWidth(shareOf(frame.height, share.speed), frame.width, (fs) => rowExtent(speedRuns(prefix, fs, d.labelSm)));
   const revsSize = fitWidth(shareOf(frame.height, share.revs), frame.width, (fs) => rowExtent(revsRuns(prefix, fs, d.labelSm)));
-  return stack(frame, rowGap(frame.height, share.gap), [
+  const rows = (gearSize: number): StackRow[] => [
     { fs: gearSize, draw: (top) => gearRow(frame, top, gearSize, prefix, ghosts) },
     { fs: speedSize, draw: (top) => row(frame, top, speedRuns(prefix, speedSize, d.labelSm)) },
     { fs: revsSize, draw: (top) => row(frame, top, revsRuns(prefix, revsSize, d.labelSm)) },
-  ]);
+  ];
+  // The highest the stack may start for the gear's ink to begin `clear` down the column, on a whole pixel.
+  const from = (gearSize: number): number => Math.ceil(frame.top + clear - gearInkDrop(frame, gearSize, prefix, ghosts));
+  let gearSize = fitWidth(shareOf(frame.height, share.gear), frame.width, (fs) => (ghosts ? ghostedGearWidth(fs, GHOSTS) : plainGearWidth(fs)));
+  if (!clear) return stack(frame, gap, rows(gearSize));
+  while (from(gearSize) + stackHeight(gap, rows(gearSize)) > frame.top + frame.height) {
+    if (gearSize <= MIN_SIZE) {
+      throw new Error(`${prefix}gear: a ${frame.width} x ${frame.height} column has no room for the gear's ink to begin ${clear} px down, under the pit banner`);
+    }
+    gearSize -= 1;
+  }
+  return stack(frame, gap, rows(gearSize), from(gearSize));
+}
+
+/** How far below the top of its stack row the gear's ink begins, its ghosts' included. */
+function gearInkDrop(frame: Rect, size: number, prefix: string, ghosts: boolean): number {
+  const runs = gearRow(frame, 0, size, prefix, ghosts).filter((item): item is TextItem => item.kind === 'text');
+  return Math.min(...runs.map((run) => inkOf(run).top));
 }
 
 /** The gear and its ghosts, in a box exactly the gear's own canvas line box. */
@@ -325,16 +359,23 @@ function trackPage(frame: Rect, prefix: string): Item[] {
   return pageBuilder('track')({ frame: inner, density: 'zone', prefix, shape: shapeOf(inner), title: false });
 }
 
-const PAGES: Record<string, (frame: Rect, prefix: string, ghosts?: boolean) => Item[]> = {
+const PAGES: Record<string, (frame: Rect, prefix: string, ghosts?: boolean, clear?: number) => Item[]> = {
   gearSpeedRevs,
   gearAlone,
   speed: speedPage,
   track: trackPage,
 };
 
-/** One of zone A's four pages, drawn in `frame`; `ghosts` false draws the gear without its neighbours. */
-export function zoneAPage(id: string, frame: Rect, prefix: string, ghosts = true): Item[] {
+/**
+ * One of zone A's four pages, drawn in `frame`; `ghosts` false draws the gear without its neighbours.
+ *
+ * `clear` is how far down `frame` the pit banner reaches, which the gear's ink has to begin below
+ * (#1182). A1 is the one page that has to move for it: A2's gear fills the column from its leading and
+ * A3's sits under the speed, and on every face the banner ends above both. `zoneADrawing` in
+ * `pages.ts` refuses a page whose gear the banner would still cover, whichever page it is.
+ */
+export function zoneAPage(id: string, frame: Rect, prefix: string, ghosts = true, clear = 0): Item[] {
   const draw = PAGES[id];
   if (!draw) throw new RangeError(`zone A has no page "${id}"`);
-  return draw(frame, prefix, ghosts);
+  return draw(frame, prefix, ghosts, clear);
 }

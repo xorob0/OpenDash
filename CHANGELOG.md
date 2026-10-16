@@ -17,6 +17,189 @@ Until then a release also carried one `.simhubdash` per package, including the `
 device shape and a `manifest.json` listing everything published. The notes of those releases say so
 where they describe them.
 
+## 0.3.0-rc.13 (2026-10-15)
+
+The candidate with the first two car themes and the first sim after iRacing. A face can now be
+drawn the way the car's own display is: a Porsche face for the 992 Cup and the GT3 R, and an AiM
+face for the MX-5 Cup, the Legends and the Cross Car, each at every size, and the display follows
+the car. On Assetto Corsa the dashboards stop drawing iRacing's zeros: the flags, the limiter, the
+pit lane, the tyres and the damage read what the sim publishes, and what it does not publish is
+said rather than drawn as 0. OpenDash now claims iRacing and Assetto Corsa. ACC and Le Mans
+Ultimate may work, untested. The site's Pages page says which sim shows what, page by page.
+
+**Press Update on the Updates page to take this candidate.** The dashboards come up to date on the
+restart it asks for. A screen you edited in Dash Studio is left alone, and Reinstall everything
+replaces it. A strip or a flag box installed before this candidate keeps its old flag hues and its
+old layout until you press Update on its header on the LEDs page, or Reinstall everything: OpenDash
+never rewrites a profile in SimHub until you press one of those.
+
+**Two car themes.** The Add sheet asks the theme after the size, and both themes are free. The
+Porsche theme is the 992's display drawn over OpenDash's own zones: the dots along the top, the
+grey panels, the settings column with TC, ABS and bias, the ISO pictograms, and the limiter body
+that goes red against the pit speed. It draws the car's crest, fetched once into your SimHub folder
+and never shipped, and an empty shield until it has one; the Crest row on the face's editor says
+where that stands. The AiM theme is a backlit LCD, with seven-segment figures, fourteen-segment
+capitals and inverse video for the highlights, and its backlight colour is the first theme setting,
+offered on the Screens page. A themed screen keeps its theme and is never rewritten from the
+default, and the plugin writes its own playlist entries so that the display switches to the car's
+face at the next car. A Porsche face's band D cycles nine pages and opens on the Porsche row; a
+Porsche screen written before this candidate keeps the pages it had, with the Porsche row offered
+unticked. (#204, #205, #713, #718, #198, #199, #714, #715, #751, #753)
+
+**Assetto Corsa.** The plugin now says, for the running sim, whether the car has a pit limiter,
+whether it is on, whether the sim reports damage and whether you are in the car, and every face
+reads those answers rather than naming a game. On Assetto Corsa the limiter lamp, the strip, the
+flag box and band D's pit family follow the limiter rather than the pit lane, and Engage limiter
+can be raised in the lane. The car alerts raise in the car and keep quiet in the menus, a replay
+and a pause. The six flags SimHub reports show on band D, the flag box and the strips. The tyre
+page reads real temperatures and the damage page draws the car's hurt panels. The low-fuel alarm
+lights at two litres, as on iRacing. A car that Car Data has measured lights its own ladder rather
+than SimHub's bands, on Assetto Corsa and ACC. The session is named, the track is named as a driver
+knows it, Red Bull Ring rather than ks_red_bull_ring, and with the delta reference set to Last lap
+the delta is to your best and says so. What the sim does not publish is said rather than drawn:
+the incident count hides, the steering dial and the pit wall's steering trace hide, pit view says
+the pit service is not published and keeps the pit time, the track map says "Drive a lap to record
+it" until SimHub has an outline of the track, and the wind and the sim clock no longer read 0 km/h
+and 00:00. (#1101, #1122, #558, #561, #551, #556, #582, #1126, #748, #1125, #1127, #1124, #575,
+#567, #564, #555, #1128)
+
+**Le Mans Ultimate and ACC are untested.** On Le Mans Ultimate the plugin corrects the four flags
+SimHub gets wrong, so the yellow is your own sector's, the black is an outstanding penalty, the
+white is your last lap and the chequer comes at the finish, and pit view's stop time counts the
+stop in the box rather than the whole pit lane. Both are read from the sim's data rather than from
+a drive, and want a rig to confirm them. The damage page's thresholds are a first guess too: any
+damage is light and heavy starts at 50, until a drive measures what the sims report. The grip, the
+wind and the sim clock on these three sims are hidden for now rather than drawn. (#1129, #1130)
+
+**The race on the road.** The plugin ranks the field on distance covered and publishes live places
+and order, so a pass in the first corner shows at once rather than a lap later, and the
+leaderboards, the class boards, the gap and the interval follow. "Live positions" is a switch in
+the Settings page's Race data section, on by default; off, the dashboards read iRacing's official
+order. It runs in iRacing races, and publishes nothing before the sim has placed you or after the
+chequered flag. With it, the places and the gaps hold their tongue until they can be trusted: the
+bar, the Position card, the blue band and the relative read -- on the grid rather than a place
+SimHub numbered itself, Gap and Int read -- until both cars are placed, a car in the pit lane says
+PIT where its gap was, a car a lap or more behind reads +5L rather than +484.6, a car is lapped by
+distance rather than by the line, and in practice and qualifying the columns read best-lap
+differences. (#1063, #1014, #1028, #388, #1077, #1023, #1040, #1041, #1022)
+
+**Timed races.** The lap count is followed by the race's length only in a race counted in laps, so
+a timed race or an open practice shows the lap alone on the bar, the headers, the stint page and
+the session page. In a timed race Refuel and Laps left count the laps the clock leaves, the fuel
+margin is counted to the end of the lap the clock runs out on, and a car that reaches the line
+between the clock and the leader is counted the lap it runs while it waits. The session clock
+counts whole seconds down without turning over half a second early. (#989, #1024, #1027, #831)
+
+**Flags and pop-ups.** A settled flag, after its three seconds on band D, is one rectangle carrying
+its name in a part of each face no reading uses, with FCY, DSQ and the other short forms where the
+long name does not fit, and push to pass and the headlight flash are now named. The lap time at the
+line and the change notification are real pop-ups, centred on the face for their three seconds,
+while low fuel and DRS sit compact in the pit banner's row above the gear, so a lap time no longer
+hides low fuel. Every pop-up gives way to the full-screen flag and to the pit state it would cover,
+so a flag's name and the Porsche's pit speed read whole at a crossing, and the AiM's engine warning
+no longer hides Engage limiter. On the flag box the S of SC is rounded so a full course yellow no
+longer reads as 5C, and a car alongside no longer takes a letter from it. (#731, #1047, #1069,
+#1070, #1097, #1098, #515, #516)
+
+**Band D.** It cycles seven pages, eight on a Porsche, and never shows the telltale row's twelve
+empty boxes: that page is held back until its pictograms exist, and a rig whose settings opened on
+it is moved to the next enabled page. An engine-readings page joins the catalogue as the
+twenty-second page of zones B and C and of the companion, for every theme. No face draws the zone
+letters any more; the page name takes their place. (#969, #752, #708)
+
+**The panel.** Adding, resizing, renaming, reinstalling or removing a screen no longer asks for a
+SimHub restart: a restart is asked only when a write put a new font into SimHub, which is every
+first screen on a fresh SimHub. A rig already on the release is no longer offered it again because
+one screen was edited, and a press on the release it already runs writes the screen behind it
+without a download or a restart. Install, update, Put mine back, Remove and Resize never leave a
+dashboard folder half deleted when SimHub or a virus scanner holds a file, and a remove or resize
+that fails puts the screen back and says so. An update puts in place only what its release says it
+carries and nothing older than the rig runs, and says why when it does not. A strip's or the flag
+box's profile is listed and kept on a SimHub that keeps profiles per game family. The Updates page
+says what the update check sends, which is nothing about you. (#664, #1083, #580, #869, #861, #588,
+#862, #689, #1116)
+
+### Fixed
+
+- **A 400-lap race reads its whole length** on the session page and the round session card, where
+  it was cut to "/ 40". (#1117)
+- **A long track name no longer clips in the track module's header**: the length gives way first,
+  then the name is cut with an ellipsis. (#1150)
+- **A lap of ten minutes or more draws whole in every lap-time box**, to the hundredth, so the
+  Nordschleife lap no longer loses its last digit. (#883)
+- **The session page draws the session's name whole**, Lone Qualify and Offline Testing included,
+  on the faces, the companion and the pit wall. (#1029)
+- **The class chip holds four letters and the tyre chip one whole letter**, so MERC and MCLA no
+  longer clip, and the class and place reads -- on the grid, cuts the class to four letters and no
+  longer clips in a big field. (#569, #603)
+- **The stint clock, the last stop, the sectors, the session clock and the lap cards draw their
+  placeholders**, never a blank, while SimHub has no time to give. (#586)
+- **An in-lap's deltas draw whole past 100 s**, to one decimal, on the lap review, the sector
+  deltas, the lap history and the relative gap. (#886)
+- **The opponents page keeps the k for a driver rated 10 000**, and its last lap fits every lap
+  under ten minutes. (#902)
+- **The stint module's Lap field holds 12 / 120**, and the Position card reads -- / 24 before the
+  sim has placed the car. (#921, #992)
+- **A stopped engine no longer lights the oil-pressure warning** on band D, the AiM and the Porsche,
+  so the garage and a stall read clean as the LED strip already did. (#1115)
+- **The fuel gauge and the strip's fuel centre read the tank's true level on a gallons profile.**
+  The raw percentage read a half tank as 189. (#993)
+- **On Assetto Corsa the ghost above the gear hides in top gear** and the over-rev flash stops
+  there, from the gear count SimHub learns, which is short on a car's first drive. (#996)
+- **The steering dial and the pit wall's steering trace turn the way the wheel does**, reading
+  iRacing's angle as positive to the left. A real wheel is still the check to make. (#1057)
+- **The fuel module's estimate is "To add" and the pit service's order is "Refuel"**, in your unit
+  rather than always in gallons, and -- where the sim publishes no order. (#604)
+- **A level delta is the bare 0.00** on every surface, a sector delta reads -- until the sector has
+  a time and a best, and Average 5, the lap history and the lap review count only this session's
+  laps rather than yesterday's from SimHub's lap database. (#614, #1011)
+- **Band D's fuel time counts on past 99 minutes** and Refuel keeps its tenths. (#899, #831)
+- **The track state reads iRacing's own wetness**, Dry to Flooded, where it read -- on every sim.
+  (#1123)
+- **The Porsche's session box holds a Hypercar's LMDH at every place.** (#1058)
+- **The flag box's pit-speeding picture lights at last**, and the assist levels draw OFF and -- on
+  the pit wall and the car settings page as the card does. (#619)
+- **A flag box with Pit or Warnings switched off shows the gear** where those would have been,
+  rather than going dark for the whole pit lane or the rest of a low-fuel stint. (#566)
+- **A car-lights table keyed "01" to "06" mirrors in every gear** instead of failing every frame,
+  and a part of the frame that fails is said in SimHub's log once a minute rather than stopping the
+  rest in silence and freezing the strip. (#577, #865)
+- **Adding or removing a screen or a strip while a dashboard is reading no longer throws**
+  "Collection was modified". (#572)
+- **A settings file whose only sign of a save is an old flag box setting keeps its box** on
+  migration, rather than being read as a new install and going dark. (#578)
+- **Leaving the panel for another SimHub page mid-press no longer starts a live preview behind
+  it.** (#802)
+- **INSTALL.md and the README count the companion's modules as twenty-two.** (#1000)
+
+### Changed
+
+- **Two car themes, and Assetto Corsa claimed**, as above.
+- **The LED profiles draw the green, red, blue and white flags in the flags' own hues** rather
+  than the face's state colours, on the strips and the flag box; the yellow, the orange, the black
+  and the chequer are unchanged, and the faces' flag colours do not move. (#733)
+- **"vs session best" is "vs your best"** on the delta page, the pit wall, the lap review and the
+  lap history, and the panel's Delta reference offers Your best where it offered Session best;
+  Session best now means the field's best wherever it is drawn. The figures are not recomputed.
+  (#1030)
+- **The Delta reference caption says that Last lap works on iRacing only**; other sims compare
+  against your best. (#575)
+- **Low fuel and DRS moved into the pit banner's row**, and the lap time and the change
+  notification are full pop-ups again. (#1047)
+- **On the flag box the spotter bar gives way to SC** on the panel drawing it. (#516)
+- **The settled flag is one rectangle** and band D's two corner blocks are gone. (#731)
+- **The telltale page is held back from band D**, and a saved selection of it moves to the next
+  page. (#969)
+- **A lap of ten minutes or more drops its third place.** (#883)
+- **Live positions are on by default**, with a switch to read the official order. (#1063)
+- **The round faces ship on their cards in 1.0**; their conversion to zones on a ring follows the
+  release. (#968)
+- **The website** reads its counts and sizes from the build, prints the version under every
+  picture, names every request the plugin makes, says 800 x 286 is the one face with no bar, starts
+  the home page's screen picker with motion off for a reader who asked for reduced motion, and
+  takes a survey only from its own origin with a cap and a throttle. (#722, #813, #819, #811, #548,
+  #1095, #1094, #1096, #815, #821, #559, #550, #830)
+
 ## 0.3.0-rc.12 (2026-10-04)
 
 The candidate that gives each colour on a strip one meaning. On an RGB LED, ABS, a car alongside,
