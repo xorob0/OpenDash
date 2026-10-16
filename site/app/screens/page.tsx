@@ -80,7 +80,7 @@ export default function Screens() {
             companionClip ? (
               <Clip clip={companionClip} alt="The companion, running" caption="Landscape" />
             ) : (
-              <Capture file={packageFile(companion.folder)} alt="The companion showing lap times" width={companion.width} height={companion.height} caption="Landscape" />
+              <Capture file={packageFile(companion.folder)} alt="The companion, showing one page" width={companion.width} height={companion.height} caption="Landscape" />
             )
           ) : null}
           {companionPortrait ? (

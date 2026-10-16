@@ -9,21 +9,21 @@
       "height": 480,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:45:01.066Z",
+      "frames": 140,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:28:25.038Z",
       "files": {
         "webm": "opendash.webm",
         "mp4": "opendash.mp4",
         "poster": "opendash.png"
       },
       "bytes": {
-        "webm": 108747,
-        "mp4": 131277,
-        "poster": 91868
+        "webm": 106288,
+        "mp4": 130979,
+        "poster": 83056
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "2dd9fd5b",
       "simHubVersion": "9.12.6"
     },
     {
@@ -34,21 +34,21 @@
       "height": 400,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:48:38.170Z",
+      "frames": 140,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:29:42.578Z",
       "files": {
         "webm": "opendash-1280x400.webm",
         "mp4": "opendash-1280x400.mp4",
         "poster": "opendash-1280x400.png"
       },
       "bytes": {
-        "webm": 75329,
-        "mp4": 86556,
-        "poster": 62360
+        "webm": 79659,
+        "mp4": 94199,
+        "poster": 60142
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "2dd9fd5b",
       "simHubVersion": "9.12.6"
     },
     {
@@ -57,23 +57,23 @@
       "scenario": "clip",
       "width": 1280,
       "height": 480,
-      "fps": 20,
+      "fps": 15,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:11:40.554Z",
+      "frames": 105,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:47:41.001Z",
       "files": {
         "webm": "opendash-1280x480.webm",
         "mp4": "opendash-1280x480.mp4",
         "poster": "opendash-1280x480.png"
       },
       "bytes": {
-        "webm": 73714,
-        "mp4": 90652,
-        "poster": 55066
+        "webm": 78138,
+        "mp4": 100566,
+        "poster": 59686
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -84,21 +84,21 @@
       "height": 720,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:46:14.039Z",
+      "frames": 137,
+      "dropped": 3,
+      "takenAt": "2026-10-16T13:32:14.492Z",
       "files": {
         "webm": "opendash-1280x720.webm",
         "mp4": "opendash-1280x720.mp4",
         "poster": "opendash-1280x720.png"
       },
       "bytes": {
-        "webm": 130238,
-        "mp4": 151701,
-        "poster": 99676
+        "webm": 131601,
+        "mp4": 149729,
+        "poster": 93867
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -109,21 +109,21 @@
       "height": 480,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:20:28.379Z",
+      "frames": 140,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:33:29.212Z",
       "files": {
         "webm": "opendash-480-round.webm",
         "mp4": "opendash-480-round.mp4",
         "poster": "opendash-480-round.png"
       },
       "bytes": {
-        "webm": 29061,
-        "mp4": 41361,
-        "poster": 11734
+        "webm": 29728,
+        "mp4": 42899,
+        "poster": 12600
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -132,23 +132,23 @@
       "scenario": "clip",
       "width": 600,
       "height": 686,
-      "fps": 15,
+      "fps": 20,
       "seconds": 6,
-      "frames": 105,
+      "frames": 140,
       "dropped": 0,
-      "takenAt": "2026-09-22T21:53:22.001Z",
+      "takenAt": "2026-10-16T13:34:44.189Z",
       "files": {
         "webm": "opendash-600x686.webm",
         "mp4": "opendash-600x686.mp4",
         "poster": "opendash-600x686.png"
       },
       "bytes": {
-        "webm": 32941,
-        "mp4": 46285,
-        "poster": 26929
+        "webm": 61585,
+        "mp4": 75583,
+        "poster": 40054
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -159,21 +159,21 @@
       "height": 800,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:19:16.228Z",
+      "frames": 140,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:35:59.208Z",
       "files": {
         "webm": "opendash-800-round.webm",
         "mp4": "opendash-800-round.mp4",
         "poster": "opendash-800-round.png"
       },
       "bytes": {
-        "webm": 50303,
-        "mp4": 66118,
-        "poster": 27506
+        "webm": 50826,
+        "mp4": 66083,
+        "poster": 28583
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -184,21 +184,21 @@
       "height": 286,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:16:51.675Z",
+      "frames": 140,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:37:14.192Z",
       "files": {
         "webm": "opendash-800x286.webm",
         "mp4": "opendash-800x286.mp4",
         "poster": "opendash-800x286.png"
       },
       "bytes": {
-        "webm": 49884,
-        "mp4": 59573,
-        "poster": 25437
+        "webm": 49323,
+        "mp4": 65527,
+        "poster": 31955
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -209,21 +209,21 @@
       "height": 480,
       "fps": 20,
       "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T21:15:39.475Z",
+      "frames": 140,
+      "dropped": 0,
+      "takenAt": "2026-10-16T13:38:29.261Z",
       "files": {
         "webm": "opendash-800x480.webm",
         "mp4": "opendash-800x480.mp4",
         "poster": "opendash-800x480.png"
       },
       "bytes": {
-        "webm": 41855,
-        "mp4": 53601,
-        "poster": 31400
+        "webm": 73746,
+        "mp4": 90310,
+        "poster": 47750
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     },
     {
@@ -236,44 +236,19 @@
       "seconds": 6,
       "frames": 139,
       "dropped": 1,
-      "takenAt": "2026-09-22T21:47:26.099Z",
+      "takenAt": "2026-10-16T13:27:07.888Z",
       "files": {
         "webm": "opendash-850x480.webm",
         "mp4": "opendash-850x480.mp4",
         "poster": "opendash-850x480.png"
       },
       "bytes": {
-        "webm": 87719,
-        "mp4": 105097,
-        "poster": 54727
+        "webm": 75539,
+        "mp4": 94353,
+        "poster": 52577
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
-      "simHubVersion": "9.12.6"
-    },
-    {
-      "slug": "opendash-companion",
-      "package": "OpenDash Companion",
-      "scenario": "clip",
-      "width": 850,
-      "height": 480,
-      "fps": 20,
-      "seconds": 6,
-      "frames": 138,
-      "dropped": 2,
-      "takenAt": "2026-09-22T19:06:42.297Z",
-      "files": {
-        "webm": "opendash-companion.webm",
-        "mp4": "opendash-companion.mp4",
-        "poster": "opendash-companion.png"
-      },
-      "bytes": {
-        "webm": 34120,
-        "mp4": 39006,
-        "poster": 31305
-      },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "2dd9fd5b",
       "simHubVersion": "9.12.6"
     },
     {
@@ -286,19 +261,19 @@
       "seconds": 6,
       "frames": 105,
       "dropped": 0,
-      "takenAt": "2026-09-22T19:07:56.295Z",
+      "takenAt": "2026-10-16T13:41:00.307Z",
       "files": {
         "webm": "opendash-pit-wall.webm",
         "mp4": "opendash-pit-wall.mp4",
         "poster": "opendash-pit-wall.png"
       },
       "bytes": {
-        "webm": 219682,
-        "mp4": 260569,
-        "poster": 233922
+        "webm": 140616,
+        "mp4": 167246,
+        "poster": 153030
       },
-      "version": "0.3.0-rc.6",
-      "commit": "b671ca9",
+      "version": "0.3.0-rc.13",
+      "commit": "9b236ea6",
       "simHubVersion": "9.12.6"
     }
   ]

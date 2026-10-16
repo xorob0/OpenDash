@@ -112,7 +112,7 @@ export default function Home() {
             <div className={styles.second}>
               <h3 className="h3">The companion</h3>
               <p className="prose">One page at a time on a phone or tablet, landscape or portrait. All {COUNTS.pages}, each with a switch.</p>
-              <Capture file={packageFile(companion.folder)} alt="The companion showing lap times" width={companion.width} height={companion.height} caption="Companion" />
+              <Capture file={packageFile(companion.folder)} alt="The companion, showing one page" width={companion.width} height={companion.height} caption="Companion" />
             </div>
           ) : null}
           {pitWall ? (
