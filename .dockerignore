@@ -5,7 +5,6 @@ build/
 **/.next
 .git
 .claude
-traces/
 site/out
 site/public/downloads
 # A local .env holds secrets, and COPY site ./site would carry site/.env into the build stage, where
@@ -13,3 +12,5 @@ site/public/downloads
 # settings are build arguments and the deployment's environment (docs/deploy.md), never a file.
 **/.env
 **/.env.*
+# Copied out of build/ and traces/ by the image's own `bun run generate`; a local copy would be stale.
+site/public/demo

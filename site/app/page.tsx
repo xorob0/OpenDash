@@ -48,6 +48,7 @@ export default function Home() {
             <Actions>
               <Primary href={INSTALL.href}>{INSTALL.label} OpenDash</Primary>
               <Secondary href="#screen">Find your screen</Secondary>
+              <Secondary href="/demo">Try it in your browser</Secondary>
             </Actions>
           </div>
 

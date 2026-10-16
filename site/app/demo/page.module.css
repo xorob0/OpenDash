@@ -1,0 +1,13 @@
+.proof {
+  margin-top: var(--space-6);
+}
+
+.empty {
+  max-width: var(--measure);
+  color: var(--color-text-secondary);
+}
+
+.empty strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}

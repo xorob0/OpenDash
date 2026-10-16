@@ -33,6 +33,9 @@ export const FACES = [
   'BarlowCondensed-Light.ttf',
   'BarlowCondensed-SemiBold.ttf',
   'BarlowCondensed-Bold.ttf',
+  'DSEG7Classic-Regular.ttf',
+  'DSEG7Classic-Bold.ttf',
+  'DSEG14Classic-Regular.ttf',
 ] as const;
 
 if (import.meta.main) {
@@ -48,5 +51,6 @@ if (import.meta.main) {
   }
   // The licence travels with the fonts, exactly as it does into a .simhubdash.
   copyFileSync(path.join(fontsDir, 'OFL.txt'), path.join(outDir, 'OFL.txt'));
-  console.log(`${FACES.length} faces, ${(saved / 1024).toFixed(0)}K saved, OFL.txt copied`);
+  copyFileSync(path.join(fontsDir, 'OFL-DSEG.txt'), path.join(outDir, 'OFL-DSEG.txt'));
+  console.log(`${FACES.length} faces, ${(saved / 1024).toFixed(0)}K saved, OFL.txt and OFL-DSEG.txt copied`);
 }

@@ -37,6 +37,11 @@ export interface Scope {
   /**
    * The opponent calls' values by canonical call text (`opponentCalls.ts`), as trace version 2
    * records them. A call with no entry is null, as a position that names no car is in SimHub.
+   *
+   * Absent, a call is looked up in {@link properties} by the same text. That is where a version 2
+   * trace's frame holds it: `frame()` in `scripts/traceFormat.ts` returns the properties and the
+   * calls in one map, so a renderer hands the frame over once and the opponent calls resolve. A
+   * version 1 frame has no call text in it, and every call is null, as it was before.
    */
   readonly calls?: Source;
   /**
@@ -72,9 +77,11 @@ export function readProperty(scope: Scope, name: string): Value {
   return null;
 }
 
-/** The recorded value of an opponent call by its canonical text, null when there is none. */
+/**
+ * The recorded value of an opponent call by its canonical text, null when there is none: from the
+ * scope's own calls when it has them, and otherwise from the frame map the properties came in.
+ */
 export function readCall(scope: Scope, text: string): Value {
-  if (!scope.calls) return null;
-  const v = lookup(scope.calls, text);
-  return v === undefined ? null : toValue(v);
+  const v = lookup(scope.calls ?? scope.properties, text);
+  return v === undefined || v === null ? null : toValue(v);
 }
