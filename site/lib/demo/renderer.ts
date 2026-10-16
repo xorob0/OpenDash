@@ -87,13 +87,13 @@ function roundedRect(ctx: Ctx, x: number, y: number, w: number, h: number, r: Ra
 /** The item's background, inside its outer edge, then its border as the ring between the edges. */
 function paintBox(ctx: Ctx, box: Box, background: Op['background'], border: ResolvedBorder | null): void {
   const radii = border?.radius ?? NO_RADII;
-  if (background.alpha > 0) {
+  if (background.opacity > 0) {
     ctx.beginPath();
     roundedRect(ctx, box.left, box.top, box.width, box.height, radii);
     ctx.fillStyle = background.css;
     ctx.fill();
   }
-  if (border && border.color.alpha > 0 && border.top + border.bottom + border.left + border.right > 0) {
+  if (border && border.color.opacity > 0 && border.top + border.bottom + border.left + border.right > 0) {
     const inner = {
       left: box.left + border.left,
       top: box.top + border.top,
@@ -132,7 +132,7 @@ function wrapLines(ctx: Ctx, font: string, text: string, width: number): string[
 
 function drawText(ctx: Ctx, op: TextOp): void {
   const { item, box } = op;
-  if (op.text === '' || op.color.alpha <= 0) return;
+  if (op.text === '' || op.color.opacity <= 0) return;
   const pad = item.padding;
   const font = cssFont(item.font, item.weight, op.size, item.italic);
   ctx.font = font;
@@ -168,7 +168,7 @@ function drawText(ctx: Ctx, op: TextOp): void {
 
 function drawGauge(ctx: Ctx, op: GaugeOp): void {
   const { box, item, fraction } = op;
-  if (fraction <= 0 || op.color.alpha <= 0) return;
+  if (fraction <= 0 || op.color.opacity <= 0) return;
   ctx.fillStyle = op.color.css;
   if (item.vertical) {
     const h = box.height * fraction;
@@ -183,7 +183,7 @@ function drawGauge(ctx: Ctx, op: GaugeOp): void {
 
 function drawChart(ctx: Ctx, op: ChartOp): void {
   const { box, points } = op;
-  if (points.length < 2 || op.color.alpha <= 0) return;
+  if (points.length < 2 || op.color.opacity <= 0) return;
   const span = op.maximum - op.minimum || 1;
   const step = box.width / Math.max(1, op.capacity - 1);
   ctx.beginPath();
@@ -218,11 +218,11 @@ function drawStandIn(ctx: Ctx, box: Box, label: string): void {
 
 function drawOps(ctx: Ctx, ops: readonly Op[], options: RenderOptions, t: Transform, outline: OutlineBox[] | null): void {
   for (const op of ops) {
-    if (op.alpha <= 0) continue;
+    if (op.opacity <= 0) continue;
     const { box } = op;
     if (outline) outline.push({ x: t.x + box.left * t.s, y: t.y + box.top * t.s, width: box.width * t.s, height: box.height * t.s, path: op.path, kind: op.kind, error: op.error });
     ctx.save();
-    ctx.globalAlpha *= op.alpha;
+    ctx.globalAlpha *= op.opacity;
     if (op.rotation) {
       const cx = box.left + box.width / 2;
       const cy = box.top + box.height / 2;
@@ -233,11 +233,11 @@ function drawOps(ctx: Ctx, ops: readonly Op[], options: RenderOptions, t: Transf
     if (op.kind === 'ellipse') {
       ctx.beginPath();
       ctx.ellipse(box.left + box.width / 2, box.top + box.height / 2, Math.max(0, box.width / 2), Math.max(0, box.height / 2), 0, 0, Math.PI * 2);
-      if (op.fill.alpha > 0) {
+      if (op.fill.opacity > 0) {
         ctx.fillStyle = op.fill.css;
         ctx.fill();
       }
-      if (op.thickness > 0 && op.stroke.alpha > 0) {
+      if (op.thickness > 0 && op.stroke.opacity > 0) {
         ctx.strokeStyle = op.stroke.css;
         ctx.lineWidth = op.thickness;
         ctx.stroke();
@@ -274,7 +274,7 @@ function drawOps(ctx: Ctx, ops: readonly Op[], options: RenderOptions, t: Transf
         paintBox(ctx, box, op.background, null);
         ctx.translate(box.left + op.offsetX, box.top + op.offsetY);
         ctx.scale(op.scale, op.scale);
-        if (op.screenBackground.alpha > 0) {
+        if (op.screenBackground.opacity > 0) {
           ctx.fillStyle = op.screenBackground.css;
           ctx.fillRect(0, 0, op.width, op.height);
         }
@@ -306,8 +306,8 @@ export function render(ctx: Ctx, frame: Frame, width: number, height: number, op
   ctx.setTransform(k, 0, 0, k, 0, 0);
   ctx.globalAlpha = 1;
   ctx.clearRect(0, 0, width, height);
-  for (const paint of [{ css: '#000', alpha: 1 }, frame.background, frame.screenBackground]) {
-    if (paint.alpha <= 0) continue;
+  for (const paint of [{ css: '#000', opacity: 1 }, frame.background, frame.screenBackground]) {
+    if (paint.opacity <= 0) continue;
     ctx.fillStyle = paint.css;
     ctx.fillRect(0, 0, width, height);
   }

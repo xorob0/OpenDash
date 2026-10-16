@@ -25,10 +25,10 @@ function rawItems(json: unknown): Record<string, unknown>[] {
 
 describe('colours', () => {
   test('reads the forms ColorConverter reads, and refuses the rest', () => {
-    expect(parsePaint('#FF102030')).toEqual({ css: 'rgba(16,32,48,1)', alpha: 1 });
-    expect(parsePaint('#00FFFFFF')?.alpha).toBe(0);
+    expect(parsePaint('#FF102030')).toEqual({ css: 'rgba(16,32,48,1)', opacity: 1 });
+    expect(parsePaint('#00FFFFFF')?.opacity).toBe(0);
     expect(parsePaint('#102030')?.css).toBe('rgba(16,32,48,1)');
-    expect(parsePaint('#8F00')?.alpha).toBeCloseTo(0x88 / 255, 5);
+    expect(parsePaint('#8F00')?.opacity).toBeCloseTo(0x88 / 255, 5);
     expect(parsePaint('DeepSkyBlue')?.css).toBe('deepskyblue');
     expect(parsePaint('#12345')).toBeNull();
     expect(parsePaint('12, 34')).toBeNull();

@@ -13,13 +13,13 @@
  * renderer can draw it as a labelled box rather than drop it.
  */
 
-/** A colour ready for a canvas, and its alpha so a transparent fill can be skipped. */
+/** A colour ready for a canvas, and its opacity so a transparent fill can be skipped. */
 export interface Paint {
   readonly css: string;
-  readonly alpha: number;
+  readonly opacity: number;
 }
 
-export const TRANSPARENT: Paint = { css: 'rgba(0,0,0,0)', alpha: 0 };
+export const TRANSPARENT: Paint = { css: 'rgba(0,0,0,0)', opacity: 0 };
 
 const paintCache = new Map<string, Paint | null>();
 
@@ -46,10 +46,10 @@ function computePaint(t: string): Paint | null {
     if (hex.length !== 8) return null;
     const n = (i: number) => parseInt(hex.slice(i, i + 2), 16);
     const a = n(0) / 255;
-    return { css: `rgba(${n(2)},${n(4)},${n(6)},${Number(a.toFixed(4))})`, alpha: a };
+    return { css: `rgba(${n(2)},${n(4)},${n(6)},${Number(a.toFixed(4))})`, opacity: a };
   }
   // WPF's named colours are CSS's, give or take a handful nobody writes; a canvas takes the name.
-  if (/^[a-z]+$/i.test(t)) return t.toLowerCase() === 'transparent' ? TRANSPARENT : { css: t.toLowerCase(), alpha: 1 };
+  if (/^[a-z]+$/i.test(t)) return t.toLowerCase() === 'transparent' ? TRANSPARENT : { css: t.toLowerCase(), opacity: 1 };
   return null;
 }
 
@@ -368,7 +368,7 @@ function parseItem(raw: unknown, index: number, unknown: Set<string>): Item | nu
         italic: raw.FontStyle === 'Italic',
         size: num(raw.FontSize, 12),
         text: str(raw.Text, ''),
-        color: paintOf(raw.TextColor, { css: '#ffffff', alpha: 1 }),
+        color: paintOf(raw.TextColor, { css: '#ffffff', opacity: 1 }),
         hAlign: H_ALIGN[num(raw.HorizontalAlignment, 0)] ?? 'left',
         vAlign: V_ALIGN[num(raw.VerticalAlignment, 0)] ?? 'top',
         padding: { top: num(pad.PaddingTop, 0), bottom: num(pad.PaddingBottom, 0), left: num(pad.PaddingLeft, 0), right: num(pad.PaddingRight, 0) },
@@ -403,7 +403,7 @@ function parseItem(raw: unknown, index: number, unknown: Set<string>): Item | nu
         maximum: num(raw.Maximum, 100),
         useMinimum: bool(raw.UseMinimum, true),
         useMaximum: bool(raw.UseMaximum, true),
-        lineColor: paintOf(raw.LineColor, { css: '#ffffff', alpha: 1 }),
+        lineColor: paintOf(raw.LineColor, { css: '#ffffff', opacity: 1 }),
         lineThickness: num(raw.LineTickness, 2),
         pointsCount: Math.max(2, Math.round(num(raw.PointsCount, 100))),
         enabled: bool(raw.ChartEnabled, true),

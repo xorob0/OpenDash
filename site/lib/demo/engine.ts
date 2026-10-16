@@ -43,7 +43,7 @@ interface OpBase {
   readonly box: Box;
   readonly rotation: number;
   /** Opacity and blink, multiplied down from every enclosing layer. */
-  readonly alpha: number;
+  readonly opacity: number;
   readonly background: Paint;
   readonly border: ResolvedBorder | null;
   /** Set when a binding of this item reached something the evaluator does not compute. */
@@ -169,13 +169,13 @@ export function enables(v: E.Value): boolean {
 function mix(a: Paint, b: Paint, t: number): Paint {
   const parse = (p: Paint): number[] => {
     const m = /rgba\(([^)]+)\)/.exec(p.css);
-    return m ? m[1]!.split(',').map(Number) : [255, 255, 255, p.alpha];
+    return m ? m[1]!.split(',').map(Number) : [255, 255, 255, p.opacity];
   };
   const x = parse(a);
   const y = parse(b);
   const c = x.map((v, i) => v + ((y[i] ?? v) - v) * t);
-  const alpha = c[3] ?? 1;
-  return { css: `rgba(${Math.round(c[0]!)},${Math.round(c[1]!)},${Math.round(c[2]!)},${alpha})`, alpha };
+  const opacity = c[3] ?? 1;
+  return { css: `rgba(${Math.round(c[0]!)},${Math.round(c[1]!)},${Math.round(c[2]!)},${opacity})`, opacity };
 }
 
 /** A Mode 4 binding: the formula's number placed on the ramp. */
@@ -405,7 +405,7 @@ class DashboardRun {
     return { ops, screen };
   }
 
-  private visit(items: readonly Item[], walk: Walk, repeat: readonly number[], dx: number, dy: number, alpha: number, path: string): void {
+  private visit(items: readonly Item[], walk: Walk, repeat: readonly number[], dx: number, dy: number, inherited: number, path: string): void {
     for (const item of items) {
       const here = `${path} > ${item.name}`;
       const scope = walk.scope(repeat);
@@ -435,7 +435,7 @@ class DashboardRun {
       const blinkValue = value('BlinkEnabled');
       const blinking = blinkValue === undefined ? item.blink.enabled : (toBool(blinkValue) ?? item.blink.enabled);
       const shown = blinking ? (blinkOn(walk.input.now, item.blink.delay, item.blink.inverted) ? 1 : 0) : 1;
-      const a = alpha * opacity * shown;
+      const a = inherited * opacity * shown;
 
       if (item.kind === 'layer') {
         const repsValue = value('Repetitions');
@@ -461,7 +461,7 @@ class DashboardRun {
     repeat: readonly number[],
     dx: number,
     dy: number,
-    alpha: number,
+    opacity: number,
     path: string,
   ): void {
     const n = (target: string, fallback: number): number => {
@@ -490,7 +490,7 @@ class DashboardRun {
       border = { ...item.border, color };
     }
     const fullPath = `${walk.where}${path}`;
-    const common = { path: fullPath, box, rotation: item.rotation, alpha, background, border };
+    const common = { path: fullPath, box, rotation: item.rotation, opacity, background, border };
     const key = `${path}|${repeat.join(',')}`;
     const ops = walk.ops;
 

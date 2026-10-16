@@ -72,7 +72,7 @@ const run = (scene: SceneDashboard) => {
 };
 
 describe('the screen a dashboard draws', () => {
-  const s = (name: string, roles: Partial<Screen> = {}): Screen => ({ name, inGame: true, idle: true, pit: true, enabledExpression: '', background: { css: '#000', alpha: 1 }, items: [], ...roles });
+  const s = (name: string, roles: Partial<Screen> = {}): Screen => ({ name, inGame: true, idle: true, pit: true, enabledExpression: '', background: { css: '#000', opacity: 1 }, items: [], ...roles });
   const screens = [s('Main', { idle: false }), s('Other', { idle: false }), s('Idle', { inGame: false, pit: false })];
   const none = new Map<Mode, number>();
 
@@ -169,7 +169,7 @@ describe('one tick, in SimHub order', () => {
 });
 
 describe('paging, as SimHub pages a dashboard between frames', () => {
-  const s = (name: string, roles: Partial<Screen> = {}): Screen => ({ name, inGame: true, idle: true, pit: true, enabledExpression: '', background: { css: '#000', alpha: 1 }, items: [], ...roles });
+  const s = (name: string, roles: Partial<Screen> = {}): Screen => ({ name, inGame: true, idle: true, pit: true, enabledExpression: '', background: { css: '#000', opacity: 1 }, items: [], ...roles });
 
   test('walks every enabled screen when they carry the same roles, and filters by role only when they differ', () => {
     const same = [s('A'), s('B'), s('C')];

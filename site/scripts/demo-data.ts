@@ -95,6 +95,7 @@ import {
   zonePageSettingName,
   zonePositionSettingName,
   zoneStartSettingName,
+  PORSCHE_CREST,
 } from '../../packages/dash/src/contract.ts';
 import { parseHeader } from '../../scripts/traceFormat.ts';
 import type { PanelCatalogue, PanelChoice, PanelFace, PanelZone } from '../lib/demo/panel.ts';
@@ -222,6 +223,7 @@ export function panelCatalogue(): PanelCatalogue {
     cards: CARD_CATALOGUE.map(({ number, id, displayName }) => ({ number, id, name: displayName })),
     defaultSlotCards: [...DEFAULT_SLOT_CARDS],
     slotNames: Array.from({ length: SLOT_MAX }, (_, i) => slotSettingName(i + 1)),
+    crestName: PORSCHE_CREST,
     faces,
     companion: {
       modules: MODULE_CATALOGUE.map(({ number, id, name, enabled }) => ({ number, id, name, enabled })),

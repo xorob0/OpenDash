@@ -1,10 +1,11 @@
 /**
  * The faces the dashboards draw with, as the browser loads them.
  *
- * A `.djson` names two families. `openDash Display` is Barlow Condensed with its family renamed so
- * WPF has no width word to fold (`docs/research/simhub-dash-format.md`, #159), and `Barlow` is
- * Barlow. The woff2 files are the site's own, converted from the same TTFs the packages bundle by
- * `scripts/fonts.ts`, so a run is set in the face it was measured in.
+ * A `.djson` names two families of the house. `openDash Display` is Barlow Condensed with its family
+ * renamed so WPF has no width word to fold (`docs/research/simhub-dash-format.md`, #159), and `Barlow`
+ * is Barlow. The AiM theme names two more, `DSEG7 Classic` and `DSEG14 Classic`, the segment faces its
+ * LCD is drawn in (#204). The woff2 files are the site's own, converted from the same TTFs the packages
+ * bundle by `scripts/fonts.ts`, so a run is set in the face it was measured in.
  *
  * They are registered under names of the demo's own rather than the site's `Barlow`, so that the
  * page's stylesheet and the canvas never disagree about which file a weight comes from.
@@ -27,6 +28,9 @@ export const DEMO_FACES: readonly Face[] = [
   { family: LABEL, file: '/fonts/Barlow-Medium.woff2', weight: 500 },
   { family: LABEL, file: '/fonts/Barlow-SemiBold.woff2', weight: 600 },
   { family: LABEL, file: '/fonts/Barlow-Bold.woff2', weight: 700 },
+  { family: 'DSEG7 Classic', file: '/fonts/DSEG7Classic-Regular.woff2', weight: 400 },
+  { family: 'DSEG7 Classic', file: '/fonts/DSEG7Classic-Bold.woff2', weight: 700 },
+  { family: 'DSEG14 Classic', file: '/fonts/DSEG14Classic-Regular.woff2', weight: 400 },
 ];
 
 /** WPF's weight names as CSS numbers. */

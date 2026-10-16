@@ -18,6 +18,7 @@ import {
   DEFAULT_PIT_WALL_PAGE,
   DEFAULT_QUICK_GLANCE,
   defaultZoneMask,
+  offeredPages,
   defaultZonePage,
   FACE_SIZES,
   FACE_ZONE_LETTERS,
@@ -74,10 +75,12 @@ describe('the names it writes', () => {
     expect(written.sort()).toEqual(facePropertyNames(face).map(propertyName).sort());
   });
 
-  test('every rig-wide name is one the dashboards read, and the crest is not among them', () => {
-    const rig = [...panelProperties(catalogue, initialPanel(catalogue, null)).keys()];
+  test('every rig-wide name is one the dashboards read, and the crest is published empty', () => {
+    const published = panelProperties(catalogue, initialPanel(catalogue, null));
+    const rig = [...published.keys()];
     expect(rig.filter((n) => !declared.has(n))).toEqual([]);
-    expect(rig).not.toContain(propertyName(PORSCHE_CREST));
+    // A trace recorded on a rig with a crest carries its path; the demo has no such file and draws the shield.
+    expect(published.get(propertyName(PORSCHE_CREST))).toBe('');
     expect(rig).toContain(propertyName('PositionMode'));
     expect(rig).toContain(propertyName('Slot01'));
   });
@@ -85,7 +88,7 @@ describe('the names it writes', () => {
   test('a fresh panel publishes the contract defaults, as a fresh install does', () => {
     const p = panelProperties(catalogue, initialPanel(catalogue, 'Face850x480'));
     expect(p.get('OpenDash.Face850x480ZoneC')).toBe(14);
-    expect(p.get('OpenDash.Face850x480ZoneBPages')).toBe(2 ** 21 - 1);
+    expect(p.get('OpenDash.Face850x480ZoneBPages')).toBe(defaultZoneMask('B'));
     expect(p.get('OpenDash.Face850x480QuickGlance')).toBe(DEFAULT_QUICK_GLANCE);
     expect(p.get('OpenDash.Face850x480RevBar')).toBe('shift');
     expect(p.get('OpenDash.Face850x480ZoneCPosition')).toBe(15);
@@ -143,16 +146,17 @@ describe('a car theme', () => {
     expect(zones[3]!.pages.length).toBe(9);
   });
 
-  test('opens band D on its own page, with all nine in the cycle, and wraps through them', () => {
+  test('opens band D on its own page, with every offered page in the cycle, and wraps through them', () => {
     const p = panelProperties(catalogue, base);
     expect(p.get('OpenDash.Face1280x480ZoneD')).toBe(defaultZonePage('D', porsche));
     expect(p.get('OpenDash.Face1280x480ZoneD')).toBe(8);
     expect(p.get('OpenDash.Face1280x480ZoneDPages')).toBe(defaultZoneMask('D', porsche));
     expect(cycle(catalogue, base, 'D', 1).zones[3]).toBe(0);
-    expect(cycle(catalogue, base, 'D', -1).zones[3]).toBe(7);
-    expect(p.get('OpenDash.Face1280x480ZoneDPosition')).toBe(9);
-    // The default face of the same size keeps the house's eight.
-    expect(panelProperties(catalogue, initialPanel(catalogue, 'Face1280x480')).get('OpenDash.Face1280x480ZoneDPages')).toBe(2 ** 8 - 1);
+    // The car page, D8, is held back (#969): the cycle skips from the Porsche's page to the relative.
+    expect(cycle(catalogue, base, 'D', -1).zones[3]).toBe(6);
+    expect(p.get('OpenDash.Face1280x480ZoneDPosition')).toBe(offeredPages('D', porsche).length);
+    // The default face of the same size keeps the house's pages, less the one held back.
+    expect(panelProperties(catalogue, initialPanel(catalogue, 'Face1280x480')).get('OpenDash.Face1280x480ZoneDPages')).toBe(defaultZoneMask('D'));
   });
 });
 

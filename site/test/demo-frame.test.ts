@@ -74,7 +74,7 @@ describe('the race trace the demo replays', () => {
     const b = race.at(50)[name] as E.NumberValue;
     const c = race.at(100)[name] as E.NumberValue;
     expect(b.value).toBeCloseTo((a.value + c.value) / 2, 6);
-    expect(race.at(50)['DataCorePlugin.GameRawData.Telemetry.Gear']).toEqual(E.int(6));
+    expect(race.at(50)['DataCorePlugin.GameData.Gear']).toBe('6');
   });
 });
 

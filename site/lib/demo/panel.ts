@@ -169,6 +169,8 @@ export interface PanelCatalogue {
   readonly defaultSlotCards: readonly number[];
   /** `Slot01` and on, one per slot the plugin exposes. */
   readonly slotNames: readonly string[];
+  /** `PorscheCrest`: the crest's file on the rig, which the panel publishes empty. */
+  readonly crestName: string;
   readonly faces: readonly PanelFace[];
   readonly companion: PanelCompanion;
   readonly pitWall: PanelPitWall;
@@ -456,13 +458,15 @@ export const pitWallPagesFor = (catalogue: PanelCatalogue, landscape: boolean): 
  * The rig-wide settings and the slots always, and the group of the one screen the panel configures.
  * `now` is the clock a companion's force is timed in, and matters to nothing else.
  *
- * `OpenDash.PorscheCrest` is not among them: a crest is a picture file on the rig, and with none set
- * a Porsche face draws its placeholder shield, which is what the demo shows.
+ * `OpenDash.PorscheCrest` is published empty: a crest is a picture file on the rig, which the browser
+ * has no way to show, and a trace recorded on a rig with one set carries its path. Empty is what the
+ * plugin publishes with none set, and the Porsche face then draws its placeholder shield.
  */
 export function panelProperties(catalogue: PanelCatalogue, state: PanelState, now = 0): Map<string, string | number | boolean> {
   const out = new Map<string, string | number | boolean>();
   const put = (name: string, value: string | number | boolean) => out.set(`${catalogue.propertyPrefix}.${name}`, value);
   for (const choice of catalogue.rig) put(choice.setting, state.rig[choice.setting] ?? choice.default);
+  put(catalogue.crestName, '');
   catalogue.slotNames.forEach((name, i) => put(name, state.slots[i] ?? catalogue.defaultSlotCards[i] ?? 0));
   if (state.screen === 'companion') {
     const c = catalogue.companion;
