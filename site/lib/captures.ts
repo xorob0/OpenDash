@@ -5,9 +5,9 @@
  * renderer on the Windows VM, and `public/shots/captures.json` says which build, which commit and
  * which emulator scenario each one came from. Each entry says so for itself: a reshoot of the
  * packages alone leaves the pages as old as they are, and a sidecar that kept one version for the
- * whole folder relabelled them as the newest run's (#627). The site shows that version under the pictures, and
- * when it is not the version being served the note says so: a stale photograph presented as the
- * product is the failure #375 was filed for.
+ * whole folder relabelled them as the newest run's (#627). The tests read that version and warn when
+ * a picture is older than the version being served: a stale photograph presented as the product is
+ * the failure #375 was filed for. The pages themselves print the size and not the version (#1188).
  *
  * File names carry no scenario. A capture is `<slug>.png` for a package and `page-<id>.png` for a
  * page, and the sidecar says what scenario it was, so re-shooting on another scenario changes a
@@ -19,8 +19,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { slug } from './packages';
-
-export { provenanceNote } from './provenance';
 
 /** Which build a capture was taken from: what `scripts/shotsRun.ts` records for a run. */
 export interface Provenance {

@@ -13,7 +13,7 @@ import { ALL, BASE_FACE, LARGE_FACE, NARROWEST_FACE, WIDEST_FACE, byFolder, pick
 import { and, counted } from '../../lib/counts';
 import { COUNTS } from '../../lib/liveCounts';
 import { sizeLabel } from '../../lib/packages';
-import { INSTALL, REPO_URL, issueUrl } from '../../lib/site';
+import { INSTALL, REPO_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 /** A face as a sentence names it: a round one is `480 round`, a strip `1920 × 480 strip`, any other `1280 × 720 face`. */
@@ -111,15 +111,7 @@ export default function Screens() {
       <Section
         id="round"
         title="The round faces"
-        lede={
-          <>
-            {and(ROUND.map(sizeLabel))} still draw the earlier card layout. What a round face does with zones is decided (
-            <a href={issueUrl(145)} className="link" rel="noopener">
-              #145
-            </a>
-            ) and the conversion comes after 1.0. Both install and work.
-          </>
-        }
+        lede={`${and(ROUND.map(sizeLabel))} draw a card layout of their own rather than zones: a disc has no room for them. Both install and work like any other face.`}
       >
         <div className={styles.pair}>
           {ROUND.map((p) => (
@@ -133,9 +125,9 @@ export default function Screens() {
         title="Not listed?"
         lede={
           <>
-            SimHub scales any face to any display. Take the nearest shape. A new size is 1 layout file and a{' '}
+            SimHub scales any face to any display, so take the nearest shape. If your size deserves a face of its own, ask for it{' '}
             <a href={REPO_URL} className="link" rel="noopener">
-              pull request
+              on GitHub
             </a>
             .
           </>

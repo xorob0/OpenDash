@@ -27,11 +27,11 @@ export default function Download() {
         ruled={false}
         id="plugin"
         title={`Download ${VERSION}`}
-        lede={`${FREE_FOREVER} ${THEMES_FREE} Windows, SimHub ${SIMHUB_VERSION} or later. Built from this commit’s source by the same command CI runs.`}
+        lede={`${FREE_FOREVER} ${THEMES_FREE} Windows, SimHub ${SIMHUB_VERSION} or later.`}
       >
         {preRelease ? (
           <p className={`prose ${styles.pre}`}>
-            <span className={styles.preTag}>Pre-release.</span> Every release so far is a candidate. Expect rough edges and report them{' '}
+            <span className={styles.preTag}>Pre-release.</span> Expect rough edges, and report them{' '}
             <a href={REPO_URL} className="link" rel="noopener">
               on GitHub
             </a>
@@ -48,7 +48,13 @@ export default function Download() {
               {PLUGIN_ZIP} <span className={`num ${styles.weight}`}>{weigh(plugin.bytes)}</span>
             </a>
           ) : (
-            <p className={styles.missing}>Not in this build. The plugin zip is produced by the packaging step the site’s image runs first.</p>
+            <p className={styles.missing}>
+              The download is not available here right now. Get it from the releases{' '}
+              <a href={`${REPO_URL}/releases`} className="link" rel="noopener">
+                on GitHub
+              </a>
+              .
+            </p>
           )}
           <p className="prose">
             Close SimHub, unzip, copy <code>OpenDash.dll</code> next to <code>SimHubWPF.exe</code>, unblock it.{' '}
@@ -86,12 +92,12 @@ export default function Download() {
             <a href={REPO_URL} className="link" rel="noopener">
               the repository
             </a>
-            , run <code>bun install</code>, then <code>bun run package</code>. The plugin zip comes out of the build directory with every package inside it, as it does in CI.
+            , run <code>bun install</code>, then <code>bun run package</code>. The plugin zip comes out of the build directory with every package inside it.
           </>
         }
       />
 
-      <Section id="releases" title="Release notes" lede={`This site serves the version it was built from, so only ${VERSION} is downloadable here. The whole changelog, newest first.`}>
+      <Section id="releases" title="Release notes" lede="What changed in each version, newest first.">
         <Releases releases={RELEASES} />
       </Section>
     </>

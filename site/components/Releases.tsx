@@ -45,7 +45,7 @@ export function Releases({ releases }: { releases: Release[] }) {
             <h3 className={`num ${styles.version}`}>{release.version}</h3>
             <div className={styles.meta}>
               {release.date ? <time dateTime={release.date}>{release.date}</time> : null}
-              {release.unreleased ? <span>On main, untagged</span> : null}
+              {release.unreleased ? <span>Not released yet</span> : null}
               {release.preRelease && !release.unreleased ? <span className={styles.pre}>Pre-release</span> : null}
             </div>
           </header>

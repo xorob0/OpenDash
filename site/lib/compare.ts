@@ -122,9 +122,9 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
     id: 'sims',
     label: 'Sims',
     cells: {
-      opendash: cell('partial', 'Supported on iRacing and Assetto Corsa. ACC and Le Mans Ultimate may work, untested and not supported.', { word: 'iRacing, AC' }),
-      lovely: cell('yes', '12 sims natively, and any sim SimHub reads.', { word: 'Compatible' }),
-      dnr: cell('yes', '9 sims with their own presets, 7 with measured car data, and any sim SimHub reads.', { word: 'Compatible' }),
+      opendash: cell('partial', 'Supported on iRacing and Assetto Corsa. Any other sim SimHub reads can run it; ACC and Le Mans Ultimate are untested.', { word: '2 sims' }),
+      lovely: cell('yes', '12 sims natively, and any sim SimHub reads.', { word: '12 sims' }),
+      dnr: cell('yes', '9 sims with their own presets, 7 with measured car data, and any sim SimHub reads.', { word: '9 sims' }),
     },
   },
   {
@@ -205,7 +205,7 @@ export const rows = (c: Counts, l: Listed): CompareRow[] => [
     id: 'flagBox',
     label: 'Flag box, 8 × 8 matrix',
     cells: {
-      opendash: cell('yes', `${c.glyphs} glyphs, generated. Flags, pit states, warnings, the gear and the spotter.`, { word: 'Free' }),
+      opendash: cell('yes', `${c.glyphs} glyphs: flags, pit states, warnings, the gear and the spotter.`, { word: 'Free' }),
       lovely: cell('no', 'Nothing in the dashboards or the plugin drives a matrix.'),
       dnr: cell('paid', 'An 8 × 8 box and the SimRep panel, on the £6 tier.'),
     },

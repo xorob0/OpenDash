@@ -13,13 +13,9 @@ import { MODULES, SIMHUB_VERSION, VERSION } from '../lib/content.generated';
 import { BASE_FACE, byFolder, pickerFaces } from '../lib/faces';
 import { counted } from '../lib/counts';
 import { sizeLabel } from '../lib/packages';
-import { COUNTS, LISTED } from '../lib/liveCounts';
-import { issuesOf, rows } from '../lib/compare';
-import { CLAIMED_SIM, DIFFERENTIATORS, FREE_FOREVER, FREE_HEADLINE, INSTALL, NOTHING_TO_UNLOCK, THEMES_FREE, issueUrl, releaseWord } from '../lib/site';
+import { COUNTS } from '../lib/liveCounts';
+import { DIFFERENTIATORS, FREE_FOREVER, FREE_HEADLINE, INSTALL, NOTHING_TO_UNLOCK, THEMES_FREE, releaseWord } from '../lib/site';
 import styles from './page.module.css';
-
-/** The issues night mode for the screens is scheduled under, read from the comparison's row. */
-const NIGHT = issuesOf(rows(COUNTS, LISTED), 'night');
 
 /** The states the lights teaser shows, drawn by the site. */
 const TEASER = [FRAMES.shift!, FRAMES.yellow!, FRAMES.spotter!];
@@ -90,10 +86,14 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="pages" title={`${COUNTS.pages} pages, one button per zone`} lede="Zone B and zone C each show one page, and a wheel button cycles it. Hold the button to glance at another, release to go back.">
+      <Section
+        id="pages"
+        title={`${COUNTS.pages} pages to choose from`}
+        lede="Each zone of the face shows one page, and you pick which ones it cycles through. A wheel button turns the page; hold it to glance at another, release to go back."
+      >
         <ul className={styles.chips}>
           {MODULES.map((m) => (
-            <li key={m.id} className={`${styles.chip} ${m.enabled ? '' : styles.off}`}>
+            <li key={m.id} className={styles.chip}>
               <span className={`num ${styles.chipNumber}`}>{String(m.number).padStart(2, '0')}</span>
               {m.name}
             </li>
@@ -142,7 +142,7 @@ export default function Home() {
             </li>
           ))}
         </ul>
-        <p className={`prose ${styles.aside}`}>Drawn by the site to show the idea. The Lights page has the whole story.</p>
+        <p className={`prose ${styles.aside}`}>An illustration of the idea. The Lights page has the whole story.</p>
         <p className={`prose ${styles.more}`}>
           <Link href="/lights" className="link">
             The lights, the strip shapes and the flag box
@@ -150,36 +150,12 @@ export default function Home() {
         </p>
       </Section>
 
-      <Section id="status" title={`${releaseWord(VERSION)}: what is missing`}>
-        <ul className={`rows ${styles.status}`}>
-          <li>Every release so far is a candidate.</li>
-          <li>
-            {CLAIMED_SIM}{' '}
-            <Link href="/pages#sims" className="link">
-              Which sim shows what
-            </Link>
-          </li>
-          <li>
-            Night mode is for the lights only. Screens are coming (
-            {NIGHT.map((n, i) => (
-              <span key={n}>
-                {i > 0 ? ', ' : ''}
-                <a href={issueUrl(n)} className="link" rel="noopener">
-                  #{n}
-                </a>
-              </span>
-            ))}
-            ).
-          </li>
-        </ul>
+      <Section id="get" title="Install it" lede={`Windows, SimHub ${SIMHUB_VERSION} or later, iRacing or Assetto Corsa. ${FREE_FOREVER}`}>
         <p className={`prose ${styles.more}`}>
-          <Link href="/compare" className="link">
-            The full comparison with Lovely and Daniel Newman Racing
+          <Link href="/pages#sims" className="link">
+            Which sim shows what
           </Link>
         </p>
-      </Section>
-
-      <Section id="get" title="Install it" lede={`Windows, SimHub ${SIMHUB_VERSION} or later. ${FREE_FOREVER}`}>
         <Actions>
           <Primary href={INSTALL.href}>{INSTALL.label} OpenDash</Primary>
           <Secondary href="/download">Download the plugin</Secondary>

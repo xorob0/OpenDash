@@ -144,10 +144,15 @@ describe('the status word', () => {
   });
 });
 
-/** Every picture says which build took it (#552): the two components that draw one call the note. */
-describe('the pictures say where they came from', () => {
-  test.each(['components/Capture.tsx', 'components/Clip.tsx'])('%s prints the provenance note', (file) => {
-    expect(read(file)).toContain('provenanceNote(');
+/**
+ * A caption is the size and nothing else (#1188). The build a picture came from is in the sidecar
+ * and read by captures.test.ts; printed under every picture it read as a note to the project, not
+ * to a visitor, and the two components that draw one no longer print it.
+ */
+describe('the pictures keep their provenance to the tests', () => {
+  test.each(['components/Capture.tsx', 'components/Clip.tsx'])('%s prints no version under a picture', (file) => {
+    expect(read(file)).not.toContain('provenanceNote(');
+    expect(read(file)).not.toContain('VERSION');
   });
 });
 

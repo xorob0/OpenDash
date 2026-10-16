@@ -28,7 +28,7 @@ export default function Pages() {
       >
         <PageGrid pages={on} />
         <div className={styles.note}>
-          <p className={`prose ${styles.aside}`}>The track page’s outline is what SimHub recorded from the emulator’s lap. On a rig it is the circuit.</p>
+          <p className={`prose ${styles.aside}`}>The track page’s outline here is from a test lap. On your rig it is the circuit you are driving.</p>
         </div>
       </Section>
 
@@ -55,7 +55,7 @@ export default function Pages() {
 
       <Section id="glance" title="Quick glance" lede="Hold a wheel button and one zone shows a page you chose. Release it and the zone goes back." />
 
-      <Section id="sims" title="Which sim shows what" lede={`${CLAIMED_SIM} Where a sim publishes nothing for a reading, the reading hides, reads -- or says so.`}>
+      <Section id="sims" title="Which sim shows what" lede={`${CLAIMED_SIM} Any other sim SimHub reads can run the packages too. Where a sim publishes nothing for a reading, the reading hides, reads -- or says so.`}>
         <SimTable sims={SIM_NAMES} sections={SIM_TABLE} />
       </Section>
     </>

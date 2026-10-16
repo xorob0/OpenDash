@@ -23,7 +23,7 @@
   padding: var(--space-3) var(--space-6);
   font-size: 1.125rem;
   font-weight: 500;
-  color: var(--purpose-ui-on-accent);
+  color: var(--purpose-ui-onAccent);
   background: var(--purpose-ui-accent);
   border-radius: var(--radius-sm);
   transition: background var(--fast) var(--ease);

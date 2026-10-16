@@ -6,7 +6,7 @@ import { DOWNLOADS, SIMHUB_VERSION, VERSION } from '../../lib/content.generated'
 import { weigh } from '../../lib/packages';
 import { counted, dashboards } from '../../lib/counts';
 import { COUNTS } from '../../lib/liveCounts';
-import { NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP, SCOPE_URL, SIMHUB_URL } from '../../lib/site';
+import { NO_OTHER_ROUTE, ONLY_WAY_IN, PLUGIN_ZIP, SIMHUB_URL } from '../../lib/site';
 import styles from './page.module.css';
 
 export const metadata: Metadata = {
@@ -145,14 +145,8 @@ export default function Install() {
         </ul>
       </Section>
 
-      <Section id="only-way" title="There is no other way in" lede={ONLY_WAY_IN}>
-        <p className="prose">
-          {NO_OTHER_ROUTE}{' '}
-          <a href={SCOPE_URL} className="link" rel="noopener">
-            Read the scope
-          </a>
-          .
-        </p>
+      <Section id="only-way" title="Without the plugin?" lede={ONLY_WAY_IN}>
+        <p className="prose">{NO_OTHER_ROUTE}</p>
       </Section>
     </>
   );

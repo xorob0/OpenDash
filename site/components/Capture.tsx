@@ -18,10 +18,12 @@
  *
  * A capture the sidecar does not know is drawn as an empty frame that says so, rather than as a
  * broken image: the panel pictures arrive with the reshoot, and a page may ship before them.
+ *
+ * The caption is the size and nothing else. Which build took the picture is in the sidecar for the
+ * tests, which warn when it is older than the version served; a visitor is not asked to read it.
  */
 import Image from 'next/image';
-import { CAPTURES, hasCapture, provenanceNote } from '../lib/captures';
-import { VERSION } from '../lib/content.generated';
+import { hasCapture } from '../lib/captures';
 import { PANNABLE_ASPECT } from './frame';
 import styles from './Capture.module.css';
 
@@ -45,8 +47,6 @@ export interface CaptureProps {
 export function Capture({ file, alt, width, height, caption, round, priority, sizes = '(min-width: 88rem) 84rem, 100vw', scale = 1 }: CaptureProps) {
   const pannable = !round && width / height > PANNABLE_ASPECT;
   const known = hasCapture(file);
-  // Every picture says which build took it, and whether that is the one being served (#552).
-  const taken = CAPTURES.files[file]?.version;
   return (
     <figure className={styles.figure}>
       <div
@@ -61,12 +61,7 @@ export function Capture({ file, alt, width, height, caption, round, priority, si
           </div>
         )}
       </div>
-      {caption || taken ? (
-        <figcaption className={styles.caption}>
-          {caption}
-          {taken ? <span className={styles.taken}>{caption ? ' · ' : ''}{provenanceNote(taken, VERSION)}</span> : null}
-        </figcaption>
-      ) : null}
+      {caption ? <figcaption className={styles.caption}>{caption}</figcaption> : null}
     </figure>
   );
 }

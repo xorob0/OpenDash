@@ -8,7 +8,7 @@ import { COUNTS } from '../lib/liveCounts';
 import { SITE_NAME, SITE_TAGLINE, SITE_URL, SUPPORTED_SIMS } from '../lib/site';
 
 const TITLE = `${SITE_NAME}: free SimHub dashboards for ${SUPPORTED_SIMS}`;
-const DESCRIPTION = `${counted(dashboards(COUNTS), 'SimHub dashboard')}, ${COUNTS.pages} pages, car themes and ${counted(COUNTS.ledProfiles, 'LED profile')} for ${SUPPORTED_SIMS} on Windows. Free, forever, under MIT. Generated from source.`;
+const DESCRIPTION = `${counted(dashboards(COUNTS), 'SimHub dashboard')}, ${COUNTS.pages} pages, car themes and ${counted(COUNTS.ledProfiles, 'LED profile')} for ${SUPPORTED_SIMS} on Windows. Free, forever, under MIT.`;
 
 export const metadata: Metadata = {
   // With NEXT_PUBLIC_SITE_URL unset there is no absolute origin to build on, and Next falls back
