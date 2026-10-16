@@ -8,7 +8,7 @@
  * Top = y - 0.1 fs, Height = 1.2 fs, VerticalAlignment top.
  */
 import type { FontWeight, Monospace } from '../generator.ts';
-import type { MeasuredFace } from './advances.ts';
+import { carries, type MeasuredFace } from './advances.ts';
 import { ds } from '../tokens.ts';
 
 export const FONT_METRICS = { unitsPerEm: 1000, ascender: 1000, descender: -200, lineGap: 0, capHeight: 700, xHeight: 510 } as const;
@@ -132,6 +132,20 @@ export const DATA_FACE: Readonly<Record<DataWeight, MeasuredFace>> = DATA_IN_LAB
   : DATA_IN_SEGMENT_FAMILY
     ? { SemiBold: 'DSEG7Regular', Bold: 'DSEG7Bold' }
     : { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
+
+/**
+ * Whether the data faces group a whole number's thousands. They do where both carry a comma, and the
+ * seven-segment face a car theme's LCD draws does not: an LCD has no comma to light, and WPF drew the
+ * one in `1,350` in a face of its own, a typographic comma hanging under the segment figures (#1184).
+ * The theme decides it by the face it points `font.family.data` at, so no module names a theme.
+ */
+const GROUPS_THOUSANDS = carries(DATA_FACE.SemiBold, ',') && carries(DATA_FACE.Bold, ',');
+
+/** The pattern a whole number that groups its thousands is formatted in, which is the engine speed's. */
+export const THOUSANDS: string = GROUPS_THOUSANDS ? '#,0' : '0';
+
+/** A whole number written as {@link THOUSANDS} writes it, for the sample beside the binding. */
+export const thousands = (n: number): string => (GROUPS_THOUSANDS ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : String(n));
 
 /**
  * Monospace cell widths as a fraction of the font size, per face, from the tokens. The cell holds

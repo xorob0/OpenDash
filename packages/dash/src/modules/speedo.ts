@@ -10,6 +10,7 @@ import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
 import { drawnFigure } from '../second/drawn.ts';
 import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
+import { THOUSANDS, thousands } from '../design/metrics.ts';
 import { redlineRpm } from '../shift.ts';
 import { band } from '../elements/band.ts';
 import { rect } from '../design/geometry.ts';
@@ -37,10 +38,10 @@ export const speedo = defineModule('speedo', (ctx) => {
             // take: 81 km/h and 281 km/h keep one gap. `second/drawn.ts`.
             drawn: drawnFigure({ value: speed(), digits: CHARS.speed.digits }),
           }),
-          fld(ctx, 'rpm', 'RPM', { sample: '7,420', bind: fmt(rpm(), '#,0'), chars: CHARS.rpm, fs: d.big }),
+          fld(ctx, 'rpm', 'RPM', { sample: thousands(7420), bind: fmt(rpm(), THOUSANDS), chars: CHARS.rpm, fs: d.big }),
           // The number the bar above it turns red at, from the same model rather than SimHub's own
           // redline: printing two answers to one question is the thing ADR 0014 exists to prevent.
-          fld(ctx, 'redline', 'Redline', { sample: '8,100', bind: fmt(redlineRpm(), '#,0'), chars: CHARS.rpm, fs: d.mid }),
+          fld(ctx, 'redline', 'Redline', { sample: thousands(8100), bind: fmt(redlineRpm(), THOUSANDS), chars: CHARS.rpm, fs: d.mid }),
         ],
         ctx,
       ),
