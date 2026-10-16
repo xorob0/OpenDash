@@ -22,12 +22,13 @@ import { band } from '../elements/band.ts';
 import { rule } from '../elements/rule.ts';
 import { flagSettled, flagSettledWidth, flagStrip, flagTakingBand, FLAG_STRIP_STYLES } from '../components/flagStrip.ts';
 import { measureText } from '../design/advances.ts';
+import { inkOf } from '../design/metrics.ts';
 import { flagFull, flagFullOut } from '../components/flagFull.ts';
 import { alertCondition, anyBandRaised } from '../flags.ts';
-import { PIT_ALERTS, pitAlerts, pitAlertVisible } from '../components/pitAlerts.ts';
-import { lastingPopUpFrame, lastingPopUps, popUpRoom, transientPopUps } from '../components/popUp.ts';
+import { PIT_ALERTS, pitAlertOut, pitAlerts, pitAlertVisible } from '../components/pitAlerts.ts';
+import { lastingPopUpFrame, lastingPopUps, popUpRoom, popUpsOfKind, transientPopUps } from '../components/popUp.ts';
 import { changeNotifications } from '../components/changeNotification.ts';
-import { overlaps, rect } from '../design/geometry.ts';
+import { bottom, contains, overlaps, rect, right, translate } from '../design/geometry.ts';
 import { idleScreen } from '../idle.ts';
 import { lapReview, lapReviewFrame, lapReviewOut } from '../components/lapReview.ts';
 import { ds } from '../tokens.ts';
@@ -38,10 +39,10 @@ import type { FaceContext, ThemeDrawing } from '../themes/drawing.ts';
 import { label } from '../elements/label.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { bannerClearance, widestCounter, zoneAGearInk, zoneDashboardsFor, zoneWidget } from './pages.ts';
-import { walkItems } from '../walk.ts';
+import { bannerClearance, widestCounter, zoneAGearInk, zoneDashboardsFor, zonePageScreens, zoneWidget } from './pages.ts';
+import { drawnParts, walkItems } from '../walk.ts';
 
-const { and, not, or } = ncalc;
+const { and, eq, not, num, or } = ncalc;
 
 export const FACE_SCREEN_NAME = 'Main';
 /**
@@ -127,6 +128,12 @@ export function faceItems(
     items.push(...zoneHeaderParts(face, zone, zoneRect(regions, zone), drawing));
   }
 
+  // Where a theme lays the pit banner over a zone of modules, as the AiM lays it over the top of zone
+  // C, the page under it gives up the row the banner cuts while the banner's row is in use (#1165).
+  // Listed after the widgets, which it is drawn over, and before the flags, which are drawn over it.
+  const banner = regionRect(regions, 'pitAlert');
+  items.push(...bannerRowMasks(face, regions, drawing, banner, theme));
+
   // A flag takes the band over, because an alert outranks fuel. The same sixty pixels goes to
   // whichever has the better claim, which is why the face has no separate flag strip.
   //
@@ -177,7 +184,6 @@ export function faceItems(
   // the zone -- and over the full-screen flag, which covers this rectangle too: a driver serving a
   // stop under a red flag still has to know whether the limiter is on.
   const restyled = (drawn: Item[], boxes: 'inverse' | 'outline'): Item[] => (drawing.restyle ? drawing.restyle(drawn, { boxes }) : drawn);
-  const banner = regionRect(regions, 'pitAlert');
   const pitFamily = restyled(pitAlerts(banner, 'pitAlert'), 'inverse');
   items.push(...pitFamily);
 
@@ -250,6 +256,214 @@ export function faceItems(
   items.push(...giveWay(restyled([lapReview(lapReviewFrame(hero, flagBody), lapReviewOut(face), 'lapReview')], 'outline'), { pitFamily: 'waits already' }));
 
   return items;
+}
+
+/** A part of a page drawn in the banner's columns: its box, its ink, and the Visibles it is drawn under. */
+interface RowPart {
+  name: string;
+  text: boolean;
+  rect: Rect;
+  ink: Rect;
+  when: readonly Expr[];
+}
+
+/**
+ * Every part a page draws in the banner's columns, a repeated layer's copies each where SimHub stamps
+ * it, with the Visibles of the layers it is drawn inside. A repeated layer's rows ask after their own
+ * copy with `repeatindex()`, which means nothing outside the copy, so the Visibles stop at the first
+ * repeated layer and a row is taken as drawn. The page's own ground, which lies behind the whole
+ * banner, is not a part.
+ */
+const rowParts = (banner: Rect, items: readonly Item[]): RowPart[] =>
+  [...drawnParts(items)]
+    .map(({ item, layers }) => {
+      const repeated = layers.findIndex((layer) => (layer.repetitions ?? 0) > 0);
+      const when = (repeated < 0 ? layers : layers.slice(0, repeated)).flatMap((layer) => visibleOf(layer) ?? []);
+      return { name: item.name, text: item.kind === 'text', rect: item.rect, ink: item.kind === 'text' ? inkOf(item) : item.rect, when };
+    })
+    .filter(({ rect: r }) => r.left < right(banner) && right(r) > banner.left && !contains(r, banner));
+
+/**
+ * What the face covers of a page under the pit banner, beyond the banner itself, in the coordinates the
+ * parts are drawn in: the banner's columns, each taken down past everything drawn across its foot until
+ * nothing is (#1165). The foot moves a run of columns at a time, so a reading taken beside a drawing
+ * does not take the drawing's columns with it.
+ *
+ * A text is taken when its ink is cut, because a figure whose top is under the banner and whose foot
+ * is not reads as a different figure, and its columns go down to the foot of the ink rather than of
+ * the box: the boxes of a page's stacked figures overlap where their ink does not, and would take the
+ * page a row at a time. A drawing is taken when it holds a text that is taken or ends no lower than the
+ * deepest text taken so far, which takes a row's ground with its row and a badge beside its text,
+ * unless taking it would cut something that was whole below the banner. That leaves a radar, a map, a
+ * trace or a car under the banner as it would be under any box: a drawing that reaches below the row
+ * it crosses is the page itself, and blanking it would leave the zone empty for the length of a stop.
+ * A wheel the banner clips by a few pixels is left too: it is shorter than the banner, but it hangs
+ * below every reading taken beside it, and blanking it took the pit view's front wheels at 800x286.
+ *
+ * `guarded` is every part the covers may be drawn over, which is more than `parts` where the covers
+ * are shown with drawings they were not computed from: nothing of it that was whole below the banner
+ * is cut by a take, and no merge changes how any of it is cut. `cut` is what of it was whole below the
+ * banner and is cut by what is covered, which a page that asks for this must not have.
+ */
+function rowUnderBanner(banner: Rect, parts: readonly RowPart[], guarded: readonly RowPart[] = parts): { covers: Rect[]; cut: RowPart[] } {
+  const sky = skyline(banner);
+  const below = (part: RowPart): boolean => part.ink.top >= bottom(banner);
+  const cutBy = (s: Skyline, { ink }: RowPart): boolean => {
+    const { least, most } = s.over(ink.left, right(ink));
+    return most > ink.top && least < bottom(ink);
+  };
+  const taken: Rect[] = [];
+  const settled = new Set<RowPart>();
+  for (;;) {
+    const taking = parts.filter((part) => {
+      if (settled.has(part) || !cutBy(sky, part)) return false;
+      if (part.text) return true;
+      const short = bottom(part.rect) <= sky.over(banner.left, right(banner)).most;
+      if (!short && !taken.some((ink) => contains(part.rect, ink))) return false;
+      const after = sky.copy();
+      after.raise(part.ink.left, right(part.ink), Math.ceil(bottom(part.ink)));
+      return !guarded.some((other) => other !== part && !settled.has(other) && below(other) && !cutBy(sky, other) && cutBy(after, other));
+    });
+    if (taking.length === 0) break;
+    for (const part of taking) {
+      settled.add(part);
+      if (part.text) taken.push(part.ink);
+      sky.raise(part.ink.left, right(part.ink), Math.ceil(bottom(part.ink)));
+    }
+  }
+  // Neighbouring runs are then drawn as one wherever that changes nothing a driver sees: no part is cut
+  // that was not, and a part cut already is cut no deeper and no shallower. A row of figures is one
+  // rectangle to the foot of its deepest figure rather than a run per figure.
+  const unchanged = (before: Skyline, after: Skyline): boolean =>
+    guarded.every((part) => {
+      if (!cutBy(after, part)) return true;
+      if (!cutBy(before, part)) return false;
+      const [was, is] = [before.over(part.ink.left, right(part.ink)), after.over(part.ink.left, right(part.ink))];
+      return was.least === is.least && was.most === is.most;
+    });
+  let flat = sky;
+  for (let merged = true; merged; ) {
+    merged = false;
+    const runs = flat.runs();
+    for (let i = 0; i + 1 < runs.length && !merged; i++) {
+      const trial = flat.copy();
+      trial.raise(runs[i]!.left, runs[i + 1]!.right, Math.max(runs[i]!.foot, runs[i + 1]!.foot));
+      if (unchanged(flat, trial)) [flat, merged] = [trial, true];
+    }
+  }
+  return { covers: flat.covers(), cut: guarded.filter((part) => !settled.has(part) && below(part) && cutBy(flat, part)) };
+}
+
+interface Skyline {
+  raise(left: number, right: number, foot: number): void;
+  over(left: number, right: number): { least: number; most: number };
+  copy(): Skyline;
+  runs(): readonly { left: number; right: number; foot: number }[];
+  covers(): Rect[];
+}
+
+/**
+ * How far down the banner's columns are covered, a run of columns at a time, from the banner's foot.
+ * Covering a span only deepens it, and `covers` gives each run deeper than the banner as a rectangle
+ * from the banner's top.
+ */
+function skyline(banner: Rect, from: readonly { left: number; right: number; foot: number }[] = [{ left: banner.left, right: right(banner), foot: bottom(banner) }]): Skyline {
+  let runs = from.map((run) => ({ ...run }));
+  const clamp = (x: number): number => Math.min(right(banner), Math.max(banner.left, x));
+  return {
+    raise(l, r, foot) {
+      const [start, end] = [clamp(l), clamp(r)];
+      if (end <= start) return;
+      runs = runs
+        .flatMap((run) => {
+          if (run.right <= start || run.left >= end || run.foot >= foot) return [run];
+          return [
+            ...(run.left < start ? [{ ...run, right: start }] : []),
+            { left: Math.max(run.left, start), right: Math.min(run.right, end), foot },
+            ...(run.right > end ? [{ ...run, left: end }] : []),
+          ];
+        })
+        .reduce<typeof runs>((merged, run) => {
+          const last = merged.at(-1);
+          if (last && last.foot === run.foot && last.right === run.left) last.right = run.right;
+          else merged.push({ ...run });
+          return merged;
+        }, []);
+    },
+    over(l, r) {
+      const feet = runs.filter((run) => run.left < r && run.right > l).map((run) => run.foot);
+      return { least: Math.min(...feet), most: Math.max(...feet) };
+    },
+    copy: () => skyline(banner, runs),
+    runs: () => runs.map((run) => ({ ...run })),
+    covers: () => runs.filter((run) => run.foot > bottom(banner)).map((run) => rect(run.left, banner.top, run.right - run.left, run.foot - banner.top)),
+  };
+}
+
+/**
+ * The zone's ground drawn over the row each page of a zone of modules loses to the pit banner, where
+ * the banner is laid over such a zone (#1165).
+ *
+ * The banner is 30 px where a row of the relative is 64, so a driver in the box read the lower half of
+ * the first row under it and nothing to say it was the car ahead. Under the ground the row is gone
+ * whole, for as long as the banner's row is in use: while a state of the pit family is out, and while
+ * a lasting pop-up holds it. The pages are read off the zone's own screens, so a page that changes its
+ * rows moves its rectangles with it, and each rectangle is shown on its page alone, asked once on the
+ * group, whose Visible being false leaves the pages' bindings unevaluated for the rest of a stint.
+ *
+ * A page that draws one of two halves, as the pit view draws the car where the sim publishes the stop
+ * and a centred column where it does not, is covered a half at a time, each half's rectangles shown
+ * with its half, so that a reading of one half never takes or cuts the other half's car: at 800x286 the
+ * unpublished half's PIT TIME caption lies across the published half's car. What every half draws is
+ * covered once, shown with all of them, and so is kept clear of every half's drawings. A page that
+ * still cuts something whole below the banner is refused, since the driver would see it.
+ *
+ * The house and the Porsche lay the banner over the gear's zone, which is drawn to be read through it,
+ * and get none.
+ */
+function bannerRowMasks(face: FaceSize, regions: Regions, drawing: ThemeDrawing, banner: Rect, theme?: ThemeEntry): Item[] {
+  const zone = (['B', 'C'] as const).find((z) => contains(zoneRect(regions, z), banner));
+  if (zone === undefined) return [];
+  const at = zoneRect(regions, zone);
+  const ground = drawing.zoneGround?.(zone) ?? ds.color.surface.base;
+  const inZone = translate(banner, -at.left, -at.top);
+  const masks = zonePageScreens(face, [zone], { width: at.width, height: at.height }, false, drawing).flatMap(({ page, screen }) => {
+    const parts = rowParts(inZone, screen.items);
+    const halves = halvesOf(parts).map((when) => {
+      const half = parts.filter((part) => startsWith(when, part.when));
+      return { when, ...rowUnderBanner(inZone, half, when.length === 0 ? parts : half) };
+    });
+    const cut = halves.flatMap((half) => half.cut);
+    if (cut.length > 0) {
+      throw new Error(`the pit banner at ${JSON.stringify(banner)} cannot take a row of the ${page.id} page at ${face.width}x${face.height} without cutting ${cut.map((part) => `${part.name} at ${part.ink.top}-${bottom(part.ink)}`).join(', ')}`);
+    }
+    const shown = new Set<string>();
+    const covers = halves.flatMap(({ when, covers }) =>
+      covers.flatMap((cover) => {
+        const key = JSON.stringify(cover);
+        if (shown.has(key)) return [];
+        if (when.length === 0) shown.add(key);
+        return [{ cover: translate(cover, at.left, at.top), when }];
+      }),
+    );
+    const onPage = eq(zoneSetting.page(face, zone, theme), num(page.number));
+    return covers.map(({ cover, when }, i) => withMoreBindings(band(covers.length === 1 ? `bannerRow.${page.id}` : `bannerRow.${page.id}.${i + 1}`, cover, ground), { Visible: when.length === 0 ? onPage : and(onPage, ...when) }));
+  });
+  if (masks.length === 0) return [];
+  return [withMoreBindings({ kind: 'layer', name: 'bannerRow', children: masks }, { Visible: or(pitAlertOut(), ...popUpsOfKind('lasting').map((spec) => spec.when)) })];
+}
+
+/** Whether `path` begins with every Visible of `prefix`, in order. */
+const startsWith = (path: readonly Expr[], prefix: readonly Expr[]): boolean => prefix.length <= path.length && prefix.every((when, i) => path[i] === when);
+
+/**
+ * The ways a page can be drawn, as the Visibles of the layers it shows: none of them, and each deepest
+ * run of them a part is drawn under. The parts drawn under none are in every way.
+ */
+function halvesOf(parts: readonly RowPart[]): (readonly Expr[])[] {
+  const paths = [...new Map(parts.map((part) => [JSON.stringify(part.when), part.when])).values()];
+  const deepest = paths.filter((path) => !paths.some((other) => other.length > path.length && startsWith(other, path)));
+  return [[], ...deepest.filter((path) => path.length > 0)];
 }
 
 /** The Visible of each state of the pit family, by which a layer drawing that state is known. */

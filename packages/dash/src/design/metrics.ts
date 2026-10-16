@@ -8,7 +8,7 @@
  * Top = y - 0.1 fs, Height = 1.2 fs, VerticalAlignment top.
  */
 import type { FontWeight, Monospace } from '../generator.ts';
-import type { MeasuredFace } from './advances.ts';
+import { carries, type MeasuredFace } from './advances.ts';
 import { ds } from '../tokens.ts';
 
 export const FONT_METRICS = { unitsPerEm: 1000, ascender: 1000, descender: -200, lineGap: 0, capHeight: 700, xHeight: 510 } as const;
@@ -61,6 +61,17 @@ export const canvasYForBaseline = (baseline: number, fs: number): number => base
  */
 const BARLOW_FAMILIES: ReadonlySet<string> = new Set(['Barlow', 'openDash Display']);
 
+/** The segment faces the AiM's register sets its readings in (`themes/aim/register.ts`). */
+const SEGMENT_FAMILIES: ReadonlySet<string> = new Set(['DSEG7 Classic', 'DSEG14 Classic']);
+
+/**
+ * How far below a box's top WPF sets the top of a segment face's cell, in em. The DSEG faces have an
+ * ascent of one em, no descent and a line gap of 0.09 em, and WPF lays half the gap above the ascent,
+ * so the cell starts 0.045 em down and its foot is 1.045 em down. Seen on the VM, where a ground cut
+ * to the box's first em left a row of 1 to 2 px of segment feet under it (#1165).
+ */
+export const SEGMENT_CELL_DROP = 0.045;
+
 /**
  * How far a figure or a capital marks above the baseline and below it, in em: the cap height and the
  * overshoot a round figure carries past it and under the baseline. Read off the bundled faces with
@@ -74,10 +85,15 @@ const INK_BELOW_BASELINE = 0.02;
  * The part of a text box a run of figures or capitals can mark: from the top of the cap height and
  * its overshoot down to just under the baseline, across the whole box. A WPF box is 1.2 em tall and
  * its first 0.28 em is leading a figure never reaches, which is the room the face draws the pit banner
- * in above the gear. A face these metrics do not describe, such as the AiM's seven-segment faces, is
- * taken to mark its whole box, which is never smaller than its ink.
+ * in above the gear. The AiM's segment faces mark a cell one em tall, set {@link SEGMENT_CELL_DROP} below
+ * the box's top, the rest of the box being the line's slack. A face neither describes is taken to mark
+ * its whole box, which is never smaller than its ink.
  */
 export function inkOf(item: { rect: { left: number; top: number; width: number; height: number }; font: string; fontSize: number }): { left: number; top: number; width: number; height: number } {
+  if (SEGMENT_FAMILIES.has(item.font)) {
+    const top = item.rect.top + SEGMENT_CELL_DROP * item.fontSize;
+    return { ...item.rect, top, height: Math.min(item.rect.top + item.rect.height, top + item.fontSize) - top };
+  }
   if (!BARLOW_FAMILIES.has(item.font)) return { ...item.rect };
   const baseline = item.rect.top + WPF_BASELINE * item.fontSize;
   const top = baseline - INK_ABOVE_BASELINE * item.fontSize;
@@ -116,6 +132,20 @@ export const DATA_FACE: Readonly<Record<DataWeight, MeasuredFace>> = DATA_IN_LAB
   : DATA_IN_SEGMENT_FAMILY
     ? { SemiBold: 'DSEG7Regular', Bold: 'DSEG7Bold' }
     : { SemiBold: 'BarlowCondensedSemiBold', Bold: 'BarlowCondensedBold' };
+
+/**
+ * Whether the data faces group a whole number's thousands. They do where both carry a comma, and the
+ * seven-segment face a car theme's LCD draws does not: an LCD has no comma to light, and WPF drew the
+ * one in `1,350` in a face of its own, a typographic comma hanging under the segment figures (#1184).
+ * The theme decides it by the face it points `font.family.data` at, so no module names a theme.
+ */
+const GROUPS_THOUSANDS = carries(DATA_FACE.SemiBold, ',') && carries(DATA_FACE.Bold, ',');
+
+/** The pattern a whole number that groups its thousands is formatted in, which is the engine speed's. */
+export const THOUSANDS: string = GROUPS_THOUSANDS ? '#,0' : '0';
+
+/** A whole number written as {@link THOUSANDS} writes it, for the sample beside the binding. */
+export const thousands = (n: number): string => (GROUPS_THOUSANDS ? String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : String(n));
 
 /**
  * Monospace cell widths as a fraction of the font size, per face, from the tokens. The cell holds

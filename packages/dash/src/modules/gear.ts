@@ -22,6 +22,7 @@ import { ROW_TAIL, stack } from '../second/layout.ts';
 import { rect } from '../design/geometry.ts';
 import { drawnFigure } from '../second/drawn.ts';
 import { CHARS, rpm, speed, speedUnit } from '../second/values.ts';
+import { THOUSANDS, thousands } from '../design/metrics.ts';
 
 const { fmt } = ncalc;
 
@@ -56,7 +57,7 @@ export const gear = defineModule('gear', (ctx) => {
       follower: { text: 'km/h', bind: speedUnit(), widest: 'km/h' },
       drawn: drawnFigure({ value: speed(), digits: CHARS.speed.digits }),
     }),
-    fld(ctx, 'rpm', 'RPM', { sample: '7,420', bind: fmt(rpm(), '#,0'), chars: CHARS.rpm, fs: d.big }),
+    fld(ctx, 'rpm', 'RPM', { sample: thousands(7420), bind: fmt(rpm(), THOUSANDS), chars: CHARS.rpm, fs: d.big }),
   ];
   const fieldsHeight = rowHeight(fields, ctx.density);
   // Less the tail `stack` reserves at each end for the line boxes of the first and last rows. Left

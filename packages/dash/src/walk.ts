@@ -9,13 +9,42 @@
  * module switches and the pit wall's page (#581): the trace recorder asked SimHub for none of them,
  * and the replays drew those fields from nothing.
  */
-import type { Binding, Dashboard, Item } from './generator.ts';
+import type { Binding, Dashboard, Item, LayerItem } from './generator.ts';
 import { VARIABLE_PREFIX, bindingsOf, ncalc } from './generator.ts';
 
 export function* walkItems(items: readonly Item[]): Generator<Item> {
   for (const item of items) {
     yield item;
     if (item.kind === 'layer') yield* walkItems(item.children);
+  }
+}
+
+/**
+ * Every item the screen draws, where it draws it: layers are groups rather than drawings and are
+ * left out, and a repeated layer's children are given once for each copy SimHub stamps, the copy
+ * moved by its offsets. A layer's children keep absolute coordinates, so the first copy is the
+ * children as written, and a copy of a copy is moved by both layers' offsets.
+ *
+ * {@link walkItems} gives a repeated layer's children once, which is the model and not the screen:
+ * a table's second row is drawn a row lower than anything the model says.
+ */
+export function* drawnItems(items: readonly Item[]): Generator<DrawnItem> {
+  for (const { item } of drawnParts(items)) yield item;
+}
+
+/** An item that draws, which is every kind but a layer. */
+export type DrawnItem = Exclude<Item, { kind: 'layer' }>;
+
+/** Each item {@link drawnItems} gives, with the layers it is drawn inside, the outermost first. */
+export function* drawnParts(items: readonly Item[], layers: readonly LayerItem[] = [], dx = 0, dy = 0): Generator<{ item: DrawnItem; layers: readonly LayerItem[] }> {
+  for (const item of items) {
+    if (item.kind !== 'layer') {
+      yield { item: dx === 0 && dy === 0 ? item : { ...item, rect: { ...item.rect, left: item.rect.left + dx, top: item.rect.top + dy } }, layers };
+      continue;
+    }
+    for (let copy = 0; copy <= (item.repetitions ?? 0); copy++) {
+      yield* drawnParts(item.children, [...layers, item], dx + copy * (item.repeatLeftOffset ?? 0), dy + copy * (item.repeatTopOffset ?? 0));
+    }
   }
 }
 

@@ -233,6 +233,24 @@ function withBandSessionNotice(page: FaceZonePageMeta, frame: Rect, corners: boo
 const groundOf = (zone: FaceZone): `#${string}` => (zone === 'D' ? ds.purpose.block.well : ds.color.surface.base);
 
 /**
+ * The screens of a zone's catalogue in the plugin's order, each with the page whose number shows it:
+ * what a zone dashboard draws before the pages a theme adds, and what the face reads when it has to
+ * know where a page's items fall under something it draws over the zone (#1165).
+ *
+ * A held-back page's screen is the house's opening page renamed, as {@link zoneDashboard} says why.
+ */
+export function zonePageScreens(face: FaceSize, zones: ZoneGroup, size: Size, corners = false, drawing: ThemeDrawing = {}): { page: FaceZonePageMeta; screen: Screen }[] {
+  const zone = zones[0];
+  const pages = pagesForZone(zone);
+  return pages.map((page) => ({
+    page,
+    screen: isHeldBack(zone, page.id)
+      ? { ...zonePageScreen(face, zones, pages[DEFAULT_ZONE_PAGE[zone]]!, size, corners, drawing), name: page.id }
+      : zonePageScreen(face, zones, page, size, corners, drawing),
+  }));
+}
+
+/**
  * A zone dashboard: every page of its catalogue, in the order the plugin lists them, and after
  * band D's the pages a theme adds to it, which go at the end so that no page leaves its index.
  *
@@ -246,17 +264,12 @@ const groundOf = (zone: FaceZone): `#${string}` => (zone === 'D' ? ds.purpose.bl
  */
 export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, metadata: DashboardMetadata, corners = false, drawing: ThemeDrawing = {}): Dashboard {
   const zone = zones[0];
-  const pages = pagesForZone(zone);
   const kind = kindOf(zone);
   const ground = drawing.zoneGround?.(zone) ?? groundOf(zone);
   const frame = rect(0, 0, size.width, size.height);
   const added = zone === 'D' ? (drawing.bandPages ?? []) : [];
   const screens = [
-    ...pages.map((page) =>
-      isHeldBack(zone, page.id)
-        ? { ...zonePageScreen(face, zones, pages[DEFAULT_ZONE_PAGE[zone]]!, size, corners, drawing), name: page.id }
-        : zonePageScreen(face, zones, page, size, corners, drawing),
-    ),
+    ...zonePageScreens(face, zones, size, corners, drawing).map(({ screen }) => screen),
     ...added.map((page) => pageScreen(page.id, [...page.items(frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])], ground)),
   ];
   return pagedDashboard({

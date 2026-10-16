@@ -152,6 +152,13 @@ export function measureText(face: MeasuredFace, text: string, fs: number): numbe
   return em * fs;
 }
 
+/**
+ * Whether `face` carries `ch` as a glyph of its own. One it does not is drawn by WPF in a fallback
+ * face, which has none of the face's metrics: a comma among DSEG7's figures is a typographic one,
+ * hanging below the segment cells (#1184).
+ */
+export const carries = (face: MeasuredFace, ch: string): boolean => Object.hasOwn(FACES[face], ch);
+
 /** The character a cut-short text ends in, which is one glyph and not three full stops. */
 export const ELLIPSIS = '…';
 

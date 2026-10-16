@@ -1,6 +1,6 @@
 /** Text metrics: canvas line boxes to SimHub boxes, monospace cells, and the elements that use them. */
 import { describe, expect, test } from 'bun:test';
-import { CELL, canvasBaseline, canvasYForBaseline, cells, GEAR_CELL, gearCells, monoWidth, SPECIAL_CHARS, textBox } from '../src/design/metrics.ts';
+import { CELL, canvasBaseline, canvasYForBaseline, cells, GEAR_CELL, gearCells, inkOf, monoWidth, SEGMENT_CELL_DROP, SPECIAL_CHARS, textBox } from '../src/design/metrics.ts';
 import { label } from '../src/elements/label.ts';
 import { numeral } from '../src/elements/numeral.ts';
 import { ds } from '../src/tokens.ts';
@@ -92,6 +92,32 @@ describe('metrics', () => {
     }
   });
 
+
+  /**
+   * The AiM's segment faces have an ascent of one em, no descent and a line gap, and WPF lays half the
+   * gap above the ascent, so a cell is drawn that far below its box's top. A ground cut to the box's
+   * first em stopped a pixel or two short of the cell's foot and left the segments' feet under it as
+   * a row of dashes, seen on the VM under the AiM's pit banner (#1165).
+   */
+  test("a segment face's ink is its cell, half the line gap below the box's top", async () => {
+    const { loadFont, measure } = await import('../../../tools/measure-font/measure.ts');
+    const { fontsForPackage } = await import('../src/dashboard.ts');
+    const segments = fontsForPackage('aim').filter((f) => /DSEG/.test(f));
+    expect(segments.length).toBe(3);
+    for (const file of segments) {
+      const font = loadFont(file);
+      const { ascender, descender, lineGap } = font.line;
+      expect({ file, ascender, descender, drop: lineGap / 2 / font.unitsPerEm }).toEqual({ file, ascender: font.unitsPerEm, descender: 0, drop: SEGMENT_CELL_DROP });
+      // Every lit cell fills the em from the baseline up, so the cell is the ink.
+      const eight = measure(font, '8')!;
+      expect({ file, ink: [eight.yMin, eight.yMax] }).toEqual({ file, ink: [0, 1] });
+    }
+    // The 1920x480 gear page's speed, a 40 px figure in a box from 130: its feet reach 171.8, so a
+    // ground over it has to come down to 172, where the box's first em stops at 170.
+    const ink = inkOf({ rect: { left: 0, top: 130, width: 100, height: 49 }, font: 'DSEG7 Classic', fontSize: 40 });
+    expect(ink.top).toBeCloseTo(131.8);
+    expect(ink.top + ink.height).toBeCloseTo(171.8);
+  });
 
   test('label and numeral produce integer, top-aligned boxes', () => {
     const l = label('x.label', 'Current', 16, 52, 223);

@@ -21,7 +21,7 @@ import type { Expr } from '../bind.ts';
 import { gear as gearComponent, gearGhosts, ghostedGearWidth, GEAR_BOX_SLACK, GEAR_CHARS, type GearGhosts } from '../components/gear.ts';
 import { measureText } from '../design/advances.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, gearCells, inkOf, monoWidth, type Chars, type DataWeight } from '../design/metrics.ts';
-import { GEAR_CELL, LINE_SPACING } from '../design/metrics.ts';
+import { GEAR_CELL, LINE_SPACING, THOUSANDS, thousands } from '../design/metrics.ts';
 import { inset, rect } from '../design/geometry.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
@@ -249,12 +249,12 @@ const revsRuns = (prefix: string, fs: number, unitFs: number, gap?: number): Run
   {
     kind: 'value',
     name: `${prefix}revs`,
-    sample: '7,420',
+    sample: thousands(7420),
     fs,
     chars: CHARS.rpm,
     color: ds.color.text.secondary,
     // `rpm`, the one body engine speed has (ADR 0014), in the pattern the speedo and gear pages print it in.
-    bind: fmt(rpm(), '#,0'),
+    bind: fmt(rpm(), THOUSANDS),
     gap,
   },
   { kind: 'label', name: `${prefix}revs.unit`, text: 'RPM', fs: unitFs, widest: 'RPM' },
