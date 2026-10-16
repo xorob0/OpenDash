@@ -14,7 +14,7 @@
 }
 
 .primary {
-  color: var(--purpose-ui-on-accent);
+  color: var(--purpose-ui-onAccent);
   background: var(--purpose-ui-accent);
 }
 

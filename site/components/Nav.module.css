@@ -92,7 +92,7 @@
   padding: 7px var(--space-4);
   font-size: var(--size-small);
   font-weight: 500;
-  color: var(--purpose-ui-on-accent);
+  color: var(--purpose-ui-onAccent);
   background: var(--purpose-ui-accent);
   border-radius: var(--radius-sm);
   transition: background var(--fast) var(--ease);

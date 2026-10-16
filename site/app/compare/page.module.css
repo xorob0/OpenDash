@@ -45,22 +45,3 @@
   margin-top: var(--space-6);
 }
 
-.scheduled {
-  max-width: var(--measure);
-}
-
-.item {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.itemLabel {
-  font-weight: 600;
-  color: var(--color-text-primary);
-}
-
-.itemText,
-.itemRefs {
-  color: var(--color-text-secondary);
-  font-size: var(--size-small);
-}

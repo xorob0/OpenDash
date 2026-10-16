@@ -65,7 +65,7 @@ export const PLUGIN_ZIP = 'OpenDash-plugin.zip';
 export const ONLY_WAY_IN = 'The plugin is the only way in: every dashboard and every LED profile reaches SimHub through it.';
 
 /** What the line costs, said where it is made rather than discovered by the reader it excludes. */
-export const NO_OTHER_ROUTE = 'A SimHub that cannot take a DLL into its own folder cannot run OpenDash. That is a choice, and the scope says what it buys.';
+export const NO_OTHER_ROUTE = 'OpenDash is a DLL in SimHub’s own folder. If you cannot put one there, OpenDash cannot run on your machine.';
 
 /**
  * The claim about sims, in docs/scope.md's terms: a sim is supported once it has been driven and its
@@ -96,7 +96,7 @@ export const DIFFERENTIATORS: readonly { id: string; title: string; body: (c: Co
     id: 'free',
     title: 'Free and open source, under MIT',
     body: () =>
-      'No tier, no key, no limit on how many machines: the dashboards and the car themes are generated from source on GitHub, so a new size, a new field or a new car is a pull request.',
+      'No tier, no key, no limit on how many machines. The source is on GitHub, so anyone can add a size, a field or a car.',
   },
   {
     id: 'lights',

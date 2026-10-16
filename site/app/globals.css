@@ -319,7 +319,7 @@ kbd {
   z-index: 100;
   padding: var(--space-3) var(--space-4);
   background: var(--purpose-ui-accent);
-  color: var(--purpose-ui-on-accent);
+  color: var(--purpose-ui-onAccent);
   font-weight: 500;
   transform: translateY(-140%);
   transition: transform var(--fast) var(--ease);

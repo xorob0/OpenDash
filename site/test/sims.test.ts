@@ -57,6 +57,9 @@ describe('the claim about sims', () => {
     expect(CLAIMED_SIM).toBe(`Supported on ${joined}. ACC and Le Mans Ultimate may work, but they are untested and not supported.`);
     const cell = rows(SAMPLE_COUNTS, SAMPLE_LISTED).find((r) => r.id === 'sims')?.cells.opendash.text ?? '';
     expect(cell).toStartWith(`Supported on ${joined}.`);
+    // The word in the cell is a count, as every product's is: "Compatible" said nothing (#1188).
+    expect(rows(SAMPLE_COUNTS, SAMPLE_LISTED).find((r) => r.id === 'sims')?.cells.opendash.word).toBe('2 sims');
+    expect(cell.toLowerCase()).toContain('any other sim simhub reads');
     for (const sim of unclaimed) expect(cell).toContain(sim);
     expect(cell).toContain('untested');
   });

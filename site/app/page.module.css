@@ -95,10 +95,6 @@
   color: var(--color-text-secondary);
 }
 
-.off {
-  color: var(--color-text-secondary);
-}
-
 .seconds {
   display: grid;
   gap: var(--space-7);
@@ -131,11 +127,6 @@
 
 .stripName {
   color: var(--color-text-secondary);
-}
-
-.status {
-  max-width: var(--measure);
-  color: var(--color-text-primary);
 }
 
 @media (min-width: 62rem) {
