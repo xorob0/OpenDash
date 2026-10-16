@@ -83,7 +83,7 @@ export const carCentre = (count: number, fallback: readonly leds.LedContainer[])
   },
   {
     kind: 'conditionalGroup',
-    description: 'no table for this car: the ladder iRacing publishes',
+    description: "no table for this car: the sim's own ladder, iRacing's published one or SimHub's elsewhere",
     trigger: { expression: ncalc.not(setting.ledMirrorReady()) },
     children: [...fallback],
   },

@@ -834,18 +834,33 @@ namespace OpenDashPlugin
         /// contradict it, and be false.
         /// </summary>
         /// <param name="tablesMissing">Whether no tables were ever downloaded (<see cref="TablesMissing"/>).</param>
-        /// <remarks>Only the missing-tables sentence is this page's own, since it names the page the download is
-        /// on, which the LEDs page's need not.</remarks>
-        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame)
+        /// <param name="tablesHoldGame">Whether the tables read can hold the game's cars at all
+        /// (<see cref="TablesHoldGame"/>): false for the flat copy from before #748 in Assetto Corsa or ACC.</param>
+        /// <remarks>Only the sentences that send the driver to the download are this page's own, since they name
+        /// the page the download is on, which the LEDs page's need not.</remarks>
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame, bool tablesHoldGame = true)
         {
-            var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame);
-            return line == PanelLeds.CarTablesMissing ? CarTablesMissing : line;
+            var line = PanelLeds.CarLine(on, car, hasTable, tablesLoaded, tablesMissing, tablesCoverGame, tablesHoldGame);
+            if (line == PanelLeds.CarTablesMissing) return CarTablesMissing;
+            return line == PanelLeds.CarTablesIRacingOnly ? CarTablesIRacingOnly : line;
         }
 
         /// <summary>The car line with no tables on disk: the tables are downloaded on the LEDs page only
         /// (ADR 0018), under the section every strip shares, named here by that page's own constants.</summary>
         public const string CarTablesMissing = "Car Data is not downloaded yet. Download it on the "
             + PanelLeds.Title + " page, under " + PanelLeds.EveryStripTitle + ".";
+
+        /// <summary>The car line where the flat copy from before #748 cannot hold the game's cars, sending the driver
+        /// to the LEDs page's download as <see cref="CarTablesMissing"/> does.</summary>
+        public const string CarTablesIRacingOnly = "Your copy of Car Data has iRacing's cars only. Update it on the "
+            + PanelLeds.Title + " page, under " + PanelLeds.EveryStripTitle + ".";
+
+        /// <summary>Whether the tables read can hold the game's cars at all: the LEDs page's test
+        /// (PanelLeds.TablesHoldGame).</summary>
+        public static bool TablesHoldGame(bool flat, string game)
+        {
+            return PanelLeds.TablesHoldGame(flat, game);
+        }
 
         /// <summary>Whether no tables were ever downloaded: none read, and the service's status opens with the
         /// sentence it gives a rig with none (a failed download adds its reason after it), rather than saying

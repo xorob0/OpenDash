@@ -633,7 +633,8 @@ namespace OpenDashPlugin
                 var loaded = PanelLeds.TablesLoaded(plugin.CarLights.CarCount);
                 var missing = PanelLeds.TablesMissing(plugin.CarLights.CarCount, plugin.CarLights.Status);
                 var known = PanelLeds.CarLineGood(plugin.LiveCarHasTable, loaded);
-                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName));
+                var holds = PanelLeds.TablesHoldGame(plugin.CarLights.Flat, live.GameName);
+                var line = PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName), holds);
                 carLine.Visibility = line == null ? Visibility.Collapsed : Visibility.Visible;
                 var key = line + "|" + known;
                 if (line == null || key == shown) return;
@@ -1027,7 +1028,8 @@ namespace OpenDashPlugin
             // service holds rather than the folder's, since a tick draws this row: the read writes the stamp
             // before the status, so read after it.
             var stale = PanelLights.CarTablesStale(service.CarCount, service.FetchedAt, DateTime.UtcNow);
-            var line = PanelLights.CarTablesLine(status, stale);
+            // The flat copy from before #748 asks for a download whatever its age: it has iRacing's cars alone.
+            var line = PanelLights.CarTablesLine(status, stale, service.Flat);
             carTablesLine.Text = carTablesDownloading ? PanelLights.CarTablesDownloading : line;
             if (carTablesButton != null)
             {

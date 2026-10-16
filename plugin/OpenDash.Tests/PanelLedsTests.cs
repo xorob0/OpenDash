@@ -1737,7 +1737,8 @@ namespace OpenDashPlugin.Tests
                 "width.Visibility = PanelLeds.ShowsMirrorFit(Settings.BarRpmStyle(ns)) ? Visibility.Visible : Visibility.Collapsed;",
                 // The car line only while the switch is on, in the game the tables cover.
                 "var on = PanelLeds.UsesCarRevLights(Settings.BarRpmStyle(ns));",
-                "PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName))",
+                "var holds = PanelLeds.TablesHoldGame(plugin.CarLights.Flat, live.GameName);",
+                "PanelLeds.CarLine(on, live.CarModel, plugin.LiveCarHasTable, loaded, missing, PanelLeds.TablesCoverGame(live.GameName), holds)",
                 "var missing = PanelLeds.TablesMissing(plugin.CarLights.CarCount, plugin.CarLights.Status);",
                 // Live draws the car's run only where the profile does.
                 "var running = PanelLeds.LiveRuns(lights.Ready, Settings.BarRpmStyle(ns), Settings.BarCentre(ns));",

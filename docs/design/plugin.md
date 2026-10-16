@@ -385,6 +385,11 @@ migration; OpenDash has no store, since a setting is a SimHub property.
   can name two cars, so in LMU and every other game the line says nothing. When nothing was ever
   downloaded it says "Car Data is not downloaded yet. Download it under Every strip."
   (`PanelLeds.CarTablesMissing`).
+- **A copy fetched before #748 asks to be fetched again.** It lies flat in the cache and holds
+  iRacing's cars alone, so in Assetto Corsa or ACC the car line says "Your copy of Car Data has
+  iRacing's cars only. Update it under Every strip." (`PanelLeds.CarTablesIRacingOnly`) rather than
+  that the car is not in Car Data, and the Car Data row ends "Press Update for the Assetto Corsa and
+  Assetto Corsa Competizione cars." whatever the copy's age (`PanelLights.CarTablesFlatStep`).
 - **A failed download beside a working copy** says "Could not download a newer copy." and the count
   and age of the copy that still works, as voice.md's "Could not reach GitHub. You have
   0.3.0-rc.4." does. With no copy on disk it is `PanelLights.CarTablesDownloadFailed`.

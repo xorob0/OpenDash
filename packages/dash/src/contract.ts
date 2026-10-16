@@ -53,7 +53,8 @@ export type LedCentre = 'rpm' | 'brake' | 'throttleBrake' | 'fuel';
  * `car` is not one of those. It is the car's own bar -- its LEDs, its colours, its order, its
  * flash, in the gear it is in -- from a table the plugin fetches (ADR 0018), and it is the default
  * because OpenDash's opinion is that the car is right. A car with no table, or a rig with no
- * plugin, falls back to the ladder iRacing publishes, drawn `leftToRight`.
+ * plugin, falls back to the sim's own ladder, drawn `leftToRight`: the shift points iRacing publishes,
+ * or SimHub's in any other sim.
  *
  * **Two of the four are retired from the panel, not from the profile.** The rebuilt panel (#791, per
  * #369) offers one switch -- the car's own lights, or not -- and "not" is `leftToRight`.

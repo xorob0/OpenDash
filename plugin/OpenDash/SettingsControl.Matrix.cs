@@ -481,7 +481,8 @@ namespace OpenDashPlugin
                     var tables = count > 0;
                     var missing = PanelMatrix.TablesMissing(count, plugin.CarLights.Status);
                     var covers = PanelMatrix.TablesCoverGame(live.GameName);
-                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, missing, covers);
+                    var holds = PanelMatrix.TablesHoldGame(plugin.CarLights.Flat, live.GameName);
+                    var text = PanelMatrix.CarLine(Settings.MatrixGearCarLadder(m), live.CarModel, known, tables, missing, covers, holds);
                     carLine.Text = text ?? string.Empty;
                     carLine.Foreground = Ui.Brush(PanelMatrix.CarLineHex(PanelMatrix.CarLineGood(known, tables)));
                     carLine.Visibility = text == null ? Visibility.Collapsed : Visibility.Visible;

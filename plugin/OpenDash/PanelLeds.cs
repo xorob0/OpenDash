@@ -578,16 +578,34 @@ namespace OpenDashPlugin
         /// (<paramref name="tablesMissing"/>): while the start's read is still running, or where the copy on disk
         /// could not be read, the row below says "Loading…" or that it could not be read, and a line saying they were never
         /// downloaded would contradict it, and be false.</para>
+        ///
+        /// <para>With tables read that cannot hold the game's cars (<paramref name="tablesHoldGame"/> false, the
+        /// flat copy from before #748 in Assetto Corsa or ACC), a car without a table is one the copy never asked
+        /// for, not one Car Data has not measured, so the line asks for the download that brings it.</para>
         /// </remarks>
-        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame)
+        public static string CarLine(bool on, string car, bool hasTable, bool tablesLoaded, bool tablesMissing, bool tablesCoverGame, bool tablesHoldGame = true)
         {
             if (!on || string.IsNullOrWhiteSpace(car) || !tablesCoverGame) return null;
             if (!tablesLoaded) return tablesMissing ? CarTablesMissing : null;
+            if (!hasTable && !tablesHoldGame) return CarTablesIRacingOnly;
             return car.Trim() + (hasTable ? " is in Car Data." : " is not in Car Data.");
         }
 
         /// <summary>The car line while a car is loaded and no tables were ever downloaded.</summary>
         public const string CarTablesMissing = "Car Data is not downloaded yet. Download it under Every strip.";
+
+        /// <summary>The car line in a sim the flat copy from before #748 does not hold, for a car it has no table for.</summary>
+        public const string CarTablesIRacingOnly = "Your copy of Car Data has iRacing's cars only. Update it under "
+            + EveryStripTitle + ".";
+
+        /// <summary>
+        /// Whether the tables read can hold the game's cars at all: any copy made since #748 can, and the flat
+        /// copy from before it (<see cref="CarLightCars.Flat"/>) holds iRacing's alone.
+        /// </summary>
+        public static bool TablesHoldGame(bool flat, string game)
+        {
+            return !flat || CarLightLibrary.SimFor(game) == CarLightLibrary.IRacing;
+        }
 
         /// <summary>Whether no tables were ever downloaded: none read, and the service says so, rather than that
         /// it is still reading them or could not read the copy on disk.</summary>

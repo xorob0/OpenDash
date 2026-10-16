@@ -732,7 +732,8 @@ namespace OpenDashPlugin
         }
 
         /// <summary>The car's own, because OpenDash's opinion is that the car is right. A car with no
-        /// table falls back to the ladder iRacing publishes without the driver choosing anything.</summary>
+        /// table falls back to the sim's own ladder, iRacing's published shift points or SimHub's elsewhere,
+        /// without the driver choosing anything.</summary>
         public const string DefaultLedRpmStyle = "car";
 
         /// <summary>What the mirror does when the car's bar and the strip are not the same length.

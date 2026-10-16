@@ -61,6 +61,13 @@ namespace OpenDashPlugin
             get { return fetchedAt; }
         }
 
+        /// <summary>Whether the tables held are the flat copy from before #748, iRacing's alone, which the panel
+        /// asks to have downloaded again (<see cref="CarLightCars.Flat"/>). Written by the same read as the count.</summary>
+        public bool Flat
+        {
+            get { return cars.Flat; }
+        }
+
         /// <summary>Whether a mirror is being published this frame, which is what the profile switches on.</summary>
         public bool Ready
         {

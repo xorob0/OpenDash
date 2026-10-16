@@ -89,8 +89,8 @@ namespace OpenDashPlugin.Tests
         [InlineData(@"{ ""carId"": ""x"", ""ledNumber"": 1, ""ledColor"": [""Red"", ""Red""], ""ledRpm"": [{}] }")]
         public void A_file_that_does_not_agree_with_itself_is_refused_rather_than_half_read(string json)
         {
-            // Null is the fallback signal: the car keeps the ladder iRacing publishes, which is what
-            // every car had before the mirror existed.
+            // Null is the fallback signal: the car keeps the sim's own ladder, which is what every
+            // car had before the mirror existed.
             Assert.Null(CarLightTable.Parse(json));
         }
 
