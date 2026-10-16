@@ -3022,6 +3022,13 @@ export const previousLapIsThisSession = (slotExpr: Expr): Expr =>
 export const hasSessionLap = (slotExpr: Expr): Expr => and(previousLapIsThisSession(slotExpr), hasTime(previousLap(slotExpr)));
 
 /**
+ * The edge under which a figure to `places` decimals still has no more than `whole` whole digits:
+ * half a unit of the last place short of the next power of ten, since .NET rounds 999.96 to one
+ * place up to `1000.0`. Shared by {@link signedToFit} and {@link secondsToFit}.
+ */
+const placesEdge = (whole: number, places: number): number => Number((10 ** whole - 0.5 * 10 ** -places).toFixed(places + 1));
+
+/**
  * A signed delta to `places` decimals where `chars` holds it, and to fewer where it does not:
  * `+1.03`, `+123.5` and `+1234` in {@link CHARS.delta}'s five cells at two places.
  *
@@ -3047,9 +3054,54 @@ export const signedToFit = (seconds: Expr, chars: Chars, places: number): Expr =
   for (let p = 1; p <= places; p++) {
     const whole = chars.digits - 1 - p;
     if (whole < 1) throw new Error(`signedToFit: ${chars.digits} digit cells hold no whole digit beside a sign and ${p} places`);
-    text = iff(lt(abs(seconds), num(Number((10 ** whole - 0.5 * 10 ** -p).toFixed(p + 1)))), signed(seconds, patternOf(p)), text);
+    text = iff(lt(abs(seconds), num(placesEdge(whole, p))), signed(seconds, patternOf(p)), text);
   }
   return text;
+};
+
+/**
+ * A duration in seconds to `places` decimals where `chars` holds it, and to fewer where it does not:
+ * `24.3`, `999.9` and then `1000` in {@link CHARS.consumption}'s four cells and a point at one place.
+ *
+ * The unsigned half of {@link signedToFit}, for the time a car spends in its pit box. Nothing bounds
+ * that time: SimHub starts `IsInPitSince` on the first frame its `IsInPit` is true, which on iRacing
+ * and Assetto Corsa is the first frame of a session the car starts in its box, so a driver who sits
+ * there working on the setup with the dash up reads `1000.0` after seventeen minutes, a fifth cell
+ * WPF clips, and `LastPitStopDuration` keeps it on screen until the first real stop (#1170). Each
+ * place given up buys a whole digit, as it does for the deltas: a stop that long is not read to the
+ * tenth. Past the last edge the figure is whole seconds, capped at the most the cells hold, `9999`,
+ * the better part of three hours, as {@link minutesClock} caps a fuel time at its widest so that even
+ * a reading nobody expects stays inside the cells it is drawn in. The cap is a double for the reason
+ * {@link hms} gives.
+ */
+export const secondsToFit = (seconds: Expr, chars: Chars, places: number): Expr => {
+  const patternOf = (p: number): string => (p === 0 ? '0' : `0.${'0'.repeat(p)}`);
+  let text: Expr = fmt(min(real(10 ** chars.digits - 1), seconds), '0');
+  for (let p = 1; p <= places; p++) {
+    const whole = chars.digits - p;
+    if (whole < 1) throw new Error(`secondsToFit: ${chars.digits} digit cells hold no whole digit beside ${p} places`);
+    text = iff(lt(seconds, num(placesEdge(whole, p))), fmt(seconds, patternOf(p)), text);
+  }
+  return text;
+};
+
+/**
+ * The longest reading {@link secondsToFit} draws in `chars` at `places`, which is what a box holding
+ * one declares: a figure with a point is as many digit cells as the whole form and a point besides,
+ * so `999.9` in four cells at one place, and the whole form `9999` only when no place is drawn. The
+ * sample stays the short end of the range, `24.3`.
+ */
+export const secondsToFitWidest = (chars: Chars, places: number): string =>
+  places === 0 ? '9'.repeat(chars.digits) : `${'9'.repeat(chars.digits - places)}.${'9'.repeat(places)}`;
+
+/** How wide {@link secondsToFit} really draws, for the unit that follows it: the same ladder, a figure at each rung. */
+export const secondsToFitDrawn = (seconds: Expr, chars: Chars, places: number): DrawnFigure => {
+  let drawn: DrawnFigure = drawnFigure({ value: min(real(10 ** chars.digits - 1), seconds), digits: chars.digits });
+  for (let p = 1; p <= places; p++) {
+    const whole = chars.digits - p;
+    drawn = drawnEither(lt(seconds, num(placesEdge(whole, p))), drawnFigure({ value: seconds, digits: whole, decimals: p }), drawn);
+  }
+  return drawn;
 };
 
 /**

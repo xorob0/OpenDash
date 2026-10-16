@@ -50,6 +50,9 @@ import {
   pitServiceIsPublished,
   pitServiceProgress,
   pitTyreSelection,
+  secondsToFit,
+  secondsToFitDrawn,
+  secondsToFitWidest,
   type Corner,
 } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -216,16 +219,23 @@ const tyresOption = (fs: number): Option => {
 /**
  * The time in the box while the car is in the lane and the last stop's otherwise. SimHub times both
  * on every sim, so this is the half of the page that does not need the order.
+ *
+ * Drawn through {@link secondsToFit}, because nothing bounds it: a car that starts the session in its
+ * box is timed from the first frame, and seventeen minutes there is `1000.0`, a cell more than the
+ * box holds. Past `999.9` it is whole seconds (#1170).
  */
-const pitTimeSpec = (ctx: ModuleContext, fs: number): FieldSpec =>
-  fld(ctx, 'pitTime', 'Pit time', {
+const pitTimeSpec = (ctx: ModuleContext, fs: number): FieldSpec => {
+  const seconds = iff(isInPitLane(), inPitSeconds(), lastPitDuration());
+  return fld(ctx, 'pitTime', 'Pit time', {
     sample: '24.3',
-    bind: fmt(iff(isInPitLane(), inPitSeconds(), lastPitDuration()), '0.0'),
+    widest: secondsToFitWidest(CHARS.consumption, 1),
+    bind: secondsToFit(seconds, CHARS.consumption, 1),
     chars: CHARS.consumption,
     fs,
     follower: { text: 's' },
-    drawn: drawnFigure({ value: iff(isInPitLane(), inPitSeconds(), lastPitDuration()), digits: CHARS.consumption.digits - 1, decimals: 1 }),
+    drawn: secondsToFitDrawn(seconds, CHARS.consumption, 1),
   });
+};
 
 export const pitView = defineModule('pitView', (ctx) => {
   const d = densityOf(ctx.density);
