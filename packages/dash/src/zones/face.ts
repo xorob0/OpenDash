@@ -38,7 +38,7 @@ import type { FaceContext, ThemeDrawing } from '../themes/drawing.ts';
 import { label } from '../elements/label.ts';
 import { densityForBox } from '../second/density.ts';
 import { zoneCounterX, zoneCounterWidth, zoneFrameMetrics, zoneTitleY } from '../second/header.ts';
-import { widestCounter, zoneAGearInk, zoneDashboardsFor, zoneWidget } from './pages.ts';
+import { bannerClearance, widestCounter, zoneAGearInk, zoneDashboardsFor, zoneWidget } from './pages.ts';
 import { walkItems } from '../walk.ts';
 
 const { and, not, or } = ncalc;
@@ -66,11 +66,14 @@ export const sizeOf = (layout: ZoneLayout): FaceSize => {
   return face;
 };
 
-/** The zones a face embeds, each with the size its dashboard is drawn for. */
-export const zonesOf = (layout: ZoneLayout, regions: Regions = zoneRegions(layout)): { zone: FaceZone; size: { width: number; height: number }; corners: boolean }[] =>
+/**
+ * The zones a face embeds, each with the size its dashboard is drawn for, and zone A with how far down
+ * it the pit banner reaches, which its pages draw the gear below (#1182).
+ */
+export const zonesOf = (layout: ZoneLayout, regions: Regions = zoneRegions(layout)): { zone: FaceZone; size: { width: number; height: number }; corners: boolean; clear: number }[] =>
   FACE_ZONE_LETTERS.map((zone) => {
     const r = zoneRect(regions, zone);
-    return { zone, size: { width: r.width, height: r.height }, corners: zone === 'D' && layout.bandCorners };
+    return { zone, size: { width: r.width, height: r.height }, corners: zone === 'D' && layout.bandCorners, clear: zone === 'A' ? bannerClearance(regions) : 0 };
   });
 
 /**
@@ -196,7 +199,7 @@ export function faceItems(
   // the gear's ink on any of zone A's pages reaches into it, and it waits for the pit family, whose
   // row it is, and for the full-screen flag, whose name it reaches on the Porsche's nano and the
   // AiM's portrait face. Drawn before a theme's takeovers, which are drawn over whatever they take.
-  const row = lastingPopUpFrame(banner, zoneAGearInk(zoneRect(regions, 'A'), drawing));
+  const row = lastingPopUpFrame(banner, zoneAGearInk(regions, drawing));
   items.push(...giveWay(restyled(lastingPopUps(row, 'popUp'), 'outline'), { pitFamily: 'waits already' }));
 
   // A theme's takeover that draws a state of the pit family is that family, and is drawn over the
