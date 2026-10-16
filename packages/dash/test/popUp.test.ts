@@ -345,7 +345,7 @@ describe('the box covers the hero and nothing that carries a state of its own', 
     });
 
     test(`${name} draws low fuel and DRS in the limiter banner's row, above the gear on every page of zone A`, () => {
-      const row = lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(layout.zones.zoneA));
+      const row = lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(zoneRegions(layout)));
       expect({ name, inside: contains(layout.zones.pitLimiter, row) }).toEqual({ name, inside: true });
       for (const spec of popUpsOfKind('lasting')) {
         const box = drawn.find((i) => i.name === `popUp.${spec.id}.box`);
@@ -353,22 +353,22 @@ describe('the box covers the hero and nothing that carries a state of its own', 
         for (const item of drawn) {
           if (item.kind === 'layer' || !item.name.startsWith(`popUp.${spec.id}.`)) continue;
           expect({ name, item: item.name, inside: contains(row, item.rect) }).toEqual({ name, item: item.name, inside: true });
-          for (const ink of zoneAGearInk(layout.zones.zoneA)) expect({ name, item: item.name, ink, covered: overlaps(item.rect, ink) }).toMatchObject({ covered: false });
+          for (const ink of zoneAGearInk(zoneRegions(layout))) expect({ name, item: item.name, ink, covered: overlaps(item.rect, ink) }).toMatchObject({ covered: false });
         }
       }
     });
   }
 
   /**
-   * Where the gear's ink reaches into the banner's row the row ends there: the house's nano by a
-   * pixel and a half, which costs its low-fuel value three pixels of size, 19 against 22.
+   * The gear is drawn below the banner on every house face (#1182), so the row is the banner's whole
+   * row on each of them. The nano's used to end a pixel and a half short, above a gear the banner
+   * covered the top of, and cost its low-fuel value three pixels of size.
    */
-  test('the nano\'s row is cut short above its gear, and every other house face keeps the whole banner row', () => {
+  test('every house face keeps the whole banner row, the gear being drawn below it', () => {
     for (const face of ZONE_FACES) {
       for (const layout of [face, layoutWithoutRevBar(face)]) {
-        const row = lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(layout.zones.zoneA));
-        const cut = face.folder === 'OpenDash 800x286' && layout === face;
-        expect({ face: face.folder, revBar: layout === face, whole: row.height === layout.zones.pitLimiter.height }).toEqual({ face: face.folder, revBar: layout === face, whole: !cut });
+        const row = lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(zoneRegions(layout)));
+        expect({ face: face.folder, revBar: layout === face, whole: row.height === layout.zones.pitLimiter.height }).toEqual({ face: face.folder, revBar: layout === face, whole: true });
       }
     }
   });
