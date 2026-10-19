@@ -12,7 +12,8 @@
  *
  * The value is the house's own field with its label taken off, so a unit, a denominator, a mark and a
  * reading's colour are drawn as the house draws them. The pages that are rows of cars, and the pages
- * that are one drawing, keep the house's layout on the glass.
+ * that are one drawing, keep the house's layout, inside a box titled as the canvas titles its
+ * `Tyre Pressure` box (`bmwModuleFrame`).
  */
 import type { Item, Rect } from '../../generator.ts';
 import { rect } from '../../design/geometry.ts';
@@ -24,7 +25,8 @@ import { stack, type StackRow } from '../../second/layout.ts';
 import type { ModuleRegister } from '../drawing.ts';
 import { withHouseLayout } from '../moduleRegister.ts';
 import { GAP, SHADOW } from './geometry.ts';
-import { box, EDGE, inkOf, runWidth } from './register.ts';
+import { pageFrame, scaleOf, typeOf } from './pages.ts';
+import { bmwColour, box, EDGE, fitSize, inkOf, lineY, runWidth } from './register.ts';
 
 /** The reference type: the canvas's zone B box, a 16 px label over a 34 px value. */
 const TYPE = { label: 16, value: 34 } as const;
@@ -200,3 +202,43 @@ function bmwStack(frame: Rect, rows: readonly StackRow[], density: Density): Ite
 const HOUSE_PAGES: ReadonlySet<string> = new Set(['leaderboard', 'relative', 'opponents', 'trackRivals', 'lapHistory', 'inputs', 'radar', 'track', 'tyres', 'damage']);
 
 export const bmwModules: ModuleRegister = { fieldsRow: readingsRow, stack: bmwStack, houseLayout: HOUSE_PAGES };
+
+/** The title's line, as the canvas's `Tyre Pressure`: a sentence-case name on a line of 1.4. */
+const TITLE_LH = 1.4;
+
+/** The room either side of a title and round a house layout inside its box. */
+const INSET = 6;
+
+/**
+ * A module page's frame on the BMW, in place of the house's title line, in the part of the zone a page
+ * of zone B or C is drawn in (`pageFrame`). The car counts no pages, so the title is the page's name
+ * alone, centred, in the canvas's label size.
+ *
+ *   - A page that lists cars or is one drawing stands in an outlined box with its shadow, the name
+ *     along the top inside it, as the canvas's `Tyre Pressure` box; the house's layout is drawn in the
+ *     box under the name, an inset clear of the border.
+ *   - A page of readings has its boxes already, so its name stands on the glass over their grid, and
+ *     the grid takes the zone down to the house's foot; a box round boxes is not drawn.
+ */
+export function bmwModuleFrame(page: { id: string; name: string }, frame: Rect, house: Rect): { items: Item[]; body: Rect } {
+  const at = pageFrame(frame);
+  const wanted = typeOf(scaleOf(frame).s).lab;
+  const title = (left: number, top: number, width: number): { item: Item; height: number } => {
+    const size = fitSize(wanted, width - 2 * INSET, [page.name]);
+    const item = label(`${page.id}.zone.title`, page.name, left + INSET, lineY(top, size, TITLE_LH), width - 2 * INSET, { size, color: bmwColour('ink'), hAlign: 'center' });
+    return { item, height: Math.round(size * TITLE_LH) };
+  };
+  if (HOUSE_PAGES.has(page.id)) {
+    const { items, inner } = box(`${page.id}.zone.frame`, at);
+    const name = title(inner.left, inner.top, inner.width);
+    return {
+      items: [...items, name.item],
+      body: rect(inner.left + INSET, inner.top + name.height, inner.width - 2 * INSET, inner.height - name.height - INSET),
+    };
+  }
+  const name = title(at.left, at.top, at.width);
+  const under = at.top + name.height + 2;
+  // The foot the house keeps clear, which a row drawing a little under its bottom (the delta's scale) needs.
+  const foot = Math.min(at.top + at.height, house.top + house.height);
+  return { items: [name.item], body: rect(at.left, under, at.width, foot - under) };
+}

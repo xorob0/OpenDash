@@ -10,7 +10,7 @@ import { bmwChrome } from './chrome.ts';
 import { bmwDots } from './dots.ts';
 import { BMW_FOOT } from './foot.ts';
 import { bmwFace, ledRow, MARGIN } from './geometry.ts';
-import { bmwModules } from './modules.ts';
+import { bmwModuleFrame, bmwModules } from './modules.ts';
 import { bmwChangeNotifications } from './notices.ts';
 import { BMW_LAPS, BMW_RACE, BMW_TYRES } from './pages.ts';
 import { bmwColour } from './register.ts';
@@ -34,6 +34,8 @@ export const bmwDrawing: ThemeDrawing = {
   zoneAPage: bmwZoneAPage,
   changeNotifications: bmwChangeNotifications,
   modules: bmwModules,
+  // Every module titled as the canvas titles its boxes, in place of the house's title line.
+  moduleFrame: bmwModuleFrame,
   // The car shows one gear.
   gearGhosts: false,
   // The car counts no pages: a zone's page is its title.
