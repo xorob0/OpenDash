@@ -31,7 +31,7 @@ import { resolveToken } from '../../tokens.ts';
 import { SHADOW } from './geometry.ts';
 
 export type BmwColour =
-  | 'face' | 'ground' | 'ink' | 'tileInk' | 'edge' | 'shadow' | 'off' | 'green' | 'yellow' | 'red' | 'magenta'
+  | 'face' | 'ground' | 'ink' | 'tileInk' | 'second' | 'edge' | 'shadow' | 'off' | 'green' | 'yellow' | 'red' | 'magenta'
   | 'tc' | 'abs' | 'map' | 'arb' | 'lit' | 'litEdge' | 'pillDim' | 'pillInk' | 'head' | 'alarm';
 
 /** A colour this theme adds under `palette.bmw`, refused unless it resolves to `#RRGGBB`. */

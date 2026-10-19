@@ -17,6 +17,10 @@
         "value": "#F5F7FA",
         "description": "The text on a filled box: the setting tiles, the lit pills and the alarm boxes."
       },
+      "second": {
+        "value": "#9AA0A8",
+        "description": "The ink a step down from the label's grey: the other cars in a list beside the player's own row, and a reading's unit."
+      },
       "edge": {
         "value": "#5A6069",
         "description": "The 2 px border of an outlined box, and the ARB tile."
@@ -110,8 +114,8 @@
         "value": "{palette.bmw.ink}"
       },
       "secondary": {
-        "value": "{palette.bmw.ink}",
-        "description": "The display writes in one ink: a unit and a second line are the label's grey."
+        "value": "{palette.bmw.second}",
+        "description": "The other cars in a list and a unit, a step down from the ink, so that the player's own row stays the brightest."
       },
       "label": {
         "value": "{palette.bmw.ink}",

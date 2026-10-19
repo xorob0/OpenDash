@@ -121,8 +121,13 @@ function readingsThatFit(specs: readonly FieldSpec[], order: readonly string[], 
   }
 }
 
-/** A value's items with the value set at the right of its cells, so that it ends where its box's text does, by its unit where it has one. */
-const atRight = (items: Item[]): Item[] => items.map((item) => (item.kind === 'text' && item.name.endsWith('.value') ? { ...item, hAlign: 'right' } : item));
+/**
+ * A value's items with the value set at the right of its cells, so that it ends where its box's text
+ * does. A value with a unit is left as it is: the unit's place is bound to where a value set from the
+ * left ends, so the two end at the box's right together.
+ */
+const atRight = (spec: FieldSpec, items: Item[]): Item[] =>
+  spec.value.follower !== undefined ? items : items.map((item) => (item.kind === 'text' && item.name.endsWith('.value') ? { ...item, hAlign: 'right' } : item));
 
 /** One reading in its box, as the canvas's `FUEL`: the label bold along the top, the value at the right under it. */
 function readingBox(spec: FieldSpec, room: Rect, type: Type, density: Density): Item {
@@ -135,9 +140,11 @@ function readingBox(spec: FieldSpec, room: Rect, type: Type, density: Density): 
   const across = inner.width - 2 * PAD;
   const valueTop = top + labelH + Math.max(0, Math.floor(free / 3));
   const bottom = valueTop + type.value;
-  const drawn = field(value, 0, bottom, density, fieldWidth(value, density));
-  const end = Math.max(...drawn.map((item) => ('rect' in item ? item.rect.left + item.rect.width : -Infinity)));
-  const shift = Math.floor(left + across - end);
+  // Drawn once from 0 to find where its last item ends, and then where that end is the box's right,
+  // so that a place bound from the field's left is bound from where it is drawn.
+  const width = fieldWidth(value, density);
+  const end = Math.max(...field(value, 0, bottom, density, width).map((item) => ('rect' in item ? item.rect.left + item.rect.width : -Infinity)));
+  const drawn = field(value, Math.floor(left + across - end), bottom, density, width);
   const children: Item[] = [
     ...items,
     ...(labelled(spec)
@@ -153,7 +160,7 @@ function readingBox(spec: FieldSpec, room: Rect, type: Type, density: Density): 
           }),
         ]
       : []),
-    ...atRight(drawn.map((item) => ('rect' in item ? { ...item, rect: { ...item.rect, left: item.rect.left + shift } } : item))),
+    ...atRight(value, drawn),
   ];
   return { kind: 'layer', name: `${spec.name}.cell`, children };
 }
