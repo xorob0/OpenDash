@@ -57,6 +57,8 @@ export interface BoxStyle {
   /** The fill bound, for a box that changes colour with a state; the static `fill` is its design-time colour. */
   fillBind?: Expr;
   visible?: Expr;
+  /** The text's colour where it is not the one the fill implies, as on an unlit tile. */
+  ink?: Hex;
 }
 
 /** The box in `room`, its shadow kept inside it: the shadow and the box, and the rectangle the box takes. */
@@ -71,7 +73,7 @@ export function box(name: string, room: Rect, style: BoxStyle = {}): { items: It
 }
 
 /** The ink a box's text takes: white on a filled box, the display's grey on an outlined one. */
-export const inkOf = (style: BoxStyle): Hex => (style.fill ? bmwColour('tileInk') : bmwColour('ink'));
+export const inkOf = (style: BoxStyle): Hex => style.ink ?? (style.fill ? bmwColour('tileInk') : bmwColour('ink'));
 
 export interface StackedType {
   label: number;

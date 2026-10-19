@@ -69,7 +69,12 @@ function tiles(row: Rect, s: number): Item[] {
   const rooms = across(row, list.length);
   const type = stackedTypeFor(rooms[0]!, list.map((t) => ({ title: t.title, widest: t.reading.widest })), { label: Math.round(15 * s), value: Math.round(40 * s) }, 0.4, true);
   if (!type) return [];
-  return list.map((tile, i) => stackedBox(`chrome.tiles.${tile.id}`, rooms[i]!, tile.title, tile.reading, type, { fill: tile.colour, visible: tile.present }, 'center'));
+  // A setting the sim does not report keeps its place as an unlit tile, as the foot's pills do, so
+  // that the row reads the same in every car rather than closing up round a gap.
+  return list.flatMap((tile, i) => [
+    stackedBox(`chrome.tiles.${tile.id}.dim`, rooms[i]!, tile.title, { sample: NO_VALUE, widest: tile.reading.widest }, type, { fill: bmwColour('pillDim'), ink: bmwColour('pillInk'), visible: not(tile.present) }, 'center'),
+    stackedBox(`chrome.tiles.${tile.id}`, rooms[i]!, tile.title, tile.reading, type, { fill: tile.colour, visible: tile.present }, 'center'),
+  ]);
 }
 
 /** The temperatures' box: four cells, each a header strip with its name over the value. */
