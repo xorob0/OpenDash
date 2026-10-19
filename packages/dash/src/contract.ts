@@ -1132,6 +1132,10 @@ function faceSizeAt(width: number, height: number): FaceSize {
  * Caterhams arrived in iRacing in September 2026 and their paths are still to be read on a rig with the
  * car loaded, so they are named in `cars` and left out of `iracingCarPaths` rather than guessed.
  *
+ * The BMW is the Bosch display of BMW M Motorsport's current cars, outlined boxes and solid setting
+ * tiles under a row of round shift lights, which the M4 GT3, the M4 G82 GT4, the M Hybrid V8 and the
+ * M8 GTE all draw (#203). The 2018 F82 GT4 carries an older display and is not claimed.
+ *
  * Every car path comes from iRacing's support article "Filepath for active iRacing cars"
  * (support.iracing.com, article 31000172625, modified on 1 May 2026), which writes it as a folder path
  * such as `\mx5\mx52016`: the session YAML's CarPath is that path without its leading backslash and
@@ -1141,6 +1145,7 @@ export const THEME_CATALOGUE: readonly ThemeEntry[] = [
   { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES, bandPages: [] },
   { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche9922cup', 'porsche992cup', 'porsche911rgt3'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
   { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car', 'Caterham Academy', 'Caterham 420R'], iracingCarPaths: ['mx5 mx52016', 'legends ford34c', 'legends ford34c rookie', 'crosscartn11'], sizes: FACE_SIZES, bandPages: [] },
+  { id: 'bmw', name: 'BMW', cars: ['BMW M4 GT3', 'BMW M4 G82 GT4', 'BMW M Hybrid V8', 'BMW M8 GTE'], iracingCarPaths: ['bmwm4gt3', 'bmwm4evogt4', 'bmwlmdh', 'bmwm8gte'], sizes: FACE_SIZES, bandPages: [{ id: 'bmwFoot', name: 'BMW' }] },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */

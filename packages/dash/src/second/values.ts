@@ -2361,6 +2361,13 @@ export const antiRollRear = (): Expr => raw('dcAntiRollRear');
 export const airTemperature = (): Expr => isnull(game('AirTemperature'), num(0));
 export const roadTemperature = (): Expr => isnull(game('RoadTemperature'), num(0));
 /**
+ * The engine's water and oil temperatures, in the driver's unit, as SimHub normalises them for every
+ * sim: zero where the sim fills neither, which a caller reads as no data, as `modules/engineReadings.ts`
+ * does. The BMW's TMOT and TOIL (#203).
+ */
+export const waterTemperature = (): Expr => isnull(game('WaterTemperature'), num(0));
+export const oilTemperature = (): Expr => isnull(game('OilTemperature'), num(0));
+/**
  * Where Assetto Corsa publishes the track's name for people: the `name` of the track's own
  * `ui_track.json`, which SimHub's AC reader loads into its raw `Track.TrackInfo` (`TrackDesc` and
  * `TrackInfo` in `ACSharedMemory.dll`, decompiled). No other sim's reader has a `Track.TrackInfo`, so
