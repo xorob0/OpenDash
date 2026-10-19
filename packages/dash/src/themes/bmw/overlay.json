@@ -91,11 +91,59 @@
     "surface": {
       "base": {
         "value": "{palette.bmw.face}"
+      },
+      "zone": {
+        "value": "{palette.bmw.face}",
+        "description": "A module page stands on the glass, as every zone does."
+      },
+      "raised": {
+        "value": "{palette.bmw.off}",
+        "description": "The tracks of the house bars and its rules: the grey of an unlit light."
+      },
+      "inset": {
+        "value": "{palette.bmw.shadow}",
+        "description": "A well, the near-black under every box."
       }
     },
     "text": {
       "primary": {
         "value": "{palette.bmw.ink}"
+      },
+      "secondary": {
+        "value": "{palette.bmw.ink}",
+        "description": "The display writes in one ink: a unit and a second line are the label's grey."
+      },
+      "label": {
+        "value": "{palette.bmw.ink}",
+        "description": "The same one ink."
+      },
+      "dim": {
+        "value": "{palette.bmw.edge}",
+        "description": "What is not lit: the grey of the ARB tile and of a box's border."
+      }
+    },
+    "good": {
+      "primary": {
+        "value": "{palette.bmw.green}",
+        "description": "Gaining, and every good state, in the green of the lights."
+      }
+    },
+    "caution": {
+      "primary": {
+        "value": "{palette.bmw.yellow}",
+        "description": "A caution, in the yellow of the lights."
+      }
+    },
+    "danger": {
+      "primary": {
+        "value": "{palette.bmw.red}",
+        "description": "Losing, and every danger, in the red of the lights."
+      }
+    },
+    "best": {
+      "primary": {
+        "value": "{palette.bmw.magenta}",
+        "description": "A best, in the display's magenta."
       }
     }
   },

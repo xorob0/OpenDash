@@ -5,8 +5,9 @@
  *
  *   - The boxes stand in a grid that fills the page's frame, as many across as the widest reading
  *     allows and as many down as there are readings for, 8 px apart, each as tall as its share.
- *   - One label size and one value size per page: the reference's 16 and 34 px at face scale, made
- *     smaller in steps, down to six tenths, until every box of the grid holds its reading.
+ *   - One label size and one value size per page: the reference's 16 and 34 px at face scale, grown
+ *     to the canvas's 46 px `RPM` where a page has few readings and room for them, and made smaller in
+ *     steps, down to six tenths, until every box of the grid holds its reading.
  *   - A page with more readings than the grid holds at the smallest type sheds them in its own order,
  *     least important first, as the house's does.
  *
@@ -30,6 +31,9 @@ import { bmwColour, box, EDGE, fitSize, inkOf, lineY, runWidth } from './registe
 
 /** The reference type: the canvas's zone B box, a 16 px label over a 34 px value. */
 const TYPE = { label: 16, value: 34 } as const;
+
+/** The largest share of the reference a page of few readings grows to: the canvas's 46 px `RPM`, its largest reading. */
+const LARGEST = 46 / 34;
 
 /** The smallest share of the reference a page is set in before it sheds a reading instead. */
 const SMALLEST = 0.6;
@@ -59,7 +63,16 @@ function valueExtent(spec: FieldSpec, type: Type, density: Density): number {
   return Math.ceil(Math.max(width, ...items.map((item) => ('rect' in item ? item.rect.left + item.rect.width : 0))));
 }
 
-const labelExtent = (spec: FieldSpec, type: Type): number => (labelled(spec) ? runWidth(spec.labelWidest ?? spec.label, type.label, true) : 0);
+/**
+ * A reading's label as the canvas writes a boxed reading's: in bold capitals, `FUEL` and `PER LAP`. A
+ * label the sim's state chooses between (the delta's reference) is a caption, written as the canvas
+ * writes `Time Diff`, in its own case and in Medium, because a binding's strings are not all drawn.
+ */
+const captioned = (spec: FieldSpec): boolean => spec.labelBind !== undefined;
+const labelText = (spec: FieldSpec): string => (captioned(spec) ? spec.label : spec.label.toUpperCase());
+
+const labelExtent = (spec: FieldSpec, type: Type): number =>
+  labelled(spec) ? runWidth(captioned(spec) ? (spec.labelWidest ?? spec.label) : labelText(spec), type.label, !captioned(spec)) : 0;
 
 /** The narrowest box that holds a reading at `type`, its edges and its shadow included. */
 const boxWidth = (spec: FieldSpec, type: Type, density: Density): number =>
@@ -108,32 +121,30 @@ function readingsThatFit(specs: readonly FieldSpec[], order: readonly string[], 
   }
 }
 
-/** A value's items moved left until the rightmost of them ends at `right`. */
-function withinRight(items: Item[], right: number): Item[] {
-  const end = Math.max(...items.map((item) => ('rect' in item ? item.rect.left + item.rect.width : -Infinity)));
-  const over = Math.ceil(end - right);
-  return over <= 0 ? items : items.map((item) => ('rect' in item ? { ...item, rect: { ...item.rect, left: item.rect.left - over } } : item));
-}
+/** A value's items with the value set at the right of its cells, so that it ends where its box's text does, by its unit where it has one. */
+const atRight = (items: Item[]): Item[] => items.map((item) => (item.kind === 'text' && item.name.endsWith('.value') ? { ...item, hAlign: 'right' } : item));
 
-/** One reading in its box: the label bold along the top, the value centred under it. */
+/** One reading in its box, as the canvas's `FUEL`: the label bold along the top, the value at the right under it. */
 function readingBox(spec: FieldSpec, room: Rect, type: Type, density: Density): Item {
   const { items, inner } = box(`${spec.name}.frame`, room, { visible: spec.visibleBind });
   const labelH = labelled(spec) ? lineOf(type.label) + UNDER : 0;
   const free = inner.height - labelH - lineOf(type.value);
   const top = inner.top + Math.max(0, Math.floor(free / 3));
   const value = valueOf(spec, type);
-  const width = fieldWidth(value, density);
   const left = inner.left + PAD;
   const across = inner.width - 2 * PAD;
   const valueTop = top + labelH + Math.max(0, Math.floor(free / 3));
   const bottom = valueTop + type.value;
+  const drawn = field(value, 0, bottom, density, fieldWidth(value, density));
+  const end = Math.max(...drawn.map((item) => ('rect' in item ? item.rect.left + item.rect.width : -Infinity)));
+  const shift = Math.floor(left + across - end);
   const children: Item[] = [
     ...items,
     ...(labelled(spec)
       ? [
-          label(`${spec.name}.label`, spec.label, left, top, across, {
+          label(`${spec.name}.label`, labelText(spec), left, top, across, {
             size: type.label,
-            weight: 'Bold',
+            weight: captioned(spec) ? 'Medium' : 'Bold',
             color: inkOf({}),
             hAlign: 'center',
             bind: spec.labelBind,
@@ -142,7 +153,7 @@ function readingBox(spec: FieldSpec, room: Rect, type: Type, density: Density): 
           }),
         ]
       : []),
-    ...withinRight(field(value, Math.round(left + (across - width) / 2), bottom, density, width), left + across),
+    ...atRight(drawn.map((item) => ('rect' in item ? { ...item, rect: { ...item.rect, left: item.rect.left + shift } } : item))),
   ];
   return { kind: 'layer', name: `${spec.name}.cell`, children };
 }
@@ -187,7 +198,7 @@ function bmwStack(frame: Rect, rows: readonly StackRow[], density: Density): Ite
   const least = boxHeight({ label: Math.round(TYPE.label * SMALLEST), value: Math.round(TYPE.value * SMALLEST) });
   while (kept.length > 0 && frame.height - othersHeight() < least) kept.pop();
   const area = rect(frame.left, frame.top, frame.width, frame.height - othersHeight());
-  const fit = readingsThatFit(specs, order, area, density, 1);
+  const fit = readingsThatFit(specs, order, area, density, LARGEST);
   if (!fit) return [];
   const items = boxesIn(fit.kept, area, fit.grid, density);
   let y = area.top + area.height + GAP;
