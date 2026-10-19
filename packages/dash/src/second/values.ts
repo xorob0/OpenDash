@@ -3155,6 +3155,8 @@ export const average5 = (): Expr => {
 };
 
 export const bestLap = (): Expr => game('BestLapTime');
+/** The lap being driven, as a time span counting from the line. */
+export const currentLapTime = (): Expr => game('CurrentLapTime');
 export const lastLap = (): Expr => game('LastLapTime');
 export const estimatedLap = (): Expr => prop('PersistantTrackerPlugin.EstimatedLapTime');
 export const sessionBestDelta = (): Expr => isnull(prop('PersistantTrackerPlugin.SessionBestLiveDeltaSeconds'), num(0));

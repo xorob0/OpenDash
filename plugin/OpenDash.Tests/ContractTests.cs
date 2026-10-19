@@ -823,7 +823,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(block.Success, "THEME_CATALOGUE not found in contract.ts");
             var rows = Regex.Matches(
                 block.Groups["items"].Value,
-                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\]),\s*bandPages:\s*\[(?<bands>[^\]]*)\]\s*\}");
+                @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)',\s*cars:\s*\[(?<cars>[^\]]*)\],\s*iracingCarPaths:\s*\[(?<paths>[^\]]*)\],\s*sizes:\s*(?<sizes>FACE_SIZES|\[[^\]]*\]),\s*bandPages:\s*\[(?<bands>[^\]]*)\](?:,\s*modulePages:\s*\[(?<modules>[^\]]*)\])?(?:,\s*opensOn:\s*\{\s*B:\s*'(?<b>[^']*)',\s*C:\s*'(?<c>[^']*)'\s*\})?\s*\}");
             Assert.Equal(Contract.Themes.Count, rows.Count);
             Assert.True(Contract.Themes[0].IsDefault);
             for (var i = 0; i < rows.Count; i++)
@@ -843,6 +843,12 @@ namespace OpenDashPlugin.Tests
                 var bands = Regex.Matches(rows[i].Groups["bands"].Value, @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)'\s*\}")
                     .Cast<Match>().Select(m => m.Groups["id"].Value + "/" + m.Groups["name"].Value);
                 Assert.Equal(bands, theme.BandPages.Select(p => p.Id + "/" + p.Name));
+                // And its module pages, which zones B and C cycle after the modules, and where they open (#203).
+                var modules = Regex.Matches(rows[i].Groups["modules"].Value, @"\{\s*id:\s*'(?<id>[^']*)',\s*name:\s*'(?<name>[^']*)'\s*\}")
+                    .Cast<Match>().Select(m => m.Groups["id"].Value + "/" + m.Groups["name"].Value);
+                Assert.Equal(modules, theme.ModulePages.Select(p => p.Id + "/" + p.Name));
+                Assert.Equal(rows[i].Groups["b"].Success ? rows[i].Groups["b"].Value : null, theme.OpensOnB);
+                Assert.Equal(rows[i].Groups["c"].Success ? rows[i].Groups["c"].Value : null, theme.OpensOnC);
             }
             Assert.Equal(Contract.Themes.Count, Contract.Themes.Select(t => t.Id).Distinct().Count());
             Assert.Equal("OpenDash Porsche 1280x480", Contract.Themes.Single(t => t.Id == "porsche").FolderAt(1280, 480));

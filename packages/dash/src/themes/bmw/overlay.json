@@ -1,59 +1,159 @@
 {
   "palette": {
     "bmw": {
-      "face": { "value": "#0A0B0D", "description": "The Bosch display's black glass, behind every box (#203)." },
-      "ground": { "value": "#14161A", "description": "Inside an outlined box: a step lighter than the glass, so that the box reads as a box before its border does." },
-      "ink": { "value": "#D2D5D9", "description": "Every label and value in an outlined box, the gear and the speed." },
-      "tileInk": { "value": "#F5F7FA", "description": "The text on a filled box: the setting tiles, the lit pills and the alarm boxes." },
-      "edge": { "value": "#5A6069", "description": "The 2 px border of an outlined box, and the ARB tile." },
-      "shadow": { "value": "#030304", "description": "The shadow every box casts down and to the right, a solid offset of the glass, as WPF draws no blur." },
-      "off": { "value": "#262A30", "description": "An unlit shift light." },
-      "green": { "value": "#00D96A", "description": "The first lights of each side, and the time difference when gaining." },
-      "yellow": { "value": "#FFD400", "description": "The third light of each side." },
-      "red": { "value": "#FF2D46", "description": "The speed over the pit limit." },
-      "magenta": { "value": "#E04CE6", "description": "The lights with the pit limiter on." },
-      "tc": { "value": "#1E51A8", "description": "The TC tile, and a change notification's tile." },
-      "abs": { "value": "#A84500", "description": "The ABS tile." },
-      "map": { "value": "#9C2FA3", "description": "The MAP tile, the lit PSL pill and the Pit Time box." },
-      "arb": { "value": "#5A6069", "description": "The ARB tile." },
-      "lit": { "value": "#2D6B33", "description": "A lit pill, and a tyre's cell." },
-      "litEdge": { "value": "#4CAF55", "description": "The top edge of a tyre's cell." },
-      "pillDim": { "value": "#1F2328", "description": "An unlit pill, and the temperatures' cells." },
-      "pillInk": { "value": "#454B53", "description": "An unlit pill's name." },
-      "head": { "value": "#33383F", "description": "The header strip of the temperatures' cells." },
-      "alarm": { "value": "#A81D2E", "description": "The FUEL box under the alarm, and the Pit Time box over the limit." }
+      "face": {
+        "value": "#14161A",
+        "description": "The Bosch display's glass, behind every box and in every zone (#203)."
+      },
+      "ground": {
+        "value": "#14161A",
+        "description": "Inside an outlined box: the glass itself, which hides the shadow under the box so that only its offset shows."
+      },
+      "ink": {
+        "value": "#D2D5D9",
+        "description": "Every label and value in an outlined box, the gear and the speed."
+      },
+      "tileInk": {
+        "value": "#F5F7FA",
+        "description": "The text on a filled box: the setting tiles, the lit pills and the alarm boxes."
+      },
+      "edge": {
+        "value": "#5A6069",
+        "description": "The 2 px border of an outlined box, and the ARB tile."
+      },
+      "shadow": {
+        "value": "#030304",
+        "description": "The shadow every box casts down and to the right, a solid offset of the glass, as WPF draws no blur."
+      },
+      "off": {
+        "value": "#262A30",
+        "description": "An unlit shift light."
+      },
+      "green": {
+        "value": "#00D96A",
+        "description": "The first lights of each side, and the time difference when gaining."
+      },
+      "yellow": {
+        "value": "#FFD400",
+        "description": "The third light of each side."
+      },
+      "red": {
+        "value": "#FF2D46",
+        "description": "The speed over the pit limit, and the time difference when losing."
+      },
+      "magenta": {
+        "value": "#E04CE6",
+        "description": "The lights with the pit limiter on."
+      },
+      "tc": {
+        "value": "#1E51A8",
+        "description": "The TC tile, and a change notification's tile."
+      },
+      "abs": {
+        "value": "#A84500",
+        "description": "The ABS tile."
+      },
+      "map": {
+        "value": "#9C2FA3",
+        "description": "The MAP tile, the lit PSL pill and the Pit Time box."
+      },
+      "arb": {
+        "value": "#5A6069",
+        "description": "The ARB tile."
+      },
+      "lit": {
+        "value": "#2D6B33",
+        "description": "A lit pill, and a tyre's cell."
+      },
+      "litEdge": {
+        "value": "#4CAF55",
+        "description": "The top edge of a tyre's cell."
+      },
+      "pillDim": {
+        "value": "#1F2328",
+        "description": "An unlit pill, and the temperatures' cells."
+      },
+      "pillInk": {
+        "value": "#454B53",
+        "description": "An unlit pill's name."
+      },
+      "head": {
+        "value": "#33383F",
+        "description": "The header strip of the temperatures' cells."
+      },
+      "alarm": {
+        "value": "#A81D2E",
+        "description": "The FUEL box under the alarm, and the Pit Time box over the limit."
+      }
     }
   },
   "color": {
     "surface": {
-      "base": { "value": "{palette.bmw.face}" }
+      "base": {
+        "value": "{palette.bmw.face}"
+      }
     },
     "text": {
-      "primary": { "value": "{palette.bmw.ink}" }
+      "primary": {
+        "value": "{palette.bmw.ink}"
+      }
     }
   },
   "font": {
     "family": {
-      "data": { "value": "{font.family.label}", "note": "The Bosch display sets its figures in a plain sans at normal width, so the numerals are Barlow like the labels, in Medium (#203)." }
+      "data": {
+        "value": "{font.family.label}",
+        "note": "The Bosch display sets its figures in a plain sans at normal width, so the numerals are Barlow like the labels, in Medium (#203)."
+      }
     },
     "cell": {
       "semiBold": {
-        "digit": { "value": 0.63, "note": "Barlow Medium: the widest digit is the 4 at 0.570 em and the O of OFF is 0.622, which the cell holds as the house cell holds the condensed O." },
-        "special": { "value": 0.35, "note": "Barlow Medium: the colon is 0.348 em." }
+        "digit": {
+          "value": 0.63,
+          "note": "Barlow Medium: the widest digit is the 4 at 0.570 em and the O of OFF is 0.622, which the cell holds as the house cell holds the condensed O."
+        },
+        "special": {
+          "value": 0.35,
+          "note": "Barlow Medium: the colon is 0.348 em."
+        }
       },
       "bold": {
-        "digit": { "value": 0.63, "note": "The same face as semiBold, since this theme draws both data weights in Medium." },
-        "special": { "value": 0.35 }
+        "digit": {
+          "value": 0.63,
+          "note": "The same face as semiBold, since this theme draws both data weights in Medium."
+        },
+        "special": {
+          "value": 0.35
+        }
       },
-      "gear": { "value": 0.68, "note": "Barlow Medium: the N is 0.673 em." }
+      "gear": {
+        "value": 0.68,
+        "note": "Barlow Medium: the N is 0.673 em."
+      }
     }
   },
   "purpose": {
     "shift": {
-      "stage1": { "value": "{palette.bmw.green}" },
-      "stage2": { "value": "{palette.bmw.yellow}" },
-      "stage3": { "value": "{palette.bmw.red}" },
-      "unlit": { "value": "{palette.bmw.off}" }
+      "stage1": {
+        "value": "{palette.bmw.green}"
+      },
+      "stage2": {
+        "value": "{palette.bmw.yellow}"
+      },
+      "stage3": {
+        "value": "{palette.bmw.red}"
+      },
+      "unlit": {
+        "value": "{palette.bmw.off}"
+      }
+    },
+    "delta": {
+      "faster": {
+        "value": "{palette.bmw.green}"
+      },
+      "slower": {
+        "value": "{palette.bmw.red}"
+      }
     }
   }
 }

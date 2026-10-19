@@ -13,6 +13,9 @@
  * The portrait face is the canvas's own board: the gear column and column C side by side across the
  * top, and zone B's box, the tiles and the temperatures under them, full width.
  *
+ * Every share is a CSS flex share of the canvas, `flex: n 1 0` with 8 px gaps, and {@link shares}
+ * divides a length the way the browser does, so that the build stands where the canvas does.
+ *
  * Only rectangles here, because the registry reads the anatomy, and so this file, before `ds` exists.
  */
 import type { Rect } from '../../generator.ts';
@@ -34,6 +37,9 @@ export interface BmwFace {
   /** The canvas's type scale: 1 at 480 high, 0.74 on a face shorter than 360. */
   s: number;
   short: boolean;
+  /** The canvas's `tall`: a body deeper than 480, where zone B's box has the two lap times under it. */
+  tall: boolean;
+  portrait: boolean;
   /** The row the shift lights stand in, and the lights' diameter and pitch. */
   leds: Rect;
   ledSize: number;
@@ -54,32 +60,48 @@ export interface BmwFace {
   places?: Rect;
 }
 
+export interface Span {
+  start: number;
+  size: number;
+}
+
+/**
+ * `length` divided as a flex container with `gap` between its children divides it among children of
+ * `flex: n 1 0`: each its share of what the gaps leave, the edges rounded where they fall so that the
+ * pieces and the gaps add up to the whole.
+ */
+export function shares(start: number, length: number, flex: readonly number[], gap = GAP): Span[] {
+  const total = flex.reduce((a, b) => a + b, 0);
+  const free = length - gap * (flex.length - 1);
+  let at = 0;
+  return flex.map((n, i) => {
+    const from = Math.round(start + (free * at) / total + gap * i);
+    at += n;
+    const to = Math.round(start + (free * at) / total + gap * i);
+    return { start: from, size: to - from };
+  });
+}
+
 /** The portrait board: the gear column 220 wide beside column C over 300 of the body's height, then zone B, the tiles and the temperatures. */
 function portrait(width: number, height: number): BmwFace {
   const s = 1;
   const ledH = 26;
-  const footH = 68;
+  const footH = 60;
   const bodyTop = ledH + 6;
   const body = rect(MARGIN, bodyTop, width - 2 * MARGIN, height - bodyTop - footH - GAP - MARGIN);
-  const share = (body.height - 3 * GAP) / (300 + 130 + 64 + 104);
-  const top = Math.round(300 * share);
-  const tyres = Math.round(130 * share);
-  const tiles = Math.round(64 * share);
-  const temps = body.height - 3 * GAP - top - tyres - tiles;
+  const [top, tyres, tiles, temps] = shares(body.top, body.height, [300, 130, 64, 86]) as [Span, Span, Span, Span];
   const columnA = 220;
-  let y = body.top;
-  const zoneA = rect(body.left, y, columnA, top);
-  const zoneC = rect(body.left + columnA + GAP, y, body.width - columnA - GAP, top);
-  y += top + GAP;
-  const zoneB = rect(body.left, y, body.width, tyres);
-  y += tyres + GAP;
-  const tileRow = rect(body.left, y, body.width, tiles);
-  y += tiles + GAP;
+  const zoneA = rect(body.left, top.start, columnA, top.size);
+  const zoneC = rect(body.left + columnA + GAP, top.start, body.width - columnA - GAP, top.size);
+  const zoneB = rect(body.left, tyres.start, body.width, tyres.size);
+  const tileRow = rect(body.left, tiles.start, body.width, tiles.size);
   return {
     width,
     height,
     s,
     short: false,
+    tall: false,
+    portrait: true,
     leds: rect(MARGIN, 0, width - 2 * MARGIN, ledH),
     ledSize: 16,
     ledGap: 18,
@@ -89,7 +111,7 @@ function portrait(width: number, height: number): BmwFace {
     zoneA,
     zoneC,
     tiles: tileRow,
-    temps: rect(body.left, y, body.width, temps),
+    temps: rect(body.left, temps.start, body.width, temps.size),
   };
 }
 
@@ -125,19 +147,18 @@ export function bmwFace(size: Size): BmwFace {
   const zoneC = column(cC);
   const laps = xC ? column(xC) : undefined;
 
+  const tall = bodyH > 480;
   let zoneB = columnB;
   let tiles: Rect | undefined;
   let temps: Rect | undefined;
   if (!short) {
-    // The canvas's shares, 160, 84 and 104; a deep column gives its extra height to zone B and keeps
-    // the tiles and the temperatures at the reference's.
-    const share = Math.min((bodyH - 2 * GAP) / 348, k);
-    const tilesH = Math.round(84 * share);
-    const tempsH = Math.round(104 * share);
-    const zoneH = bodyH - 2 * GAP - tilesH - tempsH;
-    zoneB = rect(columnB.left, bodyTop, cB, zoneH);
-    tiles = rect(columnB.left, bodyTop + zoneH + GAP, cB, tilesH);
-    temps = rect(columnB.left, bodyTop + zoneH + GAP + tilesH + GAP, cB, tempsH);
+    // The canvas's column B: zone B's box 160, on a tall face the two lap times' 160 under it, then
+    // the tiles' 84 and the temperatures' 104. Zone B is the box and the lap times together.
+    const rows = shares(bodyTop, bodyH, tall ? [160, 160, 84, 104] : [160, 84, 104]);
+    const [t, p] = rows.slice(-2) as [Span, Span];
+    zoneB = rect(columnB.left, bodyTop, cB, t.start - GAP - bodyTop);
+    tiles = rect(columnB.left, t.start, cB, t.size);
+    temps = rect(columnB.left, p.start, cB, p.size);
   }
 
   return {
@@ -145,6 +166,8 @@ export function bmwFace(size: Size): BmwFace {
     height: H,
     s,
     short,
+    tall,
+    portrait: false,
     leds: rect(MARGIN, 0, W - 2 * MARGIN, ledH),
     ledSize,
     ledGap: Math.round(ledSize * 1.15),
@@ -173,5 +196,44 @@ export function bmwFaceForFoot(width: number, height: number): BmwFace {
   return face;
 }
 
-/** A box's own rectangle in the room it is given, its shadow kept inside the room. */
-export const boxIn = (room: Rect): Rect => rect(room.left, room.top, room.width - SHADOW.x, room.height - SHADOW.y);
+/**
+ * The face a zone of this frame belongs to: a zone dashboard is drawn at its zone's size, so its width
+ * and height name the face, the first face whose zone A, B or C is that size. With the rev bar off the
+ * zones that start the body grow up into the lights' row (`regionsWithoutRevBar`), and such a zone
+ * names its face too, `lift` being what it grew by, which a page leaves empty as the dark row it is.
+ */
+export function bmwFaceForZone(width: number, height: number): { face: BmwFace; lift: number } | undefined {
+  for (const face of BMW_SIZES.map(bmwFace)) {
+    const zones = [face.zoneA, face.zoneB, face.zoneC];
+    const bodyTop = Math.min(...zones.map((z) => z.top));
+    const reclaim = bodyTop - face.leds.top;
+    if (zones.some((z) => z.width === width && z.height === height)) return { face, lift: 0 };
+    if (zones.some((z) => z.top === bodyTop && z.width === width && z.height + reclaim === height)) return { face, lift: reclaim };
+  }
+  return undefined;
+}
+
+export interface RaceRows {
+  top: Rect;
+  fuel?: Rect;
+  /** The time difference and the lap time together, which a change notification covers. */
+  lower: Rect;
+  diff: Rect;
+  lap: Rect;
+}
+
+/**
+ * Column C's rows on the race page: the revs and the brake balance, the fuel where the face is tall
+ * enough, and the time difference over the lap time, which a change notification covers together.
+ */
+export function raceRows(frame: Rect, scale: { short: boolean; portrait: boolean }): RaceRows {
+  const at = (r: { start: number; size: number }): Rect => rect(frame.left, r.start, frame.width, r.size);
+  if (scale.portrait) {
+    const [top, diff, lapRow] = shares(frame.top, frame.height, [92, 82, 90]).map(at) as [Rect, Rect, Rect];
+    return { top, lower: rect(frame.left, diff.top, frame.width, lapRow.top + lapRow.height - diff.top), diff, lap: lapRow };
+  }
+  const rows = shares(frame.top, frame.height, scale.short ? [92, 172] : [92, 76, 172]).map(at);
+  const lower = rows[rows.length - 1]!;
+  const [diff, lapRow] = shares(lower.top, lower.height, [82, 90]).map(at) as [Rect, Rect];
+  return { top: rows[0]!, fuel: scale.short ? undefined : rows[1], lower, diff, lap: lapRow };
+}

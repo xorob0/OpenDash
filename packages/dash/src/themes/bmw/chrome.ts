@@ -16,12 +16,12 @@ import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { hasSetting, LEVEL_WIDEST, trackedValue } from '../../second/tracked.ts';
 import {
-  airTemperature, antiRollFront, bestLap, carRelativeGap, estimatedLap, lapTime, LAP_TIME_WIDEST, lastLap, neighbour, NO_VALUE, oilTemperature, player,
+  airTemperature, antiRollFront, bestLap, carRelativeGap, estimatedLap, lapTime, lapTimeWidest, lastLap, neighbour, NO_VALUE, oilTemperature, player,
   positionLabelled, RELATIVE_GAP_WIDEST, roadTemperature, waterTemperature,
 } from '../../second/values.ts';
 import type { FaceContext } from '../drawing.ts';
-import { bmwFace, GAP, SHADOW } from './geometry.ts';
-import { bmwColour, box, centredY, stackedBox, stackedTypeFor, type Reading, type StackedType } from './register.ts';
+import { bmwFace, shares } from './geometry.ts';
+import { bmwColour, box, caps, centredY, FILLED_SHADOW, fitSize, lineY, readingBox, runWidth, sentence, stackedRuns, type Reading, type Writing } from './register.ts';
 
 const { eq, fmt, iff, isNull, isnull, not, num, str } = ncalc;
 
@@ -52,56 +52,79 @@ const TEMPS = (): readonly { id: string; title: string; reading: Reading }[] => 
   { id: 'air', title: 'TAIR', reading: { sample: '22', bind: degrees(airTemperature()), widest: '444' } },
 ];
 
-/** `count` rooms side by side across `row`, `GAP` apart less the shadow each keeps inside its own. */
-export function across(row: Rect, count: number, gap = GAP - SHADOW.x): Rect[] {
-  const width = (row.width - (count - 1) * gap) / count;
-  return Array.from({ length: count }, (_, i) => rect(Math.round(row.left + i * (width + gap)), row.top, Math.round(row.left + (i + 1) * width + i * gap) - Math.round(row.left + i * (width + gap)), row.height));
+/** `count` rooms side by side across `row`, `gap` apart, as a grid of equal columns lays them. */
+export function across(row: Rect, count: number, gap: number): Rect[] {
+  return shares(row.left, row.width, Array(count).fill(1), gap).map((c) => rect(c.start, row.top, c.size, row.height));
 }
 
-/** `count` rooms one under another down `column`. */
-export function down(column: Rect, count: number, gap = GAP - SHADOW.y): Rect[] {
-  const height = (column.height - (count - 1) * gap) / count;
-  return Array.from({ length: count }, (_, i) => rect(column.left, Math.round(column.top + i * (height + gap)), column.width, Math.round(column.top + (i + 1) * height + i * gap) - Math.round(column.top + i * (height + gap))));
-}
+/** The room a grid's cells may cast their shadows into: the row, and the gap after it on the face. */
+const spill = (row: Rect): Rect => rect(row.left, row.top, row.width + FILLED_SHADOW.x, row.height + FILLED_SHADOW.y);
 
-function tiles(row: Rect, s: number): Item[] {
+/**
+ * The tiles, 5 px apart: each its colour lit from above, its name in bold over its figure, or beside it
+ * on the portrait board, whose tiles are a strip.
+ */
+function tiles(row: Rect, s: number, portrait: boolean): Item[] {
   const list = TILES();
-  const rooms = across(row, list.length);
-  const type = stackedTypeFor(rooms[0]!, list.map((t) => ({ title: t.title, widest: t.reading.widest })), { label: Math.round(15 * s), value: Math.round(40 * s) }, 0.4, true);
-  if (!type) return [];
+  const rooms = across(row, list.length, 5);
+  const cell = rooms[0]!;
+  const name = fitSize(Math.round(15 * s), portrait ? cell.width / 3 : cell.width - 4, list.map((t) => t.title), true);
+  const value = Math.min(fitSize(Math.round(40 * s), portrait ? cell.width / 2 : cell.width - 4, list.map((t) => t.reading.widest)), Math.floor((cell.height - (portrait ? 0 : name * 1.1)) / 1.05));
   // A setting the sim does not report keeps its place as an unlit tile, as the foot's pills do, so
   // that the row reads the same in every car rather than closing up round a gap.
-  return list.flatMap((tile, i) => [
-    stackedBox(`chrome.tiles.${tile.id}.dim`, rooms[i]!, tile.title, { sample: NO_VALUE, widest: tile.reading.widest }, type, { fill: bmwColour('pillDim'), ink: bmwColour('pillInk'), visible: not(tile.present) }, 'center'),
-    stackedBox(`chrome.tiles.${tile.id}`, rooms[i]!, tile.title, tile.reading, type, { fill: tile.colour, visible: tile.present }, 'center'),
-  ]);
+  return list.flatMap((tile, i) => {
+    const room = rooms[i]!;
+    const draw = (id: string, fill: Hex, ink: Hex, reading: Reading, visible: Expr): Item[] => {
+      const { items, inner } = box(`chrome.tiles.${id}`, room, { fill, visible, within: spill(row) });
+      if (!portrait) {
+        return [...items, ...stackedRuns(`chrome.tiles.${id}`, inner, [
+          { id: 'name', text: tile.title, size: name, bold: true, lh: 1.1 },
+          { id: 'value', text: reading.sample, size: value, lh: 1, bind: reading.bind, widest: reading.widest },
+        ], ink, visible)];
+      }
+      // Beside each other, 14 px apart, the pair centred across the tile.
+      const nameWidth = runWidth(tile.title, name, true);
+      const valueWidth = runWidth(reading.widest, value);
+      const left = Math.round(inner.left + (inner.width - nameWidth - 14 - valueWidth) / 2);
+      return [
+        ...items,
+        label(`chrome.tiles.${id}.name`, tile.title, left, centredY(inner, name), nameWidth, { size: name, weight: 'Bold', color: ink, visibleBind: visible }),
+        label(`chrome.tiles.${id}.value`, reading.sample, left + nameWidth + 14, centredY(inner, value, 1), valueWidth, { size: value, color: ink, bind: reading.bind, widest: reading.widest, visibleBind: visible }),
+      ];
+    };
+    return [
+      ...draw(`${tile.id}.dim`, bmwColour('pillDim'), bmwColour('pillInk'), { sample: NO_VALUE, widest: tile.reading.widest }, not(tile.present)),
+      ...draw(tile.id, tile.colour, bmwColour('tileInk'), tile.reading, tile.present),
+    ];
+  });
 }
 
-/** The temperatures' box: four cells, each a header strip with its name over the value. */
-function temps(room: Rect, s: number): Item[] {
+/** The temperatures' box: four cells 4 px apart, each a header strip with its name over the value at the right. */
+function temps(room: Rect, s: number, portrait: boolean): Item[] {
   const list = TEMPS();
   const { items, inner } = box('chrome.temps', room);
-  const cells = across(rect(inner.left + 4, inner.top + 4, inner.width - 8, inner.height - 8), list.length, 4);
-  const labelSize = Math.round(15 * s);
-  const head = Math.ceil(labelSize * 1.2) + 4;
-  const valueRoom = (cells[0]?.height ?? 0) - head;
-  const fit: StackedType | undefined = stackedTypeFor(cells[0]!, list.map((t) => ({ title: t.title, widest: t.reading.widest })), { label: labelSize, value: Math.round(32 * s) }, 0.4, true);
-  if (!fit) return [];
-  const value = Math.min(fit.value, Math.floor((valueRoom - 2) / 1.2));
+  const grid = rect(inner.left + 4, inner.top + 4, inner.width - 8, inner.height - 8);
+  const cells = across(grid, list.length, 4);
+  const cell = cells[0]!;
+  const nameSize = fitSize(Math.round(16 * s), cell.width - 4, list.map((t) => t.title), true);
+  const head = Math.round(nameSize * 1.5);
+  const padRight = portrait ? 6 : 2;
+  const value = Math.min(fitSize(Math.round(40 * s), cell.width - padRight - 2, list.map((t) => t.reading.widest)), Math.floor((cell.height - head) / 1.2));
   return [
     ...items,
     ...list.flatMap((temp, i) => {
-      const cell = cells[i]!;
-      const strip = rect(cell.left, cell.top, cell.width, head);
-      const below = rect(cell.left, cell.top + head, cell.width, cell.height - head);
+      const c = cells[i]!;
+      const lit = box(`chrome.temps.${temp.id}`, c, { fill: bmwColour('pillDim'), within: inner });
+      const strip = rect(c.left, c.top, c.width, head);
+      const below = rect(c.left, c.top + head, c.width, c.height - head);
       return [
-        band(`chrome.temps.${temp.id}.cell`, cell, bmwColour('pillDim')),
+        ...lit.items,
         band(`chrome.temps.${temp.id}.head`, strip, bmwColour('head')),
-        label(`chrome.temps.${temp.id}.name`, temp.title, strip.left + 2, centredY(strip, fit.label), strip.width - 4, { size: fit.label, weight: 'Bold', color: bmwColour('ink'), hAlign: 'center' }),
-        label(`chrome.temps.${temp.id}.value`, temp.reading.sample, below.left + 2, centredY(below, value), below.width - 4, {
+        label(`chrome.temps.${temp.id}.name`, temp.title, strip.left + 2, lineY(strip.top, nameSize, 1.5), strip.width - 4, { size: nameSize, weight: 'Bold', color: bmwColour('ink'), hAlign: 'center' }),
+        label(`chrome.temps.${temp.id}.value`, temp.reading.sample, below.left + 2, centredY(below, value), below.width - 2 - padRight, {
           size: value,
           color: bmwColour('ink'),
-          hAlign: 'center',
+          hAlign: 'right',
           bind: temp.reading.bind,
           widest: temp.reading.widest,
         }),
@@ -110,34 +133,33 @@ function temps(room: Rect, s: number): Item[] {
   ];
 }
 
-/** A column of stacked boxes, as many of `list` as its height holds at the canvas's type. */
-function column(name: string, room: Rect, list: readonly { id: string; title: string; reading: Reading }[], s: number): Item[] {
-  for (let count = list.length; count > 0; count--) {
-    const rooms = down(room, count);
-    const type = stackedTypeFor(rooms[0]!, list.slice(0, count).map((r) => ({ title: r.title, widest: r.reading.widest })), { label: Math.round(16 * s), value: Math.round(40 * s) }, 0.6);
-    if (type) return list.slice(0, count).map((r, i) => stackedBox(`${name}.${r.id}`, rooms[i]!, r.title, r.reading, type));
-  }
-  return [];
+/** A column of boxes, flex 1 each and 8 px apart, in one writing. */
+function column(name: string, room: Rect, list: readonly { id: string; title: string; reading: Reading }[], writing: Writing): Item[] {
+  return shares(room.top, room.height, list.map(() => 1)).map((r, i) => readingBox(`${name}.${list[i]!.id}`, rect(room.left, r.start, room.width, r.size), list[i]!.title, list[i]!.reading, writing));
 }
 
+const LAP_WIDEST = lapTimeWidest(2);
+
 const LAPS = (): readonly { id: string; title: string; reading: Reading }[] => [
-  { id: 'predicted', title: 'Lap Predict', reading: { sample: '1:38.402', bind: lapTime(estimatedLap()), widest: LAP_TIME_WIDEST } },
-  { id: 'last', title: 'Last Lap', reading: { sample: '1:38.917', bind: lapTime(lastLap()), widest: LAP_TIME_WIDEST } },
-  { id: 'best', title: 'Best Lap', reading: { sample: '1:37.884', bind: lapTime(bestLap()), widest: LAP_TIME_WIDEST } },
+  { id: 'predicted', title: 'Lap Predict', reading: { sample: '1:37.61', bind: lapTime(estimatedLap(), 2), widest: LAP_WIDEST } },
+  { id: 'last', title: 'Last Lap', reading: { sample: '1:37.90', bind: lapTime(lastLap(), 2), widest: LAP_WIDEST } },
+  { id: 'best', title: 'Best Lap', reading: { sample: '1:37.42', bind: lapTime(bestLap(), 2), widest: LAP_WIDEST } },
 ];
 
 const PLACES = (): readonly { id: string; title: string; reading: Reading }[] => [
-  { id: 'position', title: 'Position', reading: { sample: 'P4', bind: positionLabelled(player()), widest: 'P444' } },
-  { id: 'ahead', title: 'Gap Ahead', reading: { sample: '-1.204', bind: carRelativeGap(neighbour(-1)), widest: RELATIVE_GAP_WIDEST } },
-  { id: 'behind', title: 'Gap Behind', reading: { sample: '+0.866', bind: carRelativeGap(neighbour(1)), widest: RELATIVE_GAP_WIDEST } },
+  { id: 'position', title: 'POS', reading: { sample: 'P4', bind: positionLabelled(player()), widest: 'P444' } },
+  { id: 'ahead', title: 'AHEAD', reading: { sample: '+1.24', bind: carRelativeGap(neighbour(-1)), widest: RELATIVE_GAP_WIDEST } },
+  { id: 'behind', title: 'BEHIND', reading: { sample: '-0.81', bind: carRelativeGap(neighbour(1)), widest: RELATIVE_GAP_WIDEST } },
 ];
 
 export function bmwChrome(ctx: FaceContext): Item[] {
   const face = bmwFace(ctx.layout);
+  const lab = Math.round(16 * face.s);
+  const val = Math.round(40 * face.s);
   return [
-    ...(face.tiles ? tiles(face.tiles, face.s) : []),
-    ...(face.temps ? temps(face.temps, face.s) : []),
-    ...(face.laps ? column('chrome.laps', face.laps, LAPS(), face.s) : []),
-    ...(face.places ? column('chrome.places', face.places, PLACES(), face.s) : []),
+    ...(face.tiles ? tiles(face.tiles, face.s, face.portrait) : []),
+    ...(face.temps ? temps(face.temps, face.s, face.portrait) : []),
+    ...(face.laps ? column('chrome.laps', face.laps, LAPS(), sentence(lab, val, 'center')) : []),
+    ...(face.places ? column('chrome.places', face.places, PLACES(), caps(lab, val)) : []),
   ];
 }
