@@ -55,7 +55,7 @@ import { BASE_FACE, ZONE_FACES } from '../../packages/dash/src/zones/index.ts';
 import type { ZoneLayout } from '../../packages/dash/src/zones/layout.ts';
 import { readBuiltManifest } from '../../scripts/buildOutput.ts';
 import { sectionFor, versionsIn } from '../../scripts/changelog.ts';
-import { readSimSupport, SIMS, type SimSection } from '../../scripts/simSupport.ts';
+import { readSimSupport, SIMS, SUPPORTED_SIMS, type SimSection } from '../../scripts/simSupport.ts';
 import { PLUGIN_ZIP } from '../lib/site.ts';
 
 export type { SimCell, SimMark, SimName, SimRow, SimSection } from '../../scripts/simSupport.ts';
@@ -457,6 +457,9 @@ export const RELEASES: Release[] = ${json(releases(changelog))};
 
 /** The sims docs/sim-support.md has a column for, in its order. */
 export const SIM_NAMES: SimName[] = ${json(SIMS)};
+
+/** The sims OpenDash claims; the rest may work and are untested. */
+export const SUPPORTED_SIM_NAMES: SimName[] = ${json(SUPPORTED_SIMS)};
 
 /** Which sim shows what, section by section, as docs/sim-support.md has it (#102). */
 export const SIM_TABLE: SimSection[] = ${json(simTable)};
