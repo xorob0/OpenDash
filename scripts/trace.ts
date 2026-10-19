@@ -21,7 +21,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { IRACING, SIMS, simFromArgs, type Sim } from './sims.ts';
-import { TRACE_EXTENSION, TraceError, frame, parseTrace, type Trace } from './traceFormat.ts';
+import { TRACE_EXTENSION, TraceError, callsOf, frame, parseTrace, propertiesOf, type Trace } from './traceFormat.ts';
 
 export * from './traceFormat.ts';
 
@@ -81,7 +81,7 @@ export function foreignRawColumns(trace: Trace, sim: Sim): string[] {
 const USAGE = `trace: read the recorded telemetry under traces/.
 
   bun run trace list [--sim ac]                    every committed trace, with its size and shape
-  bun run trace show <scenario> [frame] [--sim ac] one frame as a property map; default frame 0
+  bun run trace show <scenario> [frame] [--sim ac] one frame as a map of properties and calls; default frame 0
   bun run trace check [--sim ac]                   parse every trace and report what moves in it
 
 --sim picks the sim's traces: iracing, the default, in traces/, or ac in traces/ac/.
@@ -93,6 +93,12 @@ const sizeOf = (file: string): number => (existsSync(file) ? readFileSync(file).
 const kb = (bytes: number): string => `${(bytes / 1024).toFixed(0)} KB`;
 
 const moving = (trace: Trace): number => trace.columns.filter((c) => Array.isArray(c.v)).length;
+
+/** What a trace holds, as `list` and `check` say it: the version, the properties and, from version 2, the calls. */
+const shape = (trace: Trace): string => {
+  const calls = callsOf(trace).length;
+  return `v${trace.header.trace}, ${String(propertiesOf(trace).length).padStart(3)} properties${trace.header.trace >= 2 ? `, ${calls} calls` : ''}, ${moving(trace)} columns moving`;
+};
 
 export function main(argv: readonly string[]): number {
   const [command, ...args] = argv;
@@ -112,7 +118,7 @@ export function main(argv: readonly string[]): number {
       }
       for (const name of names) {
         const trace = readTrace(name, dir);
-        console.log(`${name.padEnd(10)} ${String(trace.header.frames).padStart(4)} frames at ${trace.header.hz} Hz  ${String(trace.columns.length).padStart(3)} properties, ${moving(trace)} moving  ${kb(sizeOf(traceFile(name, dir)))}  recorded ${trace.header.recorded}`);
+        console.log(`${name.padEnd(10)} ${String(trace.header.frames).padStart(4)} frames at ${trace.header.hz} Hz  ${shape(trace)}  ${kb(sizeOf(traceFile(name, dir)))}  recorded ${trace.header.recorded}`);
       }
       return 0;
     }
@@ -139,7 +145,7 @@ export function main(argv: readonly string[]): number {
       }
       for (const name of names) {
         const trace = readTrace(name, dir);
-        console.log(`${name}: ${trace.columns.length} properties, ${moving(trace)} of them moving over ${trace.header.frames} frames, ${kb(sizeOf(traceFile(name, dir)))}`);
+        console.log(`${name}: ${shape(trace)} over ${trace.header.frames} frames, ${kb(sizeOf(traceFile(name, dir)))}`);
       }
       return 0;
     }

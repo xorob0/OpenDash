@@ -13,13 +13,16 @@ export interface Route {
 }
 
 export const ROUTES = {
-  home: { path: '/', anchors: ['why', 'screen', 'pages', 'second-screens', 'lights', 'get'], changeFrequency: 'weekly' },
+  home: { path: '/', anchors: ['why', 'screen', 'pages', 'second-screens', 'themes', 'lights', 'get'], changeFrequency: 'weekly' },
   screens: { path: '/screens', anchors: ['faces', 'anatomy', 'fit', 'companion', 'pit-wall', 'round', 'not-listed'], changeFrequency: 'monthly' },
+  themes: { path: '/themes', anchors: ['porsche', 'what', 'follows', 'free'], changeFrequency: 'monthly' },
+  plugin: { path: '/plugin', anchors: ['pages', 'screens', 'rig', 'leds', 'updates', 'privacy'], changeFrequency: 'monthly' },
   pages: { path: '/pages', anchors: ['catalogue', 'face', 'glance', 'sims'], changeFrequency: 'monthly' },
   lights: { path: '/lights', anchors: ['car', 'strips', 'strip-shows', 'flag-box', 'plugin'], changeFrequency: 'monthly' },
   compare: { path: '/compare', anchors: ['table'], changeFrequency: 'monthly' },
   install: { path: '/install', anchors: ['plugin', 'after', 'companion-paging', 'nothing-showing', 'only-way'], changeFrequency: 'monthly' },
   download: { path: '/download', anchors: ['plugin', 'packages', 'source', 'releases'], changeFrequency: 'weekly' },
+  demo: { path: '/demo', anchors: ['demo', 'empty'], changeFrequency: 'monthly' },
 } as const satisfies Record<string, Route>;
 
 export const ROUTE_LIST: readonly Route[] = Object.values(ROUTES);
@@ -33,7 +36,7 @@ export const REDIRECTS = [
 ] as const;
 
 /** Static files a page may link to besides its routes. */
-export const STATIC_PREFIXES = ['/downloads/', '/shots/', '/clips/', '/fonts/', '/flag-box.svg', '/icon.svg'] as const;
+export const STATIC_PREFIXES = ['/downloads/', '/shots/', '/clips/', '/fonts/', '/flag-box.svg', '/icon.svg', '/demo/'] as const;
 
 export const routeFor = (path: string): Route | undefined => ROUTE_LIST.find((r) => r.path === path);
 
