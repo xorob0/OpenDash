@@ -404,8 +404,9 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
   field that draws it hides. AC's own reading is raw `Graphics.surfaceGrip`, a number, not yet drawn.
 - **Fuel.** `Physics.Fuel` in litres and the same calculator as every game.
 - **Tyres.** Live pressure in psi, core temperature, wear on SimHub's remaining-tread scale (100 new)
-  after mapping AC's 93.75..100. `fronttyrecompound` is null for every AC car, so the field reads `--`;
-  the player's compound is raw `Graphics.TyreCompound`.
+  after mapping AC's 93.75..100. `fronttyrecompound` is null for every AC car; the player's compound is
+  raw `Graphics.TyreCompound`, which band D and the tyres module fall back to and draw as the bracketed
+  short name at its end (#1177). Opponents have none.
 - **Car and class.** `CarModel` is `ui_car.json`'s `name`, `CarId` the car's folder. SimHub gives no AC
   opponent a class, so the class filter treats the field as one class.
 - **Gears.** `CarSettings_MaxGears` is the car's `drivetrain.ini` count; `DriverCarGearNumForward` is

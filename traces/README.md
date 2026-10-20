@@ -386,3 +386,11 @@ Ultimate's row answers, since its reader's `IsInPit` is the whole pit lane; iRac
 `IsInPit` are the box, so their rows leave it to SimHub and the plugin publishes null for both, on every frame
 of all sixteen: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` and `bun run record --sim ac` read them from the plugin and drop the entries.
+
+#1177 asserts one more in each of the nine and each of Assetto Corsa's seven,
+`DataCorePlugin.GameRawData.Graphics.TyreCompound`, the compound AC writes for the player, which band D's
+Compound and the tyres module's chip read where SimHub's `fronttyrecompound` is empty, as it is for every AC
+car. On Assetto Corsa it is `Slick Medium (M)` in all seven: the emulator's `race.json` writes it once in its
+values and every other scenario extends that file without touching it, so it is a constant, and the value a
+recording will write. iRacing's reader has no raw `Graphics` block, so in the nine it is null. The next
+`bun run record` and `bun run record --sim ac` read it from SimHub and drop the entries.
