@@ -341,13 +341,14 @@ describe('the lap review keeps to the body, and says so', () => {
  * deltas are the review's floor (`lapReviewFit`), and the house's condensed figures keep it on every
  * face. A 64 px lap time and two 46 px deltas are 680 px of Barlow at normal width and 808 of the
  * seven-segment face, and these bodies are narrower than that inside even the tighter padding: the
- * Porsche's 694, 705 and 582, the AiM's 850, 800 and 600. The Porsche's 800 x 480 and 800 x 286
+ * Porsche's 694, 705 and 582, the AiM's 850, 800 and 600, the BMW's 580. The Porsche's 800 x 480 and 800 x 286
  * kept their deltas while the review was clamped to the face rather than to the body, and gave them
  * up for not covering the settings column and the telltales (#1047).
  */
 const LAP_TIME_ALONE: Record<string, readonly string[]> = {
   porsche: ['800x480', '800x286', '600x686'],
   aim: ['850x480', '800x480', '800x286', '600x686'],
+  bmw: ['600x686'],
 };
 
 /**

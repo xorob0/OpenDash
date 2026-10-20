@@ -105,13 +105,26 @@ namespace OpenDashPlugin
             return pages;
         }
 
+        /// <summary>
+        /// Zones B and C's catalogue on a face of a theme: the modules, then the theme's module pages
+        /// numbered on from them. The modules alone for the default look.
+        /// </summary>
+        public static IReadOnlyList<ZonePage> ZoneBCFor(string theme)
+        {
+            var added = Contract.ThemeModulePages(theme);
+            if (added.Count == 0) return ZoneBC;
+            var pages = new List<ZonePage>(ZoneBC);
+            foreach (var page in added) pages.Add(new ZonePage(pages.Count, page.Id, page.Name));
+            return pages;
+        }
+
         /// <summary>The catalogue a zone draws from, by its letter, on a face of the theme given (null for
-        /// the default look). Only band D's depends on the theme.</summary>
+        /// the default look). Zone A's alone is the house's on every theme.</summary>
         public static IReadOnlyList<ZonePage> For(string letter, string theme = null)
         {
             if (letter == "A") return ZoneA;
             if (letter == "D") return BandDFor(theme);
-            if (letter == "B" || letter == "C") return ZoneBC;
+            if (letter == "B" || letter == "C") return ZoneBCFor(theme);
             throw new ArgumentOutOfRangeException(nameof(letter));
         }
 

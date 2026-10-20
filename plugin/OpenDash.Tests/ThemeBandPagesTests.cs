@@ -26,6 +26,35 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Zones_b_and_c_on_a_bmw_face_are_the_modules_and_then_the_bmw_pages_opening_on_the_tyres_and_the_race()
+        {
+            var house = FacePages.ZoneBC.Count;
+            foreach (var letter in new[] { "B", "C" })
+            {
+                var pages = FacePages.For(letter, "bmw");
+                Assert.Equal(FacePages.ZoneBC.Select(p => p.Id).Concat(new[] { "bmwTyres", "bmwRace", "bmwLaps" }), pages.Select(p => p.Id));
+                for (var page = 0; page < pages.Count; page++) Assert.Equal(page, pages[page].Number);
+            }
+            for (var zone = 1; zone <= 2; zone++)
+            {
+                Assert.Equal(house + 3, Contract.FaceZonePageCount(zone, "bmw"));
+                // The three pages are in the cycle, as every module is.
+                Assert.Equal(7, (Contract.DefaultZoneMask(zone, "bmw") >> house) & 7);
+            }
+            Assert.Equal(house, Contract.DefaultFaceZonePage(1, "bmw"));
+            Assert.Equal(house + 1, Contract.DefaultFaceZonePage(2, "bmw"));
+            // Zone A keeps the house's pages and its opening one.
+            Assert.Equal(Contract.FaceZonePageCounts[0], Contract.FaceZonePageCount(0, "bmw"));
+            Assert.Equal(Contract.DefaultFaceZonePages[0], Contract.DefaultFaceZonePage(0, "bmw"));
+            // And no other theme's zones B and C move.
+            foreach (var theme in new[] { null, Contract.DefaultThemeId, Porsche, "nope" })
+            {
+                Assert.Same(FacePages.ZoneBC, FacePages.For("B", theme));
+                Assert.Equal(Contract.DefaultFaceZonePages[2], Contract.DefaultFaceZonePage(2, theme));
+            }
+        }
+
+        [Fact]
         public void Band_d_on_a_porsche_face_is_the_house_eight_and_then_the_porsche_row()
         {
             var pages = FacePages.For("D", Porsche);

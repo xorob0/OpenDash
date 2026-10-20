@@ -75,6 +75,14 @@ namespace OpenDashPlugin.Tests
             ("OpenDash AiM 1280x720", 1280, 720),
             ("OpenDash AiM 800x286", 800, 286),
             ("OpenDash AiM 600x686", 600, 686),
+            ("OpenDash BMW 1920x480", 1920, 480),
+            ("OpenDash BMW 1280x480", 1280, 480),
+            ("OpenDash BMW 1280x400", 1280, 400),
+            ("OpenDash BMW 850x480", 850, 480),
+            ("OpenDash BMW 800x480", 800, 480),
+            ("OpenDash BMW 1280x720", 1280, 720),
+            ("OpenDash BMW 800x286", 800, 286),
+            ("OpenDash BMW 600x686", 600, 686),
         };
 
         private static PackageEntry Entry(string folder, int width, int height)
