@@ -53,7 +53,9 @@ const zonesOf = (screen: Screen): { name: string; rect: Rect; file: string }[] =
  * count is the layer's repetitions and the last row is where the pitch puts it.
  */
 function boardOf(screen: Screen, name: string): { rows: number; pitch: number; top: number; bottom: number } {
-  const stamped = screen.items.find((i) => i.name === `${name}.rows`);
+  // Walked rather than read off the top level: a board with an iRating column is drawn twice, each
+  // drawing in a layer of its own (#1162).
+  const stamped = [...walkItems(screen.items)].find((i) => i.name === `${name}.rows`);
   if (stamped?.kind !== 'layer') throw new Error(`no stamped rows named ${name}.rows`);
   const rows = (stamped.repetitions ?? 0) + 1;
   const pitch = stamped.repeatTopOffset ?? 0;
@@ -146,9 +148,11 @@ describe('the zone rectangles', () => {
 
 describe('what a board stamps into the band it is given', () => {
   test('the race board stamps a full grid at 34 px under a 32 px header', () => {
-    const board = boardOf(RACE, 'race.board');
-    expect(board).toEqual({ rows: PIT_WALL_ROWS, pitch: 34, top: BODY_TOP + 32, bottom: BODY_TOP + 32 + PIT_WALL_ROWS * 34 });
-    expect(board.bottom).toBeLessThanOrEqual(LANDSCAPE.height);
+    for (const name of ['race.board', 'race.boardUnrated']) {
+      const board = boardOf(RACE, name);
+      expect({ name, board }).toEqual({ name, board: { rows: PIT_WALL_ROWS, pitch: 34, top: BODY_TOP + 32, bottom: BODY_TOP + 32 + PIT_WALL_ROWS * 34 } });
+      expect(board.bottom).toBeLessThanOrEqual(LANDSCAPE.height);
+    }
   });
 
   test('the tower board stamps the 33 rows its artboard says fit, at 28 px under a 28 px header', () => {
@@ -278,8 +282,10 @@ describe('nothing is drawn outside the region it belongs to', () => {
   test('a board stamps its last row inside the body, not under the zones beside it', () => {
     for (const [page, screen, name] of [
       ['race', RACE, 'race.board'],
+      ['race', RACE, 'race.boardUnrated'],
       ['tower', TOWER, 'tower.board'],
       ['portrait', PORTRAIT, 'portrait.board'],
+      ['portrait', PORTRAIT, 'portrait.boardUnrated'],
     ] as const) {
       const board = boardOf(screen, name);
       const frame = REGIONS.find((r) => r.page === page)!.regions.find((r) => r.name === `${page}.board`)!.rect;

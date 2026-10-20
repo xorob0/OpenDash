@@ -79,7 +79,7 @@ import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../sec
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
 import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
-  positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour, ratingWidest, RELATIVE_GAP_WIDEST } from '../second/values.ts';
+  positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour, ratingIsPublished, ratingWidest, RELATIVE_GAP_WIDEST } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, fld, pageKeeps, shapeIn } from './module.ts';
 import { keepsAt } from './shedding.ts';
@@ -223,6 +223,8 @@ interface Detail {
   /** What the label is measured by, which for a lap time is a lap of ten minutes and not the sample. #883. */
   widest: string;
   bind: Expr;
+  /** When the label is drawn at all, where the sim may not publish what it reads. */
+  visible?: Expr;
 }
 
 /**
@@ -257,7 +259,9 @@ function details(ctx: ModuleContext, side: Side, keep: readonly string[]): Detai
           },
         ]
       : []),
-    ...(keep.includes('rating') ? [{ id: 'rating', text: 'iR 3.1k', widest: `iR ${ratingWidest(DETAIL_FACE)}`, bind: concat(str('iR '), carRating(idx)) }] : []),
+    // Hidden rather than redrawn where no iRating is published (#1162): it is the last label on the
+    // line, so what it leaves is room at the line's end and not a gap between two readings.
+    ...(keep.includes('rating') ? [{ id: 'rating', text: 'iR 3.1k', widest: `iR ${ratingWidest(DETAIL_FACE)}`, bind: concat(str('iR '), carRating(idx)), visible: ratingIsPublished() }] : []),
   ];
 }
 
@@ -389,7 +393,7 @@ function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, kee
       const baseline = canvasBaseline(lineBottom - valueHeight, valueHeight);
       for (const detail of following) {
         const width = detailWidth(detail.widest, d.label);
-        items.push(label(`${ctx.prefix}${side.id}.${detail.id}`, detail.text, x, canvasYForBaseline(baseline, d.label), width, { size: d.label, bind: detail.bind, widest: detail.widest }));
+        items.push(label(`${ctx.prefix}${side.id}.${detail.id}`, detail.text, x, canvasYForBaseline(baseline, d.label), width, { size: d.label, bind: detail.bind, widest: detail.widest, ...(detail.visible ? { visibleBind: detail.visible } : {}) }));
         x += width + DETAIL_GAP;
       }
     }
