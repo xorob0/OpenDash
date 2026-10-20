@@ -452,7 +452,7 @@ Strength of field was the eleventh and is not built, because SimHub publishes it
 and OpenDash does not compute ([ADR 0009](../decisions/0009-does-the-plugin-compute.md)). It is
 named here only so that a reader of an older draft knows where it went.
 
-The default is Race and Lap on the left, Position and Class on the right. The left end is drawn
+The default is the race time and Lap on the left, Position and Class on the right. The left end is drawn
 from the left edge and the right end from the right one, each field flush to the padding on its
 own side, and the class reads "GT3 · P4".
 
@@ -471,6 +471,13 @@ Race and Time left are the two clocks, and a session with no clock is a state th
 rather than a reading they lack: they draw `∞` there, the mark of rule 19, and `-:--:--` only where
 there is no session at all. Hiding the field instead would leave an empty slot under the label a
 driver put there, which an end field is — a fixed slot, not a member of a closing rank.
+
+The race time is captioned `Left`, not the artboards' `Race`. It reads the time left of whichever
+session is running, so in qualifying the default faces drew `Race 0:04:37` beside a session page
+reading `Lone Qualify`, and in a timed practice `Race` over the practice clock. `Left` is true in
+every session and is narrower than `Race`, so no end moves. The canvas still says Race and is the
+author's to carry over. `barCaption.test.ts` reads the caption in a race, a qualifying session and
+a practice. [#1043](https://github.com/xorob0/OpenDash/issues/1043).
 
 The bar is drawn at a scale of its own rather than at the zone density ramp's. Every artboard
 gives it a 15 px label in a 13 px row, five pixels under it, six between a value and the dimmer

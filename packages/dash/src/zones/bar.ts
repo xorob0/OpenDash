@@ -156,7 +156,14 @@ const timeOfDayField = (id: string, label: string, sample: string, clock: TimeOf
 
 /** The ten fields an end of the bar can show. Ordered as the plugin lists them. */
 export const BAR_FIELD_SPECS: readonly BarFieldSpec[] = [
-  { id: 'raceTime', label: 'Race', sample: '0:28:14', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
+  // Captioned `Left` and not the canvas's `Race`: the clock is `sessionClock()`, the time left of
+  // whatever session is running, so a qualifying session read `Race 0:04:37` beside a session page
+  // reading `Lone Qualify`. A word true of the clock in every session rather than the session's name
+  // bound as the label: a bound caption is measured by the longest name a sim gives, `Offline
+  // Testing`, which is some 97 px of label where `Race` was 33 and would widen every end at the
+  // strip's cost, and it would still not say what the figure counts. `Left` is narrower than `Race`,
+  // so no end moves. The canvas still says Race; design/ is the author's to carry over (#1043).
+  { id: 'raceTime', label: 'Left', sample: '0:28:14', bind: sessionClock(), mark: untimedMark(), chars: CHARS.clock },
   {
     id: 'lap',
     label: 'Lap',

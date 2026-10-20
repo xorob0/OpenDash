@@ -1012,7 +1012,9 @@ describe('the bar is drawn at the scale its artboard draws', () => {
 describe('the bar draws the catalogue the artboard writes', () => {
   test('ten fields, each with the label and the reading the artboard gives it', () => {
     expect(BAR_FIELD_SPECS.map((spec) => [spec.label, spec.sample, spec.denominator?.sample ?? ''])).toEqual([
-      ['Race', '0:28:14', ''],
+      // The one label that departs from the artboard: it captions the clock of whatever session is
+      // running, so the artboard's `Race` was false in qualifying and practice (#1043).
+      ['Left', '0:28:14', ''],
       ['Lap', '4', '/ 32'],
       ['Time left', '0:42:15', ''],
       ['Clock', '14:32', ''],
