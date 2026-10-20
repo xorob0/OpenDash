@@ -1373,8 +1373,10 @@ yet watched on a drive: the VM capture the ticket asks for is still owed.
 - **The radar needs the map only on iRacing.** `RadarItem` blanks where `GetMap()` is null *and* the
   frame carries `RelativeCarCoordinates`, and only iRacing's reader fills those. Assetto Corsa, ACC and
   Le Mans Ultimate leave them null, so their radar draws from the cars' own coordinates with no map at
-  all, and on iRacing it stays blank until the track has been recorded, with nothing on the screen to
-  say why.
+  all, and on iRacing it stays blank until the track has been recorded. The plugin publishes which kind
+  of reader is running as `OpenDash.RadarNeedsTrackMap`, true on iRacing alone, and the radar module
+  draws the track module's `Track · Drive a lap to record it` in its plot while that is true and
+  `TrackMapRecorded` is false (#1176).
 
 ## Sources
 

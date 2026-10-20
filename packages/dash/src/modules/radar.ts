@@ -7,6 +7,12 @@
  * (`docs/research/simhub-dash-format.md`, #555). The two blocks beside it come from SimHub's
  * own spotter and turn red when a car is alongside.
  *
+ * Until that lap, a plot with no cars in it reads as a broken radar, so on a sim whose radar needs the
+ * map the plot says what the track module says in its place, in the same words, while SimHub holds no
+ * outline (#1176). The plugin knows both halves: which kind of reader is running
+ * (`RadarNeedsTrackMap`, ADR 0021) and whether the outline is recorded (`TrackMapRecorded`). The
+ * spotter flanks stay, since SimHub's spotter needs no map on any sim.
+ *
  * The grid the canvas draws under the cars is four rectangles of this module's own: the radar item
  * paints no lines and takes no grid setting, and its background is transparent, so they are drawn
  * behind it.
@@ -32,12 +38,13 @@ import { assetBox } from '../design/assets.ts';
 import { rect, type Rect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { densityOf } from '../second/density.ts';
-import { spotterCar } from '../second/values.ts';
-import type { Item, RadarItem } from '../generator.ts';
+import { placeholder } from '../second/placeholder.ts';
+import { radarAwaitsTrackMap, spotterCar, TRACK_MAP_NOTICE } from '../second/values.ts';
+import type { Item, RadarItem, RectangleItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { defineModule } from './module.ts';
 
-const { iff, str } = ncalc;
+const { iff, not, str } = ncalc;
 
 /**
  * Pixels per metre are ten times the scale, so the scale is how large the car beside you is drawn
@@ -103,11 +110,22 @@ export const radar = defineModule('radar', (ctx) => {
   };
   // The canvas's three horizontals and its centre line, at the quarters of the plot: what they say
   // is how far away a dot is, which is the one thing a bare field of dots does not.
-  const grid: Item[] = [0.25, 0.5, 0.75].map((fraction, i) =>
+  const grid: RectangleItem[] = [0.25, 0.5, 0.75].map((fraction, i) =>
     band(`${ctx.prefix}grid${i}`, rect(plot.left, Math.round(plot.top + fraction * plot.height), plot.width, 1), ds.color.surface.raised),
   );
   grid.push(band(`${ctx.prefix}centre`, rect(Math.round(plot.left + plot.width / 2), plot.top, 1, plot.height), ds.color.surface.raised));
   const you = band(`${ctx.prefix}you`, assetBox(plot, CAR, { maxWidth: CAR.width, maxHeight: CAR.height }), ds.color.text.primary);
+  // The plot and what it says without a recorded map, one of them at a time, as the track module puts
+  // its map and its notice in one box. Hiding the plot rather than drawing over it: the notice sits on
+  // the centre line and the player's block, and an empty grid beside it adds nothing to the sentence.
+  const waiting = radarAwaitsTrackMap();
+  const shown = not(waiting);
+  const plotItems: Item[] = [
+    ...grid.map((line) => withMoreBindings<'rect'>(line, { Visible: shown })),
+    withMoreBindings<'radar'>(item, { Visible: shown }),
+    withMoreBindings<'rect'>(you, { Visible: shown }),
+  ];
+  const notice = placeholder(`${ctx.prefix}map.`, TRACK_MAP_NOTICE, plot, ctx.density).map((line) => withMoreBindings(line, { Visible: waiting }));
   const side = (id: 'left' | 'right', x: number): Item => withMoreBindings(band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim), { BackgroundColor: iff(spotterCar(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) });
-  return [side('left', ctx.frame.left), ...grid, item, you, side('right', ctx.frame.left + ctx.frame.width - spotter)];
+  return [side('left', ctx.frame.left), ...plotItems, ...notice, side('right', ctx.frame.left + ctx.frame.width - spotter)];
 });

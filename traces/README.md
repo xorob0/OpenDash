@@ -386,3 +386,13 @@ Ultimate's row answers, since its reader's `IsInPit` is the whole pit lane; iRac
 `IsInPit` are the box, so their rows leave it to SimHub and the plugin publishes null for both, on every frame
 of all sixteen: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` and `bun run record --sim ac` read them from the plugin and drop the entries.
+
+#1176 asserts one more in each of the nine and each of Assetto Corsa's seven, `OpenDash.RadarNeedsTrackMap`,
+whether the running sim's radar places the cars through the track outline SimHub records, which the plugin
+answers per sim (ADR 0021). The radar reads it beside `OpenDash.TrackMapRecorded` and says the track waits for
+a lap where both call for it. It is a fact of SimHub's reader, not of the frame: iRacing's is the one that
+fills `RelativeCarCoordinates`, so its row answers `true` on every frame of all nine, and Assetto Corsa's
+draws from the cars' own coordinates, so its row answers `false` on every frame of all seven. Both are
+constants, and the value a recording with the plugin installed will write. With `TrackMapRecorded` `true`
+in all sixteen, no trace shows the notice. The next `bun run record` and `bun run record --sim ac` read it
+from the plugin and drop the entries.

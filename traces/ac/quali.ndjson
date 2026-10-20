@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"quali","frames":200,"hz":10,"ticks":[9110,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn","OpenDash.PitStopSeconds","OpenDash.LastPitStopSeconds"]}
+{"trace":1,"scenario":"quali","frames":200,"hz":10,"ticks":[9110,6],"recorded":"2026-10-14","simHub":"unknown","game":"AssettoCorsa","asserted":["DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.TrackMapRecorded","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn","OpenDash.PitStopSeconds","OpenDash.LastPitStopSeconds","OpenDash.RadarNeedsTrackMap"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -611,6 +611,7 @@
 {"p":"OpenDash.PitWallTowerWide","v":null}
 {"p":"OpenDash.PorscheCrest","v":"C:\\Program Files (x86)\\SimHub\\OpenDash\\Crests\\porsche.png"}
 {"p":"OpenDash.PositionMode","v":"class"}
+{"p":"OpenDash.RadarNeedsTrackMap","v":false}
 {"p":"OpenDash.RevBar","v":"shift"}
 {"p":"OpenDash.SessionProgress","v":"auto"}
 {"p":"OpenDash.ShiftLights","v":true}

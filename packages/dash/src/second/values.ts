@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
+import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, RADAR_NEEDS_TRACK_MAP, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2322,6 +2322,13 @@ export const sim = {
    * `flagRaised` and `faceFlagRaised` in `flags.ts`, behind iRacing's bits, which answer first.
    */
   flagShown: (capability: FlagCapability, fallback: Expr): Expr => setting.reported(capability, fallback),
+  /**
+   * The sim's radar places the cars through the track outline SimHub records, and so draws none until a
+   * lap has recorded it. Without the plugin, true, iRacing's answer: its reader is the one that fills
+   * `RelativeCarCoordinates`. Read only beside {@link trackMapRecorded}, whose own fallback is true, so a
+   * package with no plugin still draws the radar as it always did (#1176).
+   */
+  radarNeedsTrackMap: (): Expr => setting.reported(RADAR_NEEDS_TRACK_MAP, 'true'),
 };
 
 /** The capabilities that answer for a flag. See {@link sim}'s `flagShown`. */
@@ -2456,6 +2463,18 @@ export const trackMapRecorded = (): Expr => isnull(prop(propertyName(TRACK_MAP_R
  * car crosses the line. The name half goes when the box is short, as it does for every notice.
  */
 export const TRACK_MAP_REASON = 'Drive a lap to record it';
+/**
+ * What a box drawing from SimHub's recorded outline says until it has one: the track module's map, and on
+ * a sim whose radar needs the outline, the radar's plot (#1176). One sentence for both, so a driver who has
+ * met it on one page knows it on the other.
+ */
+export const TRACK_MAP_NOTICE = `Track · ${TRACK_MAP_REASON}`;
+/**
+ * Whether the radar is waiting for SimHub to record the track: the running sim's radar needs the outline
+ * ({@link sim}'s `radarNeedsTrackMap`) and SimHub holds none ({@link trackMapRecorded}). False with no plugin,
+ * and on every sim whose radar draws from the cars' own coordinates. #1176.
+ */
+export const radarAwaitsTrackMap = (): Expr => and(sim.radarNeedsTrackMap(), not(trackMapRecorded()));
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**

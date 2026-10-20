@@ -128,7 +128,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Car settings | **Works.** | **Partly.** TC and ABS as the car's preset, and the brake bias; the engine map and the anti-roll bars hide. | **Untested.** TC and ABS as dialled. | **Untested.** TC and ABS as dialled. |
 | Inputs | **Works.** | **Partly.** The pedals work; the steering dial hides, since AC's steering is not read yet (#567). | **Partly.** As AC. | **Partly.** As AC. |
 | Session | **Works.** | **Partly.** The session's name is drawn as AC writes it, in capitals (`RACE`); incidents read `--` (#567). | **Untested.** As AC. | **Untested.** The game's own names (`Practice`, `Race`). |
-| Radar | **Works** once SimHub has recorded the track. | **Works** with SimHub's AC app, and without a recorded lap. | **Untested.** Needs broadcasting. | **Untested.** |
+| Radar | **Works** once SimHub has recorded the track, and says the track waits for a lap until then. | **Works** with SimHub's AC app, and without a recorded lap. | **Untested.** Needs broadcasting. | **Untested.** |
 | Track | **Works.** | **Works.** Says "Drive a lap to record it" until SimHub has the outline (#555), names the track as a driver knows it (#1124); the track state hides. | **Untested.** | **Untested.** |
 | Leaderboard | **Works.** | **Partly.** With SimHub's AC app: names, places, gaps, laps and pit state; no car number, class or team, and the iRating column reads `--`. Without it, one row: you, named `Me`. | **Untested.** Needs broadcasting; no iRating. | **Untested.** No iRating. |
 | Relative | **Works.** | **Partly.** As the leaderboard. | **Untested.** | **Untested.** |

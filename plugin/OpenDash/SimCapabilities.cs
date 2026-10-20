@@ -34,7 +34,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// One slot per set of answers, by <see cref="Index"/>: three answers to each of the questions. Filled
-        /// as each set is first asked for, since a session meets a handful of the 6561 and never the rest.
+        /// as each set is first asked for, since a session meets a handful of the 19683 and never the rest.
         /// </summary>
         private static readonly SimReport[] Interned = new SimReport[Power(Count)];
 
@@ -67,6 +67,9 @@ namespace OpenDashPlugin
         /// <summary>See <see cref="Contract.ChequeredFlagShown"/>.</summary>
         public bool? ChequeredFlagShown => Read(Contract.ChequeredFlagShown);
 
+        /// <summary>See <see cref="Contract.RadarNeedsTrackMap"/>.</summary>
+        public bool? RadarNeedsTrackMap => Read(Contract.RadarNeedsTrackMap);
+
         private SimReport(bool?[] answers)
         {
             this.answers = answers;
@@ -95,7 +98,8 @@ namespace OpenDashPlugin
             return "limiter " + Word(CarHasPitLimiter) + ", on " + Word(PitLimiterOn)
                 + ", damage " + Word(DamageReported) + ", in the car " + Word(DriverInCar)
                 + ", yellow " + Word(YellowFlagShown) + ", black " + Word(BlackFlagShown)
-                + ", white " + Word(WhiteFlagShown) + ", chequered " + Word(ChequeredFlagShown);
+                + ", white " + Word(WhiteFlagShown) + ", chequered " + Word(ChequeredFlagShown)
+                + ", radar needs the map " + Word(RadarNeedsTrackMap);
         }
 
         private static string Word(bool? answer) => answer.HasValue ? (answer.Value ? "yes" : "no") : "unknown";
@@ -199,6 +203,9 @@ namespace OpenDashPlugin
             public Answer WhiteFlagShown { get; set; }
             public Answer ChequeredFlagShown { get; set; }
 
+            /// <summary>Whether the radar draws its cars through the recorded track map. See <see cref="Contract.RadarNeedsTrackMap"/>.</summary>
+            public Answer RadarNeedsTrackMap { get; set; }
+
             /// <summary>
             /// Whether the car is stopped in its pit box, which is what <see cref="PitStopClock"/> times for
             /// <see cref="Contract.PitStopSeconds"/> and <see cref="Contract.LastPitStopSeconds"/>. Not published itself:
@@ -220,6 +227,7 @@ namespace OpenDashPlugin
                     case Contract.BlackFlagShown: return BlackFlagShown;
                     case Contract.WhiteFlagShown: return WhiteFlagShown;
                     case Contract.ChequeredFlagShown: return ChequeredFlagShown;
+                    case Contract.RadarNeedsTrackMap: return RadarNeedsTrackMap;
                     default: return null;
                 }
             }
@@ -319,6 +327,9 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // IRacingManager is the one reader that fills GD_RelativeCarCoordinates, and RadarItem draws those
+                // through PersistantTrackerPlugin.GetMap(), so no car shows until a lap has recorded the track. #1176.
+                RadarNeedsTrackMap = Always(true),
                 // SimHub's IsInPit is the box here, so its IsInPitSince and LastPitStopDuration time the stop.
                 InPitBox = null,
             },
@@ -339,6 +350,8 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // ACManager leaves GD_RelativeCarCoordinates null, so RadarItem draws from the cars' own coordinates.
+                RadarNeedsTrackMap = Always(false),
                 // ACManager.GD_IsInPit is Graphics.IsInPit, the box, so SimHub's own timer is the stop.
                 InPitBox = null,
             },
@@ -356,6 +369,8 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // ACCManager leaves GD_RelativeCarCoordinates null, as ACManager does.
+                RadarNeedsTrackMap = Always(false),
                 // ACCManager.GD_IsInPit is Graphics.IsInPit, the box, as Assetto Corsa's is.
                 InPitBox = null,
             },
@@ -382,6 +397,8 @@ namespace OpenDashPlugin
                 WhiteFlagShown = LmuLastLap,
                 // GD_Flag_Checkered is [NotAvailable].
                 ChequeredFlagShown = LmuChequered,
+                // LMUManager leaves GD_RelativeCarCoordinates null, as ACManager does.
+                RadarNeedsTrackMap = Always(false),
                 // GD_IsInPit is mInPits, the whole pit lane, as GD_IsInPitLane is, so SimHub's IsInPitSince runs from
                 // the entry line and its LastPitStopDuration is the lane. The player's own mPitState is the box, which
                 // is how SimHub's opponents' pit statistics already read it (#1130).
