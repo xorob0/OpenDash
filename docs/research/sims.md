@@ -442,7 +442,7 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 | Steering angle, positive left, in degrees | `SteeringWheelAngle` in degrees, not negated (#1057) | `Physics.SteerAngle`, its unit and sign for the author's wheel | `Physics.SteerAngle`, an input with no lock | `-mUnfilteredSteering * mPhysicalSteeringWheelRange / 2` |
 | A delta to the last lap | yes | no | no (one to the best) | no (one to the best) |
 | Damage | no | `CarDamage1..5` | `CarDamage1..5` | no |
-| Opponents beyond the player | yes | only with SimHub's AC app | only with broadcasting | yes |
+| Opponents beyond the player | yes | only with SimHub's AC app: raw `Opponents.numVehicles` is 0 without it, and the plugin's `FieldReported` says so (#1131) | only with broadcasting: raw `Realtime` is null until it connects (#1131) | yes |
 | Track name for people | raw `SessionData.WeekendInfo.TrackDisplayShortName`; `TrackName` is iRacing's code, `spa gp` | raw `Track.TrackInfo.name` | `TrackName` | `TrackName` |
 | Track grip | `TrackWetness`, seven levels | a number | a word | a level |
 | Wind and time of day | yes | no | yes | yes |

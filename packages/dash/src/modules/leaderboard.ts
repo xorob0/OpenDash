@@ -19,6 +19,8 @@ import { columnWidths, listPlan, NAME_FACE, nameFloorForRow, nameSizeForRow, row
 import { charsThatFit } from '../design/advances.ts';
 import { defineModule, drawnAt, pageColumns, type ModuleContext } from './module.ts';
 import { isPitWall, type Density } from '../second/density.ts';
+import { unlessReported } from '../second/placeholder.ts';
+import { FIELD_REASON, sim } from '../second/values.ts';
 import type { Archetype } from './shedding.ts';
 
 /**
@@ -181,9 +183,15 @@ export const leaderboardPlan = (ctx: ModuleContext): ListPlan =>
     fit: fittingColumns,
   });
 
+/**
+ * What the leaderboard says when SimHub reads no car but the player's: on Assetto Corsa without SimHub's
+ * in-game app and on ACC without broadcasting, where the board would otherwise be one row named `Me` (#1131).
+ */
+export const LEADERBOARD_FIELD_MESSAGE = `Leaderboard · ${FIELD_REASON}`;
+
 export const leaderboard = defineModule('leaderboard', (ctx) => {
   const plan = leaderboardPlan(ctx);
-  return table({
+  const board = table({
     name: `${ctx.prefix}table`,
     frame: ctx.frame,
     columns: plan.columns,
@@ -195,4 +203,5 @@ export const leaderboard = defineModule('leaderboard', (ctx) => {
     header: drawsHeader(ctx.density),
     classOnly: ctx.classOnly,
   });
+  return unlessReported(`${ctx.prefix}field.`, sim.fieldReported(), board, LEADERBOARD_FIELD_MESSAGE, ctx.frame, ctx.density);
 });

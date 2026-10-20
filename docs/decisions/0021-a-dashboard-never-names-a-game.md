@@ -82,6 +82,18 @@ already is, and the player's `mPitState` is 3 on Le Mans Ultimate; the plugin ti
 pit view reads them ahead of SimHub's `IsInPitSince` and `LastPitStopDuration`, so every sim but Le Mans
 Ultimate, and a package with no plugin, reads what it read before.
 
+One more says whether SimHub reads the field at all (#1131). On Assetto Corsa the cars beyond the player's
+own come from a page SimHub's in-game app writes, and on ACC from the game's broadcasting interface; without
+them SimHub's opponents are the player alone, named `Me`, which no expression can tell from a session of
+one. The leaderboard, the relative and the radar read it, and say the field needs SimHub's AC app or ACC's
+broadcasting where it is false, and the panel's Home says the same. It is the one capability a driver can
+change from one session to the next, by configuring the game in SimHub, so its row is read frame by frame
+like every other.
+
+| Capability | iRacing | Assetto Corsa | ACC | Le Mans Ultimate | Without the plugin |
+|---|---|---|---|---|---|
+| `FieldReported` | yes | the app's raw `Opponents.numVehicles` is above 0 | raw `Realtime` is there | yes | yes |
+
 **The default is iRacing's answer.** Every dashboard reads a capability through `setting.reported` in
 `contract.ts`, from a helper in `second/values.ts` (`sim.carHasPitLimiter()` and its three siblings), with
 the reading OpenDash made before the capability existed as its `isnull()` fallback. The plugin publishes

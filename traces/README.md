@@ -386,3 +386,14 @@ Ultimate's row answers, since its reader's `IsInPit` is the whole pit lane; iRac
 `IsInPit` are the box, so their rows leave it to SimHub and the plugin publishes null for both, on every frame
 of all sixteen: a constant, and the value a recording with the plugin installed will write. The next
 `bun run record` and `bun run record --sim ac` read them from the plugin and drop the entries.
+
+#1131 asserts one more in each of the sixteen, `OpenDash.FieldReported`, whether SimHub reads the cars beyond
+the player's own, which on Assetto Corsa it does only while SimHub's in-game app writes them and on ACC only
+while the game's broadcasting is connected (ADR 0021). The leaderboard, the relative and the radar read it,
+and say the field needs SimHub's app or ACC's broadcasting where it is false. iRacing's row answers `true`,
+since the session lists every car, so the column is `true` on every frame of all nine. Assetto Corsa's row
+answers whether the app's `Opponents.numVehicles` counts any car: the emulator writes a field of twenty-four in
+six of the seven, so there the column is `true`, and in `noapp` it writes none, SimHub's `OpponentsCount` is
+the player alone, and the column is `false`. All sixteen are constants, and the value a recording with the
+plugin installed will write. The next `bun run record` and `bun run record --sim ac` read it from the plugin
+and drop the entries.

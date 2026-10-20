@@ -32,7 +32,8 @@ import { assetBox } from '../design/assets.ts';
 import { rect, type Rect, type Size } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { densityOf } from '../second/density.ts';
-import { spotterCar } from '../second/values.ts';
+import { unlessReported } from '../second/placeholder.ts';
+import { FIELD_REASON, sim, spotterCar } from '../second/values.ts';
 import type { Item, RadarItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { defineModule } from './module.ts';
@@ -74,6 +75,12 @@ export const spotterWidthFor = (width: number): number => Math.max(12, Math.min(
  */
 const CAR: Size = { width: 24, height: 44 };
 
+/**
+ * What the radar says when SimHub reads no car but the player's: its spotter finds no car to call, and a
+ * plot with the player alone in it would say the track was clear. See the leaderboard's. #1131.
+ */
+export const RADAR_FIELD_MESSAGE = `Radar · ${FIELD_REASON}`;
+
 export const radar = defineModule('radar', (ctx) => {
   const d = densityOf(ctx.density);
   const height = ctx.frame.height;
@@ -109,5 +116,6 @@ export const radar = defineModule('radar', (ctx) => {
   grid.push(band(`${ctx.prefix}centre`, rect(Math.round(plot.left + plot.width / 2), plot.top, 1, plot.height), ds.color.surface.raised));
   const you = band(`${ctx.prefix}you`, assetBox(plot, CAR, { maxWidth: CAR.width, maxHeight: CAR.height }), ds.color.text.primary);
   const side = (id: 'left' | 'right', x: number): Item => withMoreBindings(band(`${ctx.prefix}${id}`, rect(x, blockTop, spotter, blockHeight), ds.color.text.dim), { BackgroundColor: iff(spotterCar(id === 'left' ? 'Left' : 'Right'), str(ds.purpose.delta.slower), str(ds.color.text.dim)) });
-  return [side('left', ctx.frame.left), ...grid, item, you, side('right', ctx.frame.left + ctx.frame.width - spotter)];
+  const drawing = [side('left', ctx.frame.left), ...grid, item, you, side('right', ctx.frame.left + ctx.frame.width - spotter)];
+  return unlessReported(`${ctx.prefix}field.`, sim.fieldReported(), drawing, RADAR_FIELD_MESSAGE, ctx.frame, ctx.density);
 });

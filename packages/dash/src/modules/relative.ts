@@ -14,6 +14,8 @@ import { listPlan, table, type ColumnId, type ListPlan } from '../second/table.t
 import type { Archetype } from './shedding.ts';
 import { drawsHeader, fittingColumns } from './leaderboard.ts';
 import { defineModule, drawnAt, pageColumns, type ModuleContext } from './module.ts';
+import { unlessReported } from '../second/placeholder.ts';
+import { FIELD_REASON, sim } from '../second/values.ts';
 
 export const RELATIVE_COLUMNS: readonly ColumnId[] = ['pos', 'num', 'name', 'class', 'gap'];
 
@@ -62,9 +64,12 @@ export const relativePlan = (ctx: ModuleContext): ListPlan =>
     fit: fittingColumns,
   });
 
+/** What the relative says when SimHub reads no car but the player's. See the leaderboard's. #1131. */
+export const RELATIVE_FIELD_MESSAGE = `Relative · ${FIELD_REASON}`;
+
 export const relative = defineModule('relative', (ctx) => {
   const plan = relativePlan(ctx);
-  return table({
+  const rows = table({
     name: `${ctx.prefix}table`,
     frame: ctx.frame,
     columns: plan.columns,
@@ -76,4 +81,5 @@ export const relative = defineModule('relative', (ctx) => {
     header: drawsHeader(ctx.density),
     classOnly: ctx.classOnly,
   });
+  return unlessReported(`${ctx.prefix}field.`, sim.fieldReported(), rows, RELATIVE_FIELD_MESSAGE, ctx.frame, ctx.density);
 });

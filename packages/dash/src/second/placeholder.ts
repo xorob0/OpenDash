@@ -6,7 +6,8 @@
  * They say so rather than showing zeros. A dashboard that invents a number is worse than one that
  * admits it has none, and the modules stay in the catalogue so another sim can switch them on.
  */
-import type { Item, Rect } from '../generator.ts';
+import { ncalc, type Item, type Rect } from '../generator.ts';
+import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { LINE_SPACING } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
@@ -91,4 +92,18 @@ export function placeholder(prefix: string, text: string, frame: Rect, density: 
       hAlign: 'center',
     }),
   );
+}
+
+/**
+ * A module's drawing while `reported` is true and {@link placeholder}'s notice while it is false: the
+ * not-available state of a module whose reading the sim may or may not give, decided frame by frame.
+ * The drawing goes into one layer named `<prefix>reported`, so that one binding hides all of it.
+ * `prefix` is the gate's own, dot included (`leaderboard.field.`), so that a module already behind
+ * the session gate of `modules/module.ts` names its notice apart from that one.
+ */
+export function unlessReported(prefix: string, reported: Expr, drawing: Item[], text: string, frame: Rect, density: Density): Item[] {
+  return [
+    withMoreBindings({ kind: 'layer', name: `${prefix}reported`, children: drawing }, { Visible: reported }),
+    ...placeholder(prefix, text, frame, density).map((item) => withMoreBindings(item, { Visible: ncalc.not(reported) })),
+  ];
 }

@@ -1716,8 +1716,9 @@ describe('the inputs page', () => {
 });
 
 describe('the radar is cut from its box', () => {
-  const build = (w: number, h: number, density: Density = 'zone'): Item[] => MODULES.find((m) => m.id === 'radar')!.build({ frame: rect(0, 0, w, h), density, prefix: 'radar.' });
-  const radarIn = (items: Item[]): RadarItem => items.find((i): i is RadarItem => i.kind === 'radar')!;
+  // Layers flattened: the plot is one group, hidden while SimHub reads no other car (#1131).
+  const build = (w: number, h: number, density: Density = 'zone'): Item[] => [...walkItems(MODULES.find((m) => m.id === 'radar')!.build({ frame: rect(0, 0, w, h), density, prefix: 'radar.' }))];
+  const radarIn = (items: Item[]): RadarItem => [...walkItems(items)].find((i): i is RadarItem => i.kind === 'radar')!;
 
   test('the scale follows the plot rather than the density, which is what rule 18 means here', () => {
     // The two boxes readability-pass.md §16 puts side by side: a nano zone and a tall face zone
@@ -1765,7 +1766,7 @@ describe('the radar is cut from its box', () => {
 
   for (const box of moduleBoxes()) {
     test(`the grid and the player's block stay in the plot on a ${box.name}`, () => {
-      const items = MODULES.find((m) => m.id === 'radar')!.build({ frame: box.frame, density: box.density, prefix: 'radar.' });
+      const items = [...walkItems(MODULES.find((m) => m.id === 'radar')!.build({ frame: box.frame, density: box.density, prefix: 'radar.' }))];
       const plot = radarIn(items).rect;
       const drawn = items.filter((i): i is RectangleItem => i.kind === 'rect' && /\.(grid\d|centre|you)$/.test(i.name));
       expect(drawn.map((i) => i.name).sort()).toEqual(['radar.centre', 'radar.grid0', 'radar.grid1', 'radar.grid2', 'radar.you']);
