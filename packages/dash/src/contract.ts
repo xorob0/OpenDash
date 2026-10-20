@@ -1107,6 +1107,17 @@ export interface ThemeEntry {
    * order, default page and names; the drawing of each is the theme's `bandPages`, in the same order.
    */
   bandPages: readonly ThemeBandPageMeta[];
+  /**
+   * The pages it adds to the module catalogue zones B and C cycle, after the house's modules and in
+   * this order, so that no module leaves its number (ADR 0015). Both zones list all of them, as both
+   * list every module; the drawing of each is the theme's `modulePages`, in the same order.
+   */
+  modulePages?: readonly ThemeBandPageMeta[];
+  /**
+   * The page zones B and C open on, by id, where it is not the house's: one of the theme's own module
+   * pages, the reading its car's display opens on there (#203).
+   */
+  opensOn?: Partial<Record<'B' | 'C', string>>;
 }
 
 /** A page a theme adds to band D: its id, which is the screen's name in the band's dashboard, and the name the panel lists. */
@@ -1132,6 +1143,10 @@ function faceSizeAt(width: number, height: number): FaceSize {
  * Caterhams arrived in iRacing in September 2026 and their paths are still to be read on a rig with the
  * car loaded, so they are named in `cars` and left out of `iracingCarPaths` rather than guessed.
  *
+ * The BMW is the Bosch display of BMW M Motorsport's current cars, outlined boxes and solid setting
+ * tiles under a row of round shift lights, which the M4 GT3, the M4 G82 GT4, the M Hybrid V8 and the
+ * M8 GTE all draw (#203). The 2018 F82 GT4 carries an older display and is not claimed.
+ *
  * Every car path comes from iRacing's support article "Filepath for active iRacing cars"
  * (support.iracing.com, article 31000172625, modified on 1 May 2026), which writes it as a folder path
  * such as `\mx5\mx52016`: the session YAML's CarPath is that path without its leading backslash and
@@ -1141,6 +1156,7 @@ export const THEME_CATALOGUE: readonly ThemeEntry[] = [
   { id: 'default', name: 'OpenDash', cars: [], iracingCarPaths: [], sizes: FACE_SIZES, bandPages: [] },
   { id: 'porsche', name: 'Porsche', cars: ['Porsche 911 GT3 R (992)', 'Porsche 911 GT3 Cup (992.2)', 'Porsche 911 GT3 Cup (992.1)', 'Porsche 911 GT3 R (991.2)'], iracingCarPaths: ['porsche992rgt3', 'porsche9922cup', 'porsche992cup', 'porsche911rgt3'], sizes: FACE_SIZES, bandPages: [{ id: 'porscheFoot', name: 'Porsche' }] },
   { id: 'aim', name: 'AiM', cars: ['Global Mazda MX-5 Cup', 'Legends Ford Coupe', 'FIA Cross Car', 'Caterham Academy', 'Caterham 420R'], iracingCarPaths: ['mx5 mx52016', 'legends ford34c', 'legends ford34c rookie', 'crosscartn11'], sizes: FACE_SIZES, bandPages: [] },
+  { id: 'bmw', name: 'BMW', cars: ['BMW M4 GT3', 'BMW M4 G82 GT4', 'BMW M Hybrid V8', 'BMW M8 GTE'], iracingCarPaths: ['bmwm4gt3', 'bmwm4evogt4', 'bmwlmdh', 'bmwm8gte'], sizes: FACE_SIZES, bandPages: [{ id: 'bmwFoot', name: 'BMW' }], modulePages: [{ id: 'bmwTyres', name: 'Tyre pressure' }, { id: 'bmwRace', name: 'Race' }, { id: 'bmwLaps', name: 'Lap times' }], opensOn: { B: 'bmwTyres', C: 'bmwRace' } },
 ];
 
 /** The catalogue entry of a theme, or undefined for an id the catalogue does not hold. */
@@ -1293,17 +1309,24 @@ export function bandDPages(theme?: ThemeEntry): readonly FaceZonePageMeta[] {
   return [...BAND_D_PAGES, ...added.map((page, i) => ({ number: BAND_D_PAGES.length + i, id: page.id, name: page.name }))];
 }
 
-/** Zones B and C draw from the full module catalogue, which is no longer companion-only. */
-export const zoneBCPages = (): readonly FaceZonePageMeta[] => MODULE_CATALOGUE.map((m) => ({ number: m.number - 1, id: m.id, name: m.name }));
+/**
+ * Zones B and C draw from the full module catalogue, which is no longer companion-only, and on a face
+ * of a theme from its module pages after it, numbered on from the modules.
+ */
+export function zoneBCPages(theme?: ThemeEntry): readonly FaceZonePageMeta[] {
+  const house = MODULE_CATALOGUE.map((m) => ({ number: m.number - 1, id: m.id, name: m.name }));
+  const added = theme?.modulePages ?? [];
+  return added.length === 0 ? house : [...house, ...added.map((page, i) => ({ number: house.length + i, id: page.id, name: page.name }))];
+}
 
 /**
- * The catalogue a zone draws from, on a face of the theme given. Only band D's depends on it: a theme
- * adds pages there and nowhere else.
+ * The catalogue a zone draws from, on a face of the theme given. Zone A's is the house's alone: a theme
+ * adds pages to band D's and to the modules, at their ends.
  */
 export function pagesForZone(zone: FaceZone, theme?: ThemeEntry): readonly FaceZonePageMeta[] {
   if (zone === 'A') return ZONE_A_PAGES;
   if (zone === 'D') return bandDPages(theme);
-  return zoneBCPages();
+  return zoneBCPages(theme);
 }
 
 /**
@@ -1342,10 +1365,17 @@ export const DEFAULT_ZONE_PAGE: Record<FaceZone, number> = { A: 0, B: 0, C: 14, 
 
 /**
  * The page a zone opens on, on a face of the theme given: {@link DEFAULT_ZONE_PAGE}, except that band
- * D on a theme that adds pages to it opens on the first of them, the row its car opens on (#718).
+ * D on a theme that adds pages to it opens on the first of them, the row its car opens on (#718), and
+ * zones B and C on the page the theme's `opensOn` names (#203).
  */
-export const defaultZonePage = (zone: FaceZone, theme?: ThemeEntry): number =>
-  zone === 'D' && (theme?.bandPages.length ?? 0) > 0 ? BAND_D_PAGES.length : DEFAULT_ZONE_PAGE[zone];
+export function defaultZonePage(zone: FaceZone, theme?: ThemeEntry): number {
+  if (zone === 'D') return (theme?.bandPages.length ?? 0) > 0 ? BAND_D_PAGES.length : DEFAULT_ZONE_PAGE[zone];
+  const opens = zone === 'A' ? undefined : theme?.opensOn?.[zone];
+  if (opens === undefined) return DEFAULT_ZONE_PAGE[zone];
+  const page = pagesForZone(zone, theme).find((p) => p.id === opens);
+  if (!page) throw new Error(`the ${theme!.id} theme opens zone ${zone} on ${opens}, which is not one of its pages`);
+  return page.number;
+}
 
 /**
  * Which pages are enabled, as a bit mask, which is what sets the length of a zone's cycle. All of
