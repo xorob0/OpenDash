@@ -1244,7 +1244,7 @@ namespace OpenDashPlugin
         /// </remarks>
         public sealed class ThemeEntry
         {
-            public ThemeEntry(string id, string name, string[] cars, string[] iracingCarPaths, IReadOnlyList<FaceSize> sizes, IReadOnlyList<ThemeBandPage> bandPages = null)
+            public ThemeEntry(string id, string name, string[] cars, string[] iracingCarPaths, IReadOnlyList<FaceSize> sizes, IReadOnlyList<ThemeBandPage> bandPages = null, IReadOnlyList<ThemeBandPage> modulePages = null, string opensOnB = null, string opensOnC = null)
             {
                 Id = id;
                 Name = name;
@@ -1252,6 +1252,9 @@ namespace OpenDashPlugin
                 IracingCarPaths = iracingCarPaths;
                 Sizes = sizes;
                 BandPages = bandPages ?? new ThemeBandPage[0];
+                ModulePages = modulePages ?? new ThemeBandPage[0];
+                OpensOnB = opensOnB;
+                OpensOnC = opensOnC;
             }
 
             /// <summary>Lower case, and the name of its directory under packages/dash/src/themes/.</summary>
@@ -1274,6 +1277,18 @@ namespace OpenDashPlugin
             /// leaves its index. A face of the theme cycles all of them and opens on the first of these.
             /// </summary>
             public IReadOnlyList<ThemeBandPage> BandPages { get; }
+
+            /// <summary>
+            /// The pages it adds to the module catalogue of zones B and C, after the house's modules and in
+            /// this order, so that no module leaves its number. Both zones list all of them.
+            /// </summary>
+            public IReadOnlyList<ThemeBandPage> ModulePages { get; }
+
+            /// <summary>The id of the page zone B opens on where it is not the house's, or null. Mirrors opensOn in contract.ts.</summary>
+            public string OpensOnB { get; }
+
+            /// <summary>The id of the page zone C opens on where it is not the house's, or null.</summary>
+            public string OpensOnC { get; }
 
             public bool IsDefault { get { return string.Equals(Id, DefaultThemeId, StringComparison.Ordinal); } }
 
@@ -1318,6 +1333,7 @@ namespace OpenDashPlugin
             new ThemeEntry("default", "OpenDash", new string[0], new string[0], FaceSizes, new ThemeBandPage[0]),
             new ThemeEntry("porsche", "Porsche", new[] { "Porsche 911 GT3 R (992)", "Porsche 911 GT3 Cup (992.2)", "Porsche 911 GT3 Cup (992.1)", "Porsche 911 GT3 R (991.2)" }, new[] { "porsche992rgt3", "porsche9922cup", "porsche992cup", "porsche911rgt3" }, FaceSizes, new[] { new ThemeBandPage("porscheFoot", "Porsche") }),
             new ThemeEntry("aim", "AiM", new[] { "Global Mazda MX-5 Cup", "Legends Ford Coupe", "FIA Cross Car", "Caterham Academy", "Caterham 420R" }, new[] { "mx5 mx52016", "legends ford34c", "legends ford34c rookie", "crosscartn11" }, FaceSizes, new ThemeBandPage[0]),
+            new ThemeEntry("bmw", "BMW", new[] { "BMW M4 GT3", "BMW M4 G82 GT4", "BMW M Hybrid V8", "BMW M8 GTE" }, new[] { "bmwm4gt3", "bmwm4evogt4", "bmwlmdh", "bmwm8gte" }, FaceSizes, new[] { new ThemeBandPage("bmwFoot", "BMW") }, new[] { new ThemeBandPage("bmwTyres", "Tyre pressure"), new ThemeBandPage("bmwRace", "Race"), new ThemeBandPage("bmwLaps", "Lap times") }, "bmwTyres", "bmwRace"),
         };
 
         /// <summary>The catalogue entry of a theme by its id, or null for the default look, an unknown id, or none.</summary>
@@ -1338,6 +1354,13 @@ namespace OpenDashPlugin
         {
             var entry = ThemeById(theme);
             return entry == null ? NoBandPages : entry.BandPages;
+        }
+
+        /// <summary>The module pages a theme adds to zones B and C, by its id: none for the default look, an unknown id, or none.</summary>
+        public static IReadOnlyList<ThemeBandPage> ThemeModulePages(string theme)
+        {
+            var entry = ThemeById(theme);
+            return entry == null ? NoBandPages : entry.ModulePages;
         }
 
         private static readonly ThemeBandPage[] NoBandPages = new ThemeBandPage[0];
@@ -1680,7 +1703,8 @@ namespace OpenDashPlugin
         {
             if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
             var count = FaceZonePageCounts[zoneIndex];
-            return zoneIndex == BandIndex ? count + ThemeBandPages(theme).Count : count;
+            if (zoneIndex == BandIndex) return count + ThemeBandPages(theme).Count;
+            return zoneIndex == 0 ? count : count + ThemeModulePages(theme).Count;
         }
 
         /// <summary>
@@ -1692,6 +1716,15 @@ namespace OpenDashPlugin
         {
             if (zoneIndex < 0 || zoneIndex >= FaceZoneLetters.Length) throw new ArgumentOutOfRangeException(nameof(zoneIndex));
             if (zoneIndex == BandIndex && ThemeBandPages(theme).Count > 0) return FaceZonePageCounts[BandIndex];
+            var entry = ThemeById(theme);
+            var opens = entry == null ? null : zoneIndex == 1 ? entry.OpensOnB : zoneIndex == 2 ? entry.OpensOnC : null;
+            if (opens != null)
+            {
+                for (var i = 0; i < entry.ModulePages.Count; i++)
+                {
+                    if (entry.ModulePages[i].Id == opens) return FaceZonePageCounts[zoneIndex] + i;
+                }
+            }
             return DefaultFaceZonePages[zoneIndex];
         }
 
