@@ -70,6 +70,11 @@ export function buildThemeFace(themeId: string, size: Size, opts: FaceBuildOptio
   if (JSON.stringify(listed) !== JSON.stringify(drawn)) {
     throw new Error(`the ${themeId} theme draws band pages ${JSON.stringify(drawn)} and its catalogue entry lists ${JSON.stringify(listed)}; they have to be the same pages in the same order`);
   }
+  const listedModules = (entry?.modulePages ?? []).map((p) => p.id);
+  const drawnModules = (drawing.modulePages ?? []).map((p) => p.id);
+  if (JSON.stringify(listedModules) !== JSON.stringify(drawnModules)) {
+    throw new Error(`the ${themeId} theme draws module pages ${JSON.stringify(drawnModules)} and its catalogue entry lists ${JSON.stringify(listedModules)}; they have to be the same pages in the same order`);
+  }
   const titled = folder === undefined ? house : { ...house, folder };
   const layout = drawing.bandCorners === undefined ? titled : { ...titled, bandCorners: drawing.bandCorners };
   const regions = anatomy.regions(layout);
