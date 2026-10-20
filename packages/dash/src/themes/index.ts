@@ -14,6 +14,8 @@ import { aimAnatomy } from './aim/anatomy.ts';
 import aimOverlay from './aim/overlay.json';
 import { porscheAnatomy } from './porsche/anatomy.ts';
 import porscheOverlay from './porsche/overlay.json';
+import { bmwAnatomy } from './bmw/anatomy.ts';
+import bmwOverlay from './bmw/overlay.json';
 
 /** The environment variable naming the theme a process builds. Unset or empty is the default theme. */
 export const THEME_ENV = 'OPENDASH_THEME';
@@ -34,6 +36,8 @@ export const THEMES: Record<string, Theme> = {
   porsche: { overlay: porscheOverlay, anatomy: porscheAnatomy },
   /** The AiM LCD of the MX-5 Cup, the Legends and the Cross Car, at every size (#204). */
   aim: { overlay: aimOverlay, anatomy: aimAnatomy },
+  /** The Bosch display of BMW M Motorsport's M4 GT3, M4 GT4, M Hybrid V8 and M8 GTE, at every size (#203). */
+  bmw: { overlay: bmwOverlay, anatomy: bmwAnatomy },
 };
 
 /** The theme {@link THEME_ENV} names, refusing one that is not registered rather than falling back. */
