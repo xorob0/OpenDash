@@ -83,6 +83,7 @@ describe('outside a race, by best lap', () => {
   test('a best lap 0.04 s either side of the car in front reads 0.0', () => {
     expect(column(carRaceGap, 'Lone Qualify', 'overall')).toEqual(['0.0', '0.0', '+0.1']);
     expect(column(carInterval, 'Lone Qualify', 'overall')).toEqual(['0.0', '0.0', '+0.1']);
+    expect(column(carClassRaceGap, 'Lone Qualify', 'class')).toEqual(['0.0', '0.0', '+0.1']);
     expect(column(carClassInterval, 'Lone Qualify', 'class')).toEqual(['0.0', '0.0', '+0.1']);
   });
 });
