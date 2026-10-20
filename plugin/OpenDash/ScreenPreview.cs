@@ -15,16 +15,18 @@
 // Two things are deliberately defensive rather than confident, and both are marked below. SimHub's
 // renderer is built to live in a dash window, not in a pane of SimHub's own settings menu, so every
 // call into it is wrapped: a preview that throws must cost the user a line of text, never the settings
-// page. And the screen selection is the one piece the dash window would otherwise do for us.
+// page. And the screen selection is the one piece the dash window would otherwise do for us, so it is
+// checked against PanelPreviewScreen.cs, which chooses by role as the window does (#1085).
 //
 // Needs SimHub and WPF types, so it is NOT compiled into OpenDash.Tests. What a test can hold is in
-// PanelPreview.cs.
+// PanelPreview.cs and PanelPreviewScreen.cs.
 using System;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using SimHub.Plugins;
 using SimHub.Plugins.OutputPlugins.GraphicalDash;
 using SimHub.Plugins.OutputPlugins.GraphicalDash.Windows.Renderers;
 using GDashScreen = SimHub.Plugins.OutputPlugins.GraphicalDash.Screen;
@@ -36,7 +38,7 @@ namespace OpenDashPlugin
     public sealed class ScreenPreview : IDisposable
     {
         /// <summary>
-        /// How often the shown screen is checked against the screens the dashboard says are enabled.
+        /// How often the shown screen is checked against the one SimHub's own window would show.
         /// </summary>
         /// <remarks>
         /// Once a second, because what it follows changes when a setting changes rather than when a
@@ -154,13 +156,17 @@ namespace OpenDashPlugin
                 }
             };
 
-            // The one piece of the dash window's job that is done here rather than by SimHub. A window
-            // decides which screen is showing; a renderer on its own is handed one. So the screen the
-            // dashboard says is enabled is followed, and only where SimHub has not already chosen.
+            // The one piece of the dash window's job that is checked here as well as by SimHub. The
+            // renderer is bound to the model's Dashboard.SelectedScreen, which the model's own frame loop
+            // moves by mode (EditorModel.CheckGameModeScreen), so this steps in only where that screen
+            // is not the one PanelPreviewScreen says SimHub's window would show, and it steps in by
+            // writing that same property. Assigning the renderer's ShownScreen, as this did until #1085,
+            // replaced the binding with the first screen for good: with no game running the preview drew
+            // a racing screen with nothing in it, never the idle screen a generated package puts last.
             //
-            // TODO: #399 -- on the VM, establish whether SetCurrentModel leaves ShownScreen filled. If it
-            // does, this follower is dead weight and should go, since the whole value of this file is
-            // that SimHub decides and we do not.
+            // TODO: #399 -- on the VM, establish whether the model's own selection always lands within a
+            // second. If it does, this follower is dead weight and should go, since the whole value of
+            // this file is that SimHub decides and we do not.
             FollowEnabledScreen(model);
             timer = new DispatcherTimer { Interval = ScreenPoll };
             timer.Tick += (sender, args) => FollowEnabledScreen(model);
@@ -172,8 +178,9 @@ namespace OpenDashPlugin
             if (disposed || renderer == null) return;
             try
             {
-                var wanted = FirstEnabled(model);
-                if (wanted != null && !ReferenceEquals(renderer.ShownScreen, wanted)) renderer.ShownScreen = wanted;
+                var dashboard = model == null ? null : model.Dashboard;
+                var wanted = ScreenSimHubWouldShow(dashboard, GameRunning());
+                if (wanted != null && !ReferenceEquals(dashboard.SelectedScreen, wanted)) dashboard.SelectedScreen = wanted;
             }
             catch (Exception error)
             {
@@ -182,14 +189,33 @@ namespace OpenDashPlugin
             }
         }
 
-        private static GDashScreen FirstEnabled(EditorModel model)
+        /// <summary>What SimHub's last frame said, which is what its own dash window reads to choose
+        /// between the racing screen and the idle one.</summary>
+        private static bool GameRunning()
         {
-            var dashboard = model == null ? null : model.Dashboard;
-            if (dashboard == null) return null;
-            var available = dashboard.AvailableScreens;
-            var enabled = available == null ? null : available.FirstOrDefault();
-            if (enabled != null) return enabled;
-            return dashboard.Screens == null ? null : dashboard.Screens.FirstOrDefault();
+            var manager = PluginManager.GetInstance();
+            var data = manager == null ? null : manager.LastData;
+            return data != null && data.GameRunning;
+        }
+
+        /// <summary>The screen PanelPreviewScreen chooses from the roles, the enabled flags and the
+        /// screen showing now, or null when the dashboard has none.</summary>
+        private static GDashScreen ScreenSimHubWouldShow(Dashboard dashboard, bool gameRunning)
+        {
+            if (dashboard == null || dashboard.Screens == null) return null;
+            var screens = dashboard.Screens.ToList();
+            var roles = screens
+                .Select(s => new PreviewScreenRoles
+                {
+                    InGame = s.InGameScreen,
+                    Idle = s.IdleScreen,
+                    Pit = s.PitScreen,
+                    Enabled = s.ScreenEnabled,
+                    Layer = s.IsLayer,
+                })
+                .ToList();
+            var index = PanelPreviewScreen.Choose(roles, gameRunning, screens.IndexOf(dashboard.SelectedScreen));
+            return index < 0 ? null : screens[index];
         }
 
         private void Stop()
