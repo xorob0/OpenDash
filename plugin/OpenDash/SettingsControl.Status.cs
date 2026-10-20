@@ -84,7 +84,7 @@ namespace OpenDashPlugin
         private void CheckAgainAndSay(PanelIssue issue)
         {
             CheckAgain();
-            Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject)));
+            Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject), plugin.LastSimReport.FieldReported));
         }
 
         /// <summary>Everything Home is told, each fact as read or as unknown.</summary>
@@ -157,6 +157,11 @@ namespace OpenDashPlugin
                 input.SettingsCopy = rescue.CopyPath;
                 input.SettingsBackups = rescue.BackupsPath;
             }
+
+            // What the running sim reported on the last frame, and the game it is: read from memory, never from SimHub.
+            input.FieldReported = plugin.LastSimReport.FieldReported;
+            input.GameCode = plugin.ReportGame;
+            input.GameName = plugin.Live.GameName;
 
             input.RestartPending = PendingRestart();
             input.UpdateAvailable = updateStatus.State == UpdateState.UpdateAvailable;

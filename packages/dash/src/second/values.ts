@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
+import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, FIELD_REPORTED, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2322,6 +2322,13 @@ export const sim = {
    * `flagRaised` and `faceFlagRaised` in `flags.ts`, behind iRacing's bits, which answer first.
    */
   flagShown: (capability: FlagCapability, fallback: Expr): Expr => setting.reported(capability, fallback),
+  /**
+   * SimHub is reading the cars beyond the player's own. Without the plugin, true: iRacing's session lists
+   * every car. On Assetto Corsa without SimHub's in-game app, and on ACC without its broadcasting, SimHub's
+   * opponents are the player alone, so the leaderboard, the relative and the spotter say the field is
+   * missing rather than drawing a board of one (#1131).
+   */
+  fieldReported: (): Expr => setting.reported(FIELD_REPORTED, 'true'),
 };
 
 /** The capabilities that answer for a flag. See {@link sim}'s `flagShown`. */
@@ -2463,6 +2470,13 @@ export const trackMapRecorded = (): Expr => isnull(prop(propertyName(TRACK_MAP_R
  * car crosses the line. The name half goes when the box is short, as it does for every notice.
  */
 export const TRACK_MAP_REASON = 'Drive a lap to record it';
+
+/**
+ * Why the leaderboard, the relative and the radar have no field to draw: the reason half of their notice,
+ * shown when {@link sim}'s `fieldReported` is false (#1131). It names the two fixes because they are the two
+ * there are, and both are in SimHub's game settings; a sim that always reports its field never shows it.
+ */
+export const FIELD_REASON = "Other cars need SimHub's AC app or ACC broadcasting";
 export const sessionType = (): Expr => isnull(game('SessionTypeName'), str(''));
 
 /**

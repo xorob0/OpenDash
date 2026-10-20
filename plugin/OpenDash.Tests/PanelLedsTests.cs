@@ -675,7 +675,7 @@ namespace OpenDashPlugin.Tests
                 // Home's press for the same issue: the outcome is said, so a strip still unselected is not a dead press.
                 "again.Click += (sender, args) => CheckAgainAndSay(issue);");
             var status = System.Text.RegularExpressions.Regex.Replace(RepoPaths.Code(System.IO.Path.Combine(RepoPaths.Root(), "plugin", "OpenDash", "SettingsControl.Status.cs")), @"\s+", " ");
-            Assert.Contains("private void CheckAgainAndSay(PanelIssue issue) { CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject))); }", status);
+            Assert.Contains("private void CheckAgainAndSay(PanelIssue issue) { CheckAgain(); Say(PanelHome.CheckedAgain(issue, issues, StripFacts(issue.Subject), plugin.LastSimReport.FieldReported)); }", status);
             Holds(Body(leds, "private void InstallLedBarProfile(", "private void ReverseLedBar("), "InstallLedBarProfile",
                 "var blocked = LedsProfileBlocked(bar, targets, declined); var plan = blocked == null ? LedsReinstall(bar, targets) : null; Redraw();",
                 "if (plan == null) { Say(PanelMessage.Caution(blocked ?? PanelLeds.ProfileFailed(bar.Name))); return; }");

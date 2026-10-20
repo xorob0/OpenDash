@@ -62,12 +62,13 @@ namespace OpenDashPlugin.Tests
         public void On_iRacing_every_answer_is_the_one_the_dashboards_fall_back_on()
         {
             // The fallbacks in values.ts are iRacing's readings, so the plugin there says what a package with no
-            // plugin already reads: the control's presence, the limiter bit, no damage, and IsOnTrack.
+            // plugin already reads: the control's presence, the limiter bit, no damage, IsOnTrack, SimHub's own flags
+            // and the whole field.
             var frame = Frame(
                 (Raw + "Telemetry.dcPitSpeedLimiterToggle", false),
                 (GameData + "PitLimiterOn", 1),
                 (Raw + "Telemetry.IsOnTrack", true));
-            Assert.Same(SimReport.Of(true, true, false, true), SimCapabilities.Read("IRacing", frame));
+            Assert.Same(SimReport.Of(true, true, false, true, null, null, null, null, true), SimCapabilities.Read("IRacing", frame));
         }
 
         [Fact]
@@ -350,6 +351,49 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void On_Assetto_Corsa_the_field_is_there_only_while_SimHubs_app_writes_it()
+        {
+            // Without SimHub's in-game app the page it writes counts no cars, and SimHub's opponents are the player
+            // alone, named "Me": the leaderboard would be a board of one (#1131).
+            var live = (Raw + "Graphics.Status", (object)AcStatus.AC_LIVE);
+            var paused = (Raw + "Graphics.Status", (object)AcStatus.AC_PAUSE);
+            Assert.True(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(live, (Raw + "Opponents.numVehicles", 24))).FieldReported);
+            Assert.False(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(live, (Raw + "Opponents.numVehicles", 0))).FieldReported);
+            Assert.False(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(paused, (Raw + "Opponents.numVehicles", 0))).FieldReported);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame()).FieldReported);
+        }
+
+        [Fact]
+        public void On_Assetto_Corsa_a_game_still_loading_is_not_a_field_missing()
+        {
+            // While the game loads Graphics.Status is AC_OFF and SimHub's app has not started, so its page counts no
+            // cars yet; Home works out its issues at that moment and would keep a warning the app then answers.
+            var none = (Raw + "Opponents.numVehicles", (object)0);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame((Raw + "Graphics.Status", AcStatus.AC_OFF), none)).FieldReported);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame((Raw + "Graphics.Status", AcStatus.AC_REPLAY), none)).FieldReported);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(none)).FieldReported);
+        }
+
+        [Fact]
+        public void On_ACC_the_field_is_there_only_while_broadcasting_is_connected()
+        {
+            // ACCManager's opponents come from the broadcasting interface, whose realtime update is null until it
+            // connects. With no frame at all the game is not running, which is not a field missing.
+            var live = (Raw + "Graphics.Status", (object)AcStatus.AC_LIVE);
+            Assert.True(SimCapabilities.Read(SimCapabilities.AssettoCorsaCompetizione, Frame(live, (Raw + "Realtime.SessionIndex", 0))).FieldReported);
+            Assert.False(SimCapabilities.Read(SimCapabilities.AssettoCorsaCompetizione, Frame(live)).FieldReported);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsaCompetizione, Frame()).FieldReported);
+        }
+
+        [Fact]
+        public void On_iRacing_and_LMU_the_field_is_always_there()
+        {
+            // Both read the session's own list of cars, which the game writes on every frame.
+            Assert.True(SimCapabilities.Read(SimCapabilities.IRacing, Frame()).FieldReported);
+            Assert.True(SimCapabilities.Read(SimCapabilities.LeMansUltimate, Frame()).FieldReported);
+        }
+
+        [Fact]
         public void A_game_with_no_row_answers_nothing_so_the_dashboards_read_what_they_read_without_the_plugin()
         {
             var frame = Frame((GameData + "PitLimiterOn", 1), (Raw + "Telemetry.IsOnTrack", true));
@@ -388,6 +432,7 @@ namespace OpenDashPlugin.Tests
             Assert.True(report.DamageReported);
             Assert.Null(report.PitLimiterOn);
             Assert.Null(report.DriverInCar);
+            Assert.Null(report.FieldReported);
         }
 
         [Fact]
@@ -428,8 +473,8 @@ namespace OpenDashPlugin.Tests
             // An answer left off the end is unknown, so a report of the first four is the same instance as one
             // that says the flags are unknown.
             Assert.Null(a.Read(Contract.YellowFlagShown));
-            Assert.Same(a, SimReport.Of(true, null, false, true, null, null, null, null));
-            Assert.Equal("limiter yes, on unknown, damage no, in the car yes, yellow unknown, black unknown, white unknown, chequered unknown", a.ToString());
+            Assert.Same(a, SimReport.Of(true, null, false, true, null, null, null, null, null));
+            Assert.Equal("limiter yes, on unknown, damage no, in the car yes, yellow unknown, black unknown, white unknown, chequered unknown, field unknown", a.ToString());
             var flags = SimReport.Of(null, null, null, null, true, false, null, true);
             Assert.Same(flags, SimReport.Of(null, null, null, null, true, false, null, true));
             Assert.Equal(true, flags.YellowFlagShown);
@@ -437,6 +482,9 @@ namespace OpenDashPlugin.Tests
             Assert.Null(flags.WhiteFlagShown);
             Assert.Equal(true, flags.ChequeredFlagShown);
             Assert.Equal(true, flags.Read(Contract.ChequeredFlagShown));
+            var alone = SimReport.Of(null, null, null, null, null, null, null, null, false);
+            Assert.Equal(false, alone.FieldReported);
+            Assert.NotSame(alone, SimReport.Unknown);
         }
 
         [Fact]
@@ -448,6 +496,7 @@ namespace OpenDashPlugin.Tests
             {
                 "CarHasPitLimiter", "PitLimiterOn", "DamageReported", "DriverInCar",
                 "YellowFlagShown", "BlackFlagShown", "WhiteFlagShown", "ChequeredFlagShown",
+                "FieldReported",
             }, Contract.Capabilities);
             var shared = Contract.SharedPropertyNames().ToList();
             Assert.Equal(Contract.Capabilities, shared.Skip(shared.IndexOf(Contract.CarHasPitLimiter)).Take(Contract.Capabilities.Length));

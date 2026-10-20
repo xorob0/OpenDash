@@ -248,10 +248,16 @@ namespace OpenDashPlugin
         /// ceiling for (voice.md).
         /// </remarks>
         /// <param name="strip">What was read about the issue's strip the second time, or null.</param>
-        public static PanelMessage CheckedAgain(PanelIssue before, IEnumerable<PanelIssue> after, AttentionStrip strip)
+        /// <param name="fieldReported">Whether SimHub read the game's other cars the second time, null with no game
+        /// running: an issue about the field that went because the game closed is not one that was fixed (#1131).</param>
+        public static PanelMessage CheckedAgain(PanelIssue before, IEnumerable<PanelIssue> after, AttentionStrip strip, bool? fieldReported = null)
         {
             var still = before == null ? null : PanelAttention.Of(after, before.Id, null);
             if (still != null) return PanelMessage.Caution(Checked + still.Title + ".");
+            if (before != null && string.Equals(before.Id, PanelAttention.FieldMissing, StringComparison.Ordinal))
+            {
+                return fieldReported == true ? PanelMessage.Info(Checked + CheckedFieldSeen) : PanelMessage.Caution(Checked + CheckedFieldUnread);
+            }
             var profile = strip == null ? null : strip.Profile;
             if (profile == FlagBoxInstallState.NotEmbedded) return PanelMessage.Caution(Checked + CheckedNoProfile + StripName(strip, false) + ".");
             var installed = FlagBoxInstallPlan.InSimHub(profile ?? FlagBoxInstallState.NotInstalled);
@@ -275,6 +281,12 @@ namespace OpenDashPlugin
         }
 
         public const string Checked = "Checked again. ";
+
+        /// <summary>The game's other cars are read now, which is the whole of what the press asked (#1131).</summary>
+        public const string CheckedFieldSeen = "SimHub sees the other cars.";
+
+        /// <summary>No game is running to read the other cars from, so nothing was learnt either way (#1131).</summary>
+        public const string CheckedFieldUnread = "Start the game to see whether SimHub reads its other cars.";
         public const string CheckedSelected = "'s profile is selected.";
 
         /// <summary>The step that is left, named where it is taken (voice.md, Messages).</summary>

@@ -319,6 +319,9 @@ export const liveSettingNames = (): string[] =>
  *   never raises the chequer or the white, raises the black for a car that has retired or been
  *   disqualified, and raises the yellow for a yellow anywhere on the track. iRacing's bits answer before
  *   any of them, so iRacing's row leaves them null; `flagRaised` in `flags.ts` is where they are read.
+ * - `FieldReported`: SimHub is reading the cars beyond the player's own (#1131). On Assetto Corsa the
+ *   field comes from SimHub's in-game app and on ACC from the game's broadcasting interface; without
+ *   them SimHub's opponents are the player alone, named `Me`, which cannot be told from a session of one.
  *
  * Published rather than chosen, true or false, and null with no game running or on a game the plugin's
  * table (`plugin/OpenDash/SimCapabilities.cs`) has no row for. So each is read through
@@ -340,6 +343,8 @@ export const BLACK_FLAG_SHOWN = 'BlackFlagShown';
 export const WHITE_FLAG_SHOWN = 'WhiteFlagShown';
 /** See {@link CAR_HAS_PIT_LIMITER}. */
 export const CHEQUERED_FLAG_SHOWN = 'ChequeredFlagShown';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const FIELD_REPORTED = 'FieldReported';
 
 /** Every capability, in the order the plugin attaches them. */
 export const CAPABILITIES = [
@@ -351,6 +356,7 @@ export const CAPABILITIES = [
   BLACK_FLAG_SHOWN,
   WHITE_FLAG_SHOWN,
   CHEQUERED_FLAG_SHOWN,
+  FIELD_REPORTED,
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 

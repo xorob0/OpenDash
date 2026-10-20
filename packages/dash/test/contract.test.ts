@@ -246,8 +246,9 @@ describe('settings', () => {
     // the plugin had to say whether SimHub holds the track's outline, which no property of SimHub's says
     // (#555), and 667 before four more said which flag a sim whose own summary is wrong is showing (#1129).
     // And 671 before the plugin had to time the stop in the pit box, which Le Mans Ultimate's reader times
-    // over the whole pit lane (#1130).
-    expect(props).toHaveLength(673);
+    // over the whole pit lane (#1130). And 673 before it said whether SimHub reads the cars beyond the
+    // player's own, which on Assetto Corsa and ACC it does only with their app or broadcasting (#1131).
+    expect(props).toHaveLength(674);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -402,6 +403,8 @@ describe('settings', () => {
         'BlackFlagShown',
         'WhiteFlagShown',
         'ChequeredFlagShown',
+        // And whether SimHub is reading the field beyond the player. #1131.
+        'FieldReported',
         // And whether SimHub holds the track's outline, published rather than chosen and asked of the same
         // track by every screen that draws its map. #555.
         'TrackMapRecorded',
