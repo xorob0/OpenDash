@@ -1331,7 +1331,7 @@ export const BAR_FIELDS: readonly FaceZonePageMeta[] = [
 export const BAR_SLOTS = ['Left1', 'Left2', 'Right1', 'Right2'] as const;
 export type BarSlot = (typeof BAR_SLOTS)[number];
 
-/** Race and Lap on the left, Position and Class on the right, as the artboards draw them. */
+/** The race time and Lap on the left, Position and Class on the right, as the artboards draw them. */
 export const DEFAULT_BAR_FIELDS: Record<BarSlot, number> = { Left1: 0, Left2: 1, Right1: 5, Right2: 6 };
 
 /**

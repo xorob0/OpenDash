@@ -21,7 +21,7 @@ import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
 
-/** A session of each kind, under the names iRacing gives them, with a clock running. */
+/** A session of each kind, under the names a sim gives them, with a clock running. */
 const SESSIONS: Record<string, Props> = {
   race: { 'DataCorePlugin.GameData.SessionTypeName': 'Race', 'DataCorePlugin.GameData.SessionTimeLeft': 1694 },
   qualifying: { 'DataCorePlugin.GameData.SessionTypeName': 'Lone Qualify', 'DataCorePlugin.GameData.SessionTimeLeft': 277 },
