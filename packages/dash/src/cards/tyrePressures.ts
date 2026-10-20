@@ -1,6 +1,7 @@
 /**
- * Card 11, Tyre pressures: the four corners from the last stop in SimHub's unit (psi, kPa or
- * bar, spelled in the label by `pressureUnit`), drawn in text.primary as the canvas does; `--` when 0.
+ * Card 11, Tyre pressures: the four corners in SimHub's unit (psi, kPa or bar, spelled in the
+ * label by `pressureUnit`), drawn in text.primary as the canvas does; `--` when 0. They are the
+ * readings from the last stop where the sim publishes no others, which the label then says (#1161).
  * One decimal wherever the grid column holds `ddd.d`. Where it does not, the widest values give
  * up their decimal first: integers from 100 (kPa) when only `dd.d` fits, integers from 10 (psi
  * and kPa, bar keeping its decimal) when only `ddd` fits. The tier is picked per layout from the
@@ -17,7 +18,7 @@ import type { RungSpec } from '../design/rung.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { PRESSURE_CHARS } from './chars.ts';
-import { TYRE_CORNERS } from './tyreTemps.ts';
+import { stopNote, TYRE_CORNERS } from './tyreTemps.ts';
 import { pressureUnit } from '../second/values.ts';
 
 const { game, isnull, eq, lt, num, iff, str, fmt, concat } = ncalc;
@@ -70,7 +71,7 @@ const labelUnit = pressureUnit();
 
 /** Longest first: the stop note, then the unit, go as the card narrows. */
 const labelForms = (label: string) => [
-  { sample: label, widest: 'Pressures kPa · last stop', bind: concat(str('Pressures '), labelUnit, str(' · last stop')) },
+  { sample: label, widest: 'Pressures kPa · last stop', bind: concat(str('Pressures '), labelUnit, stopNote) },
   { sample: 'Pressures psi', widest: 'Pressures kPa', bind: concat(str('Pressures '), labelUnit) },
   { sample: 'psi', widest: 'kPa', bind: labelUnit },
 ];
