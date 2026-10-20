@@ -226,11 +226,12 @@ neither has a ticket yet: the round faces' tyre cards are captioned "last stop" 
 and a car's sectors on the pit wall are unclear. The energy page reads only iRacing's names for virtual
 energy, so it cannot draw Le Mans Ultimate's, which is #962's.
 
-The pit wall's iRating column is only drawn where the sim publishes one (#1162). The race and portrait
+The pit wall's iRating column is only drawn where the sim publishes one (#1162). Its race and portrait
 boards are stamped twice, with the column and without it, and the player's own `iracingirating` being
-null picks the second, whose driver column takes the width back; the opponents page hides its `iR`
-label on the same test. So on Assetto Corsa, ACC and Le Mans Ultimate no row reads `--` under
-"iRating", and on iRacing the boards are as they were.
+null picks the second, whose driver column takes the width back. The opponents module of the zone faces
+is a separate case: it hides its `iR` label on the same test. So on Assetto Corsa, ACC and Le Mans
+Ultimate no row reads `--` under "iRating", and on iRacing the boards are as they were. The zone
+Leaderboard module never had a rating column; the note that said it did is gone.
 
 What a driver will meet on AC that no binding can change is SimHub's AC app: with it switched off,
 every page that lists other cars lists only you, which is SimHub's behaviour and not OpenDash's.
