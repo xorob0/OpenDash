@@ -186,11 +186,13 @@ export function zonePageScreen(face: FaceSize, zones: ZoneGroup, page: FaceZoneP
 
 /**
  * The body a module page is drawn in, in a zone dashboard of `size`: what the house's zone frame cuts
- * under its header, or what a theme's `moduleFrame` gives the page instead. The conformance harness
- * holds every page to it, so it is the one answer to where a page may draw.
+ * under its header, or what a theme's `moduleFrame` gives the page instead, and the whole frame for a
+ * page of the theme's own, which has no header. The conformance harness holds every page to it, so it
+ * is the one answer to where a page may draw.
  */
 export function moduleBodyOf(page: { id: string; name: string }, size: Size, drawing: ThemeDrawing = {}): Rect {
   const frame = rect(0, 0, size.width, size.height);
+  if (drawing.modulePages?.some((p) => p.id === page.id)) return frame;
   const { body } = zoneFrame('probe', { frame, title: page.name, counter: { kind: 'reserved', widest: '21 / 21' } }, densityForBox(size), 'face');
   return drawing.moduleFrame?.(page, frame, body).body ?? body;
 }
@@ -252,7 +254,8 @@ export function zonePageScreens(face: FaceSize, zones: ZoneGroup, size: Size, co
 
 /**
  * A zone dashboard: every page of its catalogue, in the order the plugin lists them, and after
- * band D's the pages a theme adds to it, which go at the end so that no page leaves its index.
+ * band D's and the modules' the pages a theme adds to them, which go at the end so that no page leaves
+ * its index.
  *
  * A held-back page keeps its screen, so that the pages after it keep their indices, and that screen
  * draws the house's opening page, fuel, rather than the held page: the plugin never shows it, and a
@@ -267,7 +270,7 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
   const kind = kindOf(zone);
   const ground = drawing.zoneGround?.(zone) ?? groundOf(zone);
   const frame = rect(0, 0, size.width, size.height);
-  const added = zone === 'D' ? (drawing.bandPages ?? []) : [];
+  const added = zone === 'D' ? (drawing.bandPages ?? []) : zone === 'A' ? [] : (drawing.modulePages ?? []);
   const screens = [
     ...zonePageScreens(face, zones, size, corners, drawing).map(({ screen }) => screen),
     ...added.map((page) => pageScreen(page.id, [...page.items(frame, `${page.id}.`), ...(corners ? bandCorners(frame, `${page.id}.corner.`) : [])], ground)),
@@ -285,12 +288,16 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
 /**
  * The widget that embeds a zone dashboard in a face, its screen bound to the zone's property.
  *
- * `theme` is the catalogue entry of the theme the face is drawn in. It changes band D alone: on a
- * theme that adds band pages, the band opens on the first of them, with no plugin as with one (#718).
+ * `theme` is the catalogue entry of the theme the face is drawn in. On a theme that adds band pages,
+ * the band opens on the first of them, with no plugin as with one (#718), and zones B and C open on the
+ * pages its `opensOn` names (#203).
  */
 export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }, theme?: ThemeEntry): WidgetItem {
   const size = { width: frame.width, height: frame.height };
-  const start = zone === 'D' ? defaultZonePage(zone, theme) : pagesForZone(zone).findIndex((p) => p.number === 0);
+  // The screen the widget shows before the plugin sets its property: the first page, but band D's and
+  // a theme's own opening page, which a dash without the plugin shows too.
+  const opens = zone === 'D' || (zone !== 'A' && theme?.opensOn?.[zone] !== undefined);
+  const start = opens ? defaultZonePage(zone, theme) : pagesForZone(zone).findIndex((p) => p.number === 0);
   return pagedWidget({
     name,
     rect: { ...frame },
