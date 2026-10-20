@@ -183,6 +183,8 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | AiM: session cell | **Works.** | **Works.** A time attack reads `ATTACK` (#1127). | **Untested.** | **Untested.** |
 | AiM: Pit Speed takeover | **Works.** | **Partly.** As the Porsche's: the limit reads `--`, and it follows the limiter (#558). | **Untested.** | **Untested.** |
 | AiM: engine warnings | **Works.** | **Absent.** As the Porsche's. | **Absent.** | **Absent.** |
+| BMW: band D's own page | **Works.** PSL follows the limiter and LIGHTS the headlight flash; ABS, TC and RAIN stay dim, having no source (#203). | **Partly.** LAP and MIN read and PSL follows the limiter (#558); LIGHTS stays dim, AC publishing no headlight flash. | **Untested.** | **Untested.** |
+| BMW: temperatures | **Works.** | **Partly.** TTRK and TAIR read; TMOT and TOIL read `--`, as the engine readings do. | **Untested.** The water temperature only. | **Untested.** |
 
 ### The LED strips
 
