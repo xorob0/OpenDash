@@ -130,7 +130,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Session | **Works.** | **Partly.** The session's name is drawn as AC writes it, in capitals (`RACE`); incidents read `--` (#567). | **Untested.** As AC. | **Untested.** The game's own names (`Practice`, `Race`). |
 | Radar | **Works** once SimHub has recorded the track. | **Works** with SimHub's AC app, and without a recorded lap. | **Untested.** Needs broadcasting. | **Untested.** |
 | Track | **Works.** | **Works.** Says "Drive a lap to record it" until SimHub has the outline (#555), names the track as a driver knows it (#1124); the track state hides. | **Untested.** | **Untested.** |
-| Leaderboard | **Works.** | **Partly.** With SimHub's AC app: names, places, gaps, laps and pit state; no car number, class or team, and the iRating column reads `--`. Without it, one row: you, named `Me`. | **Untested.** Needs broadcasting; no iRating. | **Untested.** No iRating. |
+| Leaderboard | **Works.** | **Partly.** With SimHub's AC app: names, places, gaps, laps and pit state; no car number, class or team. Without it, one row: you, named `Me`. | **Untested.** Needs broadcasting; no iRating. | **Untested.** No iRating. |
 | Relative | **Works.** | **Partly.** As the leaderboard. | **Untested.** | **Untested.** |
 | Opponents | **Works.** | **Partly.** As the leaderboard. | **Untested.** | **Untested.** |
 | Gear | **Works.** | **Works.** | **Untested.** | **Untested.** |
@@ -152,7 +152,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Reading | iRacing | Assetto Corsa | ACC | Le Mans Ultimate |
 |---|---|---|---|---|
 | Header | **Works.** | **Partly.** The local clock, the session and the time left work; the wind and the track state hide, the sim clock reads `--` (#1123), and the incidents hide (#567). | **Untested.** | **Untested.** |
-| Race | **Works.** | **Partly.** The table as the leaderboard: no number, class or tyre, iRating `--`; whether each car's sectors fill is unclear. | **Untested.** | **Untested.** |
+| Race | **Works.** | **Partly.** The table as the leaderboard: no number, class or tyre; whether each car's sectors fill is unclear. | **Untested.** | **Untested.** |
 | Tower | **Works.** | **Partly.** As the race page. | **Untested.** | **Untested.** |
 | Telemetry | **Works.** | **Partly.** Speed, revs, gear and the pedals work; the steering panel says it is not published by this sim (#567). | **Partly.** As AC. | **Partly.** As AC. |
 | Portrait | **Works.** | **Partly.** As the race page. | **Untested.** | **Untested.** |
@@ -223,11 +223,17 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 No cell of Assetto Corsa's column says **Wrong**: every reading there works, works in part with the gap named, or shows its
 not-available state. The **Absent** rows are what AC does not publish, and none of them draws a value.
 
-Three **Partly** cells on Assetto Corsa are not what AC lacks but what the packages could say better, and
-none has a ticket yet: the round faces' tyre cards are captioned "last stop" over AC's live values; the
-leaderboard's and the pit wall's iRating column reads `--` down every row rather than giving its width
-back; and a car's sectors on the pit wall are unclear. The energy page reads only iRacing's names for
-virtual energy, so it cannot draw Le Mans Ultimate's, which is #962's.
+Two **Partly** cells on Assetto Corsa are not what AC lacks but what the packages could say better, and
+neither has a ticket yet: the round faces' tyre cards are captioned "last stop" over AC's live values,
+and a car's sectors on the pit wall are unclear. The energy page reads only iRacing's names for virtual
+energy, so it cannot draw Le Mans Ultimate's, which is #962's.
+
+The pit wall's iRating column is only drawn where the sim publishes one (#1162). Its race and portrait
+boards are stamped twice, with the column and without it, and the player's own `iracingirating` being
+null picks the second, whose driver column takes the width back. The opponents module of the zone faces
+is a separate case: it hides its `iR` label on the same test. So on Assetto Corsa, ACC and Le Mans
+Ultimate no row reads `--` under "iRating", and on iRacing the boards are as they were. The zone
+Leaderboard module never had a rating column; the note that said it did is gone.
 
 What a driver will meet on AC that no binding can change is SimHub's AC app: with it switched off,
 every page that lists other cars lists only you, which is SimHub's behaviour and not OpenDash's.

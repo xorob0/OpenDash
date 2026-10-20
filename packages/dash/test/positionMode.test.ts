@@ -344,8 +344,9 @@ describe('a list numbers the field it is drawn from', () => {
     // says where a car first stood in its class (#1022), so the cell draws neither the class count
     // nor the overall one in its place.
     const items = flat(racePage(1920, 1080).items);
-    const count = items.find((i) => i.name.endsWith('.row.rank.count'))!;
-    const marks = items.filter((i) => /\.row\.rank\.(up|down|flat)$/.test(i.name));
+    // The board with the iRating column; the one without it (#1162) draws the same cells.
+    const count = items.find((i) => i.name === 'race.board.row.rank.count')!;
+    const marks = items.filter((i) => /^race\.board\.row\.rank\.(up|down|flat)$/.test(i.name));
     const drawn = (settings: Settings, row: number): unknown => evaluate(formulaOf(count, 'Text'), settings, row);
     const shown = (settings: Settings, row: number): unknown[] => [count, ...marks].map((i) => evaluate(formulaOf(i, 'Visible'), settings, row));
     expect({

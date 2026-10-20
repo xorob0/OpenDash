@@ -35,7 +35,7 @@ import { ds } from '../tokens.ts';
 import { CHIP_WIDEST, chip, chipText, chipWidth } from './chip.ts';
 import { densityOf, type Density, type DensitySpec } from './density.ts';
 import { CHARS, carAvailable, carBestLap, carClass, carClassInterval, carClassRaceGap, carCompound, carInPit, carInterval, carIsPlayer, carIsSessionBest, carLastLap, carNumber, carPitCount, carPosition,
-  placesGainedCounted, positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, carSector, carStintLaps, driverName, ellipsised, GAP_WIDEST, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
+  placesGainedCounted, positionLabelled, carRaceGap, carRankChange, carRating, carRelativeGap, ratingIsPublished, carSector, carStintLaps, driverName, ellipsised, GAP_WIDEST, LAP_TIME_WIDEST, RELATIVE_GAP_WIDEST, rowIndex, rowsInClass, splitHiddenCars } from './values.ts';
 
 const { and, iff, str, fmt, num, ne, not, gt, lt, abs, concat } = ncalc;
 
@@ -1166,10 +1166,40 @@ function limitLine(spec: TableSpec, top: number, hidden: Expr): Item[] {
 }
 
 /**
- * The table: the header, then the rows the frame holds, in one block or in the two a split list
- * draws with its limit line between them.
+ * The suffix the drawing without the iRating column is named by, beside the one with it.
+ *
+ * Not a dotted child of the table's own name: every test that reads a board reads it by
+ * `<page>.board.`, and the second drawing would otherwise answer each of those lookups twice.
+ */
+export const UNRATED_SUFFIX = 'Unrated';
+
+/**
+ * The table, drawn once or, where it has an iRating column, twice (#1162).
+ *
+ * Only iRacing publishes an iRating, so on every other sim the column read `--` down every row and
+ * spent 54 to 76 px of the row on a value that could never come. A stamped layout cannot move a
+ * column at run time, so a table with the column is drawn twice, once with it and once without, and
+ * {@link ratingIsPublished} shows one of the two: the drawing without it hands the column's width to
+ * the name, as {@link columnWidths} hands it whatever the fixed columns leave. Hiding the cells would
+ * have kept the same width as a gap. The second drawing costs its items in the file, which the two
+ * boards that carry the column can afford, and nothing at run time: a hidden layer leaves its
+ * children's bindings unevaluated.
  */
 export function table(spec: TableSpec): Item[] {
+  if (!spec.columns.includes('rating')) return drawTable(spec);
+  const rated = ratingIsPublished();
+  const unrated: TableSpec = { ...spec, name: `${spec.name}${UNRATED_SUFFIX}`, columns: spec.columns.filter((id) => id !== 'rating') };
+  return [
+    withMoreBindings({ kind: 'layer', name: `${spec.name}.rated`, children: drawTable(spec) }, { Visible: rated }),
+    withMoreBindings({ kind: 'layer', name: `${unrated.name}.layer`, children: drawTable(unrated) }, { Visible: not(rated) }),
+  ];
+}
+
+/**
+ * One drawing of a table: the header, then the rows the frame holds, in one block or in the two a
+ * split list draws with its limit line between them.
+ */
+function drawTable(spec: TableSpec): Item[] {
   const header = spec.header ?? true;
   const rowHeight = spec.rowHeight ?? tableRowHeight(spec.density);
   const board = spec.board ?? false;

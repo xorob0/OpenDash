@@ -1294,6 +1294,18 @@ export const carCompound = (idx: Expr): Expr => isnull(driver('fronttyrecompound
 export const carRating = (idx: Expr): Expr => ratingK(driver('iracingirating', idx));
 
 /**
+ * The sim publishes an iRating at all, which is iRacing alone (#1162).
+ *
+ * Assetto Corsa, ACC and Le Mans Ultimate leave `iracingirating` unset on every `Opponent`, so a
+ * column bound to {@link carRating} draws `--` down every row there and spends its width on a value
+ * that cannot come. The question is asked of the player's own car, which is the one row every
+ * session with a leaderboard has: an `isnull()` over the property the column already reads, ADR
+ * 0021's second kind, so no game is named and no capability is needed. A rating of nought is still
+ * a rating published, which is why the test is the null and not {@link ratingK}'s `> 0`.
+ */
+export const ratingIsPublished = (): Expr => not(isNull(driver('iracingirating', player())));
+
+/**
  * The car immediately behind on track, which is the one a blue flag is about.
  *
  * On track and not on the leaderboard: a blue flag is thrown for the car that is about to arrive,
