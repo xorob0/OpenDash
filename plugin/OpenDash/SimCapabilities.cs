@@ -153,6 +153,9 @@ namespace OpenDashPlugin
         /// <summary>AC_LIVE in Assetto Corsa's and ACC's AC_STATUS: a session running with the player driving.</summary>
         public const int AcLive = 2;
 
+        /// <summary>AC_PAUSE in the same AC_STATUS: a session running, paused by the player.</summary>
+        public const int AcPause = 3;
+
         /// <summary>Where Le Mans Ultimate publishes the session's scoring, under rFactor 2's names.</summary>
         public const string LmuScoring = GameRawData + "LMUNativeTelemetry.scoring.scoringInfo.";
 
@@ -302,10 +305,14 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Whether SimHub's in-game app is writing Assetto Corsa's field: the page it writes counts the cars, and
-        /// counts none without the app. Null with no page to read.
+        /// counts none without the app. Null with no page to read, and null until a session is live or paused:
+        /// while the game loads, Graphics.Status is AC_OFF and the app has not started yet, so its count of none is
+        /// not yet a field missing, and Home works out its issues at that moment and keeps them.
         /// </summary>
         public static bool? AcField(Func<string, object> property)
         {
+            var status = Number(property(GameRawData + "Graphics.Status"));
+            if (status != AcLive && status != AcPause) return null;
             var cars = Number(property(GameRawData + "Opponents.numVehicles"));
             return cars.HasValue ? cars.Value > 0 : (bool?)null;
         }
@@ -313,6 +320,9 @@ namespace OpenDashPlugin
         /// <summary>
         /// Whether Assetto Corsa Competizione's broadcasting interface is connected: its realtime update is there.
         /// Null with no frame at all, which Graphics.Status says, so that a game not yet running is not a field missing.
+        /// Realtime.SessionIndex is declared because ACCRawData.GetValues lists "Realtime" and ACCManager.GetDataSample
+        /// fills it with a new RealtimeUpdate, whose SessionIndex is a public int; DataCorePlugin's member delegate
+        /// answers null while the object above it is null, which Realtime is until broadcasting connects.
         /// </summary>
         public static bool? AccField(Func<string, object> property)
         {

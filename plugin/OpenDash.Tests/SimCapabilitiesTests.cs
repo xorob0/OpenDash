@@ -355,9 +355,23 @@ namespace OpenDashPlugin.Tests
         {
             // Without SimHub's in-game app the page it writes counts no cars, and SimHub's opponents are the player
             // alone, named "Me": the leaderboard would be a board of one (#1131).
-            Assert.True(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame((Raw + "Opponents.numVehicles", 24))).FieldReported);
-            Assert.False(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame((Raw + "Opponents.numVehicles", 0))).FieldReported);
+            var live = (Raw + "Graphics.Status", (object)AcStatus.AC_LIVE);
+            var paused = (Raw + "Graphics.Status", (object)AcStatus.AC_PAUSE);
+            Assert.True(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(live, (Raw + "Opponents.numVehicles", 24))).FieldReported);
+            Assert.False(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(live, (Raw + "Opponents.numVehicles", 0))).FieldReported);
+            Assert.False(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(paused, (Raw + "Opponents.numVehicles", 0))).FieldReported);
             Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame()).FieldReported);
+        }
+
+        [Fact]
+        public void On_Assetto_Corsa_a_game_still_loading_is_not_a_field_missing()
+        {
+            // While the game loads Graphics.Status is AC_OFF and SimHub's app has not started, so its page counts no
+            // cars yet; Home works out its issues at that moment and would keep a warning the app then answers.
+            var none = (Raw + "Opponents.numVehicles", (object)0);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame((Raw + "Graphics.Status", AcStatus.AC_OFF), none)).FieldReported);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame((Raw + "Graphics.Status", AcStatus.AC_REPLAY), none)).FieldReported);
+            Assert.Null(SimCapabilities.Read(SimCapabilities.AssettoCorsa, Frame(none)).FieldReported);
         }
 
         [Fact]

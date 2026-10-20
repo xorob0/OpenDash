@@ -163,7 +163,12 @@ array or object that is null in the sample. An `IExposable` raw object (ACC's) p
 - ACC (`ACCRawData.GetValues`): `Graphics.*`, `Physics.*`, `StaticInfo.*`, `Track.*`, `Realtime.*` and
   one boolean per flag, `Graphics.FlagsDetails.IsACC_YELLOW_FLAG` and so on. `GetDataSample` fills the
   physics sample twice and the graphics sample never, so ACC's graphics arrays (`CarCoordinates`,
-  `CarIDs`) are not published; the scalars are.
+  `CarIDs`) are not published; the scalars are. `GetDataSample` fills `Realtime` with a new
+  `RealtimeUpdate` (ksBroadcastingNetwork's), so its public properties are declared, `Realtime.SessionIndex`,
+  `Realtime.SessionType`, `Realtime.Phase` and the rest; live, `ACCManager` hands `Raw.Realtime` its
+  broadcasting update, null until broadcasting connects, and `DataCorePlugin`'s member delegates answer null
+  when the object above them is null. So `Realtime.SessionIndex` reads null exactly while there is no
+  broadcasting (decompiled from `ACSharedMemory.dll` and `SimHub.Plugins.dll`, 9.12.9, for #1131).
 - LMU (`LMUWrapV2`): LMU's native page as `LMUNativeTelemetry.*` (scalars only: the per-vehicle arrays
   and `scoringInfo.mSectorFlag` are null in the sample, so the sector flags are published only as the
   plugin's `Data.mSectorFlag01..03`), the player's native entries as `PlayerNativeTelemetry.*` and
