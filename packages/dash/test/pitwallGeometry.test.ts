@@ -124,10 +124,10 @@ describe('the zone rectangles', () => {
   test('the portrait page draws a narrow column and a wide one, out to its last pixel', () => {
     const zones = zonesOf(PORTRAIT);
     expect(zones).toEqual([
-      { name: 'portrait.zoneA', rect: rect(0, 976, 539, 471), file: 'zones-539x471.djson' },
-      { name: 'portrait.zoneB', rect: rect(540, 976, 540, 471), file: 'zones-540x471.djson' },
-      { name: 'portrait.zoneC', rect: rect(0, 1448, 539, 471), file: 'zones-539x471.djson' },
-      { name: 'portrait.zoneD', rect: rect(540, 1448, 540, 471), file: 'zones-540x471.djson' },
+      { name: 'portrait.zoneA', rect: rect(0, 1040, 539, 439), file: 'zones-539x439.djson' },
+      { name: 'portrait.zoneB', rect: rect(540, 1040, 540, 439), file: 'zones-540x439.djson' },
+      { name: 'portrait.zoneC', rect: rect(0, 1480, 539, 439), file: 'zones-539x439.djson' },
+      { name: 'portrait.zoneD', rect: rect(540, 1480, 540, 439), file: 'zones-540x439.djson' },
     ]);
     // The sheet's own 539 and 540: two halves of an odd width stop a pixel short of the page.
     expect([...new Set(zones.map((z) => right(z.rect)))]).toEqual([539, PORTRAIT_SIZE.width]);
@@ -160,14 +160,14 @@ describe('what a board stamps into the band it is given', () => {
     expect(board.bottom).toBeLessThanOrEqual(LANDSCAPE.height);
   });
 
-  test('the portrait board is as tall as its own header and rows, and the rule closes it there', () => {
+  test('the portrait board is as tall as its own header and rows, and the rule closes it a flag band below', () => {
     const board = boardOf(PORTRAIT, 'portrait.board');
     expect({ rows: board.rows, pitch: board.pitch, header: board.top - BODY_TOP }).toEqual({ rows: PIT_WALL_ROWS, pitch: 32, header: 32 });
-    // The band is the parts and nothing else: an empty strip under the last car is what a literal
-    // height off the sheet leaves behind, and the sheet's own 856 counts two class bands this page
-    // cannot draw.
+    // The board is the parts and nothing else, since the sheet's own 856 counts two class bands this
+    // page cannot draw. What the column keeps under the last car is the flag band's 64 px (#1016),
+    // so that a flag takes no row off a full grid.
     expect(board.bottom - BODY_TOP).toBe(32 + PIT_WALL_ROWS * 32);
-    expect(boxOf(PORTRAIT, 'portrait.boardRule').top).toBe(board.bottom);
+    expect(boxOf(PORTRAIT, 'portrait.boardRule').top).toBe(board.bottom + PIT_WALL_HEADER.height);
   });
 });
 
@@ -223,9 +223,9 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
     regions: [
       { name: 'portrait.header', rect: rect(0, 0, 1080, BODY_TOP) },
       { name: 'portrait.body', rect: rect(0, BODY_TOP, 1080, PORTRAIT_SIZE.height - BODY_TOP) },
-      { name: 'portrait.board', rect: rect(0, BODY_TOP, 1080, 801) },
-      { name: 'portrait.panels', rect: rect(0, 865, 1080, 111) },
-      { name: 'portrait.zones', rect: rect(0, 976, 1080, 944) },
+      { name: 'portrait.board', rect: rect(0, BODY_TOP, 1080, 865) },
+      { name: 'portrait.panels', rect: rect(0, 929, 1080, 111) },
+      { name: 'portrait.zones', rect: rect(0, 1040, 1080, 880) },
     ],
   },
 ];
@@ -299,6 +299,17 @@ describe('the telemetry column spends the body it is given', () => {
 });
 
 /**
+ * Where each page's band lies: the last 64 px of its left-hand column, the board's or the plot's.
+ * The portrait board is 800 px under the header, and its column keeps the band's 64 px under it.
+ */
+const FLAG_BAND: Readonly<Record<'race' | 'tower' | 'telemetry' | 'portrait', Rect>> = {
+  race: rect(0, LANDSCAPE.height - 64, 1280, 64),
+  tower: rect(0, LANDSCAPE.height - 64, 880, 64),
+  telemetry: rect(0, LANDSCAPE.height - 64, 1280, 64),
+  portrait: rect(0, BODY_TOP + 800, 1080, 64),
+};
+
+/**
  * The flag, which is the page's and not a readout's.
  *
  * The header carried a colour block and a word until a rig reported that it did not work, and the
@@ -349,17 +360,6 @@ describe('the flag belongs to the page', () => {
     });
   }
 });
-
-/**
- * Where each page's band lies: the last 64 px of its left-hand column, the board's or the plot's.
- * The portrait board is the band between the header and the panel row, 801 px with its rule.
- */
-const FLAG_BAND: Readonly<Record<'race' | 'tower' | 'telemetry' | 'portrait', Rect>> = {
-  race: rect(0, LANDSCAPE.height - 64, 1280, 64),
-  tower: rect(0, LANDSCAPE.height - 64, 880, 64),
-  telemetry: rect(0, LANDSCAPE.height - 64, 1280, 64),
-  portrait: rect(0, BODY_TOP + 800 - 64, 1080, 64),
-};
 
 /**
  * The band shown, and what it leaves readable (#1016).
@@ -430,14 +430,14 @@ describe('the flag band leaves the board readable', () => {
     ]);
   });
 
-  test('portrait: the band covers the last two rows, P23 and P24, and nothing else', () => {
-    const hit = covered(PORTRAIT, 'portrait');
-    expect(hit.length).toBeGreaterThan(0);
+  test('portrait: the band takes the foot the board column keeps for it, under P24', () => {
+    expect(bandOf(PORTRAIT, 'portrait')).toEqual(FLAG_BAND.portrait);
+    expect(covered(PORTRAIT, 'portrait')).toEqual([]);
+    // All twenty-four rows end exactly where the band begins, and the rule closing the column under it.
     const board = boardOf(PORTRAIT, 'portrait.board');
-    const rowsHit = new Set(hit.map((i) => {
-      expect({ item: i.name, inBoard: i.layers.includes('portrait.board.rows') }).toMatchObject({ inBoard: true });
-      return Math.floor((i.rect.top - board.top) / board.pitch) + 1;
-    }));
-    expect([...rowsHit].sort((a, b) => a - b)).toEqual([PIT_WALL_ROWS - 1, PIT_WALL_ROWS]);
+    expect(board.bottom).toBe(FLAG_BAND.portrait.top);
+    const boardRule = placed(PORTRAIT).find((i) => i.name === 'portrait.boardRule');
+    expect(boardRule?.rect.top).toBe(bottom(FLAG_BAND.portrait));
   });
+
 });

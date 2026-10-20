@@ -107,8 +107,12 @@ header, because "which page is this and how long is left" is the question somebo
 immediately after seeing a flag. The band sat directly under the header until a full course yellow
 on the VM took the board's column headings and the leader's row with it (#1016): a board opens
 against its header, so the room it does not use is at its foot. There the band covers nothing on
-the race and tower pages, the static axis footer on the telemetry page, and the last two rows,
-P23 and P24, on the portrait page, whose board is cut to its rows and has no foot to spare.
+the race and tower pages, where twenty-four rows of 34 px end at 912 and thirty-three of 28 px end
+exactly where the band begins, and on the telemetry page only the axis footer, "Earlier", "Time"
+and "Now", under plots that end at 1007. The portrait board is cut to its rows, so its column was
+given a 64 px foot under P24 for the band rather than letting it take P23 and P24 off a full grid;
+the foot comes out of the four zones, which are 439 px tall rather than 471, 4 px short of the
+sheet's 443.
 
 The default is `band` and not the companion's `full`. A companion is a phone showing one module,
 so a full-screen flag costs one list; a pit wall is a board, a track map and four zones that
