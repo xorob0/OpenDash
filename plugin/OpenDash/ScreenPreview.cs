@@ -15,16 +15,19 @@
 // Two things are deliberately defensive rather than confident, and both are marked below. SimHub's
 // renderer is built to live in a dash window, not in a pane of SimHub's own settings menu, so every
 // call into it is wrapped: a preview that throws must cost the user a line of text, never the settings
-// page. And the screen selection is the one piece the dash window would otherwise do for us.
+// page. And the screen selection is the one piece the dash window would otherwise do for us, so it is
+// checked against PanelPreviewScreen.cs, which chooses by role as the window does (#1085).
 //
 // Needs SimHub and WPF types, so it is NOT compiled into OpenDash.Tests. What a test can hold is in
-// PanelPreview.cs.
+// PanelPreview.cs and PanelPreviewScreen.cs.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Threading;
+using SimHub.Plugins;
 using SimHub.Plugins.OutputPlugins.GraphicalDash;
 using SimHub.Plugins.OutputPlugins.GraphicalDash.Windows.Renderers;
 using GDashScreen = SimHub.Plugins.OutputPlugins.GraphicalDash.Screen;
@@ -36,7 +39,7 @@ namespace OpenDashPlugin
     public sealed class ScreenPreview : IDisposable
     {
         /// <summary>
-        /// How often the shown screen is checked against the screens the dashboard says are enabled.
+        /// How often the shown screen is checked against the one SimHub's own window would show.
         /// </summary>
         /// <remarks>
         /// Once a second, because what it follows changes when a setting changes rather than when a
@@ -49,6 +52,10 @@ namespace OpenDashPlugin
         private WPFRenderer renderer;
         private DispatcherTimer timer;
         private bool disposed;
+
+        /// <summary>The mode the last tick found, so a tick that lands on a mode change can leave the
+        /// move to SimHub (see <see cref="FollowEnabledScreen"/>).</summary>
+        private PreviewMode? lastMode;
 
         private ScreenPreview(WPFRenderer renderer, FrameworkElement element)
         {
@@ -154,13 +161,17 @@ namespace OpenDashPlugin
                 }
             };
 
-            // The one piece of the dash window's job that is done here rather than by SimHub. A window
-            // decides which screen is showing; a renderer on its own is handed one. So the screen the
-            // dashboard says is enabled is followed, and only where SimHub has not already chosen.
+            // The one piece of the dash window's job that is checked here as well as by SimHub. The
+            // renderer is bound to the model's Dashboard.SelectedScreen, which the model's own frame loop
+            // moves by mode (EditorModel.CheckGameModeScreen), so this steps in only where that screen
+            // is not the one PanelPreviewScreen says SimHub's window would show, and it steps in by
+            // writing that same property. Assigning the renderer's ShownScreen, as this did until #1085,
+            // replaced the binding with the first screen for good: with no game running the preview drew
+            // a racing screen with nothing in it, never the idle screen a generated package puts last.
             //
-            // TODO: #399 -- on the VM, establish whether SetCurrentModel leaves ShownScreen filled. If it
-            // does, this follower is dead weight and should go, since the whole value of this file is
-            // that SimHub decides and we do not.
+            // TODO: #399 -- on the VM, establish whether the model's own selection always lands within a
+            // second. If it does, this follower is dead weight and should go, since the whole value of
+            // this file is that SimHub decides and we do not.
             FollowEnabledScreen(model);
             timer = new DispatcherTimer { Interval = ScreenPoll };
             timer.Tick += (sender, args) => FollowEnabledScreen(model);
@@ -172,8 +183,27 @@ namespace OpenDashPlugin
             if (disposed || renderer == null) return;
             try
             {
-                var wanted = FirstEnabled(model);
-                if (wanted != null && !ReferenceEquals(renderer.ShownScreen, wanted)) renderer.ShownScreen = wanted;
+                var dashboard = model == null ? null : model.Dashboard;
+                if (dashboard == null) return;
+
+                // SimHub's CheckGameModeScreen leaves the selection alone while every screen is unlocked
+                // or one is forced, and so does this. No package OpenDash generates sets either, so this
+                // only keeps a third-party dashboard's preview from disagreeing with its own window.
+                if (dashboard.UnlockAllScreens || dashboard.CurrentScreenIsForced) return;
+
+                // On the tick a game starts or stops, SimHub's next frame goes back to the screen it
+                // remembers for the new mode (LastIngameScreen and the like), which may be a companion
+                // page other than the first. Choosing here first would put the companion on its first
+                // module, so the tick that sees the change leaves it to SimHub, and the next one checks.
+                var gameRunning = GameRunning();
+                var screens = Roles(dashboard);
+                var mode = PanelPreviewScreen.Mode(screens, gameRunning);
+                var changed = lastMode.HasValue && lastMode.Value != mode;
+                lastMode = mode;
+                if (changed) return;
+
+                var wanted = ScreenSimHubWouldShow(dashboard, screens, gameRunning);
+                if (wanted != null && !ReferenceEquals(dashboard.SelectedScreen, wanted)) dashboard.SelectedScreen = wanted;
             }
             catch (Exception error)
             {
@@ -182,14 +212,41 @@ namespace OpenDashPlugin
             }
         }
 
-        private static GDashScreen FirstEnabled(EditorModel model)
+        /// <summary>What SimHub's last frame said, which is what its own dash window reads to choose
+        /// between the racing screen and the idle one.</summary>
+        private static bool GameRunning()
         {
-            var dashboard = model == null ? null : model.Dashboard;
-            if (dashboard == null) return null;
-            var available = dashboard.AvailableScreens;
-            var enabled = available == null ? null : available.FirstOrDefault();
-            if (enabled != null) return enabled;
-            return dashboard.Screens == null ? null : dashboard.Screens.FirstOrDefault();
+            var manager = PluginManager.GetInstance();
+            var data = manager == null ? null : manager.LastData;
+            return data != null && data.GameRunning;
+        }
+
+        /// <summary>The roles, the enabled flag and the layer flag of each of the dashboard's screens, in
+        /// the order the .djson lists them.</summary>
+        private static List<PreviewScreenRoles> Roles(Dashboard dashboard)
+        {
+            if (dashboard.Screens == null) return new List<PreviewScreenRoles>();
+            return dashboard.Screens
+                .Select(s => new PreviewScreenRoles
+                {
+                    InGame = s.InGameScreen,
+                    Idle = s.IdleScreen,
+                    Pit = s.PitScreen,
+                    Enabled = s.ScreenEnabled,
+                    Layer = s.IsLayer,
+                })
+                .ToList();
+        }
+
+        /// <summary>The screen PanelPreviewScreen chooses from the roles, the enabled flags and the
+        /// screen showing now, or null when the dashboard has none.</summary>
+        private static GDashScreen ScreenSimHubWouldShow(
+            Dashboard dashboard, List<PreviewScreenRoles> roles, bool gameRunning)
+        {
+            if (dashboard.Screens == null) return null;
+            var screens = dashboard.Screens.ToList();
+            var index = PanelPreviewScreen.Choose(roles, gameRunning, screens.IndexOf(dashboard.SelectedScreen));
+            return index < 0 ? null : screens[index];
         }
 
         private void Stop()
