@@ -2097,8 +2097,8 @@ export const PIT_WALL_CLASS_ONLY_SETTING = 'PitWallClassOnly';
 export const DEFAULT_PIT_WALL_CLASS_ONLY = false;
 
 /**
- * `PitWallFlagFormat`: how a pit wall draws a flag -- not at all, as a band under the header, or
- * over the body.
+ * `PitWallFlagFormat`: how a pit wall draws a flag -- not at all, as a band across the foot of the
+ * board's column, or over the body.
  *
  * The companion's three-way question, asked of the other big screen, and it replaces what the
  * header used to do. The header carried a colour block and a word built from the six flags SimHub

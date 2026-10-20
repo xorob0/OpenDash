@@ -101,9 +101,14 @@ no gap opens where the word would be (#324).
 SimHub normalises, and it did not light on a rig; a 24 px block in the corner of a 1920 px header
 would not have been where anyone looked for a flag even when it did. `OpenDash.PitWallFlagFormat`
 replaces it with the companion's three answers -- `off`, `band` or `full` -- drawn from the full
-fifteen-condition catalogue the face uses. A band is the header's own height, directly under it;
-`full` takes the body. Neither covers the header, because "which page is this and how long is
-left" is the question somebody asks immediately after seeing a flag.
+fifteen-condition catalogue the face uses. A band is the header's own height, across the foot of
+the page's left-hand column, the board's or the plot's; `full` takes the body. Neither covers the
+header, because "which page is this and how long is left" is the question somebody asks
+immediately after seeing a flag. The band sat directly under the header until a full course yellow
+on the VM took the board's column headings and the leader's row with it (#1016): a board opens
+against its header, so the room it does not use is at its foot. There the band covers nothing on
+the race and tower pages, the static axis footer on the telemetry page, and the last two rows,
+P23 and P24, on the portrait page, whose board is cut to its rows and has no foot to spare.
 
 The default is `band` and not the companion's `full`. A companion is a phone showing one module,
 so a full-screen flag costs one list; a pit wall is a board, a track map and four zones that
