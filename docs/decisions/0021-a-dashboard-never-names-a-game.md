@@ -77,12 +77,16 @@ One more is a fact of the reader rather than of the frame, so every row answers 
 the sim's radar places the cars through the track outline SimHub records (#1176). SimHub's `RadarItem` draws
 no car while it holds no outline and the frame carries `RelativeCarCoordinates`, and only iRacing's reader
 fills those. The radar reads it beside `TrackMapRecorded`, the plugin's answer to whether the outline exists,
-and says the track waits for a lap only where both call for it; with no plugin `TrackMapRecorded` reads true,
-so the radar is drawn as it always was.
+and says the track waits for a lap only where both call for it. Its fallback is false, not iRacing's yes, and
+it is the one capability that departs from that rule, for the rule's own reason: on a sim the table has no
+row for, the plugin still answers `TrackMapRecorded`, false on a track it has not recorded, and that sim's
+radar draws without a map, so iRacing's reading would hide a working radar. iRacing always has a row, which
+answers yes, and with no plugin `TrackMapRecorded` reads true, so either way the radar is drawn as it always
+was.
 
 | Capability | iRacing | Assetto Corsa | ACC | Le Mans Ultimate | Without the plugin |
 |---|---|---|---|---|---|
-| `RadarNeedsTrackMap` | yes | no | no | no | yes |
+| `RadarNeedsTrackMap` | yes | no | no | no | no |
 
 One question has a number for its answer rather than a truth, and an expression cannot work it out because
 it has to be timed: how long the car has been stopped in its pit box, and how long its last stop was (#1130).

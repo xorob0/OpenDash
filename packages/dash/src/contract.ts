@@ -322,7 +322,10 @@ export const liveSettingNames = (): string[] =>
  * - `RadarNeedsTrackMap`: the sim's radar places the cars through the track outline SimHub records, so it
  *   draws none until {@link TRACK_MAP_RECORDED} is true (#1176). SimHub's `RadarItem` draws no car while it
  *   holds no outline and the frame carries `RelativeCarCoordinates`, and only iRacing's reader fills
- *   those; Assetto Corsa, ACC and Le Mans Ultimate draw from the cars' own coordinates. A constant per row.
+ *   those; Assetto Corsa, ACC and Le Mans Ultimate draw from the cars' own coordinates. A constant per row,
+ *   and the one capability whose fallback is not iRacing's answer: on a game with no row the plugin still
+ *   answers `TrackMapRecorded`, false on a track not yet recorded, and that radar needs no map, so it
+ *   falls back to false and a radar nobody has claimed is drawn as before.
  *
  * Published rather than chosen, true or false, and null with no game running or on a game the plugin's
  * table (`plugin/OpenDash/SimCapabilities.cs`) has no row for. So each is read through

@@ -1798,6 +1798,8 @@ describe('the radar is cut from its box', () => {
         iRacingUnrecorded: frame(true, false),
         iRacingRecorded: frame(true, true),
         assettoCorsaUnrecorded: frame(false, false),
+        // A plugin on a sim its table has no row for answers TrackMapRecorded but not RadarNeedsTrackMap.
+        unclaimedSimUnrecorded: frame(undefined, false),
         noPlugin: frame(undefined, undefined),
       };
       const seen = Object.fromEntries(
@@ -1807,6 +1809,7 @@ describe('the radar is cut from its box', () => {
         iRacingUnrecorded: { notice: true, plot: false },
         iRacingRecorded: { notice: false, plot: true },
         assettoCorsaUnrecorded: { notice: false, plot: true },
+        unclaimedSimUnrecorded: { notice: false, plot: true },
         noPlugin: { notice: false, plot: true },
       });
       // The spotter needs no map on any sim, so the flanks are never hidden behind the notice.
