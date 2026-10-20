@@ -34,7 +34,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// One slot per set of answers, by <see cref="Index"/>: three answers to each of the questions. Filled
-        /// as each set is first asked for, since a session meets a handful of the 6561 and never the rest.
+        /// as each set is first asked for, since a session meets a handful of the 19683 and never the rest.
         /// </summary>
         private static readonly SimReport[] Interned = new SimReport[Power(Count)];
 
@@ -67,6 +67,9 @@ namespace OpenDashPlugin
         /// <summary>See <see cref="Contract.ChequeredFlagShown"/>.</summary>
         public bool? ChequeredFlagShown => Read(Contract.ChequeredFlagShown);
 
+        /// <summary>See <see cref="Contract.FieldReported"/>.</summary>
+        public bool? FieldReported => Read(Contract.FieldReported);
+
         private SimReport(bool?[] answers)
         {
             this.answers = answers;
@@ -95,7 +98,8 @@ namespace OpenDashPlugin
             return "limiter " + Word(CarHasPitLimiter) + ", on " + Word(PitLimiterOn)
                 + ", damage " + Word(DamageReported) + ", in the car " + Word(DriverInCar)
                 + ", yellow " + Word(YellowFlagShown) + ", black " + Word(BlackFlagShown)
-                + ", white " + Word(WhiteFlagShown) + ", chequered " + Word(ChequeredFlagShown);
+                + ", white " + Word(WhiteFlagShown) + ", chequered " + Word(ChequeredFlagShown)
+                + ", field " + Word(FieldReported);
         }
 
         private static string Word(bool? answer) => answer.HasValue ? (answer.Value ? "yes" : "no") : "unknown";
@@ -198,6 +202,7 @@ namespace OpenDashPlugin
             public Answer BlackFlagShown { get; set; }
             public Answer WhiteFlagShown { get; set; }
             public Answer ChequeredFlagShown { get; set; }
+            public Answer FieldReported { get; set; }
 
             /// <summary>
             /// Whether the car is stopped in its pit box, which is what <see cref="PitStopClock"/> times for
@@ -220,6 +225,7 @@ namespace OpenDashPlugin
                     case Contract.BlackFlagShown: return BlackFlagShown;
                     case Contract.WhiteFlagShown: return WhiteFlagShown;
                     case Contract.ChequeredFlagShown: return ChequeredFlagShown;
+                    case Contract.FieldReported: return FieldReported;
                     default: return null;
                 }
             }
@@ -294,6 +300,26 @@ namespace OpenDashPlugin
             return remaining.HasValue ? remaining.Value <= 0 : (bool?)null;
         }
 
+        /// <summary>
+        /// Whether SimHub's in-game app is writing Assetto Corsa's field: the page it writes counts the cars, and
+        /// counts none without the app. Null with no page to read.
+        /// </summary>
+        public static bool? AcField(Func<string, object> property)
+        {
+            var cars = Number(property(GameRawData + "Opponents.numVehicles"));
+            return cars.HasValue ? cars.Value > 0 : (bool?)null;
+        }
+
+        /// <summary>
+        /// Whether Assetto Corsa Competizione's broadcasting interface is connected: its realtime update is there.
+        /// Null with no frame at all, which Graphics.Status says, so that a game not yet running is not a field missing.
+        /// </summary>
+        public static bool? AccField(Func<string, object> property)
+        {
+            if (property(GameRawData + "Graphics.Status") == null) return null;
+            return property(GameRawData + "Realtime.SessionIndex") != null;
+        }
+
         /// <summary>The mMaxLaps at and above which rFactor 2's race is one of time rather than laps: it writes a huge number there.</summary>
         public const int LmuTimedRaceLaps = 10000;
 
@@ -319,6 +345,8 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // The session's own driver list, which SimHub reads on every frame.
+                FieldReported = Always(true),
                 // SimHub's IsInPit is the box here, so its IsInPitSince and LastPitStopDuration time the stop.
                 InPitBox = null,
             },
@@ -339,6 +367,9 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // ACManager.GD_Opponents reads the page SimHub's in-game app writes, Raw.Opponents, whose numVehicles
+                // is 0 without the app; SimHub's opponents are then the player alone, named "Me" (#1131).
+                FieldReported = AcField,
                 // ACManager.GD_IsInPit is Graphics.IsInPit, the box, so SimHub's own timer is the stop.
                 InPitBox = null,
             },
@@ -356,6 +387,9 @@ namespace OpenDashPlugin
                 BlackFlagShown = null,
                 WhiteFlagShown = null,
                 ChequeredFlagShown = null,
+                // ACCManager.GD_Opponents reads the broadcasting interface's car updates and Raw.Realtime, which is
+                // null until broadcasting connects and again once it drops (#1131).
+                FieldReported = AccField,
                 // ACCManager.GD_IsInPit is Graphics.IsInPit, the box, as Assetto Corsa's is.
                 InPitBox = null,
             },
@@ -382,6 +416,8 @@ namespace OpenDashPlugin
                 WhiteFlagShown = LmuLastLap,
                 // GD_Flag_Checkered is [NotAvailable].
                 ChequeredFlagShown = LmuChequered,
+                // LMUManager.GD_Opponents reads the scoring page's vehicles, which the game writes on every frame.
+                FieldReported = Always(true),
                 // GD_IsInPit is mInPits, the whole pit lane, as GD_IsInPitLane is, so SimHub's IsInPitSince runs from
                 // the entry line and its LastPitStopDuration is the lane. The player's own mPitState is the box, which
                 // is how SimHub's opponents' pit statistics already read it (#1130).

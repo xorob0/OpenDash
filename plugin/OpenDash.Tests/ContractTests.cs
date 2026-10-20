@@ -133,8 +133,9 @@ namespace OpenDashPlugin.Tests
             // And 666 before the plugin had to say whether SimHub holds the track's outline, which no property of
             // SimHub's says (#555), and 667 before four more said which flag a sim whose own summary is wrong is
             // showing (#1129). And 671 before the plugin had to time the stop in the pit box, which Le Mans
-            // Ultimate's reader times over the whole pit lane (#1130).
-            Assert.Equal(673, names.Count);
+            // Ultimate's reader times over the whole pit lane (#1130). And 673 before one more said whether SimHub
+            // is reading the field beyond the player, which on Assetto Corsa takes SimHub's own app (#1131).
+            Assert.Equal(674, names.Count);
             Assert.Equal(names.Count, names.Distinct().Count());
             Assert.Equal(new[] { "ShiftLights", "PositionMode", "DeltaReference", "SessionProgress" }, names.Take(4));
             Assert.Equal("Slot01", Contract.SlotProperty(1));
@@ -197,6 +198,8 @@ namespace OpenDashPlugin.Tests
             // And the flags the plugin answers for where SimHub's summary is wrong. #1129.
             Assert.Equal("YellowFlagShown", names[28 + 4 * LivePosition.Slots + 4]);
             Assert.Equal("ChequeredFlagShown", names[28 + 4 * LivePosition.Slots + 7]);
+            // And whether SimHub is reading the field beyond the player. #1131.
+            Assert.Equal("FieldReported", names[28 + 4 * LivePosition.Slots + 8]);
             // And whether SimHub holds the track's outline, published and asked of the same track by every
             // screen that draws its map. #555.
             Assert.Equal("TrackMapRecorded", names[28 + 4 * LivePosition.Slots + Contract.Capabilities.Length]);

@@ -3,7 +3,7 @@
 // Home leads with the things a driver cannot see from the seat: a dashboard folder that is gone, a strip whose
 // profile is installed and not selected on its device,
 // a matrix slot no device shows, an update waiting for a restart (#791), a settings file SimHub could not read
-// (#643). Each is said in the driver's terms and, where the fix is in SimHub, with the steps there.
+// (#643), a game SimHub reads no other car in (#1131). Each is said in the driver's terms and, where the fix is in SimHub, with the steps there.
 //
 // The rules are pure and take plain facts, because the facts come from SimHub and a SimHub call can fail.
 // SettingsControl.Status.cs asks SimHub and fills an AttentionInput; a fact it could not read stays null,
@@ -156,6 +156,16 @@ namespace OpenDashPlugin
 
         /// <summary>SimHub's _Backups folder beside the settings file, which holds the file when no copy does.</summary>
         public string SettingsBackups { get; set; }
+
+        /// <summary>Whether SimHub reads the cars beyond the player's own in the running game, the plugin's
+        /// <see cref="Contract.FieldReported"/>; null with no game running or on a game that does not say.</summary>
+        public bool? FieldReported { get; set; }
+
+        /// <summary>SimHub's code for the running game ("AssettoCorsa"), which picks the steps.</summary>
+        public string GameCode { get; set; }
+
+        /// <summary>The running game as SimHub names it ("Assetto Corsa"), for the title.</summary>
+        public string GameName { get; set; }
     }
 
     public static class PanelAttention
@@ -196,6 +206,17 @@ namespace OpenDashPlugin
                     SettingsUnreadableTitle,
                     SettingsUnreadableDetail(copy, input.SettingsBackups),
                     SettingsUnreadableSteps(copy != null), OpenFolder, PanelIssueAction.OpenFolder));
+            }
+
+            // Next: a game SimHub reads no other car in, so the leaderboard, the relative and the radar have
+            // nothing to draw. Filed on Home, since the fix is in SimHub's game settings and on no page here.
+            if (input.FieldReported == false)
+            {
+                issues.Add(new PanelIssue(
+                    FieldMissing, PanelPage.Home, null,
+                    FieldMissingTitle(input.GameName),
+                    FieldMissingDetail(input.GameCode),
+                    FieldMissingSteps(input.GameCode, input.GameName), CheckAgain, PanelIssueAction.CheckAgain));
             }
 
             foreach (var screen in screens.Where(s => s.Installed == false))
@@ -296,6 +317,7 @@ namespace OpenDashPlugin
         public const string UpdateRestart = "update-restart";
         public const string UpdateAvailable = "update-available";
         public const string SettingsUnreadable = "settings-unreadable";
+        public const string FieldMissing = "field-missing";
 
         /// <summary>Whether the issues hold one of that rule about that subject: ("screen-missing:", "Rim").</summary>
         public static bool Has(IEnumerable<PanelIssue> issues, string rule, string subject = null)
@@ -370,6 +392,46 @@ namespace OpenDashPlugin
         {
             return "Could not open " + path + ".";
         }
+        // --- The game SimHub reads no other car in (#1131) ---------------------------------------------------
+
+        /// <summary>"SimHub sees no other cars in Assetto Corsa", or without the game where SimHub names none.</summary>
+        public static string FieldMissingTitle(string gameName)
+        {
+            return string.IsNullOrWhiteSpace(gameName) ? FieldMissingHead : FieldMissingHead + " in " + gameName.Trim();
+        }
+
+        public const string FieldMissingHead = "SimHub sees no other cars";
+
+        /// <summary>What it costs, and on Assetto Corsa and ACC what SimHub needs: its own app in the game, and the
+        /// game's broadcasting.</summary>
+        public static string FieldMissingDetail(string gameCode)
+        {
+            if (string.Equals(gameCode, SimCapabilities.AssettoCorsa, StringComparison.OrdinalIgnoreCase)) return FieldNeedsAcApp;
+            if (string.Equals(gameCode, SimCapabilities.AssettoCorsaCompetizione, StringComparison.OrdinalIgnoreCase)) return FieldNeedsBroadcasting;
+            return FieldOnlyYours;
+        }
+
+        public const string FieldNeedsAcApp = "The leaderboard, the relative and the radar need SimHub's Assetto Corsa app.";
+        public const string FieldNeedsBroadcasting = "The leaderboard, the relative and the radar need ACC's broadcasting.";
+        public const string FieldOnlyYours = "The leaderboard, the relative and the radar show only your car.";
+
+        /// <summary>
+        /// The steps in SimHub: its own game configuration, which installs the app on Assetto Corsa and sets up
+        /// broadcasting on ACC, and then the game started again, which reads either only as it starts.
+        /// </summary>
+        public static IList<string[]> FieldMissingSteps(string gameCode, string gameName)
+        {
+            var game = string.IsNullOrWhiteSpace(gameName) ? "the game" : gameName.Trim();
+            return new List<string[]>
+            {
+                new[] { ConfigureGameStep },
+                new[] { "Restart " + game },
+            };
+        }
+
+        /// <summary>SimHub's page and its button, as SimHub spells them.</summary>
+        public const string ConfigureGameStep = "In SimHub's Game configuration, press Configure game now";
+
         public const string CheckAgain = "Check again";
         // An outdated profile's issue has no detail: its title says there is an update and its press says
         // where the Update is. "Update it to the version this OpenDash carries." described the mechanism, a

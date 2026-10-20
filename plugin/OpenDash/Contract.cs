@@ -175,11 +175,20 @@ namespace OpenDashPlugin
         /// </summary>
         public const string ChequeredFlagShown = "ChequeredFlagShown";
 
+        /// <summary>
+        /// Whether SimHub is reading the cars beyond the player's own, so that the leaderboard, the relative and the
+        /// spotter have a field to draw. See <see cref="CarHasPitLimiter"/>. On Assetto Corsa the field comes from
+        /// SimHub's in-game app, on Assetto Corsa Competizione from the game's broadcasting interface, and without it
+        /// SimHub's opponents are the player alone; a dashboard says so rather than drawing a board of one. #1131.
+        /// </summary>
+        public const string FieldReported = "FieldReported";
+
         /// <summary>Every capability, in the order they are attached. ADR 0021.</summary>
         public static readonly string[] Capabilities =
         {
             CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar,
             YellowFlagShown, BlackFlagShown, WhiteFlagShown, ChequeredFlagShown,
+            FieldReported,
         };
 
         /// <summary>

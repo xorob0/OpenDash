@@ -710,6 +710,14 @@ namespace OpenDashPlugin
         /// </summary>
         private volatile SimReport simReport = SimReport.Unknown;
 
+        /// <summary>What the running sim reported on the last frame, for the panel's Home (#1131). Never null.</summary>
+        public SimReport LastSimReport => simReport;
+
+        /// <summary>SimHub's code for the game <see cref="LastSimReport"/> was read from, or null with no game running.</summary>
+        public string ReportGame => simGame;
+
+        private volatile string simGame;
+
         /// <summary>
         /// Whether SimHub holds the outline of the track the car is on, boxed: what <see cref="Contract.TrackMapRecorded"/>
         /// publishes. See TrackMap.cs. #555.
@@ -787,10 +795,12 @@ namespace OpenDashPlugin
             if (data == null || !data.GameRunning || data.NewData == null || pluginManager == null)
             {
                 simReport = SimReport.Unknown;
+                simGame = null;
                 return;
             }
             var read = readProperty;
             if (read == null) readProperty = read = pluginManager.GetPropertyValue;
+            simGame = data.GameName;
             simReport = SimCapabilities.Read(data.GameName, read);
         }
 

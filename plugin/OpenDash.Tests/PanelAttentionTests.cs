@@ -284,6 +284,65 @@ namespace OpenDashPlugin.Tests
             Assert.False(PanelNav.Warns(PanelPage.Home, PanelAttention.Find(new AttentionInput())));
         }
 
+        /// <summary>A game SimHub reads no other car in is said on Home, with SimHub's own configuration as the fix
+        /// and the game started again; the press asks again (#1131).</summary>
+        [Fact]
+        public void Assetto_Corsa_without_SimHubs_app_says_the_field_needs_it()
+        {
+            var issues = PanelAttention.Find(new AttentionInput { FieldReported = false, GameCode = "AssettoCorsa", GameName = "Assetto Corsa" });
+            var issue = issues.Single();
+            Assert.Equal(PanelAttention.FieldMissing, issue.Id);
+            Assert.Equal("SimHub sees no other cars in Assetto Corsa", issue.Title);
+            Assert.Equal("The leaderboard, the relative and the radar need SimHub's Assetto Corsa app.", issue.Detail);
+            Assert.Equal(new[] { "In SimHub's Game configuration, press Configure game now" }, issue.Steps[0]);
+            Assert.Equal(new[] { "Restart Assetto Corsa" }, issue.Steps[1]);
+            Assert.Equal(2, issue.Steps.Count);
+            Assert.Equal("Check again", issue.ActionLabel);
+            Assert.Equal(PanelIssueAction.CheckAgain, issue.Action);
+            Assert.Equal(PanelPage.Home, issue.Page);
+            Assert.Null(issue.Subject);
+            Assert.True(PanelNav.Warns(PanelPage.Home, issues));
+        }
+
+        [Fact]
+        public void ACC_without_broadcasting_says_the_field_needs_it()
+        {
+            var issue = PanelAttention.Find(new AttentionInput { FieldReported = false, GameCode = "AssettoCorsaCompetizione", GameName = "Assetto Corsa Competizione" }).Single();
+            Assert.Equal("SimHub sees no other cars in Assetto Corsa Competizione", issue.Title);
+            Assert.Equal("The leaderboard, the relative and the radar need ACC's broadcasting.", issue.Detail);
+            Assert.Equal(new[] { "Restart Assetto Corsa Competizione" }, issue.Steps[1]);
+        }
+
+        [Fact]
+        public void A_field_that_is_read_or_unknown_says_nothing()
+        {
+            Assert.Empty(PanelAttention.Find(new AttentionInput { FieldReported = true, GameCode = "AssettoCorsa" }));
+            Assert.Empty(PanelAttention.Find(new AttentionInput { FieldReported = null, GameCode = "AssettoCorsa" }));
+            // A game the panel has no words for, and no game name at all, still says what it costs.
+            var issue = PanelAttention.Find(new AttentionInput { FieldReported = false }).Single();
+            Assert.Equal("SimHub sees no other cars", issue.Title);
+            Assert.Equal("The leaderboard, the relative and the radar show only your car.", issue.Detail);
+            Assert.Equal(new[] { "Restart the game" }, issue.Steps[1]);
+        }
+
+        [Fact]
+        public void Checking_again_says_whether_SimHub_sees_the_field_now()
+        {
+            var before = PanelAttention.Find(new AttentionInput { FieldReported = false, GameCode = "AssettoCorsa", GameName = "Assetto Corsa" }).Single();
+            var still = PanelHome.CheckedAgain(before, new[] { before }, null);
+            Assert.Equal("Checked again. SimHub sees no other cars in Assetto Corsa.", still.Text);
+            Assert.Equal(PanelTone.Caution, still.Tone);
+            var seen = PanelHome.CheckedAgain(before, new PanelIssue[0], null, true);
+            Assert.Equal("Checked again. SimHub sees the other cars.", seen.Text);
+            Assert.Equal(PanelTone.Info, seen.Tone);
+            // The issue also goes when the game closes, which fixed nothing, so that is not said to be fixed.
+            foreach (var closed in new[] { PanelHome.CheckedAgain(before, new PanelIssue[0], null, null), PanelHome.CheckedAgain(before, new PanelIssue[0], null) })
+            {
+                Assert.Equal("Checked again. Start the game to see whether SimHub reads its other cars.", closed.Text);
+                Assert.Equal(PanelTone.Caution, closed.Tone);
+            }
+        }
+
         [Fact]
         public void A_folder_the_press_could_not_open_is_named()
         {
@@ -302,7 +361,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void No_sentence_is_contracted_or_spells_the_wordmark()
         {
-            var input = new AttentionInput { RestartPending = true, SettingsUnreadable = true };
+            var input = new AttentionInput { RestartPending = true, SettingsUnreadable = true, FieldReported = false, GameCode = "AssettoCorsa", GameName = "Assetto Corsa" };
             input.Screens.Add(Screen("Gone", installed: false));
             input.Screens.Add(Screen("Old", unclaimed: true));
             input.Strips.Add(Strip("Brow", FlagBoxInstallState.UpToDate, false));
