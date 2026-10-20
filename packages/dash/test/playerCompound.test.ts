@@ -7,7 +7,8 @@
  * the bracketed code AC writes after the name, which is what fits the field and the chip. The frames
  * below are what SimHub hands a dashboard on each sim: AC's reader has no `fronttyrecompound` for the
  * player and an empty string in the raw field until the game writes one, and iRacing's reader has no
- * raw `Graphics` block at all, which reads as null.
+ * raw `Graphics` block at all, which reads as null. ACC's reader has AC's raw field and writes
+ * `dry_compound` or `wet_compound` in it, drawn as `Dry` and `Wet`.
  *
  * Each reading is evaluated by the generator's own evaluator, SimHub's `right` and `left` included.
  */
@@ -17,7 +18,7 @@ import { measureText, widestOf } from '../src/design/advances.ts';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { SHAPE_ARCHETYPES } from '../src/second/shape.ts';
-import { AC_TYRE_COMPOUND, COMPOUND_WIDEST, NO_VALUE } from '../src/second/values.ts';
+import { AC_TYRE_COMPOUND, ACC_COMPOUNDS, COMPOUND_WIDEST, NO_VALUE } from '../src/second/values.ts';
 import { walkItems } from '../src/walk.ts';
 import { BAND_PAGES } from '../src/zones/bandPages.ts';
 
@@ -28,6 +29,9 @@ const FRONT = 'driverfronttyrecompound(3)';
 
 /** Assetto Corsa in the race scenario, whose emulator writes the compound as AC's Kunos cars do. */
 const AC: Props = { [PLAYER]: 3, [FRONT]: null, [AC_TYRE_COMPOUND]: 'Slick Medium (M)' };
+
+/** ACC, whose reader has the same raw field and writes one of two names in it. */
+const ACC: Props = { [PLAYER]: 3, [FRONT]: null, [AC_TYRE_COMPOUND]: 'dry_compound' };
 
 /** iRacing, whose reader fills `fronttyrecompound` and has no raw `Graphics` block. */
 const IRACING: Props = { [PLAYER]: 3, [FRONT]: 'Medium', [AC_TYRE_COMPOUND]: null };
@@ -68,6 +72,11 @@ describe("band D's Compound", () => {
     expect(band({ ...AC, [AC_TYRE_COMPOUND]: '' })).toBe(NO_VALUE);
   });
 
+  test('on ACC it reads the kind of tyre ACC names, capitalised', () => {
+    expect(band(ACC)).toBe('Dry');
+    expect(band({ ...ACC, [AC_TYRE_COMPOUND]: 'wet_compound' })).toBe('Wet');
+  });
+
   test("on iRacing it reads SimHub's compound, as it did", () => {
     expect(band(IRACING)).toBe('Medium');
   });
@@ -80,6 +89,7 @@ describe("band D's Compound", () => {
 describe("the tyres module's chip", () => {
   test('reads the same compound on either sim, and nothing where neither publishes one', () => {
     expect(chip(AC)).toBe('M');
+    expect(chip(ACC)).toBe('Dry');
     expect(chip(IRACING)).toBe('Medium');
     expect(chip({ ...AC, [AC_TYRE_COMPOUND]: '' })).toBe('');
   });
@@ -91,4 +101,10 @@ describe("the tyres module's chip", () => {
 
 test("AC's widest drawn compound, three of the face's widest glyph, sits inside the declared widest", () => {
   expect(measureText('BarlowMedium', widestOf('BarlowMedium', 3), 20)).toBeLessThan(measureText('BarlowMedium', COMPOUND_WIDEST, 20));
+});
+
+test("ACC's drawn compounds sit inside the declared widest", () => {
+  for (const [, drawn] of ACC_COMPOUNDS) {
+    expect(measureText('BarlowMedium', drawn, 20)).toBeLessThan(measureText('BarlowMedium', COMPOUND_WIDEST, 20));
+  }
 });

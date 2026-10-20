@@ -1308,6 +1308,18 @@ const AC_COMPOUND_CHARS = 3;
 export const COMPOUND_WIDEST = 'Medium';
 
 /**
+ * What ACC writes in the same `Graphics.TyreCompound`, and what is drawn for it. ACC's shared memory
+ * names only the two kinds of tyre a car carries, `dry_compound` and `wet_compound` (Kunos's ACC
+ * shared memory documentation), which the bracket rule below would cut to a lowercase `dry`; they
+ * are drawn as `Dry` and `Wet` instead, both narrower than {@link COMPOUND_WIDEST}. SimHub gives
+ * ACC's player no `fronttyrecompound` either (docs/research/sims.md). #1177.
+ */
+export const ACC_COMPOUNDS: readonly (readonly [written: string, drawn: string])[] = [
+  ['dry_compound', 'Dry'],
+  ['wet_compound', 'Wet'],
+];
+
+/**
  * The player's compound as a dash draws it on Assetto Corsa, from `Graphics.TyreCompound`.
  *
  * AC writes the compound as the car's `tyres.ini` names it with the short name after it in brackets,
@@ -1316,7 +1328,8 @@ export const COMPOUND_WIDEST = 'Medium';
  * the code in the brackets, `M` or `SM`, which is how AC's own tyre app names the compound. It is
  * the last four characters, room for a code of up to three with the space or bracket before it, with
  * the brackets and the space taken out. A name that ends in no bracket is cut to its first
- * {@link AC_COMPOUND_CHARS}. Empty where AC writes nothing, and on every sim that is not AC.
+ * {@link AC_COMPOUND_CHARS}. ACC's two names are drawn as {@link ACC_COMPOUNDS} says. Empty where
+ * the game writes nothing, and on every sim that is neither.
  *
  * `right(value, 0, n)` is SimHub's `StringExtensions.Right`: the string reversed, its first `n`
  * characters taken by `Left`, and reversed back, so the last `n` and the whole of a shorter string
@@ -1325,12 +1338,13 @@ export const COMPOUND_WIDEST = 'Medium';
 const acCompound = (): Expr => {
   const name = isnull(prop(AC_TYRE_COMPOUND), str(''));
   const code = replace(replace(replace(right(name, 4), '(', ''), ')', ''), ' ', '');
-  return iff(eq(right(name, 1), str(')')), code, left(name, AC_COMPOUND_CHARS));
+  const named = iff(eq(right(name, 1), str(')')), code, left(name, AC_COMPOUND_CHARS));
+  return ACC_COMPOUNDS.reduceRight<Expr>((rest, [written, drawn]) => iff(eq(name, str(written)), str(drawn), rest), named);
 };
 
 /**
  * The player's tyre compound: SimHub's `fronttyrecompound` where it publishes one, and Assetto
- * Corsa's raw reading where it does not (#1177). The empty string where neither does.
+ * Corsa's or ACC's raw reading where it does not (#1177). The empty string where neither does.
  */
 export const playerCompound = (): Expr => {
   const front = isnull(driver('fronttyrecompound', playerPosition()), str(''));
