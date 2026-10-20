@@ -48,6 +48,7 @@ import {
   carRelativeGap,
   RELATIVE_GAP_WIDEST,
   CHARS,
+  COMPOUND_WIDEST,
   type Corner,
   INCIDENTS_WIDEST,
   LAP_WIDEST,
@@ -79,6 +80,7 @@ import {
   NO_VALUE,
   pitRefuel,
   pitRefuelIsAbsent,
+  playerCompound,
   roadTemperature,
   secondsOf,
   secondsToFit,
@@ -337,6 +339,12 @@ const bandTyreCell = (corner: Corner): string => {
   return iff(ncalc.isNull(t), str(NO_VALUE), fmt(t, '0'));
 };
 
+/** The player's compound, or `--` where no sim publishes one. */
+const bandCompound = (): string => {
+  const compound = playerCompound();
+  return iff(eq(compound, str('')), str(NO_VALUE), compound);
+};
+
 const tyres: readonly BandField[] = [
   {
     id: 'temps',
@@ -352,7 +360,8 @@ const tyres: readonly BandField[] = [
       { sample: '88', bind: bandTyreCell('RearRight') },
     ],
   },
-  { id: 'compound', label: 'Compound', sample: 'Medium', bind: isnull(driver('fronttyrecompound', playerPosition()), str('--')), chars: { digits: 7, specials: 0 }, widest: 'Medium' },
+  // SimHub's compound where it publishes one and AC's raw one where not, `--` where neither (#1177).
+  { id: 'compound', label: 'Compound', sample: 'Medium', bind: bandCompound(), chars: { digits: 7, specials: 0 }, widest: COMPOUND_WIDEST },
 ];
 
 /** D5 Weather. There is no weather module: a companion page of it would be mostly empty, and a

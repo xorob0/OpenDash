@@ -17,7 +17,7 @@ import { chip } from '../second/chip.ts';
 import { densityOf } from '../second/density.ts';
 import { ROW_TAIL, stack } from '../second/layout.ts';
 import { wheel } from '../second/wheel.ts';
-import { CORNERS, carCompound, player } from '../second/values.ts';
+import { CORNERS, COMPOUND_WIDEST, playerCompound } from '../second/values.ts';
 import { ncalc } from '../generator.ts';
 import { blockRow, defineModule, drawnAt, pageKeeps, shapeIn } from './module.ts';
 
@@ -47,7 +47,7 @@ const COMPANION_GAP = { x: 28, y: 12 } as const;
  * has the room for a second sentence; the room for a label on the axle line is the canvas's to give,
  * and the disagreement is recorded in `docs/design/zones.md` §10 rather than settled here.
  */
-const CHIP = { height: 28, size: 15, padding: 13, widest: 'Medium' } as const;
+const CHIP = { height: 28, size: 15, padding: 13, widest: COMPOUND_WIDEST } as const;
 
 /** Gap between two captions sharing a line. */
 const CAPTION_GAP = 20;
@@ -151,7 +151,7 @@ export const tyres = defineModule('tyres', (ctx) => {
             height: CHIP.height,
             size: CHIP.size,
             width: chipWidth,
-            bind: carCompound(player()),
+            bind: playerCompound(),
             widest: CHIP.widest,
           }),
         ];

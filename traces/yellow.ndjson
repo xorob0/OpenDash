@@ -1,4 +1,4 @@
-{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[80230,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn","OpenDash.PitStopSeconds","OpenDash.LastPitStopSeconds"]}
+{"trace":1,"scenario":"yellow","frames":200,"hz":10,"ticks":[80230,6],"recorded":"2026-10-14","simHub":"unknown","game":"IRacing","asserted":["DataCorePlugin.GameData.CarDamage1","DataCorePlugin.GameData.CarDamage2","DataCorePlugin.GameData.CarDamage3","DataCorePlugin.GameData.CarDamage4","OpenDash.DamageReported","DataCorePlugin.GameRawData.Track.TrackInfo.name","DataCorePlugin.GameRawData.SessionData.WeekendInfo.TrackDisplayShortName","DataCorePlugin.GameRawData.Telemetry.TrackWetness","OpenDash.YellowFlagShown","OpenDash.BlackFlagShown","OpenDash.WhiteFlagShown","OpenDash.ChequeredFlagShown","OpenDash.DriverInCar","OpenDash.PitLimiterOn","OpenDash.PitStopSeconds","OpenDash.LastPitStopSeconds","DataCorePlugin.GameRawData.Graphics.TyreCompound"]}
 {"p":"DataCorePlugin.Computed.Fuel_CurrentLapConsumption","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
 {"p":"DataCorePlugin.Computed.Fuel_LastLapConsumption","v":0}
 {"p":"DataCorePlugin.Computed.Fuel_LitersPerLap","v":0}
@@ -88,6 +88,7 @@
 {"p":"DataCorePlugin.GameData.TyreWearRearLeft","v":79}
 {"p":"DataCorePlugin.GameData.TyreWearRearRight","v":63}
 {"p":"DataCorePlugin.GameData.WaterTemperature","v":88.5}
+{"p":"DataCorePlugin.GameRawData.Graphics.TyreCompound","v":null}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarGearNumForward","v":"6"}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLBlinkRPM","v":9000}
 {"p":"DataCorePlugin.GameRawData.SessionData.DriverInfo.DriverCarSLFirstRPM","v":7800}
