@@ -416,21 +416,32 @@ namespace OpenDashPlugin
         public const string FieldOnlyYours = "The leaderboard, the relative and the radar show only your car.";
 
         /// <summary>
-        /// The steps in SimHub: its own game configuration, which installs the app on Assetto Corsa and sets up
-        /// broadcasting on ACC, and then the game started again, which reads either only as it starts.
+        /// The steps in the order they have to be taken: the game closed, SimHub's own game configuration, which
+        /// installs the app on Assetto Corsa and sets up broadcasting on ACC, and the game started again, which
+        /// reads either only as it starts.
         /// </summary>
+        /// <remarks>
+        /// The game is closed first because SimHub asks for it: its automatic setup says "please make sure that
+        /// {0} is closed before" (GameList_AutomaticSetup_CloseGameBefore), and its failure says to make sure the
+        /// game was not running. The issue is only found while the game runs, so the driver reading it has the
+        /// game open.
+        /// </remarks>
         public static IList<string[]> FieldMissingSteps(string gameCode, string gameName)
         {
             var game = string.IsNullOrWhiteSpace(gameName) ? "the game" : gameName.Trim();
             return new List<string[]>
             {
+                new[] { "Close " + game },
                 new[] { ConfigureGameStep },
-                new[] { "Restart " + game },
+                new[] { "Start " + game },
             };
         }
 
-        /// <summary>SimHub's page and its button, as SimHub spells them.</summary>
-        public const string ConfigureGameStep = "In SimHub's Game configuration, press Configure game now";
+        /// <summary>
+        /// SimHub's page and its button, as SimHub spells them: the page's title is Game Configuration, which its
+        /// Game config. button opens, and the button on it is Configure game now (GameConfigurationManager_ConfigureGameNowButton).
+        /// </summary>
+        public const string ConfigureGameStep = "In SimHub's Game Configuration, press Configure game now";
 
         public const string CheckAgain = "Check again";
         // An outdated profile's issue has no detail: its title says there is an update and its press says

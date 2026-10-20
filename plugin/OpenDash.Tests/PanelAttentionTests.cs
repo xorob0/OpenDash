@@ -285,7 +285,7 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>A game SimHub reads no other car in is said on Home, with SimHub's own configuration as the fix
-        /// and the game started again; the press asks again (#1131).</summary>
+        /// with the game closed first, as SimHub's own setup asks, and started again; the press asks again (#1131).</summary>
         [Fact]
         public void Assetto_Corsa_without_SimHubs_app_says_the_field_needs_it()
         {
@@ -294,9 +294,10 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(PanelAttention.FieldMissing, issue.Id);
             Assert.Equal("SimHub sees no other cars in Assetto Corsa", issue.Title);
             Assert.Equal("The leaderboard, the relative and the radar need SimHub's Assetto Corsa app.", issue.Detail);
-            Assert.Equal(new[] { "In SimHub's Game configuration, press Configure game now" }, issue.Steps[0]);
-            Assert.Equal(new[] { "Restart Assetto Corsa" }, issue.Steps[1]);
-            Assert.Equal(2, issue.Steps.Count);
+            Assert.Equal(new[] { "Close Assetto Corsa" }, issue.Steps[0]);
+            Assert.Equal(new[] { "In SimHub's Game Configuration, press Configure game now" }, issue.Steps[1]);
+            Assert.Equal(new[] { "Start Assetto Corsa" }, issue.Steps[2]);
+            Assert.Equal(3, issue.Steps.Count);
             Assert.Equal("Check again", issue.ActionLabel);
             Assert.Equal(PanelIssueAction.CheckAgain, issue.Action);
             Assert.Equal(PanelPage.Home, issue.Page);
@@ -310,7 +311,8 @@ namespace OpenDashPlugin.Tests
             var issue = PanelAttention.Find(new AttentionInput { FieldReported = false, GameCode = "AssettoCorsaCompetizione", GameName = "Assetto Corsa Competizione" }).Single();
             Assert.Equal("SimHub sees no other cars in Assetto Corsa Competizione", issue.Title);
             Assert.Equal("The leaderboard, the relative and the radar need ACC's broadcasting.", issue.Detail);
-            Assert.Equal(new[] { "Restart Assetto Corsa Competizione" }, issue.Steps[1]);
+            Assert.Equal(new[] { "Close Assetto Corsa Competizione" }, issue.Steps[0]);
+            Assert.Equal(new[] { "Start Assetto Corsa Competizione" }, issue.Steps[2]);
         }
 
         [Fact]
@@ -322,7 +324,8 @@ namespace OpenDashPlugin.Tests
             var issue = PanelAttention.Find(new AttentionInput { FieldReported = false }).Single();
             Assert.Equal("SimHub sees no other cars", issue.Title);
             Assert.Equal("The leaderboard, the relative and the radar show only your car.", issue.Detail);
-            Assert.Equal(new[] { "Restart the game" }, issue.Steps[1]);
+            Assert.Equal(new[] { "Close the game" }, issue.Steps[0]);
+            Assert.Equal(new[] { "Start the game" }, issue.Steps[2]);
         }
 
         [Fact]
