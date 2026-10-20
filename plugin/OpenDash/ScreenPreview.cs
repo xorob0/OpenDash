@@ -21,6 +21,7 @@
 // Needs SimHub and WPF types, so it is NOT compiled into OpenDash.Tests. What a test can hold is in
 // PanelPreview.cs and PanelPreviewScreen.cs.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -51,6 +52,10 @@ namespace OpenDashPlugin
         private WPFRenderer renderer;
         private DispatcherTimer timer;
         private bool disposed;
+
+        /// <summary>The mode the last tick found, so a tick that lands on a mode change can leave the
+        /// move to SimHub (see <see cref="FollowEnabledScreen"/>).</summary>
+        private PreviewMode? lastMode;
 
         private ScreenPreview(WPFRenderer renderer, FrameworkElement element)
         {
@@ -179,7 +184,25 @@ namespace OpenDashPlugin
             try
             {
                 var dashboard = model == null ? null : model.Dashboard;
-                var wanted = ScreenSimHubWouldShow(dashboard, GameRunning());
+                if (dashboard == null) return;
+
+                // SimHub's CheckGameModeScreen leaves the selection alone while every screen is unlocked
+                // or one is forced, and so does this. No package OpenDash generates sets either, so this
+                // only keeps a third-party dashboard's preview from disagreeing with its own window.
+                if (dashboard.UnlockAllScreens || dashboard.CurrentScreenIsForced) return;
+
+                // On the tick a game starts or stops, SimHub's next frame goes back to the screen it
+                // remembers for the new mode (LastIngameScreen and the like), which may be a companion
+                // page other than the first. Choosing here first would put the companion on its first
+                // module, so the tick that sees the change leaves it to SimHub, and the next one checks.
+                var gameRunning = GameRunning();
+                var screens = Roles(dashboard);
+                var mode = PanelPreviewScreen.Mode(screens, gameRunning);
+                var changed = lastMode.HasValue && lastMode.Value != mode;
+                lastMode = mode;
+                if (changed) return;
+
+                var wanted = ScreenSimHubWouldShow(dashboard, screens, gameRunning);
                 if (wanted != null && !ReferenceEquals(dashboard.SelectedScreen, wanted)) dashboard.SelectedScreen = wanted;
             }
             catch (Exception error)
@@ -198,13 +221,12 @@ namespace OpenDashPlugin
             return data != null && data.GameRunning;
         }
 
-        /// <summary>The screen PanelPreviewScreen chooses from the roles, the enabled flags and the
-        /// screen showing now, or null when the dashboard has none.</summary>
-        private static GDashScreen ScreenSimHubWouldShow(Dashboard dashboard, bool gameRunning)
+        /// <summary>The roles, the enabled flag and the layer flag of each of the dashboard's screens, in
+        /// the order the .djson lists them.</summary>
+        private static List<PreviewScreenRoles> Roles(Dashboard dashboard)
         {
-            if (dashboard == null || dashboard.Screens == null) return null;
-            var screens = dashboard.Screens.ToList();
-            var roles = screens
+            if (dashboard.Screens == null) return new List<PreviewScreenRoles>();
+            return dashboard.Screens
                 .Select(s => new PreviewScreenRoles
                 {
                     InGame = s.InGameScreen,
@@ -214,6 +236,15 @@ namespace OpenDashPlugin
                     Layer = s.IsLayer,
                 })
                 .ToList();
+        }
+
+        /// <summary>The screen PanelPreviewScreen chooses from the roles, the enabled flags and the
+        /// screen showing now, or null when the dashboard has none.</summary>
+        private static GDashScreen ScreenSimHubWouldShow(
+            Dashboard dashboard, List<PreviewScreenRoles> roles, bool gameRunning)
+        {
+            if (dashboard.Screens == null) return null;
+            var screens = dashboard.Screens.ToList();
             var index = PanelPreviewScreen.Choose(roles, gameRunning, screens.IndexOf(dashboard.SelectedScreen));
             return index < 0 ? null : screens[index];
         }
