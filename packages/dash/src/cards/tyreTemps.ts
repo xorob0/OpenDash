@@ -1,6 +1,7 @@
 /**
- * Card 10, Tyre temps: the four corners from the last stop in car orientation, in SimHub's unit
- * (the label says which), blue below 60 C, red above 100 C, `--` when there is no reading.
+ * Card 10, Tyre temps: the four corners in car orientation, in SimHub's unit (the label says
+ * which), blue below 60 C, red above 100 C, `--` when there is no reading. They are the readings
+ * from the last stop where the sim publishes no others, which the label then says (#1161).
  *
  * At rung L the tread left follows each temperature on a second line, which is what the canvas
  * draws; a shorter slot keeps the plain numerals. The tyre drawing beside them waits on an image
@@ -11,7 +12,7 @@ import { cardFrame } from '../components/frame.ts';
 import { grid2x2, type CellSpec } from '../components/grid2x2.ts';
 import { fitLabelForm } from '../elements/label.ts';
 import { TYRE_THRESHOLDS, WEAR_CAUTION } from '../second/wheel.ts';
-import { perTemperatureUnit } from '../second/values.ts';
+import { perTemperatureUnit, tyreReadingsLive } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { TEMP_CHARS } from './chars.ts';
@@ -60,9 +61,16 @@ function cell(corner: (typeof TYRE_CORNERS)[number], sample: string, wearSample:
  */
 const labelUnit = perUnit(str('°F'), str('K'), str('°C'));
 
+/**
+ * ` · last stop` where the readings are the ones taken at the last stop, which is iRacing's tyre
+ * block, and nothing where they are live, as SimHub fills them on every other sim (#1161). The
+ * label's widest form keeps the note either way, so the box is the one that holds it.
+ */
+export const stopNote = iff(tyreReadingsLive(), str(''), str(' · last stop'));
+
 /** Longest first: the stop note goes when the card is too narrow to hold it. */
 const labelForms = (label: string) => [
-  { sample: label, widest: 'Tyres °C · last stop', bind: concat(str('Tyres '), labelUnit, str(' · last stop')) },
+  { sample: label, widest: 'Tyres °C · last stop', bind: concat(str('Tyres '), labelUnit, stopNote) },
   { sample: 'Tyres °C', widest: 'Tyres °C', bind: concat(str('Tyres '), labelUnit) },
 ];
 

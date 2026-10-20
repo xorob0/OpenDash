@@ -170,7 +170,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 | Position, Session | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Fuel, Fuel laps | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | TC, ABS | **Works.** | **Works.** The car's preset. | **Untested.** | **Untested.** |
-| Tyre temps, Tyre pressures | **Works.** From the last stop, as the label says. | **Partly.** Live values, under a label that says they are from the last stop. | **Untested.** | **Untested.** |
+| Tyre temps, Tyre pressures | **Works.** From the last stop, as the label says. | **Works.** Live values, captioned without the stop (#1161). | **Untested.** Live values, captioned as on AC. | **Untested.** Live values, captioned as on AC. |
 | Speed | **Works.** | **Works.** | **Untested.** | **Untested.** |
 
 ### The themes
@@ -221,8 +221,8 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 No cell of Assetto Corsa's column says **Wrong**: every reading there works, works in part with the gap named, or shows its
 not-available state. The **Absent** rows are what AC does not publish, and none of them draws a value.
 
-Three **Partly** cells on Assetto Corsa are not what AC lacks but what the packages could say better, and
-none has a ticket yet: the round faces' tyre cards are captioned "last stop" over AC's live values; the
+Two **Partly** cells on Assetto Corsa are not what AC lacks but what the packages could say better, and
+neither has a ticket yet: the
 leaderboard's and the pit wall's iRating column reads `--` down every row rather than giving its width
 back; and a car's sectors on the pit wall are unclear. The energy page reads only iRacing's names for
 virtual energy, so it cannot draw Le Mans Ultimate's, which is #962's.
