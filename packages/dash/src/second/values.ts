@@ -976,6 +976,18 @@ export const BEST_LAP_SESSIONS = [
 export const rankedByBestLap = (): Expr => sessionIs(...BEST_LAP_SESSIONS);
 
 /**
+ * A gap or an interval in seconds to one decimal, as the Gap and Int columns draw it: `+2.6`, `−0.4`,
+ * and a bare `0.0` where the difference rounds to nought.
+ *
+ * `signed` keeps the sign of the unrounded value, so two cars within a twentieth of a second of each
+ * other read `+0.0` or `−0.0`, a plus or a minus on a figure that says there is no difference to have
+ * a direction (#1078). The lap readings already draw a level delta as a bare zero (#614), and the
+ * leaderboard's gaps are the same quantity at one place fewer. The band is half the last place, the
+ * edge below which `format` writes the figure as a zero.
+ */
+const gapSeconds = (seconds: Expr): Expr => iff(lt(abs(seconds), num(0.05)), str('0.0'), signed(seconds, '0.0'));
+
+/**
  * The gap outside a race: a car's best lap less the best lap of the car it is measured from, signed
  * to one decimal as the race gap is, or `missing` where either car has no best lap yet.
  *
@@ -997,7 +1009,7 @@ export const rankedByBestLap = (): Expr => sessionIs(...BEST_LAP_SESSIONS);
 const bestLapGap = (idx: Expr, from: Expr, missing: string): Expr => {
   const here = driver('bestlap', idx);
   const there = driver('bestlap', from);
-  return iff(and(hasTime(here), hasTime(there)), signed(sub(secondsOf(here), secondsOf(there)), '0.0'), str(missing));
+  return iff(and(hasTime(here), hasTime(there)), gapSeconds(sub(secondsOf(here), secondsOf(there))), str(missing));
 };
 
 /**
@@ -1007,7 +1019,7 @@ const bestLapGap = (idx: Expr, from: Expr, missing: string): Expr => {
  * Both are spelled here rather than taken from `gaptoleadercombined`, which is SimHub's one string
  * for both cases and whose sign, decimals and words the dash has no say in. It writes the seconds to
  * two decimals and a lapped car as `+1 lap` or `+2 laps`, where the interval beside it is
- * `signed(..., '0.0')` and the class column {@link carClassRaceGap} spells laps `+1L`: two
+ * {@link gapSeconds} and the class column {@link carClassRaceGap} spells laps `+1L`: two
  * neighbouring readings of one quantity at different precisions is what the sheet is measured
  * against, and `+2 laps` is wider than the cells the column is cut for. `signed` writes the
  * typographic minus, so the value is not formatted again on top of it.
@@ -1058,7 +1070,7 @@ export const carRaceGap = (idx: Expr): Expr => {
       iff(
         rankedByBestLap(),
         bestLapGap(idx, leader, NO_VALUE),
-        iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)), str(NO_VALUE), iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, lead), '0.0'))),
+        iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)), str(NO_VALUE), iff(gt(laps, num(0)), lapsDown(laps), gapSeconds(sub(here, lead)))),
       ),
     ),
   );
@@ -1140,7 +1152,7 @@ export const carClassRaceGap = (idx: Expr): Expr => {
       iff(
         rankedByBestLap(),
         bestLapGap(idx, leader, NO_VALUE),
-        iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)), str(NO_VALUE), iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, lead), '0.0'))),
+        iff(ncalc.or(ncalc.isNull(here), ncalc.isNull(lead)), str(NO_VALUE), iff(gt(laps, num(0)), lapsDown(laps), gapSeconds(sub(here, lead)))),
       ),
     ),
   );
@@ -1199,7 +1211,7 @@ const raceInterval = (idx: Expr, above: Expr): Expr => {
   const laps = lapsBehind(idx, above);
   return iff(
     and(ncalc.not(ncalc.isNull(ahead)), ncalc.not(ncalc.isNull(here))),
-    iff(gt(laps, num(0)), lapsDown(laps), signed(sub(here, ahead), '0.0')),
+    iff(gt(laps, num(0)), lapsDown(laps), gapSeconds(sub(here, ahead))),
     str(''),
   );
 };

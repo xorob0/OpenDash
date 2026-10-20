@@ -73,6 +73,7 @@ function evaluate(
     .replace(/\breplace\(/g, 'rep(')
     .replace(/\bin\(/g, 'isIn(')
     .replace(/\btruncate\(/g, 'Math.trunc(')
+    .replace(/\babs\(/g, 'Math.abs(')
     .replace(/\bucase\(/g, 'upper(')
     .replace(/ = /g, ' === ')
     .replace(/ and /g, ' && ')
