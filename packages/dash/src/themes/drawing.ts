@@ -37,7 +37,7 @@ export interface FaceContext {
   withRevBar: boolean;
 }
 
-/** A page a theme adds to band D's catalogue, after the contract's eight. */
+/** A page a theme adds to band D's catalogue, after the contract's eight, or to the modules' after theirs. */
 export interface ThemeBandPage {
   id: string;
   name: string;
@@ -129,6 +129,12 @@ export interface ThemeDrawing {
    * catalogue entry lists in `bandPages`, the same pages in the same order, which the build holds it to.
    */
   bandPages?: readonly ThemeBandPage[];
+  /**
+   * Pages added to the module catalogue of zones B and C, after the house's modules: the drawing of each
+   * page the theme's catalogue entry lists in `modulePages`, in the same order. Drawn in whatever zone
+   * frame the face gives them, the whole of it, with no header.
+   */
+  modulePages?: readonly ThemeBandPage[];
   /** How the modules of zones B and C lay their fields out; see {@link ModuleRegister}. */
   modules?: ModuleRegister;
   /**

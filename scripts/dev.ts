@@ -81,6 +81,14 @@ export const LIST_ORDER = [
   'OpenDash AiM 800x286',
   'OpenDash AiM 800x480',
   'OpenDash AiM 850x480',
+  'OpenDash BMW 1280x400',
+  'OpenDash BMW 1280x480',
+  'OpenDash BMW 1280x720',
+  'OpenDash BMW 1920x480',
+  'OpenDash BMW 600x686',
+  'OpenDash BMW 800x286',
+  'OpenDash BMW 800x480',
+  'OpenDash BMW 850x480',
 ] as const;
 
 export interface DevOptions {

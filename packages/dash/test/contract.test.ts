@@ -806,13 +806,13 @@ describe('plugin mirror', () => {
   });
 
   /** The other half of `ContractTests.Themes_agree_with_contract_ts_when_present` (#202). */
-  test('Contract.cs lists every theme THEME_CATALOGUE does, with its name, its cars, its sizes and its band pages', () => {
+  test('Contract.cs lists every theme THEME_CATALOGUE does, with its name, its cars, its sizes, its band pages and its module pages', () => {
     const source = pluginSource('Contract.cs');
     expect(source).toContain(`public const string DefaultThemeId = "${DEFAULT_THEME_ID}";`);
     const block = /Themes = new\[\]\s*\{(?<items>.*?)\n\s*\};/s.exec(source)?.groups?.items ?? '';
     const strings = (list: string): string[] => [...list.matchAll(/"([^"]*)"/g)].map((m) => m[1]!);
     const rows = [
-      ...block.matchAll(/new ThemeEntry\("([^"]*)", "([^"]*)", (new string\[0\]|new\[\] \{[^}]*\}), (new string\[0\]|new\[\] \{[^}]*\}), (FaceSizes|new\[\] \{[^}]*\}), (new ThemeBandPage\[0\]|new\[\] \{[^}]*\})\)/g),
+      ...block.matchAll(/new ThemeEntry\("([^"]*)", "([^"]*)", (new string\[0\]|new\[\] \{[^}]*\}), (new string\[0\]|new\[\] \{[^}]*\}), (FaceSizes|new\[\] \{[^}]*\}), (new ThemeBandPage\[0\]|new\[\] \{[^}]*\})(?:, (new\[\] \{[^}]*\}), "([^"]*)", "([^"]*)")?\)/g),
     ].map((m) => ({
       id: m[1],
       name: m[2],
@@ -820,6 +820,8 @@ describe('plugin mirror', () => {
       iracingCarPaths: strings(m[4]!),
       sizes: m[5] === 'FaceSizes' ? FACE_SIZES.map((f) => `${f.width}x${f.height}`) : [...m[5]!.matchAll(/FaceOf\((\d+), (\d+)\)\.Value/g)].map((s) => `${s[1]}x${s[2]}`),
       bandPages: [...m[6]!.matchAll(/new ThemeBandPage\("([^"]*)", "([^"]*)"\)/g)].map((p) => ({ id: p[1], name: p[2] })),
+      modulePages: [...(m[7] ?? '').matchAll(/new ThemeBandPage\("([^"]*)", "([^"]*)"\)/g)].map((p) => ({ id: p[1], name: p[2] })),
+      opensOn: (m[8] === undefined ? {} : { B: m[8], C: m[9] }) as Partial<Record<'B' | 'C', string>>,
     }));
     expect(rows).toEqual(
       THEME_CATALOGUE.map((t) => ({
@@ -829,6 +831,8 @@ describe('plugin mirror', () => {
         iracingCarPaths: [...t.iracingCarPaths],
         sizes: t.sizes.map((f) => `${f.width}x${f.height}`),
         bandPages: t.bandPages.map((p) => ({ id: p.id, name: p.name })),
+        modulePages: (t.modulePages ?? []).map((p) => ({ id: p.id, name: p.name })),
+        opensOn: t.opensOn ?? {},
       })),
     );
     // And the folder spelled as themedFolder spells it, the one string both halves must agree on.
