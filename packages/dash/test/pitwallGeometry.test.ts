@@ -14,12 +14,12 @@
  * nothing but this says it does not.
  */
 import { describe, expect, test } from 'bun:test';
-import { bottom, contains, rect, right, type Rect } from '../src/design/geometry.ts';
+import { bottom, contains, overlaps, rect, right, type Rect } from '../src/design/geometry.ts';
 import type { Item, Screen } from '../src/generator.ts';
 import { PIT_WALL_ROWS, TELEMETRY_TRACES, TOWER_ROWS, portraitPage, racePage, telemetryPage, towerPage, tracePanelHeight } from '../src/screens/pitwall.ts';
 import { PIT_WALL_HEADER } from '../src/screens/pitwallHeader.ts';
 import { ds } from '../src/tokens.ts';
-import { walkItems } from '../src/walk.ts';
+import { drawnParts, walkItems } from '../src/walk.ts';
 
 /** An item with a box, which is everything a page draws: a layer carries none and is not one. */
 type Placed = Extract<Item, { rect: Rect }>;
@@ -124,10 +124,10 @@ describe('the zone rectangles', () => {
   test('the portrait page draws a narrow column and a wide one, out to its last pixel', () => {
     const zones = zonesOf(PORTRAIT);
     expect(zones).toEqual([
-      { name: 'portrait.zoneA', rect: rect(0, 976, 539, 471), file: 'zones-539x471.djson' },
-      { name: 'portrait.zoneB', rect: rect(540, 976, 540, 471), file: 'zones-540x471.djson' },
-      { name: 'portrait.zoneC', rect: rect(0, 1448, 539, 471), file: 'zones-539x471.djson' },
-      { name: 'portrait.zoneD', rect: rect(540, 1448, 540, 471), file: 'zones-540x471.djson' },
+      { name: 'portrait.zoneA', rect: rect(0, 1040, 539, 439), file: 'zones-539x439.djson' },
+      { name: 'portrait.zoneB', rect: rect(540, 1040, 540, 439), file: 'zones-540x439.djson' },
+      { name: 'portrait.zoneC', rect: rect(0, 1480, 539, 439), file: 'zones-539x439.djson' },
+      { name: 'portrait.zoneD', rect: rect(540, 1480, 540, 439), file: 'zones-540x439.djson' },
     ]);
     // The sheet's own 539 and 540: two halves of an odd width stop a pixel short of the page.
     expect([...new Set(zones.map((z) => right(z.rect)))]).toEqual([539, PORTRAIT_SIZE.width]);
@@ -160,14 +160,14 @@ describe('what a board stamps into the band it is given', () => {
     expect(board.bottom).toBeLessThanOrEqual(LANDSCAPE.height);
   });
 
-  test('the portrait board is as tall as its own header and rows, and the rule closes it there', () => {
+  test('the portrait board is as tall as its own header and rows, and the rule closes it a flag band below', () => {
     const board = boardOf(PORTRAIT, 'portrait.board');
     expect({ rows: board.rows, pitch: board.pitch, header: board.top - BODY_TOP }).toEqual({ rows: PIT_WALL_ROWS, pitch: 32, header: 32 });
-    // The band is the parts and nothing else: an empty strip under the last car is what a literal
-    // height off the sheet leaves behind, and the sheet's own 856 counts two class bands this page
-    // cannot draw.
+    // The board is the parts and nothing else, since the sheet's own 856 counts two class bands this
+    // page cannot draw. What the column keeps under the last car is the flag band's 64 px (#1016),
+    // so that a flag takes no row off a full grid.
     expect(board.bottom - BODY_TOP).toBe(32 + PIT_WALL_ROWS * 32);
-    expect(boxOf(PORTRAIT, 'portrait.boardRule').top).toBe(board.bottom);
+    expect(boxOf(PORTRAIT, 'portrait.boardRule').top).toBe(board.bottom + PIT_WALL_HEADER.height);
   });
 });
 
@@ -223,9 +223,9 @@ const REGIONS: { page: string; screen: Screen; size: { width: number; height: nu
     regions: [
       { name: 'portrait.header', rect: rect(0, 0, 1080, BODY_TOP) },
       { name: 'portrait.body', rect: rect(0, BODY_TOP, 1080, PORTRAIT_SIZE.height - BODY_TOP) },
-      { name: 'portrait.board', rect: rect(0, BODY_TOP, 1080, 801) },
-      { name: 'portrait.panels', rect: rect(0, 865, 1080, 111) },
-      { name: 'portrait.zones', rect: rect(0, 976, 1080, 944) },
+      { name: 'portrait.board', rect: rect(0, BODY_TOP, 1080, 865) },
+      { name: 'portrait.panels', rect: rect(0, 929, 1080, 111) },
+      { name: 'portrait.zones', rect: rect(0, 1040, 1080, 880) },
     ],
   },
 ];
@@ -299,13 +299,25 @@ describe('the telemetry column spends the body it is given', () => {
 });
 
 /**
+ * Where each page's band lies: the last 64 px of its left-hand column, the board's or the plot's.
+ * The portrait board is 800 px under the header, and its column keeps the band's 64 px under it.
+ */
+const FLAG_BAND: Readonly<Record<'race' | 'tower' | 'telemetry' | 'portrait', Rect>> = {
+  race: rect(0, LANDSCAPE.height - 64, 1280, 64),
+  tower: rect(0, LANDSCAPE.height - 64, 880, 64),
+  telemetry: rect(0, LANDSCAPE.height - 64, 1280, 64),
+  portrait: rect(0, BODY_TOP + 800, 1080, 64),
+};
+
+/**
  * The flag, which is the page's and not a readout's.
  *
  * The header carried a colour block and a word until a rig reported that it did not work, and the
- * wall now answers the companion's three-way question instead: off, a band under the header, or the
- * body. What is pinned here is the geometry, because that is the part a page's own layout can break
- * -- a band that started at the top of the *screen* would cover the header that says which page it
- * is, and a full flag that stopped at a column would be a flag over half a wall.
+ * wall now answers the companion's three-way question instead: off, a band at the foot of the
+ * page's left-hand column, or the body. What is pinned here is the geometry, because that is the
+ * part a page's own layout can break -- a band that started at the top of the *screen* would cover
+ * the header that says which page it is, a band under the header covers the board's headings and
+ * P1 (#1016), and a full flag that stopped at a column would be a flag over half a wall.
  */
 describe('the flag belongs to the page', () => {
   const layerOf = (screen: Screen, name: string): Extract<Item, { kind: 'layer' }> => {
@@ -321,6 +333,7 @@ describe('the flag belongs to the page', () => {
     ['telemetry', TELEMETRY, LANDSCAPE],
     ['portrait', PORTRAIT, PORTRAIT_SIZE],
   ] as const) {
+    const bandArea = FLAG_BAND[page];
     test(`${page} draws both formats over its body and neither over its header`, () => {
       const band = layerOf(screen, `${page}.flag`);
       const full = layerOf(screen, `${page}.flagFull`);
@@ -328,13 +341,14 @@ describe('the flag belongs to the page', () => {
         band: "(isnull([OpenDash.PitWallFlagFormat], 'band')) = ('band')",
         full: "(isnull([OpenDash.PitWallFlagFormat], 'band')) = ('full')",
       });
-      // The band is the header's own height, under it, the width of the page: one object on a wall
-      // of any shape, where a proportion would draw it half as tall on the page twice as wide.
+      // The band is the header's own height on every page, one object on a wall of any shape where a
+      // proportion would draw it half as tall on the page twice as wide, at the foot of the column.
       const bandBoxes = [...walkItems(band.children)].filter((i): i is Placed => i.kind !== 'layer');
       const fullBoxes = [...walkItems(full.children)].filter((i): i is Placed => i.kind !== 'layer');
       expect(bandBoxes.length).toBeGreaterThan(0);
       expect(fullBoxes.length).toBeGreaterThan(0);
-      const bodyBand = rect(0, BODY_TOP, size.width, PIT_WALL_HEADER.height);
+      const bodyBand = bandArea;
+      expect(bodyBand.height).toBe(PIT_WALL_HEADER.height);
       const body = rect(0, BODY_TOP, size.width, size.height - BODY_TOP);
       for (const item of bandBoxes) {
         const slack = item.kind === 'text' ? Math.ceil(0.25 * item.fontSize) + 2 : 0;
@@ -345,4 +359,85 @@ describe('the flag belongs to the page', () => {
       }
     });
   }
+});
+
+/**
+ * The band shown, and what it leaves readable (#1016).
+ *
+ * The band drew under the header, the width of the page, and a board's 32 px header row is followed
+ * at once by P1: under a full course yellow the race and tower boards lost their column headings and
+ * the leader's row, and the panels and zones beside them were cut through their titles. Every page
+ * is laid out here as SimHub draws it, each stamped row at its own copy's place, and whatever the
+ * band overlaps is named. The board's header row and its first row are never among them, and what
+ * is is pinned page by page, so a layout that moves under the band is a diff somebody reads.
+ */
+describe('the flag band leaves the board readable', () => {
+  /** Every drawn item outside the two flag layers, each stamped copy where SimHub stamps it. */
+  const under = (screen: Screen, page: string): { name: string; rect: Rect; layers: readonly string[] }[] =>
+    [...drawnParts(screen.items)]
+      .filter(({ layers }) => !layers.some((l) => l.name === `${page}.flag` || l.name === `${page}.flagFull`))
+      .map(({ item, layers }) => ({ name: item.name, rect: item.rect, layers: layers.map((l) => l.name) }));
+
+  /**
+   * The band as the page draws it: the box around everything its layer paints but its words, whose
+   * line boxes run past the ink. Read off the page rather than off {@link FLAG_BAND}, so that a band
+   * put back under the header fails here and not only in the test that pins where it is.
+   */
+  const bandOf = (screen: Screen, page: string): Rect => {
+    const layer = screen.items.find((i) => i.kind === 'layer' && i.name === `${page}.flag`);
+    if (layer?.kind !== 'layer') throw new Error(`no flag band on ${page}`);
+    const boxes = [...walkItems(layer.children)].filter((i): i is Placed => i.kind !== 'layer' && i.kind !== 'text').map((i) => i.rect);
+    const left = Math.min(...boxes.map((b) => b.left));
+    const top = Math.min(...boxes.map((b) => b.top));
+    return rect(left, top, Math.max(...boxes.map(right)) - left, Math.max(...boxes.map(bottom)) - top);
+  };
+
+  /** What the band covers: the items whose box overlaps it, by name and by the row it sits in. */
+  const covered = (screen: Screen, page: string) => under(screen, page).filter((i) => overlaps(i.rect, bandOf(screen, page)));
+
+  for (const [page, screen, board, pitch] of [
+    ['race', RACE, 'race.board', 34],
+    ['tower', TOWER, 'tower.board', 28],
+    ['portrait', PORTRAIT, 'portrait.board', 32],
+  ] as const) {
+    test(`${page}: the board's header row and first row are clear of the band`, () => {
+      const items = under(screen, page);
+      const head = items.filter((i) => i.name.startsWith(`${board}.head`));
+      const first = boardOf(screen, board);
+      const firstRow = items.filter((i) => i.layers.includes(`${board}.rows`) && i.rect.top < first.top + pitch);
+      expect(head.length).toBeGreaterThan(0);
+      expect(firstRow.length).toBeGreaterThan(0);
+      for (const item of [...head, ...firstRow]) {
+        expect({ page, item: item.name, rect: item.rect, clear: !overlaps(item.rect, bandOf(screen, page)) }).toMatchObject({ clear: true });
+      }
+    });
+  }
+
+  test('race and tower: the band takes the foot of the board column, which no row reaches', () => {
+    expect({ race: bandOf(RACE, 'race'), tower: bandOf(TOWER, 'tower') }).toEqual({ race: FLAG_BAND.race, tower: FLAG_BAND.tower });
+    expect(covered(RACE, 'race')).toEqual([]);
+    expect(covered(TOWER, 'tower')).toEqual([]);
+    // The tower's thirty-three rows end exactly where the band begins.
+    expect(boardOf(TOWER, 'tower.board').bottom).toBe(FLAG_BAND.tower.top);
+  });
+
+  test('telemetry: the band covers the axis footer and the rule over it, and no trace', () => {
+    expect([...new Set(covered(TELEMETRY, 'telemetry').map((i) => i.name))].sort()).toEqual([
+      'telemetry.axisEnd',
+      'telemetry.axisName',
+      'telemetry.axisStart',
+      'telemetry.steering.rule',
+    ]);
+  });
+
+  test('portrait: the band takes the foot the board column keeps for it, under P24', () => {
+    expect(bandOf(PORTRAIT, 'portrait')).toEqual(FLAG_BAND.portrait);
+    expect(covered(PORTRAIT, 'portrait')).toEqual([]);
+    // All twenty-four rows end exactly where the band begins, and the rule closing the column under it.
+    const board = boardOf(PORTRAIT, 'portrait.board');
+    expect(board.bottom).toBe(FLAG_BAND.portrait.top);
+    const boardRule = placed(PORTRAIT).find((i) => i.name === 'portrait.boardRule');
+    expect(boardRule?.rect.top).toBe(bottom(FLAG_BAND.portrait));
+  });
+
 });

@@ -427,13 +427,38 @@ const vRule = (name: string, x: number, top: number, height: number): Item => ru
  * One number for all four pages rather than a fraction of each, because a flag is read from across
  * the room and not from a seat: the band has to be the same object on a 1920 x 1080 wall and on a
  * 1080 x 1920 one, and a proportion would draw it half as tall on the page that is twice as wide.
- * 64 px is what the header beside it takes and is the tallest band that still leaves the board's
- * first rows visible on every page.
  */
 const FLAG_BAND_HEIGHT = PIT_WALL_HEADER.height;
 
 /**
- * The two flag formats, drawn over one page's body and gated on `PitWallFlagFormat`.
+ * Where the band goes: across the foot of the page's left-hand column, the board's or the plot's,
+ * over the last {@link FLAG_BAND_HEIGHT} of it.
+ *
+ * It used to sit directly under the header, the width of the page, and that is the one place on a
+ * pit wall it cannot go. A board's 32 px header row is followed at once by P1, so a 64 px band there
+ * took the column headings and the leader's whole row, which is often the car the wall is watching,
+ * and cut the panels and zones beside the board through their titles (#1016). Pushing the body down
+ * instead would mean binding the `Top` of every item under the band, the board's stamped rows among
+ * them, on the band's whole twenty-condition reading, and a bound `Top` inside a repeated layer is
+ * something no page here does and no VM check has shown. So the band takes room the board does not
+ * use.
+ *
+ * That room is at the foot of the column, because a board opens against its header and whatever the
+ * field is short of falls at the bottom. On the race and tower pages the band covers nothing, on the
+ * telemetry page only the axis footer, and the portrait page keeps a foot for it under its board.
+ * docs/second-screens.md has the arithmetic page by page; `pitwallGeometry.test.ts` pins it.
+ *
+ * The column and not the page's width, because the right-hand column is panels and zones to its
+ * last pixel on every landscape page, and a band across it would cut them again. The header still
+ * writes the flag's name beside the session, so the page says what is out from its top as well.
+ */
+function flagBandRect(column: Rect): Rect {
+  return rect(column.left, column.top + column.height - FLAG_BAND_HEIGHT, column.width, FLAG_BAND_HEIGHT);
+}
+
+/**
+ * The two flag formats, gated on `PitWallFlagFormat`: the band over `band`, the full flag over the
+ * page's body.
  *
  * Both are drawn and at most one shows, the way the companion and the face do it: a layer whose
  * Visible is false leaves its children's bindings unevaluated, so the format that is not chosen
@@ -441,15 +466,14 @@ const FLAG_BAND_HEIGHT = PIT_WALL_HEADER.height;
  *
  * Neither covers the header. It says which page is up, what the session is and how much of it is
  * left, and those are the first things somebody asks *after* seeing a flag; the companion keeps its
- * own header for the same reason. The band sits directly under it so that it reads as one strip
- * with the page's identity, and the full flag takes the body and nothing above it.
+ * own header for the same reason. The full flag takes the body and nothing above it.
  */
-function flagLayers(name: string, body: Rect): Item[] {
+function flagLayers(name: string, body: Rect, band: Rect): Item[] {
   return [
     withMoreBindings({
       kind: 'layer',
       name: `${name}.flag`,
-      children: flagStrip(rect(body.left, body.top, body.width, FLAG_BAND_HEIGHT), FLAG_STRIP_STYLES.standard, `${name}.flag`),
+      children: flagStrip(band, FLAG_STRIP_STYLES.standard, `${name}.flag`),
     }, { Visible: secondScreen.pitWallFlagFormatIs('band') }),
     withMoreBindings({
       kind: 'layer',
@@ -497,7 +521,7 @@ export function racePage(width: number, height: number): Screen {
   items.push(zoneWidget('race.zoneA', rect(columnLeft, y, columnWidth, zoneHeight), 'standard', 'race', 'A'));
   items.push(rule('race.zoneRule', columnLeft, y + zoneHeight, columnWidth, 1));
   items.push(zoneWidget('race.zoneB', rect(columnLeft, y + zoneHeight + 1, columnWidth, zoneHeight), 'standard', 'race', 'B'));
-  items.push(...flagLayers('race', rect(0, bodyTop, width, bodyHeight)));
+  items.push(...flagLayers('race', rect(0, bodyTop, width, bodyHeight), flagBandRect(rect(0, bodyTop, boardWidth, bodyHeight))));
   return { name: 'race', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(0) };
 }
 
@@ -525,7 +549,7 @@ export function towerPage(width: number, height: number): Screen {
     vRule('tower.zoneRule', columnLeft + zoneWidth, zonesTop, zoneHeight),
     zoneWidget('tower.zoneB', rect(columnLeft + zoneWidth + 1, zonesTop, zoneWidth, zoneHeight), 'standard', 'tower', 'B'),
   ];
-  items.push(...flagLayers('tower', rect(0, bodyTop, width, bodyHeight)));
+  items.push(...flagLayers('tower', rect(0, bodyTop, width, bodyHeight), flagBandRect(rect(0, bodyTop, boardWidth, bodyHeight))));
   return { name: 'tower', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(1) };
 }
 
@@ -569,7 +593,7 @@ export function telemetryPage(width: number, height: number): Screen {
     items.push(zoneWidget(`telemetry.zone${letter}`, rect(zoneLeft, top, zoneWidth, zoneHeight), 'standard', 'telemetry', letter));
     if (i < 2) items.push(rule(`telemetry.zone${letter}.rule`, zoneLeft, top + zoneHeight, zoneWidth, 1));
   });
-  items.push(...flagLayers('telemetry', rect(0, bodyTop, width, bodyHeight)));
+  items.push(...flagLayers('telemetry', rect(0, bodyTop, width, bodyHeight), flagBandRect(rect(0, bodyTop, plotWidth, bodyHeight))));
   return { name: 'telemetry', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items, enabledExpression: secondScreen.pitWallPageIs(2) };
 }
 
@@ -596,11 +620,16 @@ export function portraitPage(width: number, height: number): Screen {
   // `PitWall1080x1920` draws this band 856 px tall, which is 32 + 2 x 28 + 24 x 32: a header, two
   // class bands and the field. The bands are a picture of data SimHub does not publish, as the head
   // of this file says, so the board is composed from the parts it does draw instead of keeping a
-  // total that only matches the sheet by accident. The 56 px the bands would have taken go to what
-  // follows the board rather than to an empty strip under the last car, which is what the sheet's
-  // own column does with them: every band under the board is laid out after it, not against it.
+  // total that only matches the sheet by accident.
+  //
+  // What the column keeps under its last row instead is a foot for the flag band (#1016). A board
+  // cut to its rows has none, and the band would take P23 and P24 off a full grid whenever a flag is
+  // out, the player's own row among them when that is where they run; every other strip of this
+  // page is a panel or a zone whose text it would cut. The 64 px come out of the zones, 32 each, which leaves them 4 px
+  // short of the sheet's own 443, and the column 8 px taller than the sheet's 856.
   const boardHeight = boardHeightOf({ rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT });
-  const panelTop = bodyTop + boardHeight + 1;
+  const boardColumn = boardHeight + FLAG_BAND_HEIGHT;
+  const panelTop = bodyTop + boardColumn + 1;
   const panelHeight = 110;
   const zonesTop = panelTop + panelHeight + 1;
   const zoneHeight = Math.floor((height - zonesTop - 1) / 2);
@@ -613,7 +642,7 @@ export function portraitPage(width: number, height: number): Screen {
   const items: Item[] = [
     ...pitWallHeader('portrait.header', { frame: rect(0, 0, width, PIT_WALL_HEADER.height), pageName: 'Pit wall · portrait', page: 1, pages: 1, compact: true }),
     ...table({ name: 'portrait.board', frame: rect(0, bodyTop, width, boardHeight), columns: PORTRAIT_COLUMNS, mode: 'full', classOnly: secondScreen.classOnly(), density: DENSITY, rows: PIT_WALL_ROWS, rowHeight: PORTRAIT_ROW_HEIGHT, board: true }),
-    rule('portrait.boardRule', 0, bodyTop + boardHeight, width, 1),
+    rule('portrait.boardRule', 0, bodyTop + boardColumn, width, 1),
     ...sessionPanel('portrait.session', rect(0, panelTop, half, panelHeight)),
     vRule('portrait.panelRule', half, panelTop, panelHeight),
     ...lapDataPanel('portrait.lapData', rect(half + 1, panelTop, rightWidth, panelHeight)),
@@ -626,7 +655,7 @@ export function portraitPage(width: number, height: number): Screen {
     vRule('portrait.zoneRuleBottom', half, zonesTop + zoneHeight + 1, zoneHeight),
     zoneWidget('portrait.zoneD', rect(half + 1, zonesTop + zoneHeight + 1, rightWidth, zoneHeight), 'standard', 'portrait', 'D'),
   ];
-  items.push(...flagLayers('portrait', rect(0, bodyTop, width, height - bodyTop)));
+  items.push(...flagLayers('portrait', rect(0, bodyTop, width, height - bodyTop), flagBandRect(rect(0, bodyTop, width, boardColumn))));
   return { name: 'portrait', inGame: true, idle: false, pit: false, backgroundColor: ds.color.surface.base, items };
 }
 
