@@ -246,8 +246,9 @@ describe('settings', () => {
     // the plugin had to say whether SimHub holds the track's outline, which no property of SimHub's says
     // (#555), and 667 before four more said which flag a sim whose own summary is wrong is showing (#1129).
     // And 671 before the plugin had to time the stop in the pit box, which Le Mans Ultimate's reader times
-    // over the whole pit lane (#1130).
-    expect(props).toHaveLength(673);
+    // over the whole pit lane (#1130). And 673 before one more said whether the running sim's radar waits
+    // for the track's outline, which only iRacing's does (#1176).
+    expect(props).toHaveLength(674);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -402,6 +403,9 @@ describe('settings', () => {
         'BlackFlagShown',
         'WhiteFlagShown',
         'ChequeredFlagShown',
+        // And whether the sim's radar draws its cars through the recorded track map, which only iRacing's
+        // does. #1176.
+        'RadarNeedsTrackMap',
         // And whether SimHub holds the track's outline, published rather than chosen and asked of the same
         // track by every screen that draws its map. #555.
         'TrackMapRecorded',

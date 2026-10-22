@@ -303,6 +303,7 @@ OpenDash.YellowFlagShown
 OpenDash.BlackFlagShown
 OpenDash.WhiteFlagShown
 OpenDash.ChequeredFlagShown
+OpenDash.RadarNeedsTrackMap
 OpenDash.TrackMapRecorded
 OpenDash.PitStopSeconds
 OpenDash.LastPitStopSeconds

@@ -175,11 +175,24 @@ namespace OpenDashPlugin
         /// </summary>
         public const string ChequeredFlagShown = "ChequeredFlagShown";
 
+        /// <summary>
+        /// Whether the sim's radar places the cars through the track outline SimHub records, so that it draws none
+        /// until <see cref="TrackMapRecorded"/> is true. See <see cref="CarHasPitLimiter"/>. #1176.
+        /// </summary>
+        /// <remarks>
+        /// SimHub's RadarItem draws no car while PersistantTrackerPlugin.GetMap() is null and the frame carries
+        /// RelativeCarCoordinates, and only the iRacing reader fills GD_RelativeCarCoordinates: Assetto Corsa, ACC
+        /// and Le Mans Ultimate draw from the cars' own coordinates with no map at all. A fact of the reader, so a
+        /// constant per row. The radar reads it beside TrackMapRecorded to say why its plot is empty.
+        /// </remarks>
+        public const string RadarNeedsTrackMap = "RadarNeedsTrackMap";
+
         /// <summary>Every capability, in the order they are attached. ADR 0021.</summary>
         public static readonly string[] Capabilities =
         {
             CarHasPitLimiter, PitLimiterOn, DamageReported, DriverInCar,
             YellowFlagShown, BlackFlagShown, WhiteFlagShown, ChequeredFlagShown,
+            RadarNeedsTrackMap,
         };
 
         /// <summary>

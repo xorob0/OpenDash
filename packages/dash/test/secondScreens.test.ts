@@ -1773,6 +1773,61 @@ describe('the radar is cut from its box', () => {
     });
   }
 
+  /**
+   * On iRacing SimHub's radar places the cars through the outline it records, so it draws none until a
+   * lap has recorded the track, and the plot read as a broken radar on a driver's first visit (#1176).
+   * The plugin says which kind of reader is running and whether the outline exists; the plot says what
+   * the track module says while both call for it, and the radar is drawn as before otherwise.
+   */
+  describe('says the track waits for a lap on a sim whose radar needs the recorded map', () => {
+    const visible = (item: Item, props: Props): boolean => Boolean(evalNcalc(bindingExpression(item as TextItem, 'Visible'), props));
+    const frame = (needs: boolean | undefined, recorded: boolean | undefined): Props => ({
+      ...(needs === undefined ? {} : { [`${PROPERTY_PREFIX}.RadarNeedsTrackMap`]: needs }),
+      ...(recorded === undefined ? {} : { [`${PROPERTY_PREFIX}.TrackMapRecorded`]: recorded }),
+    });
+    const plotNames = ['radar.grid0', 'radar.grid1', 'radar.grid2', 'radar.centre', 'radar.you'];
+
+    test('the notice is shown on iRacing with the map unrecorded, and hidden once it is and on Assetto Corsa', () => {
+      const items = build(802, 336, 'companion');
+      const notice = items.find((i): i is TextItem => i.name === 'radar.map.placeholder')!;
+      expect(notice.text).toBe('Track · Drive a lap to record it');
+      const plot = [radarIn(items), ...items.filter((i) => plotNames.includes(i.name))];
+      expect(plot).toHaveLength(6);
+      const flanks = items.filter((i) => i.name === 'radar.left' || i.name === 'radar.right');
+      const cases = {
+        iRacingUnrecorded: frame(true, false),
+        iRacingRecorded: frame(true, true),
+        assettoCorsaUnrecorded: frame(false, false),
+        // A plugin on a sim its table has no row for answers TrackMapRecorded but not RadarNeedsTrackMap.
+        unclaimedSimUnrecorded: frame(undefined, false),
+        noPlugin: frame(undefined, undefined),
+      };
+      const seen = Object.fromEntries(
+        Object.entries(cases).map(([name, props]) => [name, { notice: visible(notice, props), plot: plot.every((i) => visible(i, props)) }]),
+      );
+      expect(seen).toEqual({
+        iRacingUnrecorded: { notice: true, plot: false },
+        iRacingRecorded: { notice: false, plot: true },
+        assettoCorsaUnrecorded: { notice: false, plot: true },
+        unclaimedSimUnrecorded: { notice: false, plot: true },
+        noPlugin: { notice: false, plot: true },
+      });
+      // The spotter needs no map on any sim, so the flanks are never hidden behind the notice.
+      for (const flank of flanks) expect(flank.bindings?.Visible).toBeUndefined();
+    });
+
+    for (const box of moduleBoxes()) {
+      test(`the notice stays in the plot on a ${box.name}`, () => {
+        const items = MODULES.find((m) => m.id === 'radar')!.build({ frame: box.frame, density: box.density, prefix: 'radar.' });
+        const plot = radarIn(items).rect;
+        const lines = items.filter((i): i is TextItem => i.kind === 'text' && i.name.startsWith('radar.map.placeholder'));
+        expect(lines.length).toBeGreaterThan(0);
+        expect(lines.map((l) => l.text).join(' ')).toMatch(/Drive a lap to record it$/);
+        for (const line of lines) expect({ box: box.name, line: line.text, inside: contains(plot, line.rect) }).toMatchObject({ inside: true });
+      });
+    }
+  });
+
   test('the spotter flanks are a proportion of the width and turn red on the side being called', () => {
     const flanksOf = (w: number, h: number): RectangleItem[] => build(w, h).filter((i): i is RectangleItem => i.name === 'radar.left' || i.name === 'radar.right');
     expect(flanksOf(802, 336).map((i) => i.rect.width)).toEqual([64, 64]);

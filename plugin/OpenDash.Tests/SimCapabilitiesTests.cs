@@ -67,7 +67,7 @@ namespace OpenDashPlugin.Tests
                 (Raw + "Telemetry.dcPitSpeedLimiterToggle", false),
                 (GameData + "PitLimiterOn", 1),
                 (Raw + "Telemetry.IsOnTrack", true));
-            Assert.Same(SimReport.Of(true, true, false, true), SimCapabilities.Read("IRacing", frame));
+            Assert.Same(SimReport.Of(true, true, false, true, null, null, null, null, true), SimCapabilities.Read("IRacing", frame));
         }
 
         [Fact]
@@ -379,6 +379,22 @@ namespace OpenDashPlugin.Tests
         }
 
         [Fact]
+        public void Only_iRacings_radar_needs_the_recorded_map()
+        {
+            // RadarItem draws no car while SimHub holds no outline and the frame carries RelativeCarCoordinates,
+            // which only the iRacing reader fills; the other three draw from the cars' own coordinates. A fact of
+            // the reader, so it is answered on an empty frame and through a property that cannot be read. #1176.
+            var claimed = new[] { "IRacing", "AssettoCorsa", "AssettoCorsaCompetizione", "LMU" };
+            Func<string, object> broken = name => throw new InvalidOperationException("SimHub could not evaluate " + name);
+            foreach (var frame in new[] { Frame(), broken })
+            {
+                var needs = claimed.Select(g => SimCapabilities.Read(g, frame).RadarNeedsTrackMap).ToArray();
+                Assert.Equal(new bool?[] { true, false, false, false }, needs);
+            }
+            Assert.Null(SimCapabilities.Read("RFactor2", Frame()).RadarNeedsTrackMap);
+        }
+
+        [Fact]
         public void A_property_that_cannot_be_read_is_an_answer_not_given_and_never_an_exception()
         {
             Func<string, object> broken = name => throw new InvalidOperationException("SimHub could not evaluate " + name);
@@ -428,8 +444,8 @@ namespace OpenDashPlugin.Tests
             // An answer left off the end is unknown, so a report of the first four is the same instance as one
             // that says the flags are unknown.
             Assert.Null(a.Read(Contract.YellowFlagShown));
-            Assert.Same(a, SimReport.Of(true, null, false, true, null, null, null, null));
-            Assert.Equal("limiter yes, on unknown, damage no, in the car yes, yellow unknown, black unknown, white unknown, chequered unknown", a.ToString());
+            Assert.Same(a, SimReport.Of(true, null, false, true, null, null, null, null, null));
+            Assert.Equal("limiter yes, on unknown, damage no, in the car yes, yellow unknown, black unknown, white unknown, chequered unknown, radar needs the map unknown", a.ToString());
             var flags = SimReport.Of(null, null, null, null, true, false, null, true);
             Assert.Same(flags, SimReport.Of(null, null, null, null, true, false, null, true));
             Assert.Equal(true, flags.YellowFlagShown);
@@ -437,6 +453,8 @@ namespace OpenDashPlugin.Tests
             Assert.Null(flags.WhiteFlagShown);
             Assert.Equal(true, flags.ChequeredFlagShown);
             Assert.Equal(true, flags.Read(Contract.ChequeredFlagShown));
+            Assert.Null(flags.RadarNeedsTrackMap);
+            Assert.Equal(true, SimReport.Of(null, null, null, null, null, null, null, null, true).RadarNeedsTrackMap);
         }
 
         [Fact]
@@ -448,6 +466,7 @@ namespace OpenDashPlugin.Tests
             {
                 "CarHasPitLimiter", "PitLimiterOn", "DamageReported", "DriverInCar",
                 "YellowFlagShown", "BlackFlagShown", "WhiteFlagShown", "ChequeredFlagShown",
+                "RadarNeedsTrackMap",
             }, Contract.Capabilities);
             var shared = Contract.SharedPropertyNames().ToList();
             Assert.Equal(Contract.Capabilities, shared.Skip(shared.IndexOf(Contract.CarHasPitLimiter)).Take(Contract.Capabilities.Length));

@@ -319,6 +319,13 @@ export const liveSettingNames = (): string[] =>
  *   never raises the chequer or the white, raises the black for a car that has retired or been
  *   disqualified, and raises the yellow for a yellow anywhere on the track. iRacing's bits answer before
  *   any of them, so iRacing's row leaves them null; `flagRaised` in `flags.ts` is where they are read.
+ * - `RadarNeedsTrackMap`: the sim's radar places the cars through the track outline SimHub records, so it
+ *   draws none until {@link TRACK_MAP_RECORDED} is true (#1176). SimHub's `RadarItem` draws no car while it
+ *   holds no outline and the frame carries `RelativeCarCoordinates`, and only iRacing's reader fills
+ *   those; Assetto Corsa, ACC and Le Mans Ultimate draw from the cars' own coordinates. A constant per row,
+ *   and the one capability whose fallback is not iRacing's answer: on a game with no row the plugin still
+ *   answers `TrackMapRecorded`, false on a track not yet recorded, and that radar needs no map, so it
+ *   falls back to false and a radar nobody has claimed is drawn as before.
  *
  * Published rather than chosen, true or false, and null with no game running or on a game the plugin's
  * table (`plugin/OpenDash/SimCapabilities.cs`) has no row for. So each is read through
@@ -340,6 +347,8 @@ export const BLACK_FLAG_SHOWN = 'BlackFlagShown';
 export const WHITE_FLAG_SHOWN = 'WhiteFlagShown';
 /** See {@link CAR_HAS_PIT_LIMITER}. */
 export const CHEQUERED_FLAG_SHOWN = 'ChequeredFlagShown';
+/** See {@link CAR_HAS_PIT_LIMITER}. */
+export const RADAR_NEEDS_TRACK_MAP = 'RadarNeedsTrackMap';
 
 /** Every capability, in the order the plugin attaches them. */
 export const CAPABILITIES = [
@@ -351,6 +360,7 @@ export const CAPABILITIES = [
   BLACK_FLAG_SHOWN,
   WHITE_FLAG_SHOWN,
   CHEQUERED_FLAG_SHOWN,
+  RADAR_NEEDS_TRACK_MAP,
 ] as const;
 export type Capability = (typeof CAPABILITIES)[number];
 

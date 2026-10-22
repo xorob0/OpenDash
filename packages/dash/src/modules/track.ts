@@ -26,13 +26,13 @@ import { label } from '../elements/label.ts';
 import type { StaticMapItem } from '../generator.ts';
 import { ds } from '../tokens.ts';
 import { placeholder } from '../second/placeholder.ts';
-import { ellipsised, GRIP_WIDEST, hasTrackState, TRACK_MAP_REASON, trackGrip, trackLengthKm, trackMapRecorded, trackName } from '../second/values.ts';
+import { ellipsised, GRIP_WIDEST, hasTrackState, TRACK_MAP_NOTICE, trackGrip, trackLengthKm, trackMapRecorded, trackName } from '../second/values.ts';
 import { defineModule } from './module.ts';
 
 const { concat, eq, fmt, iff, left, min, not, num, str } = ncalc;
 
-/** What the map's box says until SimHub has an outline to draw in it. */
-export const TRACK_MAP_NOTICE = `Track · ${TRACK_MAP_REASON}`;
+/** What the map's box says until SimHub has an outline to draw in it, which the radar says too (#1176). */
+export { TRACK_MAP_NOTICE };
 
 /**
  * The line the circuit is drawn with, cut from the map the way the gear's cell is cut from its box.
