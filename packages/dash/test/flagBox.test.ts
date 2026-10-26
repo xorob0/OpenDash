@@ -1288,6 +1288,28 @@ describe('the pit family, the spotter and the warnings', () => {
     expect(text).toInclude('isnull([DataCorePlugin.GameData.WaterTemperature], 0)');
   });
 
+  test('no warning draws a pixel in the flag yellow or the caution amber, which an LED shows as the yellow flag', () => {
+    // #1118: low fuel was the flag yellow and the oil and water the caution amber, and #794 settled
+    // on the strips that the two are one colour on an LED. A pump at the edge of vision read as a
+    // yellow flag. The warnings read the strips' lamp tokens now, and this holds them off both.
+    const forbidden = new Set([ds.purpose.flag.yellow, ds.color.caution.primary].map((c) => c.toLowerCase()));
+    const colours = (container: MatrixContainer): string[] =>
+      container.kind === 'animation' ? [...new Set(container.frames.flatMap((f) => f.pixels.flat()).filter((p): p is Hex => p !== null).map((p) => p.toLowerCase()))] : [];
+    const glyphs = all.filter((c) => c.kind === 'animation' && /^Warning \w+ glyph$/.test(c.description ?? ''));
+    // One set per panel, so every name appears once per matrix; each of them is checked below.
+    expect([...new Set(glyphs.map((g) => g.description))].sort()).toEqual(warningStates(1).map((s) => `Warning ${s.id} glyph`).sort());
+    for (const glyph of glyphs) {
+      expect(colours(glyph).length).toBeGreaterThan(0);
+      const wrong = colours(glyph).filter((p) => forbidden.has(p));
+      expect({ glyph: glyph.description, wrong }).toEqual({ glyph: glyph.description, wrong: [] });
+    }
+    // And they are the strips' own colours, so a warning is one colour on every LED of a rig.
+    const colourOf = (id: string): string[] => [...new Set(glyphs.filter((g) => g.description === `Warning ${id} glyph`).flatMap(colours))];
+    expect(colourOf('lowFuel')).toEqual([ds.purpose.light.lowFuel.toLowerCase()]);
+    expect(colourOf('oilHot')).toEqual([ds.purpose.light.temperature.toLowerCase()]);
+    expect(colourOf('waterHot')).toEqual([ds.purpose.light.temperature.toLowerCase()]);
+  });
+
   test('no two of these states draw the same picture', () => {
     const grids = [...pitStates(), ...spotterStates(1), ...warningStates(1)].map((s) => s.grid.join('|'));
     expect(new Set(grids).size).toBe(grids.length);
