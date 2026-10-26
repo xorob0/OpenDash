@@ -87,7 +87,7 @@ import type { Hex, Item } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import type { ModuleContext } from './module.ts';
 
-const { concat, str, fmt } = ncalc;
+const { concat, str, fmt, ne } = ncalc;
 
 /** Between the heading, the identity row and the gap row of one block. */
 const INNER_GAP = 6;
@@ -368,7 +368,9 @@ function block(ctx: ModuleContext, side: Side, box: Column, type: BlockType, kee
         }
         if (cell.id === 'num') items.push(...field(numSpec, x, centred(numberSize) + numberSize, ctx.density, cell.width));
         if (cell.id === 'class') {
-          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: chipText(carClass(idx)), widest: CHIP_WIDEST, width: cell.width }));
+          // Hidden, box and text, for a car with no class name, as the Class column is (#1013).
+          const text = chipText(carClass(idx));
+          items.push(...chip(`${ctx.prefix}${side.id}.class`, 'GT3', x, centred(d.chipHeight), ctx.density, { bind: text, widest: CHIP_WIDEST, width: cell.width, visibleBind: ne(text, str('')) }));
         }
         x += cell.width + IDENTITY_GAP;
       }

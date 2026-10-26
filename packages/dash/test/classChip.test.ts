@@ -5,7 +5,8 @@
  * empty drew the chip's grey box with nothing in it, and a session whose cars carry no class drew one
  * on every row of every leaderboard and pit wall board. What is pinned here is that the chip, box and
  * text, carries a Visible that hides it for a car whose class is empty or null and shows it for a car
- * with a class, on every board and list the build draws the column on.
+ * with a class, on every board and list the build draws the column on, and on the opponents page beside the car
+ * ahead and the car behind.
  */
 import { describe, expect, test } from 'bun:test';
 import type { Item } from '../src/generator.ts';
@@ -17,7 +18,7 @@ import { moduleBoxes } from './secondScreens.test.ts';
 
 const flat = (items: readonly Item[]): Item[] => items.flatMap((i) => [...walkItems([i])]);
 
-/** Every class chip, block and text, the build draws: the pit wall boards and the leaderboard at every box. */
+/** Every class chip, block and text, the build draws: the pit wall boards, and the leaderboard and the opponents page at every box. */
 function chips(): { where: string; item: Item }[] {
   const found: { where: string; item: Item }[] = [];
   const collect = (where: string, items: readonly Item[]): void => {
@@ -26,8 +27,10 @@ function chips(): { where: string; item: Item }[] {
   for (const [page, screen] of [['race', racePage(1920, 1080)], ['tower', towerPage(1920, 1080)], ['portrait', portraitPage(1080, 1920)]] as const) {
     collect(`${page} board`, screen.items);
   }
-  const leaderboard = MODULES.find((m) => m.id === 'leaderboard')!;
-  for (const box of moduleBoxes()) collect(`leaderboard ${box.name}`, leaderboard.build({ frame: box.frame, density: box.density, prefix: '' }));
+  for (const id of ['leaderboard', 'opponents']) {
+    const module = MODULES.find((m) => m.id === id)!;
+    for (const box of moduleBoxes()) collect(`${id} ${box.name}`, module.build({ frame: box.frame, density: box.density, prefix: '' }));
+  }
   return found;
 }
 
@@ -52,9 +55,9 @@ function shows(item: Item, carClass: string | null): boolean {
 describe('the class chip', () => {
   const found = chips();
 
-  test('is drawn on the three pit wall boards and on the leaderboard', () => {
+  test('is drawn on the three pit wall boards, on the leaderboard and on the opponents page', () => {
     const where = new Set(found.map((c) => c.where.split(' ')[0]));
-    expect([...where].sort()).toEqual(['leaderboard', 'portrait', 'race', 'tower']);
+    expect([...where].sort()).toEqual(['leaderboard', 'opponents', 'portrait', 'race', 'tower']);
   });
 
   test('is hidden, box and text, for a car whose class name is empty', () => {
