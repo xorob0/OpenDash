@@ -277,7 +277,7 @@ namespace OpenDashPlugin
             return seen;
         }
 
-        private static IList<DeviceInstance> Roots()
+        internal static IList<DeviceInstance> Roots()
         {
             try
             {
@@ -385,7 +385,7 @@ namespace OpenDashPlugin
         /// anything. Only on the interface thread, which is where every walk runs; anywhere else the device
         /// is declined rather than a control built off the thread that owns it.
         /// </remarks>
-        private static LedModuleSettings EditorModule(DeviceInstance root)
+        internal static LedModuleSettings EditorModule(DeviceInstance root)
         {
             LedModuleSettings cached;
             if (EditorModules.TryGetValue(root, out cached)) return cached;
@@ -491,7 +491,7 @@ namespace OpenDashPlugin
 
         /// <summary>The device's name, with the module's own behind it when the two differ: a wheel the
         /// user renamed reads as they named it, and one they did not reads as its model.</summary>
-        private static string NameOf(DeviceInstance root, LedModuleSettings settings)
+        internal static string NameOf(DeviceInstance root, LedModuleSettings settings)
         {
             var given = root == null ? null : root.MainDisplayName;
             var model = settings == null ? null : settings.DeviceName;

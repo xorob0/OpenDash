@@ -402,7 +402,7 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What may take the matrix over, in the flag box's order, each with its switch and the options that
-        /// belong to it; then what it shows when nothing does, and the device row #363 builds.
+        /// belong to it; then what it shows when nothing does, and which of SimHub's devices it is (#363).
         /// </summary>
         private FrameworkElement BuildMatrixPriority(int matrix, Action repaint)
         {
@@ -500,9 +500,7 @@ namespace OpenDashPlugin
             idle.Add(Ui.Soon(MatrixOption(PanelSoon.RpmColourForEverything.Title, null, Ui.Switch(true, null)), PanelSoon.RpmColourForEverything));
             var idleLayer = MatrixLayer(idle.ToArray());
 
-            var device = MatrixLayer(Ui.Soon(
-                MatrixLayerHead(null, PanelSoon.SimHubDevice.Title, null, null, Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)),
-                PanelSoon.SimHubDevice));
+            var device = MatrixLayer(BuildMatrixDeviceRow(m));
 
             return Ui.Anchor(Ui.VStack(0,
                 head,
@@ -511,7 +509,7 @@ namespace OpenDashPlugin
                 Ui.Anchor(spotter, PanelMatrix.AnchorSpotter),
                 Ui.Anchor(warnings, PanelMatrix.AnchorWarnings),
                 Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay),
-                device), PanelMatrix.AnchorPriority);
+                Ui.Anchor(device, PanelMatrix.AnchorDevice)), PanelMatrix.AnchorPriority);
         }
 
         /// <summary>The artboard's .layer: a rule over a layer's line and the options under it.</summary>
@@ -660,6 +658,35 @@ namespace OpenDashPlugin
             };
         }
 
+        /// <summary>
+        /// The SimHub device row: which of SimHub's matrices this one is, so the flag box profile is installed into
+        /// that device's own list (#363).
+        /// </summary>
+        /// <remarks>
+        /// The strip's row in its three shapes (PanelMatrixDevices.DeviceRow). A pick records the device and does not
+        /// install: the profile is one for every matrix and is installed by the header's press, which a pick turns
+        /// back to Install while the new device lacks it -- the press stays the driver's, as every install is.
+        /// </remarks>
+        private FrameworkElement BuildMatrixDeviceRow(int matrix)
+        {
+            var current = Settings.MatrixDevice(matrix);
+            var row = PanelMatrixDevices.DeviceRow(MatrixTargets.Entries(matrixDevices.Targets), current);
+            if (!row.HasPicker) return MatrixLayerHead(null, PanelMatrixDevices.DeviceTitle, row.Caption, null, null);
+            var ids = row.Ids;
+            var labels = row.Labels;
+            var picker = Ui.ChoiceButton(labels.ToArray(), row.Selected, k =>
+            {
+                if (string.Equals(ids[k], current, StringComparison.Ordinal)) return;
+                Settings.SetMatrixDevice(matrix, ids[k]);
+                Save();
+                Redraw();
+            }, PanelLeds.DevicePickerMinWidth);
+            // Bounded as the strip's is, so a long device name trims inside the button; the whole name is the hover.
+            picker.MaxWidth = PanelLeds.DevicePickerMaxWidth;
+            if (row.Selected >= 0) picker.ToolTip = labels[row.Selected];
+            return MatrixLayerHead(null, PanelMatrixDevices.DeviceTitle, row.Caption, null, picker);
+        }
+
         /// <summary>Naming a new matrix, in the sheet: which content it will be and the step on the device.</summary>
         private void ShowAddMatrix()
         {
@@ -671,7 +698,9 @@ namespace OpenDashPlugin
             // the shell's to drop (SettingsControl.Sheet.cs).
             add.Click += (sender, args) =>
             {
-                var added = Settings.AddMatrixPanel(name.Text);
+                // On the device a first matrix most likely is: a wheel's own 8x8 over the Arduino's (#363). The
+                // device row on the new matrix shows it, and changes it.
+                var added = Settings.AddMatrixPanel(name.Text, MatrixTargets.Preferred(matrixDevices.Targets));
                 Save();
                 if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added));
                 Redraw();

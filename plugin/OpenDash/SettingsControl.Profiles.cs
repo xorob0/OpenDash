@@ -217,7 +217,8 @@ namespace OpenDashPlugin
         {
             try
             {
-                return FlagBoxInstaller.Plan(plugin.FlagBoxJson);
+                var targets = matrixDevices.Targets;
+                return FlagBoxInstaller.Plan(plugin.FlagBoxJson, FlagBoxDevices(targets), targets);
             }
             catch (Exception ex)
             {
@@ -226,12 +227,20 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>The matrix devices the flag box profile goes to: every device a matrix names, and on a rig with no
+        /// matrix the one a first matrix would open on (PanelMatrixDevices.Wanted, #363).</summary>
+        private IList<string> FlagBoxDevices(IList<MatrixTarget> targets)
+        {
+            return PanelMatrixDevices.Wanted(Settings.MatrixPanels().Select(Settings.MatrixDevice), MatrixTargets.Preferred(targets));
+        }
+
         /// <summary>Installs the flag box profile into SimHub's matrix settings. A press, never on its own.</summary>
         private FlagBoxPlan InstallFlagBox()
         {
             try
             {
-                return FlagBoxInstaller.Install(plugin.FlagBoxJson);
+                var targets = matrixDevices.Targets;
+                return FlagBoxInstaller.Install(plugin.FlagBoxJson, FlagBoxDevices(targets), targets);
             }
             catch (Exception ex)
             {

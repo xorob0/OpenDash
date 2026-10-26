@@ -60,34 +60,64 @@ namespace OpenDashPlugin
             return ProfileInstall.Driver(s => s.RGBMatrixDriver, "matrix");
         }
 
-        /// <summary>The profiles SimHub currently holds, or null when the driver is unreachable.</summary>
-        public static List<InstalledProfile> Installed()
+        /// <summary>The profiles one matrix device holds, or null when it cannot be read.</summary>
+        public static List<InstalledProfile> Installed(MatrixTarget target)
         {
-            var settings = Driver()?.Settings;
+            var settings = target?.Settings;
             return settings == null ? null : ProfileInstall.Census(settings.Profiles, "matrix");
         }
 
-        /// <summary>What the panel shows: the embedded profile compared with what SimHub holds.</summary>
-        public static FlagBoxPlan Plan(string embeddedJson)
+        /// <summary>
+        /// What the panel shows: the embedded profile compared with what every device a matrix names holds, read
+        /// as one answer (<see cref="PanelMatrixDevices.Combine"/>). A device SimHub no longer lists is unavailable.
+        /// </summary>
+        /// <remarks>
+        /// The devices are <see cref="PanelMatrixDevices.Wanted"/>; before #363 there was one, the Arduino matrix,
+        /// and a matrix built into a wheel never saw the profile.
+        /// </remarks>
+        public static FlagBoxPlan Plan(string embeddedJson, IEnumerable<string> devices, IList<MatrixTarget> targets)
         {
             var embedded = Parse(embeddedJson);
             if (embedded == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-            return FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed());
+            var plans = new List<FlagBoxPlan>();
+            foreach (var device in devices ?? Enumerable.Empty<string>())
+            {
+                var target = MatrixTargets.Find(device, targets);
+                plans.Add(target?.Settings == null
+                    ? new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }
+                    : FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed(target)));
+            }
+            return PanelMatrixDevices.Combine(plans);
         }
 
         /// <summary>
-        /// Adds the profile to SimHub, replacing an older copy of our own, and asks SimHub to save.
+        /// Adds the profile to every device a matrix names, replacing an older copy of our own in each, asks SimHub
+        /// to save each, and reads the answers as one (<see cref="PanelMatrixDevices.Combine"/>).
         ///
         /// Runs on the UI thread: `Profiles` is an ObservableCollection and WPF bindings are watching
         /// it, so mutating it from a worker would throw. The button's click handler is already there.
         /// </summary>
-        public static FlagBoxPlan Install(string embeddedJson)
+        /// <remarks>
+        /// Each device gets a profile object of its own, parsed afresh: SimHub's profile carries its settings
+        /// (`profile.Settings`), so one object cannot sit in two devices' lists.
+        /// </remarks>
+        public static FlagBoxPlan Install(string embeddedJson, IEnumerable<string> devices, IList<MatrixTarget> targets)
+        {
+            if (Parse(embeddedJson) == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
+            var results = new List<FlagBoxPlan>();
+            foreach (var device in devices ?? Enumerable.Empty<string>())
+            {
+                results.Add(Install(embeddedJson, MatrixTargets.Find(device, targets)));
+            }
+            return PanelMatrixDevices.Combine(results);
+        }
+
+        /// <summary>The install into one matrix device; unavailable when there is no such device.</summary>
+        private static FlagBoxPlan Install(string embeddedJson, MatrixTarget target)
         {
             var embedded = Parse(embeddedJson);
             if (embedded == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-
-            var driver = Driver();
-            var settings = driver?.Settings;
+            var settings = target?.Settings;
             if (settings == null) return new FlagBoxPlan { State = FlagBoxInstallState.Unavailable };
 
             var lists = ListsOf(settings);
@@ -95,9 +125,10 @@ namespace OpenDashPlugin
                 lists,
                 new object[] { embedded },
                 index => AddToSaved(settings, embedded, lists),
-                driver.SaveSettings,
+                target.Save,
                 "matrix",
-                FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles))[0];
+                FlagBoxInstallPlan.BuiltInModeOf(settings.HasBuiltInProfiles, settings.UseBuiltInProfiles),
+                target.Name)[0];
         }
 
         /// <summary>Adds to the list SimHub saves, and under the game family filter to the current family's list

@@ -891,8 +891,6 @@ namespace OpenDashPlugin
             return good ? Theme.StatusUpToDate : Theme.Caution;
         }
 
-        /// <summary>The greyed press on the SimHub device row (#363).</summary>
-        public const string SimHubDeviceButton = "Choose a device";
 
         // The list, as Matrix.dc.html draws it: the heading 8 over the first rule; each layer a rule over a
         // 12-padded line of its number (16 in the display family, 14 wide), 12, its name at 15 and its switch;
@@ -929,6 +927,8 @@ namespace OpenDashPlugin
         public const string AnchorSpotterAnimation = "matrix.spotter-animation";
         public const string AnchorWarnings = "matrix.warnings";
         public const string AnchorIdleDisplay = "matrix.idle-display";
+        /// <summary>The selected matrix's SimHub device row (#363).</summary>
+        public const string AnchorDevice = "matrix.device";
 
         /// <summary>Whether search lists a row of this page on a rig of <paramref name="matrices"/> matrices: the
         /// profile's line and the cards on any rig, every other row only where there is a matrix to select, since
@@ -954,11 +954,12 @@ namespace OpenDashPlugin
             new PanelSearch.Entry(ShiftColoursTitle, PanelPage.Matrix, AnchorIdleDisplay, "gear", "revs"),
             new PanelSearch.Entry(CarShiftPointsTitle, PanelPage.Matrix, AnchorIdleDisplay, "car data", "car-specific", "thresholds"),
             new PanelSearch.Entry(RedlineFlashTitle, PanelPage.Matrix, AnchorIdleDisplay, "gear", "shift"),
+            new PanelSearch.Entry(PanelMatrixDevices.DeviceTitle, PanelPage.Matrix, AnchorDevice, "matrix device", "arduino", "wheel"),
         };
 
         /// <summary>The greyed rows this page draws (PanelSoon's named entries), which search lists unless one
         /// is InSheetOnly. PanelSoonTests holds the list to this page's own sources: draw a row, add it here.</summary>
-        public static readonly SoonItem[] SoonDrawn = { PanelSoon.PriorityOrder, PanelSoon.RpmColourForEverything, PanelSoon.SimHubDevice };
+        public static readonly SoonItem[] SoonDrawn = { PanelSoon.PriorityOrder, PanelSoon.RpmColourForEverything };
 
         /// <summary>
         /// Search labels this page draws through something other than the constant, each with the text its
