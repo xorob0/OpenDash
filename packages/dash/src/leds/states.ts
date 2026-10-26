@@ -32,9 +32,14 @@ const { and, eq, game, gt, lt, computed, not, num, str } = ncalc;
  * water in `purpose.flag.orange`, the caution amber. #794 settled on the strips that an LED draws
  * the caution amber as the flag yellow, so all three were a yellow-flag colour, and a pump glimpsed
  * at the edge of vision read as a yellow flag (#1118). The box reads the same two tokens the strips
- * do, so a warning is the same colour on every LED of a rig and none of them is the flag yellow or
- * the caution amber; flagBox.test.ts holds them off both. The shapes still carry the meaning under
- * #129's rule: the fuel orange is the meatball's, and the temperature red is speeding's.
+ * do, so by default a warning is the same colour on every LED of a rig and none of them is the flag
+ * yellow or the caution amber; flagBox.test.ts holds them off both. A driver who recolours a strip's
+ * low fuel or temperature in the panel (`LED_COLOURS`) recolours only the strip: these are baked.
+ *
+ * Neither colour is a flag's alone. The fuel orange is `color.attention.primary`, which is also
+ * `purpose.light.meatball`, and the temperature red is the face's danger red, which an LED draws
+ * close to the box's red flag. The strips accept the same overlap, and the shapes carry the meaning
+ * under #129's rule: a pump, a can and waves, never a solid panel.
  */
 export const STATE_PALETTE: Palette = {
   P: ds.purpose.pitLimiter,

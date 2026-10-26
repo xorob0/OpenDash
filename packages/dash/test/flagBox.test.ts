@@ -1293,18 +1293,28 @@ describe('the pit family, the spotter and the warnings', () => {
     // on the strips that the two are one colour on an LED. A pump at the edge of vision read as a
     // yellow flag. The warnings read the strips' lamp tokens now, and this holds them off both.
     const forbidden = new Set([ds.purpose.flag.yellow, ds.color.caution.primary].map((c) => c.toLowerCase()));
-    const colours = (container: MatrixContainer): string[] =>
-      container.kind === 'animation' ? [...new Set(container.frames.flatMap((f) => f.pixels.flat()).filter((p): p is Hex => p !== null).map((p) => p.toLowerCase()))] : [];
+    const colours = (container: MatrixContainer): string[] => {
+      if (container.kind !== 'animation') return [];
+      const lit = container.frames
+        .flatMap((f) => f.pixels.flat())
+        .filter((p): p is Hex => p !== null)
+        .map((p) => p.toLowerCase());
+      return [...new Set(lit)];
+    };
     const glyphs = all.filter((c) => c.kind === 'animation' && /^Warning \w+ glyph$/.test(c.description ?? ''));
     // One set per panel, so every name appears once per matrix; each of them is checked below.
-    expect([...new Set(glyphs.map((g) => g.description))].sort()).toEqual(warningStates(1).map((s) => `Warning ${s.id} glyph`).sort());
+    const names = [...new Set(glyphs.map((g) => g.description))].sort();
+    expect(names).toEqual(warningStates(1).map((s) => `Warning ${s.id} glyph`).sort());
     for (const glyph of glyphs) {
       expect(colours(glyph).length).toBeGreaterThan(0);
       const wrong = colours(glyph).filter((p) => forbidden.has(p));
       expect({ glyph: glyph.description, wrong }).toEqual({ glyph: glyph.description, wrong: [] });
     }
-    // And they are the strips' own colours, so a warning is one colour on every LED of a rig.
-    const colourOf = (id: string): string[] => [...new Set(glyphs.filter((g) => g.description === `Warning ${id} glyph`).flatMap(colours))];
+    // And they are the strips' own default colours, so by default a warning is one colour on every LED.
+    const colourOf = (id: string): string[] => {
+      const named = glyphs.filter((g) => g.description === `Warning ${id} glyph`);
+      return [...new Set(named.flatMap(colours))];
+    };
     expect(colourOf('lowFuel')).toEqual([ds.purpose.light.lowFuel.toLowerCase()]);
     expect(colourOf('oilHot')).toEqual([ds.purpose.light.temperature.toLowerCase()]);
     expect(colourOf('waterHot')).toEqual([ds.purpose.light.temperature.toLowerCase()]);
