@@ -268,7 +268,7 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
    */
   const SITES: readonly { name: string; frame: (seconds: number) => Props }[] = [
     { name: 'vsBest', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [NOW]: 2000 + seconds, [TO_BEST]: seconds }) },
-    { name: 'vsPrevious', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [BEFORE]: 2000 }) },
+    { name: 'vsPrevious', frame: (seconds) => ({ ...TODAY, [LAST]: 2000 + seconds, [NOW]: 2000 + seconds, [BEFORE]: 2000 }) },
   ];
 
   for (const { name, frame } of SITES) {
@@ -309,7 +309,7 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
       expect({ name, ...drawnIn(name, { ...TODAY, [LAST]: 0, [TO_BEST]: 1.5, [BEFORE]: 90 }) }).toEqual({ name, text: '--', colour: ds.color.text.dim });
     }
     // Once there is a lap to compare, the figure and its colour come back together.
-    expect(drawnIn('vsPrevious', { ...TODAY, [LAST]: 92.4, [BEFORE]: 92.1 })).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
+    expect(drawnIn('vsPrevious', { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [BEFORE]: 92.1 })).toEqual({ text: '+0.30', colour: ds.purpose.delta.slower });
     expect(drawnIn('vsBest', { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [TO_BEST]: -0.21 })).toEqual({ text: '−0.21', colour: ds.purpose.delta.faster });
   });
 
@@ -362,6 +362,43 @@ describe('the two deltas at the end of an in-lap (#886)', () => {
       const emptied: Props = { [LAST]: 92.4, [NOW]: 0, [TO_BEST]: 0, [FLAG_00]: 1, [FLAG_01]: 1 };
       expect(drawnIn('vsBest', emptied)).toEqual({ text: '--', colour: ds.color.text.dim });
       expect(drawnIn('vsPrevious', emptied)).toEqual({ text: '--', colour: ds.color.text.dim });
+    });
+  });
+
+  /**
+   * #1025: SimHub puts a lap in the ring only when it is not a test lap -- one the game called
+   * invalid, one of 5 s or less, one across a change of session type -- so after such a lap slot
+   * zero is still the lap before it, and slot one two laps back.
+   */
+  describe('after a lap SimHub left out of the ring (#1025)', () => {
+    // A lap cut and invalidated in 1:32.4, after clean laps of 1:31.0 and 1:30.5 which the ring holds.
+    // Slot zero's delta, +0.50 against a best of 1:30.5, is the 1:31.0 lap's and must not be drawn.
+    const LEFT_OUT: Props = { ...TODAY, [LAST]: 92.4, [NOW]: 91.0, [BEFORE]: 90.5, [TO_BEST]: 0.5 };
+
+    test('neither delta draws a figure taken from the lap before it', () => {
+      for (const { name } of SITES) {
+        const drawn = drawnIn(name, LEFT_OUT);
+        // Not the 1:31.0 lap's delta, and not the lap just finished against the lap two back.
+        expect({ name, text: drawn.text }).not.toEqual({ name, text: '+0.50' });
+        expect({ name, text: drawn.text }).not.toEqual({ name, text: '+1.90' });
+        expect({ name, ...drawn }).toEqual({ name, text: '--', colour: ds.color.text.dim });
+      }
+    });
+
+    test('the same ring with the lap taken draws both figures, against the right laps', () => {
+      // The lap ran clean: the ring put it in slot zero with its own delta, and 1:31.0 moved to slot one.
+      const taken: Props = { ...TODAY, [LAST]: 92.4, [NOW]: 92.4, [BEFORE]: 91.0, [TO_BEST]: 1.9 };
+      expect(drawnIn('vsBest', taken)).toEqual({ text: '+1.90', colour: ds.purpose.delta.slower });
+      expect(drawnIn('vsPrevious', taken)).toEqual({ text: '+1.40', colour: ds.purpose.delta.slower });
+    });
+
+    test('slot zero is the lap just finished to the millisecond and no further', () => {
+      // A tracker that wrote the slot from the same TimeSpan, read back through a double, is one lap.
+      const near: Props = { ...LEFT_OUT, [NOW]: 92.4 + 0.0004, [TO_BEST]: 1.9, [BEFORE]: 91.0 };
+      expect(drawnIn('vsBest', near).text).toBe('+1.90');
+      // Two laps a few thousandths apart are two laps.
+      const apart: Props = { ...near, [NOW]: 92.4 - 0.004 };
+      for (const { name } of SITES) expect({ name, text: drawnIn(name, apart).text }).toEqual({ name, text: '--' });
     });
   });
 });

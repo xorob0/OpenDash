@@ -69,6 +69,7 @@ import {
   fuelUnit,
   hasSessionLap,
   hasTime,
+  ringHasLastLap,
   LAP_TIME_WIDEST,
   lapTime,
   lastLap,
@@ -212,9 +213,16 @@ interface Comparison {
  * of the ring. The flag alone is not enough: on a car and track the database has no laps for, SimHub
  * writes slot zero's time and deltas to nought and leaves its flag at 1 from the last combination,
  * and a delta of nought would be drawn as a level `0.00`.
+ *
+ * And slot zero has to be the lap just finished, which `ringHasLastLap` asks of its time against
+ * `LastLapTime`. SimHub leaves a lap out of the ring when the game called it invalid, when it was
+ * 5 s or less, or when the session type changed across it, and after such a lap slot zero is still
+ * the lap before: the review drew that lap's delta under the lap just finished. The tracker
+ * publishes no delta for a lap it left out, and working one out here from `BestLapTime` would be a
+ * reading of a lap SimHub itself declined to count, so the field says nothing (#1025).
  */
 const vsYourBest: Comparison = {
-  shown: () => and(hasTime(lastLap()), hasSessionLap(num(0))),
+  shown: () => and(hasTime(lastLap()), ringHasLastLap()),
   seconds: () => isnull(previousLapDelta(num(0)), num(0)),
 };
 
@@ -229,9 +237,15 @@ const vsYourBest: Comparison = {
  * Two laps of this session. SimHub fills the ring from its lap database, so at the first crossing of
  * a session slot one holds the last lap of an earlier one, driven on another day or in another
  * session's conditions, and a difference against it is not the lap before this one (#1011).
+ *
+ * Slot one is the lap before only when slot zero is the lap just finished. After a lap SimHub left
+ * out of the ring (#1025, see `vsYourBest`) slot one is two laps back, and slot zero is the lap
+ * before only if that one was taken in turn, which nothing published says: a run of cut laps leaves
+ * slot zero as far back as the last clean one. So the field says nothing rather than compare with a
+ * lap it cannot name.
  */
 const vsPrevious: Comparison = {
-  shown: () => and(hasTime(lastLap()), hasSessionLap(num(1))),
+  shown: () => and(hasTime(lastLap()), ringHasLastLap(), hasSessionLap(num(1))),
   seconds: () => sub(secondsOf(lastLap()), secondsOf(previousLap(num(1)))),
 };
 
