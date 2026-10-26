@@ -303,8 +303,23 @@ export const lapTime = (ts: Expr, decimals = 3): Expr => iff(hasTime(ts), lapRea
 export const sectorTime = (ts: Expr, decimals = 2): Expr =>
   iff(hasTime(ts), fmt(secondsOf(ts), `0.${'0'.repeat(decimals)}`), str(NO_VALUE));
 
-/** Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count. */
-export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(seconds), str('-:--:--'));
+/** The longest reading {@link clock} draws, and so what a box holding one is measured by: {@link CHARS.clock} full. */
+export const CLOCK_WIDEST = '99:59:59';
+
+/** {@link CLOCK_WIDEST} in seconds, the most {@link clock} counts. */
+const CLOCK_CAP = 99 * 3600 + 59 * 60 + 59;
+
+/**
+ * Seconds as `h:mm:ss`, or `-:--:--` when there is nothing to count.
+ *
+ * Capped at {@link CLOCK_WIDEST}, the six digit cells and two colons of {@link CHARS.clock}, for the
+ * reason {@link minutesClock} is capped. The fuel time is SimHub's `Fuel_RemainingTime`, and a
+ * settled per-lap figure a hair above zero asks for a range of a hundred hours or more: 100 L at
+ * 0.01 L a lap on a 90 s lap drew `250:00:00`, seven digits in six cells, and WPF took the last glyph
+ * off it. No stint and no tank lasts four days, so the clock holds still at its widest rather than
+ * writing a digit it has no cell for. The cap is a double for the reason {@link hms} gives. #1066.
+ */
+export const clock = (seconds: Expr): Expr => iff(gt(seconds, num(0)), hms(min(real(CLOCK_CAP), seconds)), str('-:--:--'));
 
 /** The longest reading {@link minutesClock} draws, and so what a box holding one is measured by. */
 export const MINUTES_CLOCK_WIDEST = '999:59';
@@ -1596,6 +1611,22 @@ export const fuelLitres = (): Expr => iff(fuelInGallons(), div(game('Fuel'), num
 export const fuelPercent = (): Expr => isnull(computed('Fuel_Percent'), num(0));
 export const fuelPerLap = (): Expr => isnull(computed('Fuel_LitersPerLap'), num(0));
 export const fuelLapsLeft = (): Expr => isnull(computed('Fuel_RemainingLaps'), num(0));
+
+/** The longest reading {@link fuelLapsLeftText} draws, {@link CHARS.consumption} full, and what a box holding one is measured by. */
+export const FUEL_LAPS_LEFT_WIDEST = '999.9';
+
+/**
+ * The estimated laps the tank holds, to a tenth, as the fuel page's `Est. laps` draws them.
+ *
+ * Capped at {@link FUEL_LAPS_LEFT_WIDEST}, the four digit cells and a point of
+ * {@link CHARS.consumption}. No tank holds a thousand laps, but a per-lap figure a hair above zero
+ * asks for one: 9.97 L at 0.002 L a lap is `4985.0`, which band D drew as `4985.` with its tenth
+ * clipped and the AiM's foot drew as `985.0`, its leading digit dropped, which is a wrong reading
+ * rather than a cut one. The cap is a double on the left of the `min` for the reason {@link hms}
+ * gives. The figure is capped where it is drawn and not in {@link fuelLapsLeft}, which the margin and
+ * the low-fuel alarm read as it is. #1015.
+ */
+export const fuelLapsLeftText = (): Expr => fmt(min(real(999.9), fuelLapsLeft()), '0.0');
 /** The fuel range in seconds, nought when SimHub has none, guarded here for every caller as {@link sessionTimeLeft} is. */
 export const fuelTimeLeft = (): Expr => secondsOf(computed('Fuel_RemainingTime'));
 export const fuelLastLap = (): Expr => isnull(computed('Fuel_LastLapConsumption'), num(0));
@@ -2051,7 +2082,27 @@ export const fuelToEnd = (): Expr => iff(showsTimeLeft(), fuelToEndMinutes(), fu
  * is what the two boxes carrying it are measured by, since the sample is the narrow end of the range.
  */
 export const fuelToEndText = (): Expr =>
-  iff(fuelToEndIsSettled(), iff(showsTimeLeft(), signed(fuelToEndMinutes(), '0'), signed(fuelToEndLaps(), '0.0')), str(NO_VALUE));
+  iff(
+    fuelToEndIsSettled(),
+    iff(showsTimeLeft(), signed(clampMagnitude(fuelToEndMinutes(), FUEL_TO_END_MINUTES_CAP), '0'), signed(clampMagnitude(fuelToEndLaps(), FUEL_TO_END_LAPS_CAP), '0.0')),
+    str(NO_VALUE),
+  );
+
+/**
+ * The most the margin counts either way, in each of its two units: what {@link CHARS.margin} holds
+ * beside the sign, `999.9` laps and `9999` minutes.
+ *
+ * The margin is the range less the race, and a range has no ceiling: a per-lap figure a hair above
+ * zero made `Fuel_RemainingLaps` 4985 on the VM, and the margin read `+4974.0` laps in five digit
+ * cells and a point, the sign taking one of them, so WPF cut the tenth. The minutes are a whole
+ * figure and hold a fourth digit, and an empty tank against a day's race is `−14xx`, so their cap
+ * is the box's and not the fuel time's `999:59`. #1015.
+ */
+const FUEL_TO_END_LAPS_CAP = 999.9;
+const FUEL_TO_END_MINUTES_CAP = 9999;
+
+/** `value` held to `[-cap, cap]`, both bounds doubles on the left so NCalc keeps the fraction. */
+const clampMagnitude = (value: Expr, cap: number): Expr => max(real(-cap), min(real(cap), value));
 
 /**
  * How wide {@link fuelToEndText} draws, for the `laps` or `min` that follows it.
@@ -2065,8 +2116,8 @@ export const fuelToEndDrawn = (): DrawnFigure =>
     fuelToEndIsSettled(),
     drawnEither(
       showsTimeLeft(),
-      drawnFigure({ value: fuelToEndMinutes(), digits: CHARS.margin.digits - 1, signed: true }),
-      drawnFigure({ value: fuelToEndLaps(), digits: CHARS.margin.digits - 2, decimals: 1, signed: true }),
+      drawnFigure({ value: clampMagnitude(fuelToEndMinutes(), FUEL_TO_END_MINUTES_CAP), digits: CHARS.margin.digits - 1, signed: true }),
+      drawnFigure({ value: clampMagnitude(fuelToEndLaps(), FUEL_TO_END_LAPS_CAP), digits: CHARS.margin.digits - 2, decimals: 1, signed: true }),
     ),
     drawnText(NO_VALUE),
   );

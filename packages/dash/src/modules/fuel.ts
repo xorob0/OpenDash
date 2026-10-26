@@ -37,8 +37,10 @@ import { stack } from '../second/layout.ts';
 import {
   CHARS,
   clock,
+  CLOCK_WIDEST,
   fuel as fuelLevel,
-  fuelLapsLeft,
+  fuelLapsLeftText,
+  FUEL_LAPS_LEFT_WIDEST,
   fuelLastLap,
   fuelLastLapIsSettled,
   fuelPercent,
@@ -114,7 +116,7 @@ export const fuel = defineModule('fuel', (ctx) => {
           // frame along with it, and the row would otherwise be an estimate saying it has none
           // beside a range naming one. The gate is on the seconds rather than around the drawing,
           // so the absence keeps the clock's own shape and the field has one spelling of nothing.
-          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: d.big }),
+          fld(ctx, 'time', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), widest: CLOCK_WIDEST, chars: CHARS.clock, fs: d.big }),
           // The answer, before the working. `Est. laps` and the session page's laps left are the two
           // terms of this subtraction and a driver was doing it himself between corners; the sign is
           // the whole of the reading, so the field is signed and coloured and the unit follows it,
@@ -131,7 +133,8 @@ export const fuel = defineModule('fuel', (ctx) => {
           }),
           fld(ctx, 'lapsLeft', 'Est. laps', {
             sample: '11.2',
-            bind: iff(fuelIsSettled(), fmt(fuelLapsLeft(), '0.0'), str(NO_VALUE)),
+            bind: iff(fuelIsSettled(), fuelLapsLeftText(), str(NO_VALUE)),
+            widest: FUEL_LAPS_LEFT_WIDEST,
             chars: CHARS.consumption,
             fs: d.big,
             colorBind: iff(lowFuel(), str(ds.purpose.fuel.low), str(ds.color.text.primary)),
