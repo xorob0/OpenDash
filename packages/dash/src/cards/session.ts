@@ -14,7 +14,7 @@ import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
 import { markWhen } from '../elements/mark.ts';
-import { NO_CLOCK, hasLapTotal, lapTotalWidest, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
+import { NO_CLOCK, hasLapTotal, hasSessionClock, lapTotalWidest, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
@@ -32,7 +32,7 @@ export { UNTIMED_SECONDS, sessionTimeLeft as timeLeft, isTimedSession as timedSe
 
 export const session = defineCard('session', (slot, rung, prefix, meta) => {
   const time = showsTimeLeft();
-  const timed = isTimedSession();
+  const timed = hasSessionClock();
   const untimed = isUntimedSession();
   // Dim is for the clock nobody is counting, which is the session that has not started. An untimed
   // session draws the mark instead, at full strength, because a lap race having no clock is a

@@ -396,3 +396,13 @@ draws from the cars' own coordinates, so its row answers `false` on every frame 
 constants, and the value a recording with the plugin installed will write. With `TrackMapRecorded` `true`
 in all sixteen, no trace shows the notice. The next `bun run record` and `bun run record --sim ac` read it
 from the plugin and drop the entries.
+
+#1026 asserts one more in each of the nine and each of Assetto Corsa's seven,
+`DataCorePlugin.GameRawData.Telemetry.SessionLapsTotal`, the lap count iRacing declares for the session, so
+that a race given both a lap count and a time limit is measured by whichever ends it first. The values are
+the emulator's own: 30 in `green`, `pit`, `pitspeeding`, `race`, `settingchange`, `shiftlights` and
+`yellow`, whose race inherits the thirty-lap, 2700 s session, and 32767, iRacing's no-limit, in `notc` and
+`quali`, which set it so. `shiftlights`' scenario says its laps are unlimited in the session string but
+leaves the telemetry's thirty in place, and 30 is what a recording writes. Assetto Corsa publishes no raw
+iRacing telemetry, so the column is null in all seven. None of them moves within a session, so each is a
+constant. The next `bun run record` and `bun run record --sim ac` read it from SimHub and drop the entries.
