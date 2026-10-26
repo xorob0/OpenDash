@@ -696,17 +696,29 @@ const COLUMNS: Record<ColumnId, ColumnDef> = {
    * `pitwallColumns.test.ts` holds it above the canvas's 190 so that the floor is what is checked.
    */
   name: { header: 'Driver', align: 'left', width: () => 0, cell: cellName },
+  /**
+   * The class as a chip, drawn only for a car that has a class name (#1013).
+   *
+   * A sim that sends no class for a car drew the chip's grey box with nothing in it, and a session
+   * whose cars carry no class drew one on every row. The chip hides, box and text, when the cut
+   * name is empty. Its column keeps its width: a column is laid out once for every row of a board,
+   * and the row beside a classless car can have a class, so the cell is left empty rather than
+   * given back to the name.
+   */
   class: {
     header: 'Class',
     align: 'left',
     width: (row) => drawnWidth(row, chipWidth(row.d), 56),
-    cell: (ctx) =>
-      chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
-        bind: chipText(carClass(ctx.idx)),
+    cell: (ctx) => {
+      const text = chipText(carClass(ctx.idx));
+      return chip(`${ctx.name}.class`, 'GT3', ctx.x, ctx.top + (ctx.height - ctx.d.chipHeight) / 2, ctx.density, {
+        bind: text,
         widest: CHIP_WIDEST,
         invertedBind: ctx.isPlayer,
+        visibleBind: ne(text, str('')),
         width: chipWidth(ctx.d),
-      }),
+      });
+    },
   },
   /**
    * The licence badge and its safety rating, declared and unfilled.
