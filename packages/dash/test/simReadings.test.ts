@@ -7,6 +7,8 @@
  * on AC a driver read `0 km/h` and `00:00`, or `12:00 AM`, as if measured. The track state read
  * `GameData.TrackGripStatus`, which SimHub 9.12.6 has for no game, so it read `--` everywhere, iRacing
  * included. It reads iRacing's raw `TrackWetness` now, and hides where that is not there.
+ * Since #1175 each reads the plugin's own `OpenDash.*` reading first, which carries Assetto Corsa's,
+ * ACC's and Le Mans Ultimate's readings on iRacing's scale, and iRacing's raw property after it.
  *
  * Each field is read as a rig draws it, item by item: its `Visible`, then its `Text`, evaluated against
  * a frame of each sim. A field may hide or read `--` on AC, and may not draw a 0 for a reading it was
@@ -23,7 +25,7 @@ import { rect } from '../src/design/geometry.ts';
 import type { Item, TextItem } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { PIT_WALL_HEADER, pitWallHeader } from '../src/screens/pitwallHeader.ts';
-import { hasTrackState, simClock, trackGrip, windKmh } from '../src/second/values.ts';
+import { hasTrackState, simClock, trackGrip, windDegrees, windKmh } from '../src/second/values.ts';
 import { drawsInThisProcess } from '../src/themes/faces.ts';
 import { DEFAULT_THEME_ID, THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { porscheStrip } from '../src/themes/porsche/strip.ts';
@@ -178,6 +180,68 @@ describe('the track state', () => {
     expect(trackState(ac('24h'))).toEqual(none);
     expect(trackState(iracing('24h', 0))).toEqual(none);
     expect(evalNcalc(hasTrackState(), ac('24h'))).toBe(false);
+  });
+});
+
+/**
+ * Assetto Corsa, ACC and Le Mans Ultimate as the plugin publishes them (#1175): each sim's own reading,
+ * mapped onto iRacing's scale and units by `plugin/OpenDash/SimReadings.cs`, under `OpenDash.*`, and
+ * none of iRacing's raw properties. AC has a dry track's grip and no wind or clock; ACC has a grip status,
+ * a wind and a clock; LMU a path wetness, a wind vector and a clock. The values are the plugin's output for
+ * the frames its own tests read: AC's grip of 0.98, ACC's DAMP status and 2.1 m/s, LMU's half-wet line.
+ */
+const OD = (name: string): string => `${PROPERTY_PREFIX}.${name}`;
+const acPlugin = (format: ClockFormat): Props => ({ ...ac(format), [OD('TrackWetness')]: 1 });
+const accPlugin = (format: ClockFormat): Props => ({
+  ...ac(format),
+  [OD('TrackWetness')]: 3,
+  [OD('WindSpeed')]: 2.1,
+  [OD('WindDirection')]: 1.2,
+  [OD('SimTimeOfDay')]: 51732.58,
+});
+const lmuPlugin = (format: ClockFormat): Props => ({
+  ...ac(format),
+  [OD('TrackWetness')]: 4,
+  [OD('WindSpeed')]: 5,
+  [OD('WindDirection')]: 0.6435,
+  [OD('SimTimeOfDay')]: 30600,
+});
+
+describe("each sim's own track state, wind and clock, as the plugin publishes them", () => {
+  test('Assetto Corsa reads a dry track, and still no wind and no clock', () => {
+    expect(trackState(acPlugin('24h'))).toEqual({ bandGrip: ['Grip', 'Dry'], bandCorner: ['Track', 'Dry'], header: ['Track', 'Dry'], trackModule: ['Dry'] });
+    expect(windAndClock(acPlugin('12h'))).toEqual(windAndClock(ac('12h')));
+  });
+
+  test('ACC reads its grip status, its wind and its clock', () => {
+    expect(trackState(accPlugin('24h'))).toEqual({ bandGrip: ['Grip', 'Damp'], bandCorner: ['Track', 'Damp'], header: ['Track', 'Damp'], trackModule: ['Damp'] });
+    expect(windAndClock(accPlugin('24h'))).toEqual({
+      bandWind: ['Wind', '8', 'km/h'],
+      headerWind: ['8 km/h'],
+      headerSimClock: ['Sim', '14:22'],
+      barSimulatedTime: ['14:22'],
+      bandSimClock: ['Sim', '14:22'],
+    });
+    expect(Math.round(evalNcalc(windDegrees(), accPlugin('24h')) as number)).toBe(69);
+  });
+
+  test('Le Mans Ultimate reads its path wetness, its wind and its clock', () => {
+    expect(trackState(lmuPlugin('24h'))).toEqual({ bandGrip: ['Grip', 'Wet'], bandCorner: ['Track', 'Wet'], header: ['Track', 'Wet'], trackModule: ['Wet'] });
+    expect(windAndClock(lmuPlugin('12h'))).toEqual({
+      bandWind: ['Wind', '18', 'km/h'],
+      headerWind: ['18 km/h'],
+      headerSimClock: ['Sim', '8:30', 'AM'],
+      barSimulatedTime: ['8:30', 'AM'],
+      bandSimClock: ['Sim', '8:30', 'AM'],
+    });
+    expect(Math.round(evalNcalc(windDegrees(), lmuPlugin('24h')) as number)).toBe(37);
+  });
+
+  test("reads the plugin's reading before iRacing's raw property", () => {
+    const both = { ...iracing('24h', 1), [OD('TrackWetness')]: 7, [OD('WindSpeed')]: 5, [OD('SimTimeOfDay')]: 30600 };
+    expect(evalNcalc(trackGrip(), both)).toBe('Flooded');
+    expect(evalNcalc(windKmh(), both)).toBe(18);
+    expect(shown(field(corners(), 'corner.sim'), both)).toEqual(['Sim', '08:30']);
   });
 });
 

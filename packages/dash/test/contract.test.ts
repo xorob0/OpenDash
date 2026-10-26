@@ -69,6 +69,7 @@ import {
   LIVE_SLOTS,
   liveSettingNames,
   CAPABILITIES,
+  SIM_READINGS,
   POSITION_MODES,
   PROPERTY_PREFIX,
   REV_BAR_MODES,
@@ -183,7 +184,8 @@ describe('settings', () => {
     // shares with the four modes and the twelve slots, and the race as it stands on the road after
     // them, four families of a place or a row per car, which every screen that draws one reads (#1063).
     // The lone 1 after the capabilities is whether SimHub holds the track's outline (#555), and the 2 after it
-    // the stop in the pit box, timed by the plugin where SimHub's own timer counts the pit lane (#1130).
+    // the stop in the pit box, timed by the plugin where SimHub's own timer counts the pit lane (#1130), and
+    // after those the running sim's own track wetness, wind and time of day (#1175).
     expect(props).toHaveLength(
       4 +
         SLOT_MAX +
@@ -192,6 +194,7 @@ describe('settings', () => {
         CAPABILITIES.length +
         1 +
         2 +
+        SIM_READINGS.length +
         FACE_SIZES.length * perFace +
         MODULE_COUNT +
         // The page it is showing, how it draws a flag, and the module the plugin forces at a start.
@@ -247,8 +250,9 @@ describe('settings', () => {
     // (#555), and 667 before four more said which flag a sim whose own summary is wrong is showing (#1129).
     // And 671 before the plugin had to time the stop in the pit box, which Le Mans Ultimate's reader times
     // over the whole pit lane (#1130). And 673 before one more said whether the running sim's radar waits
-    // for the track's outline, which only iRacing's does (#1176).
-    expect(props).toHaveLength(674);
+    // for the track's outline, which only iRacing's does (#1176). And 674 before the plugin published the
+    // running sim's own track wetness, wind and time of day on iRacing's scale (#1175).
+    expect(props).toHaveLength(678);
     expect(new Set(props).size).toBe(props.length);
     expect(props.slice(0, 4)).toEqual(['OpenDash.ShiftLights', 'OpenDash.PositionMode', 'OpenDash.DeltaReference', 'OpenDash.SessionProgress']);
     expect(props[4]).toBe('OpenDash.Slot01');
@@ -413,6 +417,11 @@ describe('settings', () => {
         // lane, and asked of the same car by every screen that times a stop. #1130.
         'PitStopSeconds',
         'LastPitStopSeconds',
+        // And the running sim's own track wetness, wind and time of day, on iRacing's scale. #1175.
+        'TrackWetness',
+        'WindSpeed',
+        'WindDirection',
+        'SimTimeOfDay',
       ].map((n) => `${PROPERTY_PREFIX}.${n}`),
     );
 

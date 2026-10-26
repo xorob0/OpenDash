@@ -81,7 +81,7 @@ pit stop is timed in the box rather than down the whole lane (#1156).
 | Lap | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Time left | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Clock | **Works.** The rig's own clock, on every sim. | **Works.** | **Works.** | **Works.** |
-| Simulated time | **Works.** | **Absent.** Reads `--` (#1123). | **Absent.** ACC's clock is published under a name the bar does not read. | **Absent.** As ACC. |
+| Simulated time | **Works.** | **Absent.** Reads `--` (#1123). | **Untested.** The plugin publishes ACC's clock for the bar to read (#1175). | **Untested.** As ACC. |
 | Position | **Works.** | **Works.** | **Untested.** | **Untested.** |
 | Class | **Works.** | **Partly.** SimHub gives no AC car a class, so the field is one class and this is the overall place. | **Untested.** Classes from SimHub's ACC table. | **Untested.** The game's own classes. |
 | Incidents | **Works.** | **Absent.** The slot is left empty, since AC publishes no incident count (#567). | **Absent.** As AC. | **Absent.** As AC. |
@@ -106,10 +106,10 @@ pit stop is timed in the box rather than down the whole lane (#1156).
 | Energy | **Absent.** iRacing publishes no virtual energy; every field reads `--`. | **Absent.** | **Absent.** | **Absent.** LMU publishes it under its own names, which the page does not read yet (#962). |
 | Stint | **Works.** | **Works.** | **Untested.** | **Untested.** The stop is timed in the box (#1156). |
 | Tyres | **Works.** The carcass temperature iRacing measures at the last stop. | **Works.** The live core temperature (#556). The compound reads `--`, since SimHub gives AC none. | **Untested.** Live core temperatures. | **Untested.** The mean of the three tread temperatures. |
-| Weather | **Works.** Air, track, wind and the track state. | **Partly.** Air and track; the wind and the track state hide (#1123). | **Untested.** Air and track; ACC's wind and grip are published under names the page does not read. | **Untested.** As ACC. |
+| Weather | **Works.** Air, track, wind and the track state. | **Partly.** Air and track, and the track state reads Dry, AC having no rain (#1175); the wind hides (#1123). | **Untested.** Air, track, wind and the track state, which the plugin publishes from ACC's own (#1175). | **Untested.** As ACC. |
 | Sectors | **Works.** | **Works.** SimHub times the three sectors. | **Untested.** Whether the second sector is right is a question for the drive (research/sims.md). | **Untested.** |
 | Relative | **Works.** | **Works** with SimHub's AC app; without it there is nobody around you. | **Untested.** Needs SimHub's broadcasting connection. | **Untested.** |
-| Corners: incidents, track state, sim clock, local clock, DRS, P2P, spotter | **Works.** | **Partly.** The local clock and DRS work; the track state hides and the sim clock reads `--` (#1123); the spotter needs the app; P2P stays dark, rightly; incidents hide (#567). | **Untested.** | **Untested.** |
+| Corners: incidents, track state, sim clock, local clock, DRS, P2P, spotter | **Works.** | **Partly.** The local clock and DRS work; the track state reads Dry (#1175) and the sim clock reads `--` (#1123); the spotter needs the app; P2P stays dark, rightly; incidents hide (#567). | **Untested.** | **Untested.** |
 
 ### The modules
 
@@ -151,7 +151,7 @@ Zones B and C of every face, the companion's pages and the pit wall's zones.
 
 | Reading | iRacing | Assetto Corsa | ACC | Le Mans Ultimate |
 |---|---|---|---|---|
-| Header | **Works.** | **Partly.** The local clock, the session and the time left work; the wind and the track state hide, the sim clock reads `--` (#1123), and the incidents hide (#567). | **Untested.** | **Untested.** |
+| Header | **Works.** | **Partly.** The local clock, the session and the time left work; the track state reads Dry (#1175), the wind hides and the sim clock reads `--` (#1123), and the incidents hide (#567). | **Untested.** | **Untested.** |
 | Race | **Works.** | **Partly.** The table as the leaderboard: no number, class or tyre, iRating `--`; whether each car's sectors fill is unclear. | **Untested.** | **Untested.** |
 | Tower | **Works.** | **Partly.** As the race page. | **Untested.** | **Untested.** |
 | Telemetry | **Works.** | **Partly.** Speed, revs, gear and the pedals work; the steering panel says it is not published by this sim (#567). | **Partly.** As AC. | **Partly.** As AC. |

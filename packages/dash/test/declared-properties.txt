@@ -307,6 +307,10 @@ OpenDash.RadarNeedsTrackMap
 OpenDash.TrackMapRecorded
 OpenDash.PitStopSeconds
 OpenDash.LastPitStopSeconds
+OpenDash.TrackWetness
+OpenDash.WindSpeed
+OpenDash.WindDirection
+OpenDash.SimTimeOfDay
 OpenDash.Face1920x480ZoneA
 OpenDash.Face1920x480ZoneAPages
 OpenDash.Face1920x480ZoneAStart

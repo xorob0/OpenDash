@@ -396,3 +396,13 @@ draws from the cars' own coordinates, so its row answers `false` on every frame 
 constants, and the value a recording with the plugin installed will write. With `TrackMapRecorded` `true`
 in all sixteen, no trace shows the notice. The next `bun run record` and `bun run record --sim ac` read it
 from the plugin and drop the entries.
+
+#1175 asserts three more in each of the nine and each of Assetto Corsa's seven: `OpenDash.TrackWetness`,
+`OpenDash.WindSpeed` and `OpenDash.SimTimeOfDay`, the running sim's own track wetness, wind and time of day
+(the plugin's `OpenDash.WindDirection` is not asserted, because no dashboard draws it yet), which the plugin maps onto iRacing's scale (ADR 0021,
+`plugin/OpenDash/SimReadings.cs`). iRacing's row publishes none of them, its raw `TrackWetness`, `WindVel`,
+`WindDir` and `SessionTimeOfDay` being the answer, so all three are null on every frame of all nine. Assetto
+Corsa has no wind and no clock, so those two are null in all seven, and its `TrackWetness` is `1`, dry, on
+every frame: every AC scenario extends `race.json`, whose `Graphics.surfaceGrip` is 0.98, and the plugin reads
+any grip above 0 as a dry track. All are constants, and the value a recording with the plugin installed will
+write. The next `bun run record` and `bun run record --sim ac` read them from the plugin and drop the entries.

@@ -1648,11 +1648,12 @@ namespace OpenDashPlugin.Tests
             // blue flag detail, the two that say how a driver is named, the idle screen's two, the class
             // best, the clock format, the delta's precision, whether a flag shows in the pit lane and the
             // Porsche crest's path, the AiM's backlight, the race as it stands on the road and what the running
-            // sim can report (#1101), whether SimHub holds the track's outline (#555) and the stop in the pit box
-            // (#1130), which every screen shares, and one group per screen the rig holds.
+            // sim can report (#1101), whether SimHub holds the track's outline (#555), the stop in the pit box
+            // (#1130) and the sim's own track wetness, wind and time of day (#1175), which every screen shares,
+            // and one group per screen the rig holds.
             const int perFace = 4 + 4 + 4 + 4 + 4 + 1 + 1 + 1 + 1 + 4;
             var shared = Contract.SharedPropertyNames().Count();
-            Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1 + 2, shared);
+            Assert.Equal(28 + 4 * LivePosition.Slots + Contract.Capabilities.Length + 1 + 2 + Contract.Readings.Length, shared);
             // The lights are declared whatever the rig is: OpenDash does not install the flag box
             // profile (ADR 0013), so there is nothing to detect, and a hundred and nine names is still
             // fewer than the screens' two hundred and sixty-four, which are what was worth narrowing.
