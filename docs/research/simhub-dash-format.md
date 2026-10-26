@@ -268,6 +268,14 @@ screen depends on.
   `*ScreensIndexs` lists from the per-screen booleans. Put the idle screen last and the generated
   metadata agrees with what SimHub would have written.
 
+- **A bare renderer follows the same choice through a binding.** `WPFRenderer.SetCurrentModel` binds
+  its `ShownScreen` to the model's `Dashboard.SelectedScreen` and starts the model, which subscribes
+  to `GraphicalDashPlugin.DataUpdated` and runs `CheckGameModeScreen` every frame, game or no game.
+  Assigning `ShownScreen` directly replaces that binding with a fixed screen, which is how the panel's
+  preview came to draw a racing screen at rest (#1085); its follower writes `SelectedScreen` instead.
+  `ScreenEnabled` starts false and only that frame loop sets it, and `Dashboard.AvailableScreens`
+  filters out layers only, not disabled screens.
+
 SimHub's own samples say the same thing in JSON: `ControlCenter.djson` carries an `Idle` screen with
 `"InGameScreen": false, "IdleScreen": true, "PitScreen": false` and three racing screens with
 `"IdleScreen": false`, and `MobileDashWithRelativeTimings` is the same shape with one of each.
