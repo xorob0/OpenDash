@@ -420,9 +420,9 @@ verified, and a spotter that is wrong is worse than one that says less.
 
 | Condition | Threshold | Picture |
 |---|---|---|
-| Oil too hot | `OpenDash.FlagBoxMatrix<N>OilTemp`, default 120 °C | An oil can, orange, steady |
-| Water too hot | `OpenDash.FlagBoxMatrix<N>WaterTemp`, default 110 °C | Waves, orange, steady |
-| Low fuel | `OpenDash.FlagBoxLowFuelLaps`, default 2 | A fuel pump, yellow, steady |
+| Oil too hot | `OpenDash.FlagBoxMatrix<N>OilTemp`, default 120 °C | An oil can, red (`purpose.light.temperature`), steady |
+| Water too hot | `OpenDash.FlagBoxMatrix<N>WaterTemp`, default 110 °C | Waves, red (`purpose.light.temperature`), steady |
+| Low fuel | `OpenDash.FlagBoxLowFuelLaps`, default 2 | A fuel pump, orange (`purpose.light.lowFuel`), steady |
 
 The two temperatures are a panel's own and the fuel threshold is the rig's, which is why only the
 first two carry a matrix in their names: one number answers "am I low" for the strip, the rev bar

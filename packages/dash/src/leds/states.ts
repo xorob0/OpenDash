@@ -24,12 +24,28 @@ import { isInPitLane, pitLimiterOn, pitSpeeding, spotterCar, tankIsLow } from '.
 
 const { and, eq, game, gt, lt, computed, not, num, str } = ncalc;
 
-/** The pit colour is `purpose.pitLimiter`; the warnings borrow the flag palette's danger colours. */
+/**
+ * The pit colour is `purpose.pitLimiter`, speeding is the danger red, and the three warnings are the
+ * strips' own lamp colours, `purpose.light.lowFuel` (`F`) and `purpose.light.temperature` (`T`).
+ *
+ * The warnings used to borrow the flag palette: low fuel in `purpose.flag.yellow` and the oil and
+ * water in `purpose.flag.orange`, the caution amber. #794 settled on the strips that an LED draws
+ * the caution amber as the flag yellow, so all three were a yellow-flag colour, and a pump glimpsed
+ * at the edge of vision read as a yellow flag (#1118). The box reads the same two tokens the strips
+ * do, so by default a warning is the same colour on every LED of a rig and none of them is the flag
+ * yellow or the caution amber; flagBox.test.ts holds them off both. A driver who recolours a strip's
+ * low fuel or temperature in the panel (`LED_COLOURS`) recolours only the strip: these are baked.
+ *
+ * Neither colour is a flag's alone. The fuel orange is `color.attention.primary`, which is also
+ * `purpose.light.meatball`, and the temperature red is the face's danger red, which an LED draws
+ * close to the box's red flag. The strips accept the same overlap, and the shapes carry the meaning
+ * under #129's rule: a pump, a can and waves, never a solid panel.
+ */
 export const STATE_PALETTE: Palette = {
   P: ds.purpose.pitLimiter,
   R: ds.purpose.flag.red,
-  O: ds.purpose.flag.orange,
-  Y: ds.purpose.flag.yellow,
+  F: ds.purpose.light.lowFuel,
+  T: ds.purpose.light.temperature,
   W: ds.purpose.flag.white,
 };
 
@@ -131,14 +147,14 @@ export const CAR_BOTH_GROWING: readonly Grid[] = [bar([0, 7]), CAR_BOTH, bar([0,
  * road car, and knowing it is worth more than a shape that fits the grid more comfortably.
  */
 export const LOW_FUEL: Grid = [
-  '.YYYYY..',
-  '.Y...Y.Y',
-  '.YYYYY.Y',
-  '.Y...Y.Y',
-  '.Y...YYY',
-  '.Y...Y..',
-  '.Y...Y..',
-  'YYYYYYY.',
+  '.FFFFF..',
+  '.F...F.F',
+  '.FFFFF.F',
+  '.F...F.F',
+  '.F...FFF',
+  '.F...F..',
+  '.F...F..',
+  'FFFFFFF.',
 ];
 
 /**
@@ -150,30 +166,30 @@ export const LOW_FUEL: Grid = [
  * for the oil telltale.
  */
 export const OIL_HOT: Grid = [
-  '.......O',
-  '......O.',
-  '.....O..',
-  '.OOOOO..',
-  'OOOOOOO.',
-  'OOOOOOO.',
-  '.OOOOO..',
-  '...O....',
+  '.......T',
+  '......T.',
+  '.....T..',
+  '.TTTTT..',
+  'TTTTTTT.',
+  'TTTTTTT.',
+  '.TTTTT..',
+  '...T....',
 ];
 
 /**
- * Water too hot: waves, in orange, so the two temperatures are told apart by shape.
+ * Water too hot: waves, in the oil's colour, so the two temperatures are told apart by shape.
  *
  * Two bands of three rows and a blank, not two single rows. The face sheet's prose says "two rows
  * of waves" and its own artboard draws these eight, and the artboard is the drawing, so it wins.
  */
 export const WATER_HOT: Grid = [
-  '..OO..OO',
-  '.O..OO..',
-  'O....OO.',
+  '..TT..TT',
+  '.T..TT..',
+  'T....TT.',
   '........',
-  '..OO..OO',
-  '.O..OO..',
-  'O....OO.',
+  '..TT..TT',
+  '.T..TT..',
+  'T....TT.',
   '........',
 ];
 
