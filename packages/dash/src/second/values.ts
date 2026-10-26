@@ -2784,6 +2784,20 @@ export const bandTyreTemperature = (corner: Corner): Expr => isnull(raw(`${CORNE
  */
 export const bandTyreTemperatureMark = (): Expr => iff(isNull(raw('LFtempCM')), temperatureMark(), str('°C'));
 
+/**
+ * Whether SimHub's `TyreTemperature*` and `TyrePressure*` are live readings rather than the ones taken
+ * at the car's last stop: the round faces' tyre cards caption them "last stop" only where they are not
+ * (#1161).
+ *
+ * iRacing publishes its tyre block, the carcass temperatures and the cold pressures, only when the car
+ * stops, and SimHub's two members are that block (`LFtempCM`, `LFcoldPressure`). Its raw `LFtempCM` is
+ * there on every iRacing frame and absent on every other sim, where SimHub fills the same members from
+ * the sim's live telemetry, so its absence is the answer and no game is named (ADR 0021's second kind).
+ * One corner answers for the block, which is published whole or not at all, as
+ * {@link bandTyreTemperatureMark} reads it too.
+ */
+export const tyreReadingsLive = (): Expr => isNull(raw('LFtempCM'));
+
 export const tyreChangeScheduled = (corner: Corner): Expr => gt(isnull(raw(CORNER_PIT_FLAGS[corner]), num(0)), num(0));
 export const temperatureUnit = (): Expr => isnull(game('TemperatureUnit'), str('Celcius'));
 /**

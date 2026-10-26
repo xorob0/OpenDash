@@ -211,9 +211,24 @@ describe('card expressions', () => {
     expect(colour).toContain("('Kelvin'), 373, 100");
     expect(formulaOf(textItem('tyreTemps', 'label'), 'Text')).toContain("'°F'");
     expect(formulaOf(textItem('tyrePressures', 'label'), 'Text')).toBe(
-      `('Pressures ') + (${values.pressureUnit()}) + (' · last stop')`,
+      `('Pressures ') + (${values.pressureUnit()}) + (if(${values.tyreReadingsLive()}, '', ' · last stop'))`,
     );
     expect(formulaOf(textItem('tyrePressures', 'rr'), 'Text')).toContain("format(isnull([DataCorePlugin.GameData.TyrePressureRearRight], 0), '0.0')");
+  });
+
+  test('the tyre cards say "last stop" only over the readings taken at the last stop (#1161)', () => {
+    // iRacing publishes its raw tyre block, which is what SimHub's TyreTemperature* and
+    // TyrePressure* are there, only when the car stops; every other sim fills the same members live
+    // and publishes no LFtempCM. The caption follows the property, and names no game.
+    const CARCASS = 'DataCorePlugin.GameRawData.Telemetry.LFtempCM';
+    const label = (id: string, props: Props) => evalNcalc(formulaOf(textItem(id, 'label'), 'Text'), props);
+    const iracing: Props = { [CARCASS]: 84, 'DataCorePlugin.GameData.TemperatureUnit': 'Celcius', 'DataCorePlugin.GameData.TyrePressureUnit': 'Psi' };
+    const live: Props = { 'DataCorePlugin.GameData.TemperatureUnit': 'Celcius', 'DataCorePlugin.GameData.TyrePressureUnit': 'Psi' };
+    expect(label('tyreTemps', iracing)).toBe('Tyres °C · last stop');
+    expect(label('tyrePressures', iracing)).toBe('Pressures psi · last stop');
+    expect(label('tyreTemps', live)).toBe('Tyres °C');
+    expect(label('tyrePressures', live)).toBe('Pressures psi');
+    for (const id of ['tyreTemps', 'tyrePressures']) expect(formulaOf(textItem(id, 'label'), 'Text')).not.toContain('CurrentGame');
   });
 });
 
