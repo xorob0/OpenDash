@@ -133,10 +133,9 @@ export const drawnOr = (absent: Expr, text: string, drawn: DrawnFigure): DrawnFi
  *
  * A declaration wider than the budget is a mark bound outside the region the box was measured for,
  * and the least wrong place for a mark whose figure WPF has already clipped is the end of the ink
- * that survived, which is the end of the budget. Band D's energy and refuel are the two: cut for
- * three bare digit cells and formatted `0.0`, so `68.0` overruns the box before the `%` is placed at
- * all. Widening those two budgets is the other half, is recorded in `docs/design/zones.md` §10 and
- * is not this branch's; this is what keeps the mark inside the field until it happens.
+ * that survived, which is the end of the budget. Nothing uses it today: the right answer to a
+ * format that overruns its cells is a format or a budget that agree, as band D's energy and refuel
+ * got in #607. It stays for a field whose budget cannot change in the branch that finds it.
  */
 export const drawnAtMost =
   (chars: Chars, drawn: DrawnFigure): DrawnFigure =>
@@ -277,8 +276,8 @@ function fold(terms: string[], combine: (a: DrawnRange, b: DrawnRange) => DrawnR
  * measured for, and no fit test can see it: `textFit` and `faceFit` measure boxes, not bound
  * `Left`s. Band D's energy and refuel were the case -- cut for three bare digit cells, formatted
  * `0.0`, so the declaration said 71 px where the budget holds 48 and the `%` went past the far side
- * of a box WPF had already clipped. {@link drawnAtMost} is the answer where the budget cannot widen
- * yet; this is what makes the next mismatch between a format and a budget a failed build. #387.
+ * of a box WPF had already clipped, until #607 drew them whole. This is what makes the next mismatch
+ * between a format and a budget a failed build, and {@link drawnAtMost} the stopgap. #387.
  */
 export function drawnWithin(what: string, drawn: DrawnFigure, chars: Chars, mono: Monospace): Expr {
   const expr = drawn(mono);
