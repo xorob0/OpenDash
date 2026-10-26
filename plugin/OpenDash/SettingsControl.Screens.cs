@@ -313,9 +313,11 @@ namespace OpenDashPlugin
         /// its own left column, beside the aside.</summary>
         private FrameworkElement BuildScreenEditor(ScreenInstance screen)
         {
-            if (!screen.IsCompanion && !screen.IsPitWall && !screen.IsSlots) return BuildFacePane(screen);
+            if (screen.IsFace) return BuildFacePane(screen);
             FrameworkElement editor;
-            if (screen.IsCompanion) editor = BuildCompanionPane(screen);
+            // A kind a newer OpenDash made (#864): nothing here to set, and its Details say what it is.
+            if (!screen.IsKnownKind) editor = Ui.Caption(PanelScreens.UnknownKindNote(screen.Kind));
+            else if (screen.IsCompanion) editor = BuildCompanionPane(screen);
             else if (screen.IsPitWall) editor = BuildPitWallPane(screen);
             else editor = BuildSlotsPane(screen);
             var details = BuildScreenDetails(screen);

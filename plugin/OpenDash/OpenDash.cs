@@ -325,7 +325,7 @@ namespace OpenDashPlugin
                 {
                     Settings.LastUpdateCheckTicks = ticks;
                     Settings.OfferedRelease = remembered;
-                    SaveSettings();
+                    SaveOnOwn();
                 }
             }
             RefreshUpdateMark();
@@ -477,8 +477,8 @@ namespace OpenDashPlugin
             Log.Info(FlagBoxProfile.Summary(FlagBox));
             // The installer records what it wrote into each folder, and spells a stock folder the settings
             // still spell the way they did before #374 as its package does (#467), but never saves; this is
-            // the safe moment.
-            SaveSettings();
+            // the safe moment -- unless a newer plugin wrote the file, which is then left as it is (#864).
+            SaveOnOwn();
         }
 
         /// <summary>
@@ -1105,7 +1105,7 @@ namespace OpenDashPlugin
                         + " seconds and SimHub is closing anyway; a dashboard may be left as OpenDash found it.");
                 }
             }
-            SaveSettings();
+            SaveOnOwn();
         }
 
         public Control GetWPFSettingsControl(PluginManager pluginManager)
@@ -1134,7 +1134,9 @@ namespace OpenDashPlugin
             try
             {
                 Settings.Normalise();
+                Settings.SettingsVersion = Version;
                 this.SaveCommonSettings(SettingsKey, Settings);
+                holdingSaves = false;
             }
             catch (Exception ex)
             {
@@ -1159,6 +1161,28 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
+        /// Whether the file is a newer plugin's and nothing has been saved over it yet (#864). Set once by
+        /// LoadSettings and cleared by the first save somebody causes by changing something.
+        /// </summary>
+        private bool holdingSaves;
+
+        /// <summary>
+        /// A save OpenDash makes on its own rather than because somebody changed something: the end of Init,
+        /// SimHub closing, the update check's bookkeeping. Skipped while the file is a newer plugin's, so that a
+        /// rollback that is only tried leaves the file as the newer plugin wrote it (SettingsRescue, #864). None of
+        /// them follows a change to the rig, so there is nothing added in this session to attach either.
+        /// </summary>
+        private void SaveOnOwn()
+        {
+            if (!holdingSaves)
+            {
+                SaveSettings();
+                return;
+            }
+            Log.Info("Not saving the settings: OpenDash " + Rescue.SavedBy + " wrote them and nothing has been changed since.");
+        }
+
+        /// <summary>
         /// Saves after a rig button's press: a normalised copy, not the live settings, so a press while
         /// a quick glance is held on a page its zone's cycle leaves out does not move the glanced zone.
         /// See <see cref="OpenDashSettings.NormalisedCopy"/>.
@@ -1167,7 +1191,10 @@ namespace OpenDashPlugin
         {
             try
             {
+                // Stamped on the live settings, which the copy carries (OpenDashSettings.CopyFrom).
+                Settings.SettingsVersion = Version;
                 this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy());
+                holdingSaves = false;
             }
             catch (Exception ex)
             {
@@ -1185,7 +1212,8 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// What the start made of a settings file SimHub could not read: whether it was, and where the file was
-        /// set aside. Never null. Home's settings-unreadable issue reads it (#643).
+        /// set aside, or of one a newer plugin wrote (#864). Never null. Home's settings-unreadable and
+        /// settings-newer issues read it (#643).
         /// </summary>
         public SettingsRescue Rescue { get; private set; } = SettingsRescue.Read;
 
@@ -1221,6 +1249,19 @@ namespace OpenDashPlugin
                     Log.Error("Looking at the settings file SimHub could not read failed", ex);
                 }
             }
+            else
+            {
+                // Read before Normalise, which is what turns a newer plugin's rig into this one's shape (#864).
+                try
+                {
+                    Rescue = SettingsRescue.InspectNewer(SettingsPath(), Settings.SettingsVersion, Version, new SimHubInstallLog());
+                }
+                catch (Exception ex)
+                {
+                    Log.Error("Looking at the settings a newer OpenDash saved failed", ex);
+                }
+            }
+            holdingSaves = Rescue.HoldsSaves;
             Settings.Normalise();
         }
 

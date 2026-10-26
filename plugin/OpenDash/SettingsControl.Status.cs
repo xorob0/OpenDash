@@ -157,6 +157,13 @@ namespace OpenDashPlugin
                 input.SettingsCopy = rescue.CopyPath;
                 input.SettingsBackups = rescue.BackupsPath;
             }
+            else if (rescue != null && rescue.Newer)
+            {
+                input.SettingsNewer = true;
+                input.SettingsSavedBy = rescue.SavedBy;
+                input.SettingsCopy = rescue.CopyPath;
+                input.SettingsFile = rescue.SettingsPath;
+            }
 
             input.RestartPending = PendingRestart();
             input.UpdateAvailable = updateStatus.State == UpdateState.UpdateAvailable;

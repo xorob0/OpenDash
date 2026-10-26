@@ -195,8 +195,19 @@ namespace OpenDashPlugin
         public static string KindOf(ScreenInstance screen)
         {
             if (screen == null) return string.Empty;
+            if (!screen.IsKnownKind) return UnknownKind;
             if (screen.IsSlots && !IsRound(screen)) return CardFace;
             return PanelAddScreen.KindName(screen.Kind);
+        }
+
+        /// <summary>The kind name of a screen a newer OpenDash made, whose kind this one does not know (#864).</summary>
+        public const string UnknownKind = "Newer screen";
+
+        /// <summary>What the editor of such a screen says in place of its rows: "A newer OpenDash made this screen
+        /// ("dial"). This version has nothing to set on it and keeps it as it is."</summary>
+        public static string UnknownKindNote(string kind)
+        {
+            return "A newer OpenDash made this screen (\"" + kind + "\"). This version has nothing to set on it and keeps it as it is.";
         }
 
         /// <summary>The kind a card's picture is drawn as (Ui.Thumb): a ring for a round screen only, and a
