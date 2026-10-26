@@ -901,13 +901,34 @@ export interface ColumnSpan {
  */
 export function columnSpans(columns: readonly ColumnId[], frame: Rect, density: Density, row?: RowSize, board = false): ColumnSpan[] {
   const widths = columnWidths(columns, frame.width, density, row, board);
+  const clear = rankClearance(typeOfRow(row, density, board), board);
   let x = frame.left + padXOf(board);
   return columns.map((id, i) => {
-    const span = { id, left: x, width: widths[i] ?? 0 };
-    x += span.width + cellGapOf(board);
+    const width = widths[i] ?? 0;
+    const lead = columns[i - 1] === 'rank' ? Math.min(clear, width) : 0;
+    const span = { id, left: x + lead, width: width - lead };
+    x += width + cellGapOf(board);
     return span;
   });
 }
+
+/**
+ * The room a board keeps clear between the rank column and the column after it, which is the car
+ * number on every page that draws one.
+ *
+ * A board butts its cells ({@link BOARD_CELL_GAP}), and the rank's count and its no-change dash both
+ * end on the column's right edge while the car number starts on its own left edge. With nothing
+ * between them a red `10` beside a grey `92` read as `1092` (#1012), and the dash beside car 25 read
+ * as `-25` (#1055). The rank column cannot give the room itself: its 36 px already hold the mark, the
+ * three pixels after it and two digits, with seven left before the position's digits. The number
+ * column can, since four digits of it leave twelve of its 44, so the column after the rank starts
+ * one digit of the rank's own face later -- the room a one-digit change leaves, which is what kept a
+ * one-digit change legible all along -- and its header moves with it. The column keeps the width the
+ * canvas gives it; only what is drawn in it is inset. A list spaces its cells by {@link CELL_GAP},
+ * which is already more than a digit, and keeps none.
+ */
+const rankClearance = (type: RowType, board: boolean): number =>
+  board ? Math.max(0, monoWidth(cells('SemiBold', type.minor), { digits: 1, specials: 0 }) - BOARD_CELL_GAP) : 0;
 
 /** How many rows of `rowHeight` fit under the header. */
 export function rowCapacity(frame: Rect, density: Density, header: boolean, rowHeight?: number): number {

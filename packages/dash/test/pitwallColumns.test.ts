@@ -239,6 +239,48 @@ describe('the rank cell marks the direction with a triangle', () => {
   }
 });
 
+/**
+ * The rank cell and the car number after it, which a board butts together.
+ *
+ * Both of the rank's marks end where its column does -- the count is cut for two digits from the
+ * right edge, the no-change dash is the last eight pixels -- and the number is drawn from its own
+ * column's left edge. With nothing between them a red `10` beside a grey `92` read as `1092` (#1012)
+ * and the dash beside car 25 as `-25` (#1055). Both have to end at least one digit of the count's
+ * face before the number begins, which is the room a one-digit change always left.
+ */
+describe('the rank cell stands clear of the car number', () => {
+  const countOf = (b: Board): TextItem => b.items.find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.rank.count'))!;
+  const dashOf = (b: Board): RectangleItem => b.items.find((i): i is RectangleItem => i.kind === 'rect' && i.name.endsWith('.row.rank.flat'))!;
+
+  for (const b of BOARDS) {
+    test(`${b.page}: a two-digit change ends a digit's room before the number`, () => {
+      const count = countOf(b);
+      const digit = count.monospace?.charWidth ?? 0;
+      expect({ page: b.page, digit: digit > 0 }).toEqual({ page: b.page, digit: true });
+      // The count's widest: both of the digits it is cut for, from where it starts.
+      const widest = count.rect.left + 2 * digit;
+      const number = cellOf(b, 'num')!.rect.left;
+      expect({ page: b.page, clear: number - widest >= digit }).toEqual({ page: b.page, clear: true });
+    });
+
+    test(`${b.page}: and so does the dash for a car that has not moved`, () => {
+      const dash = dashOf(b);
+      const digit = countOf(b).monospace?.charWidth ?? 0;
+      const number = cellOf(b, 'num')!.rect.left;
+      expect({ page: b.page, clear: number - (dash.rect.left + dash.rect.width) >= digit }).toEqual({ page: b.page, clear: true });
+    });
+
+    test(`${b.page}: with the number's header over the number, and both inside its column`, () => {
+      const widths = widthsOf(b);
+      const at = b.columns.indexOf('num');
+      const left = frameOf(b).left + 16 + widths.slice(0, at).reduce((sum, w) => sum + w, 0);
+      const cell = cellOf(b, 'num')!;
+      expect({ page: b.page, header: headerOf(b, 'num')!.rect.left }).toEqual({ page: b.page, header: cell.rect.left });
+      expect({ page: b.page, inside: cell.rect.left > left && cell.rect.left + cell.rect.width <= left + (widths[at] ?? 0) }).toEqual({ page: b.page, inside: true });
+    });
+  }
+});
+
 describe('the columns no artboard heads are gone from the boards that drew them', () => {
   test('the stint count, which the race board drew where the canvas draws the iRating', () => {
     expect(RACE_COLUMNS.includes('stint')).toBe(false);
