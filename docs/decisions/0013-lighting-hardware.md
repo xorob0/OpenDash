@@ -281,3 +281,20 @@ selects a profile on a device, and every Update press carries one hover on every
 steps in SimHub's own menus, and a Check again press that asks SimHub and never installs. Whether a
 matrix device shows a given content is not on SimHub's public surface, so the matching issue for a
 matrix is built and drawn on no rig until [#521](https://github.com/xorob0/OpenDash/issues/521).
+
+## Amended, 2026-10-26: a matrix names its device (#363)
+
+The flag box half of the 2026-09-18 amendment's "What this does not fix" is fixed
+([#363](https://github.com/xorob0/OpenDash/issues/363)). `MatrixTargets` lists SimHub's 8x8 matrices the way
+`LedTargets` lists its strips: the Arduino's (`SerialDashPlugin.Settings.RGBMatrixDriver`) first, then every
+device's `LedModuleSettings.MatrixDriver`, saved by the same two calls. Each matrix records its device in
+`FlagBoxMatrixDevice`, in the strips' id vocabulary, and the Matrix page has a SimHub device row to choose it.
+
+**One profile, every device a matrix names.** SimHub composes the four contents inside one profile, so the press
+installs that one profile into each device a matrix is on, and the header reads their answers as one
+(`PanelMatrixDevices.Combine`): Install while any of them lacks it. A matrix from before this reads as the
+Arduino's, which is where it was installed. A pick records the device and installs nothing; the header's press
+still does, so the consent half stands.
+
+**Only an 8x8.** A device whose matrix is a 4x4, 5x4, 5x7 or PSP-shaped panel is not offered, and its name is
+written to SimHub's log: the flag box is drawn for an 8x8.

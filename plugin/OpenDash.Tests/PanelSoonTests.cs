@@ -18,7 +18,7 @@ namespace OpenDashPlugin.Tests
         {
             746, 96, 383, 112, 321, 114, 319, 320, 741, 739, 85, 146,
             747, 485, 743, 479, 509,
-            371, 363, 505,
+            371, 505,
             506,
             511, 510,
             326, 325, 504, 507, 508, 737, 512, 740, 735, 129, 127, 484, 736,
@@ -54,7 +54,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(12, PanelSoon.For(PanelPage.Screens).Count());
             Assert.Equal(5, PanelSoon.For(PanelPage.Leds).Count());
-            Assert.Equal(3, PanelSoon.For(PanelPage.Matrix).Count());
+            Assert.Equal(2, PanelSoon.For(PanelPage.Matrix).Count());
             Assert.Single(PanelSoon.For(PanelPage.Rig));
             Assert.Equal(2, PanelSoon.For(PanelPage.Shortcuts).Count());
             Assert.Equal(17, PanelSoon.For(PanelPage.Settings).Count());
@@ -138,7 +138,6 @@ namespace OpenDashPlugin.Tests
             ("Car data for LMU", 479, PanelPage.Leds, false),
             ("Pit limiter lights", 509, PanelPage.Leds, false),
             ("RPM colour for everything", 371, PanelPage.Matrix, false),
-            ("SimHub device", 363, PanelPage.Matrix, false),
             ("Priority order", 505, PanelPage.Matrix, false),
             ("Real hardware", 506, PanelPage.Rig, false),
             ("Rig test", 511, PanelPage.Shortcuts, false),
@@ -165,7 +164,7 @@ namespace OpenDashPlugin.Tests
         [Fact]
         public void The_registry_is_exactly_these_rows_in_order()
         {
-            Assert.Equal(40, Registry.Length);
+            Assert.Equal(39, Registry.Length);
             Assert.Equal(
                 Registry.Select(row => row.Title + " #" + row.Ticket + " " + row.Page + (row.InSheetOnly ? " sheet" : "")),
                 PanelSoon.All.Select(item => item.Title + " #" + item.Ticket + " " + item.Page + (item.InSheetOnly ? " sheet" : "")));

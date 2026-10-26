@@ -32,11 +32,19 @@ namespace OpenDashPlugin
         /// </summary>
         private readonly PanelLedDevices<LedTarget> ledDevices = new PanelLedDevices<LedTarget>(LedTargets.All);
 
+        /// <summary>
+        /// SimHub's 8x8 matrices -- the Arduino's and every device's own (#363) -- read on the same terms as
+        /// <see cref="ledDevices"/>: once each time the panel asks SimHub again, for the flag box's plan, its install
+        /// and the Matrix page's device row.
+        /// </summary>
+        private readonly PanelLedDevices<MatrixTarget> matrixDevices = new PanelLedDevices<MatrixTarget>(MatrixTargets.All);
+
         /// <summary>Asks SimHub again and keeps the answer. Run on every Go, so it opens only the profiles of the rig's own strips; never on the tick.</summary>
         private void RefreshAttention()
         {
             // Read again below, once, for this ask and the page built after it.
             ledDevices.Forget();
+            matrixDevices.Forget();
             try
             {
                 attentionFacts = Attention();

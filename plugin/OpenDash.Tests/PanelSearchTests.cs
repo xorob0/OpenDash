@@ -162,7 +162,7 @@ namespace OpenDashPlugin.Tests
             var matrixRows = new[]
             {
                 PanelMatrix.PriorityTitle, PanelMatrix.FlagsTitle, PanelMatrix.PitLaneTitle, PanelMatrix.SpotterTitle, PanelMatrix.SpotterAnimationTitle,
-                PanelMatrix.WarningsTitle, PanelMatrix.IdleDisplayTitle, PanelMatrix.ShiftColoursTitle, PanelMatrix.RedlineFlashTitle, PanelSoon.SimHubDevice.Title,
+                PanelMatrix.WarningsTitle, PanelMatrix.IdleDisplayTitle, PanelMatrix.ShiftColoursTitle, PanelMatrix.RedlineFlashTitle, PanelMatrixDevices.DeviceTitle,
             };
             foreach (var label in matrixRows) Assert.DoesNotContain(bare, entry => entry.Route.Page == PanelPage.Matrix && entry.Label == label);
             Assert.Contains(bare, entry => entry.Label == PanelMatrix.AddPanel);

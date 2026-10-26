@@ -158,7 +158,8 @@ namespace OpenDashPlugin
             return "Goes to " + name + ", which is not connected, and " + unreached + ". See SimHub's log.";
         }
 
-        private static string NameList(System.Collections.Generic.IList<string> names)
+        /// <summary>The names spelled out, at most <see cref="NotOfferedNames"/> and the rest counted: "Rim, Plate and 1 other".</summary>
+        public static string NameList(System.Collections.Generic.IList<string> names)
         {
             var shown = names.Count > NotOfferedNames ? NotOfferedNames : names.Count;
             var rest = names.Count - shown;

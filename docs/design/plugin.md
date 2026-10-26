@@ -585,7 +585,6 @@ registry, in the order the pages draw them, and `PanelSoonTests` holds it to thi
 | LEDs | Car data for LMU | [#479](https://github.com/xorob0/OpenDash/issues/479) |
 | LEDs | Pit limiter lights | [#509](https://github.com/xorob0/OpenDash/issues/509) |
 | Matrix | RPM colour for everything | [#371](https://github.com/xorob0/OpenDash/issues/371) |
-| Matrix | SimHub device | [#363](https://github.com/xorob0/OpenDash/issues/363) |
 | Matrix | Priority order | [#505](https://github.com/xorob0/OpenDash/issues/505) |
 | Rig | Real hardware | [#506](https://github.com/xorob0/OpenDash/issues/506) |
 | Shortcuts | Rig test | [#511](https://github.com/xorob0/OpenDash/issues/511) |
@@ -691,7 +690,7 @@ row names is in its built column.
 | Matrix: "Flash at redline" | "Redline flash" | a label is a noun phrase. `PanelMatrix.RedlineFlashTitle` |
 | Matrix: "Matrix content: 2" | "RGB Matrix content" | SimHub's own label for the field. `PanelMatrix.ContentField` |
 | Matrix: "Colour everything by RPM", switched on | "RPM colour for everything", switched off | a greyed title is a noun phrase, and nothing is on until #371 lands. `PanelSoon.RpmColourForEverything` |
-| Matrix: "Arduino matrix" on the greyed device press | "Choose a device" | nothing is bound until #363 lands. `PanelMatrix.SimHubDeviceButton` |
+| Matrix: "Arduino matrix" on the device press | "Arduino RGB matrix" | the picker lists SimHub's matrices by their device names, and the Arduino's is named as the strips' Arduino is (#363). `PanelMatrixDevices.ArduinoName` |
 | Shortcuts: "A wheel button, a button box, a key or a touch. SimHub saves them." | "A wheel button, a button box or a key." | a touch is not bound here, and the panel does not describe mechanism. `PanelShortcuts.IntroCaption` |
 | Shortcuts: "Previous page, zone in focus" | "Band D · previous page", one row per zone | the zone in focus is a concept the panel has nowhere else. `PanelShortcuts.ZoneRow` |
 | Shortcuts: "Run the Rig test", "Dismiss the alert on screen" | "Rig test", "Alert dismissal" | a greyed title is a noun phrase. `PanelSoon.RigTest`, `PanelSoon.AlertDismissal` |

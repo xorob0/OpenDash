@@ -61,7 +61,8 @@ namespace OpenDashPlugin.Tests
             // voice.md gives the car's own tables.
             Assert.Equal("Car-specific shift points", PanelMatrix.CarShiftPointsTitle);
             Assert.DoesNotContain("threshold", PanelMatrix.CarShiftPointsTitle, StringComparison.OrdinalIgnoreCase);
-            Assert.Equal("Choose a device", PanelMatrix.SimHubDeviceButton);
+            // The strip's word for the same question (#363).
+            Assert.Equal("SimHub device", PanelMatrixDevices.DeviceTitle);
             // The artboard draws no caption under Pit lane or Critical flags only, and the page adds none.
             var matrix = MatrixSource();
             Assert.Contains("PanelMatrix.PitLaneTitle, null, null,", matrix);
@@ -520,7 +521,7 @@ namespace OpenDashPlugin.Tests
                 "check.Click += (sender, args) => CheckAgain();",
                 // The add sheet.
                 "var name = Ui.Input(PanelMatrix.DefaultName(slot), PanelMatrix.NameWidth);",
-                "var added = Settings.AddMatrixPanel(name.Text);",
+                "var added = Settings.AddMatrixPanel(name.Text, MatrixTargets.Preferred(matrixDevices.Targets));",
                 "Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))),",
                 "var state = PanelMatrix.StateOf(MatrixPlan());",
                 "PanelMatrix.PanelAdded(PanelMatrix.NameOf(Settings.MatrixName(added), added), added, FlagBoxName(), state), PanelMatrix.NeedsInstall(state) ? PanelTone.Caution : PanelTone.Info",
@@ -546,10 +547,12 @@ namespace OpenDashPlugin.Tests
                 // The add press saves at once and selects the new matrix; each sheet draws its body.
                 // The cards: which matrix the page opens on, a card never claiming what nothing read, and the
                 // empty state only on an empty rig.
-                "var device = MatrixLayer(Ui.Soon( MatrixLayerHead(null, PanelSoon.SimHubDevice.Title, null, null, Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)), PanelSoon.SimHubDevice));",
+                "var device = MatrixLayer(BuildMatrixDeviceRow(m));",
+                // The device row records a pick and redraws, and installs nothing: the header's press does (#363).
+                "Settings.SetMatrixDevice(matrix, ids[k]); Save(); Redraw();",
                 "foreach (var id in offered) { var chosen = id; var chip = Ui.Chip(PanelMatrix.PreviewLabel(chosen), chosen == scenario, () => { matrixPreviewScenario = chosen; repaint(); drawChips(); });",
                 "var offered = PanelMatrix.PreviewChips(PanelMatrix.OptionsFor(Settings, m)); var scenario = PanelMatrix.PreviewScenario(matrixPreviewScenario, PanelMatrix.OptionsFor(Settings, m));",
-                "var added = Settings.AddMatrixPanel(name.Text); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
+                "var added = Settings.AddMatrixPanel(name.Text, MatrixTargets.Preferred(matrixDevices.Targets)); Save(); if (added != 0) Select(PanelPage.Matrix, PanelMatrix.SlotId(added)); Redraw(); if (added == 0) return;",
                 "var body = Ui.VStack(PanelMatrix.SheetGap, Ui.Caption(PanelMatrix.AddPanelCaption(slot, FlagBoxName(), PanelMatrix.StateOf(MatrixPlan()))), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption)); ShowSheet(PanelMatrix.AddPanel, body, SheetFooter(null, cancel, add));",
                 "ShowSheet(PanelMatrix.RenameTitle(current), Ui.SettingRow(PanelMatrix.NameTitle, name, PanelMatrix.NameCaption), SheetFooter(null, cancel, save));",
                 "ShowSheet(PanelMatrix.RemoveTitle(name), Ui.Caption(PanelMatrix.RemoveCaption(name)), SheetFooter(null, cancel, remove));",
@@ -902,20 +905,20 @@ namespace OpenDashPlugin.Tests
             // The link is the plural of the column it lands on, so the two pages say one word for the thing:
             // the Settings column renamed renames the link, and a link reworded here fails.
             Assert.Equal(PanelSettings.ThresholdColumn + "s", PanelMatrix.ThresholdsLink);
-            Assert.Equal(new[] { 363, 371, 505 }, PanelMatrix.SoonDrawn.Select(item => item.Ticket).OrderBy(t => t));
+            Assert.Equal(new[] { 371, 505 }, PanelMatrix.SoonDrawn.Select(item => item.Ticket).OrderBy(t => t));
             var matrix = MatrixSource();
             Assert.Contains("Ui.Soon(reorder, PanelSoon.PriorityOrder)", matrix);
             // The list is drawn in the order Layers holds, each numbered by Rank, then the idle display and the device.
             var flat = FlatSource();
             Assert.Contains("return Ui.Anchor(Ui.VStack(0, head, Ui.Anchor(flags, PanelMatrix.AnchorFlags), Ui.Anchor(pit, PanelMatrix.AnchorPitLane), "
                 + "Ui.Anchor(spotter, PanelMatrix.AnchorSpotter), Ui.Anchor(warnings, PanelMatrix.AnchorWarnings), "
-                + "Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay), device), PanelMatrix.AnchorPriority);", flat);
+                + "Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay), Ui.Anchor(device, PanelMatrix.AnchorDevice)), PanelMatrix.AnchorPriority);", flat);
             foreach (var layer in new[] { "flags", "pit", "spotter", "warnings" })
             {
                 var title = new Dictionary<string, string> { { "flags", "FlagsTitle" }, { "pit", "PitLaneTitle" }, { "spotter", "SpotterTitle" }, { "warnings", "WarningsTitle" } }[layer];
                 Assert.Contains("var " + layer + " = MatrixLayer( MatrixLayerHead(PanelMatrix.Rank(PanelMatrix." + title + "), PanelMatrix." + title + ",", flat);
             }
-            Assert.Contains("MatrixLayerHead(null, PanelSoon.SimHubDevice.Title,", flat);
+            Assert.Contains("MatrixLayerHead(null, PanelMatrixDevices.DeviceTitle, row.Caption, null, picker);", flat);
             // Every write goes through at once; the rig-wide animation is the only one not indexed per matrix,
             // and the oil and water thresholds are Settings' only.
             foreach (var write in new[]
@@ -1497,7 +1500,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(2, System.Text.RegularExpressions.Regex.Matches(flat, System.Text.RegularExpressions.Regex.Escape("if (control is ToggleButton) AutomationProperties.SetName(control, title);")).Count);
             // A press keeps its own words: the greyed device press is heard as what it shows.
             Assert.DoesNotContain("control is ButtonBase", flat);
-            Assert.Contains("Ui.Button(PanelMatrix.SimHubDeviceButton, PanelButtonKind.Outline, PanelButtonSize.Small)", flat);
+            // The device row's picker is the strip's, bounded the same way (#363).
+            Assert.Contains("picker.MaxWidth = PanelLeds.DevicePickerMaxWidth;", flat);
             // Each card is heard with the line under its name, which the card's name would otherwise replace.
             Assert.Equal("Left pillar, Matrix 2, Left", PanelMatrix.CardName("Left pillar", 2, "left", null));
             Assert.Equal("Matrix 3, Both sides", PanelMatrix.CardName("Matrix 3", 3, "both", null));
@@ -1547,6 +1551,7 @@ namespace OpenDashPlugin.Tests
                 PanelMatrix.ShiftColoursTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
                 PanelMatrix.CarShiftPointsTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
                 PanelMatrix.RedlineFlashTitle + " -> " + PanelMatrix.AnchorIdleDisplay,
+                PanelMatrixDevices.DeviceTitle + " -> " + PanelMatrix.AnchorDevice,
             }, PanelMatrix.Search.Select(entry => entry.Label + " -> " + entry.Route.Anchor));
             // Each entry's keywords, the old row names among them ("race flags", "pit status", "car warnings",
             // "slide in", "at rest"), so a search in the words the panel used to use lands on the row that
@@ -1567,6 +1572,7 @@ namespace OpenDashPlugin.Tests
                 "Shift colours: gear, revs",
                 "Car-specific shift points: car data, car-specific, thresholds",
                 "Redline flash: gear, shift",
+                "SimHub device: matrix device, arduino, wheel",
             }, PanelMatrix.Search.Select(entry => entry.Label + ": " + string.Join(", ", entry.Keywords)));
             // And the page wraps each of those parts in its anchor.
             var flat = FlatSource();
@@ -1581,7 +1587,7 @@ namespace OpenDashPlugin.Tests
                 "on => { Settings.FlagBoxSpotterAnimation = on; Save(); })), PanelMatrix.AnchorSpotterAnimation)",
                 "Ui.Anchor(warnings, PanelMatrix.AnchorWarnings)",
                 "Ui.Anchor(idleLayer, PanelMatrix.AnchorIdleDisplay)",
-                "device), PanelMatrix.AnchorPriority)",
+                "Ui.Anchor(device, PanelMatrix.AnchorDevice)), PanelMatrix.AnchorPriority)",
             })
             {
                 Assert.Contains(wrap, flat);
@@ -1592,7 +1598,7 @@ namespace OpenDashPlugin.Tests
                 "PanelMatrix.AddPanel", "PanelMatrix.PriorityTitle", "PanelMatrix.FlagsTitle",
                 "PanelMatrix.CriticalFlagsOnlyTitle", "PanelMatrix.PitLaneTitle", "PanelMatrix.SpotterTitle", "PanelMatrix.MountingSideTitle",
                 "PanelMatrix.SpotterAnimationTitle", "PanelMatrix.WarningsTitle", "PanelMatrix.IdleDisplayTitle", "PanelMatrix.ShiftColoursTitle",
-                "PanelMatrix.CarShiftPointsTitle", "PanelMatrix.RedlineFlashTitle",
+                "PanelMatrix.CarShiftPointsTitle", "PanelMatrix.RedlineFlashTitle", "PanelMatrixDevices.DeviceTitle",
             })
             {
                 Assert.Contains(name, matrix);
@@ -1606,6 +1612,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(new[]
             {
+                "AnchorDevice = matrix.device",
                 "AnchorFlags = matrix.flags",
                 "AnchorIdleDisplay = matrix.idle-display",
                 "AnchorPanels = matrix.panels",

@@ -149,9 +149,10 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | MX-09 | Triggers link (Warnings) | | Click | Settings › Alerts | V |
 | MX-10 | Idle display | | Gear | FlagBoxRest; sub-rows appear | J; V |
 | MX-11 | Shift colours / Car-specific shift points / Redline flash | Gear | Flip each | GearBands / GearCarLadder / GearBlink; car line | U; J; V |
-| MX-12 | RPM colour for everything #371 / SimHub device #363 / Priority order #505 | | Hover | greyed | V |
+| MX-12 | RPM colour for everything #371 / Priority order #505 | | Hover | greyed | V |
 | MX-13 | Rename / Remove | | Remove Left pillar | asks once ("Removes Left pillar and its settings. The flag box profile stays in SimHub.", Remove it); matrix 2 back to defaults | J |
 | MX-14 | Reinstall (profile line) | | Click | profile rewritten through SimHub's API; Say; log | J |
+| MX-15 | SimHub device (#363) | a wheel with an 8x8 in SimHub | Pick the wheel, then Install in the header | FlagBoxMatrixDevice; the header asks to install; the profile appears in the wheel's own matrix profile list, not only the Arduino's | J; V |
 
 ## SH Shortcuts
 | id | control | setup | action | expected | how |

@@ -96,7 +96,6 @@ namespace OpenDashPlugin
 
         // Matrix.
         public static readonly SoonItem RpmColourForEverything = new SoonItem(371, "RPM colour for everything", PanelPage.Matrix);
-        public static readonly SoonItem SimHubDevice = new SoonItem(363, "SimHub device", PanelPage.Matrix);
         public static readonly SoonItem PriorityOrder = new SoonItem(505, "Priority order", PanelPage.Matrix);
 
         // Rig.
@@ -132,7 +131,7 @@ namespace OpenDashPlugin
             RevFill, SpotterAtRevBarEnds, PitPageInPitLane, PopUps, DeltaEdgeLights, ScreenCare, Fit, CircleTracker, Launch,
             FlagsScreen, YourDisplays, ZonesInsteadOfCards,
             EachLedInTurn, IdleSweep, EngineStartAnimation, CarDataForLmu, PitLimiterLights,
-            RpmColourForEverything, SimHubDevice, PriorityOrder,
+            RpmColourForEverything, PriorityOrder,
             RealHardware,
             RigTest, AlertDismissal,
             FuelTargetPerLap, TyreDisplay, YellowFlags, TyreWear, PitWindowOpen, Incidents, HybridBatteryLow, AlertDisplay,

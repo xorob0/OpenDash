@@ -246,6 +246,17 @@ namespace OpenDashPlugin
         public string[] FlagBoxMatrixName { get; set; }
 
         /// <summary>
+        /// Which of SimHub's devices each matrix is: <see cref="LedBar.ArduinoDevice"/> or a device's own id, the
+        /// vocabulary a strip's device uses (#363). Null for a slot with no panel, and for a panel added before a
+        /// matrix named its device, which reads as the Arduino's because that is where its profile was installed.
+        /// </summary>
+        /// <remarks>
+        /// A matrix built into a wheel or a button plate keeps its own profile list under SimHub's Devices plugin,
+        /// so the flag box profile has to be installed into the device the matrix is, not into the Arduino's list.
+        /// </remarks>
+        public string[] FlagBoxMatrixDevice { get; set; }
+
+        /// <summary>
         /// The RGB strips on the rig, each with the settings its own profile reads.
         /// </summary>
         /// <remarks>
@@ -685,6 +696,23 @@ namespace OpenDashPlugin
             return string.IsNullOrWhiteSpace(name) ? null : name;
         }
 
+        /// <summary>The device a panel is, normalised (a panel with none recorded is the Arduino's), or null when
+        /// there is no panel in the slot.</summary>
+        public string MatrixDevice(int matrix)
+        {
+            if (!MatrixAdded(matrix)) return null;
+            var stored = FlagBoxMatrixDevice == null || matrix > FlagBoxMatrixDevice.Length ? null : FlagBoxMatrixDevice[matrix - 1];
+            return LedBar.NormaliseDevice(stored);
+        }
+
+        /// <summary>Points a panel at a device. Nothing for a slot with no panel in it.</summary>
+        public void SetMatrixDevice(int matrix, string device)
+        {
+            if (!MatrixAdded(matrix)) return;
+            if (FlagBoxMatrixDevice == null) FlagBoxMatrixDevice = new string[Contract.FlagBoxMatrices.Count];
+            FlagBoxMatrixDevice[matrix - 1] = LedBar.NormaliseDevice(device);
+        }
+
         /// <summary>Every slot with a panel in it, in slot order.</summary>
         public IEnumerable<int> MatrixPanels()
         {
@@ -716,10 +744,18 @@ namespace OpenDashPlugin
         /// </remarks>
         public int AddMatrixPanel(string name)
         {
+            return AddMatrixPanel(name, null);
+        }
+
+        /// <summary><see cref="AddMatrixPanel(string)"/> on a device (#363); null is the Arduino's matrix.</summary>
+        public int AddMatrixPanel(string name, string device)
+        {
             var slot = FreeMatrixSlot();
             if (slot == 0) return 0;
             var i = slot - 1;
             FlagBoxMatrixName[i] = string.IsNullOrWhiteSpace(name) ? "Matrix " + slot : name.Trim();
+            if (FlagBoxMatrixDevice == null) FlagBoxMatrixDevice = new string[Contract.FlagBoxMatrices.Count];
+            FlagBoxMatrixDevice[i] = LedBar.NormaliseDevice(device);
             SetMatrixRest(slot, "gear");
             FlagBoxFlags[i] = true;
             FlagBoxPit[i] = true;
@@ -744,6 +780,7 @@ namespace OpenDashPlugin
             if (matrix < 1 || matrix > Contract.FlagBoxMatrices.Count) return;
             var i = matrix - 1;
             FlagBoxMatrixName[i] = null;
+            if (FlagBoxMatrixDevice != null && i < FlagBoxMatrixDevice.Length) FlagBoxMatrixDevice[i] = null;
             SetMatrixRest(matrix, "dark");
             FlagBoxFlags[i] = false;
             FlagBoxPit[i] = false;
@@ -798,6 +835,17 @@ namespace OpenDashPlugin
             }
         }
 
+        /// <summary>Four slots; a slot with no panel holds no device, and a blank one is none recorded (#363).</summary>
+        private void NormaliseMatrixDevices()
+        {
+            FlagBoxMatrixDevice = Resize(FlagBoxMatrixDevice, new string[Contract.FlagBoxMatrices.Count], v => true);
+            for (var i = 0; i < FlagBoxMatrixDevice.Length; i++)
+            {
+                if (FlagBoxMatrixName[i] == null || string.IsNullOrWhiteSpace(FlagBoxMatrixDevice[i])) FlagBoxMatrixDevice[i] = null;
+                else FlagBoxMatrixDevice[i] = FlagBoxMatrixDevice[i].Trim();
+            }
+        }
+
         public int MatrixOilTemp(int matrix) => Pick(FlagBoxMatrixOilTemp, matrix, 0);
 
         public int MatrixWaterTemp(int matrix) => Pick(FlagBoxMatrixWaterTemp, matrix, 0);
@@ -839,6 +887,7 @@ namespace OpenDashPlugin
             // After the arrays are four long and the old scalars have been emptied into them, because
             // which panels a migrating rig keeps is read off what those panels were doing.
             NormaliseMatrixPanels(saved);
+            NormaliseMatrixDevices();
             // After both of those: a file that predates the rig-wide thresholds takes a named panel's,
             // which may be where a legacy scalar just went, and which panels are named is only known
             // once the names are.
@@ -2298,6 +2347,7 @@ namespace OpenDashPlugin
             FlagBoxMatrixGearBands = other.FlagBoxMatrixGearBands == null ? null : (bool[])other.FlagBoxMatrixGearBands.Clone();
             FlagBoxMatrixGearCarLadder = other.FlagBoxMatrixGearCarLadder == null ? null : (bool[])other.FlagBoxMatrixGearCarLadder.Clone();
             FlagBoxMatrixName = other.FlagBoxMatrixName == null ? null : (string[])other.FlagBoxMatrixName.Clone();
+            FlagBoxMatrixDevice = other.FlagBoxMatrixDevice == null ? null : (string[])other.FlagBoxMatrixDevice.Clone();
             LedBars = other.LedBars == null ? null : other.LedBars.Select(bar => bar == null ? null : bar.Copy()).ToList();
             FlagBoxMatrixOilTemp = other.FlagBoxMatrixOilTemp == null ? null : (int[])other.FlagBoxMatrixOilTemp.Clone();
             FlagBoxMatrixWaterTemp = other.FlagBoxMatrixWaterTemp == null ? null : (int[])other.FlagBoxMatrixWaterTemp.Clone();
