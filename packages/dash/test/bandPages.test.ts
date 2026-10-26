@@ -18,7 +18,7 @@ import { BAND_PAGES, BAND_PAGE_IDS, bandCorners, bandCornerWidths, bandMetrics, 
 import { TELLTALES, TELLTALE_GAP, TELLTALE_PAGE, telltaleArt, telltaleArtwork } from '../src/zones/telltales.ts';
 import { assetNamed } from '../src/design/assets.ts';
 import { SPECIAL_CHARS } from '../src/design/metrics.ts';
-import { textWidth } from '../src/second/drawn.ts';
+import { charsOfText, textWidth } from '../src/second/drawn.ts';
 import { bandFuelQuantity, bandFuelQuantityDrawn, bandFuelQuantityWidest, fuelIsSettled, fuelLastLapIsSettled, fuelToEndIsSettled, fuelToEndUnit, FUEL_TO_END_UNIT_WIDEST, LITRES_TO_GALLONS, MINUTES_CLOCK_WIDEST, NO_VALUE, sessionType } from '../src/second/values.ts';
 import { ncalcEvaluator as E } from '../src/generator.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
@@ -540,6 +540,69 @@ describe('the fuel page draws its quantities whole from 10 and to a tenth below'
       expect({ value, width: js(drawn, { Q: E.double(value) }) }).toEqual({ value, width: textWidth(text, mono) });
     }
     expect(js(drawn, {})).toBe(textWidth(NO_VALUE, mono));
+  });
+});
+
+/**
+ * The energy page's two per cents, the tank and the refuel, are whole numbers in three digit cells,
+ * as the energy module draws the same two members. They were `0.0` into those cells, so every
+ * reading a sim published lost its last digit, `100.0` two of them. #607.
+ */
+describe('the energy page draws its per cents in the cells they are cut for', () => {
+  const WHOLE = ['energy', 'refuel'] as const;
+  const fieldNamed = (id: string): BandField => BAND_PAGES.energy!.find((f) => f.id === id)!;
+  const js = (expression: string, properties: Record<string, unknown>): unknown => E.toJs(E.evaluate(expression, { properties }));
+  const MEMBER = { energy: 'VirtualEnergy', refuel: 'VirtualEnergyRefuel' } as const;
+  const at = (id: (typeof WHOLE)[number], value: number | null): Record<string, unknown> =>
+    value === null ? {} : { [`DataCorePlugin.GameRawData.Telemetry.${MEMBER[id]}`]: E.double(value) };
+
+  const READS: readonly [number | null, string][] = [
+    [100, '100'],
+    [99.6, '100'],
+    [68, '68'],
+    [68.4, '68'],
+    [5.4, '5'],
+    [0, '0'],
+    [null, NO_VALUE],
+  ];
+
+  test('each field reads whole, 100 included, and the absence where the sim publishes nothing', () => {
+    for (const id of WHOLE) {
+      for (const [value, reads] of READS) expect({ id, value, reads: js(fieldNamed(id).bind, at(id, value)) }).toEqual({ id, value, reads });
+    }
+  });
+
+  test("every reading the format writes is inside the field's chars", () => {
+    const mono = named(pageTexts('1920x480', 'energy'), 'energy.value').monospace!;
+    for (const id of WHOLE) {
+      const { chars } = fieldNamed(id);
+      expect({ id, chars }).toEqual({ id, chars: { digits: 3, specials: 0 } });
+      for (const [value] of READS) {
+        const text = String(js(fieldNamed(id).bind, at(id, value)));
+        const has = charsOfText(text, mono);
+        expect({ id, text, inside: has.digits <= chars.digits && has.specials <= chars.specials }).toEqual({ id, text, inside: true });
+      }
+    }
+  });
+
+  test('100 fits its box on every face that keeps the field, and the width it says it draws is what it draws', () => {
+    for (const face of Object.keys(BANDS) as (keyof typeof BANDS)[]) {
+      const texts = pageTexts(face, 'energy');
+      for (const id of WHOLE) {
+        const value = texts.find((t) => t.name === `${id}.value`);
+        if (value === undefined) continue;
+        for (const reading of ['100', NO_VALUE]) {
+          expect({ face, id, reading, fits: widthAsDrawn(value, reading) <= value.rect.width }).toEqual({ face, id, reading, fits: true });
+        }
+        const declared = fieldNamed(id).drawn!;
+        if (declared === 'fixed') throw new Error(`${id} declares a fixed width`);
+        const drawn = declared(value.monospace!);
+        for (const [v] of READS) {
+          const text = String(js(fieldNamed(id).bind, at(id, v)));
+          expect({ face, id, v, width: js(drawn, at(id, v)) }).toEqual({ face, id, v, width: textWidth(text, value.monospace!) });
+        }
+      }
+    }
   });
 });
 
