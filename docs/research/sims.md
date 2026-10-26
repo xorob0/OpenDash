@@ -334,9 +334,9 @@ section). What a null does to the reading:
 | `Telemetry.PitSvFlags`, `PitSvFuel`, `dpLFTireChange` and the other three | the pit view's service, band D's `Refuel` | the notice in place of the service, the pit time kept; `--` | #564 |
 | `Telemetry.dcPitSpeedLimiterToggle` | "the car has a limiter", the pit alerts | alerts off | #558 |
 | `Telemetry.LapDeltaToSessionLastlLap`, `_OK` | the last-lap delta reference | the session best, captioned as such | #575 |
-| `Telemetry.WindVel` | the wind on band D and the pit wall header | hidden | #1123 |
-| `Telemetry.SessionTimeOfDay` | the sim clock on the bar, band D and the pit wall header | `--` | #1123 |
-| `Telemetry.TrackWetness` | the track state on band D, the track module, the pit wall header and the Porsche strip | hidden | #1128 |
+| `Telemetry.WindVel` | the wind on band D and the pit wall header, after the plugin's `WindSpeed` | the plugin's `WindSpeed` on ACC and LMU; hidden on AC | #1123, #1175 |
+| `Telemetry.SessionTimeOfDay` | the sim clock on the bar, band D and the pit wall header, after the plugin's `SimTimeOfDay` | the plugin's `SimTimeOfDay` on ACC and LMU; `--` on AC | #1123, #1175 |
+| `Telemetry.TrackWetness` | the track state on band D, the track module, the pit wall header and the Porsche strip, after the plugin's `TrackWetness` | the plugin's `TrackWetness` on all three | #1128, #1175 |
 | `Telemetry.SessionTimeTotal` | the untimed-session mark | rests on `SessionTimeLeft` alone | none needed |
 | `Telemetry.EngineWarnings` | the engine telltale, the AiM and Porsche engine warnings, the oil pressure LED | dark | none needed |
 | `Telemetry.FuelPress`, `ManifoldPress`, `Voltage` | the engine readings page | `--` | none needed |
@@ -350,6 +350,9 @@ The track state read `DataCorePlugin.GameData.TrackGripStatus` until #1128, whic
 iRacing's included, because `StatusDataBase` has no such member; it read `--` everywhere. It reads
 iRacing's raw `TrackWetness` now, an `irsdk_TrackWetness` SimHub passes through as a plain int (0 not
 yet known, 1 dry to 7 extremely wet), folded onto five words: Dry, Damp, Wet, Very wet and Flooded.
+Since #1175 each of the three reads the plugin's `OpenDash.TrackWetness`, `WindSpeed`, `WindDirection` and
+`SimTimeOfDay` first, the other three sims' own readings on iRacing's scale and units; see
+[For #1175](#for-1175-the-readings-the-plugin-publishes).
 
 The Porsche's low-fuel alarm read `Telemetry.FuelLevel` when this page was written, so it never lit on
 the other three. It reads `GameData.Fuel` now, turned back into litres on a gallons profile, which on
@@ -400,8 +403,12 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
   empty. Every comparison of the name goes through `sessionIs()`, which compares it in capitals, and
   `ncalcCoverage.test.ts` refuses one that does not, so the Porsche strip reads `RACE` and `QUAL` (#1125). `untimedMark` reads `SessionTimeTotal`, which AC does not have, so it rests on `SessionTimeLeft`.
 - **Spotter.** Fires from car coordinates within 10 m beside the car, only with SimHub's AC app running.
-- **Grip.** The track state reads iRacing's raw `TrackWetness` (#1128), which AC does not have, so every
-  field that draws it hides. AC's own reading is raw `Graphics.surfaceGrip`, a number, not yet drawn.
+- **Grip.** AC's own reading is raw `Graphics.surfaceGrip`, a float: the grip of a dry track as a fraction
+  of its full grip. A server starts it at its session preset, which runs from 0.86 (Kunos's "green") to
+  1.00 ("optimum") among the game's own, and it climbs towards 1 as cars lay rubber down; it reads 0 before
+  the game has a session. AC has no rain, so every value of it is a dry track: the plugin publishes
+  `TrackWetness` 1, dry, for any grip above 0, and nothing for 0 (#1175). Before, the track state hid on AC
+  (#1128). The emulator's race scenario publishes 0.98.
 - **Fuel.** `Physics.Fuel` in litres and the same calculator as every game.
 - **Tyres.** Live pressure in psi, core temperature, wear on SimHub's remaining-tread scale (100 new)
   after mapping AC's 93.75..100. `fronttyrecompound` is null for every AC car, so the field reads `--`;
@@ -415,8 +422,9 @@ The Assetto Corsa worklist in #592 asked these of the AC column. What remains is
 - **DRS and P2P.** `DRSAvailable` is AC's own; `PushToPassActive` is null, so the chip stays dark.
 - **Opponents.** With SimHub's app: name, car, position, best, last and current lap, pit state and world
   position; no class, number, team, iRating or compound. Without it: one row, the player, named `Me`.
-- **Clock and weather.** Air and road temperatures are filled. `WindVel` and `SessionTimeOfDay` are absent:
-  the wind field hides and the sim clock reads `--` (#1123); before, they drew `0 km/h` and `00:00`.
+- **Clock and weather.** Air and road temperatures are filled. `WindVel` and `SessionTimeOfDay` are absent,
+  and AC's shared memory has no wind and no time of day of its own, so the plugin publishes neither: the
+  wind field hides and the sim clock reads `--` (#1123, #1175); before, they drew `0 km/h` and `00:00`.
 - **Telltales.** `EngineWarnings` is absent, so the engine lamp stays dark. The limiter lamp, like every
   limiter reading, reads the plugin's `OpenDash.PitLimiterOn`, which on AC is the raw `Physics.PitLimiterOn`
   (#1122). Without the plugin it falls back to `GameData.PitLimiterOn`, which on AC is the pit lane.
@@ -444,8 +452,8 @@ which is filled with the pit lane, and marks ACC's filled `ABSLevel`).
 | Damage | no | `CarDamage1..5` | `CarDamage1..5` | no |
 | Opponents beyond the player | yes | only with SimHub's AC app | only with broadcasting | yes |
 | Track name for people | raw `SessionData.WeekendInfo.TrackDisplayShortName`; `TrackName` is iRacing's code, `spa gp` | raw `Track.TrackInfo.name` | `TrackName` | `TrackName` |
-| Track grip | `TrackWetness`, seven levels | a number | a word | a level |
-| Wind and time of day | yes | no | yes | yes |
+| Track grip | `TrackWetness`, seven levels | a number, always dry; the plugin's `TrackWetness` (#1175) | a word; the plugin's `TrackWetness` | a wetness; the plugin's `TrackWetness` |
+| Wind and time of day | yes | no | yes; the plugin's `WindSpeed`, `WindDirection`, `SimTimeOfDay` (#1175) | yes; the same |
 | Pit lane speed limit | yes | no | a constant 60 km/h | no |
 | Virtual energy | no | no | no | yes |
 | Engine warnings | yes | no | no | overheating only |
@@ -456,6 +464,27 @@ Two readings need no capability, only a different property: the tyre temperature
 `GameData.TyreTemperature*`, which is `LFtempCM` on iRacing and each game's own elsewhere, and the gear
 count (#996) can read `GameData.CarSettings_MaxGears`, which AC and LMU fill from the car and SimHub
 learns on iRacing and ACC (so a car's first laps there read the highest gear used so far).
+
+## For #1175: the readings the plugin publishes
+
+The track state, the wind and the sim clock were written against iRacing's raw `TrackWetness`, `WindVel`,
+`WindDir` and `SessionTimeOfDay`. The other three publish readings of their own, under other names and on
+other scales, and SimHub's readers copy them into `GameRawData` without reading them. Under ADR 0021 the
+plugin maps the running sim's reading onto iRacing's scale and publishes it as `OpenDash.TrackWetness`
+(1 dry to 7 extremely wet), `WindSpeed` (m/s), `WindDirection` (radians) and `SimTimeOfDay` (seconds since
+midnight). Every dashboard reads the property first and iRacing's raw one after it. The table is
+`plugin/OpenDash/SimReadings.cs`. iRacing's row is empty, because its raw properties are the answer.
+
+| Reading | Assetto Corsa | ACC | Le Mans Ultimate |
+| --- | --- | --- | --- |
+| `TrackWetness` | `Graphics.surfaceGrip` above 0 is 1, dry | `Graphics.trackGripStatus`: `GREEN`, `FAST`, `OPTIMUM` 1; `GREASY` 2; `DAMP` 3; `WET` 5; `FLOODED` 7 | `scoringInfo.mAvgPathWetness`, 0.0 to 1.0: 0 is 1, anything above spread over 2 to 7 as `1 + ceil(w * 6)` |
+| `WindSpeed` | none | `Graphics.WindSpeed`, m/s | the horizontal length of `scoringInfo.mWind` (x, z), m/s |
+| `WindDirection` | none | `Graphics.WindDirection`, radians | `atan2(x, z)` of `mWind`, 0 to 2π, in the track's frame; rFactor 2's world has no north |
+| `SimTimeOfDay` | none | `Graphics.clock`, seconds | `scoringInfo.mTimeOfDay`, read as seconds |
+
+ACC's grip status reaches the plugin as the reader's `ACC_TRACK_GRIP_STATUS` enum, and the table takes
+its number or its name. LMU's `mTrackGripLevel` is not read: it is a byte the reader leaves undescribed,
+and nothing says it measures the water rather than the rubber.
 
 ## For #579: what an Assetto Corsa emulator must provide
 
@@ -503,6 +532,10 @@ What the source cannot settle, to check in the drives #592, #961 and #962 ask fo
 - **The damage scale.** `CarDamage1..5` are AC's and ACC's numbers unscaled, in the order front, rear,
   left, right, centre by Kunos's ACC documentation; the range a crash reaches is for a drive.
 - **LMU's time of day and virtual energy units.** `mTimeOfDay` and `mVirtualEnergy` are floats whose
-  units LMU does not document in the structs.
+  units LMU does not document in the structs. The plugin publishes `mTimeOfDay` as seconds since midnight
+  (#1175); a drive says whether the sim clock then reads the session's hour.
+- **The other sims' weather on a drive (#1175).** Whether ACC's `trackGripStatus` reaches the plugin as
+  its enum, its number or its name; whether ACC's `WindDirection` is in radians as Kunos documents it;
+  where LMU's `mAvgPathWetness` sits in a shower, which decides whether its six wet steps are spread well.
 - **ACC's session names past 6.** Which sessions ACC numbers 7 and 8 and what `SessionTypeName` then reads.
 - **The track name ACC's broadcast gives.** A display name or the track's code.

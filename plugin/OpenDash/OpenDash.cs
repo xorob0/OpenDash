@@ -23,6 +23,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Windows.Controls;
 using System.Windows.Media;
 using GameReaderCommon;
@@ -787,11 +788,27 @@ namespace OpenDashPlugin
             if (data == null || !data.GameRunning || data.NewData == null || pluginManager == null)
             {
                 simReport = SimReport.Unknown;
+                ForgetSimReadings();
                 return;
             }
             var read = readProperty;
             if (read == null) readProperty = read = pluginManager.GetPropertyValue;
             simReport = SimCapabilities.Read(data.GameName, read);
+            for (var i = 0; i < Contract.Readings.Length; i++)
+                Volatile.Write(ref simReadings[i], Boxed(SimReadings.Read(data.GameName, Contract.Readings[i], read), Volatile.Read(ref simReadings[i])));
+        }
+
+        /// <summary>
+        /// The running sim's own track wetness, wind and time of day, mapped onto iRacing's units, boxed: what
+        /// <see cref="Contract.Readings"/> publish, one slot each in their order. Each slot is replaced whole, and only when
+        /// its reading moves. See SimReadings.cs. #1175.
+        /// </summary>
+        private readonly object[] simReadings = new object[Contract.Readings.Length];
+
+        /// <summary>Empties every reading, which every dashboard reads as no plugin and answers from iRacing's raw property.</summary>
+        private void ForgetSimReadings()
+        {
+            for (var i = 0; i < simReadings.Length; i++) Volatile.Write(ref simReadings[i], null);
         }
 
         /// <summary>
@@ -902,6 +919,7 @@ namespace OpenDashPlugin
             catch (Exception e)
             {
                 simReport = SimReport.Unknown;
+                ForgetSimReadings();
                 Report(simReportFault, e, nowMs);
             }
 
@@ -1329,6 +1347,13 @@ namespace OpenDashPlugin
             // setting: see Contract.PitStopSeconds. #1130.
             this.AttachDelegate(Contract.PitStopSeconds, () => pitStopSeconds);
             this.AttachDelegate(Contract.LastPitStopSeconds, () => lastPitStopSeconds);
+            // And the running sim's own track wetness, wind and time of day, filled by DataUpdate on iRacing's scale and null
+            // where iRacing's raw property is the answer. Not a setting: see Contract.TrackWetness. #1175.
+            for (var i = 0; i < Contract.Readings.Length; i++)
+            {
+                var slot = i;
+                this.AttachDelegate(Contract.Readings[slot], () => Volatile.Read(ref simReadings[slot]));
+            }
             // One group per screen the rig holds, under that screen's own namespace, which is what lets
             // two screens of one size be configured apart (ADR 0017). The screen object is captured
             // rather than looked up per read: the panel replaces the settings object on every change, so

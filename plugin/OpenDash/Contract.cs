@@ -226,6 +226,32 @@ namespace OpenDashPlugin
         /// </summary>
         public const string LastPitStopSeconds = "LastPitStopSeconds";
 
+        /// <summary>
+        /// How wet the track is, on iRacing's own scale: 1 for dry up to 7 for extremely wet, as its raw TrackWetness
+        /// writes it, or null where the plugin does not know. Published rather than chosen, from the running sim's
+        /// row of SimReadings.cs. #1175.
+        /// </summary>
+        /// <remarks>
+        /// The first of the readings: a number every sim publishes under a name, a unit and a scale of its own, which
+        /// the dashboards draw from iRacing's raw property. The plugin maps each sim's own reading onto iRacing's
+        /// unit and scale, so a dashboard reads one property and never names a game (ADR 0021), and reads it with
+        /// iRacing's raw property as the isnull() fallback, which is what a package draws with no plugin. iRacing's
+        /// row publishes none of them, its raw property being the answer.
+        /// </remarks>
+        public const string TrackWetness = "TrackWetness";
+
+        /// <summary>The wind's speed in metres per second, as iRacing's raw WindVel. See <see cref="TrackWetness"/>.</summary>
+        public const string WindSpeed = "WindSpeed";
+
+        /// <summary>The wind's direction in radians, as iRacing's raw WindDir. See <see cref="TrackWetness"/>.</summary>
+        public const string WindDirection = "WindDirection";
+
+        /// <summary>The sim's own time of day in seconds since midnight, as iRacing's raw SessionTimeOfDay. See <see cref="TrackWetness"/>.</summary>
+        public const string SimTimeOfDay = "SimTimeOfDay";
+
+        /// <summary>Every reading, in the order they are attached. See <see cref="TrackWetness"/>.</summary>
+        public static readonly string[] Readings = { TrackWetness, WindSpeed, WindDirection, SimTimeOfDay };
+
         /// <summary>The longest version UpdateVersion carries. contract.ts measures the mark's box for it.</summary>
         public const int UpdateVersionMaxLength = 12;
 
@@ -1681,6 +1707,10 @@ namespace OpenDashPlugin
             // because every screen that times a stop times the same car. #1130.
             yield return PitStopSeconds;
             yield return LastPitStopSeconds;
+            // And the readings each sim publishes in a unit and on a scale of its own, appended for the same reason,
+            // published rather than chosen and shared because every screen that draws the track state, the wind or the
+            // sim's clock reads the same sim. #1175.
+            foreach (var reading in Readings) yield return reading;
         }
 
         /// <summary>The four zones of a rectangular face. Band D is a zone: it cycles a catalogue.</summary>

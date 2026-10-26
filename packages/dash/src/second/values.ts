@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { ELLIPSIS, measureText, widestFigure, type MeasuredFace } from '../design/advances.ts';
 import { DATA_FACE, MINUS, type Chars, type DataWeight } from '../design/metrics.ts';
 import type { Mark } from '../elements/mark.ts';
-import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, RADAR_NEEDS_TRACK_MAP, setting, TRACK_MAP_RECORDED, WHITE_FLAG_SHOWN, YELLOW_FLAG_SHOWN } from '../contract.ts';
+import { BLACK_FLAG_SHOWN, CAR_HAS_PIT_LIMITER, CHEQUERED_FLAG_SHOWN, CLASS_BEST_LAP, DAMAGE_REPORTED, DRIVER_IN_CAR, flagBox, LAST_PIT_STOP_SECONDS, LIVE_CLASS_ORDER, LIVE_CLASS_POSITION, LIVE_ORDER, LIVE_POSITION, PIT_LIMITER_ON, PIT_STOP_SECONDS, propertyName, RADAR_NEEDS_TRACK_MAP, setting, SIM_TIME_OF_DAY, TRACK_MAP_RECORDED, TRACK_WETNESS, WHITE_FLAG_SHOWN, WIND_DIRECTION, WIND_SPEED, YELLOW_FLAG_SHOWN } from '../contract.ts';
 import { chipText } from './chip.ts';
 import { drawnAfter, drawnEither, drawnFigure, drawnText, type DrawnFigure } from './drawn.ts';
 import { rpms } from '../shift.ts';
@@ -2412,18 +2412,22 @@ export const trackLengthKm = (): Expr => div(isnull(game('TrackLength'), num(0))
 /**
  * How wet the track is, as iRacing's raw `TrackWetness` writes it: `irsdk_TrackWetness`, 1 for dry up
  * to 7 for extremely wet, and 0 while iRacing does not know. SimHub passes it through as the plain
- * int (`Telemetry.ConvertToSpecificType` in its iRacingSDK leaves it alone), and it is null on every
- * other sim, which has no reading of this kind under this name.
+ * int (`Telemetry.ConvertToSpecificType` in its iRacingSDK leaves it alone).
+ *
+ * The plugin's `TrackWetness` is read first: Assetto Corsa's surface grip, ACC's grip status and Le Mans
+ * Ultimate's path wetness, each mapped onto iRacing's scale by `plugin/OpenDash/SimReadings.cs` (#1175).
+ * It is null on iRacing and with no plugin, where iRacing's raw property is the answer, and both are null
+ * on a sim with no reading of this kind.
  */
-export const trackWetness = (): Expr => raw('TrackWetness');
+export const trackWetness = (): Expr => isnull(prop(propertyName(TRACK_WETNESS)), raw('TrackWetness'));
 
 /**
- * Whether the sim reports a track state at all: iRacing's wetness is there and known.
+ * Whether the sim reports a track state at all: its wetness is there and known.
  *
- * Asked of the reading itself, as ADR 0021 has an absent raw property answer for itself. Assetto Corsa,
- * ACC and Le Mans Ultimate each publish a grip of their own, in a scale of their own (a number, a word
- * and a level, docs/research/sims.md), which nothing has seen on a drive yet, so the field hides there
- * rather than drawing a word nobody checked (#1128).
+ * Asked of the reading itself, as ADR 0021 has an absent property answer for itself. Assetto Corsa, ACC
+ * and Le Mans Ultimate each publish a grip of their own, in a scale of their own (a number, a word and a
+ * level, docs/research/sims.md), which the plugin maps onto iRacing's (#1175); with no plugin the field
+ * hides there, as it did before (#1128).
  */
 export const hasTrackState = (): Expr => gt(isnull(trackWetness(), num(0)), num(0));
 
@@ -2615,16 +2619,28 @@ export const carModel = (): Expr => isnull(game('CarModel'), str(''));
  */
 const orNull = (reading: Expr, value: Expr): Expr => iff(isNull(reading), reading, value);
 
-/** Whether the sim publishes a wind: iRacing's raw `WindVel`, which Assetto Corsa, ACC and LMU do not (#1123). */
-export const hasWind = (): Expr => not(isNull(raw('WindVel')));
-/** Wind speed in km/h, from the raw metres per second iRacing publishes; null where the sim has none. */
-export const windKmh = (): Expr => orNull(raw('WindVel'), mul(raw('WindVel'), num(3.6)));
+/**
+ * The wind's speed in metres per second: the plugin's `WindSpeed` first, which ACC and Le Mans Ultimate
+ * publish in a name of their own (#1175), and iRacing's raw `WindVel` after it (#1123). Null on a sim with
+ * neither, which is Assetto Corsa.
+ */
+const windSpeed = (): Expr => isnull(prop(propertyName(WIND_SPEED)), raw('WindVel'));
+/** The wind's direction in radians, the plugin's `WindDirection` first and iRacing's raw `WindDir` after it. */
+const windDirection = (): Expr => isnull(prop(propertyName(WIND_DIRECTION)), raw('WindDir'));
+/** Whether the sim publishes a wind: iRacing's, ACC's and LMU's, and not Assetto Corsa's (#1123, #1175). */
+export const hasWind = (): Expr => not(isNull(windSpeed()));
+/** Wind speed in km/h, from the metres per second the sim publishes; null where the sim has none. */
+export const windKmh = (): Expr => orNull(windSpeed(), mul(windSpeed(), num(3.6)));
 /** Wind direction in degrees, from radians; null where the sim has none. */
-export const windDegrees = (): Expr => orNull(raw('WindDir'), mul(raw('WindDir'), num(180 / Math.PI)));
-/** Whether the sim publishes a clock of its own: iRacing's raw `SessionTimeOfDay` (#1123). */
-export const hasSimClock = (): Expr => not(isNull(raw('SessionTimeOfDay')));
-/** The sim's own clock, as seconds of day; null where the sim has none. */
-export const simTimeOfDay = (): Expr => raw('SessionTimeOfDay');
+export const windDegrees = (): Expr => orNull(windDirection(), mul(windDirection(), num(180 / Math.PI)));
+/**
+ * The sim's own clock, as seconds of day: the plugin's `SimTimeOfDay` first, which ACC and Le Mans
+ * Ultimate publish in a name of their own (#1175), and iRacing's raw `SessionTimeOfDay` after it; null
+ * where the sim has none, which is Assetto Corsa.
+ */
+export const simTimeOfDay = (): Expr => isnull(prop(propertyName(SIM_TIME_OF_DAY)), raw('SessionTimeOfDay'));
+/** Whether the sim publishes a clock of its own (#1123, #1175). */
+export const hasSimClock = (): Expr => not(isNull(simTimeOfDay()));
 
 /** Whether the rig writes its clocks to twelve hours, which is `ClockFormat`. #324. */
 export const twelveHour = (): Expr => setting.clockFormatIs('12h');

@@ -473,7 +473,7 @@ namespace OpenDashPlugin
         }
 
         /// <summary>A value as a number: an enum by its value, a number as it is, a string parsed; null otherwise.</summary>
-        private static double? Real(object value)
+        public static double? Real(object value)
         {
             if (value == null || value is bool) return null;
             try

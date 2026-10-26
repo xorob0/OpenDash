@@ -398,6 +398,26 @@ export const PIT_STOP_SECONDS = 'PitStopSeconds';
  */
 export const LAST_PIT_STOP_SECONDS = 'LastPitStopSeconds';
 
+/**
+ * The running sim's own track wetness on iRacing's `irsdk_TrackWetness` scale, `1` dry to `7` extremely
+ * wet, or null where iRacing's raw `TrackWetness` is the answer or the sim has none. #1175.
+ *
+ * Published rather than chosen, like {@link PIT_STOP_SECONDS}. Assetto Corsa, ACC and Le Mans Ultimate each
+ * publish a reading of their own under another name and on another scale, and under ADR 0021 a dashboard
+ * never names a game, so the plugin maps the running sim's reading onto iRacing's scale through
+ * `plugin/OpenDash/SimReadings.cs`. Read through `trackWetness` in `second/values.ts`, with iRacing's raw
+ * property as the fallback, so a package with no plugin draws what it always drew.
+ */
+export const TRACK_WETNESS = 'TrackWetness';
+/** The running sim's wind speed in metres per second, iRacing's `WindVel`. See {@link TRACK_WETNESS}. #1175. */
+export const WIND_SPEED = 'WindSpeed';
+/** The running sim's wind direction in radians, iRacing's `WindDir`. See {@link TRACK_WETNESS}. #1175. */
+export const WIND_DIRECTION = 'WindDirection';
+/** The running sim's time of day in seconds since midnight, iRacing's `SessionTimeOfDay`. See {@link TRACK_WETNESS}. #1175. */
+export const SIM_TIME_OF_DAY = 'SimTimeOfDay';
+/** Every sim reading, in the order the plugin publishes them: `Contract.Readings`. */
+export const SIM_READINGS = [TRACK_WETNESS, WIND_SPEED, WIND_DIRECTION, SIM_TIME_OF_DAY] as const;
+
 /** The longest version {@link UPDATE_VERSION} carries. `UpdateMark.Shown` in the plugin holds it. */
 export const UPDATE_VERSION_MAX_LENGTH = 12;
 
@@ -563,6 +583,9 @@ export function dashProperties(): string[] {
     // that times a stop times the same car. #1130.
     PIT_STOP_SECONDS,
     LAST_PIT_STOP_SECONDS,
+    // And the running sim's own track wetness, wind and time of day after that, on iRacing's scale, shared because
+    // every screen that draws one reads it of the same sim. #1175.
+    ...SIM_READINGS,
   ];
   return [...[...fixed, ...slots, ...shared].map(propertyName), ...zoneProperties()];
 }

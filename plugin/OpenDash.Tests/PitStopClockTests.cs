@@ -154,7 +154,8 @@ namespace OpenDashPlugin.Tests
             Assert.Equal("PitStopSeconds", Contract.PitStopSeconds);
             Assert.Equal("LastPitStopSeconds", Contract.LastPitStopSeconds);
             Assert.Equal(shared.IndexOf(Contract.TrackMapRecorded) + 1, shared.IndexOf(Contract.PitStopSeconds));
-            Assert.Equal(shared.Count - 1, shared.IndexOf(Contract.LastPitStopSeconds));
+            // Last of the group until the sim readings followed it. #1175.
+            Assert.Equal(shared.Count - 1 - Contract.Readings.Length, shared.IndexOf(Contract.LastPitStopSeconds));
             Assert.Equal(shared.IndexOf(Contract.PitStopSeconds) + 1, shared.IndexOf(Contract.LastPitStopSeconds));
         }
     }
