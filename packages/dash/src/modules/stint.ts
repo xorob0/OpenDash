@@ -29,7 +29,7 @@ import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { densityOf } from '../second/density.ts';
 import { stack } from '../second/layout.ts';
-import { CHARS, lapOfTotalWidest, LAP_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, secondsToFit, secondsToFitDrawn, secondsToFitWidest, settledFuelTimeLeft } from '../second/values.ts';
+import { CHARS, CLOCK_WIDEST, lapOfTotalWidest, LAP_WIDEST, average5, clock, LAP_TIME_WIDEST, lapOfTotal, player, secondsOf, secondsToFit, secondsToFitDrawn, secondsToFitWidest, settledFuelTimeLeft } from '../second/values.ts';
 import { defineModule, fieldsRow, fld, leadRankSize } from './module.ts';
 
 const { fmt, isnull, num, driver, game } = ncalc;
@@ -53,7 +53,7 @@ export const stint = defineModule('stint', (ctx) => {
           // extrapolating a partial lap and this clock runs backwards and forwards as you drive.
           // The gate is on the seconds, so an unsettled range reads `-:--:--` as the stint time
           // beside it does when it has nothing to count, rather than `--` in a row of clocks.
-          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), chars: CHARS.clock, fs: lead }),
+          fld(ctx, 'fuelTime', 'Fuel time', { sample: '0:31:40', bind: clock(settledFuelTimeLeft()), widest: CLOCK_WIDEST, chars: CHARS.clock, fs: lead }),
           fld(ctx, 'stintTime', 'Stint time', { sample: '0:21:40', bind: clock(stintSeconds), chars: CHARS.clock, fs: lead }),
         ],
         ctx,
