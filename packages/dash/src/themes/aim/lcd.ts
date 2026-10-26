@@ -26,6 +26,8 @@
  *     with their figures in the ink, as the canvas's warning box is, since a block of ink that size
  *     hides the page under it and no LCD draws one. A filled box holding no text is a bar or a rule
  *     when it is thin, and drawn in the ink, and otherwise an area, drawn as its outline.
+ *     A box holds only a text that can show with it: one on a layer that is out whenever the box's
+ *     is in, as the two halves of the pit view are, is not counted, however the two overlap (#1183).
  *   - A box, a dot or a gauge whose colour is bound says a state by it, a segment lit or not: the
  *     binding is kept and every colour it can give is turned into the ink, or into the ghost's tone
  *     where the house gives an unlit, dim or ground colour, so the segment still lights.
@@ -88,12 +90,32 @@ const centreIn = (r: Rect, box: Rect): boolean => {
   return x >= box.left && x <= box.left + box.width && y >= box.top && y <= box.top + box.height;
 };
 
-const flat = (items: readonly Item[]): Item[] => items.flatMap((item) => (item.kind === 'layer' ? flat(item.children) : [item]));
+/** An item and the Visible of every layer it stands in, outermost first. */
+interface Placed<T extends Item = Item> {
+  item: T;
+  layers: readonly Expr[];
+}
+
+const placed = (items: readonly Item[], layers: readonly Expr[] = []): Placed[] =>
+  items.flatMap((item) => {
+    if (item.kind !== 'layer') return [{ item, layers }];
+    const when = expressionOf(item.bindings?.Visible);
+    return placed(item.children, when === undefined ? layers : [...layers, when]);
+  });
+
+/**
+ * Whether two items can never show in the same frame: one stands in a layer whose Visible is the
+ * other's layer's, negated, as the two halves of a module that shows one layout or another are
+ * bound (`modules/pitView.ts`). A text in the half that is out is not in a box of the half that is
+ * in, however the two overlap in the editor (#1183).
+ */
+const apart = (a: readonly Expr[], b: readonly Expr[]): boolean => a.some((x) => b.some((y) => x === not(y) || y === not(x)));
 
 /** A highlight: the box, and when it shows, which is when its text is in the ground. */
 interface Highlight {
   rect: Rect;
   when?: Expr;
+  layers: readonly Expr[];
 }
 
 const isChip = (r: Rect): boolean => r.width <= CHIP.width && r.height <= CHIP.height;
@@ -193,23 +215,29 @@ function ghostFor(item: TextItem): TextItem | undefined {
 export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
   const ink = lcdColour('ink');
   const ground = lcdColour('ground');
-  const texts = flat(items).filter((item): item is TextItem => item.kind === 'text');
-  const figures = texts.filter((t) => t.monospace !== undefined && t.bindings?.Visible !== undefined);
-  const holdsText = (r: Rect): boolean => texts.some((t) => centreIn(t.rect, r));
-  const highlights: Highlight[] = flat(items)
-    .filter((item) => item.kind === 'rect' && opts.boxes !== 'outline' && holdsText(item.rect) && (opts.boxes === 'inverse' ? filled(item.backgroundColor) || item.border !== undefined : filled(item.backgroundColor) && !isChip(item.rect)))
-    .map((item) => ({ rect: (item as { rect: Rect }).rect, when: expressionOf(item.bindings?.Visible) }));
-  const onHighlight = (t: TextItem): Highlight | undefined => highlights.find((h) => centreIn(t.rect, h.rect));
+  const all = placed(items);
+  const texts = all.filter((p): p is Placed<TextItem> => p.item.kind === 'text');
+  const figures = texts.map((p) => p.item).filter((t) => t.monospace !== undefined && t.bindings?.Visible !== undefined);
+  /** Whether a text that can show with the box stands in it; one on a layer that is out while the box is in does not count. */
+  const holdsText = (r: Rect, layers: readonly Expr[]): boolean => texts.some((t) => centreIn(t.item.rect, r) && !apart(t.layers, layers));
+  const highlights: Highlight[] = all
+    .filter(({ item, layers }) => item.kind === 'rect' && opts.boxes !== 'outline' && holdsText(item.rect, layers) && (opts.boxes === 'inverse' ? filled(item.backgroundColor) || item.border !== undefined : filled(item.backgroundColor) && !isChip(item.rect)))
+    .map(({ item, layers }) => ({ rect: (item as { rect: Rect }).rect, when: expressionOf(item.bindings?.Visible), layers }));
+  const onHighlight = (t: TextItem, layers: readonly Expr[]): Highlight | undefined => highlights.find((h) => centreIn(t.rect, h.rect) && !apart(h.layers, layers));
 
-  const restyle = (item: Item): Item[] => {
-    if (item.kind === 'layer') return [{ ...item, children: item.children.flatMap(restyle) }];
+  const restyle = (item: Item, layers: readonly Expr[]): Item[] => {
+    if (item.kind === 'layer') {
+      const when = expressionOf(item.bindings?.Visible);
+      const inner = when === undefined ? layers : [...layers, when];
+      return [{ ...item, children: item.children.flatMap((child) => restyle(child, inner)) }];
+    }
     if (item.kind === 'image' || item.kind === 'webPage' || item.kind === 'widget') return item.kind === 'image' ? [] : [item];
     const plain = withoutColourBindings(item);
     switch (plain.kind) {
       case 'text': {
         const figure = plain.font === ds.font.label ? standingInFor(plain, figures) : undefined;
         const set = figure ? inPlaceOf(plain, figure) : plain.font === ds.font.label ? captionOf(plain) : plain;
-        const lit = onHighlight(plain);
+        const lit = onHighlight(plain, layers);
         const coloured = withMoreBindings<'text'>(
           {
             ...set,
@@ -226,15 +254,15 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
       case 'rect': {
         const border = plain.border ? { ...plain.border, color: ink, colorBinding: undefined } : undefined;
         const bound = boundColour(item, 'BackgroundColor');
-        if (bound !== undefined && !holdsText(plain.rect)) return [withMoreBindings<'rect'>({ ...plain, backgroundColor: ink, ...(border ? { border } : {}) }, { BackgroundColor: bound })];
+        if (bound !== undefined && !holdsText(plain.rect, layers)) return [withMoreBindings<'rect'>({ ...plain, backgroundColor: ink, ...(border ? { border } : {}) }, { BackgroundColor: bound })];
         // Over the face a box holding text is inverse video whether the house filled it or outlined it, as the pit family's banners are.
-        if (opts.boxes === 'inverse' && border && holdsText(plain.rect)) return [{ ...plain, backgroundColor: ink, border }];
-        if (opts.boxes === 'outline' && (border || filled(plain.backgroundColor)) && holdsText(plain.rect)) {
+        if (opts.boxes === 'inverse' && border && holdsText(plain.rect, layers)) return [{ ...plain, backgroundColor: ink, border }];
+        if (opts.boxes === 'outline' && (border || filled(plain.backgroundColor)) && holdsText(plain.rect, layers)) {
           return [{ ...plain, backgroundColor: ground, border: { color: ink, top: BOX_OUTLINE, bottom: BOX_OUTLINE, left: BOX_OUTLINE, right: BOX_OUTLINE } }];
         }
         if (!filled(plain.backgroundColor)) return [{ ...plain, ...(border ? { border } : {}) }];
         const r = plain.rect;
-        if (holdsText(r)) {
+        if (holdsText(r, layers)) {
           const highlight = opts.boxes === 'inverse' || !isChip(r);
           return [{ ...plain, backgroundColor: highlight ? ink : TRANSPARENT, ...(border ? { border } : {}) }];
         }
@@ -273,7 +301,7 @@ export function lcd(items: readonly Item[], opts: LcdOptions = {}): Item[] {
         return [plain];
     }
   };
-  return items.flatMap(restyle);
+  return items.flatMap((item) => restyle(item, []));
 }
 
 /** A dot in the ink: the player's filled, everyone else's an outline on the ground. */
