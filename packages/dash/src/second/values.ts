@@ -3049,6 +3049,30 @@ export const previousLapIsThisSession = (slotExpr: Expr): Expr =>
 export const hasSessionLap = (slotExpr: Expr): Expr => and(previousLapIsThisSession(slotExpr), hasTime(previousLap(slotExpr)));
 
 /**
+ * How far apart slot zero's time and `LastLapTime` may be and still be one lap: under a millisecond.
+ * The tracker writes the slot from the same `TimeSpan` it reads `LastLapTime` from, so the two are
+ * equal to the tick; the margin is for the double either side of the subtraction, not for a game.
+ */
+export const RING_LAP_TOLERANCE = 0.001;
+
+/**
+ * Whether the ring took the lap just finished: slot zero is a lap of this session and its time is
+ * `LastLapTime`'s.
+ *
+ * SimHub does not put every lap in the ring. `PersistantTrackerPlugin.TrackNewLap` inserts the lap
+ * and refills the ring only when it is not a test lap, the player is not spectating and the lap is
+ * over 5 s (9.12.6, `PersistantTrackerPlugin.cs:741`), and a test lap is one the game called invalid
+ * at any point, one of 5 s or less, or one across a change of `SessionTypeName`
+ * (`GameManagerBase.IsPreviousLapTest`). After a lap left out, slot zero is still the lap before it,
+ * and a reading that took slot zero for the lap just finished would describe an older one (#1025).
+ * When the ring does take the lap it writes slot zero from `LastLapTime` itself (`record.LapTime =
+ * data.NewData.LastLapTime`), so the two times agree to the tick; when it does not they are two laps,
+ * and two laps a millisecond apart is a coincidence the gate accepts.
+ */
+export const ringHasLastLap = (): Expr =>
+  and(hasSessionLap(num(0)), lt(abs(sub(secondsOf(lastLap()), secondsOf(previousLap(num(0))))), num(RING_LAP_TOLERANCE)));
+
+/**
  * The edge under which a figure to `places` decimals still has no more than `whole` whole digits:
  * half a unit of the last place short of the next power of ten, since .NET rounds 999.96 to one
  * place up to `1000.0`. Shared by {@link signedToFit} and {@link secondsToFit}.
