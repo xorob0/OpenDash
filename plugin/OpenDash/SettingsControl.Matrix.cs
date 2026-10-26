@@ -670,7 +670,7 @@ namespace OpenDashPlugin
         private FrameworkElement BuildMatrixDeviceRow(int matrix)
         {
             var current = Settings.MatrixDevice(matrix);
-            var row = PanelMatrixDevices.DeviceRow(MatrixTargets.Entries(matrixDevices.Targets), current);
+            var row = PanelMatrixDevices.DeviceRow(MatrixTargets.Entries(matrixDevices.Targets), current, matrixDevices.Declined);
             if (!row.HasPicker) return MatrixLayerHead(null, PanelMatrixDevices.DeviceTitle, row.Caption, null, null);
             var ids = row.Ids;
             var labels = row.Labels;

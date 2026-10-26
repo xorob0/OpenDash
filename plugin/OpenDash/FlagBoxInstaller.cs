@@ -79,37 +79,51 @@ namespace OpenDashPlugin
         {
             var embedded = Parse(embeddedJson);
             if (embedded == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
-            var plans = new List<FlagBoxPlan>();
+            return PanelMatrixDevices.Combine(Plans(embedded, devices, targets).Select(entry => entry.Value).ToList());
+        }
+
+        /// <summary>What each device the profile goes to holds, by device, in the devices' order.</summary>
+        private static List<KeyValuePair<string, FlagBoxPlan>> Plans(RGBMatrixProfile embedded, IEnumerable<string> devices, IList<MatrixTarget> targets)
+        {
+            var plans = new List<KeyValuePair<string, FlagBoxPlan>>();
             foreach (var device in devices ?? Enumerable.Empty<string>())
             {
                 var target = MatrixTargets.Find(device, targets);
-                plans.Add(target?.Settings == null
+                plans.Add(new KeyValuePair<string, FlagBoxPlan>(device, target?.Settings == null
                     ? new FlagBoxPlan { State = FlagBoxInstallState.Unavailable }
-                    : FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed(target)));
+                    : FlagBoxInstallPlan.Decide(embedded.ProfileId, embedded.Description, Installed(target))));
             }
-            return PanelMatrixDevices.Combine(plans);
+            return plans;
         }
 
         /// <summary>
-        /// Adds the profile to every device a matrix names, replacing an older copy of our own in each, asks SimHub
-        /// to save each, and reads the answers as one (<see cref="PanelMatrixDevices.Combine"/>).
+        /// Adds the profile to the devices a press writes (<see cref="PanelMatrixDevices.ToWrite"/>), replacing a
+        /// copy of our own in each, asks SimHub to save each, and reads the answers as one
+        /// (<see cref="PanelMatrixDevices.Combine"/>).
         ///
         /// Runs on the UI thread: `Profiles` is an ObservableCollection and WPF bindings are watching
         /// it, so mutating it from a worker would throw. The button's click handler is already there.
         /// </summary>
         /// <remarks>
+        /// Each device is planned before any is written, and only the ones its own plan calls for are: a press made
+        /// because one device lacks the profile must not replace a current copy on another, the user's edits with
+        /// it, nor take a newer copy back a version (#363). The answer is the written devices' own; with nothing to
+        /// write it is what the devices hold.
+        ///
         /// Each device gets a profile object of its own, parsed afresh: SimHub's profile carries its settings
         /// (`profile.Settings`), so one object cannot sit in two devices' lists.
         /// </remarks>
         public static FlagBoxPlan Install(string embeddedJson, IEnumerable<string> devices, IList<MatrixTarget> targets)
         {
-            if (Parse(embeddedJson) == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
+            var embedded = Parse(embeddedJson);
+            if (embedded == null) return new FlagBoxPlan { State = FlagBoxInstallState.NotEmbedded };
+            var plans = Plans(embedded, devices, targets);
             var results = new List<FlagBoxPlan>();
-            foreach (var device in devices ?? Enumerable.Empty<string>())
+            foreach (var device in PanelMatrixDevices.ToWrite(plans))
             {
                 results.Add(Install(embeddedJson, MatrixTargets.Find(device, targets)));
             }
-            return PanelMatrixDevices.Combine(results);
+            return PanelMatrixDevices.Combine(results.Count > 0 ? results : plans.Select(entry => entry.Value).ToList());
         }
 
         /// <summary>The install into one matrix device; unavailable when there is no such device.</summary>

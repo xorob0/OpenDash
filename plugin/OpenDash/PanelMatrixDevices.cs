@@ -8,9 +8,9 @@
 // matrix shares goes to every device a matrix names.
 //
 // MatrixTargets.cs reaches SimHub and is not compiled into OpenDash.Tests. What it decides is here, which is: which
-// devices the profile goes to, which device a new matrix opens on, which of a device's matrices can take the flag
-// box at all, what the device row on the Matrix page says, and how the answers from several devices read as the one
-// line the page's title carries.
+// devices the profile goes to and which of them a press writes, which device a new matrix opens on, which of a
+// device's matrices can take the flag box at all, what the device row on the Matrix page says, and how the answers
+// from several devices read as the one line the page's title carries.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,6 +77,12 @@ namespace OpenDashPlugin
         /// a wheel with an 8x8 in it is in the list only because it has one. Somebody who has wired an Arduino matrix
         /// has done it deliberately and will look, as LedTargets.Preferred reasons for the strips. The row shows the choice
         /// either way.
+        ///
+        /// A wheel SimHub reports as not connected still wins over the Arduino, and on purpose: the Arduino's entry
+        /// is listed as connected whether or not there is an Arduino at all (MatrixTargets.Arduino), so preferring a
+        /// connected device would always pick it over a wheel whose rim is off its base while the driver sets the
+        /// panel up. SimHub keeps a disconnected wheel's 8x8 in its Devices list because the driver added it there,
+        /// and installing into it does not need the wheel attached.
         /// </remarks>
         public static string Preferred(IList<LedDeviceEntry> devices)
         {
@@ -92,12 +98,73 @@ namespace OpenDashPlugin
         /// <remarks>
         /// A matrix pointed at a device SimHub no longer lists keeps that entry, first and labelled as gone, for the
         /// reason the strip's does: dropping it would re-point the matrix at whatever sorted first.
+        ///
+        /// The devices SimHub has with a matrix that is not an 8x8 (<paramref name="declined"/>) are named on the
+        /// caption, as the strip row names the devices it passed over (<see cref="PanelLights.DeviceRowCaption"/>):
+        /// a wheel whose matrix was passed over is the driver this row is for, and otherwise the reason is only in
+        /// SimHub's log. Said in the matrix's own fact, an 8x8, not the strip's "no LEDs".
         /// </remarks>
-        public static LedDeviceRow DeviceRow(IList<LedDeviceEntry> devices, string current)
+        public static LedDeviceRow DeviceRow(IList<LedDeviceEntry> devices, string current, IList<string> declined = null)
         {
             var listed = (devices ?? new LedDeviceEntry[0]).Where(device => device != null).ToList();
-            if (listed.Count == 0) return new LedDeviceRow(NoDevices, null, null, -1);
-            return PanelLeds.DeviceRow(listed, LedBar.NormaliseDevice(current), null);
+            var passed = declined != null && declined.Count > 0;
+            if (listed.Count == 0) return new LedDeviceRow(passed ? Unfit(declined) + SeeLog : NoDevices, null, null, -1);
+            var row = PanelLeds.DeviceRow(listed, LedBar.NormaliseDevice(current), null);
+            if (!passed) return row;
+            return new LedDeviceRow(DeclinedCaption(row, listed, declined), row.Ids, row.Labels, row.Selected);
+        }
+
+        /// <summary>What the row says with devices passed over: the caption it had, then the devices and why.</summary>
+        private static string DeclinedCaption(LedDeviceRow row, IList<LedDeviceEntry> listed, IList<string> declined)
+        {
+            // One device that is not connected is already a "which" clause; the two facts are joined, each beside
+            // its own device, as PanelLights.OneDeviceCaption joins them for a strip.
+            if (!row.HasPicker && listed.Count == 1 && !listed[0].Connected)
+            {
+                return "Goes to " + listed[0].Name + ", which is not connected, and " + Unfit(declined) + SeeLog;
+            }
+            if (string.IsNullOrEmpty(row.Caption)) return Unfit(declined) + SeeLog;
+            return row.Caption.Trim().TrimEnd('.') + ", not " + PanelLights.NameList(declined) + ", which " + Has(declined) + UnfitFact + SeeLog;
+        }
+
+        /// <summary>The devices passed over and what they lack: "Wheel has no 8x8 matrix".</summary>
+        private static string Unfit(IList<string> declined)
+        {
+            return PanelLights.NameList(declined) + " " + Has(declined) + UnfitFact;
+        }
+
+        private static string Has(IList<string> declined)
+        {
+            return declined.Count == 1 ? "has" : "have";
+        }
+
+        private const string UnfitFact = " no 8x8 matrix";
+        private const string SeeLog = ". See SimHub's log.";
+
+        /// <summary>
+        /// The devices a press on the profile's line writes, in <paramref name="plans"/>' order, given what each
+        /// device holds now.
+        /// </summary>
+        /// <remarks>
+        /// A press made while any device lacks the profile or holds an older copy (the combined state, <see
+        /// cref="Combine"/>, is one <see cref="PanelUpdates.BringsForward"/> writes) writes those devices and only
+        /// those: a current copy elsewhere is left alone, since a rewrite could only cost the edits made to it, and
+        /// so is a newer one, which a rewrite would put back a version without the warning the single-device press
+        /// gives. That is the rule Reinstall everything applies to the strips (PanelUpdates.StripsToWrite).
+        /// Only where every device the profile goes to holds a current or newer copy is the press the Matrix page's
+        /// Reinstall, drawn with its Replaces or ReplacesNewer warning, and then it writes every one of them.
+        /// A device SimHub could not be asked is never written.
+        /// </remarks>
+        public static IList<string> ToWrite(IList<KeyValuePair<string, FlagBoxPlan>> plans)
+        {
+            var given = (plans ?? new KeyValuePair<string, FlagBoxPlan>[0]).Where(entry => entry.Value != null).ToList();
+            var combined = Combine(given.Select(entry => entry.Value).ToList()).State;
+            Func<FlagBoxInstallState, bool> writes;
+            if (PanelUpdates.BringsForward(combined)) writes = PanelUpdates.BringsForward;
+            else if (combined == FlagBoxInstallState.UpToDate || combined == FlagBoxInstallState.Newer)
+                writes = state => state == FlagBoxInstallState.UpToDate || state == FlagBoxInstallState.Newer;
+            else return new List<string>();
+            return given.Where(entry => writes(entry.Value.State)).Select(entry => entry.Key).ToList();
         }
 
         /// <summary>

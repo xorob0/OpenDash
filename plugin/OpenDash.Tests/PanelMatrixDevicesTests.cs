@@ -79,6 +79,80 @@ namespace OpenDashPlugin.Tests
             Assert.Equal(0, row.Selected);
         }
 
+        private static KeyValuePair<string, FlagBoxPlan> On(string device, FlagBoxInstallState state) =>
+            new KeyValuePair<string, FlagBoxPlan>(device, new FlagBoxPlan { State = state });
+
+        [Fact]
+        public void The_row_names_a_device_whose_matrix_is_not_an_8x8()
+        {
+            var one = PanelMatrixDevices.DeviceRow(new[] { Arduino() }, null, new[] { "Wheel" });
+            Assert.False(one.HasPicker);
+            Assert.Equal("Goes to Arduino RGB matrix, not Wheel, which has no 8x8 matrix. See SimHub's log.", one.Caption);
+
+            var two = PanelMatrixDevices.DeviceRow(new[] { Arduino(), new LedDeviceEntry(Plate, "Plate", true) }, Plate, new[] { "Wheel", "Rim" });
+            Assert.True(two.HasPicker);
+            Assert.Equal(1, two.Selected);
+            Assert.Equal("Wheel and Rim have no 8x8 matrix. See SimHub's log.", two.Caption);
+
+            var none = PanelMatrixDevices.DeviceRow(new LedDeviceEntry[0], null, new[] { "Wheel" });
+            Assert.False(none.HasPicker);
+            Assert.Equal("Wheel has no 8x8 matrix. See SimHub's log.", none.Caption);
+
+            var away = PanelMatrixDevices.DeviceRow(new[] { new LedDeviceEntry(Plate, "Plate", false) }, Plate, new[] { "Wheel" });
+            Assert.Equal("Goes to Plate, which is not connected, and Wheel has no 8x8 matrix. See SimHub's log.", away.Caption);
+
+            // Nothing passed over reads exactly as before.
+            Assert.Equal(PanelMatrixDevices.DeviceRow(new[] { Arduino() }, null).Caption, PanelMatrixDevices.DeviceRow(new[] { Arduino() }, null, new string[0]).Caption);
+        }
+
+        [Fact]
+        public void A_press_for_a_device_without_the_profile_leaves_a_current_or_newer_copy_elsewhere_alone()
+        {
+            var written = PanelMatrixDevices.ToWrite(new[]
+            {
+                On(LedBar.ArduinoDevice, FlagBoxInstallState.UpToDate),
+                On(Wheel, FlagBoxInstallState.NotInstalled),
+                On(Plate, FlagBoxInstallState.Newer),
+            });
+            Assert.Equal(new[] { Wheel }, written);
+        }
+
+        [Fact]
+        public void A_press_brings_every_missing_older_or_failed_device_forward_and_never_one_that_is_gone()
+        {
+            var written = PanelMatrixDevices.ToWrite(new[]
+            {
+                On(LedBar.ArduinoDevice, FlagBoxInstallState.Outdated),
+                On(Wheel, FlagBoxInstallState.UpToDate),
+                On(Plate, FlagBoxInstallState.Unavailable),
+                On("device:gone", FlagBoxInstallState.NotInstalled),
+            });
+            Assert.Equal(new[] { LedBar.ArduinoDevice, "device:gone" }, written);
+        }
+
+        [Fact]
+        public void Reinstall_where_every_device_is_current_or_newer_writes_them_all()
+        {
+            Assert.Equal(new[] { LedBar.ArduinoDevice, Wheel }, PanelMatrixDevices.ToWrite(new[]
+            {
+                On(LedBar.ArduinoDevice, FlagBoxInstallState.UpToDate),
+                On(Wheel, FlagBoxInstallState.Newer),
+            }));
+            Assert.Equal(new[] { Wheel }, PanelMatrixDevices.ToWrite(new[] { On(Wheel, FlagBoxInstallState.UpToDate) }));
+        }
+
+        [Fact]
+        public void Nothing_is_written_where_a_device_cannot_be_asked_and_nothing_else_needs_it()
+        {
+            Assert.Empty(PanelMatrixDevices.ToWrite(new[]
+            {
+                On(LedBar.ArduinoDevice, FlagBoxInstallState.UpToDate),
+                On(Wheel, FlagBoxInstallState.Unavailable),
+            }));
+            Assert.Empty(PanelMatrixDevices.ToWrite(new KeyValuePair<string, FlagBoxPlan>[0]));
+            Assert.Empty(PanelMatrixDevices.ToWrite(null));
+        }
+
         [Fact]
         public void The_title_offers_Install_while_any_device_lacks_the_profile()
         {

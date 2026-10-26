@@ -891,7 +891,6 @@ namespace OpenDashPlugin
             return good ? Theme.StatusUpToDate : Theme.Caution;
         }
 
-
         // The list, as Matrix.dc.html draws it: the heading 8 over the first rule; each layer a rule over a
         // 12-padded line of its number (16 in the display family, 14 wide), 12, its name at 15 and its switch;
         // each option under it padded 7, at 14, its control 16 from its words; a line under an option at 12,
