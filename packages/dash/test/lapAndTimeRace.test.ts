@@ -94,11 +94,13 @@ describe('a race with a lap count and a time limit', () => {
 
   test('a purely timed race, whose lap count is 32767, is measured by the clock', () => {
     const r = reading(race(NO_LAP_LIMIT));
-    expect({ timed: r.timed, lap: r.lap, total: r.total, timeLeft: r.timeLeft, unit: r.unit }).toEqual({
+    expect({ timed: r.timed, lap: r.lap, total: r.total, timeLeft: r.timeLeft, margin: r.margin, unit: r.unit }).toEqual({
       timed: true,
       lap: null,
       total: null,
       timeLeft: '0:50:00',
+      // The tank's 10.9 laps less the 22 the clock holds, read at 2:18 a lap: −25.5 minutes.
+      margin: '−26',
       unit: 'min',
     });
     // Twenty-one whole laps of the fifty minutes and the one the clock runs out on.
@@ -132,6 +134,39 @@ describe('a race with a lap count and a time limit', () => {
 
   test('a sim that publishes no lap count is measured as it always was', () => {
     expect(evalTyped(isTimedSession(), race(null))).toBe(true);
+  });
+
+  /**
+   * A twenty-lap race whose clock runs out `beyond` seconds after its last lap starts, read on lap 13
+   * `into` seconds after the line. With the two ends within a lap, the case a host sets up by setting
+   * both limits to match, the time left falls through the lap while the laps run stay put, so a test
+   * that left out the time run in the lap read laps at the lap's start and the clock later in it.
+   */
+  const close = (beyond: number, into: number): Props =>
+    race(20, {
+      'DataCorePlugin.GameData.SessionTimeLeft': (20 - 13) * 138 + beyond - into,
+      'DataCorePlugin.GameData.CurrentLapTime': into,
+    });
+  const THROUGH_THE_LAP = [0, 5, 10, 11, 60, 137];
+
+  test('with the clock running out just after the last lap starts, the race reads laps through every lap', () => {
+    for (const into of THROUGH_THE_LAP) {
+      const r = reading(close(10, into));
+      expect({ into, timed: r.timed, lap: r.lap, total: r.total, unit: r.unit }).toEqual({
+        into,
+        timed: false,
+        lap: '13',
+        total: '/ 20',
+        unit: 'laps',
+      });
+    }
+  });
+
+  test('with the clock running out just before the last lap starts, the race reads the clock through every lap', () => {
+    for (const into of THROUGH_THE_LAP) {
+      const r = reading(close(-10, into));
+      expect({ into, timed: r.timed, lap: r.lap, unit: r.unit }).toEqual({ into, timed: true, lap: null, unit: 'min' });
+    }
   });
 
   test('the clock is still read where the count is the nearer end', () => {

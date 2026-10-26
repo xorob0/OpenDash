@@ -1445,20 +1445,33 @@ const lapsToTheCount = (): Expr => sub(sessionLapLimit(), completedLaps());
  * Whether a session with a lap count reaches it before its clock: the race given both a lap count
  * and a time limit, measured by whichever ends it first (#1026).
  *
- * The count ends it first where the laps before its last fit inside the time left at
- * {@link timedLapSeconds}: the clock then runs out on the count's last lap or after it, which is
- * {@link lapsLeft}'s count of the laps the clock holds, the lap the clock runs out on included, set
- * against the count. It leaves out the time already run in the lap and the wait for the flag, which
- * move the clock's end by a lap at most and only where the two ends are within a lap of each other,
- * and it multiplies rather than divides, so the test costs a product where the clock's count costs
- * the whole of {@link lapsLeft}'s arithmetic in every reading that asks whether a session is timed.
- * Until a lap has been timed the product is nought and the count is taken: it is the one length the
- * race has declared that can be read without a lap.
+ * The count ends it first where its last lap starts before the clock runs out: the time to the start
+ * of that lap, the laps before it at {@link timedLapSeconds} less the time already run in the lap in
+ * progress, fits inside the time left. The clock then runs out on the count's last lap or after it.
+ * The time run in the lap is what keeps the answer steady through a lap: without it the two sides
+ * fall together, the time left by the second and the laps before the last only at the line, so where
+ * the two ends are within a lap of each other -- the usual case, a host setting both limits to match
+ * -- the test read the count at each lap's start and the clock later in the same lap, and the session
+ * counter and the fuel margin's unit swapped between laps and minutes every lap. The run is held to
+ * a lap as {@link lapsLeft} holds it, so an out lap or a lap through the pits does not count for more
+ * than one. It leaves out the wait for the flag, and it multiplies rather than divides, so the test
+ * costs a product where the clock's count costs the whole of {@link lapsLeft}'s arithmetic in every
+ * reading that asks whether a session is timed. Until a lap has been timed the product is nought and
+ * the count is taken: it is the one length the race has declared that can be read without a lap.
+ *
+ * The laps to the count are the player's, {@link lapsToTheCount}, where the count ends the race when
+ * the leader completes it. A lapped car therefore reads its count a lap or more further off than it
+ * is and leans toward the clock; that is accepted, since the leader's laps are a leaderboard read in
+ * every reading that asks whether a session is timed, and a car a lap down is the one whose own
+ * laps matter least to which end comes first.
  *
  * False where the sim declares no lap count, which is every sim but iRacing, and in iRacing's purely
  * timed race, whose 32767 is not a count: those are measured as they always were.
  */
-const lapCountEndsFirst = (): Expr => and(hasLapLimit(), le(mul(sub(lapsToTheCount(), num(1)), timedLapSeconds()), sessionTimeLeft()));
+const lapCountEndsFirst = (): Expr => {
+  const lap = timedLapSeconds();
+  return and(hasLapLimit(), le(mul(sub(lapsToTheCount(), num(1)), lap), add(sessionTimeLeft(), min(lapTimeRun(), lap))));
+};
 
 /**
  * Whether the session is measured by its clock: it has one, {@link hasSessionClock}, and no lap count

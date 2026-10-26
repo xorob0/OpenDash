@@ -87,14 +87,16 @@ describe('card expressions', () => {
     // iRacing's declared length keeps a timed session timed once its clock reads nought (#1017).
     const length = 'isnull([DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal], 0)';
     const clock = `(((${secs}) > (0)) and ((${secs}) <= (86400))) or (((${length}) > (0)) and ((${length}) <= (86400)))`;
-    // A race with a lap count as well is measured in laps while the laps before its last fit in the
-    // time left at the timed lap (#1026).
+    // A race with a lap count as well is measured in laps while its last lap starts before the clock
+    // runs out: the laps before the last, at the timed lap, less the time run in this one, held to a
+    // lap (#1026).
     const count = 'isnull([DataCorePlugin.GameRawData.Telemetry.SessionLapsTotal], 0)';
     const done = 'isnull([DataCorePlugin.GameData.CompletedLaps], 0)';
     const best = 'isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)';
     const last = 'isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)';
     const lap = `if((${best}) > (0), ${best}, if((${last}) > (0), ${last}, 0))`;
-    const countFirst = `(((${count}) > (0)) and ((${count}) <= (999))) and (((((${count}) - (${done})) - (1)) * (${lap})) <= (${secs}))`;
+    const run = `min(isnull(timespantoseconds([DataCorePlugin.GameData.CurrentLapTime]), 0.0), ${lap})`;
+    const countFirst = `(((${count}) > (0)) and ((${count}) <= (999))) and (((((${count}) - (${done})) - (1)) * (${lap})) <= ((${secs}) + (${run})))`;
     const timed = `(${clock}) and (!(${countFirst}))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
