@@ -32,7 +32,7 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { densityOf } from '../second/density.ts';
-import { charsOfText, drawnAtMost, drawnEither, drawnFigure, drawnOr, drawnText, drawnWithin, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
+import { charsOfText, drawnEither, drawnFigure, drawnOr, drawnText, drawnWithin, type DrawnFigure, type DrawnWidth } from '../second/drawn.ts';
 import { dimUnless, rank, type RankMember } from '../second/rank.ts';
 import { TELLTALE_PAGE, telltaleItems } from './telltales.ts';
 import {
@@ -278,16 +278,16 @@ const fuel: readonly BandField[] = [
 
 /** D2 Energy. Le Mans Ultimate publishes virtual energy; iRacing does not, so this reads `--`. */
 const energy: readonly BandField[] = [
-  { id: 'energy', label: 'Energy', sample: '68', bind: notAvailable(raw('VirtualEnergy')), drawn: notAvailableDrawn(raw('VirtualEnergy'), CHARS.temperature), chars: CHARS.temperature, after: '%' },
+  { id: 'energy', label: 'Energy', sample: '68', bind: notAvailable(raw('VirtualEnergy'), '0'), drawn: notAvailableDrawn(raw('VirtualEnergy'), CHARS.percent, 0), chars: CHARS.percent, after: '%' },
   { id: 'perLap', label: 'Per lap', sample: '5.6', bind: notAvailable(raw('VirtualEnergyPerLap')), drawn: notAvailableDrawn(raw('VirtualEnergyPerLap'), CHARS.consumption), chars: CHARS.consumption, after: '%' },
   { id: 'laps', label: 'Est. laps', sample: '12.1', bind: notAvailable(raw('VirtualEnergyLaps')), chars: CHARS.consumption },
   {
     id: 'refuel',
     label: 'Refuel',
     sample: '31',
-    bind: notAvailable(raw('VirtualEnergyRefuel')),
-    drawn: notAvailableDrawn(raw('VirtualEnergyRefuel'), CHARS.temperature),
-    chars: CHARS.temperature,
+    bind: notAvailable(raw('VirtualEnergyRefuel'), '0'),
+    drawn: notAvailableDrawn(raw('VirtualEnergyRefuel'), CHARS.percent, 0),
+    chars: CHARS.percent,
     after: '%',
     color: ds.color.caution.primary,
   },
@@ -470,26 +470,27 @@ export const relativeFields = (classOnly?: Expr): readonly BandField[] => [
   },
 ];
 
-/** `--` when the sim publishes nothing, rather than a zero that reads as a reading. */
-function notAvailable(expr: string): string {
-  return iff(ncalc.isNull(expr), str('--'), fmt(expr, '0.0'));
+/**
+ * `--` when the sim publishes nothing, rather than a zero that reads as a reading.
+ *
+ * `pattern` is the field's own precision, and its cells are cut for it: the tank and the refuel are
+ * whole per cents, `0` into three digit cells as the energy module draws the same two members, so
+ * `100` is drawn whole; the per lap and the estimate keep their tenth in four cells and a point.
+ * The tank and the refuel were once `0.0` into those three cells, which clipped the last digit of
+ * every reading a sim published (#607).
+ */
+function notAvailable(expr: string, pattern: '0' | '0.0' = '0.0'): string {
+  return iff(ncalc.isNull(expr), str('--'), fmt(expr, pattern));
 }
 
 /**
- * How wide {@link notAvailable} draws, for the per-cent sign that follows three of the four.
- *
- * The format is the same `0.0` on every field and the budget is not, so the whole digits are counted
- * off the field's own cells rather than off one constant: the estimate's four cells and a point hold
- * `100.0`, and energy and refuel are cut for three bare digit cells, where the same format writes
- * one character more than the box holds. Clamped to those cells for exactly that reason -- the mark
- * belongs beside the ink the driver can see, and on a clipped figure the ink stops at the budget.
- * Widening those two budgets to the estimate's is the other half and is `docs/design/zones.md` §10's
- * to give away; until then the `%` stays inside the field rather than 25 px past it. #387.
+ * How wide {@link notAvailable} draws, for the per-cent sign that follows three of the four, with
+ * `decimals` the places its pattern writes. The whole digits are counted off the field's own cells,
+ * less the one a point takes, so the figure declared is the figure the box holds.
  */
-function notAvailableDrawn(expr: string, chars: Chars): DrawnFigure {
-  return drawnAtMost(chars, drawnOr(ncalc.isNull(expr), NO_VALUE, drawnFigure({ value: expr, digits: chars.digits - 1, decimals: 1 })));
+function notAvailableDrawn(expr: string, chars: Chars, decimals: 0 | 1 = 1): DrawnFigure {
+  return drawnOr(ncalc.isNull(expr), NO_VALUE, drawnFigure({ value: expr, digits: chars.digits - decimals, decimals }));
 }
-
 
 /**
  * Litres per lap against energy per lap: how much fuel a per cent of the virtual tank is worth,
