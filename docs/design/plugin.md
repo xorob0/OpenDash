@@ -141,7 +141,9 @@ rig is in the copy. A file with no stamp, written before it existed, and one of 
 as they always did. A screen of a kind the plugin does not know keeps its kind and owns nothing --
 no properties, no actions, no per-kind state, and an editor that says so -- rather than becoming a
 face. The steps close SimHub, install the newer OpenDash again and save the kept file under the
-settings file's name, and start SimHub; the press opens Explorer on the copy, or on the file itself.
+settings file's name, and start SimHub; the press opens Explorer on the copy, or on the file itself. When no copy
+could be made and something has been changed since, the save put the newer file in SimHub's `_Backups`, and Home
+says so, as it does for an unreadable file; an update counts as a change. `SettingsHold` holds the rule.
 
 A missing folder comes before the lights, because a screen is what most rigs have. The out-of-date
 profile and the waiting update come last, because the rig works while they wait.

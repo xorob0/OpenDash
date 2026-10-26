@@ -166,6 +166,10 @@ namespace OpenDashPlugin
 
         /// <summary>The settings file itself, which the press opens on when no copy holds the newer file.</summary>
         public string SettingsFile { get; set; }
+
+        /// <summary>Whether this session has saved over the file a newer OpenDash wrote (SettingsHold.SavedOver):
+        /// with no copy, the newer file is then in SettingsBackups, where SimHub's save moved it.</summary>
+        public bool SettingsSavedOver { get; set; }
     }
 
     public static class PanelAttention
@@ -211,13 +215,16 @@ namespace OpenDashPlugin
             {
                 // The same place in the list for the same reason: what the other rules read is this version's
                 // reading of a rig a newer one wrote, and the way back to it is a file, not a page.
+                // Once saved over with no copy, the newer file is in SimHub's _Backups, and the press opens there.
                 var copy = string.IsNullOrWhiteSpace(input.SettingsCopy) ? null : input.SettingsCopy;
                 var file = string.IsNullOrWhiteSpace(input.SettingsFile) ? null : input.SettingsFile;
+                var backups = string.IsNullOrWhiteSpace(input.SettingsBackups) ? null : input.SettingsBackups;
+                var inBackups = copy == null && input.SettingsSavedOver;
                 issues.Add(new PanelIssue(
-                    SettingsNewer, PanelPage.Home, copy ?? file,
+                    SettingsNewer, PanelPage.Home, copy ?? (inBackups ? backups ?? file : file),
                     SettingsNewerTitle,
-                    SettingsNewerDetail(input.SettingsSavedBy, copy),
-                    SettingsNewerSteps(input.SettingsSavedBy, copy != null), OpenFolder, PanelIssueAction.OpenFolder));
+                    SettingsNewerDetail(input.SettingsSavedBy, copy, inBackups, backups),
+                    SettingsNewerSteps(input.SettingsSavedBy, copy != null, inBackups), OpenFolder, PanelIssueAction.OpenFolder));
             }
 
             foreach (var screen in screens.Where(s => s.Installed == false))
@@ -396,14 +403,17 @@ namespace OpenDashPlugin
         /// Who saved them, what this version makes of them and where the newer file is: "OpenDash 1.3.0 saved
         /// them. What this version does not know is left out here, and the file is kept as C:\...\
         /// OpenDash.GeneralSettings.newer.json." The file itself is saved over only once something is changed,
-        /// which is the rule SettingsRescue states.
+        /// which is the rule SettingsHold states; with no copy, it is then in SimHub's _Backups
+        /// (<paramref name="savedOver"/>), as the unreadable file is in SettingsUnreadableDetail.
         /// </summary>
-        public static string SettingsNewerDetail(string savedBy, string copy)
+        public static string SettingsNewerDetail(string savedBy, string copy, bool savedOver = false, string backups = null)
         {
             var who = string.IsNullOrWhiteSpace(savedBy) ? "A newer OpenDash saved them." : "OpenDash " + savedBy + " saved them.";
-            var kept = string.IsNullOrWhiteSpace(copy)
-                ? " It is left as it is until something is changed here."
-                : " The file is kept as " + copy + ".";
+            string kept;
+            if (!string.IsNullOrWhiteSpace(copy)) kept = " The file is kept as " + copy + ".";
+            else if (savedOver) kept = " Something was changed here, so SimHub keeps the newer file in "
+                + (string.IsNullOrWhiteSpace(backups) ? "its _Backups folder" : backups) + ".";
+            else kept = " It is left as it is until something is changed here.";
             return who + " What this version does not know is left out here." + kept;
         }
 
@@ -411,7 +421,7 @@ namespace OpenDashPlugin
         /// The way back to the newer rig: the newer plugin, which reads the kept file as it was written. SimHub
         /// is closed first because OpenDash saves when it closes once something has been changed.
         /// </summary>
-        public static IList<string[]> SettingsNewerSteps(string savedBy, bool kept)
+        public static IList<string[]> SettingsNewerSteps(string savedBy, bool kept, bool inBackups = false)
         {
             var version = string.IsNullOrWhiteSpace(savedBy) ? "the newer OpenDash" : "OpenDash " + savedBy;
             return new List<string[]>
@@ -419,7 +429,9 @@ namespace OpenDashPlugin
                 new[] { "Close SimHub" },
                 new[] { kept
                     ? "Install " + version + " again, and save the kept file as " + SettingsFileName
-                    : "Install " + version + " again" },
+                    : inBackups
+                        ? "Install " + version + " again, take the file it saved from _Backups, and save it as " + SettingsFileName
+                        : "Install " + version + " again" },
                 new[] { "Start SimHub" },
             };
         }

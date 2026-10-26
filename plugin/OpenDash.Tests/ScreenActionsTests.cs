@@ -304,7 +304,7 @@ namespace OpenDashPlugin.Tests
             // The rig's own buttons save after each press, and save a normalised copy rather than
             // normalising the live settings under a held glance.
             Assert.Contains("() => OnInterfaceThread(SaveRigPress));", body);
-            Assert.Contains("this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy());", source);
+            Assert.Contains("this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy())", source);
             // The one registration in the file, and it is inside ScreenActions.Register's delegate: a second
             // AddAction with a name spelled by hand, here or anywhere in OpenDash.cs, fails this.
             Assert.Equal(1, Occurrences(source, ".AddAction("));

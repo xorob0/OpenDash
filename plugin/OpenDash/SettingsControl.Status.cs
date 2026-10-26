@@ -163,6 +163,8 @@ namespace OpenDashPlugin
                 input.SettingsSavedBy = rescue.SavedBy;
                 input.SettingsCopy = rescue.CopyPath;
                 input.SettingsFile = rescue.SettingsPath;
+                input.SettingsBackups = rescue.BackupsPath;
+                input.SettingsSavedOver = plugin.Hold.SavedOver;
             }
 
             input.RestartPending = PendingRestart();

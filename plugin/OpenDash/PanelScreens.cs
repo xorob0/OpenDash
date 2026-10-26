@@ -810,6 +810,9 @@ namespace OpenDashPlugin
         public const string SimHubNameLabel = "SimHub name";
         public const string FolderLabel = "Folder";
         public const string PropertiesLabel = "Properties";
+
+        /// <summary>Details' Properties for a screen that publishes none: one of a kind a newer OpenDash made.</summary>
+        public const string PropertiesNone = "None";
         public const string VersionLabel = "Version";
         public const string NotInstalled = "Not installed";
 
@@ -834,6 +837,8 @@ namespace OpenDashPlugin
         public static string Properties(ScreenInstance screen)
         {
             if (screen == null) return string.Empty;
+            // A kind a newer OpenDash made publishes nothing here (ScreenInstance.PropertyNames, #864).
+            if (!screen.IsKnownKind) return PropertiesNone;
             if (screen.IsSlots)
             {
                 return Contract.Prefix + "." + Contract.SlotProperty(1) + " to " + Contract.Prefix + "." + Contract.SlotProperty(CardsRead(screen));

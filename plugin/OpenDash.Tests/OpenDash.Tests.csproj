@@ -63,6 +63,7 @@
     <Compile Include="../OpenDash/LiveStatus.cs" Link="Plugin/LiveStatus.cs" />
     <Compile Include="../OpenDash/FrameFault.cs" Link="Plugin/FrameFault.cs" />
     <Compile Include="../OpenDash/SettingsRescue.cs" Link="Plugin/SettingsRescue.cs" />
+    <Compile Include="../OpenDash/SettingsHold.cs" Link="Plugin/SettingsHold.cs" />
   </ItemGroup>
 
   <!-- A resource whose file name has spaces, embedded by the same MSBuild rule the plugin's Resources/*.simhubdash use;

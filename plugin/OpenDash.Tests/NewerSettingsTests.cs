@@ -183,5 +183,146 @@ namespace OpenDashPlugin.Tests
             }
             Assert.Empty(PanelAttention.Find(new AttentionInput { SettingsNewer = false, SettingsCopy = copy }));
         }
+
+        [Fact]
+        public void Home_names_Backups_once_a_newer_file_with_no_copy_has_been_saved_over()
+        {
+            const string file = @"C:\SimHub\PluginsData\Common\OpenDash.GeneralSettings.json";
+            const string backups = @"C:\SimHub\PluginsData\Common\_Backups";
+            var issue = PanelAttention.Find(new AttentionInput
+            {
+                SettingsNewer = true, SettingsSavedBy = "1.3.0", SettingsFile = file, SettingsBackups = backups, SettingsSavedOver = true,
+            }).Single();
+            Assert.Equal(backups, issue.Subject);
+            Assert.Equal("OpenDash 1.3.0 saved them. What this version does not know is left out here. Something was changed here, so SimHub keeps the newer file in " + backups + ".", issue.Detail);
+            Assert.Equal(new[] { "Install OpenDash 1.3.0 again, take the file it saved from _Backups, and save it as OpenDash.GeneralSettings.json" }, issue.Steps[1]);
+            foreach (var text in new[] { issue.Detail }.Concat(issue.Steps.SelectMany(s => s))) Assert.DoesNotContain("n't", text);
+
+            // With a copy, the copy still holds the newer rig, saved over or not.
+            const string copy = @"C:\SimHub\PluginsData\Common\OpenDash.GeneralSettings.newer.json";
+            var kept = PanelAttention.Find(new AttentionInput
+            {
+                SettingsNewer = true, SettingsSavedBy = "1.3.0", SettingsCopy = copy, SettingsFile = file, SettingsBackups = backups, SettingsSavedOver = true,
+            }).Single();
+            Assert.Equal(copy, kept.Subject);
+            Assert.EndsWith("The file is kept as " + copy + ".", kept.Detail);
+        }
+
+        [Fact]
+        public void A_screen_of_a_kind_this_plugin_does_not_know_lists_no_properties_in_its_details()
+        {
+            Assert.Equal(PanelScreens.PropertiesNone, PanelScreens.Properties(new ScreenInstance { Kind = "dial", Namespace = "Dial800x800" }));
+        }
+
+        // --- SettingsHold: when OpenDash saves, and what it stamps -----------------------------------------------
+
+        [Fact]
+        public void A_start_on_a_newer_file_reads_the_stamp_sets_the_file_aside_holds_the_saves_and_then_normalises()
+        {
+            File.WriteAllText(settings, NewerFile);
+            var read = JsonConvert.DeserializeObject<OpenDashSettings>(NewerFile);
+            var hold = SettingsHold.Begin(read, false, () => settings, "1.2.0", new ListLog());
+            Assert.True(hold.Holding);
+            Assert.False(hold.MaySaveOnOwn);
+            Assert.False(hold.SavedOver);
+            Assert.True(hold.Rescue.Newer);
+            Assert.Equal("99.0.0", hold.Rescue.SavedBy);
+            Assert.Equal(SettingsRescue.NewerPathFor(settings), hold.Rescue.CopyPath);
+            Assert.Equal(NewerFile, File.ReadAllText(hold.Rescue.CopyPath));
+            // Normalised once the stamp was read: the face has its per-kind state, the newer kind kept its own.
+            Assert.NotNull(read.RigScreens().Single(s => s.Namespace == "Face1280x480").Face);
+            Assert.Equal("dial", read.RigScreens().Single(s => s.Namespace == "Dial800x800").Kind);
+            Assert.Equal("99.0.0", read.SettingsVersion);
+            Assert.Contains("99.0.0", hold.SkippedLine());
+        }
+
+        [Fact]
+        public void A_start_on_a_file_of_this_version_or_none_saves_on_its_own_as_before()
+        {
+            File.WriteAllText(settings, "{}");
+            foreach (var stamp in new[] { null, "1.2.0", "1.1.0" })
+            {
+                var read = new OpenDashSettings { SettingsVersion = stamp };
+                var hold = SettingsHold.Begin(read, false, () => settings, "1.2.0", new ListLog());
+                Assert.False(hold.Holding);
+                Assert.True(hold.MaySaveOnOwn);
+                Assert.Same(SettingsRescue.Read, hold.Rescue);
+            }
+            Assert.False(File.Exists(SettingsRescue.NewerPathFor(settings)));
+            Assert.True(SettingsHold.None().MaySaveOnOwn);
+        }
+
+        [Fact]
+        public void A_start_SimHub_handed_defaults_looks_for_an_unreadable_file_and_holds_nothing()
+        {
+            File.WriteAllText(settings, "{ not json");
+            var hold = SettingsHold.Begin(new OpenDashSettings(), true, () => settings, "1.2.0", new ListLog());
+            Assert.True(hold.Rescue.Unreadable);
+            Assert.False(hold.Holding);
+        }
+
+        [Fact]
+        public void A_start_that_cannot_name_the_file_logs_it_holds_nothing_and_still_normalises()
+        {
+            var log = new ListLog();
+            var read = JsonConvert.DeserializeObject<OpenDashSettings>(NewerFile);
+            var hold = SettingsHold.Begin(read, false, () => { throw new InvalidOperationException("no manager"); }, "1.2.0", log);
+            Assert.Same(SettingsRescue.Read, hold.Rescue);
+            Assert.False(hold.Holding);
+            Assert.Contains(log.Lines, l => l.StartsWith("error: ") && l.Contains("no manager"));
+            Assert.NotNull(read.RigScreens().Single(s => s.Namespace == "Face1280x480").Face);
+        }
+
+        [Fact]
+        public void A_save_somebody_caused_stamps_the_file_and_ends_the_hold()
+        {
+            File.WriteAllText(settings, NewerFile);
+            var live = JsonConvert.DeserializeObject<OpenDashSettings>(NewerFile);
+            var hold = SettingsHold.Begin(live, false, () => settings, "1.2.0", new ListLog());
+            Assert.False(hold.MaySaveOnOwn);
+
+            // As SaveRigPress does: the live settings are stamped, and the copy made in the write carries it.
+            OpenDashSettings written = null;
+            hold.Save(live, "1.2.0", () => written = live.NormalisedCopy());
+            Assert.Equal("1.2.0", live.SettingsVersion);
+            Assert.Equal("1.2.0", written.SettingsVersion);
+            Assert.False(hold.Holding);
+            Assert.True(hold.MaySaveOnOwn);
+            Assert.True(hold.SavedOver);
+
+            // And it goes out as this version, which the next start reads as nothing out of the ordinary.
+            var next = JsonConvert.DeserializeObject<OpenDashSettings>(JsonConvert.SerializeObject(written));
+            Assert.False(SettingsHold.Begin(next, false, () => settings, "1.2.0", new ListLog()).Holding);
+        }
+
+        [Fact]
+        public void A_save_that_fails_keeps_the_hold()
+        {
+            File.WriteAllText(settings, NewerFile);
+            var live = JsonConvert.DeserializeObject<OpenDashSettings>(NewerFile);
+            var hold = SettingsHold.Begin(live, false, () => settings, "1.2.0", new ListLog());
+            Assert.Throws<IOException>(() => hold.Save(live, "1.2.0", () => { throw new IOException("locked"); }));
+            Assert.True(hold.Holding);
+            Assert.False(hold.SavedOver);
+        }
+
+        [Fact]
+        public void A_save_of_a_file_this_version_wrote_stamps_it_and_saves_over_no_newer_rig()
+        {
+            var live = new OpenDashSettings();
+            var hold = SettingsHold.Begin(live, false, () => settings, "1.2.0", new ListLog());
+            hold.Save(live, "1.2.0", () => { });
+            Assert.Equal("1.2.0", live.SettingsVersion);
+            Assert.False(hold.SavedOver);
+        }
+
+        [Fact]
+        public void An_update_started_on_a_newer_file_ends_the_hold_so_the_close_saves_what_it_recorded()
+        {
+            File.WriteAllText(settings, NewerFile);
+            var hold = SettingsHold.Begin(JsonConvert.DeserializeObject<OpenDashSettings>(NewerFile), false, () => settings, "1.2.0", new ListLog());
+            hold.Changed();
+            Assert.True(hold.MaySaveOnOwn);
+        }
     }
 }

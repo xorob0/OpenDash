@@ -1070,16 +1070,20 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The plugin's rather than the panel's, so that nothing the rig is owed waits on a settings page (#613). A
         /// SimHub that closes before the posted save runs saves in End, which waits for the part of the run that
-        /// writes and so finds the consent and the screens' names already recorded.
+        /// writes and so finds the consent and the screens' names already recorded. An update is something the
+        /// driver changed, so a started one ends the hold on a newer plugin's file (#864); otherwise End, which
+        /// saves only on its own, would skip that save and drop what the run recorded.
         /// </remarks>
         /// <returns>False, with nothing started, when an update is already running (UpdateService.Applying).</returns>
         public bool ApplyUpdate(ReleaseInfo release, bool replaceEdited, Action<double> progress, Action<UpdateOutcome> applied)
         {
-            return Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
+            var started = Updates.ApplyInBackground(Installer, release, replaceEdited, Settings, progress, outcome =>
             {
                 OnInterfaceThread(SaveSettings);
                 applied?.Invoke(outcome);
             });
+            if (started) hold.Changed();
+            return started;
         }
 
         public void End(PluginManager pluginManager)
@@ -1134,9 +1138,7 @@ namespace OpenDashPlugin
             try
             {
                 Settings.Normalise();
-                Settings.SettingsVersion = Version;
-                this.SaveCommonSettings(SettingsKey, Settings);
-                holdingSaves = false;
+                hold.Save(Settings, Version, () => this.SaveCommonSettings(SettingsKey, Settings));
             }
             catch (Exception ex)
             {
@@ -1161,10 +1163,13 @@ namespace OpenDashPlugin
         }
 
         /// <summary>
-        /// Whether the file is a newer plugin's and nothing has been saved over it yet (#864). Set once by
-        /// LoadSettings and cleared by the first save somebody causes by changing something.
+        /// Whether the file is a newer plugin's and nothing has been saved over it yet, and what each save stamps
+        /// on it (#864). Set once by LoadSettings; the first save somebody causes by changing something ends it.
         /// </summary>
-        private bool holdingSaves;
+        private SettingsHold hold = SettingsHold.None();
+
+        /// <summary>The hold on the settings file, which Home reads to say where a newer rig went (#864). Never null.</summary>
+        public SettingsHold Hold { get { return hold; } }
 
         /// <summary>
         /// A save OpenDash makes on its own rather than because somebody changed something: the end of Init,
@@ -1174,12 +1179,12 @@ namespace OpenDashPlugin
         /// </summary>
         private void SaveOnOwn()
         {
-            if (!holdingSaves)
+            if (hold.MaySaveOnOwn)
             {
                 SaveSettings();
                 return;
             }
-            Log.Info("Not saving the settings: OpenDash " + Rescue.SavedBy + " wrote them and nothing has been changed since.");
+            Log.Info(hold.SkippedLine());
         }
 
         /// <summary>
@@ -1191,10 +1196,8 @@ namespace OpenDashPlugin
         {
             try
             {
-                // Stamped on the live settings, which the copy carries (OpenDashSettings.CopyFrom).
-                Settings.SettingsVersion = Version;
-                this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy());
-                holdingSaves = false;
+                // Stamped on the live settings, which the copy made after it carries (OpenDashSettings.CopyFrom).
+                hold.Save(Settings, Version, () => this.SaveCommonSettings(SettingsKey, Settings.NormalisedCopy()));
             }
             catch (Exception ex)
             {
@@ -1215,7 +1218,7 @@ namespace OpenDashPlugin
         /// set aside, or of one a newer plugin wrote (#864). Never null. Home's settings-unreadable and
         /// settings-newer issues read it (#643).
         /// </summary>
-        public SettingsRescue Rescue { get; private set; } = SettingsRescue.Read;
+        public SettingsRescue Rescue { get { return hold.Rescue; } }
 
         private void LoadSettings()
         {
@@ -1238,31 +1241,9 @@ namespace OpenDashPlugin
                 defaulted = true;
                 Settings = new OpenDashSettings();
             }
-            if (defaulted)
-            {
-                try
-                {
-                    Rescue = SettingsRescue.Inspect(SettingsPath(), true, new SimHubInstallLog());
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("Looking at the settings file SimHub could not read failed", ex);
-                }
-            }
-            else
-            {
-                // Read before Normalise, which is what turns a newer plugin's rig into this one's shape (#864).
-                try
-                {
-                    Rescue = SettingsRescue.InspectNewer(SettingsPath(), Settings.SettingsVersion, Version, new SimHubInstallLog());
-                }
-                catch (Exception ex)
-                {
-                    Log.Error("Looking at the settings a newer OpenDash saved failed", ex);
-                }
-            }
-            holdingSaves = Rescue.HoldsSaves;
-            Settings.Normalise();
+            // The stamp is read before Normalise, which is what turns a newer plugin's rig into this one's shape
+            // (#864); Begin normalises once it has.
+            hold = SettingsHold.Begin(Settings, defaulted, SettingsPath, Version, new SimHubInstallLog());
         }
 
         /// <summary>The file ReadCommonSettings reads and SaveCommonSettings writes, named as SimHub names it:
