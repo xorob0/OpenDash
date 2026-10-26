@@ -86,19 +86,30 @@ describe('card expressions', () => {
     const secs = 'isnull(timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]), 0)';
     // iRacing's declared length keeps a timed session timed once its clock reads nought (#1017).
     const length = 'isnull([DataCorePlugin.GameRawData.Telemetry.SessionTimeTotal], 0)';
-    const timed = `(((${secs}) > (0)) and ((${secs}) <= (86400))) or (((${length}) > (0)) and ((${length}) <= (86400)))`;
+    const clock = `(((${secs}) > (0)) and ((${secs}) <= (86400))) or (((${length}) > (0)) and ((${length}) <= (86400)))`;
+    // A race with a lap count as well is measured in laps while its last lap starts before the clock
+    // runs out: the laps before the last, at the timed lap, less the time run in this one, held to a
+    // lap (#1026).
+    const count = 'isnull([DataCorePlugin.GameRawData.Telemetry.SessionLapsTotal], 0)';
+    const done = 'isnull([DataCorePlugin.GameData.CompletedLaps], 0)';
+    const best = 'isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)';
+    const last = 'isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)';
+    const lap = `if((${best}) > (0), ${best}, if((${last}) > (0), ${last}, 0))`;
+    const run = `min(isnull(timespantoseconds([DataCorePlugin.GameData.CurrentLapTime]), 0.0), ${lap})`;
+    const countFirst = `(((${count}) > (0)) and ((${count}) <= (999))) and (((((${count}) - (${done})) - (1)) * (${lap})) <= ((${secs}) + (${run})))`;
+    const timed = `(${clock}) and (!(${countFirst}))`;
     const time = `((${mode}) = ('time')) or (((${mode}) = ('auto')) and (${timed}))`;
     expect(formulaOf(textItem('session', 'label'), 'Text')).toBe(`if(${time}, 'Time left', 'Lap')`);
     const value = formulaOf(textItem('session', 'value'), 'Text');
     // A clock SimHub has not given is the unset clock, not a clock run out to `0:00:00` (#586, #1017).
     const given = "(isnull(timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]), -1000000000)) > (-1000000000)";
-    expect(value).toBe(`if(${time}, if((${timed}) and (${given}), ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
+    expect(value).toBe(`if(${time}, if((${clock}) and (${given}), ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
     expect(value).toContain('/ (3600)');
     // Dim is the clock nobody is counting, which is the session that has not started. An untimed
     // session is the third state and draws the `∞` mark beside this clock at full strength, so it is
     // excluded from the dim here rather than folded in with the absence (#439).
     const untimed = `(${secs}) > (86400)`;
-    expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${timed})) and (!(${untimed})), '#33383F', '#F5F7FA')`);
+    expect(formulaOf(textItem('session', 'value'), 'TextColor')).toBe(`if((${time}) and (!(${clock})) and (!(${untimed})), '#33383F', '#F5F7FA')`);
     const mark = textItem('session', 'mark');
     expect({ text: mark.text, mono: mark.monospace, bound: mark.bindings?.Text }).toMatchObject({ text: '∞', mono: undefined, bound: undefined });
     expect(formulaOf(mark, 'Visible')).toBe(`(${time}) and (${untimed})`);
