@@ -86,6 +86,11 @@ namespace OpenDashPlugin
         /// keeps the press; only leaving the page drops it.</summary>
         private bool applyWaiting;
 
+        /// <summary>The head of the update's bar for the run last pressed, decided at the press: "Installing" when
+        /// it fetches nothing because the release is the version running, "Downloading" otherwise (#1166). Held apart
+        /// from the build's controls so a rebuild during the run draws the same word.</summary>
+        private string updatesRunHead = PanelUpdates.Downloading;
+
         /// <summary>Whether this visit to the page has read the installer's folders from the disk.</summary>
         private bool updatesRead;
 

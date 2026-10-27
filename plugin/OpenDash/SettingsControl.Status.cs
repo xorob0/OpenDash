@@ -159,6 +159,7 @@ namespace OpenDashPlugin
             }
 
             input.RestartPending = PendingRestart();
+            input.RestartSameVersion = input.RestartPending == true && StagedIsRunning();
             input.UpdateAvailable = updateStatus.State == UpdateState.UpdateAvailable;
             input.OfferedVersion = updateStatus.LatestVersion;
             return input;

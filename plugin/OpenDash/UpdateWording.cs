@@ -159,11 +159,34 @@ namespace OpenDashPlugin
         /// </remarks>
         public const string RestartTitle = "Restart SimHub to finish updating";
 
-        public static string RestartQuestion(string version)
+        /// <param name="version">The release staged, or null when it is not known.</param>
+        /// <param name="alreadyRunning">
+        /// Whether the plugin staged is the version running (<see cref="SameVersion"/>). UpdateService.Apply stages
+        /// that plugin only to carry a yes to replacing an edited dashboard to the start that writes it (#862), so
+        /// the restart replaces what was edited and nothing else, and "you are running the old version" would be
+        /// false: the driver runs the very version the dialog names (#1119).
+        /// </param>
+        public static string RestartQuestion(string version, bool alreadyRunning = false)
         {
+            if (alreadyRunning)
+            {
+                return "You already have OpenDash " + Show(version) + ". Restarting SimHub replaces what you edited. "
+                    + "A copy is kept, and \"Put mine back\" restores it.\n\n"
+                    + "Close SimHub now and start it again?";
+            }
             return "OpenDash " + (version ?? "itself") + " is downloaded, but until you restart SimHub "
                 + "you are running the old version.\n\n"
                 + "Close SimHub now and start it again?";
+        }
+
+        /// <summary>
+        /// Whether two versions are the same release, as UpdateService.Apply decides that the release offered is the
+        /// plugin running. False when either is not known, so a caller that cannot tell keeps the ordinary wording.
+        /// </summary>
+        public static bool SameVersion(string release, string running)
+        {
+            return !string.IsNullOrWhiteSpace(release) && !string.IsNullOrWhiteSpace(running)
+                && Versioning.VersionCompare(release.Trim(), running.Trim()) == 0;
         }
 
         /// <summary>Said after the driver says yes, in the moment before the window goes.</summary>

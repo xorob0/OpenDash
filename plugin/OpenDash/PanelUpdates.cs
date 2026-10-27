@@ -260,6 +260,21 @@ namespace OpenDashPlugin
         /// no presets.</summary>
         public const string RestartNote = "Needs a SimHub restart. Your settings are kept.";
 
+        /// <summary>
+        /// What replaces <see cref="RestartNote"/> when the release offered is the version running, which is offered
+        /// only when a dashboard is behind it, after a start that could not write it. UpdateService.Apply answers that
+        /// press by installing the dashboards behind the plugin running (WriteRunning): it downloads nothing and stages
+        /// nothing, so there is no restart to promise (#1166).
+        /// </summary>
+        public const string InstallNote = "Installs the dashboards that are behind this version. Your settings are kept.";
+
+        /// <summary>Whether the release offered is the plugin running, which the press installs dashboards for
+        /// rather than downloading (#1166). False when either version is not known.</summary>
+        public static bool OffersRunning(string offered, string running)
+        {
+            return UpdateWording.SameVersion(offered, running);
+        }
+
         public const string ReleaseNotesTitle = "Release notes";
 
         /// <summary>The card foot's heading over the release's opening sentence, or null when there is none: a
@@ -301,11 +316,13 @@ namespace OpenDashPlugin
         /// <summary>The sentence under the card's heading in each state, or null for none. A download has none:
         /// the heading names the release and the bar's head says the run and its percent (<see cref="Downloading"/>),
         /// so a caption between them said the run twice in two verbs and the version twice.</summary>
-        public static string CardNote(UpdatesCard card, string version)
+        /// <param name="offersRunning">Whether the release offered is the version running (<see cref="OffersRunning"/>),
+        /// whose offer installs dashboards and needs no restart.</param>
+        public static string CardNote(UpdatesCard card, string version, bool offersRunning = false)
         {
             switch (card)
             {
-                case UpdatesCard.Available: return RestartNote;
+                case UpdatesCard.Available: return offersRunning ? InstallNote : RestartNote;
                 case UpdatesCard.Staged: return UpdateWording.RestartLater;
                 default: return null;
             }
@@ -317,6 +334,18 @@ namespace OpenDashPlugin
         /// two verbs on one card (voice.md: one word per thing).
         /// </summary>
         public const string Downloading = "Downloading";
+
+        /// <summary>The head of the bar over a press that installs the running version's dashboards and fetches
+        /// nothing, in the verb its button and its note use (#1166).</summary>
+        public const string Installing = "Installing";
+
+        /// <summary>The head of the update's bar: <see cref="Downloading"/>, or <see cref="Installing"/> when the run
+        /// fetches nothing because the release is the version running and no edited dashboard behind it is to be replaced
+        /// (UpdateService.InstallsFromRunning, the rule UpdateService.Apply follows).</summary>
+        public static string BarHead(bool installsOnly)
+        {
+            return installsOnly ? Installing : Downloading;
+        }
 
         /// <summary>The card's padding and rhythm, from the artboard's inline styles.</summary>
         public const double CardPaddingX = 20;

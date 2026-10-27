@@ -861,6 +861,11 @@ namespace OpenDashPlugin.Tests
             long ticks = 0;
             var service = new UpdateService(fetcher, null, pluginVersion: Built);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
+            // Behind the release and edited, so a yes stages and downloads, and the bar says so; without the yes the
+            // run would install from the plugin running (#1166).
+            Assert.False(service.InstallsFromRunning(installer, service.LastReleases[0], replaceEdited: true));
+            Assert.True(service.InstallsFromRunning(installer, service.LastReleases[0], replaceEdited: false));
+            Assert.Equal(PanelUpdates.Downloading, PanelUpdates.BarHead(service.InstallsFromRunning(installer, service.LastReleases[0], replaceEdited: true)));
 
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
 
@@ -1022,6 +1027,11 @@ namespace OpenDashPlugin.Tests
             var service = new UpdateService(fetcher, null, pluginVersion: Built);
             service.Check("0.1.0", true, ref ticks, DateTime.UtcNow, manual: true);
             fetcher.Requested.Clear();
+            // The panel asks about the edited screen, so the yes is one a driver can give, and the bar it then draws
+            // is headed from the run's own rule: Installing, since this run fetches nothing (#1166).
+            Assert.Contains("OpenDash", UpdatePlan.Edited(installer.Packages, service.LastReleases[0]).All);
+            Assert.True(service.InstallsFromRunning(installer, service.LastReleases[0], replaceEdited: true));
+            Assert.Equal(PanelUpdates.Installing, PanelUpdates.BarHead(service.InstallsFromRunning(installer, service.LastReleases[0], replaceEdited: true)));
 
             var outcome = service.Apply(installer, service.LastReleases[0], replaceEdited: true);
 

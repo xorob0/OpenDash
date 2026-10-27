@@ -208,6 +208,8 @@ Deferred controls (#504 #505 #506 #507 #508 #509 #510 #511 #512) are verified on
 | UP-10 | Copy a support report | | Click | "Support report copied. Paste it into your issue."; clipboard holds versions, rig, devices, log tail; nothing sent (`Get-Clipboard` in run_in_desktop). The SimHub line names the installed release ("SimHub: 9.12.6, in C:\Program Files (x86)\SimHub\"), never 1.0.0.0 (#641) | J |
 | UP-11 | Open the log | | Click | Explorer/Notepad window on the log | V |
 | UP-12 | Links: Every release on GitHub, Report an issue, Read the guide | | Click | browser windows | V |
+| UP-13 | Available, the version running | B:cur with an unedited screen one release behind it (a start that could not write it) | Open, then Install | "Installs the dashboards that are behind this version. Your settings are kept.", Install; bar "Installing"; the line "You already have OpenDash …" and no restart dialog (#1166) | U PanelUpdatesTests; V |
+| UP-14 | Restart over the version running | B:cur, an edited screen and an unedited one behind it | Install, then Replace anyway | dialog "You already have OpenDash …. Restarting SimHub replaces what you edited. …", never "the old version"; Home's restart item "The restart replaces what you edited. A copy is kept." (#1119) | U UpdateWordingTests; V |
 
 ## RS Responsive · FL Flows
 | id | setup | action | expected | how |

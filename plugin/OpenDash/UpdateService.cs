@@ -226,7 +226,7 @@ namespace OpenDashPlugin
             // Without that yes it is not fetched at all. Staged, it put "Restart SimHub to finish updating" on the
             // line, on the card for as long as it waited and in the dialog, for a restart that then cleared it and
             // finished nothing (#1083). Only an edited folder behind the release is one that start would replace.
-            var alreadyRunning = pluginAsset != null && IsRunning(release.Version) && !(replaceEdited && EditedBehind(installer, release).Count > 0);
+            var alreadyRunning = InstallsFromRunning(installer, release, replaceEdited);
             if (alreadyRunning) pluginAsset = null;
             if (plan.IsEmpty && pluginAsset == null)
             {
@@ -356,6 +356,22 @@ namespace OpenDashPlugin
             {
                 FinishWriting();
             }
+        }
+
+        /// <summary>
+        /// Whether <see cref="Apply"/> answers this press from the plugin running rather than by fetching and staging
+        /// the release's own: the release publishes a plugin and it is the version running, and no yes to replacing an
+        /// edited folder behind it has to be carried to the start. The panel heads its bar from this, so the bar says
+        /// Installing exactly when the run fetches nothing (#1166).
+        /// </summary>
+        /// <remarks>
+        /// A yes to replacing an edited folder that is already at the release is no reason to stage: the start leaves a
+        /// current folder alone whatever the driver said, so the run still installs only what is behind.
+        /// </remarks>
+        public bool InstallsFromRunning(DashboardInstaller installer, ReleaseInfo release, bool replaceEdited)
+        {
+            if (installer == null || release == null || release.PluginAsset() == null) return false;
+            return IsRunning(release.Version) && !(replaceEdited && EditedBehind(installer, release).Count > 0);
         }
 
         /// <summary>

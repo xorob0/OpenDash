@@ -59,9 +59,9 @@ namespace OpenDashPlugin.Tests
             var labels = new[]
             {
                 PanelUpdates.Title, PanelUpdates.ReleaseNotesTitle, PanelUpdates.EveryRelease, PanelUpdates.CheckTitle,
-                PanelUpdates.CheckNow, PanelUpdates.InSimHubTitle, PanelConfirmation.ReinstallLabel, PanelConfirmation.UpdateLabel,
+                PanelUpdates.CheckNow, PanelUpdates.InSimHubTitle, PanelConfirmation.ReinstallLabel, PanelConfirmation.UpdateLabel, PanelConfirmation.InstallLabel,
                 PanelUpdates.PutMineBack, PanelUpdates.SupportTitle, PanelUpdates.CopyReport, PanelUpdates.OpenLog,
-                PanelUpdates.ReportIssue, PanelUpdates.ReadGuide, PanelUpdates.RestartNote, PanelUpdates.SupportCaption,
+                PanelUpdates.ReportIssue, PanelUpdates.ReadGuide, PanelUpdates.RestartNote, PanelUpdates.InstallNote, PanelUpdates.Installing, PanelUpdates.SupportCaption,
                 PanelUpdates.Heading("0.5.1"), PanelUpdates.KeptHeading(1), PanelUpdates.KeptHeading(2), PanelUpdates.KeptLine(new[] { "Main dash" }),
                 PanelUpdates.Licence,
             };
@@ -154,6 +154,43 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("Restart SimHub", offer);
             Assert.Contains(UpdateWording.RestartTitle, PanelUpdates.CardNote(UpdatesCard.Staged, "0.5.1"));
             Assert.Contains(UpdateWording.RestartTitle, UpdateWording.RestartLater);
+        }
+
+        /// <summary>
+        /// An offer of the version running is answered by installing the dashboards behind it, with nothing downloaded
+        /// and no plugin staged (UpdateService.WriteRunning), so its card promises neither a restart nor a download:
+        /// the note says what the press does, the button reads Install and the bar Installing. An offer of a newer
+        /// release keeps the restart note, Download and Downloading (#1166).
+        /// </summary>
+        [Fact]
+        public void An_offer_of_the_version_running_promises_no_restart_and_no_download()
+        {
+            Assert.True(PanelUpdates.OffersRunning("0.4.0", "0.4.0"));
+            Assert.False(PanelUpdates.OffersRunning("0.5.0", "0.4.0"));
+            Assert.False(PanelUpdates.OffersRunning("0.4.0", null));
+
+            var running = PanelUpdates.CardNote(UpdatesCard.Available, "0.4.0", offersRunning: true);
+            Assert.Equal(PanelUpdates.InstallNote, running);
+            Assert.DoesNotContain("restart", running, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("download", running, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("dashboards that are behind", running);
+            Assert.Equal(PanelUpdates.RestartNote, PanelUpdates.CardNote(UpdatesCard.Available, "0.5.0", offersRunning: false));
+            Assert.Equal(PanelUpdates.RestartNote, PanelUpdates.CardNote(UpdatesCard.Available, "0.5.0"));
+            // Only the offer changes: a run has no note, and a staged plugin is staged whatever its version.
+            Assert.Null(PanelUpdates.CardNote(UpdatesCard.Downloading, "0.4.0", offersRunning: true));
+            Assert.Equal(UpdateWording.RestartLater, PanelUpdates.CardNote(UpdatesCard.Staged, "0.4.0", offersRunning: true));
+
+            var head = PanelUpdates.BarHead(true);
+            Assert.Equal("Installing", head);
+            Assert.DoesNotContain("Download", head);
+            Assert.Equal(PanelUpdates.Downloading, PanelUpdates.BarHead(false));
+
+            var confirmation = new PanelConfirmation();
+            var button = confirmation.Label(ReplacingAction.Update, null, installs: true);
+            Assert.Equal(PanelConfirmation.InstallLabel, button);
+            Assert.DoesNotContain("Download", button);
+            Assert.Equal(PanelConfirmation.UpdateLabel, confirmation.Label(ReplacingAction.Update, null, installs: false));
+            Assert.Equal(PanelConfirmation.ReinstallLabel, confirmation.Label(ReplacingAction.Reinstall, null, installs: true));
         }
 
         /// <summary>The card says "You have" only beside a version it knows, and heads its foot "Release notes"
@@ -448,7 +485,7 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("applying", applied);
             var net = applied.IndexOf("try", StringComparison.Ordinal);
             var logged = applied.IndexOf("Log.Error(\"Finishing the update on the panel failed\", ex);", StringComparison.Ordinal);
-            var restart = applied.IndexOf("if (outcome.PluginStaged) OfferRestart(release.Version);", StringComparison.Ordinal);
+            var restart = applied.IndexOf("if (outcome.PluginStaged) OfferRestart(release.Version, UpdateWording.SameVersion(release.Version, OpenDash.Version));", StringComparison.Ordinal);
             Assert.True(net >= 0 && logged > net && restart > logged, "the completion is caught, and the restart is offered after the net");
         }
 
@@ -546,7 +583,7 @@ namespace OpenDashPlugin.Tests
         public void Each_replacing_press_asks_on_its_own_line_and_withdraws_the_other_s_question()
         {
             var code = FlatCode();
-            Assert.Contains("updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));", code);
+            Assert.Contains("updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update, offersRunning));", code);
             Assert.Contains("updatesReinstall.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesReinstallLine, ReplacingAction.Reinstall));", code);
 
             var apply = Method("private void ApplyUpdate()");
@@ -579,9 +616,9 @@ namespace OpenDashPlugin.Tests
 
             // Each press's label is read from its own line, through its own action: "Download" or "Reinstall
             // everything", and "Replace anyway" only while that press's question is what the line shows.
-            var label = Method("private Binding UpdatesLabelFrom(TextBlock line, ReplacingAction action)");
-            Assert.Contains("return new Binding(nameof(TextBlock.Text)) { Source = line, Mode = BindingMode.OneWay, Converter = new ConfirmationLabel(confirmation, action), };", label);
-            Assert.Contains("public object Convert(object value, Type targetType, object parameter, CultureInfo culture) { return confirmation.Label(action, value as string); }", FlatCode());
+            var label = Method("private Binding UpdatesLabelFrom(TextBlock line, ReplacingAction action, bool installs = false)");
+            Assert.Contains("return new Binding(nameof(TextBlock.Text)) { Source = line, Mode = BindingMode.OneWay, Converter = new ConfirmationLabel(confirmation, action, installs), };", label);
+            Assert.Contains("public object Convert(object value, Type targetType, object parameter, CultureInfo culture) { return confirmation.Label(action, value as string, installs); }", FlatCode());
         }
 
         /// <summary>
@@ -1991,8 +2028,15 @@ namespace OpenDashPlugin.Tests
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !UpdatesHeld; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesStripRow("));
             Assert.Contains("var button = UpdatesRowPress(); button.IsEnabled = !UpdatesHeld; updatesRunPresses.Add(button);", Method("private FrameworkElement UpdatesFlagBoxRow("));
             InOrder(Method("private void UpdatesDrawCard()"), "updatesCardHost.Child = Ui.CardBox(card, 0);", "if (Updates.Applying) ShowRun();");
-            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ShowRun()"));
-            Assert.Contains("if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);", Method("private void ApplyUpdate()"));
+            Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, updatesRunHead);", Method("private void ShowRun()"));
+            Assert.Contains("if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, updatesRunHead);", Method("private void ApplyUpdate()"));
+            // The bar's head is decided at the press, before the run starts, by the rule the run itself follows: the
+            // release running installs and fetches nothing unless a yes about an edited dashboard behind it stages it,
+            // and a yes about one already current stages nothing (UpdateService.InstallsFromRunning, #1166).
+            InOrder(Method("private void ApplyUpdate()"),
+                "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
+                "updatesRunHead = PanelUpdates.BarHead(Updates.InstallsFromRunning(plugin.Installer, release, replaceEdited));",
+                "var started = plugin.ApplyUpdate(");
             // The bar's host joins the card: since a download's card has no note, the bar is the only thing on
             // it that says a run is going, and a bar written into a detached host would leave the heading alone.
             InOrder(Method("private void UpdatesDrawCard()"),
@@ -2100,7 +2144,8 @@ namespace OpenDashPlugin.Tests
             var card = Method("private void UpdatesDrawCard()");
             Assert.Contains("updatesCard = PanelUpdates.CardFor(updateStatus.State, Updates.Applying, UpdatesPending());", card);
             Assert.Contains("var heading = Ui.Heading(PanelUpdates.Heading(latest), true);", card);
-            Assert.Contains("var note = PanelUpdates.CardNote(updatesCard, latest);", card);
+            Assert.Contains("var offersRunning = PanelUpdates.OffersRunning(latest, OpenDash.Version);", card);
+            Assert.Contains("var note = PanelUpdates.CardNote(updatesCard, latest, offersRunning);", card);
             Assert.Contains("updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);", card);
             Assert.Contains("if (updatesCard == UpdatesCard.Available) card.Children.Add(UpdatesReleaseNotes());", card);
             // The brief's named source for the notes, never the release's raw text.

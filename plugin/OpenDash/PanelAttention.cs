@@ -143,6 +143,10 @@ namespace OpenDashPlugin
         /// <summary>Whether a plugin update is staged and waits for SimHub to close.</summary>
         public bool? RestartPending { get; set; }
 
+        /// <summary>Whether the plugin staged is the version already running, so the restart only replaces the
+        /// dashboards somebody edited (#1119).</summary>
+        public bool? RestartSameVersion { get; set; }
+
         /// <summary>Whether the last check found a newer release, and which.</summary>
         public bool? UpdateAvailable { get; set; }
         public string OfferedVersion { get; set; }
@@ -263,7 +267,7 @@ namespace OpenDashPlugin
                 issues.Add(new PanelIssue(
                     UpdateRestart, PanelPage.Updates, null,
                     "Restart SimHub to finish updating",
-                    RestartDetail,
+                    input.RestartSameVersion == true ? RestartReplacesDetail : RestartDetail,
                     null, Open(PanelUpdates.Title), PanelIssueAction.Navigate));
             }
             else if (input.UpdateAvailable == true && !string.IsNullOrWhiteSpace(input.OfferedVersion))
@@ -384,6 +388,13 @@ namespace OpenDashPlugin
         public const string UnselectedDetail = "Installed, but not selected in SimHub.";
 
         public const string RestartDetail = "Until then you are running the old version.";
+
+        /// <summary>
+        /// What replaces <see cref="RestartDetail"/> when the plugin staged is the version running, which is staged
+        /// only to replace an edited dashboard as SimHub starts (#862): the driver is not running an old version,
+        /// and the restart is what replaces their edit (#1119).
+        /// </summary>
+        public const string RestartReplacesDetail = "The restart replaces what you edited. A copy is kept.";
 
         /// <summary>"1 screen came with an older OpenDash", "2 screens ...".</summary>
         public static string UnclaimedTitle(int count)
