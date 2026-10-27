@@ -568,8 +568,8 @@ describe('what a row gives way, in the order the leaderboard writes down', () =>
       }
       return found;
     };
-    expect(least('compact')).toEqual({ best: 588, last: 478, class: 368, num: 313, name: 191, pos: 156, gap: 104 });
-    expect(least('zone')).toEqual({ best: 670, last: 544, class: 418, num: 356, name: 216, pos: 177, gap: 117 });
+    expect(least('compact')).toEqual({ best: 589, last: 479, class: 369, num: 314, name: 191, pos: 156, gap: 104 });
+    expect(least('zone')).toEqual({ best: 671, last: 545, class: 419, num: 357, name: 216, pos: 177, gap: 117 });
   });
 
   test('the name goes once it cannot hold a letter and the ellipsis, and not before', () => {

@@ -210,7 +210,7 @@ function clockBlock(name: string, cx: number, y: number, fs: number): TextItem[]
 }
 
 /** The state line's box, measured in the weight a label is drawn in. */
-const stateWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', IDLE_STATE, fs)) + 2;
+const stateWidth = (fs: number): number => Math.ceil(measureText('BarlowMedium', IDLE_STATE, fs)) + boxSlack(fs);
 
 /**
  * A block: how wide its ink is at a size, and the drawing itself, centred on `cx` with its canvas line
@@ -321,7 +321,7 @@ function updateMark(spec: IdleSpec, stackInk: readonly Rect[]): TextItem[] {
   const name = `${spec.prefix ?? 'idle.'}update`;
   const fs = UPDATE_SIZE;
   const widest = updateMarkWidest(fs);
-  const width = Math.ceil(measureText('BarlowMedium', widest, fs)) + 2;
+  const width = Math.ceil(measureText('BarlowMedium', widest, fs)) + boxSlack(fs);
   const disc = spec.disc;
   const room = rect(spec.frame.left + IDLE_MARGIN, spec.frame.top + IDLE_MARGIN, spec.frame.width - 2 * IDLE_MARGIN, spec.frame.height - 2 * IDLE_MARGIN);
   // The line box's height and its offset from the canvas y it is asked for, read off a label drawn at 0.

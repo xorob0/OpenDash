@@ -25,6 +25,7 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { WHEEL_CHANGE_TICK, assetBox, imageOf } from '../design/assets.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { measureText } from '../design/advances.ts';
+import { boxSlack } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { CAR_MIN_WIDTH, carTopView, carTopViewSize, type CarPaint } from '../second/carTopView.ts';
@@ -92,9 +93,6 @@ const BADGE = 14;
  * too, where `d.bar` is four in a zone, so the page carries its own rather than the density's.
  */
 const BAR_HEIGHT = 6;
-
-/** Padding round a label's measured advances, so that WPF has a pixel in hand at either end. */
-const LABEL_SLACK = 2;
 
 /**
  * Between the car and the column beside it: the canvas draws 24 at the two shapes that set the two
@@ -204,9 +202,9 @@ const tyresOption = (fs: number): Option => {
   return {
     id: 'tyres',
     text: 'Tyres',
-    stateWidth: Math.ceil(measureText('BarlowMedium', widest, fs)) + LABEL_SLACK,
+    stateWidth: Math.ceil(measureText('BarlowMedium', widest, fs)) + boxSlack(fs),
     state: (name, x, middle) => [
-      label(`${name}.value`, 'Rights', x, middle - fs / 2, Math.ceil(measureText('BarlowMedium', widest, fs)) + LABEL_SLACK, {
+      label(`${name}.value`, 'Rights', x, middle - fs / 2, Math.ceil(measureText('BarlowMedium', widest, fs)) + boxSlack(fs), {
         size: fs,
         color: ds.color.text.primary,
         bind: pitTyreSelection(),
@@ -252,7 +250,7 @@ export const pitView = defineModule('pitView', (ctx) => {
   /** Each option with the width its label really takes, so the wrap below can be measured. */
   const measured = options.map((option) => ({
     ...option,
-    textWidth: Math.ceil(measureText('BarlowMedium', option.text, d.labelSm)) + LABEL_SLACK,
+    textWidth: Math.ceil(measureText('BarlowMedium', option.text, d.labelSm)) + boxSlack(d.labelSm),
   }));
   type Measured = (typeof measured)[number];
   const widthOf = (option: Measured): number => option.textWidth + STATE_GAP + option.stateWidth;

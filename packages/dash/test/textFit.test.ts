@@ -53,7 +53,7 @@ describe('every text fits the box SimHub clips it to', () => {
         expect(items.length).toBeGreaterThan(0);
         for (const item of items) {
           const width = drawnWidth(item);
-          expect({ item: item.name, text: drawnText(item), width, box: item.rect.width, fits: width < item.rect.width }).toMatchObject({ fits: true });
+          expect({ item: item.name, text: drawnText(item), width, box: item.rect.width, fits: width + 1 <= item.rect.width }).toMatchObject({ fits: true });
           const line = LINE_SPACING * item.fontSize;
           expect({ item: item.name, line, box: item.rect.height, fits: line <= item.rect.height }).toMatchObject({ fits: true });
         }

@@ -10,7 +10,9 @@
  * catalogue's row rather than a board's.
  */
 import { describe, expect, test } from 'bun:test';
+import { measureText } from '../src/design/advances.ts';
 import { rect } from '../src/design/geometry.ts';
+import { CHIP_WIDEST } from '../src/second/chip.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { PORTRAIT_COLUMNS, RACE_COLUMNS, TOWER_COLUMNS, portraitPage, racePage, towerPage } from '../src/screens/pitwall.ts';
 import { PIT_WALL_HEADER } from '../src/screens/pitwallHeader.ts';
@@ -146,7 +148,12 @@ describe('a chip on a board is 20 tall with 6 either side of its text', () => {
   test('the class chip', () => {
     const block = box(race, '.row.class.block');
     const label = race.items.find((i): i is TextItem => i.name.endsWith('.row.class.text'))!;
-    expect({ height: block.rect.height, padLeft: label.rect.left - block.rect.left, width: label.rect.width }).toEqual({ height: 20, padLeft: 6, width: block.rect.width - 12 });
+    // The text's box is the chip and the text is centred in it (#925), so the six pixels are what the
+    // widest class leaves either side of its ink rather than the edges of a box cut inside it.
+    const ink = measureText('BarlowMedium', CHIP_WIDEST, label.fontSize);
+    const pad = Math.floor(label.rect.left + (label.rect.width - ink) / 2 - block.rect.left);
+    const span = (r: { left: number; width: number }) => ({ left: r.left, width: r.width });
+    expect({ height: block.rect.height, pad, box: span(label.rect), align: label.hAlign }).toEqual({ height: 20, pad: 6, box: span(block.rect), align: 'center' });
   });
 
   test('and the tyre chip is drawn at the right edge of a right-aligned column', () => {

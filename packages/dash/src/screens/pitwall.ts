@@ -20,7 +20,7 @@ import { flagFull } from '../components/flagFull.ts';
 import { label } from '../elements/label.ts';
 import { densityOf } from '../second/density.ts';
 import { drawnFigure } from '../second/drawn.ts';
-import { fieldRowFitted, fitFields, rowHeight, type FieldSpec } from '../second/field.ts';
+import { fieldRowFitted, fieldWidth, fitFields, rowHeight, type FieldSpec } from '../second/field.ts';
 import { panel, PANEL_TITLE_HEIGHT } from '../second/header.ts';
 import { centreZeroGauge } from '../second/gauge.ts';
 import { sectorFields } from '../second/sectors.ts';
@@ -221,15 +221,41 @@ export function trackPanel(name: string, frame: Rect): Item[] {
   // race page, 520 of 999 on the tower -- and the ratio is what the circuit can actually spend of
   // that half at the height the panel leaves it, so the box is whichever of the two is smaller and
   // the field column keeps the rest. A box wider than the ratio asks for buys no ink.
-  const mapWidth = trackFrameWidth(body.height, DENSITY, Math.floor(body.width / 2));
-  const right = rect(body.left + mapWidth + d.gapX, body.top, Math.max(0, body.width - mapWidth - d.gapX), body.height);
+  const columnAt = (mapWidth: number): Rect => rect(body.left + mapWidth + d.gapX, body.top, Math.max(0, body.width - mapWidth - d.gapX), body.height);
+  const cut = trackFrameWidth(body.height, DENSITY, Math.floor(body.width / 2));
+  // The map gives way by a few pixels where the readings would otherwise just miss one line: the
+  // tower's six need 477 px beside a 499 px map, a pixel past the column, since every measured box
+  // carries its slack (#925). The outline sits inside its box with a margin, so a map MAP_YIELD
+  // narrower draws the same circuit, where a reading dropped onto a line of its own reads as a fault.
+  const short = lineWidth(trackFields(ctxOf(columnAt(cut), `${name}.`))) - columnAt(cut).width;
+  const mapWidth = short > 0 && short <= MAP_YIELD ? cut - short : cut;
+  const right = columnAt(mapWidth);
   const ctx = ctxOf(right, `${name}.`);
   return [
     ...items,
     ...withSessionGate(`${name}.`, sessionNotice({ name: 'Track' }), body, DENSITY, [
       ...track.build({ frame: rect(body.left, body.top, mapWidth, body.height), density: DENSITY, prefix: `${name}.map.`, notice: false }),
       ...fitFields(
-        [
+        trackFields(ctx),
+        right,
+        DENSITY,
+        { gap: TRACK_FIELD_GAP, lineGap: TRACK_LINE_GAP },
+      ),
+    ]),
+  ];
+}
+
+/** Pixels the Track panel's map may give its field column so the readings keep one line. */
+const MAP_YIELD = 4;
+
+/** The width `fields` take on one line at the Track panel's gap. */
+const lineWidth = (fields: readonly FieldSpec[]): number =>
+  fields.reduce((sum, spec) => sum + fieldWidth(spec, DENSITY), 0) + TRACK_FIELD_GAP * Math.max(0, fields.length - 1);
+
+/** The Track panel's readings, in the order the column draws them. */
+function trackFields(ctx: ModuleContext): FieldSpec[] {
+  const d = densityOf(DENSITY);
+  return [
           fld(ctx, 'sessionBest', 'Session best', { sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, widest: LAP_TIME_WIDEST, fs: d.mid, color: ds.purpose.lap.sessionBest }),
           fld(ctx, 'road', 'Road', {
             sample: '31',
@@ -259,12 +285,6 @@ export function trackPanel(name: string, frame: Rect): Item[] {
           assistField(ctx, 'tc', 'TC', d.small),
           assistField(ctx, 'abs', 'ABS', d.small, '2'),
           fld(ctx, 'bb', 'BB', { sample: '54.2', bind: fmt(brakeBias(), '0.0'), chars: CHARS.setting, fs: d.small }, { visibleBind: present(game('BrakeBias')) }),
-        ],
-        right,
-        DENSITY,
-        { gap: TRACK_FIELD_GAP, lineGap: TRACK_LINE_GAP },
-      ),
-    ]),
   ];
 }
 

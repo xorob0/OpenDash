@@ -294,7 +294,9 @@ describe('the Track panel carries the session best', () => {
     };
     const race = mapOf('race.track', racePage(1920, 1080));
     const tower = mapOf('tower.track', towerPage(1920, 1080));
-    expect({ race, tower }).toEqual({ race: { width: 253, height: 164 }, tower: { width: 499, height: 328 } });
+    // The tower's map gives its field column the pixel the six readings need to keep one line,
+    // since every measured box carries its slack (#925).
+    expect({ race, tower }).toEqual({ race: { width: 253, height: 164 }, tower: { width: 498, height: 328 } });
     for (const [page, box] of [['race', race], ['tower', tower]] as const) {
       expect({ page, wider: box.width > Math.round(TRACK_ASPECT * box.height) }).toMatchObject({ wider: false });
     }

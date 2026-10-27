@@ -109,7 +109,9 @@ export function chip(name: string, text: string, x: number, top: number, density
   return [
     withMoreBindings(block, { BackgroundColor: fillBind }),
     withMoreBindings(
-      label(`${name}.text`, text, x + d.chipPadding, textY, width - 2 * d.chipPadding, {
+      // The box is the whole chip and the text is centred in it, so the padding either side is the
+      // run's slack: a box cut to the padding's inside edge held `MMMM` with 0.8 px to spare (#925).
+      label(`${name}.text`, text, x, textY, width, {
         size,
         color: ink,
         hAlign: 'center',

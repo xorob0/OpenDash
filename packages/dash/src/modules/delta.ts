@@ -13,6 +13,7 @@
  */
 import { ds } from '../tokens.ts';
 import { measureText } from '../design/advances.ts';
+import { boxSlack } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
 import { rect } from '../design/geometry.ts';
@@ -126,7 +127,7 @@ export const delta = defineModule('delta', (ctx) => {
               // Space-between, as the canvas sets the row: the outer two on the ends of the bar
               // they graduate and the rest sharing what is left. Centring each on its own fraction
               // put the first and the last half off the track and then clamped them back.
-              const widths = marks.map((mark) => Math.ceil(measureText('BarlowMedium', mark.text, d.labelSm)) + 2);
+              const widths = marks.map((mark) => Math.ceil(measureText('BarlowMedium', mark.text, d.labelSm)) + boxSlack(d.labelSm));
               const free = ctx.frame.width - widths.reduce((sum, w) => sum + w, 0);
               const step = free / Math.max(1, marks.length - 1);
               let x = ctx.frame.left;

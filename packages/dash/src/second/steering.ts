@@ -24,7 +24,7 @@ import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, type Rect } from '../design/geometry.ts';
-import { textBox } from '../design/metrics.ts';
+import { boxSlack, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { ring } from '../elements/ring.ts';
@@ -156,9 +156,9 @@ function spoke(name: string, hub: { cx: number; cy: number }, bearing: number, l
  * iRacing until Assetto Corsa's is measured (#567).
  */
 export function steeringDial(name: string, frame: Rect, labelSize: number): Item[] {
-  // A pixel over the advance: `Steer` is a whole 36 px at 15, and a box cut to the exact advance loses
-  // the last glyph's final column to WPF.
-  const labelWidth = Math.ceil(measureText('BarlowMedium', 'Steer', labelSize)) + 1;
+  // The box's slack over the advance: `Steer` is a whole 36 px at 15, and a box cut to the exact
+  // advance loses the last glyph's final column to WPF.
+  const labelWidth = Math.ceil(measureText('BarlowMedium', 'Steer', labelSize)) + boxSlack(labelSize);
   // The word is shed rather than shrunk in a column too narrow for it: a dial is legible without
   // being named and a clipped "Stee" names nothing. Its line box is taller than its size, and a row
   // measured from the size instead puts the last of the word outside the frame.

@@ -218,7 +218,7 @@ export function followerWidth(follower: Follower, d: DensitySpec, valueFs: numbe
     throw new Error(`follower ${JSON.stringify(follower.text)} is bound and declares no widest; a bound unit is measured by what it can draw, not by its sample`);
   }
   const drawn = follower.widest ?? follower.text;
-  return Math.ceil(measureText('BarlowMedium', drawn, fs)) + 1;
+  return Math.ceil(measureText('BarlowMedium', drawn, fs)) + boxSlack(fs);
 }
 
 /**
@@ -289,7 +289,9 @@ export function fieldWidth(spec: FieldSpec, density: Density): number {
   if (spec.alternate !== undefined) return Math.max(...turnsOf(spec).map((one) => fieldWidth(one, density)));
   const d = densityOf(density);
   const text = spec.labelWidest ?? spec.label;
-  const labelW = text === '' ? 0 : measureText('BarlowMedium', text, d.label);
+  // The label's box is the field's width, so a label wider than its value is measured with the slack
+  // every measured box gets: `Laps completed` advances 105.4 px and had a 106 px box (#925).
+  const labelW = text === '' ? 0 : measureText('BarlowMedium', text, d.label) + boxSlack(d.label);
   return Math.ceil(Math.max(labelW, valueWidth(spec, d)));
 }
 

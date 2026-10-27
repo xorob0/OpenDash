@@ -14,6 +14,7 @@ import { moduleMeta, type ModuleMeta } from '../contract.ts';
 import { placeholder } from '../second/placeholder.ts';
 import { inSession } from '../second/values.ts';
 import {
+  cellWidth,
   drawFieldBlock,
   fieldBlockHeight,
   fieldWidth,
@@ -309,7 +310,11 @@ export function fieldsRow(specs: readonly FieldSpec[], ctx: ModuleContext, opts:
           // A field wider than the whole box is where growing stops. `wrapFields` would give it a
           // line of its own and `fieldRowFitted` would draw it from the left edge and off the right
           // one, which is the clip this whole file exists to avoid.
-          if (grown.some((spec) => fieldWidth(spec, ctx.density) > ctx.frame.width)) return undefined;
+          // On a grid the room is the cell rather than the box: a grown field too wide for its cell
+          // wraps the grid one to a line and is still drawn in the cell, so the damage page's
+          // `Heavy` grew to 142 px in a 124 px cell (#925).
+          const room = plan === 'grid' ? cellWidth(ctx.frame.width, columnCount, gap ?? densityOf(ctx.density).gapX) : ctx.frame.width;
+          if (grown.some((spec) => fieldWidth(spec, ctx.density) > room)) return undefined;
           // And a rank may not grow itself into a worse shape than it started in. Growing may turn
           // two lines of two and one into three of one, which is the narrow zone stacking itself
           // and is the point; it may not turn one line of three into two and one, which is the
