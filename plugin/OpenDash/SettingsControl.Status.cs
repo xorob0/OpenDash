@@ -101,6 +101,7 @@ namespace OpenDashPlugin
                     Namespace = screen.Namespace,
                     Installed = installed,
                     Unclaimed = screen.Unclaimed == true,
+                    Installable = PanelScreens.Installable(screen),
                 });
             }
 

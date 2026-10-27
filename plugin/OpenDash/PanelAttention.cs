@@ -92,6 +92,10 @@ namespace OpenDashPlugin
 
         /// <summary>Whether it is a screen a migration made that nobody has kept or removed.</summary>
         public bool Unclaimed { get; set; }
+
+        /// <summary>Whether this build can write its dashboard (PanelScreens.Installable): false for a screen a
+        /// newer OpenDash made, whose gone folder is no issue, since Install it again could only fail (#864).</summary>
+        public bool Installable { get; set; } = true;
     }
 
     /// <summary>A strip as Home needs it.</summary>
@@ -227,7 +231,7 @@ namespace OpenDashPlugin
                     SettingsNewerSteps(input.SettingsSavedBy, copy != null, inBackups), OpenFolder, PanelIssueAction.OpenFolder));
             }
 
-            foreach (var screen in screens.Where(s => s.Installed == false))
+            foreach (var screen in screens.Where(s => s.Installed == false && s.Installable))
             {
                 issues.Add(new PanelIssue(
                     ScreenMissing + screen.Namespace, PanelPage.Screens, screen.Namespace,

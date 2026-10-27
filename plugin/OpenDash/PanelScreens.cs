@@ -21,6 +21,10 @@ namespace OpenDashPlugin
     {
         InSimHub,
         Missing,
+
+        /// <summary>Its folder is not in SimHub and this build cannot write one: a screen a newer OpenDash made,
+        /// of a kind this one does not know (#864). Not Missing, which offers Install it again.</summary>
+        NotInSimHub,
     }
 
     /// <summary>One page of a face zone as the zone list draws it.</summary>
@@ -118,11 +122,36 @@ namespace OpenDashPlugin
             return installed ? ScreenState.InSimHub : ScreenState.Missing;
         }
 
+        /// <summary>
+        /// The state of this screen's card: as <see cref="StateOf(bool)"/>, except that a screen this build cannot
+        /// install (<see cref="Installable"/>) is never Missing, since Missing offers Install it again (#864).
+        /// </summary>
+        public static ScreenState StateOf(ScreenInstance screen, bool installed)
+        {
+            if (installed) return ScreenState.InSimHub;
+            return Installable(screen) ? ScreenState.Missing : ScreenState.NotInSimHub;
+        }
+
+        /// <summary>
+        /// Whether this build can write the screen's dashboard, and so whether a gone folder is Missing, raises
+        /// Home's issue and offers Install it again: not for a screen a newer OpenDash made, of a kind this one does
+        /// not know (#864). Its install can only fail ("This build ships no package for ..."), and the press would
+        /// count as a change, end the hold on the newer plugin's settings file and save the reduced rig over it.
+        /// </summary>
+        public static bool Installable(ScreenInstance screen)
+        {
+            return screen != null && screen.IsKnownKind;
+        }
+
+        /// <summary>The card's state for a screen this build cannot install whose folder is not there.</summary>
+        public const string NotInSimHub = "Not in SimHub";
+
         public static string StateLabel(ScreenState state)
         {
             switch (state)
             {
                 case ScreenState.Missing: return Missing;
+                case ScreenState.NotInSimHub: return NotInSimHub;
                 default: return InSimHub;
             }
         }
@@ -133,6 +162,7 @@ namespace OpenDashPlugin
             switch (state)
             {
                 case ScreenState.Missing: return Theme.StatusFailed;
+                case ScreenState.NotInSimHub: return Theme.TextSecondary;
                 default: return Theme.StatusUpToDate;
             }
         }

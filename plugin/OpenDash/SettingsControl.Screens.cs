@@ -182,7 +182,7 @@ namespace OpenDashPlugin
         /// of its being written (#664).</summary>
         private ScreenState ScreensStateOf(ScreenInstance screen)
         {
-            return PanelScreens.StateOf(Installed(screen));
+            return PanelScreens.StateOf(screen, Installed(screen));
         }
 
         private bool Installed(ScreenInstance screen)

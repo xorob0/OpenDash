@@ -143,6 +143,60 @@ namespace OpenDashPlugin.Tests
             Assert.NotNull(rim.Face);
         }
 
+        /// <summary>
+        /// Seen on the Windows VM (PR #1209): a newer kind's gone folder raised Home's missing-dashboard issue and a
+        /// Missing card, both offering Install it again, which could only fail and, counting as a change, saved the
+        /// reduced rig over the newer plugin's file. Such a screen is not Missing and offers no install; a known
+        /// kind is as it was.
+        /// </summary>
+        [Fact]
+        public void A_screen_of_a_kind_this_plugin_does_not_know_is_not_missing_and_offers_no_install()
+        {
+            var read = JsonConvert.DeserializeObject<OpenDashSettings>(NewerFile);
+            read.Normalise();
+            var dial = read.RigScreens().Single(s => s.Namespace == "Dial800x800");
+            var rim = read.RigScreens().Single(s => s.Namespace == "Face1280x480");
+
+            Assert.False(PanelScreens.Installable(dial));
+            Assert.Equal(ScreenState.NotInSimHub, PanelScreens.StateOf(dial, false));
+            Assert.Equal(ScreenState.InSimHub, PanelScreens.StateOf(dial, true));
+            Assert.Equal(PanelScreens.NotInSimHub, PanelScreens.StateLabel(PanelScreens.StateOf(dial, false)));
+            Assert.NotEqual(Theme.StatusFailed, PanelScreens.StateHex(PanelScreens.StateOf(dial, false)));
+            var line = PanelHome.ScreenLine(read, dial, false);
+            Assert.Equal(PanelScreens.NotInSimHub, line.Text);
+            Assert.Null(line.DotHex);
+            Assert.Equal(PanelScreens.UnknownKind, PanelScreens.KindOf(dial));
+
+            // The known kind beside it is unchanged: Missing, in the failure ink, with Home's issue and its install.
+            Assert.True(PanelScreens.Installable(rim));
+            Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(rim, false));
+            Assert.Equal(ScreenState.InSimHub, PanelScreens.StateOf(rim, true));
+            Assert.Equal(PanelScreens.Missing, PanelHome.ScreenLine(read, rim, false).Text);
+
+            var input = new AttentionInput { SettingsNewer = true, SettingsSavedBy = "99.0.0" };
+            foreach (var screen in new[] { dial, rim })
+            {
+                input.Screens.Add(new AttentionScreen
+                {
+                    Name = screen.Name,
+                    Namespace = screen.Namespace,
+                    Installed = false,
+                    Installable = PanelScreens.Installable(screen),
+                });
+            }
+            var issues = PanelAttention.Find(input);
+            Assert.Equal(PanelAttention.SettingsNewer, issues.First().Id);
+            Assert.False(PanelAttention.Has(issues, PanelAttention.ScreenMissing, dial.Namespace));
+            Assert.DoesNotContain(issues, i => i.Action == PanelIssueAction.Reinstall && i.Subject == dial.Namespace);
+            var missing = issues.Single(i => i.Action == PanelIssueAction.Reinstall);
+            Assert.Equal(PanelAttention.ScreenMissing + rim.Namespace, missing.Id);
+            Assert.Equal("Rim's dashboard is missing from SimHub", missing.Title);
+            Assert.Equal(PanelAttention.InstallAgain, missing.ActionLabel);
+
+            // A screen whose kind is not said is installable, as every AttentionScreen was before (#864).
+            Assert.True(new AttentionScreen().Installable);
+        }
+
         [Fact]
         public void A_screen_with_no_kind_is_still_a_face()
         {
