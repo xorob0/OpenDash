@@ -150,7 +150,11 @@ describe('card expressions', () => {
     expect(formulaOf(textItem('lastLap', 'value'), 'Text')).toContain(`'${values.NO_TIME}'`);
     expect(formulaOf(textItem('bestLap', 'value'), 'Text')).toContain(`'${values.NO_TIME}'`);
     expect(formulaOf(textItem('lastLap', 'value'), 'Text')).toContain('toshorttime([DataCorePlugin.GameData.LastLapTime], 3, false, true)');
-    expect(formulaOf(textItem('lastLap', 'value'), 'TextColor')).toContain("< (0.0005), '#B14BFF'");
+    // Purple on the session best, never on the player's own best (#1042).
+    const lastColour = formulaOf(textItem('lastLap', 'value'), 'TextColor');
+    expect(lastColour).toContain("< (0.0005)), '#B14BFF'");
+    expect(lastColour).toContain('[DataCorePlugin.GameData.BestLapOpponent.BestLapTime]');
+    expect(lastColour).not.toContain('[DataCorePlugin.GameData.BestLapTime]');
     expect(formulaOf(textItem('bestLap', 'value'), 'TextColor')).not.toContain('#B14BFF');
   });
 

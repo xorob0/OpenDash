@@ -42,7 +42,7 @@ import {
   bandFuelQuantityWidest,
   bandTyreTemperature,
   bandTyreTemperatureMark,
-  bestLap,
+  sessionBestLap,
   carPosition,
   positionLabelled,
   carRelativeGap,
@@ -390,13 +390,18 @@ const weather: readonly BandField[] = [
  * Through `sectorTime` rather than a bare format, so a sector nobody has set yet reads the same
  * placeholder the two lap times on this page already read. Formatted raw it came out as 0.00, which
  * on the one page a driver reads sector by sector is a time rather than an absence.
+ *
+ * `Best` is the session best, {@link sessionBestLap}: the field's best lap, or the class's when the
+ * rig counts in class, which is what its purple says everywhere else (#1038). It read `BestLapTime`,
+ * the driver's own best, in that purple, so a face with Lap times beside the band drew two purple
+ * bests that disagreed by most of a second. Your own best is Lap times' `Your best`.
  */
 const sectors: readonly BandField[] = [
   { id: 's1', label: 'S1', sample: '28.41', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 1)), chars: CHARS.sector },
   { id: 's2', label: 'S2', sample: '41.07', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 2)), chars: CHARS.sector },
   { id: 's3', label: 'S3', sample: '32.83', bind: sectorTime(ncalc.driverSector('lastlap', playerPosition(), 3)), chars: CHARS.sector },
   { id: 'last', label: 'Last', sample: '1:42.905', bind: lapTime(lastLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST },
-  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(bestLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST, color: ds.purpose.lap.sessionBest },
+  { id: 'best', label: 'Best', sample: '1:41.877', bind: lapTime(sessionBestLap()), chars: CHARS.lapTime, numeralWidest: LAP_TIME_WIDEST, color: ds.purpose.lap.sessionBest },
 ];
 
 /**
