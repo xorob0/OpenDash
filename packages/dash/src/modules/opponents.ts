@@ -71,7 +71,7 @@
 import { ncalc } from '../generator.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
-import { MINUS, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
+import { MINUS, boxSlack, canvasBaseline, canvasYForBaseline } from '../design/metrics.ts';
 import { charsThatFit, measureText, widestOf } from '../design/advances.ts';
 import { densityOf, grownAtMost, rampOf } from '../second/density.ts';
 import { CHIP_WIDEST, chip, chipText, chipWidth } from '../second/chip.ts';
@@ -213,8 +213,8 @@ function cellsThatFit(cells: readonly Cell[], width: number): Cell[] {
 /** The face the labels that follow the gap are drawn in, which is `label`'s. */
 const DETAIL_FACE = 'BarlowMedium';
 
-/** Width of one of the labels that follow the gap, with the pixel `label` leaves itself. */
-const detailWidth = (text: string, fs: number): number => Math.ceil(measureText(DETAIL_FACE, text, fs)) + 1;
+/** Width of one of the labels that follow the gap, with the slack every box has. */
+const detailWidth = (text: string, fs: number): number => Math.ceil(measureText(DETAIL_FACE, text, fs)) + boxSlack(fs);
 
 /** One of the labels that follow the gap: its sample, the widest its binding draws, and the binding. */
 interface Detail {

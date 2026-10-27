@@ -173,7 +173,12 @@ describe('the packages are built and valid', () => {
       for (const dashboard of pkg.dashboards) {
         for (const item of textsOf(dashboard)) {
           const width = drawnWidth(item);
-          expect({ dashboard: dashboard.name, item: item.name, text: drawnText(item), width, box: item.rect.width, fits: width <= item.rect.width }).toMatchObject({ fits: true });
+          // A run measured from its advances gets a pixel of room on top of them, which WPF needs not
+          // to clip the last glyph's final column; a box that holds the advance with a fraction to
+          // spare passes `width < box` by luck (#925). Monospaced cells are rounded up a glyph at a
+          // time and carry their room inside them.
+          const room = item.monospace ? 0 : 1;
+          expect({ dashboard: dashboard.name, item: item.name, text: drawnText(item), width, box: item.rect.width, fits: width + room <= item.rect.width }).toMatchObject({ fits: true });
           const line = LINE_SPACING * item.fontSize;
           expect({ item: item.name, line, box: item.rect.height, fits: line <= item.rect.height }).toMatchObject({ fits: true });
         }
@@ -826,7 +831,9 @@ describe('every list cell fits its column', () => {
           expect({ id, box: box.name, item: item.name, rect: r, span, inside: r.left >= span.left && r.left + r.width <= span.left + span.width + 1 }).toMatchObject({ inside: true });
           if (item.kind !== 'text') continue;
           const width = drawnWidth(item);
-          expect({ id, box: box.name, item: item.name, fs: item.fontSize, text: drawnText(item), width, box_: r.width, fits: width <= r.width }).toMatchObject({ fits: true });
+          // A pixel of room past a measured run, as `fits every text in its box` asks (#925).
+          const room = item.monospace ? 0 : 1;
+          expect({ id, box: box.name, item: item.name, fs: item.fontSize, text: drawnText(item), width, box_: r.width, fits: width + room <= r.width }).toMatchObject({ fits: true });
         }
         expect({ id, box: box.name, measured: measured > 0 }).toMatchObject({ measured: true });
       }

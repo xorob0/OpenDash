@@ -31,7 +31,7 @@ import { ncalc } from '../generator.ts';
 import { type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth, type Chars } from '../design/metrics.ts';
 import { numeral } from '../elements/numeral.ts';
 import { unit } from '../elements/unit.ts';
 import { ds } from '../tokens.ts';
@@ -159,7 +159,7 @@ const readings = (q: Quantity): Quantity[] => (q.also ? [q, q.also] : [q]);
  * where the "KPA" a unit was once upper-cased to is a twentieth of a pixel past it.
  */
 const unitBox = (q: Quantity, d: DensitySpec): number =>
-  q.unit === undefined ? 0 : Math.max(UNIT_CELL, Math.ceil(measureText('BarlowMedium', q.unit.widest ?? q.unit.text, d.labelSm)) + 1);
+  q.unit === undefined ? 0 : Math.max(UNIT_CELL, Math.ceil(measureText('BarlowMedium', q.unit.widest ?? q.unit.text, d.labelSm)) + boxSlack(d.labelSm));
 
 const valueWidth = (q: Quantity): number => monoWidth(cells('SemiBold', q.fs), q.chars);
 

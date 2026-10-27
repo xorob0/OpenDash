@@ -12,6 +12,7 @@
  */
 import { rect } from '../design/geometry.ts';
 import { measureText } from '../design/advances.ts';
+import { boxSlack } from '../design/metrics.ts';
 import { label } from '../elements/label.ts';
 import { chip } from '../second/chip.ts';
 import { densityOf } from '../second/density.ts';
@@ -84,8 +85,8 @@ export const CAPTIONS: readonly Caption[] = [
  */
 const SHED_FIRST: readonly string[] = ['tread', 'compound', 'tick'];
 
-/** A caption's box: the sentence as it is drawn, and the pixel of slack WPF needs not to clip it. */
-const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text, fs)) + 1;
+/** A caption's box: the sentence as it is drawn, and the slack WPF needs not to clip it. */
+const captionWidth = (caption: Caption, fs: number): number => Math.ceil(measureText('BarlowMedium', caption.text, fs)) + boxSlack(fs);
 
 /**
  * The captions the line holds, in the order they are drawn: as many as fit, shed by

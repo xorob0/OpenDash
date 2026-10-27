@@ -26,7 +26,7 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { charsThatFit, dottedLetterSize, measureText, widestGlyph, widestOf, type TextFace } from '../design/advances.ts';
 import { assetBox, imageOf, RANK_DOWN, RANK_UP } from '../design/assets.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
+import { boxSlack, cells, monoWidth, MINUS, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -343,14 +343,14 @@ export const nameText = (idx: Expr, chars: number, fs: number): Expr => {
  */
 export const nameSampleAt = (fs: number): string => (nameIsUpperCased(fs) ? NAME_SAMPLE.toUpperCase() : NAME_SAMPLE);
 
-/** The width a column wants before it draws a name: the shortest form's budget, with the pixel `label` leaves itself. */
+/** The width a column wants before it draws a name: the shortest form's budget, with the box's slack. */
 export const nameColumnFloor = (fs: number): number => nameColumnFor(SHORTEST_NAME_CHARS, fs);
 
 /**
- * The width a name column needs to hold `chars` characters at this size, with the pixel `label` leaves
- * itself: the inverse of the budget `charsThatFit` counts, in characters of the widest glyph.
+ * The width a name column needs to hold `chars` characters at this size, with the box's slack: the
+ * inverse of the budget `cellName` counts, in characters of the widest glyph.
  */
-export const nameColumnFor = (chars: number, fs: number): number => Math.ceil(chars * widestGlyph(NAME_FACE).advance * fs) + 1;
+export const nameColumnFor = (chars: number, fs: number): number => Math.ceil(chars * widestGlyph(NAME_FACE).advance * fs) + boxSlack(fs);
 
 /** The size a row sets a name in, which is what a caller measuring the column has to measure at. */
 export const nameSizeForRow = (row: RowSize, board = false): number => (typeof row === 'object' ? row : rowTypeOf(row, board)).name;
@@ -510,7 +510,9 @@ const OWN_ROW_NAME = 'YOU';
  */
 function cellName(ctx: CellContext): Item[] {
   const fs = ctx.type.name;
-  const chars = charsThatFit(NAME_FACE, fs, ctx.width);
+  // Counted in the column less the box's slack, so the widest name the count allows still has its
+  // room before the edge WPF clips at (#925).
+  const chars = charsThatFit(NAME_FACE, fs, ctx.width - boxSlack(fs));
   const bind = iff(ctx.isPlayer, str(OWN_ROW_NAME), nameText(ctx.idx, chars, fs));
   // A column cut to two characters declares WW, which is narrower than the own row's YOU.
   const budget = widestOf(NAME_FACE, chars);
@@ -1070,10 +1072,13 @@ function headerRow(spec: TableSpec, spans: readonly ColumnSpan[], top: number, g
   spans.forEach(({ id, left: x, width }) => {
     const column = COLUMNS[id];
     const text = column.header;
-    // Measured as `label` draws it, which is in the case it is written in.
-    const drawn = Math.ceil(measureText('BarlowMedium', text, d.labelSm));
-    const left = column.align === 'right' ? x + width - drawn : x;
-    items.push(label(`${spec.name}.head.${id}`, text, left, top + (height - d.labelSm) / 2, Math.max(drawn, 0), { size: d.labelSm }));
+    // Measured as `label` draws it, which is in the case it is written in, and given the slack every
+    // box has: cut to the exact advance, `Class` had four thousandths of a pixel and WPF clips at the
+    // edge (#925). A right-aligned header is drawn right-aligned in its box, so the slack falls at
+    // its left and the text still ends where the column's cells do.
+    const box = Math.ceil(measureText('BarlowMedium', text, d.labelSm)) + boxSlack(d.labelSm);
+    const right = column.align === 'right';
+    items.push(label(`${spec.name}.head.${id}`, text, right ? x + width - box : x, top + (height - d.labelSm) / 2, box, { size: d.labelSm, ...(right ? { hAlign: 'right' as const } : {}) }));
   });
   return items;
 }
@@ -1141,9 +1146,9 @@ function limitLine(spec: TableSpec, top: number, hidden: Expr): Item[] {
   const d = densityOf(spec.density);
   const padX = padXOf(spec.board ?? false);
   const fs = d.labelSm;
-  // A pixel over what the widest count draws: WPF clips at the box's edge, and a box cut to the
-  // exact advance loses the last glyph's final column.
-  const width = Math.ceil(measureText('BarlowMedium', SPLIT_WIDEST, fs)) + 1;
+  // The box's slack over what the widest count draws: WPF clips at the box's edge, and a box cut to
+  // the exact advance loses the last glyph's final column.
+  const width = Math.ceil(measureText('BarlowMedium', SPLIT_WIDEST, fs)) + boxSlack(fs);
   const left = spec.frame.left + Math.round((spec.frame.width - width) / 2);
   const right = left + width;
   const shown = gt(hidden, num(0));

@@ -16,6 +16,7 @@ import type { ChartItem, Hex, Item, Rect } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { withMoreBindings } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
+import { boxSlack } from '../design/metrics.ts';
 import { inset as insetRect, rect, roundRect } from '../design/geometry.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
@@ -130,9 +131,12 @@ export function legend(name: string, series: readonly Series[], x: number, y: nu
   for (const s of series) {
     const width = Math.ceil(measureText('BarlowMedium', s.name, d.labelSm));
     const takes = SWATCH.width + SWATCH_GAP + width;
-    if (maxWidth !== undefined && cursor - x + takes > maxWidth) break;
+    // The label's box carries the slack every box has and the next swatch is placed from the advance,
+    // so the slack falls in the gap before it; at the edge it has to fit the room like the rest.
+    const box = width + boxSlack(d.labelSm);
+    if (maxWidth !== undefined && cursor - x + SWATCH.width + SWATCH_GAP + box > maxWidth) break;
     items.push(band(`${name}.${s.name}.swatch`, rect(cursor, Math.round(y + d.labelSm / 2), SWATCH.width, SWATCH.height), s.color));
-    items.push(label(`${name}.${s.name}.legend`, s.name, cursor + SWATCH.width + SWATCH_GAP, y, width, { size: d.labelSm, color: ds.color.text.secondary }));
+    items.push(label(`${name}.${s.name}.legend`, s.name, cursor + SWATCH.width + SWATCH_GAP, y, box, { size: d.labelSm, color: ds.color.text.secondary }));
     cursor += takes + LEGEND_GAP;
   }
   return items;
@@ -142,7 +146,8 @@ export function legend(name: string, series: readonly Series[], x: number, y: nu
 export const legendWidth = (series: readonly Series[], density: Density): number => {
   const d = densityOf(density);
   const total = series.reduce((w, s) => w + SWATCH.width + SWATCH_GAP + Math.ceil(measureText('BarlowMedium', s.name, d.labelSm)) + LEGEND_GAP, 0);
-  return Math.max(0, total - LEGEND_GAP);
+  // The last label's box ends its slack past the advance, and that is where the legend ends.
+  return series.length === 0 ? 0 : total - LEGEND_GAP + boxSlack(d.labelSm);
 };
 
 /**

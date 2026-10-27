@@ -12,7 +12,7 @@ import type { Expr } from '../bind.ts';
 import { measureText, widestFigure } from '../design/advances.ts';
 import { withMoreBindings } from '../bind.ts';
 import { rect } from '../design/geometry.ts';
-import { canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, cells, monoWidth } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { dot, DOT_SIZE } from '../elements/dot.ts';
 import { label } from '../elements/label.ts';
@@ -79,7 +79,7 @@ function pair(
       // dash: `L9` is a cell shorter than `L12` and `L12` one shorter than the `L999` the cells are
       // cut for, and a denominator placed at the end of the cells carries the difference with it.
       // #387.
-      unit(`${name}.denominator`, denominator, x + textWidth(valueSample, mono) + ds.space[2], canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + 2, {
+      unit(`${name}.denominator`, denominator, x + textWidth(valueSample, mono) + ds.space[2], canvasYForBaseline(canvasBaseline(y, fs), d.labelSm), denominatorWidth + boxSlack(d.labelSm), {
         bind: denominatorBind,
         widest: denominatorWidest,
         visibleBind,
@@ -111,10 +111,10 @@ export function companionHeader(name: string, spec: CompanionHeaderSpec, density
   const valueY = canvasYForBaseline(canvasBaseline(textY, d.label), fs);
   const items: Item[] = [];
   const nameWidth = Math.ceil(measureText('BarlowMedium', spec.moduleName, d.label));
-  items.push(label(`${name}.module`, spec.moduleName, frame.left + COMPANION_HEADER.padX, textY, nameWidth + 2, { size: d.label, color: ds.color.text.primary }));
+  items.push(label(`${name}.module`, spec.moduleName, frame.left + COMPANION_HEADER.padX, textY, nameWidth + boxSlack(d.label), { size: d.label, color: ds.color.text.primary }));
   const counter = `${spec.page} / ${spec.pages}`;
   items.push(
-    label(`${name}.counter`, counter, frame.left + COMPANION_HEADER.padX + nameWidth + COMPANION_HEADER.gap, textY, Math.ceil(measureText('BarlowMedium', counter, d.label)) + 2, {
+    label(`${name}.counter`, counter, frame.left + COMPANION_HEADER.padX + nameWidth + COMPANION_HEADER.gap, textY, Math.ceil(measureText('BarlowMedium', counter, d.label)) + boxSlack(d.label), {
       size: d.label,
     }),
   );
@@ -291,7 +291,7 @@ export const zoneTitleY = (frame: Rect, metrics: ZoneFrameMetrics): number => fr
 /** The room a zone's title bar keeps at its right for the counter, drawn there or not. */
 export function zoneCounterWidth(counter: ZoneCounter, metrics: ZoneFrameMetrics): number {
   const text = counter.kind === 'static' ? `${counter.page} / ${counter.pages}` : counter.widest;
-  return Math.ceil(measureText('BarlowMedium', text, metrics.size)) + 2;
+  return Math.ceil(measureText('BarlowMedium', text, metrics.size)) + boxSlack(metrics.size);
 }
 
 /** The x a zone's counter is drawn at, which a caller that draws its own needs. */
@@ -362,7 +362,7 @@ export type InlinePart =
 export function inlineGroup(name: string, parts: readonly InlinePart[], fs: number, density: Density, gap = ds.space[2]): { width: number; draw(x: number, top: number): Item[] } {
   const d = densityOf(density);
   const widths = parts.map((part) => {
-    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', part.widest ?? part.text, d.labelSm)) + 2;
+    if (part.kind === 'label') return Math.ceil(measureText('BarlowMedium', part.widest ?? part.text, d.labelSm)) + boxSlack(d.labelSm);
     if (part.kind === 'block') return part.width;
     return monoWidth(cells('SemiBold', fs), part.chars) + 4;
   });

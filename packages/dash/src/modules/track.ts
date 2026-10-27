@@ -20,6 +20,7 @@
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
 import { charsThatFit, measureText, widestFigure, widestOf } from '../design/advances.ts';
+import { boxSlack } from '../design/metrics.ts';
 import { rect, type Rect } from '../design/geometry.ts';
 import { densityOf, type Density } from '../second/density.ts';
 import { label } from '../elements/label.ts';
@@ -98,8 +99,10 @@ export const TRACK_LENGTH_WIDEST = ` · ${widestFigure(HEADER_FACE, LENGTH_CAP.t
  * forms, so the fit tests measure the line by what either can draw.
  */
 export function trackHeader(width: number, fs: number): { bind: Expr; widest: string } {
-  const withLength = charsThatFit(HEADER_FACE, fs, width - measureText(HEADER_FACE, TRACK_LENGTH_WIDEST, fs));
-  const alone = charsThatFit(HEADER_FACE, fs, width);
+  // Counted in the box less its slack, so the line the count promises ends a slack short of the edge.
+  const room = width - boxSlack(fs);
+  const withLength = charsThatFit(HEADER_FACE, fs, room - measureText(HEADER_FACE, TRACK_LENGTH_WIDEST, fs));
+  const alone = charsThatFit(HEADER_FACE, fs, room);
   const name = trackName();
   const bind = iff(
     // `left(name, 1, n)` is the character just past `n`, and empty exactly when the name has no more.
@@ -145,7 +148,7 @@ export const track = defineModule('track', (ctx) => {
   // word the binding can produce rather than for "Dry", and the name gives up exactly that much
   // plus the canvas's 12 px: a name and a state competing for one 245 px line is where WPF clips
   // whichever it draws second.
-  const stateWidth = Math.ceil(measureText(HEADER_FACE, GRIP_WIDEST, d.labelSm));
+  const stateWidth = Math.ceil(measureText(HEADER_FACE, GRIP_WIDEST, d.labelSm)) + boxSlack(d.labelSm);
   const titleWidth = Math.max(0, ctx.frame.width - stateWidth - ds.space[3]);
   const header = trackHeader(titleWidth, d.labelSm);
   return [
