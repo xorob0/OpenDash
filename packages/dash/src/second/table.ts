@@ -290,7 +290,8 @@ export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
  * rows and bridge them, and 13 is simply where that came up first. The other two candidates lose to
  * the same numbers. **A heavier weight makes it worse**: Barlow Bold's break is 0.057 em against
  * Medium's 0.080, a fatter stem and a fatter dot being drawn into the same vertical. **A bigger size
- * costs letters**: 15 px in the three narrow boxes buys 6, 5 and 4 characters where 13 buys 7, 6 and 4,
+ * costs letters**: 15 px in the three narrow boxes buys 5, 5 and 4 characters where 13 buys 6, 6 and 4
+ * (counted in the Æ since #576),
  * and it does not clear the bound either. **Upper case costs nothing at all**, which is the part worth
  * saying twice: the budget is counted in characters of the face's *widest* glyph, so shouting a name
  * changes no budget anywhere — `tables.test.ts`'s six counts are the same numbers after this as before
