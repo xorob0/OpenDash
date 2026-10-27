@@ -10,8 +10,11 @@ import { describe, expect, test } from 'bun:test';
 import type { Item, TextItem } from '../src/generator.ts';
 import { rect } from '../src/design/geometry.ts';
 import { DAMAGE_HEAVY, DAMAGE_MESSAGE, DAMAGE_PANELS, DAMAGE_WORDS, damage } from '../src/modules/damage.ts';
+import { densityForBox } from '../src/second/density.ts';
+import { zoneFrame } from '../src/second/header.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
+import { insideBox } from './conformance.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 
 const GAME = 'DataCorePlugin.GameData.';
@@ -78,5 +81,34 @@ describe('the damage page reads the sim it is on', () => {
     expect(bound(named('damage.front.value'), 'TextColor', props)).toBe(ds.color.danger.primary);
     expect(bound(named('damage.rear.value'), 'TextColor', props)).toBe(ds.color.caution.primary);
     expect(bound(named('damage.left.value'), 'TextColor', props)).toBe(ds.color.text.primary);
+  });
+});
+
+describe('the words beside the car stay in the frame once the stack has grown them (#1167)', () => {
+  // The face's 274 x 366 zone is a one-column shape, so the four words are centred by default. The
+  // grid is chosen at the size the words fit before growing, two columns of 63 px there, and `stack`
+  // then grows them to the point that a word no longer fits its cell and the rank wraps to one per
+  // line. Each line used to be placed as a 63 px cell centred in the frame while its value drew 110
+  // px wide, so the value ended seven pixels past the frame's right edge.
+  const size = { width: 274, height: 366 };
+  const density = densityForBox(size);
+  const { body } = zoneFrame('probe', { frame: rect(0, 0, size.width, size.height), title: 'PROBE', counter: { kind: 'reserved', widest: '21 / 21' } }, density, 'face');
+  const drawn = damage.build({ frame: body, density, prefix: 'damage.' }).flatMap((i) => [...walkItems([i])]);
+  const values = DAMAGE_PANELS.map(({ id }) => drawn.find((i) => i.name === `damage.${id}.value`) as TextItem);
+
+  test('the stack grew the words past the grid they were fitted in, which is the case that drew outside', () => {
+    expect(values.every((v) => v !== undefined)).toBe(true);
+    // One word under another, each on a line of its own: the grid of two has become one column. Where
+    // each one starts is the centring's business, and a word with a wider `widest` would start
+    // further left without the layout being wrong, so only the lines are counted.
+    expect(new Set(values.map((v) => v.rect.top)).size).toBe(4);
+  });
+
+  test('every item is inside the frame', () => {
+    const out = drawn
+      .filter((i): i is Exclude<Item, { kind: 'layer' }> => i.kind !== 'layer')
+      .filter((i) => !insideBox(i, body))
+      .map((i) => `${i.name} at ${i.rect.left} + ${i.rect.width}`);
+    expect(out).toEqual([]);
   });
 });
