@@ -98,8 +98,9 @@ describe('the words beside the car stay in the frame once the stack has grown th
 
   test('the stack grew the words past the grid they were fitted in, which is the case that drew outside', () => {
     expect(values.every((v) => v !== undefined)).toBe(true);
-    // One word under another, every one at the same left: the grid of two has become one column.
-    expect(new Set(values.map((v) => v.rect.left)).size).toBe(1);
+    // One word under another, each on a line of its own: the grid of two has become one column. Where
+    // each one starts is the centring's business, and a word with a wider `widest` would start
+    // further left without the layout being wrong, so only the lines are counted.
     expect(new Set(values.map((v) => v.rect.top)).size).toBe(4);
   });
 
