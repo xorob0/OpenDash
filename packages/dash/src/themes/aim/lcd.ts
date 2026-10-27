@@ -104,7 +104,9 @@ function captionOf(item: TextItem): TextItem {
   const fitOf = (widest: string): number => Math.floor(room / Math.max(1e-6, measureText('DSEG14Regular', widest, 1)));
   // A name's budget is counted in the house face's widest letter, the Æ since #576, which DSEG14
   // does not carry and would measure at the fallback's narrower advance. Its widest is the same
-  // count of DSEG14's own widest cell, which every letter it carries fills.
+  // count of DSEG14's own widest cell, which every letter it carries fills. That is a budget and not
+  // a measurement: an Æ in a real name is still drawn by WPF in a fallback face, at a width nothing
+  // here measures, as every Latin-1 letter on the AiM's captions already was.
   const cell = widestGlyph('DSEG14Regular').glyph;
   const inFace = (s: string): string => [...s].map((ch) => (ch === ' ' || carries('DSEG14Regular', ch) ? ch : cell)).join('');
   const declared = item.widest === undefined ? capitals(item.text) : inFace(capitals(item.widest));
