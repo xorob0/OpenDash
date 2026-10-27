@@ -266,7 +266,7 @@ namespace OpenDashPlugin
         /// press by installing the dashboards behind the plugin running (WriteRunning): it downloads nothing and stages
         /// nothing, so there is no restart to promise (#1166).
         /// </summary>
-        public const string InstallNote = "Installs the dashboards that are behind it. Your settings are kept.";
+        public const string InstallNote = "Installs the dashboards that are behind this version. Your settings are kept.";
 
         /// <summary>Whether the release offered is the plugin running, which the press installs dashboards for
         /// rather than downloading (#1166). False when either version is not known.</summary>

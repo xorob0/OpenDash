@@ -360,9 +360,9 @@ namespace OpenDashPlugin
 
         /// <summary>
         /// Whether <see cref="Apply"/> answers this press from the plugin running rather than by fetching and staging
-        /// the release's own: the release publishes a plugin and it is the version running, and no yes to replacing an edited folder behind it
-        /// has to be carried to the start. The panel heads its bar from this, so the bar says Installing exactly when
-        /// the run fetches nothing (#1166).
+        /// the release's own: the release publishes a plugin and it is the version running, and no yes to replacing an
+        /// edited folder behind it has to be carried to the start. The panel heads its bar from this, so the bar says
+        /// Installing exactly when the run fetches nothing (#1166).
         /// </summary>
         /// <remarks>
         /// A yes to replacing an edited folder that is already at the release is no reason to stage: the start leaves a
