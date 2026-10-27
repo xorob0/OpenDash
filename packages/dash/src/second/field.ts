@@ -531,7 +531,13 @@ export function fieldRowFitted(
   const natural = specs.map((spec) => fieldWidth(spec, density));
   const grid = opts.columns !== undefined && opts.columns > 0;
   const cell = grid ? cellWidth(width, opts.columns ?? 1, preferred) : 0;
-  const widths = grid ? natural.map(() => cell) : natural;
+  // A centred line is centred on the places it draws, so a place is never narrower than the field in
+  // it. A grid fitted at one size and grown by `stack` can outgrow its cells: `planLines` then wraps
+  // the grown fields one to a line, and centring each as the 63 px cell it was fitted in, while its
+  // value drew 110 px wide, put the value's right edge past the frame's (#1167). A line drawn from
+  // the left keeps its cells, so its columns stay where the lines above and below put them.
+  const centred = opts.justify === 'centre';
+  const widths = grid ? natural.map((w) => (centred ? Math.max(cell, w) : cell)) : natural;
   const total = widths.reduce((sum, w) => sum + w, 0);
   const gaps = Math.max(0, specs.length - 1);
   const gap = grid ? preferred : gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));

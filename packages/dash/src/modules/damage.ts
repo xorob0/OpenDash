@@ -114,7 +114,7 @@ export const damage = defineModule('damage', (ctx) => {
 
   const words = (box: Rect): Item[] => {
     const { fs, columns } = fit(box);
-    return stack(box, [fieldsRow(specsAt(fs), { ...ctx, frame: box }, { lines: 'grid', columns, gap: GRID_GAP, lineGap, justify: 'left' })], ctx.density);
+    return stack(box, [fieldsRow(specsAt(fs), { ...ctx, frame: box }, { lines: 'grid', columns, gap: GRID_GAP, lineGap })], ctx.density);
   };
 
   // The car is cut from the box the way the pit view's is (rule 18): at most a third of the frame's
