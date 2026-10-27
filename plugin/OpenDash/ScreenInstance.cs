@@ -341,6 +341,11 @@ namespace OpenDashPlugin
         public bool IsPitWall { get { return string.Equals(Kind, Contract.KindPitWall, StringComparison.Ordinal); } }
         public bool IsSlots { get { return string.Equals(Kind, Contract.KindSlots, StringComparison.Ordinal); } }
 
+        /// <summary>Whether this plugin knows the screen's kind. One it does not was written by a newer plugin
+        /// (#864): the screen is kept, with its kind, and owns nothing here -- no properties, no actions, no
+        /// per-kind state -- so that a later save writes it back as the screen it is rather than as a face.</summary>
+        public bool IsKnownKind { get { return Array.IndexOf(Contract.ScreenKinds, Kind) >= 0; } }
+
         /// <summary>
         /// Whether this screen holds the stock package for its size, unmodified.
         /// </summary>
@@ -419,12 +424,14 @@ namespace OpenDashPlugin
         /// <summary>Every property this screen owns, in attachment order.</summary>
         public IEnumerable<string> PropertyNames()
         {
+            if (!IsKnownKind) return new string[0];
             return Contract.ScreenPropertyNames(Kind, Namespace);
         }
 
         /// <summary>Every action this screen registers, in registration order.</summary>
         public IEnumerable<string> ActionNames()
         {
+            if (!IsKnownKind) return new string[0];
             return Contract.ScreenActionNames(Kind, Namespace);
         }
 
@@ -435,11 +442,14 @@ namespace OpenDashPlugin
         /// <remarks>
         /// The per-kind state is created when it is missing and cleared when it belongs to another kind,
         /// so a settings file that carried a face's zones on a pit wall -- which only a hand-edit or a
-        /// future version could produce -- does not attach a face's properties to it.
+        /// future version could produce -- does not attach a face's properties to it. A kind this plugin does
+        /// not know is a newer plugin's and is kept as it is, with no per-kind state at all (#864): it used to
+        /// become a face, which a save then wrote back over the newer plugin's screen. Only a screen with no
+        /// kind at all is taken for a face.
         /// </remarks>
         public void Normalise()
         {
-            if (Array.IndexOf(Contract.ScreenKinds, Kind) < 0) Kind = Contract.KindFace;
+            if (string.IsNullOrEmpty(Kind)) Kind = Contract.KindFace;
             if (string.IsNullOrEmpty(Namespace)) Namespace = StockNamespace;
             if (string.IsNullOrEmpty(Name)) Name = SizeLabel;
             if (LayoutX < 0) LayoutX = null;

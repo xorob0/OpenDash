@@ -287,7 +287,7 @@ namespace OpenDashPlugin.Tests
         {
             Assert.Equal(ScreenState.InSimHub, PanelScreens.StateOf(true));
             Assert.Equal(ScreenState.Missing, PanelScreens.StateOf(false));
-            Assert.Equal(new[] { ScreenState.InSimHub, ScreenState.Missing }, (ScreenState[])System.Enum.GetValues(typeof(ScreenState)));
+            Assert.Equal(new[] { ScreenState.InSimHub, ScreenState.Missing, ScreenState.NotInSimHub }, (ScreenState[])System.Enum.GetValues(typeof(ScreenState)));
             Assert.Equal("In SimHub", PanelScreens.StateLabel(ScreenState.InSimHub));
             Assert.Equal("Missing", PanelScreens.StateLabel(ScreenState.Missing));
             Assert.Equal(Theme.StatusUpToDate, PanelScreens.StateHex(ScreenState.InSimHub));
@@ -1432,7 +1432,7 @@ namespace OpenDashPlugin.Tests
                 "var facts = Ui.Prose(PanelScreens.Facts(screen));",
                 "title.ToolTip = screen.Name;",
                 // A screen whose folder is there is in SimHub, which lists it within seconds of the write (#664).
-                "return PanelScreens.StateOf(Installed(screen));",
+                "return PanelScreens.StateOf(screen, Installed(screen));",
             })
             {
                 AssertOnce(page, pin, "Screens.cs");

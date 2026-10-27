@@ -1086,6 +1086,15 @@ namespace OpenDashPlugin
         /// <summary>Pre-face quick glance. Migrated into the reference face, then zero.</summary>
         public int QuickGlance { get; set; }
 
+        /// <summary>
+        /// The plugin version that last saved this file: "1.2.0". Stamped by every save (OpenDash.SaveSettings),
+        /// and read before anything is normalised, so that a file a newer plugin wrote is known for one when an
+        /// older plugin starts on it after a rollback (#864). Null in a file written before the stamp existed,
+        /// which reads as older than any plugin, as it is. Normalise() leaves it as it is: what it says is who
+        /// wrote the file, not what this plugin makes of it.
+        /// </summary>
+        public string SettingsVersion { get; set; }
+
         /// <summary>Whether OpenDash may ask GitHub what the newest release is. Plugin-local rather than an
         /// [OpenDash.*] property: a dashboard cannot react to it, so ADR 0003's reason for making a setting a
         /// property does not apply. It is read before a request is constructed, so off means nothing is
@@ -2336,6 +2345,7 @@ namespace OpenDashPlugin
             // edited-dashboard consent, and the fingerprints that tell a driver's Dash Studio work and
             // their edited flag box file from OpenDash's. The dictionary is cloned under its own comparer, so that two spellings a
             // case-sensitive one kept apart cannot collide in the copy and throw.
+            SettingsVersion = other.SettingsVersion;
             CheckForUpdates = other.CheckForUpdates;
             LastUpdateCheckTicks = other.LastUpdateCheckTicks;
             OfferedRelease = other.OfferedRelease;

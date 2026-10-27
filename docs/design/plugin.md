@@ -128,6 +128,23 @@ earlier one taken from `_Backups`, and saved under the settings file's name, the
 press opens Explorer on the copy, or on `_Backups`. Home's own sidebar item wears the dot, since the
 fix is in no page of the panel.
 
+**Settings a newer OpenDash saved take the same place** (#864), "A newer OpenDash saved these
+settings". SimHub reads such a file without complaint, since Newtonsoft ignores the members it does
+not know, and the older plugin's first save would write its reduced reading of the rig over it. Every
+save stamps the file with the version that wrote it (`SettingsVersion`), and the rule is: when the
+stamp is strictly newer than the running plugin, `SettingsRescue` copies the file beside itself as
+`OpenDash.GeneralSettings.newer.json` before anything is saved, under the never-overwrite rule above,
+and OpenDash makes none of its own saves (the end of `Init`, SimHub closing, the update check's
+bookkeeping) until something is changed. A rollback that is only tried leaves the file exactly as the
+newer plugin wrote it; a driver who changes something on the older plugin has that kept, and the newer
+rig is in the copy. A file with no stamp, written before it existed, and one of the same version read
+as they always did. A screen of a kind the plugin does not know keeps its kind and owns nothing --
+no properties, no actions, no per-kind state, and an editor that says so -- rather than becoming a
+face. The steps close SimHub, install the newer OpenDash again and save the kept file under the
+settings file's name, and start SimHub; the press opens Explorer on the copy, or on the file itself. When no copy
+could be made and something has been changed since, the save put the newer file in SimHub's `_Backups`, and Home
+says so, as it does for an unreadable file; an update counts as a change. `SettingsHold` holds the rule.
+
 A missing folder comes before the lights, because a screen is what most rigs have. The out-of-date
 profile and the waiting update come last, because the rig works while they wait.
 

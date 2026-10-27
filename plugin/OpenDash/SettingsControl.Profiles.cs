@@ -38,6 +38,9 @@ namespace OpenDashPlugin
         /// </summary>
         private void InstallScreenAgain(ScreenInstance screen)
         {
+            // A kind this build does not know has nothing to write, and the failed write would still save the rig
+            // over a newer plugin's settings file (#864). Neither fix offers it; this holds for any press that might.
+            if (!PanelScreens.Installable(screen)) return;
             if (WriteRefused()) return;
             WriteScreenThen(() => plugin.Installer.Write(screen), result =>
             {

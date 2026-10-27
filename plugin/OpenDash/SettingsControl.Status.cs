@@ -101,6 +101,7 @@ namespace OpenDashPlugin
                     Namespace = screen.Namespace,
                     Installed = installed,
                     Unclaimed = screen.Unclaimed == true,
+                    Installable = PanelScreens.Installable(screen),
                 });
             }
 
@@ -156,6 +157,15 @@ namespace OpenDashPlugin
                 input.SettingsUnreadable = true;
                 input.SettingsCopy = rescue.CopyPath;
                 input.SettingsBackups = rescue.BackupsPath;
+            }
+            else if (rescue != null && rescue.Newer)
+            {
+                input.SettingsNewer = true;
+                input.SettingsSavedBy = rescue.SavedBy;
+                input.SettingsCopy = rescue.CopyPath;
+                input.SettingsFile = rescue.SettingsPath;
+                input.SettingsBackups = rescue.BackupsPath;
+                input.SettingsSavedOver = plugin.Hold.SavedOver;
             }
 
             input.RestartPending = PendingRestart();

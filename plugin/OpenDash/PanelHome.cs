@@ -319,7 +319,13 @@ namespace OpenDashPlugin
         /// <param name="installed">Whether its dashboard is in SimHub, or null when the disk could not be asked.</param>
         public static HomeLine ScreenLine(OpenDashSettings settings, ScreenInstance screen, bool? installed)
         {
-            if (installed == false) return new HomeLine(PanelScreens.Missing, Theme.StatusFailed, Theme.StatusFailed);
+            if (installed == false)
+            {
+                // A screen this build cannot install is not Missing, as its card says (#864).
+                var state = PanelScreens.StateOf(screen, false);
+                if (state == ScreenState.Missing) return new HomeLine(PanelScreens.Missing, Theme.StatusFailed, Theme.StatusFailed);
+                return new HomeLine(PanelScreens.StateLabel(state), PanelScreens.StateHex(state), null);
+            }
             return new HomeLine(ScreenShows(settings, screen), Theme.TextSecondary, installed == true ? Theme.StatusUpToDate : null);
         }
 
