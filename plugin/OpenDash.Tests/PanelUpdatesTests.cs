@@ -2030,11 +2030,12 @@ namespace OpenDashPlugin.Tests
             InOrder(Method("private void UpdatesDrawCard()"), "updatesCardHost.Child = Ui.CardBox(card, 0);", "if (Updates.Applying) ShowRun();");
             Assert.Contains("if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, updatesRunHead);", Method("private void ShowRun()"));
             Assert.Contains("if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, updatesRunHead);", Method("private void ApplyUpdate()"));
-            // The bar's head is decided at the press, before the run starts, from the release and the yes: the release
-            // running installs and fetches nothing unless a yes stages it (#1166).
+            // The bar's head is decided at the press, before the run starts, by the rule the run itself follows: the
+            // release running installs and fetches nothing unless a yes about an edited dashboard behind it stages it,
+            // and a yes about one already current stages nothing (UpdateService.InstallsFromRunning, #1166).
             InOrder(Method("private void ApplyUpdate()"),
                 "var replaceEdited = press == PressOutcome.RunReplacingEdited;",
-                "updatesRunHead = PanelUpdates.BarHead(PanelUpdates.OffersRunning(release.Version, OpenDash.Version) && !replaceEdited);",
+                "updatesRunHead = PanelUpdates.BarHead(Updates.InstallsFromRunning(plugin.Installer, release, replaceEdited));",
                 "var started = plugin.ApplyUpdate(");
             // The bar's host joins the card: since a download's card has no note, the bar is the only thing on
             // it that says a run is going, and a bar written into a detached host would leave the heading alone.

@@ -489,8 +489,10 @@ namespace OpenDashPlugin
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
             // The release running is installed from the plugin and fetches nothing, unless a yes to replacing an
-            // edited dashboard stages it to carry that yes to the start (UpdateService.Apply), which downloads (#1166).
-            updatesRunHead = PanelUpdates.BarHead(PanelUpdates.OffersRunning(release.Version, OpenDash.Version) && !replaceEdited);
+            // edited dashboard behind it stages it to carry that yes to the start, which downloads. The rule is the
+            // run's own (UpdateService.InstallsFromRunning): a yes about an edited dashboard already current stages
+            // nothing, and the bar says Installing for it (#1166).
+            updatesRunHead = PanelUpdates.BarHead(Updates.InstallsFromRunning(plugin.Installer, release, replaceEdited));
 
             // The run reports per chunk of a several-megabyte download, which is thousands of calls, and every
             // one of them crosses to the interface thread. Only a whole percent is drawn, so only a whole

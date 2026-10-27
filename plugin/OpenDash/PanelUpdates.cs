@@ -340,7 +340,8 @@ namespace OpenDashPlugin
         public const string Installing = "Installing";
 
         /// <summary>The head of the update's bar: <see cref="Downloading"/>, or <see cref="Installing"/> when the run
-        /// fetches nothing because the release is the version running and no edited dashboard is to be replaced.</summary>
+        /// fetches nothing because the release is the version running and no edited dashboard behind it is to be replaced
+        /// (UpdateService.InstallsFromRunning, the rule UpdateService.Apply follows).</summary>
         public static string BarHead(bool installsOnly)
         {
             return installsOnly ? Installing : Downloading;
