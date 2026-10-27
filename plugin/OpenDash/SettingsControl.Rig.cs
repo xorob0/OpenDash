@@ -557,6 +557,15 @@ namespace OpenDashPlugin
             return probe.DesiredSize.Width > room;
         }
 
+        /// <summary>Whether a pit wall cell's page name is wider than <paramref name="room"/>, measured as the
+        /// cell draws it: its size and weight, unbounded.</summary>
+        private static bool RigZoneTrimmed(string text, double room)
+        {
+            var probe = Ui.Text(text ?? string.Empty, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);
+            probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            return probe.DesiredSize.Width > room;
+        }
+
         /// <summary>Puts a tile back in the canvas's order once it is out of the hand, so Tab and the shell's
         /// focus restore walk the tiles in the order they were built. A tile it is over may now draw over it,
         /// as the next build draws them anyway.</summary>
@@ -807,11 +816,13 @@ namespace OpenDashPlugin
             var body = new Canvas { Width = bodyWidth, Height = bodyHeight, ClipToBounds = true };
             foreach (var cell in PanelRigMap.PitWallCells(screen))
             {
-                var text = Ui.Text(cell.Text, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);
+                var width = Math.Max(0, Math.Floor(cell.Width * bodyWidth));
+                var whole = !RigZoneTrimmed(cell.Text, width - 2 * PanelRigMap.PitWallCellPadding);
+                var text = Ui.Text(whole ? cell.Text : PanelRigMap.PitWallShortName(cell.Text), PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);
                 text.TextTrimming = TextTrimming.CharacterEllipsis;
                 var box = new Border
                 {
-                    Width = Math.Max(0, Math.Floor(cell.Width * bodyWidth)),
+                    Width = width,
                     Height = Math.Max(0, Math.Floor(cell.Height * bodyHeight)),
                     Padding = new Thickness(PanelRigMap.PitWallCellPadding),
                     Background = Ui.Brush(Theme.SurfaceZone),
