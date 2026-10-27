@@ -533,11 +533,14 @@ export function fieldRowFitted(
   const cell = grid ? cellWidth(width, opts.columns ?? 1, preferred) : 0;
   // A centred line is centred on the places it draws, so a place is never narrower than the field in
   // it. A grid fitted at one size and grown by `stack` can outgrow its cells: `planLines` then wraps
-  // the grown fields one to a line, and centring each as the 63 px cell it was fitted in, while its
-  // value drew 110 px wide, put the value's right edge past the frame's (#1167). A line drawn from
-  // the left keeps its cells, so its columns stay where the lines above and below put them.
-  const centred = opts.justify === 'centre';
-  const widths = grid ? natural.map((w) => (centred ? Math.max(cell, w) : cell)) : natural;
+  // the grown fields by their own widths, and centring each as the 63 px cell it was fitted in, while
+  // its value drew 110 px wide, put the value's right edge past the frame's (#1167). So a centred
+  // line whose fields overrun their cells is placed at the widths it was wrapped at, which
+  // `wrapFields` already made fit the line; widening only the overrunning field and keeping the cell
+  // for the rest could sum past the line and push its first field left of `x`. A line drawn from the
+  // left keeps its cells, so its columns stay where the lines above and below put them.
+  const outgrown = grid && opts.justify === 'centre' && natural.some((w) => w > cell);
+  const widths = grid && !outgrown ? natural.map(() => cell) : natural;
   const total = widths.reduce((sum, w) => sum + w, 0);
   const gaps = Math.max(0, specs.length - 1);
   const gap = grid ? preferred : gaps === 0 ? 0 : Math.max(minGap, Math.min(preferred, Math.floor((width - total) / gaps)));
