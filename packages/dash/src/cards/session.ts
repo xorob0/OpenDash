@@ -14,13 +14,13 @@ import { DATA_FACE } from '../design/metrics.ts';
 import { ncalc } from '../generator.ts';
 import { readoutRow } from '../components/readoutRow.ts';
 import { markWhen } from '../elements/mark.ts';
-import { NO_CLOCK, hasLapTotal, lapTotalWidest, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, untimedMark } from '../second/values.ts';
+import { NO_CLOCK, currentLap, hasLapTotal, lapTotalWidest, isTimedSession, isUntimedSession, sessionClock, showsTimeLeft, totalLaps, untimedMark } from '../second/values.ts';
 import type { Expr } from '../bind.ts';
 import { ds } from '../tokens.ts';
 import { defineCard } from './card.ts';
 import { SESSION_CHARS, SESSION_LAP_DIGITS } from './chars.ts';
 
-const { game, eq, lt, or, and, not, str, iff, fmt, concat, add, mul, num, digitCount } = ncalc;
+const { eq, lt, or, and, not, str, iff, fmt, concat, add, mul, num, digitCount } = ncalc;
 
 /** What the time value shows when time mode is forced and there is no session to count. */
 export const TIME_PLACEHOLDER = NO_CLOCK;
@@ -38,8 +38,10 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
   // session draws the mark instead, at full strength, because a lap race having no clock is a
   // reading and not an absence (#439).
   const placeholder = and(time, not(timed), not(untimed));
-  const currentLap = game('CurrentLap');
-  const totalLaps = game('TotalLaps');
+  // Guarded reads: with no game both are null, and the denominator's Left compares the lap count
+  // with ten, which NCalc throws on (#990).
+  const lap = currentLap();
+  const total = totalLaps();
   return readoutRow(
     slot,
     rung,
@@ -47,7 +49,7 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
     { text: meta.label, bind: iff(time, str('Time left'), str('Lap')) },
     {
       sample: '12',
-      bind: iff(time, sessionClock(), fmt(currentLap, '0')),
+      bind: iff(time, sessionClock(), fmt(lap, '0')),
       // The mark belongs to the mode as well as to the state: a laps-mode card draws a lap number,
       // and a week of time left is nothing to it.
       mark: markWhen(untimedMark(), time),
@@ -58,13 +60,13 @@ export const session = defineCard('session', (slot, rung, prefix, meta) => {
       kind: 'denominator',
       sample: '/ 30',
       widest: lapTotalWidest(DATA_FACE.SemiBold),
-      bind: concat(str('/ '), fmt(totalLaps, '0')),
+      bind: concat(str('/ '), fmt(total, '0')),
       after: { digits: 2, specials: 0 },
       maxAfter: { digits: SESSION_LAP_DIGITS, specials: 0 },
       // The race's length only where `TotalLaps` is one, which a timed session's is not even with
       // the lap forced on (#989).
       visibleBind: and(not(time), hasLapTotal()),
-      leftBind: ({ x, mono, gap }) => add(num(x), mul(digitCount(currentLap, SESSION_LAP_DIGITS), num(mono.charWidth)), num(gap)),
+      leftBind: ({ x, mono, gap }) => add(num(x), mul(digitCount(lap, SESSION_LAP_DIGITS), num(mono.charWidth)), num(gap)),
     },
   );
 });
