@@ -660,6 +660,10 @@ answer, in the order `fitFields` answers a rank:
    question is whether it can be read rather than whether it is whole, and one character of a cut name
    buys two pixels of every character left. The 850 × 480 face is that case, six characters of the Æ at
    13 px against five at 15, and the 34 px numerals, which would cost it two more, are refused.
+   **The licence is the sample's and not the Æ's** ([#576](https://github.com/xorob0/OpenDash/issues/576)):
+   the 469 px zones of the 1280-wide faces hold nine Æ and ten W in the canvas's row, so `Liam Byrne`'s
+   own letters still fit and the cut is the budget's alone; a step there may cost nothing more, and the
+   numerals stay at 24 rather than taking the name column from 134 px to 118.
 
 3. **Then the rest as space.** The row is stretched to fill the body whatever type it carries, so a
    declared list spans its box instead of sitting centred in a pool of slack; a row taller than its

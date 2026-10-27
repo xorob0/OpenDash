@@ -26,7 +26,7 @@ import { fittingColumns } from '../src/modules/leaderboard.ts';
 import { RELATIVE_COLUMNS } from '../src/modules/relative.ts';
 import { densityForBox, type Density } from '../src/second/density.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { columnWidths, listPlan, NAME_FACE, NAME_SAMPLE, nameFloorOf, nameSizeForRow, rowSlack, SHORTEST_NAME_CHARS, table, tableRowHeight, type ColumnId } from '../src/second/table.ts';
+import { columnWidths, holdsPlainName, listPlan, NAME_FACE, NAME_SAMPLE, nameFloorOf, nameSizeForRow, rowSlack, SHORTEST_NAME_CHARS, table, tableRowHeight, type ColumnId } from '../src/second/table.ts';
 import { charsThatFit } from '../src/design/advances.ts';
 import { COMPANION_SIZES, companionGeometry } from '../src/screens/index.ts';
 import { walkItems } from '../src/walk.ts';
@@ -221,10 +221,19 @@ describe('a list declares its rows and answers the box with the rest', () => {
 
 /** The characters the relative's name column holds at this row height in this box, which is what a stretch spends. */
 function nameRoom(box: { frame: Rect; density: Density }, rowHeight: number): number {
+  return charsThatFit(NAME_FACE, nameSizeForRow(rowHeight), nameWidth(box, rowHeight));
+}
+
+function nameWidth(box: { frame: Rect; density: Density }, rowHeight: number): number {
   const kept = fittingColumns(RELATIVE_COLUMNS, box.frame.width, box.density, rowHeight);
   const index = kept.indexOf('name');
-  if (index < 0) return 0;
-  return charsThatFit(NAME_FACE, nameSizeForRow(rowHeight), columnWidths(kept, box.frame.width, box.density, rowHeight)[index] ?? 0);
+  return index < 0 ? 0 : (columnWidths(kept, box.frame.width, box.density, rowHeight)[index] ?? 0);
+}
+
+/** The floor `listPlan` holds this box's relative to, its licence read off the declared row as the plan reads it. */
+function floorOf(box: { frame: Rect; density: Density }): number {
+  const row = tableRowHeight(box.density);
+  return nameFloorOf(nameRoom(box, row), holdsPlainName(nameSizeForRow(row), nameWidth(box, row)));
 }
 
 /**
@@ -266,7 +275,7 @@ describe('the class chip and the car number fit the room the relative leaves the
       // a taller row promoted the car number and drew `Liam Byr…` for a name the canvas row drew whole --
       // and a box whose canvas row already cut it may lose one character to a larger name, never two.
       const declared = nameRoom(box, tableRowHeight(box.density));
-      expect({ box: box.name, room, declared, floor: nameFloorOf(declared), kept: room >= nameFloorOf(declared) }).toMatchObject({ kept: true });
+      expect({ box: box.name, room, declared, floor: floorOf(box), kept: room >= floorOf(box) }).toMatchObject({ kept: true });
     });
   }
 });
@@ -293,14 +302,15 @@ test('the default format draws Liam Byrne whole on every box whose declared row 
     // The column was already short of ten at the declared row, so the row is not what cost the name its
     // tenth letter; what the row may have cost is the one character `nameFloorOf` allows a larger name.
     const declared = nameRoom(box, tableRowHeight(box.density));
-    expect({ box: box.name, room, declared, short: declared < NAME_SAMPLE.length, kept: room >= nameFloorOf(declared) }).toMatchObject({ short: true, kept: true });
+    expect({ box: box.name, room, declared, short: declared < NAME_SAMPLE.length, kept: room >= floorOf(box) }).toMatchObject({ short: true, kept: true });
   }
   // The twelve short boxes, named so that one being added or leaving is a diff rather than a silence:
   // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements, and since #576 the
   // 469 px zones of the 1280 x 480, 1280 x 400 and 1280 x 720 faces in both arrangements too. Those
   // held ten W and hold nine Æ: the budget is counted in the widest glyph the name face draws, which
   // became the Æ once Latin-1 was measured, and their declared row is short of ten Æ as well, so the
-  // rule above still holds them. The companion's portrait page was a seventh, its 109 px column
+  // rule above still holds them -- to the nine, since the row still holds ten W and the cut is the Æ's
+  // alone (`holdsPlainName`), which the test after this one pins. The companion's portrait page was a seventh, its 109 px column
   // holding eight beside a chip cut for `LMP2`; a chip that holds four M (#569) is wider than that row
   // can spare, so the row gives the class up and the name has twelve.
   expect(short).toEqual([
@@ -317,6 +327,28 @@ test('the default format draws Liam Byrne whole on every box whose declared row 
     'face-269x194',
     'face-269x226',
   ]);
+});
+
+/**
+ * #576: counting the budget in the Æ cut the 469 px zones of the 1280-wide faces from ten to nine, and is
+ * not a licence for the 34 px numerals to cut them to eight. Their declared row holds ten of the letters
+ * `Liam Byrne` is written in, so the relative keeps the nine the canvas's row holds and its car number
+ * stays at 24 rather than taking the name column from 134 px to 118.
+ */
+test('the Æ is not a licence to cut the 1280-wide faces\' names further', () => {
+  const zones = moduleBoxes().filter((box) => box.name.startsWith('face-469x'));
+  expect(zones.length).toBe(6);
+  for (const box of zones) {
+    const items = MODULES.find((m) => m.id === 'relative')!.build({ frame: box.frame, density: box.density, prefix: '' });
+    const name = flat(items).find((i): i is TextItem => i.kind === 'text' && i.name.endsWith('.row.name'))!;
+    const row = tableRowHeight(box.density);
+    expect({ box: box.name, plain: holdsPlainName(nameSizeForRow(row), nameWidth(box, row)), declared: nameRoom(box, row), room: charsThatFit(NAME_FACE, name.fontSize, name.rect.width) }).toEqual({
+      box: box.name,
+      plain: true,
+      declared: 9,
+      room: 9,
+    });
+  }
 });
 
 /**

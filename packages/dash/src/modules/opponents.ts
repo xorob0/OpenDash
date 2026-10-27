@@ -77,7 +77,7 @@ import { densityOf, grownAtMost, rampOf } from '../second/density.ts';
 import { CHIP_WIDEST, chip, chipText, chipWidth } from '../second/chip.ts';
 import { field, fieldTail, fieldWidth, valueWidth, type FieldSpec } from '../second/field.ts';
 import { ROW_TAIL, stack, type StackRow } from '../second/layout.ts';
-import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
+import { DEFAULT_NAME_CHARS, LIST_ROW_TYPES, NAME_FACE, SHORTEST_NAME_CHARS, holdsPlainName, nameColumnFor, nameFloorOf, nameSampleAt, nameText } from '../second/table.ts';
 import { CHARS, carBestLap, carClass, carLastLap, carNumber, carPosition,
   positionLabelled, carRating, carRelativeGap, LAP_TIME_WIDEST, listNeighbour, ratingWidest, RELATIVE_GAP_WIDEST } from '../second/values.ts';
 import { ds } from '../tokens.ts';
@@ -284,6 +284,8 @@ interface Measured {
   across: number;
   /** The characters the name's box holds, which is what the cut is counted in; nought where the name is shed. */
   chars: number;
+  /** Whether the name's box holds the default sample's ten characters in its own letters, which `nameFloorOf` turns on. */
+  plain: boolean;
 }
 
 /** The detail the page decides by, and the block draws from. */
@@ -327,6 +329,7 @@ function measure(ctx: ModuleContext, side: Side, box: Column, type: BlockType, k
     tail: gapHeight > 0 ? fieldTail(gapSpec, ctx.density) : 0,
     across: across.reduce((sum, width) => sum + width, 0) + DETAIL_GAP * Math.max(0, across.length - 1),
     chars: name === undefined ? 0 : charsThatFit(NAME_FACE, type.name, name.width),
+    plain: name !== undefined && holdsPlainName(type.name, name.width),
   };
 }
 
@@ -461,7 +464,7 @@ export const opponents = defineModule('opponents', (ctx) => {
   // more characters than `nameFloorOf` allows.
   const canvas = settle(NAME_SIZES[NAME_SIZES.length - 1]!);
   const had = measured(canvas.type, canvas.keep);
-  const least = nameFloorOf(had.chars);
+  const least = nameFloorOf(had.chars, had.plain);
   const settled =
     NAME_SIZES.map(settle).find((at) => {
       const now = measured(at.type, at.keep);
