@@ -36,6 +36,7 @@ import type { Hex, Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
 import { withMoreBindings } from '../../bind.ts';
 import { setting } from '../../contract.ts';
+import { widestFigure } from '../../design/advances.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
@@ -57,9 +58,16 @@ const TYRE_BOX = { height: 142, oneRow: { height: 60, width: 291 } };
 /** The badge's words, from the canvas: 10 px on a 12 px line. */
 const BADGE = { word: 10, line: 12 };
 
-/** The widest pressure and temperature a corner can draw. */
-const PRESSURE_WIDEST = '188.8';
-const TEMPERATURE_WIDEST = '188';
+/**
+ * The widest pressure and temperature a corner can draw. SimHub hands both over already in the
+ * driver's unit, so the ranges are the units': a tyre reaches `299` on Fahrenheit and `299.9` on kPa
+ * (#995). In Barlow Medium the 0, the 2 and the 4 are wider than the 8, so each is the widest figure
+ * of that shape, measured in the face the corners draw in, rather than a run of 8s.
+ */
+export const TEMPERATURE_RANGE = '299';
+export const PRESSURE_RANGE = '299.9';
+export const PRESSURE_WIDEST = widestFigure('BarlowMedium', PRESSURE_RANGE);
+export const TEMPERATURE_WIDEST = widestFigure('BarlowMedium', TEMPERATURE_RANGE);
 
 const settingReading = (id: string) => {
   const value = trackedValue(id);
