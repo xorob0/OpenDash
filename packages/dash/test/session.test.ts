@@ -118,16 +118,25 @@ describe('session card modes', () => {
     // A frame with no GameData reads as untimed since #586, which is laps mode, so the lap count and
     // the lap total are the reads that run. Read raw, each compared a null with a number, which NCalc
     // throws on and `ncalcEval.ts` does not, so this asks the evaluator that answers as NCalc does.
-    const empty = (): E.Scope => ({ properties: () => undefined, repeat: [1, 1, 1], state: new E.CallState(), now: 0, rootScreenName: '' });
-    const onEmpty = (target: 'Visible' | 'Left'): unknown => {
+    const frame = (lap?: number): E.Scope => ({
+      properties: (name) => (lap !== undefined && name === 'DataCorePlugin.GameData.CurrentLap' ? lap : undefined),
+      repeat: [1, 1, 1],
+      state: new E.CallState(),
+      now: 0,
+      rootScreenName: '',
+    });
+    const on = (target: 'Visible' | 'Left', lap?: number): unknown => {
       const formula = item('denominator').bindings?.[target]?.formula;
       if (typeof formula !== 'string') throw new Error(`session.denominator has no ${target} formula`);
-      const result = E.evaluateBinding(formula, empty());
+      const result = E.evaluateBinding(formula, frame(lap));
       if (!result.ok) throw result.error;
       return E.toJs(result.value);
     };
-    expect(onEmpty('Visible')).toBe(false);
-    expect(typeof onEmpty('Left')).toBe('number');
+    expect(on('Visible')).toBe(false);
+    // Placed where a lap of one figure puts it, which is where a guarded lap of nought falls, and
+    // not merely a number: a guard that came back NaN would be a number too.
+    expect(on('Left')).toBe(on('Left', 7));
+    expect(on('Left')).not.toBe(on('Left', 12));
   });
 });
 
