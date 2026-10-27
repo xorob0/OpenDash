@@ -99,16 +99,23 @@ namespace OpenDashPlugin
         /// Read from the line as it stands rather than from whether a question was ever asked, so that a label can
         /// never promise a replacement once its question has gone from the screen.
         /// </remarks>
-        public string Label(ReplacingAction action, string showing)
+        /// <param name="installs">Whether Download's release is the version running, whose press installs dashboards
+        /// and downloads nothing, so the button reads <see cref="InstallLabel"/> (#1166).</param>
+        public string Label(ReplacingAction action, string showing, bool installs = false)
         {
             if (IsAsking(action, showing)) return ReplaceAnyway;
-            return action == ReplacingAction.Update ? UpdateLabel : ReinstallLabel;
+            if (action == ReplacingAction.Update) return installs ? InstallLabel : UpdateLabel;
+            return ReinstallLabel;
         }
 
         /// <summary>The two buttons' own words: the update card's primary, and the press under the "In SimHub"
         /// table, which search lists by its label.</summary>
         public const string UpdateLabel = "Download";
         public const string ReinstallLabel = "Reinstall everything";
+
+        /// <summary>The update card's primary when the release is the version running: the press installs the
+        /// dashboards behind it and downloads nothing (#1166).</summary>
+        public const string InstallLabel = "Install";
 
         private bool IsAsking(ReplacingAction action, string showing)
         {

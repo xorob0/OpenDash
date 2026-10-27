@@ -77,7 +77,8 @@ namespace OpenDashPlugin
 
             // A download has no sentence under its heading: the bar's own head says the run, and a caption over
             // it named the run a second time, with a second verb, and the heading's version again.
-            var note = PanelUpdates.CardNote(updatesCard, latest);
+            var offersRunning = PanelUpdates.OffersRunning(latest, OpenDash.Version);
+            var note = PanelUpdates.CardNote(updatesCard, latest, offersRunning);
             var text = note == null ? Ui.VStack(PanelUpdates.CardTextGap, headLine) : Ui.VStack(PanelUpdates.CardTextGap, headLine, Ui.Caption(note, BodyWidth));
             updatesCardLine = Ui.Caption(string.Empty, BodyWidth);
             updatesCardLine.Visibility = Visibility.Collapsed;
@@ -95,7 +96,7 @@ namespace OpenDashPlugin
                 updatesDownload = Ui.Button(null, PanelButtonKind.Primary);
                 updatesDownload.MinWidth = ButtonMinWidth;
                 updatesDownload.IsEnabled = PanelUpdates.DownloadEnabled(updateStatus.State, UpdatesHeld);
-                updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update));
+                updatesDownload.SetBinding(ContentControl.ContentProperty, UpdatesLabelFrom(updatesCardLine, ReplacingAction.Update, offersRunning));
                 updatesDownload.Click += (sender, args) => ApplyUpdate();
             }
             var head = new Border
@@ -243,7 +244,7 @@ namespace OpenDashPlugin
             if (updatesReinstall != null) updatesReinstall.IsEnabled = false;
             if (updatesCheckNow != null) updatesCheckNow.IsEnabled = false;
             foreach (var press in updatesRunPresses) press.IsEnabled = false;
-            if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
+            if (updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(Updates.ApplyingFraction, PanelMetrics.ProgressWidth, updatesRunHead);
         }
 
         /// <summary>
@@ -302,13 +303,13 @@ namespace OpenDashPlugin
         /// line, a writer added later included, turns it back into the button's words, and it reads "Replace anyway"
         /// only while its own question is what the line shows. The line is built before its button.
         /// </remarks>
-        private Binding UpdatesLabelFrom(TextBlock line, ReplacingAction action)
+        private Binding UpdatesLabelFrom(TextBlock line, ReplacingAction action, bool installs = false)
         {
             return new Binding(nameof(TextBlock.Text))
             {
                 Source = line,
                 Mode = BindingMode.OneWay,
-                Converter = new ConfirmationLabel(confirmation, action),
+                Converter = new ConfirmationLabel(confirmation, action, installs),
             };
         }
 
@@ -317,16 +318,18 @@ namespace OpenDashPlugin
         {
             private readonly PanelConfirmation confirmation;
             private readonly ReplacingAction action;
+            private readonly bool installs;
 
-            public ConfirmationLabel(PanelConfirmation confirmation, ReplacingAction action)
+            public ConfirmationLabel(PanelConfirmation confirmation, ReplacingAction action, bool installs)
             {
                 this.confirmation = confirmation;
                 this.action = action;
+                this.installs = installs;
             }
 
             public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
             {
-                return confirmation.Label(action, value as string);
+                return confirmation.Label(action, value as string, installs);
             }
 
             public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
@@ -485,6 +488,9 @@ namespace OpenDashPlugin
             }
 
             var replaceEdited = press == PressOutcome.RunReplacingEdited;
+            // The release running is installed from the plugin and fetches nothing, unless a yes to replacing an
+            // edited dashboard stages it to carry that yes to the start (UpdateService.Apply), which downloads (#1166).
+            updatesRunHead = PanelUpdates.BarHead(PanelUpdates.OffersRunning(release.Version, OpenDash.Version) && !replaceEdited);
 
             // The run reports per chunk of a several-megabyte download, which is thousands of calls, and every
             // one of them crosses to the interface thread. Only a whole percent is drawn, so only a whole
@@ -500,7 +506,7 @@ namespace OpenDashPlugin
                 {
                     // The build that is showing now, which a rebuild since the press has replaced; a rebuild draws
                     // the fraction the service last heard (UpdateService.ApplyingFraction).
-                    if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, PanelUpdates.Downloading);
+                    if (Updates.Applying && updatesProgressHost != null) updatesProgressHost.Child = Ui.Progress(fraction, PanelMetrics.ProgressWidth, updatesRunHead);
                 }));
             };
 
