@@ -48,7 +48,7 @@
 import type { Hex, Item, LayerItem, Rect, TextItem } from '../generator.ts';
 import { ncalc } from '../generator.ts';
 import { withMoreBindings, type Expr } from '../bind.ts';
-import { measureText } from '../design/advances.ts';
+import { measureText, widestFigure } from '../design/advances.ts';
 import { overlaps, rect, roundRect } from '../design/geometry.ts';
 import { boxSlack, canvasBaseline, canvasYForBaseline, cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
@@ -424,14 +424,20 @@ export const LAP_POP_UP: PopUpSpec = {
  *
  * The laps carry their unit inside the run, which is what the artboard draws and what stops "FUEL /
  * 0.8" being read as litres. That costs the run its cells: a word cannot sit in a digit cell, so
- * this one is proportional and is measured from the widest reading the threshold allows, which is
- * the 99 laps the panel's number box will accept.
+ * this one is proportional and is measured from the widest reading the threshold allows: two digits
+ * and a tenth under the 99 laps the panel's number box will accept, each the widest figure of the
+ * face. That is not `99.9 laps`: in Barlow Condensed SemiBold the 4 and the 0 are wider than the 9,
+ * and `44.4 laps` is the reading that lost the `s` of its unit to a box measured from the nines (#994).
  */
 export const FUEL_POP_UP: PopUpSpec = {
   id: 'fuel',
   kind: 'lasting',
   label: { text: 'Fuel' },
-  value: { sample: '0.8 laps', bind: concat(fmt(isnull(computed('Fuel_RemainingLaps'), num(0)), '0.0'), str(' laps')), widest: '99.9 laps' },
+  value: {
+    sample: '0.8 laps',
+    bind: concat(fmt(isnull(computed('Fuel_RemainingLaps'), num(0)), '0.0'), str(' laps')),
+    widest: `${widestFigure(DATA_FACE.SemiBold, '99.9')} laps`,
+  },
   colour: ds.purpose.fuel.low,
   when: tankIsLow(),
   flashMs: FLAG_BLINK_MS,

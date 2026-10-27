@@ -452,6 +452,46 @@ describe('a lasting pop-up is one line in the banner\'s row', () => {
   });
 });
 
+describe('the low-fuel value fits its box at every reading the threshold allows (#994)', () => {
+  /** Every reading the binding can write under the panel's 99-lap ceiling: `0.0 laps` to `99.9 laps`. */
+  const READINGS = Array.from({ length: 1000 }, (_, tenths) => `${(tenths / 10).toFixed(1)} laps`);
+  /** Every width from a row too narrow for the value at 22 px to one with room to spare, at the two heights the faces give it. */
+  const SWEEP = Array.from({ length: 201 }, (_, i) => 100 + i).flatMap((width) => [rect(0, 0, width, 30), rect(0, 0, width, 24)]);
+  /** The row every face that ships gives it, in both arrangements, and the sweep. */
+  const ROOMS: { name: string; row: Rect }[] = [
+    ...ZONE_FACES.flatMap((face) =>
+      [face, layoutWithoutRevBar(face)].map((layout, i) => ({
+        name: `${face.folder}${i ? ', rev bar off' : ''}`,
+        row: lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(zoneRegions(layout))),
+      })),
+    ),
+    ...SWEEP.map((row) => ({ name: `a ${row.width} by ${row.height} row`, row })),
+  ];
+  const fuelValue = (row: Rect): TextItem => [...walkItems([popUp(row, FUEL_POP_UP)])].find((i): i is TextItem => i.name === 'popUp.fuel.value')!;
+
+  test('the declared widest is the widest of them in the face it is drawn in', () => {
+    const face = faceOf(fuelValue(rect(0, 0, 272, 30)));
+    const widest = Math.max(...READINGS.map((r) => measureText(face, r, 100)));
+    expect(measureText(face, FUEL_POP_UP.value.widest!, 100)).toBeGreaterThanOrEqual(widest);
+  });
+
+  test('every reading from 0.0 to 99.9 laps is narrower than the value\'s box, in every row and at every size', () => {
+    const sizes = new Set<number>();
+    for (const { name, row } of ROOMS) {
+      const value = fuelValue(row);
+      sizes.add(value.fontSize);
+      const face = faceOf(value);
+      for (const reading of READINGS) {
+        const width = measureText(face, reading, value.fontSize);
+        if (width >= value.rect.width) expect({ name, reading, fontSize: value.fontSize, width, box: value.rect.width, fits: false }).toMatchObject({ fits: true });
+      }
+    }
+    // The sweep reaches every size a row sets the value at, from the floor to the 22 a 30 px row allows.
+    const largest = lastingFit(FUEL_POP_UP, rect(0, 0, 1000, 30)).valueFs;
+    expect([...sizes].sort((a, b) => a - b)).toEqual(Array.from({ length: largest - 12 + 1 }, (_, i) => 12 + i));
+  });
+});
+
 describe('the three conditions, each a state or arithmetic over a published property', () => {
   test('the lap time is out for the three seconds after the line, read off the lap and not off a clock', () => {
     expect(POP_UP_SECONDS * 1000).toBe(numberToken('indicator.popUp.durationMs'));
