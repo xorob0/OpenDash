@@ -12,7 +12,7 @@ import { UNTIMED_MARK } from '../src/second/values.ts';
 import { rect } from '../src/design/geometry.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { walkItems } from '../src/walk.ts';
-import { ncalc, type TextItem } from '../src/generator.ts';
+import { ncalc, ncalcEvaluator as E, type TextItem } from '../src/generator.ts';
 import type { Density } from '../src/second/density.ts';
 import { takingTurns, type FieldSpec } from '../src/second/field.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
@@ -112,6 +112,31 @@ describe('session card modes', () => {
     expect(reading(game(1800, 20, 3, 'laps'))).toEqual({ label: 'Lap', value: '3', dim: false, denominator: null });
     expect(reading(game(1800, 0, 112, 'laps'))).toEqual({ label: 'Lap', value: '112', dim: false, denominator: null });
     expect(reading(game(A_WEEK, 5, 7, 'laps'))).toEqual({ label: 'Lap', value: '7', dim: false, denominator: '/ 5' });
+  });
+
+  test('with no game the denominator is hidden and placed, not a failure (#990)', () => {
+    // A frame with no GameData reads as untimed since #586, which is laps mode, so the lap count and
+    // the lap total are the reads that run. Read raw, each compared a null with a number, which NCalc
+    // throws on and `ncalcEval.ts` does not, so this asks the evaluator that answers as NCalc does.
+    const frame = (lap?: number): E.Scope => ({
+      properties: (name) => (lap !== undefined && name === 'DataCorePlugin.GameData.CurrentLap' ? lap : undefined),
+      repeat: [1, 1, 1],
+      state: new E.CallState(),
+      now: 0,
+      rootScreenName: '',
+    });
+    const on = (target: 'Visible' | 'Left', lap?: number): unknown => {
+      const formula = item('denominator').bindings?.[target]?.formula;
+      if (typeof formula !== 'string') throw new Error(`session.denominator has no ${target} formula`);
+      const result = E.evaluateBinding(formula, frame(lap));
+      if (!result.ok) throw result.error;
+      return E.toJs(result.value);
+    };
+    expect(on('Visible')).toBe(false);
+    // Placed where a lap of one figure puts it, which is where a guarded lap of nought falls, and
+    // not merely a number: a guard that came back NaN would be a number too.
+    expect(on('Left')).toBe(on('Left', 7));
+    expect(on('Left')).not.toBe(on('Left', 12));
   });
 });
 

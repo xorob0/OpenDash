@@ -92,7 +92,7 @@ describe('card expressions', () => {
     const value = formulaOf(textItem('session', 'value'), 'Text');
     // A clock SimHub has not given is the unset clock, not a clock run out to `0:00:00` (#586, #1017).
     const given = "(isnull(timespantoseconds([DataCorePlugin.GameData.SessionTimeLeft]), -1000000000)) > (-1000000000)";
-    expect(value).toBe(`if(${time}, if((${timed}) and (${given}), ${ncalc.hms(secs)}, '-:--:--'), format([DataCorePlugin.GameData.CurrentLap], '0'))`);
+    expect(value).toBe(`if(${time}, if((${timed}) and (${given}), ${ncalc.hms(secs)}, '-:--:--'), format(isnull([DataCorePlugin.GameData.CurrentLap], 0), '0'))`);
     expect(value).toContain('/ (3600)');
     // Dim is the clock nobody is counting, which is the session that has not started. An untimed
     // session is the third state and draws the `∞` mark beside this clock at full strength, so it is
@@ -104,7 +104,7 @@ describe('card expressions', () => {
     expect(formulaOf(mark, 'Visible')).toBe(`(${time}) and (${untimed})`);
     expect(formulaOf(textItem('session', 'value'), 'Visible')).toBe(`!((${time}) and (${untimed}))`);
     const denominator = textItem('session', 'denominator');
-    expect(formulaOf(denominator, 'Text')).toBe("('/ ') + (format([DataCorePlugin.GameData.TotalLaps], '0'))");
+    expect(formulaOf(denominator, 'Text')).toBe("('/ ') + (format(isnull([DataCorePlugin.GameData.TotalLaps], 0), '0'))");
     // Not timed as well as a total above nought: a timed session's `TotalLaps` is the leader's laps,
     // which is no length even with the lap forced on (#989). Nor is a total of four figures, which
     // the box is not cut for and no race runs to (#1117).
