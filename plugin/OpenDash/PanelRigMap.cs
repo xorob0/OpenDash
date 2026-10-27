@@ -1643,6 +1643,34 @@ namespace OpenDashPlugin
         /// <summary>The fixed panels of a pit wall page by what they show; a zone is named for its page.</summary>
         public const string BoardLabel = "Leaderboard";
 
+        /// <summary>
+        /// A page's name where its whole name does not fit a pit wall cell: the Tower page's A and B cells
+        /// on a 1920 x 1080 wall hold 51 px, where "Leaderboard" is 56, and a portrait wall's zones hold 23,
+        /// where only "Fuel" fits. Every one fits the narrowest of them at <see cref="ZoneTextSize"/> in
+        /// Barlow Regular, which PanelRigMapTests measures. The Screens page names the page whole.
+        /// </summary>
+        private static readonly IReadOnlyDictionary<string, string> PitWallShortNames = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            { "Tyres", "Tyre" },
+            { "Opponents", "Opp." },
+            { "Pit view", "Pit" },
+            { "Relative", "Rel." },
+            { "Leaderboard", "Lead" },
+            { "Lap history", "Laps" },
+            { "Web view", "Web" },
+            { "Inputs", "Input" },
+            { "Radar", "Rad." },
+            { "Sectors", "Sec." },
+        };
+
+        /// <summary>What a pit wall cell draws when <paramref name="name"/> does not fit it whole: the
+        /// page's short form, or the name itself for a page that has none, which the cell then trims.</summary>
+        public static string PitWallShortName(string name)
+        {
+            string shortName;
+            return name != null && PitWallShortNames.TryGetValue(name, out shortName) ? shortName : name;
+        }
+
         /// <summary>The portrait pit wall's one page, by the name its zones' settings carry
         /// (Contract.PitWallZoneSlots' "Portrait"). A key, never drawn: the driver never sees it as a page.</summary>
         public const string PortraitPage = "Portrait";

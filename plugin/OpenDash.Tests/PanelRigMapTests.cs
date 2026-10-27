@@ -2117,9 +2117,95 @@ namespace OpenDashPlugin.Tests
             var wallCode = RigMethod("private FrameworkElement RigPitWall(");
             Assert.Contains("var inner = PanelRigMap.ScreenInner(tile.Width);", wallCode);
             Assert.Contains("var bodyWidth = inner;", wallCode);
-            Assert.Contains("var text = Ui.Text(cell.Text, PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);", wallCode);
-            Assert.Contains("Width = Math.Max(0, Math.Floor(cell.Width * bodyWidth)),", wallCode);
+            Assert.Contains("var width = Math.Max(0, Math.Floor(cell.Width * bodyWidth));", wallCode);
+            Assert.Contains("var text = Ui.Text(whole ? cell.Text : PanelRigMap.PitWallShortName(cell.Text), PanelRigMap.ZoneTextSize, FontWeights.Normal, Theme.TextSecondary);", wallCode);
+            Assert.Contains("Width = width,", wallCode);
             Assert.Contains("Padding = new Thickness(PanelRigMap.PitWallCellPadding),", wallCode);
+        }
+
+        /// <summary>
+        /// Every page a pit wall zone can be given, in every cell of every page of both pit walls the
+        /// catalogue ships, 1920 x 1080 and 1080 x 1920, and every fixed panel's name, either fits its cell
+        /// whole or draws a short form that fits: "Leaderboard" chosen for the Tower page's A or B drew as
+        /// "Leaderbo…" (#1045), and a portrait wall's 23 px zones trimmed every page but Fuel. Measured as
+        /// the cell draws it, Barlow Regular at PanelRigMap.ZoneTextSize, in the cell's width less its padding.
+        /// </summary>
+        [Fact]
+        public void Every_page_name_fits_every_pit_wall_cell_whole_or_by_its_short_form()
+        {
+            var font = TrueTypeAdvances.Of(Path.Combine(RepoPaths.Root(), "packages", "dash", "fonts", "Barlow-Regular.ttf"));
+            var shortened = new HashSet<string>(StringComparer.Ordinal);
+            var measured = 0;
+            foreach (var size in new[] { new[] { 1920, 1080 }, new[] { 1080, 1920 } })
+            {
+                var wall = Screen(Contract.KindPitWall, "PitWall", "Pit wall", size[0], size[1]);
+                var portrait = PanelRigMap.PitWallPortrait(wall);
+                Assert.Equal(size[1] > size[0], portrait);
+                double tileWidth, tileHeight;
+                PanelRigMap.SecondScreenTileSize(false, wall.Width, wall.Height, out tileWidth, out tileHeight);
+                var inner = PanelRigMap.ScreenInner(tileWidth);
+                for (var i = 0; i < (portrait ? 1 : Contract.PitWallPageNames.Length); i++)
+                {
+                    wall.PitWallPage = i;
+                    // The zones by the cell each is drawn in: the portrait page's board and then A to D, and
+                    // a landscape page's configurable panels where its plan puts them.
+                    var zones = new Dictionary<int, string>();
+                    if (portrait)
+                    {
+                        for (var z = 0; z < Contract.PitWallZoneLetters.Length; z++) zones[1 + z] = PanelRigMap.PortraitPage + Contract.PitWallZoneLetters[z];
+                    }
+                    else
+                    {
+                        var panels = PanelRigMap.PitWallPlanPage(i).Panels;
+                        for (var at = 0; at < panels.Count; at++)
+                            if (panels[at].Configurable) zones[at] = Contract.PitWallPageNames[i] + panels[at].Name;
+                    }
+                    var cells = PanelRigMap.PitWallCells(wall);
+                    Assert.All(zones.Values, key => Assert.NotNull(Contract.PitWallZoneSlotByKey(key)));
+                    for (var at = 0; at < cells.Count; at++)
+                    {
+                        if (zones.ContainsKey(at)) continue;
+                        PitWallCellFits(font, cells[at], cells[at].Text, inner, shortened);
+                        measured++;
+                    }
+                    foreach (var zone in zones)
+                    {
+                        var catalogue = Contract.PitWallZoneSlotByKey(zone.Value).Wide ? ZonePages.Wide : ZonePages.Standard;
+                        foreach (var page in catalogue)
+                        {
+                            wall.SetZonePage(zone.Value, page.Number);
+                            var cell = PanelRigMap.PitWallCells(wall)[zone.Key];
+                            Assert.Equal(page.Name, cell.Text);
+                            PitWallCellFits(font, cell, page.Name, inner, shortened);
+                            measured++;
+                        }
+                    }
+                }
+            }
+            // Race A and B, Tower A and B, Telemetry A to C and portrait A to D take the eleven standard pages,
+            // Tower's wide zone the six wide ones, and four fixed panels are drawn among them.
+            Assert.Equal(11 * ZonePages.Standard.Count + ZonePages.Wide.Count + 3, measured);
+            // The case the ticket is about, and a portrait wall's zones, draw short forms.
+            Assert.Contains("Leaderboard", shortened);
+            Assert.Contains("Relative", shortened);
+            Assert.Equal("Lead", PanelRigMap.PitWallShortName("Leaderboard"));
+            Assert.Equal("Fuel", PanelRigMap.PitWallShortName("Fuel"));
+            // The panel draws the short form only where the whole name is wider than the cell's room,
+            // measured as the cell draws it.
+            InOrder(RigMethod("private FrameworkElement RigPitWall("), "var whole = !RigZoneTrimmed(cell.Text, width - 2 * PanelRigMap.PitWallCellPadding);", "whole ? cell.Text : PanelRigMap.PitWallShortName(cell.Text)");
+            InOrder(RigMethod("private static bool RigZoneTrimmed("), "Ui.Text(text ?? string.Empty, PanelRigMap.ZoneTextSize, FontWeights.Normal,", "probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));", "return probe.DesiredSize.Width > room;");
+        }
+
+        private static void PitWallCellFits(TrueTypeAdvances font, RigCell cell, string name, double inner, ISet<string> shortened)
+        {
+            var room = Math.Floor(cell.Width * inner) - 2 * PanelRigMap.PitWallCellPadding;
+            var whole = font.Width(name, PanelRigMap.ZoneTextSize);
+            if (whole < room) return;
+            var drawn = PanelRigMap.PitWallShortName(name);
+            Assert.True(drawn != name, "\"" + name + "\" is " + whole.ToString("0.0") + " px in a cell of " + room + " and has no short form");
+            var width = font.Width(drawn, PanelRigMap.ZoneTextSize);
+            Assert.True(width < room, "\"" + drawn + "\", short for \"" + name + "\", is " + width.ToString("0.0") + " px in a cell of " + room);
+            shortened.Add(name);
         }
 
         [Fact]
