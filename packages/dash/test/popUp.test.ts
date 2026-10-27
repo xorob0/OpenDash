@@ -54,7 +54,7 @@ import { FLAG_BLINK_MS } from '../src/components/flagStrip.ts';
 import { SIDE_EFFECTS } from '../src/leds/effects.ts';
 import { measureText } from '../src/design/advances.ts';
 import { centre, contains, overlaps, rect, type Rect } from '../src/design/geometry.ts';
-import { CANVAS_BASELINE, LINE_SPACING, WPF_BASELINE } from '../src/design/metrics.ts';
+import { boxSlack, CANVAS_BASELINE, LINE_SPACING, WPF_BASELINE } from '../src/design/metrics.ts';
 import { resolveToken } from '../src/tokens.ts';
 import { ds } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
@@ -449,6 +449,50 @@ describe('a lasting pop-up is one line in the banner\'s row', () => {
 
   test('the value is as large as the row lets it be: 22 in the 30 px row every face but three gives it', () => {
     for (const spec of popUpsOfKind('lasting')) expect(lastingFit(spec, rect(0, 0, 272, 30)).valueFs).toBe(22);
+  });
+});
+
+describe('the low-fuel value fits its box at every reading the threshold allows (#994)', () => {
+  /** Every reading the binding can write under the panel's 99-lap ceiling: `0.0 laps` to `99.9 laps`. */
+  const READINGS = Array.from({ length: 1000 }, (_, tenths) => `${(tenths / 10).toFixed(1)} laps`);
+  /** Every width from a row too narrow for the value at 22 px to one with room to spare, at the two heights the faces give it. */
+  const SWEEP = Array.from({ length: 201 }, (_, i) => 100 + i).flatMap((width) => [rect(0, 0, width, 30), rect(0, 0, width, 24)]);
+  /** The row every face that ships gives it, in both arrangements, and the sweep. */
+  const ROOMS: { name: string; row: Rect }[] = [
+    ...ZONE_FACES.flatMap((face) =>
+      [face, layoutWithoutRevBar(face)].map((layout, i) => ({
+        name: `${face.folder}${i ? ', rev bar off' : ''}`,
+        row: lastingPopUpFrame(layout.zones.pitLimiter, zoneAGearInk(zoneRegions(layout))),
+      })),
+    ),
+    ...SWEEP.map((row) => ({ name: `a ${row.width} by ${row.height} row`, row })),
+  ];
+  const fuelValue = (row: Rect): TextItem => [...walkItems([popUp(row, FUEL_POP_UP)])].find((i): i is TextItem => i.name === 'popUp.fuel.value')!;
+
+  test('the declared widest is the widest of them in the face it is drawn in', () => {
+    const face = faceOf(fuelValue(rect(0, 0, 272, 30)));
+    const widest = Math.max(...READINGS.map((r) => measureText(face, r, 100)));
+    expect(measureText(face, FUEL_POP_UP.value.widest!, 100)).toBeGreaterThanOrEqual(widest);
+  });
+
+  // The box is the declared widest plus the slack WPF needs for its last glyph. A reading that fits only by eating
+  // into the slack is the bug: the slack is spent on rounding at 22 px and gone at a larger size, which is how
+  // `44.4 laps` lost its `s` to a box measured from the nines. So each reading must fit with the slack still spare.
+  test('every reading from 0.0 to 99.9 laps fits the value\'s box with its slack to spare, in every row and at every size', () => {
+    const sizes = new Set<number>();
+    for (const { name, row } of ROOMS) {
+      const value = fuelValue(row);
+      sizes.add(value.fontSize);
+      const face = faceOf(value);
+      const room = value.rect.width - boxSlack(value.fontSize);
+      for (const reading of READINGS) {
+        const width = measureText(face, reading, value.fontSize);
+        if (width > room) expect({ name, reading, fontSize: value.fontSize, width, room, box: value.rect.width, fits: false }).toMatchObject({ fits: true });
+      }
+    }
+    // The sweep reaches every size a row sets the value at, from the floor to the 22 a 30 px row allows.
+    const largest = lastingFit(FUEL_POP_UP, rect(0, 0, 1000, 30)).valueFs;
+    expect([...sizes].sort((a, b) => a - b)).toEqual(Array.from({ length: largest - 12 + 1 }, (_, i) => 12 + i));
   });
 });
 
