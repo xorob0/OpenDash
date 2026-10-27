@@ -632,6 +632,21 @@ namespace OpenDashPlugin
             return toggle;
         }
 
+        /// <summary>Whether the plugin staged is the version running, which is staged only to replace an edited
+        /// dashboard as SimHub starts (#1119). False when that cannot be read.</summary>
+        private bool StagedIsRunning()
+        {
+            try
+            {
+                return UpdateWording.SameVersion(PluginUpdate.StagedVersion(plugin.Installer.SimHubRoot), OpenDash.Version);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Could not tell which version waits for a restart: " + ex.Message);
+                return false;
+            }
+        }
+
         /// <summary>Whether a plugin update waits for SimHub to close. False when that cannot be read.</summary>
         private bool PendingRestart()
         {

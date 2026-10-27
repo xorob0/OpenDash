@@ -448,7 +448,7 @@ namespace OpenDashPlugin.Tests
             Assert.DoesNotContain("applying", applied);
             var net = applied.IndexOf("try", StringComparison.Ordinal);
             var logged = applied.IndexOf("Log.Error(\"Finishing the update on the panel failed\", ex);", StringComparison.Ordinal);
-            var restart = applied.IndexOf("if (outcome.PluginStaged) OfferRestart(release.Version);", StringComparison.Ordinal);
+            var restart = applied.IndexOf("if (outcome.PluginStaged) OfferRestart(release.Version, UpdateWording.SameVersion(release.Version, OpenDash.Version));", StringComparison.Ordinal);
             Assert.True(net >= 0 && logged > net && restart > logged, "the completion is caught, and the restart is offered after the net");
         }
 

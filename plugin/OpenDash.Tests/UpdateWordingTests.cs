@@ -115,6 +115,63 @@ namespace OpenDashPlugin.Tests
         }
 
         /// <summary>
+        /// A press that said yes to replacing an edited dashboard stages the plugin already running, to carry the
+        /// yes to the start that writes it (#862). The dialog after it asks for the restart all the same, since the
+        /// restart is what replaces the edit, but it says that, and never that an old version is running: the driver
+        /// runs the version the dialog names (#1119). A newer plugin keeps the sentence above.
+        /// </summary>
+        [Fact]
+        public void The_restart_question_over_the_version_running_says_what_the_restart_replaces()
+        {
+            var question = UpdateWording.RestartQuestion("0.4.0", alreadyRunning: true);
+            Assert.DoesNotContain("old version", question);
+            Assert.DoesNotContain("downloaded", question);
+            Assert.Contains("0.4.0", question);
+            Assert.Contains("replaces what you edited", question);
+            Assert.Contains("\"Put mine back\"", question);
+            Assert.Contains("Close SimHub now", question);
+            Assert.DoesNotContain("old version", UpdateWording.RestartQuestion(null, alreadyRunning: true));
+
+            // A newer plugin keeps today's wording, which the default is.
+            Assert.Equal(UpdateWording.RestartQuestion("0.5.0"), UpdateWording.RestartQuestion("0.5.0", alreadyRunning: false));
+            Assert.Contains("you are running the old version", UpdateWording.RestartQuestion("0.5.0", alreadyRunning: false));
+        }
+
+        /// <summary>The release is the plugin running by version, as UpdateService.Apply decides it, and an unknown
+        /// side is never the same, so a panel that cannot tell keeps the ordinary wording.</summary>
+        [Fact]
+        public void The_same_version_is_the_same_release_and_an_unknown_one_is_not()
+        {
+            Assert.True(UpdateWording.SameVersion("0.4.0", "0.4.0"));
+            Assert.True(UpdateWording.SameVersion(" 0.4.0 ", "0.4.0"));
+            Assert.True(UpdateWording.SameVersion("0.3.0-rc.7", "0.3.0-rc.7"));
+            Assert.False(UpdateWording.SameVersion("0.3.0-rc.7", "0.3.0-rc.8"));
+            Assert.False(UpdateWording.SameVersion("0.5.0", "0.4.0"));
+            Assert.False(UpdateWording.SameVersion(null, "0.4.0"));
+            Assert.False(UpdateWording.SameVersion("0.4.0", ""));
+        }
+
+        /// <summary>
+        /// The restart's attention line, on Home and the Updates page, says the same as the dialog: over a newer
+        /// plugin that an old version runs until the restart, over the version running what the restart replaces
+        /// (#1119).
+        /// </summary>
+        [Fact]
+        public void The_restart_attention_line_over_the_version_running_says_what_the_restart_replaces()
+        {
+            var newer = PanelAttention.Find(new AttentionInput { RestartPending = true, RestartSameVersion = false }).Single();
+            Assert.Equal(PanelAttention.RestartDetail, newer.Detail);
+            Assert.Contains("old version", newer.Detail);
+            Assert.Equal(PanelAttention.RestartDetail, PanelAttention.Find(new AttentionInput { RestartPending = true }).Single().Detail);
+
+            var same = PanelAttention.Find(new AttentionInput { RestartPending = true, RestartSameVersion = true }).Single();
+            Assert.Equal("Restart SimHub to finish updating", same.Title);
+            Assert.Equal(PanelAttention.RestartReplacesDetail, same.Detail);
+            Assert.DoesNotContain("old version", same.Detail);
+            Assert.Contains("replaces what you edited", same.Detail);
+        }
+
+        /// <summary>
         /// The sentence after an update to a release that carries the plugin and nothing else (#438). It names the
         /// restart as the step, never calls the dashboards up to date or absent, and says what happens to an edited
         /// one on that start.

@@ -587,7 +587,7 @@ namespace OpenDashPlugin
             }
             // The one thing the run cannot do for itself. Asked here rather than before the download, because
             // until the assembly is staged there is nothing for a restart to put in place.
-            if (outcome.PluginStaged) OfferRestart(release.Version);
+            if (outcome.PluginStaged) OfferRestart(release.Version, UpdateWording.SameVersion(release.Version, OpenDash.Version));
         }
 
         /// <summary>
@@ -607,14 +607,17 @@ namespace OpenDashPlugin
         ///
         /// A "not now" says nothing: the card already reads UpdateWording.RestartLater for as long as the
         /// swap waits.
+        ///
+        /// A plugin of the version running is staged only to carry a yes to replacing an edited dashboard (#862),
+        /// and the question then says that the restart replaces it rather than that an old version runs (#1119).
         /// </remarks>
-        private async void OfferRestart(string version)
+        private async void OfferRestart(string version, bool alreadyRunning)
         {
             var root = plugin.Installer.SimHubRoot;
             try
             {
                 var answer = await SHMessageBox.Show(
-                    UpdateWording.RestartQuestion(version),
+                    UpdateWording.RestartQuestion(version, alreadyRunning),
                     UpdateWording.RestartTitle,
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
