@@ -12,7 +12,6 @@ import type { FaceContext } from '../drawing.ts';
 import { bmwFace, raceRows } from './geometry.ts';
 import { bmwColour, box, fitSize, stackedRuns } from './register.ts';
 
-
 export function bmwChangeNotifications(ctx: FaceContext): Item[] {
   const face = bmwFace(ctx.layout);
   const room = raceRows(face.zoneC, face).lower;

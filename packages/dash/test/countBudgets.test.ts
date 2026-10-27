@@ -17,7 +17,6 @@
 import { describe, expect, test } from 'bun:test';
 import { composePackages, themesToBuild } from '../src/build.ts';
 import type { TextItem } from '../src/generator.ts';
-import { ncalc } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
 import { assistValue, type Assist } from '../src/cards/assist.ts';
 import { ASSIST_WIDEST, BIAS_WIDEST, LEVEL_WIDEST, TRACKED_VALUES, trackedText, trackedValue } from '../src/second/tracked.ts';
@@ -27,7 +26,6 @@ import { itemsOf, walkItems } from '../src/walk.ts';
 import { widthAsDrawn } from './drawnStrings.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
-
 
 const themes = themesToBuild({ themes: [], allThemes: true, touchedThemes: false }, () => {});
 const PACKAGES = composePackages({ version: '0.0.0-test', themes, log: () => {} });
