@@ -30,7 +30,7 @@ import { gearCells, monoWidth } from '../../design/metrics.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
 import { numeral } from '../../elements/numeral.ts';
-import { TRACKED_VALUES } from '../../second/tracked.ts';
+import { TRACKED_VALUES, trackedText } from '../../second/tracked.ts';
 import { fuelLitres, gear as currentGear, overPitLimit, pitLimitText, speed } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { gearSizeIn } from '../../zones/zoneAPages.ts';
@@ -161,7 +161,7 @@ export function porscheChangeNotifications(ctx: FaceContext): Item[] {
         size: NOTICE.value,
         color: ink,
         hAlign: 'center',
-        bind: fmt(value.read, value.pattern),
+        bind: trackedText(value),
         widest: value.widest,
       }),
     ];

@@ -24,7 +24,7 @@ import { mark, type Mark, unmarked } from '../elements/mark.ts';
 import { numeral } from '../elements/numeral.ts';
 import { charsOfText, drawnFigure, drawnWithin, type DrawnFigure } from '../second/drawn.ts';
 import { rank, type RankMember } from '../second/rank.ts';
-import { TRACKED_VALUES, hasSetting } from '../second/tracked.ts';
+import { TRACKED_VALUES, hasSetting, trackedText } from '../second/tracked.ts';
 import type { BarScale } from './layout.ts';
 import {
   CHARS,
@@ -249,8 +249,8 @@ interface StripCell {
   sample: string;
   /** The longest reading the setting can draw, which its cells are cut from: the tracked value's. */
   widest: string;
-  expr: string;
-  pattern: string;
+  /** What the cell draws: `trackedText` of the tracked value, so TC and ABS read `OFF` where their cards do. */
+  text: Expr;
   /** True when the car has this setting: `hasSetting` of the tracked value, which is the one rule. */
   present: Expr;
 }
@@ -261,8 +261,7 @@ export const STRIP_CELLS: readonly StripCell[] = TRACKED_VALUES.map((value) => (
   label: value.strip,
   sample: value.sample,
   widest: value.widest,
-  expr: value.read,
-  pattern: value.pattern,
+  text: trackedText(value),
   present: hasSetting(value),
 }));
 
@@ -509,7 +508,7 @@ export function bar(frame: Rect, prefix: string, opts: BarOptions): Item[] {
             visibleBind: at.visibleBind,
             // Emptied as well as hidden: a hidden item still holds its last text, and the strip is
             // rebuilt from the same items when the next car does publish the setting.
-            bind: iff(present, fmt(cell.expr, cell.pattern), str('')),
+            bind: iff(present, cell.text, str('')),
           }),
         ],
       } satisfies RankMember;

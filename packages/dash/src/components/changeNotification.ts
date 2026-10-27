@@ -49,12 +49,12 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { charsOfText } from '../second/drawn.ts';
 import { FIT_LADDER } from '../second/field.ts';
-import { TRACKED_VALUES, hasSetting, type TrackedValue } from '../second/tracked.ts';
+import { TRACKED_VALUES, hasSetting, trackedText, type TrackedValue } from '../second/tracked.ts';
 import { sim } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { LAP_POP_UP, sheetFrame } from './popUp.ts';
 
-const { and, changed, fmt, isdecreasing, isincreasing, not, num } = ncalc;
+const { and, changed, isdecreasing, isincreasing, not, num } = ncalc;
 
 /**
  * The box the pagesandalerts artboard draws.
@@ -224,7 +224,7 @@ export function changeNotification(frame: Rect, value: TrackedValue, prefix = 'n
       widest: value.widest,
       width: reading,
       hAlign: 'right',
-      bind: fmt(value.read, value.pattern),
+      bind: trackedText(value),
     }),
     // One file per direction, because an image carries neither colour nor rotation, and both are
     // hidden while the setting holds still: a mark with no direction to report is no mark.

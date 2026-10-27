@@ -8,17 +8,19 @@
  * over a level the strip beside it was drawing.
  *
  * The pit wall read the level a second time with its own `fmt`, so a car with TC switched off read
- * `0` there and `OFF` on the card. One body, so a reading has one spelling wherever it is drawn.
+ * `0` there and `OFF` on the card. One body, so a reading has one spelling wherever it is drawn:
+ * `assistReading`, which the bar's strip, the change notification and the house themes' boxes bind
+ * through the tracked values (#997).
  */
 import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import type { ValueSpec } from '../components/readout.ts';
-import { assistPresent } from '../second/tracked.ts';
+import { ASSIST_WIDEST, assistPresent, assistReading } from '../second/tracked.ts';
 import { absLevel, tcLevel } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { ASSIST_CHARS } from './chars.ts';
 
-const { isnull, eq, num, iff, not, raw, str, fmt } = ncalc;
+const { isnull, eq, num, iff, not, raw, str } = ncalc;
 
 /** The two assists a car can publish, by SimHub's normalised level and iRacing's in-car knob. */
 export const ASSISTS = {
@@ -37,11 +39,12 @@ export function assistValue(assist: Assist, sample: string): ValueSpec {
   const off = eq(level, num(0));
   return {
     sample,
-    bind: iff(none, str('--'), iff(off, str('OFF'), fmt(level, '0'))),
+    // The binding the bar's strip, the change notification and the house themes' boxes draw too. #997.
+    bind: assistReading(raw(ASSISTS[assist].knob), ASSISTS[assist].level()),
     chars: ASSIST_CHARS,
     // The widest of what the binding draws, in every face it is set in: wider than `--` and than
     // any two-digit level.
-    widest: 'OFF',
+    widest: ASSIST_WIDEST,
     colorBind: iff(none, str(ds.purpose.assist.none), iff(off, str(ds.purpose.assist.off), str(ds.color.text.primary))),
   };
 }

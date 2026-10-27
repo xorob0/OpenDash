@@ -32,7 +32,7 @@ import { ncalc } from '../../generator.ts';
 import { withMoreBindings, type Expr } from '../../bind.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
-import { LEVEL_WIDEST, hasSetting, trackedValue } from '../../second/tracked.ts';
+import { LEVEL_WIDEST, hasSetting, trackedText, trackedValue } from '../../second/tracked.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import { antiRollFront, pitLimiterOn } from '../../second/values.ts';
 import type { TrackedValue } from '../../second/tracked.ts';
@@ -43,7 +43,7 @@ import { porscheFace, type SettingsColumn, type TelltaleColumn } from './geometr
 import { pictogram, type Lit, type Pictogram } from './pictograms.ts';
 import { BORDER, carColour, lowFuelAlarm, RADIUS, settingBox } from './register.ts';
 
-const { add, fmt, iff, lt, mul, num, and, or } = ncalc;
+const { add, iff, lt, mul, num, and, or } = ncalc;
 
 /** A zone fills the inside of its 3 px border, so its cells stand flush against it. */
 const PANEL_PAD = BORDER;
@@ -99,7 +99,7 @@ function settingsColumn(column: SettingsColumn, top: number, height: number): It
     const before = place === 0 ? num(0) : add(...present.slice(0, place));
     const at = Math.min(place, fits - 1);
     const frame = rect(column.left, top + at * pitch, column.width, column.box);
-    const box = settingBox(`settings.${setting.id}`, frame, setting.colour(), setting.title, { sample: setting.value.sample, bind: fmt(setting.value.read, setting.value.pattern), widest: setting.value.widest }, undefined, column);
+    const box = settingBox(`settings.${setting.id}`, frame, setting.colour(), setting.title, { sample: setting.value.sample, bind: trackedText(setting.value), widest: setting.value.widest }, undefined, column);
     return withMoreBindings(atSlot(box, before, at, pitch), { Visible: and(hasSetting(setting.value), lt(before, num(fits))) });
   });
 }

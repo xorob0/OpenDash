@@ -5,15 +5,12 @@
  * zone C, the lower 172 of the race page, so that the driver's eye finds it where it always is.
  */
 import type { Item } from '../../generator.ts';
-import { ncalc } from '../../generator.ts';
 import { withMoreBindings } from '../../bind.ts';
 import { changeNotificationVisible } from '../../components/changeNotification.ts';
-import { TRACKED_VALUES } from '../../second/tracked.ts';
+import { TRACKED_VALUES, trackedText } from '../../second/tracked.ts';
 import type { FaceContext } from '../drawing.ts';
 import { bmwFace, raceRows } from './geometry.ts';
 import { bmwColour, box, fitSize, stackedRuns } from './register.ts';
-
-const { fmt } = ncalc;
 
 export function bmwChangeNotifications(ctx: FaceContext): Item[] {
   const face = bmwFace(ctx.layout);
@@ -28,7 +25,7 @@ export function bmwChangeNotifications(ctx: FaceContext): Item[] {
       ...items,
       ...stackedRuns(name, inner, [
         { id: 'label', text: title, size: titleSize, bold: true, lh: 1.1 },
-        { id: 'value', text: value.sample, size: valueSize, lh: 1, bind: fmt(value.read, value.pattern), widest: value.widest },
+        { id: 'value', text: value.sample, size: valueSize, lh: 1, bind: trackedText(value), widest: value.widest },
       ], bmwColour('tileInk')),
     ];
     return withMoreBindings({ kind: 'layer', name, children }, { Visible: changeNotificationVisible(value.id) });

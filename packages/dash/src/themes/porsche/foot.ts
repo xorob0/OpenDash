@@ -39,7 +39,7 @@ import { setting } from '../../contract.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
-import { hasSetting, trackedValue } from '../../second/tracked.ts';
+import { hasSetting, trackedText, trackedValue } from '../../second/tracked.ts';
 import { brakeBias, CORNERS, tyrePressure, tyreTemperature, type Corner } from '../../second/values.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import type { ThemeBandPage } from '../drawing.ts';
@@ -63,7 +63,7 @@ const TEMPERATURE_WIDEST = '188';
 
 const settingReading = (id: string) => {
   const value = trackedValue(id);
-  return { value, reading: { sample: value.sample, bind: fmt(value.read, value.pattern), widest: value.widest } };
+  return { value, reading: { sample: value.sample, bind: trackedText(value), widest: value.widest } };
 };
 
 /** The largest size, from `size` down, at which `text` fits `width`; a font follows its box. */
