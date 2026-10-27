@@ -19,6 +19,11 @@
  *
  *   bun tools/measure-font/measure.ts packages/dash/fonts/BarlowCondensed-Bold.ttf
  *   bun tools/measure-font/measure.ts --json --chars '0123456789NR' <file.ttf>
+ *   bun tools/measure-font/measure.ts --table packages/dash/fonts/Barlow-Medium.ttf
+ *
+ * `--table` prints the body of one face's table in `packages/dash/src/design/advances.ts`: every
+ * character of {@link TABLE_CHARS} the file carries, rounded to three decimals, and nothing for one it
+ * does not, so that character falls back there as it does in WPF.
  *
  * Only the tables needed are parsed: head for the em, cmap for the character mapping, hmtx for the
  * advances, loca and glyf for the bounding boxes. Composite glyphs report the bounding box the
@@ -378,17 +383,58 @@ export function inkBreak(font: Font, char: string): number | undefined {
   return widest;
 }
 
+const ASCII = [...Array(95)].map((_, i) => String.fromCharCode(32 + i)).join('');
+
+/**
+ * The letters a driver's name reaches beyond ASCII: Latin-1's, which is À to ÿ without × and ÷, and
+ * the whole of Latin Extended-A, which is where Polish, Czech and the rest of central Europe write
+ * theirs. Barlow leaves nine of Extended-A out (Ĕ ĕ Ĭ Ĳ ĸ Ŀ ŉ Ŏ ſ), and those fall back.
+ */
+export const LATIN_LETTERS = [
+  ...Array.from({ length: 0x100 - 0xc0 }, (_, i) => String.fromCodePoint(0xc0 + i)).filter((ch) => ch !== '×' && ch !== '÷'),
+  ...Array.from({ length: 0x180 - 0x100 }, (_, i) => String.fromCodePoint(0x100 + i)),
+].join('');
+
+/** Every character the advance tables are generated over: ASCII, the symbols the dash draws, and the letters. */
+export const TABLE_CHARS = `${ASCII}°·−–Δ…∞${LATIN_LETTERS}`;
+
+/** One face's table body, as `advances.ts` writes it: two spaces in, wrapped short of 120 columns. */
+export function tableBody(font: Font, chars: string = TABLE_CHARS): string {
+  const entries = [...chars].flatMap((ch) => {
+    const m = measure(font, ch);
+    if (!m) return [];
+    const key = ch === "'" || ch === '\\' ? `\\${ch}` : ch;
+    return [`'${key}': ${Number(m.advance.toFixed(3))},`];
+  });
+  const lines: string[] = [];
+  let line = '';
+  for (const entry of entries) {
+    if (line && `${line} ${entry}`.length > 118) {
+      lines.push(line);
+      line = '';
+    }
+    line = line ? `${line} ${entry}` : `  ${entry}`;
+  }
+  if (line) lines.push(line);
+  return lines.join('\n');
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const json = args.includes('--json');
+  const table = args.includes('--table');
   const charsFlag = args.indexOf('--chars');
-  const chars = charsFlag >= 0 ? (args[charsFlag + 1] ?? '') : [...Array(95)].map((_, i) => String.fromCharCode(32 + i)).join('');
+  const chars = charsFlag >= 0 ? (args[charsFlag + 1] ?? '') : table ? TABLE_CHARS : ASCII;
   const file = args.filter((a) => !a.startsWith('--') && a !== chars)[0];
   if (!file) {
-    console.error('usage: bun tools/measure-font/measure.ts [--json] [--chars "0123456789NR"] <font.ttf>');
+    console.error('usage: bun tools/measure-font/measure.ts [--json | --table] [--chars "0123456789NR"] <font.ttf>');
     process.exit(2);
   }
   const font = loadFont(file);
+  if (table) {
+    console.log(tableBody(font, chars));
+    process.exit(0);
+  }
   const rows = [...chars].map((ch) => ({ ch, ...(measure(font, ch) ?? { advance: 0, xMin: 0, xMax: 0, yMin: 0, yMax: 0 }) }));
   if (json) {
     console.log(JSON.stringify(Object.fromEntries(rows.map((r) => [r.ch, { advance: r.advance, xMin: r.xMin, xMax: r.xMax }])), null, 2));

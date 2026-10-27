@@ -8,7 +8,7 @@
  * are checked here against the files the package ships.
  */
 import { describe, expect, test } from 'bun:test';
-import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, charsThatFit, dottedLetterSize, measureText, widestFigure, widestGlyph, widestOf, type SegmentFace, type TextFace } from '../src/design/advances.ts';
+import { ELLIPSIS, FALLBACK_ADVANCE, TITTLE_BREAK, carries, charsThatFit, dottedLetterSize, measureText, widestFigure, widestGlyph, widestOf, type SegmentFace, type TextFace } from '../src/design/advances.ts';
 import { UNTIMED_MARK } from '../src/second/values.ts';
 
 /** Which bundled file each measured face is measured from. */
@@ -25,8 +25,9 @@ const FACES = Object.keys(FILES) as TextFace[];
 /**
  * The segment faces a theme ships (#204), which carry fewer characters than Barlow: no `#`, no `;`,
  * no brackets, and DSEG7 none of the punctuation a seven-segment cell cannot draw. Their tables hold
- * exactly the characters the file has, so a character outside them falls back as an accented letter
- * does in Barlow, and is measured at the fallback rather than at a width the face never drew.
+ * exactly the characters the file has, so a character outside them falls back as one of the nine
+ * Extended-A letters Barlow lacks does, and is measured at the fallback rather than at a width the
+ * face never drew.
  */
 const SEGMENT_FILES: Record<SegmentFace, string> = {
   DSEG7Regular: 'DSEG7Classic-Regular.ttf',
@@ -34,15 +35,26 @@ const SEGMENT_FILES: Record<SegmentFace, string> = {
   DSEG14Regular: 'DSEG14Classic-Regular.ttf',
 };
 
-/** Every character any face's table carries, which is the same set for all five. */
+/** The ASCII and symbols every text face's table carries, which is the same set for all five. */
 const CHARACTERS = [...' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~', '°', '·', '−', '–', 'Δ', ELLIPSIS, UNTIMED_MARK];
+
+/**
+ * The letters a driver's name reaches past ASCII, enumerated here rather than taken from the tool so
+ * that a tool which stopped generating some of them would be caught: Latin-1's, À to ÿ without the ×
+ * and ÷ among them, and the whole of Latin Extended-A, which is where Polish and Czech names live.
+ */
+const LATIN_1 = Array.from({ length: 0x100 - 0xc0 }, (_, i) => String.fromCodePoint(0xc0 + i)).filter((ch) => ch !== '×' && ch !== '÷');
+const EXTENDED_A = Array.from({ length: 0x180 - 0x100 }, (_, i) => String.fromCodePoint(0x100 + i));
 
 describe('the advance table is the fonts', () => {
   for (const face of FACES) {
     test(`${face} advances every character as its file does`, async () => {
       const { loadFont, measure } = await import('../../../tools/measure-font/measure.ts');
       const font = loadFont(`packages/dash/fonts/${FILES[face]}`);
-      for (const ch of CHARACTERS) {
+      // Every Latin-1 letter is drawn by every text face, so each is read from the file and held to the
+      // table. Before #576 none of them was, and Æ was measured at the fallback's 0.75 em where the name
+      // face draws it at 0.935: a box fitted to `Ærø Sæther` lost its last glyph.
+      for (const ch of [...CHARACTERS, ...LATIN_1]) {
         const m = measure(font, ch);
         if (!m) throw new Error(`${FILES[face]} has no glyph for ${JSON.stringify(ch)}`);
         // Rounded to the three decimals the table carries. A one-thousandth disagreement is the table
@@ -51,6 +63,19 @@ describe('the advance table is the fonts', () => {
           table: Math.round(m.advance * 1000) / 1000,
         });
       }
+      // Extended-A the same, except for the nine letters Barlow does not draw, which the table must not
+      // carry either: WPF draws those in a face of its own, and the fallback is what measures them.
+      const missing: string[] = [];
+      for (const ch of EXTENDED_A) {
+        const m = measure(font, ch);
+        if (!m) missing.push(ch);
+        const table = Math.round(measureText(face, ch, 1000)) / 1000;
+        expect({ face, ch, carried: carries(face, ch), table }).toMatchObject({
+          carried: m !== undefined,
+          table: m ? Math.round(m.advance * 1000) / 1000 : FALLBACK_ADVANCE,
+        });
+      }
+      expect({ face, missing: missing.join('') }).toMatchObject({ missing: 'ĔĕĬĲĸĿŉŎſ' });
     });
   }
 });
@@ -74,20 +99,27 @@ describe('the segment faces are their fonts', () => {
 
 describe('the widest glyph, which is what a character budget is measured by', () => {
   test('it is the widest entry the face carries, and the fallback is under it', () => {
-    // The fallback covers a character the table does not carry, which in a driver name is an accented
-    // letter. Every one of those is a narrower letter than W, so the budget holds them too — and if the
-    // fallback ever rose above the widest measured glyph, `widestOf` would declare a `widest` narrower
-    // than what the item could draw and the fit tests would stop being a promise.
+    // Taken over every letter of Latin-1 and Extended-A as well as ASCII, so a budget holds `Ærø` as it
+    // holds `Wim`. The fallback covers a character the table does not carry, and if it ever rose above
+    // the widest measured glyph, `widestOf` would declare a `widest` narrower than what the item could
+    // draw and the fit tests would stop being a promise.
     for (const face of FACES) {
       const { glyph, advance } = widestGlyph(face);
-      const widest = Math.max(...CHARACTERS.map((ch) => measureText(face, ch, 1)));
+      const widest = Math.max(...[...CHARACTERS, ...LATIN_1, ...EXTENDED_A].map((ch) => measureText(face, ch, 1)));
       expect({ face, glyph, advance }).toMatchObject({ advance: widest });
       expect({ face, over: FALLBACK_ADVANCE <= advance }).toMatchObject({ over: true });
     }
-    // In the name face it is the W, which is what makes a character budget a letter's width rather
-    // than a per-cent sign's: `%` is the widest glyph of the three condensed faces and no part of a
-    // name, but the name face is Barlow Medium and there the W is wider than it.
-    expect(widestGlyph('BarlowMedium').glyph).toBe('W');
+    // In Barlow, the name face among them, it is the Æ, wider than the W the budget used to be taken
+    // from and wider than Œ and Ŵ after it; in the three condensed faces the `%` is wider than any
+    // letter. #576 chose the widest entry over keeping the W, because a W budget cuts a name that
+    // holds an Æ at a width that clips it.
+    expect(Object.fromEntries(FACES.map((face) => [face, widestGlyph(face).glyph]))).toEqual({
+      BarlowMedium: 'Æ',
+      BarlowBold: 'Æ',
+      BarlowCondensedSemiBold: '%',
+      BarlowCondensedBold: '%',
+      BarlowCondensedLight: '%',
+    });
   });
 
   test('a budget is strictly inside its box, at every size and width', () => {

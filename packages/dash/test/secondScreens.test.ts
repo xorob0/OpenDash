@@ -887,8 +887,8 @@ describe('the leaderboard keeps its gap at every zone the build produces', () =>
     expect(moduleBoxes().flatMap(givenAt)).toEqual([
       'OpenDash Companion portrait page: sheds class',
       'OpenDash Pit wall zone-639x338: sheds best',
-      'face-274x328: cuts the name to 6',
-      'face-274x366: cuts the name to 6',
+      'face-274x328: cuts the name to 5',
+      'face-274x366: cuts the name to 5',
       'face-249x328: cuts the name to 4',
       'face-249x366: cuts the name to 4',
       'face-269x194: cuts the name to 6',
@@ -1280,20 +1280,43 @@ describe('the opponents identity row sets its cells side by side', () => {
  * answer rather than the density's own 13 and 12: a size off the list ramp, never smaller than the
  * relative draws in the same box, and the ten characters of `Liam Byrne` wherever the row has them,
  * which is every box the build produces.
+ *
+ * Except where those two meet, which since #576 is the two wide zones of the 600 x 686 face: the
+ * budget is counted in the Æ, which is wider than the W it was counted in before, and the identity
+ * row of their columns holds ten of them at 13 px and not at the relative's 15. The page's own
+ * rule keeps the ten and the smaller step, as it keeps ten wherever 13 px did, so it is the size that
+ * gives. The exception is asserted as the condition rather than granted by name: a name drawn under
+ * the relative's size must be one whose row, given every pixel the number and the chip leave it, could
+ * not hold ten at that size, and the boxes where that happens are listed so that one arriving or
+ * leaving is a diff.
  */
 describe('the opponents name is the relative\'s', () => {
   const opponents = MODULES.find((m) => m.id === 'opponents')!;
   const ramp = new Set(LIST_ROW_TYPES.map((type) => type.name));
+  // Each name the page draws in a box, with the relative's size there and the most room its row could
+  // give it: the column, less what the number and the chip beside it take, measured at the size drawn,
+  // where those two are no wider than at a larger one.
+  const namesIn = (box: { frame: Rect; density: Density }): { name: TextItem; relative: number; room: number }[] => {
+    const ctx = { frame: box.frame, density: box.density, prefix: '' };
+    const items = opponents.build(ctx).flatMap((i) => [...walkItems([i])]);
+    const drawn = items.filter((i): i is Exclude<Item, { kind: 'layer' }> => i.kind !== 'layer');
+    const relative = relativePlan({ ...ctx, page: 'relative' }).rowType.name;
+    const names = ['ahead.name', 'behind.name'].map((name) => items.find((i) => i.name === name)).filter((i): i is TextItem => i?.kind === 'text');
+    return names.map((name) => {
+      const side = name.name.split('.')[0]!;
+      const column = drawn.find((i) => i.name === `${side}.heading`)!.rect;
+      const right = name.rect.left + name.rect.width;
+      const beside = drawn.filter((i) => i.name === `${side}.num.value` || i.name === `${side}.class.block`).map((i) => i.rect.left + i.rect.width);
+      return { name, relative, room: column.left + column.width - name.rect.left - (Math.max(right, ...beside) - right) };
+    });
+  };
 
   for (const box of moduleBoxes()) {
     test(`on a ${box.name}`, () => {
-      const ctx = { frame: box.frame, density: box.density, prefix: '' };
-      const items = opponents.build(ctx).flatMap((i) => [...walkItems([i])]);
-      const relative = relativePlan({ ...ctx, page: 'relative' }).rowType.name;
-      const names = ['ahead.name', 'behind.name'].map((name) => items.find((i) => i.name === name)).filter((i): i is TextItem => i?.kind === 'text');
       // The nano's 156 px body sheds the pair, which `the opponents page keeps both cars` holds.
-      for (const name of names) {
-        expect({ box: box.name, item: name.name, fs: name.fontSize, relative, onTheRamp: ramp.has(name.fontSize), notSmaller: name.fontSize >= relative, chars: name.widest?.length }).toMatchObject({
+      for (const { name, relative, room } of namesIn(box)) {
+        const tenAtRelative = charsThatFit(NAME_FACE, relative, room) >= DEFAULT_NAME_CHARS;
+        expect({ box: box.name, item: name.name, fs: name.fontSize, relative, room, onTheRamp: ramp.has(name.fontSize), notSmaller: name.fontSize >= relative || !tenAtRelative, chars: name.widest?.length }).toMatchObject({
           onTheRamp: true,
           notSmaller: true,
           chars: DEFAULT_NAME_CHARS,
@@ -1301,6 +1324,11 @@ describe('the opponents name is the relative\'s', () => {
       }
     });
   }
+
+  test('and is smaller only in the two wide zones of the 600 x 686 face', () => {
+    const smaller = moduleBoxes().flatMap((box) => namesIn(box).filter(({ name, relative }) => name.fontSize < relative).map(({ name }) => `${box.name} ${name.name}`));
+    expect(smaller).toEqual(['face-600x160 ahead.name', 'face-600x160 behind.name', 'face-600x150 ahead.name', 'face-600x150 behind.name']);
+  });
 });
 
 /**

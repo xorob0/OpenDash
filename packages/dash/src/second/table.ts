@@ -290,7 +290,8 @@ export const DEFAULT_NAME_CHARS = NAME_SAMPLE.length;
  * rows and bridge them, and 13 is simply where that came up first. The other two candidates lose to
  * the same numbers. **A heavier weight makes it worse**: Barlow Bold's break is 0.057 em against
  * Medium's 0.080, a fatter stem and a fatter dot being drawn into the same vertical. **A bigger size
- * costs letters**: 15 px in the three narrow boxes buys 6, 5 and 4 characters where 13 buys 7, 6 and 4,
+ * costs letters**: 15 px in the three narrow boxes buys 5, 5 and 4 characters where 13 buys 6, 6 and 4
+ * (counted in the Æ since #576),
  * and it does not clear the bound either. **Upper case costs nothing at all**, which is the part worth
  * saying twice: the budget is counted in characters of the face's *widest* glyph, so shouting a name
  * changes no budget anywhere — `tables.test.ts`'s six counts are the same numbers after this as before
@@ -995,11 +996,27 @@ export interface ListPlan {
  * the eight-character floor could hold nine characters of the budget where it had held ten.
  */
 export function nameBudget(frame: Rect, list: ListDeclaration, row: RowType): number {
+  return charsThatFit(NAME_FACE, row.name, nameColumnAt(frame, list, row));
+}
+
+/** The width of the name column at a row type in this frame, and 0 where the row gives the name up. */
+function nameColumnAt(frame: Rect, list: ListDeclaration, row: RowType): number {
   const kept = list.fit(list.columns, frame.width, list.density, row);
   const index = kept.indexOf('name');
-  if (index < 0) return 0;
-  return charsThatFit(NAME_FACE, row.name, columnWidths(kept, frame.width, list.density, row)[index] ?? 0);
+  return index < 0 ? 0 : (columnWidths(kept, frame.width, list.density, row)[index] ?? 0);
 }
+
+/**
+ * The widest letter of the alphabet `Liam Byrne` is written in, A to Z in either case: the W, at 0.878
+ * em in the name face. What the budget was counted in before #576 measured Latin-1 and found the Æ.
+ */
+const PLAIN_LETTER = Math.max(...[...'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'].map((ch) => measureText(NAME_FACE, ch, 1)));
+
+/**
+ * Whether a column of this width holds the default sample's ten characters in the letters the sample
+ * is written in, which is the question `nameFloorOf`'s licence turns on; see there.
+ */
+export const holdsPlainName = (fs: number, width: number): boolean => DEFAULT_NAME_CHARS * PLAIN_LETTER * fs < width;
 
 /**
  * The least a step may leave the name, given what the canvas's own row left it.
@@ -1014,10 +1031,20 @@ export function nameBudget(frame: Rect, list: ListDeclaration, row: RowType): nu
  * the default sample is ellipsised whatever the row does, so the question the column answers stops
  * being *is the name whole* and becomes *can it be read from the seat*, and one character of a name
  * that is already cut buys two pixels of every character left. That is the 850 x 480 face, whose
- * 82 px column holds seven at 13 and six at 15. A step costing two is refused, which is what keeps a
+ * 82 px column holds six at 13 and five at 15, in characters of the Æ (#576). A step costing two is refused, which is what keeps a
  * narrow zone's numerals at 24: at 34 they would take the same column to five.
+ *
+ * **The licence is the sample's, not the Æ's (#576).** Counting the budget in the Æ took the 134 px
+ * name column of the 1280-wide faces' 469 px zones from ten characters to nine, and the rule as it read
+ * then took that as a column already cut and let the 34 px numerals have one more character, so the
+ * flagship faces cut `Liam Byrne` to eight where the canvas's row holds it in nine. The ten is about
+ * `Liam Byrne`, which is written in A to Z, so `plain` says whether the canvas's column holds ten of the
+ * widest of those letters ({@link holdsPlainName}): where it does, the cut is the Æ's alone, and a step
+ * may cost the name nothing more than the canvas's row already cost it. Where it does not, as on the
+ * narrow faces, the sample was cut before any Æ was counted and the one character stands.
  */
-export const nameFloorOf = (had: number): number => (had >= DEFAULT_NAME_CHARS ? DEFAULT_NAME_CHARS : Math.max(0, had - 1));
+export const nameFloorOf = (had: number, plain = had >= DEFAULT_NAME_CHARS): number =>
+  had >= DEFAULT_NAME_CHARS ? DEFAULT_NAME_CHARS : plain ? had : Math.max(0, had - 1);
 
 /**
  * The row a list page draws: its declared rows first, then the type they can carry, then the rest as
@@ -1054,7 +1081,7 @@ export function listPlan(frame: Rect, list: ListDeclaration): ListPlan {
   const rows = Math.max(list.least ?? 1, counted);
   const rowHeight = rowHeightThatFills(frame, fit, rows);
   const canvas = rowTypeOf(floor);
-  const least = nameFloorOf(nameBudget(frame, list, canvas));
+  const least = nameFloorOf(nameBudget(frame, list, canvas), holdsPlainName(canvas.name, nameColumnAt(frame, list, canvas)));
   const columns = list.fit(list.columns, frame.width, list.density, canvas).join();
   const keepsColumns = (step: RowType): boolean => list.fit(list.columns, frame.width, list.density, step).join() === columns;
   const steps = LIST_ROW_TYPES.slice(LIST_ROW_TYPES.indexOf(canvas)).filter((step) => step.from <= rowHeight).reverse();

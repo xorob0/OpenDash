@@ -36,7 +36,7 @@
 import type { Binding, BindingTarget, Hex, Item, Rect, TextItem } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
 import { withMoreBindings, withoutBindings, type Expr } from '../../bind.ts';
-import { measureText } from '../../design/advances.ts';
+import { carries, measureText, widestGlyph } from '../../design/advances.ts';
 import { BOX_SLACK, LINE_SPACING } from '../../design/metrics.ts';
 import { ds, TRANSPARENT } from '../../tokens.ts';
 import type { SegmentFace } from '../../design/advances.ts';
@@ -102,11 +102,19 @@ function captionOf(item: TextItem): TextItem {
   const capitals = (s: string): string => s.toUpperCase().replaceAll('·', '-').replaceAll('…', '.');
   const room = item.rect.width - BOX_SLACK - 1;
   const fitOf = (widest: string): number => Math.floor(room / Math.max(1e-6, measureText('DSEG14Regular', widest, 1)));
+  // A name's budget is counted in the house face's widest letter, the Æ since #576, which DSEG14
+  // does not carry and would measure at the fallback's narrower advance. Its widest is the same
+  // count of DSEG14's own widest cell, which every letter it carries fills. That is a budget and not
+  // a measurement: an Æ in a real name is still drawn by WPF in a fallback face, at a width nothing
+  // here measures, as every Latin-1 letter on the AiM's captions already was.
+  const cell = widestGlyph('DSEG14Regular').glyph;
+  const inFace = (s: string): string => [...s].map((ch) => (ch === ' ' || carries('DSEG14Regular', ch) ? ch : cell)).join('');
+  const declared = item.widest === undefined ? capitals(item.text) : inFace(capitals(item.widest));
   // A box the house cut so close that the words two spaces apart do not fit it even at the smallest
   // size keeps the house's one space, since a clipped caption reads worse than a tight one.
-  const spaced = fitOf(spacedWords('DSEG14Regular', capitals(item.widest ?? item.text))) >= SMALLEST_CAPTION;
+  const spaced = fitOf(spacedWords('DSEG14Regular', declared)) >= SMALLEST_CAPTION;
   const upper = (s: string): string => (spaced ? spacedWords('DSEG14Regular', capitals(s)) : capitals(s));
-  const widest = upper(item.widest ?? item.text);
+  const widest = upper(declared);
   const fit = fitOf(widest);
   const size = Math.max(SMALLEST_CAPTION, Math.min(Math.round(item.fontSize * CAPTION_SCALE), fit));
   const height = Math.ceil(LINE_SPACING * size) + BOX_SLACK;
