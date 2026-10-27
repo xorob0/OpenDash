@@ -427,7 +427,8 @@ export const LAP_POP_UP: PopUpSpec = {
  * this one is proportional and is measured from the widest reading the threshold allows: two digits
  * and a tenth under the 99 laps the panel's number box will accept, each the widest figure of the
  * face. That is not `99.9 laps`: in Barlow Condensed SemiBold the 4 and the 0 are wider than the 9,
- * and `44.4 laps` is the reading that lost the `s` of its unit to a box measured from the nines (#994).
+ * and a box measured from the nines held `44.4 laps` only by spending the slack its last glyph is
+ * owed, which the 22 px run happened to have and a larger one would not (#994).
  */
 export const FUEL_POP_UP: PopUpSpec = {
   id: 'fuel',
