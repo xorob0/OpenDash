@@ -36,6 +36,7 @@ import type { Hex, Item, Rect } from '../../generator.ts';
 import { ncalc } from '../../generator.ts';
 import { withMoreBindings } from '../../bind.ts';
 import { setting } from '../../contract.ts';
+import { widestFigure } from '../../design/advances.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
@@ -57,9 +58,16 @@ const TYRE_BOX = { height: 142, oneRow: { height: 60, width: 291 } };
 /** The badge's words, from the canvas: 10 px on a 12 px line. */
 const BADGE = { word: 10, line: 12 };
 
-/** The widest pressure and temperature a corner can draw. */
-const PRESSURE_WIDEST = '188.8';
-const TEMPERATURE_WIDEST = '188';
+/**
+ * The widest pressure and temperature a corner can draw. SimHub hands both over already in the
+ * driver's unit, so the ranges are the units': a tyre reaches `299` on Fahrenheit and `299.9` on kPa
+ * (#995). In Barlow Medium the 0, the 2 and the 4 are wider than the 8, so each is the widest figure
+ * of that shape, measured in the face the corners draw in, rather than a run of 8s.
+ */
+export const TEMPERATURE_RANGE = '299';
+export const PRESSURE_RANGE = '299.9';
+export const PRESSURE_WIDEST = widestFigure('BarlowMedium', PRESSURE_RANGE);
+export const TEMPERATURE_WIDEST = widestFigure('BarlowMedium', TEMPERATURE_RANGE);
 
 const settingReading = (id: string) => {
   const value = trackedValue(id);
@@ -129,9 +137,14 @@ function tyreBox(prefix: string, box: Rect, oneRow: boolean): Item[] {
     RearRight: { x: inner.left + inner.width - cornerX - tempWidth, y: tempBottom, align: 'right' },
   };
   // The grid is 52 px in on the reference and less in a narrower box, by `gen_sizes.py`'s rule, so
-  // that its two columns keep 76 px each.
+  // that its two columns keep 76 px each. Where that brings its columns in under the corner
+  // temperatures, as on the 850 and 800 wide faces, the grid stops above the rear temperatures, as it
+  // starts below the front ones, so that a rear tyre of 200 °F never runs into a pressure of 200 kPa.
   const gridX = Math.max(10, Math.min(s(TYRE.grid.x), Math.floor((box.width - 2 * s(76)) / 2) - 4));
-  const grid = rect(inner.left + gridX, inner.top + s(TYRE.grid.top), inner.width - 2 * gridX, inner.height - s(TYRE.grid.top) - s(TYRE.grid.bottom));
+  const gridTop = inner.top + s(TYRE.grid.top);
+  const gridBottom = inner.top + inner.height - s(TYRE.grid.bottom);
+  const underTemperatures = gridX < cornerX + tempWidth;
+  const grid = rect(inner.left + gridX, gridTop, inner.width - 2 * gridX, (underTemperatures ? Math.min(gridBottom, tempBottom) : gridBottom) - gridTop);
   const cellWidth = Math.floor(grid.width / 2);
   const cellHeight = Math.floor(grid.height / 2);
   const size = fitting(PRESSURE_WIDEST, s(TYRE.pressure), cellWidth);
