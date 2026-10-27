@@ -129,7 +129,7 @@ exports[`card snapshots card 1 lastLap 1`] = `
       },
       "TextColor": {
         "Formula": {
-          "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+          "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
         },
         "Mode": 2
       }
@@ -13637,7 +13637,7 @@ exports[`dashboard snapshots cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -21154,7 +21154,7 @@ exports[`package snapshots OpenDash slots 1280x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -28735,7 +28735,7 @@ exports[`package snapshots OpenDash slots 1280x400/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -35418,7 +35418,7 @@ exports[`package snapshots OpenDash slots 850x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -42041,7 +42041,7 @@ exports[`package snapshots OpenDash slots 800x480/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -49408,7 +49408,7 @@ exports[`package snapshots OpenDash slots 1280x720/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -57424,7 +57424,7 @@ exports[`package snapshots OpenDash slots 800x286/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -63792,7 +63792,7 @@ exports[`package snapshots OpenDash slots 600x686/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -68917,7 +68917,7 @@ exports[`package snapshots OpenDash 480 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }
@@ -74748,7 +74748,7 @@ exports[`package snapshots OpenDash 800 round/cards.djson 1`] = `
             },
             "TextColor": {
               "Formula": {
-                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds([DataCorePlugin.GameData.BestLapTime]), 0)))) < (0.0005), '#B14BFF', '#F5F7FA'))"
+                "Expression": "if(!((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)), '#33383F', if(((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) > (0)) and ((isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)) > (0)) and ((abs((isnull(timespantoseconds([DataCorePlugin.GameData.LastLapTime]), 0)) - (isnull(timespantoseconds(if((isnull([OpenDash.PositionMode], 'class')) = ('class'), isnull([OpenDash.ClassBestLap], driverbestlap(if((isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) >= (0), (isnull([DataCorePlugin.GameData.BestLapOpponentSameClassPosition], -1)) + (1), -1))), [DataCorePlugin.GameData.BestLapOpponent.BestLapTime])), 0)))) < (0.0005)), '#B14BFF', '#F5F7FA'))"
               },
               "Mode": 2
             }

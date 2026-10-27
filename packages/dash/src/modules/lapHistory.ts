@@ -6,6 +6,12 @@
  * the session and the time Lap times draws as `Your best`; Lap times' `Session best` is the field's.
  * So the column is headed, and the catalogue describes the page, by your best (#1030).
  *
+ * **Purple is the session best, not your best** (#1042). A row's time and delta are purple when the
+ * lap is the field's best, or the class's when the rig counts in class (`sessionBestLap`), which is
+ * what purple means on Lap times and across the brand. A lap that is only your own best, a zero in
+ * the delta column, is drawn in the row's ordinary colours: a driver five tenths off the field who
+ * sets a personal best would otherwise see a purple row beside a faster purple session best.
+ *
  * SimHub keeps ten previous laps as numbered properties, so the rows are a repeated layer that
  * builds its property name from its own repeat index. A row whose lap has no time is hidden, which
  * is what a driver on lap two should see: one row, not six empty ones. So is a row whose lap was
@@ -36,12 +42,12 @@ import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
 import { densityOf, type DensitySpec } from '../second/density.ts';
 import { rowCapacity, tableRowHeight } from '../second/table.ts';
-import { CHARS, HISTORY_DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasSessionLap, LAP_TIME_WIDEST, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
+import { CHARS, HISTORY_DELTA_WIDEST, PREVIOUS_LAP_SLOTS, currentLap, hasSessionLap, isSessionBestLap, LAP_TIME_WIDEST, lapTime, previousLap, previousLapDelta, signedToFit } from '../second/values.ts';
 import { ds } from '../tokens.ts';
 import { defineModule, drawnAt, pageKeeps, type ModuleContext } from './module.ts';
 import type { Archetype } from './shedding.ts';
 
-const { concat, str, fmt, iff, gt, lt, abs, num, sub, repeatIndex, isnull } = ncalc;
+const { concat, str, fmt, iff, gt, num, sub, repeatIndex, isnull } = ncalc;
 
 /**
  * A delta this far behind your best is drawn in caution, and twice that in danger.
@@ -196,7 +202,10 @@ export const lapHistory = defineModule('lapHistory', (ctx) => {
   // Each cell is centred in the row, as a list's cells are, so the smaller lap number sits on the
   // row's centre line beside the time rather than on its baseline.
   const centred = (fs: number): number => top + (rowHeight - fs) / 2;
-  const isBest = lt(abs(delta), num(0.0005));
+  // Purple is the session best and nothing else (#1042). The delta reaching zero says only that the
+  // lap is your own best, which a driver off the pace sets without touching the field's best, so the
+  // row is purple when its time is the session best and the delta is coloured by its size otherwise.
+  const isBest = isSessionBestLap(time);
   const deltaColour = iff(
     isBest,
     str(ds.purpose.lap.sessionBest),

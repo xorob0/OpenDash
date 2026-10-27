@@ -232,13 +232,13 @@ describe('the delta to your best is coloured in three bands', () => {
     expect(formula).toContain(ds.purpose.delta.slower);
   });
 
-  test('your best is purple, and the thresholds are the ones the module declares', () => {
+  test('the session best is purple, and the thresholds are the ones the module declares', () => {
     expect(formula).toContain(ds.purpose.lap.sessionBest);
     expect(formula).toContain(String(DELTA_THRESHOLDS.caution));
     expect(formula).toContain(String(DELTA_THRESHOLDS.danger));
   });
 
-  test('and the best lap carries that purple on its time as well', () => {
+  test('and the session best carries that purple on its time as well', () => {
     expect(bound(named(built(600, 280), 'row.time')!, 'TextColor')).toContain(ds.purpose.lap.sessionBest);
   });
 });

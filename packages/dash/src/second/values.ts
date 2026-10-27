@@ -504,6 +504,18 @@ export const sessionBestRow = (inClass: Expr | boolean = classMode()): Expr => {
 export const sessionBestLap = (): Expr =>
   iff(classMode(), isnull(prop(propertyName(CLASS_BEST_LAP)), driver('bestlap', sessionBestRow(true))), game('BestLapOpponent.BestLapTime'));
 
+/** Two lap times closer than this are the same lap: half a unit of the thousandths a lap is drawn to. */
+export const SAME_LAP_EPSILON = 0.0005;
+
+/**
+ * Whether a lap time is the session best, {@link sessionBestLap}: the one test behind purple on a
+ * lap time. Purple means the best anyone has done (`docs/design/brand.md`), so a lap that equals only
+ * the driver's own best, `BestLapTime`, is not purple unless nobody has gone faster (#1042). False
+ * until both times are set, so two missing times are not taken for the same lap.
+ */
+export const isSessionBestLap = (ts: Expr): Expr =>
+  and(hasTime(ts), hasTime(sessionBestLap()), lt(abs(sub(secondsOf(ts), secondsOf(sessionBestLap()))), num(SAME_LAP_EPSILON)));
+
 /**
  * The session's best time through one sector, of the field or of the player's own class as
  * `PositionMode` says, for the same reason {@link sessionBestRow} follows it: a GT3 driver could
