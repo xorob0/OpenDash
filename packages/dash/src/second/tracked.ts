@@ -21,7 +21,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { absLevel, antiRollRear, brakeBias, fuelMixture, tcLevel } from './values.ts';
 
-const { game, raw, isNull, isnull, not, or, gt, num } = ncalc;
+const { game, raw, isNull, isnull, not, or, gt, num, eq, iff, str, fmt } = ncalc;
 
 /**
  * One watched setting.
@@ -43,17 +43,26 @@ export interface TrackedValue {
   sample: string;
   /**
    * The longest reading the setting can draw, which every box that shows it is cut from and measured
-   * by: {@link LEVEL_WIDEST} for a level and {@link BIAS_WIDEST} for the bias. The boxes used to be
-   * cut from the sample, and most samples are one digit, so the strip and the change notification
-   * drew a TC of 10 in the one cell its `5` took. #596.
+   * by: {@link LEVEL_WIDEST} for a level, {@link ASSIST_WIDEST} for TC and ABS and {@link BIAS_WIDEST}
+   * for the bias. The boxes used to be cut from the sample, and most samples are one digit, so the
+   * strip and the change notification drew a TC of 10 in the one cell its `5` took. #596.
    */
   widest: string;
   read: Expr;
   /** .NET format string the reading is written with. */
   pattern: string;
+  /**
+   * What the setting draws, where it is more than the reading in `pattern`: TC and ABS draw `OFF` at
+   * zero, as their cards do, from {@link assistReading}. Read through {@link trackedText}, never
+   * around it, so that no box writes the number where another writes the word. #997.
+   */
+  text?: Expr;
   /** True when the car has this setting; the reading being published when nothing else says so. */
   has?: Expr;
 }
+
+/** What a box that draws the setting binds its text to: the override, or the reading in its pattern. */
+export const trackedText = (value: TrackedValue): Expr => value.text ?? fmt(value.read, value.pattern);
 
 /**
  * Whether the car has the setting, which is what every consumer asks before it draws or announces
@@ -84,6 +93,22 @@ export const hasSetting = (value: TrackedValue): Expr => value.has ?? not(isNull
  */
 export const assistPresent = (knob: Expr, level: Expr): Expr => or(not(isNull(knob)), gt(isnull(level, num(0)), num(0)));
 
+/**
+ * What a TC or ABS reading draws, wherever it is drawn: the level as an integer, `OFF` at zero and
+ * `--` for a car without the system.
+ *
+ * The one body of the cards' value (`cards/assist.ts`), the bar's strip, the change notification and
+ * the house themes' boxes. They drew the level as a number, so with TC switched off the strip read
+ * `TC 0` beside a TC card reading `OFF`: one state spelled two ways on one rig. #997.
+ */
+export function assistReading(knob: Expr, level: Expr): Expr {
+  const value = isnull(level, num(0));
+  return iff(not(assistPresent(knob, level)), str('--'), iff(eq(value, num(0)), str('OFF'), fmt(value, '0')));
+}
+
+/** The widest an assist draws: `OFF`, three letters, wider than `--` and than any two-digit level. */
+export const ASSIST_WIDEST = 'OFF';
+
 /** The widest level a stepped setting draws: two digits, a GT3 car's TC and ABS dials running to twelve. */
 export const LEVEL_WIDEST = '88';
 /** The widest brake bias: two digits and a place, a front share always being under a hundred. */
@@ -108,10 +133,10 @@ export const BIAS_WIDEST = '88.8';
  */
 export const TRACKED_VALUES: readonly TrackedValue[] = [
   { id: 'slip', strip: 'Slip', notice: 'Slip', sample: '4', read: raw('dcThrottleShape'), widest: LEVEL_WIDEST, pattern: '0' },
-  { id: 'tc', strip: 'TC', notice: 'TC', sample: '5', read: tcLevel(), widest: LEVEL_WIDEST, pattern: '0', has: assistPresent(raw('dcTractionControl'), tcLevel()) },
+  { id: 'tc', strip: 'TC', notice: 'TC', sample: '5', read: tcLevel(), widest: ASSIST_WIDEST, pattern: '0', text: assistReading(raw('dcTractionControl'), tcLevel()), has: assistPresent(raw('dcTractionControl'), tcLevel()) },
   { id: 'cut', strip: 'Cut', notice: 'TC cut', sample: '2', read: raw('dcTractionControl2'), widest: LEVEL_WIDEST, pattern: '0' },
   { id: 'bias', strip: 'Bias', notice: 'Brake bias', sample: '50.5', read: brakeBias(), widest: BIAS_WIDEST, pattern: '0.0', has: not(isNull(game('BrakeBias'))) },
-  { id: 'abs', strip: 'ABS', notice: 'ABS', sample: '4', read: absLevel(), widest: LEVEL_WIDEST, pattern: '0', has: assistPresent(raw('dcABS'), absLevel()) },
+  { id: 'abs', strip: 'ABS', notice: 'ABS', sample: '4', read: absLevel(), widest: ASSIST_WIDEST, pattern: '0', text: assistReading(raw('dcABS'), absLevel()), has: assistPresent(raw('dcABS'), absLevel()) },
   { id: 'map', strip: 'Map', notice: 'Engine map', sample: '1', read: fuelMixture(), widest: LEVEL_WIDEST, pattern: '0' },
   { id: 'diff', strip: 'Diff', notice: 'Diff', sample: '4', read: antiRollRear(), widest: LEVEL_WIDEST, pattern: '0' },
 ];

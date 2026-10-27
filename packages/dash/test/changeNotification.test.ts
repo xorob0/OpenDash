@@ -31,7 +31,7 @@ import { assetPath, imageOf, RANK_UP, TREND_DOWN, TREND_UP } from '../src/design
 import { measureText } from '../src/design/advances.ts';
 import { contains, rect } from '../src/design/geometry.ts';
 import { STRIP_CELLS } from '../src/zones/bar.ts';
-import { TRACKED_VALUES, trackedValue } from '../src/second/tracked.ts';
+import { TRACKED_VALUES, trackedText, trackedValue } from '../src/second/tracked.ts';
 import { ds } from '../src/tokens.ts';
 import type { ImageItem, RectangleItem, TextItem } from '../src/generator.ts';
 import { walkItems } from '../src/walk.ts';
@@ -48,7 +48,7 @@ describe('one list, two boxes', () => {
     expect(STRIP_CELLS.map((cell) => cell.id)).toEqual(TRACKED_VALUES.map((value) => value.id));
     for (const cell of STRIP_CELLS) {
       const value = trackedValue(cell.id);
-      expect({ id: cell.id, read: cell.expr, pattern: cell.pattern }).toEqual({ id: value.id, read: value.read, pattern: value.pattern });
+      expect({ id: cell.id, text: cell.text, widest: cell.widest }).toEqual({ id: value.id, text: trackedText(value), widest: value.widest });
     }
   });
 

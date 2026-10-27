@@ -14,7 +14,7 @@ import type { Expr } from '../../bind.ts';
 import { rect } from '../../design/geometry.ts';
 import { band } from '../../elements/band.ts';
 import { label } from '../../elements/label.ts';
-import { hasSetting, LEVEL_WIDEST, trackedValue } from '../../second/tracked.ts';
+import { hasSetting, LEVEL_WIDEST, trackedText, trackedValue } from '../../second/tracked.ts';
 import {
   airTemperature, antiRollFront, bestLap, carRelativeGap, estimatedLap, lapTime, lapTimeWidest, lastLap, neighbour, NO_VALUE, oilTemperature, player,
   positionLabelled, RELATIVE_GAP_WIDEST, roadTemperature, waterTemperature,
@@ -29,7 +29,7 @@ const { eq, fmt, iff, isNull, isnull, not, num, str } = ncalc;
 const TILES = (): readonly { id: string; title: string; colour: Hex; reading: Reading; present: Expr }[] => {
   const tracked = (id: string): Reading & { present: Expr } => {
     const value = trackedValue(id);
-    return { sample: value.sample, bind: fmt(value.read, value.pattern), widest: value.widest, present: hasSetting(value) };
+    return { sample: value.sample, bind: trackedText(value), widest: value.widest, present: hasSetting(value) };
   };
   const tc = tracked('tc');
   const abs = tracked('abs');

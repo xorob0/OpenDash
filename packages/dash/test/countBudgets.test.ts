@@ -19,7 +19,8 @@ import { composePackages, themesToBuild } from '../src/build.ts';
 import type { TextItem } from '../src/generator.ts';
 import { ncalc } from '../src/generator.ts';
 import { MODULES } from '../src/modules/index.ts';
-import { BIAS_WIDEST, LEVEL_WIDEST, TRACKED_VALUES } from '../src/second/tracked.ts';
+import { assistValue, type Assist } from '../src/cards/assist.ts';
+import { ASSIST_WIDEST, BIAS_WIDEST, LEVEL_WIDEST, TRACKED_VALUES, trackedText, trackedValue } from '../src/second/tracked.ts';
 import { CHARS, INCIDENTS_WIDEST, LAP_WIDEST, MOST_LAPS, lapsLeftText } from '../src/second/values.ts';
 import { charsOfText } from '../src/second/drawn.ts';
 import { itemsOf, walkItems } from '../src/walk.ts';
@@ -27,7 +28,6 @@ import { widthAsDrawn } from './drawnStrings.ts';
 import { evalNcalc, type Props } from './ncalcEval.ts';
 import { moduleBoxes } from './secondScreens.test.ts';
 
-const { fmt } = ncalc;
 
 const themes = themesToBuild({ themes: [], allThemes: true, touchedThemes: false }, () => {});
 const PACKAGES = composePackages({ version: '0.0.0-test', themes, log: () => {} });
@@ -160,14 +160,17 @@ describe('the car settings', () => {
   /** A setting at the long end: a level of twelve, which a GT3 car's TC and ABS dials reach, and a bias of 56.5. */
   const longEnd = (pattern: string): number => (pattern === '0' ? 12 : 56.5);
 
-  test('a level is two digits and the bias two and a place, whatever the sample', () => {
+  test('a level is two digits, TC and ABS the three letters of OFF, and the bias two and a place, whatever the sample', () => {
     expect(LEVEL_WIDEST).toBe('88');
+    expect(ASSIST_WIDEST).toBe('OFF');
     expect(BIAS_WIDEST).toBe('88.8');
-    for (const value of TRACKED_VALUES) expect({ id: value.id, widest: value.widest }).toEqual({ id: value.id, widest: value.pattern === '0' ? LEVEL_WIDEST : BIAS_WIDEST });
+    const widest = (value: (typeof TRACKED_VALUES)[number]): string => (value.text !== undefined ? ASSIST_WIDEST : value.pattern === '0' ? LEVEL_WIDEST : BIAS_WIDEST);
+    for (const value of TRACKED_VALUES) expect({ id: value.id, widest: value.widest }).toEqual({ id: value.id, widest: widest(value) });
+    expect(TRACKED_VALUES.filter((value) => value.text !== undefined).map((value) => value.id)).toEqual(['tc', 'abs']);
   });
 
   for (const value of TRACKED_VALUES) {
-    const reading = fmt(value.read, value.pattern);
+    const reading = trackedText(value);
     const sites = SITES.filter((s) => s.formula.includes(reading));
     const props = Object.fromEntries([...reading.matchAll(/\[([A-Za-z0-9_.]+)\]/g)].map(([, name]) => [name, longEnd(value.pattern)]));
 
@@ -187,6 +190,32 @@ describe('the car settings', () => {
       const own = sites.filter((s) => new RegExp(String.raw`\b(strip|notice)\.${value.id}\.value$`).test(s.item.name));
       expect(own.length).toBeGreaterThan(10);
       for (const s of own) expect({ where: s.where, item: s.item.name, widest: s.item.widest }).toEqual({ where: s.where, item: s.item.name, widest: value.widest });
+    });
+  }
+
+  // TC and ABS at zero: one state, one spelling. The strip, the change notification and the Porsche's
+  // settings boxes drew `0` there while the cards drew `OFF` (#997), so every text that reads the
+  // level is held to the cards' own binding, and that binding to `OFF` with the system switched off.
+  for (const assist of ['tc', 'abs'] as const satisfies readonly Assist[]) {
+    test(`${assist}: every box that draws the level binds the card's reading, which is OFF at zero`, () => {
+      const card = assistValue(assist, '3').bind as string;
+      expect(trackedText(trackedValue(assist))).toBe(card);
+      const level = assist === 'tc' ? 'TCLevel' : 'ABSLevel';
+      const reads = SITES.filter((s) => s.formula.includes(`[DataCorePlugin.GameData.${level}]`));
+      // The cards and the pit wall, the strip, the change notification and the house themes' boxes.
+      expect(reads.length).toBeGreaterThan(10);
+      for (const s of reads) {
+        // The strip empties a cell the car does not have, around the same reading.
+        const emptied = `, ${card}, '')`;
+        const formula = s.formula.startsWith('if(') && s.formula.endsWith(emptied) ? card : s.formula;
+        expect({ where: s.where, item: s.item.name, formula }).toEqual({ where: s.where, item: s.item.name, formula: card });
+      }
+      const names = [...card.matchAll(/\[([A-Za-z0-9_.]+)\]/g)].map(([, name]) => name!);
+      const at = (levelValue: number, knob: number | null): Props =>
+        Object.fromEntries(names.map((name) => [name, name.endsWith(level) ? levelValue : knob]));
+      expect(String(evalNcalc(card, at(0, 2)))).toBe('OFF');
+      expect(String(evalNcalc(card, at(4, 2)))).toBe('4');
+      expect(String(evalNcalc(card, at(0, null)))).toBe('--');
     });
   }
 });
