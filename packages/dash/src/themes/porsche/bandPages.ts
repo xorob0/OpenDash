@@ -59,7 +59,7 @@ function valueWidth(f: BandField, CELL: Cell): number {
 }
 
 const unitWidth = (f: BandField, CELL: Cell): number =>
-  f.after === undefined ? 0 : Math.ceil(Math.max(...[f.after, f.afterWidest ?? f.after].map((s) => measureText('BarlowMedium', s, CELL.unit)))) + 2;
+  f.after === undefined ? 0 : Math.ceil(Math.max(...[f.after, f.afterWidest ?? f.after].map((s) => measureText('BarlowMedium', s, CELL.unit)))) + boxSlack(CELL.unit);
 
 const labelWidth = (f: BandField, CELL: Cell): number => Math.ceil(measureText('BarlowMedium', f.labelWidest ?? f.label, CELL.label)) + boxSlack(CELL.label);
 

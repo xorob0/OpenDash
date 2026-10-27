@@ -27,7 +27,7 @@ import { withMoreBindings, type Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect, roundRect } from '../design/geometry.ts';
 import { wordmark } from '../components/wordmark.ts';
-import { canvasBaseline, canvasYForBaseline, textBox } from '../design/metrics.ts';
+import { boxSlack, canvasBaseline, canvasYForBaseline, textBox } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { rule } from '../elements/rule.ts';
@@ -108,8 +108,8 @@ interface RunSpec {
  */
 function dataRun(name: string, spec: RunSpec, fs: number, labelSize: number): { width: number; draw(x: number, top: number): Item[] } {
   const gap = ds.space[2];
-  const labelWidth = spec.label === undefined ? 0 : Math.ceil(measureText('BarlowMedium', spec.label, labelSize)) + 2;
-  const runWidth = Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs)) + 2;
+  const labelWidth = spec.label === undefined ? 0 : Math.ceil(measureText('BarlowMedium', spec.label, labelSize)) + boxSlack(labelSize);
+  const runWidth = Math.ceil(measureText('BarlowCondensedSemiBold', spec.widest, fs)) + boxSlack(fs);
   const runOffset = spec.label === undefined ? 0 : labelWidth + gap;
   return {
     width: runOffset + runWidth,
@@ -312,7 +312,7 @@ export function pitWallHeader(name: string, spec: PitWallHeaderSpec, density: 'z
   items.push(...mark.items);
   let x = frame.left + PIT_WALL_HEADER.padX + mark.width + PIT_WALL_HEADER.gap;
   const squares = spec.pages > 1 ? spec.pages * PAGE_SQUARE.size + (spec.pages - 1) * PAGE_SQUARE.gap : 0;
-  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName, d.labelSm)) + 2;
+  const pageWidth = Math.ceil(measureText('BarlowMedium', spec.pageName, d.labelSm)) + boxSlack(d.labelSm);
   // The loop leaves `right` a group gap clear of everything it drew, which is the room the cluster
   // has. The squares are counted first because they say which page this is and the name only
   // repeats it, and a name that does not fit goes whole rather than cut to the room: WPF clips

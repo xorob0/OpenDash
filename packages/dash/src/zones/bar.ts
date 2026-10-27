@@ -287,7 +287,7 @@ const STRIP_PRIORITY: readonly string[] = ['bias', 'tc', 'abs', 'slip', 'cut', '
 const cellChars = (cell: StripCell, mono: Monospace): Chars => charsOfText(cell.widest, mono);
 
 /** Width of the text a label is drawn with, with the pixel of room WPF needs not to clip it. */
-const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium', text, ds.size.label)) + 2;
+const labelWidth = (text: string): number => Math.ceil(measureText('BarlowMedium', text, ds.size.label)) + boxSlack(ds.size.label);
 
 /**
  * Width a strip cell takes: the artboard's column, widened to a reading that does not fit it and

@@ -26,7 +26,7 @@ import { ncalc } from '../generator.ts';
 import type { Expr } from '../bind.ts';
 import { measureText } from '../design/advances.ts';
 import { rect } from '../design/geometry.ts';
-import { cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
+import { boxSlack, cells, DATA_FACE, monoWidth, textBox, type Chars } from '../design/metrics.ts';
 import { band } from '../elements/band.ts';
 import { label } from '../elements/label.ts';
 import { numeral } from '../elements/numeral.ts';
@@ -672,12 +672,12 @@ const unitWidth = (field: BandField): number => {
   // Measured by the wider of the two spellings where the sim names the unit, since either may be
   // the one drawn and a box cut for the shorter clips the longer.
   const drawn = [field.after, ...(field.afterWidest ? [field.afterWidest] : [])].map((s) => measureText('BarlowMedium', s, ds.size.labelSm));
-  return Math.ceil(Math.max(...drawn)) + 2;
+  return Math.ceil(Math.max(...drawn)) + boxSlack(ds.size.labelSm);
 };
 
 /** Width the value of a field takes, the numerals sharing its label included. */
 function valueWidthOf(field: BandField, valueFs: number): number {
-  if (field.widest) return Math.ceil(measureText('BarlowMedium', field.widest, valueFs)) + 2;
+  if (field.widest) return Math.ceil(measureText('BarlowMedium', field.widest, valueFs)) + boxSlack(valueFs);
   const cell = monoWidth(cells('SemiBold', valueFs), field.chars);
   return field.row ? cell * (field.row.length + 1) + ROW_GAP * field.row.length : cell;
 }
@@ -686,7 +686,7 @@ function valueWidthOf(field: BandField, valueFs: number): number {
 function fieldWidth(field: BandField, valueFs: number, labelFs: number): number {
   const value = valueWidthOf(field, valueFs);
   const after = field.after ? FIELD_GAP + unitWidth(field) : 0;
-  const text = Math.ceil(measureText('BarlowMedium', field.labelWidest ?? field.label, labelFs)) + 2;
+  const text = Math.ceil(measureText('BarlowMedium', field.labelWidest ?? field.label, labelFs)) + boxSlack(labelFs);
   return Math.ceil(Math.max(value + after, text));
 }
 
@@ -848,7 +848,7 @@ function inlineValueSize(height: number, preferred: number): number {
 function inlineMembers(fields: readonly BandField[], page: InlinePage, prefix: string, frame: Rect, valueFs: number, labelFs: number): RankMember[] {
   const valueTop = frame.top + (frame.height - valueFs) / 2;
   const wordTop = frame.top + (frame.height - labelFs) / 2;
-  const wordWidth = Math.ceil(measureText('BarlowMedium', page.word, labelFs)) + 2;
+  const wordWidth = Math.ceil(measureText('BarlowMedium', page.word, labelFs)) + boxSlack(labelFs);
   const word: RankMember = {
     id: 'word',
     width: wordWidth,
@@ -863,7 +863,7 @@ function inlineMembers(fields: readonly BandField[], page: InlinePage, prefix: s
       // The position is set in the value's face at the value's size, so it is measured there and
       // not in the label's: a position is proportional rather than cellular, because "P" is wider
       // than any digit and a cell cut for digits would clip it.
-      const head = Math.ceil(measureText(DATA_FACE.SemiBold, field.labelWidest ?? field.label, valueFs)) + 2;
+      const head = Math.ceil(measureText(DATA_FACE.SemiBold, field.labelWidest ?? field.label, valueFs)) + boxSlack(valueFs);
       const value = valueWidthOf(field, valueFs);
       return {
         id: field.id,
@@ -920,7 +920,7 @@ interface BlockGeometry {
  */
 const letterRoom = (frame: Rect): number => {
   const m = bandMetrics(frame);
-  return Math.ceil(measureText('BarlowMedium', 'D', ds.size.label)) + 2 + m.letterGap;
+  return Math.ceil(measureText('BarlowMedium', 'D', ds.size.label)) + boxSlack(ds.size.label) + m.letterGap;
 };
 
 // --- The corner blocks at each end of the band -------------------------------------------------
@@ -1027,7 +1027,7 @@ const cornerValueSize = (frame: Rect): number => valueSizeFor(frame.height, dens
 const LAMP_PAD_X = 7;
 const LAMP_HEIGHT = 20;
 const LAMP_BORDER = 1;
-const lampWidth = (): number => Math.ceil(measureText('BarlowMedium', 'DRS', ds.size.labelSm)) + 2 + 2 * (LAMP_PAD_X + 1);
+const lampWidth = (): number => Math.ceil(measureText('BarlowMedium', 'DRS', ds.size.labelSm)) + boxSlack(ds.size.labelSm) + 2 * (LAMP_PAD_X + 1);
 
 export function bandCorners(frame: Rect, prefix: string): Item[] {
   const m = bandMetrics(frame);

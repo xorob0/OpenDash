@@ -9,6 +9,7 @@
  */
 import type { TextItem } from '../generator.ts';
 import { measureText } from '../design/advances.ts';
+import { boxSlack } from '../design/metrics.ts';
 import { rect } from '../design/geometry.ts';
 import { BASE_TREE, ds, resolveTokenIn } from '../tokens.ts';
 
@@ -20,7 +21,7 @@ import { BASE_TREE, ds, resolveTokenIn } from '../tokens.ts';
  * in any other, and a box measured from the wrong one loses its last letter.
  */
 export const wordmarkWidth = (fs: number): number =>
-  Math.ceil(measureText('BarlowCondensedLight', 'open', fs)) + 2 + Math.ceil(measureText('BarlowCondensedBold', 'Dash', fs)) + 2;
+  Math.ceil(measureText('BarlowCondensedLight', 'open', fs)) + boxSlack(fs) + Math.ceil(measureText('BarlowCondensedBold', 'Dash', fs)) + boxSlack(fs);
 
 export interface WordmarkOptions {
   /**
@@ -51,8 +52,8 @@ export function wordmark(name: string, x: number, top: number, fs: number, opts:
   // a SimHub install can be missing a face the package ships. The boxes are therefore a quarter
   // wider than the measurement, which costs nothing (they are transparent, left aligned, and the
   // layout uses the measured width) and leaves no way for the wordmark to lose a letter.
-  const openWidth = Math.ceil(measureText('BarlowCondensedLight', 'open', fs)) + 2;
-  const dashWidth = Math.ceil(measureText('BarlowCondensedBold', 'Dash', fs)) + 2;
+  const openWidth = Math.ceil(measureText('BarlowCondensedLight', 'open', fs)) + boxSlack(fs);
+  const dashWidth = Math.ceil(measureText('BarlowCondensedBold', 'Dash', fs)) + boxSlack(fs);
   // Floored, so a box whose left rounds up still ends inside the room it was given, and never below
   // the letters it holds: the cap trades slack a reader cannot see for room, and clipping is the one
   // thing it may not buy.
