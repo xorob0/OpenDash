@@ -1014,7 +1014,7 @@ export function nameBudget(frame: Rect, list: ListDeclaration, row: RowType): nu
  * the default sample is ellipsised whatever the row does, so the question the column answers stops
  * being *is the name whole* and becomes *can it be read from the seat*, and one character of a name
  * that is already cut buys two pixels of every character left. That is the 850 x 480 face, whose
- * 82 px column holds seven at 13 and six at 15. A step costing two is refused, which is what keeps a
+ * 82 px column holds six at 13 and five at 15, in characters of the Æ (#576). A step costing two is refused, which is what keeps a
  * narrow zone's numerals at 24: at 34 they would take the same column to five.
  */
 export const nameFloorOf = (had: number): number => (had >= DEFAULT_NAME_CHARS ? DEFAULT_NAME_CHARS : Math.max(0, had - 1));

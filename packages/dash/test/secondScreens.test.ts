@@ -887,8 +887,8 @@ describe('the leaderboard keeps its gap at every zone the build produces', () =>
     expect(moduleBoxes().flatMap(givenAt)).toEqual([
       'OpenDash Companion portrait page: sheds class',
       'OpenDash Pit wall zone-639x338: sheds best',
-      'face-274x328: cuts the name to 6',
-      'face-274x366: cuts the name to 6',
+      'face-274x328: cuts the name to 5',
+      'face-274x366: cuts the name to 5',
       'face-249x328: cuts the name to 4',
       'face-249x366: cuts the name to 4',
       'face-269x194: cuts the name to 6',
@@ -1280,6 +1280,11 @@ describe('the opponents identity row sets its cells side by side', () => {
  * answer rather than the density's own 13 and 12: a size off the list ramp, never smaller than the
  * relative draws in the same box, and the ten characters of `Liam Byrne` wherever the row has them,
  * which is every box the build produces.
+ *
+ * Except the two wide zones of the 600 x 686 face since #576, where those two meet: the budget is
+ * counted in the Æ, which is wider than the W it was counted in before, and the identity row of a
+ * 251 px column holds ten of them at 13 px and not at the relative's 15. The page's own rule keeps
+ * the ten and the smaller step, as it keeps ten wherever 13 px did, so it is the size that gives.
  */
 describe('the opponents name is the relative\'s', () => {
   const opponents = MODULES.find((m) => m.id === 'opponents')!;
@@ -1290,12 +1295,13 @@ describe('the opponents name is the relative\'s', () => {
       const ctx = { frame: box.frame, density: box.density, prefix: '' };
       const items = opponents.build(ctx).flatMap((i) => [...walkItems([i])]);
       const relative = relativePlan({ ...ctx, page: 'relative' }).rowType.name;
+      const tenOverSize = ['face-600x160', 'face-600x150'].includes(box.name);
       const names = ['ahead.name', 'behind.name'].map((name) => items.find((i) => i.name === name)).filter((i): i is TextItem => i?.kind === 'text');
       // The nano's 156 px body sheds the pair, which `the opponents page keeps both cars` holds.
       for (const name of names) {
         expect({ box: box.name, item: name.name, fs: name.fontSize, relative, onTheRamp: ramp.has(name.fontSize), notSmaller: name.fontSize >= relative, chars: name.widest?.length }).toMatchObject({
           onTheRamp: true,
-          notSmaller: true,
+          notSmaller: !tenOverSize,
           chars: DEFAULT_NAME_CHARS,
         });
       }

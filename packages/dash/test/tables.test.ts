@@ -197,8 +197,8 @@ describe('a list declares its rows and answers the box with the rest', () => {
    * Zone B of the 850 x 480 face is 250 x 290 of body, and 328 without the rev bar. The numerals stay at
    * 24, since at 34 they would take the name column from 82 px to 61; the name steps up alone, to the
    * 15 px the canvas draws a name at in its 34 px row, and pays the one character its larger glyph
-   * costs: seven at 13 is `LIAM B…` and six at 15 is `LIAM…`. `nameFloorOf` is the rule that allows the
-   * one and refuses two.
+   * costs: six at 13 is `LIAM …` and five at 15 is `LIAM…`, in characters of the Æ the budget is taken
+   * from since #576. `nameFloorOf` is the rule that allows the one and refuses two.
    */
   for (const [height, rows] of [[290, [7, 8]], [328, [7, 8]]] as const) {
     test(`zone B of the 850 x 480 face, ${height} px of body, names its drivers at 15`, () => {
@@ -206,7 +206,7 @@ describe('a list declares its rows and answers the box with the rest', () => {
         const items = build(id, 250, height, 'compact');
         expect({ id, rows: rowsOf(items).count }).toEqual({ id, rows: count });
         expect({ id, name: cell(items, 'name').fontSize, pos: cell(items, 'pos').fontSize, gap: cell(items, 'gap').fontSize }).toEqual({ id, name: 15, pos: 24, gap: 24 });
-        expect({ id, room: charsThatFit(NAME_FACE, 15, cell(items, 'name').rect.width) }).toEqual({ id, room: 6 });
+        expect({ id, room: charsThatFit(NAME_FACE, 15, cell(items, 'name').rect.width) }).toEqual({ id, room: 5 });
       }
     });
   }
@@ -295,16 +295,25 @@ test('the default format draws Liam Byrne whole on every box whose declared row 
     const declared = nameRoom(box, tableRowHeight(box.density));
     expect({ box: box.name, room, declared, short: declared < NAME_SAMPLE.length, kept: room >= nameFloorOf(declared) }).toMatchObject({ short: true, kept: true });
   }
-  // The six narrow boxes, named so that one being added or leaving is a diff rather than a silence:
-  // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements. The companion's
-  // portrait page was a seventh, its 109 px column holding eight beside a chip cut for `LMP2`; a chip
-  // that holds four M (#569) is wider than that row can spare, so the row gives the class up and the
-  // name has twelve.
+  // The twelve short boxes, named so that one being added or leaving is a diff rather than a silence:
+  // zone C of the 850 x 480, 800 x 480 and 800 x 286 faces in both arrangements, and since #576 the
+  // 469 px zones of the 1280 x 480, 1280 x 400 and 1280 x 720 faces in both arrangements too. Those
+  // held ten W and hold nine Æ: the budget is counted in the widest glyph the name face draws, which
+  // became the Æ once Latin-1 was measured, and their declared row is short of ten Æ as well, so the
+  // rule above still holds them. The companion's portrait page was a seventh, its 109 px column
+  // holding eight beside a chip cut for `LMP2`; a chip that holds four M (#569) is wider than that row
+  // can spare, so the row gives the class up and the name has twelve.
   expect(short).toEqual([
+    'face-469x320',
+    'face-469x361',
+    'face-469x258',
+    'face-469x292',
     'face-274x328',
     'face-274x366',
     'face-249x328',
     'face-249x366',
+    'face-469x554',
+    'face-469x598',
     'face-269x194',
     'face-269x226',
   ]);
@@ -360,7 +369,7 @@ describe('the row the canvas draws', () => {
    * What 15 px would actually cost the three narrow boxes, counted rather than asserted.
    *
    * The 28 px row keeping 13 was recorded in three places as "82 px is seven characters at 13 and five
-   * at 15". It is seven and six. The boxes the row is handed are zone C of the 850 x 480, 800 x 286 and
+   * at 15". It was seven and six, and is six and five since #576 took the budget from the Æ. The boxes the row is handed are zone C of the 850 x 480, 800 x 286 and
    * 800 x 480 faces, at 82, 77 and 57 px of name column once `fittingColumns` is down to the position,
    * the name and the gap, and 15 costs one character, one character and nothing. So the saving is not
    * what keeps 13 there — the catalogue drawing 13 at every shape is, a second divergence needing to
@@ -372,7 +381,7 @@ describe('the row the canvas draws', () => {
       return { width, name, at13: charsThatFit(NAME_FACE, 13, name), at15: charsThatFit(NAME_FACE, 15, name) };
     });
     expect(budgets).toEqual([
-      { width: 250, name: 82, at13: 7, at15: 6 },
+      { width: 250, name: 82, at13: 6, at15: 5 },
       { width: 245, name: 77, at13: 6, at15: 5 },
       { width: 225, name: 57, at13: 4, at15: 4 },
     ]);
@@ -388,18 +397,18 @@ describe('the row the canvas draws', () => {
    * two: the position's 40 px and the gap's 92 are both the canvas's stated numbers, and the gap's is a
    * floor over its own content — six digits and a sign need 79 px at 24, so even dropping a decimal
    * would not narrow it. Giving the name the position's column is therefore the whole of the lever, and
-   * it is worth four characters at the narrowest face. Not taken: the position is what says whether the
+   * it is worth four characters at the narrowest face, eight against four. Not taken: the position is what says whether the
    * car behind is racing you or lapping you, and dropping a third column is the canvas's to decide.
    */
-  test('and giving the name the position column would buy it nine characters at the narrowest face', () => {
+  test('and giving the name the position column would buy it eight characters at the narrowest face', () => {
     const withoutPos = [250, 245, 225].map((width) => {
       const name = columnWidths(['name', 'gap'], width, 'compact', 28)[0] ?? 0;
       return { width, name, at13: charsThatFit(NAME_FACE, 13, name) };
     });
     expect(withoutPos).toEqual([
       { width: 250, name: 134, at13: 11 },
-      { width: 245, name: 129, at13: 11 },
-      { width: 225, name: 109, at13: 9 },
+      { width: 245, name: 129, at13: 10 },
+      { width: 225, name: 109, at13: 8 },
     ]);
   });
 
@@ -558,7 +567,7 @@ describe('what a row gives way, in the order the leaderboard writes down', () =>
   test('and takes each step at a width that is written down', () => {
     // The least width that still draws each column, at the two rows a zone is drawn in. The first four
     // are step 2 and move with the columns' own widths; the last two are step 4, which the narrowest
-    // body the build produces, 225 px, clears by 34 px in the 28 px row. A box under 104 px holds
+    // body the build produces, 225 px, clears by 32 px in the 28 px row. A box under 104 px holds
     // nothing but the gap and not all of that, and is the one width the page cannot answer.
     const least = (density: Density): Record<string, number> => {
       const found: Record<string, number> = {};
@@ -568,20 +577,20 @@ describe('what a row gives way, in the order the leaderboard writes down', () =>
       }
       return found;
     };
-    expect(least('compact')).toEqual({ best: 588, last: 478, class: 368, num: 313, name: 191, pos: 156, gap: 104 });
-    expect(least('zone')).toEqual({ best: 670, last: 544, class: 418, num: 356, name: 216, pos: 177, gap: 117 });
+    expect(least('compact')).toEqual({ best: 594, last: 484, class: 374, num: 319, name: 193, pos: 156, gap: 104 });
+    expect(least('zone')).toEqual({ best: 677, last: 551, class: 425, num: 363, name: 218, pos: 177, gap: 117 });
   });
 
   test('the name goes once it cannot hold a letter and the ellipsis, and not before', () => {
-    // 191 px of 28 px row leaves the name 27 px, two characters at 13; a pixel less leaves it one,
+    // 193 px of 28 px row leaves the name 29 px, two characters of the Æ at 13; a pixel less leaves it one,
     // which would draw the ellipsis alone.
     const nameAt = (width: number): number => {
       const columns = ['pos', 'name', 'gap'] as const;
       return charsThatFit(NAME_FACE, 13, columnWidths(columns, width, 'compact', 28)[1] ?? 0);
     };
-    expect({ at191: nameAt(191), at190: nameAt(190) }).toEqual({ at191: LEAST_NAME_CHARS, at190: LEAST_NAME_CHARS - 1 });
-    expect(fittingColumns(LEADERBOARD_COLUMNS, 191, 'compact')).toEqual(['pos', 'name', 'gap']);
-    expect(fittingColumns(LEADERBOARD_COLUMNS, 190, 'compact')).toEqual(['pos', 'gap']);
+    expect({ at193: nameAt(193), at192: nameAt(192) }).toEqual({ at193: LEAST_NAME_CHARS, at192: LEAST_NAME_CHARS - 1 });
+    expect(fittingColumns(LEADERBOARD_COLUMNS, 193, 'compact')).toEqual(['pos', 'name', 'gap']);
+    expect(fittingColumns(LEADERBOARD_COLUMNS, 192, 'compact')).toEqual(['pos', 'gap']);
   });
 
   test('a larger type never costs a column the canvas row kept', () => {
