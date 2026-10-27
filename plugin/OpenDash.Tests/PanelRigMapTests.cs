@@ -2183,7 +2183,8 @@ namespace OpenDashPlugin.Tests
                 }
             }
             // Race A and B, Tower A and B, Telemetry A to C and portrait A to D take the eleven standard pages,
-            // Tower's wide zone the six wide ones, and four fixed panels are drawn among them.
+            // Tower's wide zone the six wide ones, and three fixed panels are drawn among them: Race's board,
+            // Tower's tower and the portrait page's board.
             Assert.Equal(11 * ZonePages.Standard.Count + ZonePages.Wide.Count + 3, measured);
             // The case the ticket is about, and a portrait wall's zones, draw short forms.
             Assert.Contains("Leaderboard", shortened);
