@@ -112,9 +112,12 @@ describe('every themed face', () => {
         const main = pkg.dashboards[0]!;
         const widgets = main.screens.flatMap((s) => flatten(s.items)).filter((i): i is WidgetItem => i.kind === 'widget');
         for (const zone of FACE_ZONE_LETTERS) {
-          for (const widget of widgets.filter((w) => w.name === `zone${zone}`)) {
+          // A face whose zone widget were renamed would check nothing, so each zone must be found.
+          const zoneWidgets = widgets.filter((w) => w.name === `zone${zone}`);
+          const at = { theme: theme.id, face: pkg.folderName, zone };
+          expect({ ...at, found: zoneWidgets.length > 0 }).toEqual({ ...at, found: true });
+          for (const widget of zoneWidgets) {
             const page = defaultZonePage(zone, theme);
-            const at = { theme: theme.id, face: pkg.folderName, zone };
             expect({ ...at, index: widget.initialScreenIndex }).toEqual({ ...at, index: page });
             expect({ ...at, binding: widget.bindings?.InitialScreenIndex }).toEqual({
               ...at,
