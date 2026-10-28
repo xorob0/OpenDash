@@ -99,6 +99,34 @@ describe('the Porsche face', () => {
   });
 });
 
+describe('every themed face', () => {
+  const flatten = (list: readonly Item[]): Item[] => list.flatMap((item) => (item.kind === 'layer' ? [item, ...flatten(item.children)] : [item]));
+  // Composed at `describe` scope, off the per-test clock: every theme but the default is drawn in a
+  // process of its own, and the four together outlast a test's five seconds.
+  const themed = THEME_CATALOGUE.map((theme) => ({ theme, faces: composeTheme({ theme, version: '0.0.0-test', simHubVersion: '9.12.6' }) }));
+
+  test('opens every zone, before its binding resolves, on the page its binding falls back to (#908)', () => {
+    for (const { theme, faces } of themed) {
+      expect({ theme: theme.id, faces: faces.length > 0 }).toEqual({ theme: theme.id, faces: true });
+      for (const { pkg } of faces) {
+        const main = pkg.dashboards[0]!;
+        const widgets = main.screens.flatMap((s) => flatten(s.items)).filter((i): i is WidgetItem => i.kind === 'widget');
+        for (const zone of FACE_ZONE_LETTERS) {
+          for (const widget of widgets.filter((w) => w.name === `zone${zone}`)) {
+            const page = defaultZonePage(zone, theme);
+            const at = { theme: theme.id, face: pkg.folderName, zone };
+            expect({ ...at, index: widget.initialScreenIndex }).toEqual({ ...at, index: page });
+            expect({ ...at, binding: widget.bindings?.InitialScreenIndex }).toEqual({
+              ...at,
+              binding: { mode: 'formula', formula: `isnull([OpenDash.Face${main.width}x${main.height}Zone${zone}], ${page})` },
+            });
+          }
+        }
+      }
+    }
+  });
+});
+
 describe('the build', () => {
   const drawings = THEME_DRAWINGS as Record<string, ThemeDrawing>;
   THEMES[GEAR_LEFT_THEME_ID] = gearLeftTheme;

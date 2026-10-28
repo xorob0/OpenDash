@@ -288,21 +288,21 @@ export function zoneDashboard(face: FaceSize, zones: ZoneGroup, size: Size, meta
 /**
  * The widget that embeds a zone dashboard in a face, its screen bound to the zone's property.
  *
- * `theme` is the catalogue entry of the theme the face is drawn in. On a theme that adds band pages,
- * the band opens on the first of them, with no plugin as with one (#718), and zones B and C open on the
- * pages its `opensOn` names (#203).
+ * `theme` is the catalogue entry of the theme the face is drawn in. Every zone opens on its start page,
+ * `defaultZonePage`: zone C on the relative, and on a theme that adds band pages the band on the first
+ * of them, with no plugin as with one (#718), and zones B and C on the pages its `opensOn` names (#203).
  */
 export function zoneWidget(name: string, face: FaceSize, zone: FaceZone, frame: { left: number; top: number; width: number; height: number }, theme?: ThemeEntry): WidgetItem {
   const size = { width: frame.width, height: frame.height };
-  // The screen the widget shows before the plugin sets its property: the first page, but band D's and
-  // a theme's own opening page, which a dash without the plugin shows too.
-  const opens = zone === 'D' || (zone !== 'A' && theme?.opensOn?.[zone] !== undefined);
-  const start = opens ? defaultZonePage(zone, theme) : pagesForZone(zone).findIndex((p) => p.number === 0);
+  // The screen the widget shows before its binding resolves, which is what Dash Studio's editor, the
+  // Overview thumbnails and the first frame draw: the binding's own fallback, the zone's start page, so
+  // that the file and a dash without the plugin open on the same page (#908). A page's number is its
+  // screen index on every zone dashboard, the theme's pages numbered on after the house's.
   return pagedWidget({
     name,
     rect: { ...frame },
     fileName: `${zoneDashboardName(kindOf(zone), size)}.djson`,
-    initialScreenIndex: Math.max(0, start),
+    initialScreenIndex: defaultZonePage(zone, theme),
     page: zoneSetting.page(face, zone, theme),
   });
 }
