@@ -26,11 +26,13 @@ import { stack, type StackRow } from '../second/layout.ts';
 import {
   CHARS,
   DELTA_WIDEST,
+  REFERENCE_DELTA_HUNDREDTHS_WIDEST,
   REFERENCE_DELTA_WIDEST,
   REFERENCE_LABEL_WIDEST,
   referenceDelta,
   referenceDeltaColour,
   referenceDeltaDrawn,
+  referenceDeltaInHundredths,
   referenceDeltaText,
   referenceLabel,
   YOUR_BEST_CAPTION,
@@ -78,6 +80,7 @@ export const delta = defineModule('delta', (ctx) => {
     fs: d.hero,
     colorBind: referenceDeltaColour(value),
     drawn: referenceDeltaDrawn(value),
+    shape: { when: referenceDeltaInHundredths(value), widest: REFERENCE_DELTA_HUNDREDTHS_WIDEST },
   };
   const beside = fld(ctx, 'delta', '', { ...number, follower: { text: YOUR_BEST_CAPTION, widest: REFERENCE_LABEL_WIDEST, bind: referenceLabel(), gap: CAPTION_GAP, size: d.label } });
   const below = fld(ctx, 'delta', YOUR_BEST_CAPTION, number, { labelBind: referenceLabel(), labelWidest: REFERENCE_LABEL_WIDEST, labelBelow: true });
