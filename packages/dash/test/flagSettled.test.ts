@@ -40,6 +40,9 @@ import { faceInk, overlapping } from './faceInk.ts';
 
 const SETTLED = 'flagCorner';
 
+/** The three layers that draw the chequer: the takeover, the settled flag and the full-screen block. */
+const CHEQUERED = ['flag.chequered', `${SETTLED}.chequered`, 'flagFull.chequered'];
+
 /**
  * The faces whose settled flag covers a reading, each with the readings it may cover and why. Empty is
  * the rule; an entry here is a face on which no part of the drawing was free and the least of its
@@ -74,6 +77,28 @@ for (const theme of THEME_CATALOGUE) {
         expect({ face: main.name, screens: asked.length }).toEqual({ face: main.name, screens: 2 });
       }
     });
+
+    for (const { pkg } of faces) {
+      const main = pkg.dashboards[0]!;
+      // #998: on an odd band the check is a half pixel, and the chequer must still end on the band's
+      // foot, in the takeover, the settled flag and the full-screen block alike.
+      test(`${main.name}: every chequer, on every screen, lies inside its ground`, () => {
+        const found = new Set<string>();
+        for (const screen of main.screens) {
+          const layers = [...walkItems(screen.items)].filter((i): i is LayerItem => isLayer(i) && CHEQUERED.includes(i.name));
+          for (const layer of layers) {
+            found.add(layer.name);
+            const ground = groundOf(layer).rect;
+            for (const item of drawn(layer.children)) {
+              const inside = contains(ground, (item as RectangleItem).rect);
+              expect({ at: `${main.name}, ${screen.name}`, item: item.name, inside }).toEqual({ at: `${main.name}, ${screen.name}`, item: item.name, inside: true });
+            }
+          }
+        }
+        // A face whose chequer were renamed or dropped would pass by finding nothing to walk.
+        expect({ face: main.name, found: [...found].sort() }).toEqual({ face: main.name, found: [...CHEQUERED].sort() });
+      });
+    }
 
     for (const { pkg, width, height } of faces) {
       const main = pkg.dashboards[0]!;
