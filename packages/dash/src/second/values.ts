@@ -1674,10 +1674,13 @@ const leaderLapSeconds = (): Expr =>
  *
  * Nought where nothing is waited for: outside a race, where a practice or a qualifying session ends
  * for each car at its own first crossing after the clock; for the leader itself, whose crossing is
- * the flag; and once the chequered flag is out, `Flag_Checkered`, which SimHub takes from iRacing's
- * session flag and which the SDK raises for the field once the leader has crossed. That has not been
- * seen on iRacing itself. Were the flag raised only at the car's own crossing, the wait would run on
- * to the leader's next crossing and the car's last lap would read two, a lap too many. A whole lap
+ * the flag; and once the chequered flag is out, as {@link sim}'s `flagShown` reads it. The plugin
+ * answers `OpenDash.ChequeredFlagShown` for Le Mans Ultimate, whose SimHub reader never raises
+ * `Flag_Checkered`, from the game's phase or the car's finish status (#1168); where it gives no
+ * answer, `Flag_Checkered` is the fallback, which SimHub takes from iRacing's session flag and which
+ * the SDK raises for the field once the leader has crossed. That has not been seen on iRacing itself.
+ * Were the flag raised only at the car's own crossing, the wait would run on to the leader's next
+ * crossing and the car's last lap would read two, a lap too many. A whole lap
  * where the leader's position is not published, which is the most the wait can be.
  *
  * Nothing sharper is published. iRacing's `CarIdxEstTime`, the leader's time round its lap, reaches
@@ -1691,7 +1694,8 @@ const leaderWait = (): Expr => {
   const lap = leaderLapSeconds();
   const position = driver('trackpositionpercent', RACE_LEADER);
   const roundAtTheClock = mod(add(div(clockLeft(), lap), position), num(1));
-  const awaited = and(isRace(), not(gt(isnull(game('Flag_Checkered'), num(0)), num(0))), not(carIsPlayer(RACE_LEADER)));
+  const chequered = sim.flagShown(CHEQUERED_FLAG_SHOWN, gt(isnull(game('Flag_Checkered'), num(0)), num(0)));
+  const awaited = and(isRace(), not(chequered), not(carIsPlayer(RACE_LEADER)));
   return iff(awaited, mul(lap, iff(isNull(position), num(1), sub(num(1), roundAtTheClock))), num(0));
 };
 

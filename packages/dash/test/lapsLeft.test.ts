@@ -274,6 +274,19 @@ describe('a car behind the leader runs to its first crossing after the leader’
     expect(lapsLeft({ ...before, 'DataCorePlugin.GameData.Flag_Checkered': 1 })).toBe('1');
   });
 
+  test('the plugin’s chequered flag ends the wait where SimHub’s is never raised, and wins over it (#1168)', () => {
+    const before = car(0, 20, { ...leader(0.4), 'DataCorePlugin.GameData.SessionTimeLeft': -5 });
+    // Le Mans Ultimate: SimHub's reader never raises Flag_Checkered, and the plugin says the flag is out.
+    const shown = { ...before, 'OpenDash.ChequeredFlagShown': true, 'DataCorePlugin.GameData.Flag_Checkered': 0 };
+    expect({ lapsLeft: lapsLeft(shown), refuel: refuel(shown) }).toEqual({ lapsLeft: '1', refuel: '0.0' });
+    // Neither raised: the car still waits for the leader's crossing.
+    const neither = { ...before, 'OpenDash.ChequeredFlagShown': null, 'DataCorePlugin.GameData.Flag_Checkered': 0 };
+    expect(lapsLeft(neither)).toBe('2');
+    // The plugin's answer comes first: a plugin that says no keeps the wait, whatever SimHub says.
+    const denied = { ...before, 'OpenDash.ChequeredFlagShown': false, 'DataCorePlugin.GameData.Flag_Checkered': 1 };
+    expect(lapsLeft(denied)).toBe('2');
+  });
+
   test('the leader’s own count, and every count outside a race, is the clock’s', () => {
     // The car leads: its own crossing is the flag, wherever row 1's figures put it.
     expect(lapsLeft(car(0, 20, { ...leader(0.4), 'driverisplayer(1)': true }))).toBe('1');
