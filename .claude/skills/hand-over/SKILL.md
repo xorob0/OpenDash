@@ -31,8 +31,12 @@ All of these, or the PR is not handed over and the missing one is fixed or sent 
 
 ```bash
 gh pr ready <pr> --repo xorob0/OpenDash
-gh pr edit <pr> --repo xorob0/OpenDash --add-label needs-human-review
+gh api -X POST repos/xorob0/OpenDash/issues/<pr>/labels -f 'labels[]=needs-human-review'
 ```
+
+A PR's labels go through the REST API because `gh pr edit --add-label` fails on this repository
+with a projects-classic GraphQL error; removing one is
+`gh api -X DELETE repos/xorob0/OpenDash/issues/<pr>/labels/needs-human-review`.
 
 Tell Tim in one line per PR: the number, the title, and the one thing you would look at first.
 Never merge it, never enable auto-merge, and never add `to merge`: that label is his to give.

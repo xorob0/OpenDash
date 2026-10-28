@@ -52,7 +52,7 @@ preview thumbnail, refresh it with `bun run previews --packages ...` and commit 
 Then tick the Done list in the PR body with a PATCH, using `-F body=@file` and not `-f`, and label:
 
 ```bash
-gh pr edit <pr> --repo xorob0/OpenDash --add-label verified-on-vm
+gh api -X POST repos/xorob0/OpenDash/issues/<pr>/labels -f 'labels[]=verified-on-vm'
 ```
 
 Release the VM with `bun run vm release` when done. Report in the PR, as one comment: what the review found and fixed,
