@@ -92,18 +92,24 @@ const textFormula = (item: TextItem): string | undefined => {
 
 /**
  * Every live delta that does not stand on its ghost at some precision and some delta, as a sentence
- * naming it, and the names of the readings looked at. The live delta is drawn to two places or to
- * three, and its point has to land on the ghost's point at both (#988). `offTheirGhosts` looks at the
- * monospaced readings, which these are not.
+ * naming it, the names of the readings looked at, and the names of every live delta the face draws,
+ * so that a delta whose Text stopped reading the precision is not skipped in silence. The live delta
+ * is drawn to two places or to three, and its point has to land on the ghost's point at both (#988).
+ * `offTheirGhosts` looks at the monospaced readings, which these are not.
  */
-function deltasOffTheirGhosts(size: { width: number; height: number }): { problems: string[]; seen: Set<string> } {
+function deltasOffTheirGhosts(size: { width: number; height: number }): { problems: string[]; seen: Set<string>; drawn: Set<string> } {
   const face = buildThemeFace(AIM, size, OPTS);
   const problems: string[] = [];
   const seen = new Set<string>();
+  const drawn = new Set<string>();
   for (const dashboard of [face.built.main, ...face.built.zones]) {
     for (const screen of dashboard.screens) {
       const texts = [...walkItems(screen.items)].filter((item): item is TextItem => item.kind === 'text');
       const byName = new Map(texts.map((item) => [item.name, item]));
+      for (const item of texts) {
+        const live = /(?:^|\.)((?:delta|lapTimes)\.delta\.value)$/.exec(item.name);
+        if (live) drawn.add(live[1]!);
+      }
       for (const value of texts.filter((item) => item.name.endsWith('.value') && textFormula(item)?.includes(`[${PRECISION}]`))) {
         const ghost = byName.get(`${value.name.slice(0, -'.value'.length)}.ghost`);
         if (ghost === undefined) {
@@ -126,7 +132,7 @@ function deltasOffTheirGhosts(size: { width: number; height: number }): { proble
       }
     }
   }
-  return { problems, seen };
+  return { problems, seen, drawn };
 }
 
 if (THEME_ID === AIM) {
@@ -137,10 +143,13 @@ if (THEME_ID === AIM) {
       });
 
       test('the live delta stands on its ghost at both precisions, its point on the unlit point (#988)', () => {
-        const { problems, seen } = deltasOffTheirGhosts(size);
+        const { problems, seen, drawn } = deltasOffTheirGhosts(size);
         expect(problems).toEqual([]);
-        // The delta page is on every size; a scan that found nothing would pass for the wrong reason.
+        // The delta page is on every size, and Lap times draws its delta wherever the module is tall
+        // enough to keep it; a scan that skipped either where it is drawn would pass for the wrong
+        // reason.
         expect(seen.has('delta.delta.value')).toBe(true);
+        expect([...seen].sort()).toEqual([...drawn].sort());
       });
     });
   }
