@@ -128,6 +128,30 @@ describe('every zone selects a page it has', () => {
     }
   });
 
+  test('a widget opens, before its binding resolves, on the page its binding falls back to (#908)', () => {
+    // Dash Studio's editor, the Overview thumbnails and the first frame draw the static index; a
+    // dash without the plugin draws the fallback. Two answers to which page a zone opens on would
+    // show zone C on lap times in the one and on the relative in the other.
+    // A binding written another way would be skipped rather than read, so the test counts what it
+    // read and fails when that is nothing.
+    let read = 0;
+    for (const pkg of packages()) {
+      for (const widget of widgetsOf(pkg)) {
+        const formula = widget.bindings?.InitialScreenIndex?.formula;
+        const text = String(typeof formula === 'string' ? formula : formula?.expression);
+        const fallback = text.match(/^isnull\(\[[A-Za-z0-9_.]+\],\s*(\d+)\)$/)?.[1];
+        if (fallback === undefined) continue;
+        read += 1;
+        expect({ pkg: pkg.folderName, widget: widget.name, index: widget.initialScreenIndex }).toEqual({
+          pkg: pkg.folderName,
+          widget: widget.name,
+          index: Number(fallback),
+        });
+      }
+    }
+    expect(read).toBeGreaterThan(0);
+  });
+
   test('every page of every face catalogue exists as a screen to reach', () => {
     // A mask the plugin can set has to have somewhere to land. The plugin refuses a mask bit
     // beyond the catalogue (ContractTests); this is the other half, that the catalogue the plugin
