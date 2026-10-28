@@ -17,7 +17,7 @@
  * blinking the whole layer away.
  */
 import { describe, expect, test } from 'bun:test';
-import { ALERT_DISC_RATIO } from '../src/components/alertBand.ts';
+import { ALERT_DISC_RATIO, chequerBand } from '../src/components/alertBand.ts';
 import { BLACK_FLAG_BORDER, BLUE_FLAG_ID, FLAG_BLINK_MS, FLAG_NAME_WEIGHT, FLAG_TAKEOVER_MS, flagSettledWidth, flagTakingBand } from '../src/components/flagStrip.ts';
 import { chequerCount, chequerStep } from '../src/components/flagRing.ts';
 import { BLUE_FLAG_DETAILS } from '../src/contract.ts';
@@ -123,6 +123,65 @@ describe('the chequered band', () => {
       test('carries no label', () => {
         expect([...walkItems(children)].filter((i) => i.kind === 'text')).toEqual([]);
       });
+    });
+  }
+});
+
+/**
+ * The chequer on a band of any height, #998. The check is half the band, which on an odd band is a
+ * half pixel, and the squares are cut between rounded edges so that the board still fills the band
+ * exactly: whole pixels, inside the frame, two rows that meet and are a pixel apart at most, and one
+ * set of column edges that both rows share. Heights 1 to 160 cover every band and corner block the
+ * packages draw (12 to 150, the Porsche's 115 and the BMW's 53, 57 and 85 among them), at an odd
+ * origin and at the widths of a band, a corner block and a settled strip.
+ */
+describe('the chequer on a band of any height', () => {
+  const whole = (r: { left: number; top: number; width: number; height: number }): boolean =>
+    [r.left, r.top, r.width, r.height].every(Number.isInteger) && r.width > 0 && r.height > 0;
+  for (const width of [1280, 176, 16]) {
+    test(`fills a band ${width} wide exactly, at every height from 1 to 160`, () => {
+      for (let height = 1; height <= 160; height++) {
+        const frame = rect(10, 333, width, height);
+        const at = `${width}x${height}`;
+        const [ground, ...squares] = chequerBand('flag.chequered', frame) as RectangleItem[];
+        expect({ at, ground: ground!.rect }).toEqual({ at, ground: frame });
+        for (const square of squares) {
+          expect({ at, square: square.name, whole: whole(square.rect), inside: contains(frame, square.rect) }).toEqual({ at, square: square.name, whole: true, inside: true });
+        }
+
+        const rowOf = (square: RectangleItem): number => Number(/\.r(\d)c/.exec(square.name)![1]);
+        const rows = [0, 1].map((row) => squares.filter((s) => rowOf(s) === row));
+        const top = frame.top;
+        const h0 = rows[0]![0]?.rect.height ?? Math.round(height / 2);
+        for (const s of rows[0]!) expect({ at, square: s.name, top: s.rect.top, height: s.rect.height }).toEqual({ at, square: s.name, top, height: h0 });
+        for (const s of rows[1]!) expect({ at, square: s.name, top: s.rect.top, height: s.rect.height }).toEqual({ at, square: s.name, top: top + h0, height: height - h0 });
+        expect({ at, apart: Math.abs(h0 - (height - h0)) <= 1 }).toEqual({ at, apart: true });
+
+        // Below a check of one pixel the board is narrower than a pixel and has no columns to hold.
+        if (height < 2) continue;
+        const check = height / 2;
+        const right = frame.left + frame.width;
+        const edges = [...new Set([frame.left, right, ...squares.flatMap((s) => [s.rect.left, s.rect.left + s.rect.width])])].sort((a, b) => a - b);
+        edges.slice(1).forEach((edge, i) => {
+          const run = edge - edges[i]!;
+          const last = edge === right;
+          const ok = last ? run >= 1 && run <= Math.ceil(check) : run === Math.floor(check) || run === Math.ceil(check);
+          expect({ at, from: edges[i], run, ok }).toEqual({ at, from: edges[i], run, ok: true });
+        });
+        // Every square spans one run between the shared edges, row 0 every odd run and row 1 every
+        // even one: no overlap, no gap with a dark square between, and row 1's columns start where
+        // row 0's end.
+        for (const row of [0, 1]) {
+          if (row === 1 && h0 === height) continue;
+          const runs = rows[row]!.map((s) => {
+            const i = edges.indexOf(s.rect.left);
+            expect({ at, square: s.name, spansOne: edges[i + 1] === s.rect.left + s.rect.width }).toEqual({ at, square: s.name, spansOne: true });
+            return i;
+          });
+          const expected = edges.slice(0, -1).map((_, i) => i).filter((i) => i % 2 === (row + 1) % 2);
+          expect({ at, row, runs }).toEqual({ at, row, runs: expected });
+        }
+      }
     });
   }
 });

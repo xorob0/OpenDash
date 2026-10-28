@@ -137,15 +137,26 @@ export function outlinedBand(name: string, frame: Rect, style: AlertBandStyle, c
  *
  * The check is half the band high rather than the canvas's 40 px, which is the one rule that makes
  * the same board correct on a 40 px alert band, on band D's sixty and on the nano's twelve.
+ *
+ * The edges are rounded and the squares cut between them, as `stripes` and the full-screen chequer
+ * cut theirs, rather than each square rounded on its own: on an odd band the check is a half pixel,
+ * and rounding the second row's top and its height apart ends it a pixel below the band, #998. Cut
+ * between edges, the two rows meet and end on the band's foot, the last column ends on its right
+ * edge, and the two rows' columns line up; on an even band every edge is whole and nothing moves.
  */
 export function chequerBand(name: string, frame: Rect): Item[] {
   const check = frame.height / 2;
   const columns = Math.ceil(frame.width / check);
+  const right = frame.left + frame.width;
+  const x = (k: number): number => (k >= columns ? right : Math.round(frame.left + k * check));
+  const y = (k: number): number => (k >= 2 ? frame.top + frame.height : Math.round(frame.top + k * check));
   const children: Item[] = [band(`${name}.band`, frame, ds.color.surface.base)];
   for (let row = 0; row < 2; row++) {
     for (let col = (row + 1) % 2; col < columns; col += 2) {
-      const width = Math.min(check, frame.left + frame.width - (frame.left + col * check));
-      children.push(band(`${name}.r${row}c${String(col).padStart(2, '0')}`, rect(frame.left + col * check, frame.top + row * check, width, check), ds.purpose.flag.chequer));
+      // A square the rounding has closed to nothing, a last column or a band a pixel high, is the
+      // ground's, and is not drawn.
+      if (x(col + 1) <= x(col) || y(row + 1) <= y(row)) continue;
+      children.push(band(`${name}.r${row}c${String(col).padStart(2, '0')}`, rect(x(col), y(row), x(col + 1) - x(col), y(row + 1) - y(row)), ds.purpose.flag.chequer));
     }
   }
   return children;
