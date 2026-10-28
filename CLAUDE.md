@@ -21,6 +21,14 @@ able to revert exactly it.
 
 Never commit a red tree. If something has to be left broken, say so in the message.
 
+## The sprint
+
+The work runs as a sprint, in five steps that are each a skill under `.claude/skills/`: plan the
+sprint, analyse a ticket on the ticket itself, work it on a branch to a draft pull request, verify
+it with a review and the VM, and hand it to Tim with `needs-human-review`. He reviews and merges by
+hand. [docs/process.md](docs/process.md) is the lifecycle and the labels; nothing is built on a
+ticket that has no `## Technical analysis` comment and the `analysed` label.
+
 ## The backlog
 
 The work is tracked as GitHub issues on `xorob0/OpenDash`, and a ticket is cited as `#123`. Labels

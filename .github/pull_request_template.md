@@ -7,7 +7,7 @@ a reviewer cannot get for themselves.
 
 <!-- One paragraph. The why matters more than the what; the diff already says the what. -->
 
-Closes XOR-
+Closes #
 
 ## Done
 
