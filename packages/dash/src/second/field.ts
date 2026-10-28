@@ -100,6 +100,15 @@ export interface FieldValue {
    * Only a bound value with a follower needs one, and every one of them is required to declare it.
    */
   drawn?: DrawnWidth;
+  /**
+   * A second widest of the same cells, which `bind` draws while `when` holds: the live delta's
+   * `−123.45` beside its `−12.345`, the same six cells with the point a cell further right.
+   *
+   * The house layout ignores it, since a box is cut from `chars` and the two shapes are one width.
+   * It is for a face that draws the unlit cells under a reading, which has to put its unlit point
+   * where the lit one is (#988).
+   */
+  shape?: { when: Expr; widest: string };
 }
 
 export interface FieldSpec {

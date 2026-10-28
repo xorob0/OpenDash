@@ -30,7 +30,15 @@ import { lapDeltaPanel } from '../src/screens/pitwall.ts';
 import type { Density } from '../src/second/density.ts';
 import { charsOfText, textWidth } from '../src/second/drawn.ts';
 import { contentRect } from '../src/second/layout.ts';
-import { CHARS, LAST_LAP_DELTA, REFERENCE_DELTA_WIDEST, referenceDelta, referenceDeltaText } from '../src/second/values.ts';
+import {
+  CHARS,
+  LAST_LAP_DELTA,
+  REFERENCE_DELTA_HUNDREDTHS_WIDEST,
+  REFERENCE_DELTA_WIDEST,
+  referenceDelta,
+  referenceDeltaInHundredths,
+  referenceDeltaText,
+} from '../src/second/values.ts';
 import { ds } from '../src/tokens.ts';
 import { expressionsOf, itemsOf, walkItems } from '../src/walk.ts';
 import { evalNcalc, Single, type Props } from './ncalcEval.ts';
@@ -246,6 +254,30 @@ describe('the delta precision (#322)', () => {
       expect({ site: s.name, text: at(-123.456) }).toEqual({ site: s.name, text: '−123.46' });
       expect({ site: s.name, text: at(999.99) }).toEqual({ site: s.name, text: '+999.99' });
     }
+  });
+
+  test('the shape a face cuts its unlit cells from says the places the reading is drawn to (#988)', () => {
+    // The AiM draws the unlit cells under the delta from `referenceDeltaInHundredths`, so it has to
+    // hold exactly when the format draws two places: the default, an unknown setting, and a delta of
+    // 100 s or more at thousandths. The level branch is held too, `0.00` against `0.000`.
+    const shape = referenceDeltaInHundredths(referenceDelta());
+    const text = referenceDeltaText(referenceDelta());
+    const readings = [...READINGS, 99.9995, -99.9995, 999.99, -999.99];
+    for (const reference of REFERENCES) {
+      for (const precision of PRECISIONS) {
+        for (const reading of readings) {
+          const props = frame(reference, precision, reading);
+          const drawnText = String(evalNcalc(text, props));
+          const places = drawnText.length - drawnText.indexOf('.') - 1;
+          const at = { reference, precision, reading, drawnText };
+          expect({ ...at, hundredths: evalNcalc(shape, props) === true }).toEqual({ ...at, hundredths: places === 2 });
+        }
+      }
+    }
+    // And the two shapes are the same six cells, the point a cell apart.
+    const mono = SITES[0]!.item.monospace!;
+    expect(REFERENCE_DELTA_HUNDREDTHS_WIDEST).toBe('\u2212123.45');
+    expect(charsOfText(REFERENCE_DELTA_HUNDREDTHS_WIDEST, mono)).toEqual(charsOfText(REFERENCE_DELTA_WIDEST, mono));
   });
 
   test('with no lap to compare against, every surface is level at either precision', () => {

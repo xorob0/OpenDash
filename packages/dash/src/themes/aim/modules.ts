@@ -249,7 +249,7 @@ function valueItems(spec: FieldSpec, right: number, row: Rect, size: number): It
   const mark = spec.value.mark;
   const visible = unmarked(mark, spec.visibleBind);
   const bind = spec.value.bind !== undefined && isSessionName(spec) ? sessionShort(spec.value.bind) : spec.value.bind;
-  const items = reading(spec.name, spec.value.sample, right, y, size, { bind, widest: widestValue(spec), visibleBind: visible });
+  const items = reading(spec.name, spec.value.sample, right, y, size, { bind, widest: widestValue(spec), visibleBind: visible, shape: spec.value.shape });
   if (mark) {
     // The house's mark for a state no figure can say, the `∞` of a session with no clock, in the
     // value's place; the segment faces have no glyph for it, so WPF draws it in a face of its own.

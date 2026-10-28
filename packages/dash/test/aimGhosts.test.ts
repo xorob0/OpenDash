@@ -15,10 +15,13 @@
  */
 import { describe, expect, test } from 'bun:test';
 import type { TextItem } from '../src/generator.ts';
+import { DELTA_PRECISIONS } from '../src/contract.ts';
+import { measureText } from '../src/design/advances.ts';
 import { buildThemeFace } from '../src/themes/faces.ts';
 import { THEME_ENV, THEMES } from '../src/themes/index.ts';
 import { THEME_ID } from '../src/tokens.ts';
 import { walkItems } from '../src/walk.ts';
+import { evalNcalc } from './ncalcEval.ts';
 
 const AIM = 'aim';
 const OPTS = { version: '0.0.0-test', simHubVersion: '9.12.6', author: 'test' };
@@ -62,11 +65,91 @@ function offTheirGhosts(size: { width: number; height: number }): string[] {
   return problems;
 }
 
+const PRECISION = 'OpenDash.DeltaPrecision';
+const SESSION_DELTA = 'PersistantTrackerPlugin.SessionBestLiveDeltaSeconds';
+/** The short end, a slower lap, a level one, the widest at three places, and a long stop's. */
+const DELTAS = [-0.21, 1.03, 0.003, -12.345, 123.4] as const;
+
+/**
+ * Where each character of a right-aligned run ends, and whether it is the point: a run's right
+ * edges, in DSEG7Bold advances. A cell is held by where it ends rather than where it starts because
+ * the `+` is not a glyph of the face and is drawn narrower than a cell, so it starts inside the
+ * cell it stands on and ends where that cell ends.
+ */
+function rightEdges(item: TextItem, text: string): string[] {
+  let x = item.rect.left + item.rect.width;
+  return [...text].reverse().map((c) => {
+    const at = `${x.toFixed(2)} ${c === '.' ? 'point' : 'cell'}`;
+    x -= measureText('DSEG7Bold', c, item.fontSize!);
+    return at;
+  });
+}
+
+const textFormula = (item: TextItem): string | undefined => {
+  const b = item.bindings?.Text;
+  return b && typeof b.formula === 'string' ? b.formula : undefined;
+};
+
+/**
+ * Every live delta that does not stand on its ghost at some precision and some delta, as a sentence
+ * naming it, the names of the readings looked at, and the names of every live delta the face draws,
+ * so that a delta whose Text stopped reading the precision is not skipped in silence. The live delta
+ * is drawn to two places or to three, and its point has to land on the ghost's point at both (#988).
+ * `offTheirGhosts` looks at the monospaced readings, which these are not.
+ */
+function deltasOffTheirGhosts(size: { width: number; height: number }): { problems: string[]; seen: Set<string>; drawn: Set<string> } {
+  const face = buildThemeFace(AIM, size, OPTS);
+  const problems: string[] = [];
+  const seen = new Set<string>();
+  const drawn = new Set<string>();
+  for (const dashboard of [face.built.main, ...face.built.zones]) {
+    for (const screen of dashboard.screens) {
+      const texts = [...walkItems(screen.items)].filter((item): item is TextItem => item.kind === 'text');
+      const byName = new Map(texts.map((item) => [item.name, item]));
+      for (const item of texts) {
+        const live = /(?:^|\.)((?:delta|lapTimes)\.delta\.value)$/.exec(item.name);
+        if (live) drawn.add(live[1]!);
+      }
+      for (const value of texts.filter((item) => item.name.endsWith('.value') && textFormula(item)?.includes(`[${PRECISION}]`))) {
+        const ghost = byName.get(`${value.name.slice(0, -'.value'.length)}.ghost`);
+        if (ghost === undefined) {
+          problems.push(`${size.width}x${size.height} ${screen.name}: ${value.name} has no ghost`);
+          continue;
+        }
+        seen.add(value.name.replace(/^.*?((delta|lapTimes)\.delta\.value)$/, '$1'));
+        for (const precision of DELTA_PRECISIONS) {
+          for (const delta of DELTAS) {
+            const props = { [PRECISION]: precision, [SESSION_DELTA]: delta };
+            const lit = String(evalNcalc(textFormula(value)!, props));
+            const ghostFormula = textFormula(ghost);
+            const unlit = ghostFormula === undefined ? ghost.text : String(evalNcalc(ghostFormula, props));
+            const under = new Set(rightEdges(ghost, unlit));
+            if (rightEdges(value, lit).some((at) => !under.has(at))) {
+              problems.push(`${size.width}x${size.height} ${screen.name}: ${value.name} draws ${JSON.stringify(lit)} over ${JSON.stringify(unlit)} at ${precision}`);
+            }
+          }
+        }
+      }
+    }
+  }
+  return { problems, seen, drawn };
+}
+
 if (THEME_ID === AIM) {
   for (const size of THEMES[AIM]!.anatomy.sizes) {
     describe(`the AiM theme at ${size.width}x${size.height}`, () => {
       test('every reading stands on its ghost cell for cell', () => {
         expect(offTheirGhosts(size)).toEqual([]);
+      });
+
+      test('the live delta stands on its ghost at both precisions, its point on the unlit point (#988)', () => {
+        const { problems, seen, drawn } = deltasOffTheirGhosts(size);
+        expect(problems).toEqual([]);
+        // The delta page is on every size, and Lap times draws its delta wherever the module is tall
+        // enough to keep it; a scan that skipped either where it is drawn would pass for the wrong
+        // reason.
+        expect(seen.has('delta.delta.value')).toBe(true);
+        expect([...seen].sort()).toEqual([...drawn].sort());
       });
     });
   }

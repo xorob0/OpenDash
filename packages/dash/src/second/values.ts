@@ -3321,6 +3321,24 @@ export const referenceDeltaText = (seconds: Expr): Expr =>
 export const REFERENCE_DELTA_WIDEST = `${MINUS}12.345`;
 
 /**
+ * The other shape of the same six cells: three whole digits and two places, which is what
+ * {@link referenceDeltaText} draws while {@link referenceDeltaInHundredths} holds. It is exactly as
+ * wide as {@link REFERENCE_DELTA_WIDEST}, cell for cell, and only the point has moved, so a box cut
+ * for one is cut for the other. A face that draws the unlit cells under the reading, the AiM's,
+ * draws them from this shape while the reading is drawn to hundredths, so that the lit point lands
+ * on the unlit one (#988).
+ */
+export const REFERENCE_DELTA_HUNDREDTHS_WIDEST = `${MINUS}123.45`;
+
+/**
+ * Whether {@link referenceDeltaText} draws this delta to two places: the default precision, or a
+ * delta of 100 s or more at thousandths. The level branch agrees: a level delta is under 0.005, so
+ * it is drawn `0.000` exactly when {@link drawnToThousandths} holds. Named beside the format so that
+ * the shape a face cuts its ghost from cannot drift away from the places the reading is drawn to.
+ */
+export const referenceDeltaInHundredths = (seconds: Expr): Expr => not(drawnToThousandths(seconds));
+
+/**
  * Half a unit of the last place the live delta is drawn to: 0.005 at hundredths, 0.0005 at
  * thousandths.
  *

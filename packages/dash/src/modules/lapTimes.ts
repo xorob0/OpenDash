@@ -32,9 +32,11 @@ import {
   lastLap,
   player,
   positionDrawn,
+  REFERENCE_DELTA_HUNDREDTHS_WIDEST,
   REFERENCE_DELTA_WIDEST,
   referenceDelta,
   referenceDeltaColour,
+  referenceDeltaInHundredths,
   referenceDeltaText,
   sectorLast,
   sectorTime,
@@ -100,7 +102,15 @@ export const lapTimes = defineModule('lapTimes', (ctx) => {
     ctx,
     'delta',
     DELTA_LABEL_WIDEST,
-    { sample: '\u22120.21', widest: REFERENCE_DELTA_WIDEST, bind: referenceDeltaText(delta), chars: CHARS.referenceDelta, fs: d.mid, colorBind: referenceDeltaColour(delta) },
+    {
+      sample: '\u22120.21',
+      widest: REFERENCE_DELTA_WIDEST,
+      bind: referenceDeltaText(delta),
+      chars: CHARS.referenceDelta,
+      fs: d.mid,
+      colorBind: referenceDeltaColour(delta),
+      shape: { when: referenceDeltaInHundredths(delta), widest: REFERENCE_DELTA_HUNDREDTHS_WIDEST },
+    },
     { labelBind: iff(deltaIsToLastLap(), str('Delta to last lap'), str(DELTA_LABEL_WIDEST)), labelWidest: DELTA_LABEL_WIDEST },
   );
   /**

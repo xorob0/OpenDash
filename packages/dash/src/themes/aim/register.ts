@@ -114,14 +114,28 @@ export const ghostOf = (widest: string): string => [...widest].map((ch) => (ch =
 /**
  * A reading right-aligned against `right`, over its ghost: the widest string the binding can draw,
  * in `8`s, which is the box the reading is measured in too.
+ *
+ * A reading whose binding draws its cells in two shapes, the live delta's `−12.345` and `−123.45`,
+ * says so with `shape`, and its ghost follows: the unlit point is drawn where the lit one is, which a
+ * ghost cut from the widest alone misses by a cell whenever the other shape is drawn (#988). The two
+ * shapes are the same cells, so the box does not move. The condition is the core's; the theme only
+ * turns the two strings into eights.
  */
-export function reading(name: string, sample: string, right: number, y: number, size: number, opts: { bind?: Expr; widest: string; face?: SegmentFace; visibleBind?: Expr }): Item[] {
+export function reading(
+  name: string,
+  sample: string,
+  right: number,
+  y: number,
+  size: number,
+  opts: { bind?: Expr; widest: string; face?: SegmentFace; visibleBind?: Expr; shape?: { when: Expr; widest: string } },
+): Item[] {
   const face = opts.face ?? 'DSEG7Bold';
   const ghost = ghostOf(opts.widest);
   const width = segmentWidth(face, ghost, size);
   const left = right - width;
+  const shaped = opts.shape === undefined ? {} : { bind: ncalc.iff(opts.shape.when, ncalc.str(ghostOf(opts.shape.widest)), ncalc.str(ghost)), widest: ghost };
   return [
-    segment(`${name}.ghost`, face, ghost, left, y, width, { size, hAlign: 'right', ghost: true, visibleBind: opts.visibleBind }),
+    segment(`${name}.ghost`, face, ghost, left, y, width, { size, hAlign: 'right', ghost: true, visibleBind: opts.visibleBind, ...shaped }),
     segment(`${name}.value`, face, sample, left, y, width, {
       size,
       hAlign: 'right',
