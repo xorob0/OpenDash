@@ -83,9 +83,11 @@ for (const theme of THEME_CATALOGUE) {
       // #998: on an odd band the check is a half pixel, and the chequer must still end on the band's
       // foot, in the takeover, the settled flag and the full-screen block alike.
       test(`${main.name}: every chequer, on every screen, lies inside its ground`, () => {
+        const found = new Set<string>();
         for (const screen of main.screens) {
           const layers = [...walkItems(screen.items)].filter((i): i is LayerItem => isLayer(i) && CHEQUERED.includes(i.name));
           for (const layer of layers) {
+            found.add(layer.name);
             const ground = groundOf(layer).rect;
             for (const item of drawn(layer.children)) {
               const inside = contains(ground, (item as RectangleItem).rect);
@@ -93,6 +95,8 @@ for (const theme of THEME_CATALOGUE) {
             }
           }
         }
+        // A face whose chequer were renamed or dropped would pass by finding nothing to walk.
+        expect({ face: main.name, found: [...found].sort() }).toEqual({ face: main.name, found: [...CHEQUERED].sort() });
       });
     }
 
